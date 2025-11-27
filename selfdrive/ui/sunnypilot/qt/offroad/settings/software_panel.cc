@@ -7,19 +7,15 @@
 
 #include "selfdrive/ui/sunnypilot/qt/offroad/settings/software_panel.h"
 
-SoftwarePanelSP::SoftwarePanelSP(QWidget *parent) : SoftwarePanel(parent) {
+SoftwarePanelSP::SoftwarePanelSP(QWidget *parent) : SoftwarePanel(parent)
+{
   // branch selector
   QObject::disconnect(targetBranchBtn, nullptr, nullptr, nullptr);
-  connect(targetBranchBtn, &ButtonControlSP::clicked, [=]() {
+  connect(targetBranchBtn, &ButtonControlSP::clicked, [=]()
+          {
     if (Hardware::get_device_type() == cereal::InitData::DeviceType::TICI) {
       auto current = params.get("GitBranch");
-      QStringList allBranches = QString::fromStdString(params.get("UpdaterAvailableBranches")).split(",");
-      QStringList branches;
-      for (const QString &b : allBranches) {
-        if (b.endsWith("-tici")) {
-          branches.append(b);
-        }
-      }
+      QStringList branches = QString::fromStdString(params.get("UpdaterAvailableBranches")).split(",");
 
       for (QString b : {current.c_str(), "master-tici", "staging-tici", "release-tici"}) {
         auto i = branches.indexOf(b);
@@ -43,15 +39,14 @@ SoftwarePanelSP::SoftwarePanelSP(QWidget *parent) : SoftwarePanel(parent) {
       if (ret) {
         searchBranches(d.text());
       }
-    }
-  });
+    } });
 
   // Disable Updates toggle
   disableUpdatesToggle = new ParamControl("DisableUpdates",
-    tr("Disable Updates"),
-    tr("When enabled, software updates will be disabled. <b>This requires a reboot to take effect.</b>"),
-    "../assets/icons/icon_warning.png",
-    this, true);
+                                          tr("Disable Updates"),
+                                          tr("When enabled, software updates will be disabled. <b>This requires a reboot to take effect.</b>"),
+                                          "../assets/icons/icon_warning.png",
+                                          this, true);
   disableUpdatesToggle->showDescription();
   addItem(disableUpdatesToggle);
   connect(disableUpdatesToggle, &ParamControl::toggleFlipped, this, &SoftwarePanelSP::handleDisableUpdatesToggled);
@@ -69,45 +64,55 @@ SoftwarePanelSP::SoftwarePanelSP(QWidget *parent) : SoftwarePanel(parent) {
  *
  * @param query The search query string.
  */
-void SoftwarePanelSP::searchBranches(const QString &query) {
+void SoftwarePanelSP::searchBranches(const QString &query)
+{
 
   QStringList branches = QString::fromStdString(params.get("UpdaterAvailableBranches")).split(",");
   QStringList results = searchFromList(query, branches);
   results.sort();
 
-  if (results.isEmpty()) {
+  if (results.isEmpty())
+  {
     ConfirmationDialog::alert(tr("No branches found for keywords: %1").arg(query), this);
     return;
   }
 
   QString selected_branch = MultiOptionDialog::getSelection(tr("Select a branch"), results, "", this);
 
-  if (!selected_branch.isEmpty()) {
+  if (!selected_branch.isEmpty())
+  {
     params.put("UpdaterTargetBranch", selected_branch.toStdString());
     targetBranchBtn->setValue(selected_branch);
     checkForUpdates();
   }
 }
 
-void SoftwarePanelSP::handleDisableUpdatesToggled(bool state) {
+void SoftwarePanelSP::handleDisableUpdatesToggled(bool state)
+{
   if (ConfirmationDialog::confirm(tr("%1 updates requires a reboot.<br>Reboot now?")
-      .arg(state ? "Disabling" : "Enabling"), tr("Reboot"), this)) {
+                                      .arg(state ? "Disabling" : "Enabling"),
+                                  tr("Reboot"), this))
+  {
     params.putBool("DoReboot", true);
-  } else {
+  }
+  else
+  {
     params.putBool("DisableUpdates", !state);
     disableUpdatesToggle->refresh();
   }
 }
 
-void SoftwarePanelSP::updateDisableUpdatesToggle(bool offroad) {
+void SoftwarePanelSP::updateDisableUpdatesToggle(bool offroad)
+{
   bool enabled = offroad;
   disableUpdatesToggle->setEnabled(enabled);
   disableUpdatesToggle->setDescription(enabled
-    ? tr("When enabled, software updates will be disabled.<br><b>This requires a reboot to take effect.</b>")
-    : tr("Please enable always offroad mode or turn off vehicle to adjust these toggles"));
+                                           ? tr("When enabled, software updates will be disabled.<br><b>This requires a reboot to take effect.</b>")
+                                           : tr("Please enable always offroad mode or turn off vehicle to adjust these toggles"));
 }
 
-void SoftwarePanelSP::showEvent(QShowEvent *event) {
+void SoftwarePanelSP::showEvent(QShowEvent *event)
+{
   SoftwarePanel::showEvent(event);
   updateDisableUpdatesToggle(!uiState()->scene.started);
   disableUpdatesToggle->showDescription();

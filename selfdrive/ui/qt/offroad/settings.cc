@@ -15,6 +15,7 @@
 #include "selfdrive/ui/qt/widgets/scrollview.h"
 #include "selfdrive/ui/qt/offroad/developer_panel.h"
 #include "selfdrive/ui/qt/offroad/firehose.h"
+#include "selfdrive/ui/qt/widgets/tsk_keyboard.h"
 
 TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
   // param, title, desc, icon, restart needed
@@ -84,6 +85,15 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
     },
   };
 
+  std::vector<QString> distraction_button_texts{tr("Strict"), tr("Moderate"), tr("Lenient"), tr("Off")};
+  distraction_detection_level = new ButtonParamControl("DistractionDetectionLevel", tr("Distraction Detection Level"),
+                                          tr("Set how sensitive the driver distraction detection should be. "
+                                          "Strict: Very sensitive, warns on minor distractions. "
+                                          "Moderate: Balanced between sensitivity and false positives. "
+                                          "Lenient: Only alerts on clear distractions. "
+                                          "Off: Disable Driver Distraction Detection and Control."),
+                                          "../assets/icons/monitoring.png",
+                                          distraction_button_texts);
 
   std::vector<QString> longi_button_texts{tr("Aggressive"), tr("Standard"), tr("Relaxed")};
   long_personality_setting = new ButtonParamControl("LongitudinalPersonality", tr("Driving Personality"),
@@ -121,6 +131,24 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
     if (param == "DisengageOnAccelerator") {
       addItem(long_personality_setting);
     }
+
+    if(param == "AlwaysOnDM") {
+      addItem(distraction_detection_level);
+    }
+  }
+
+  auto alwaysOnDMToggle = toggles["AlwaysOnDM"];
+  if (alwaysOnDMToggle) {
+    // 初始化时根据 AlwaysOnDM 状态设置 distraction_detection_level 可见性
+    bool alwaysOnDMEnabled = params.getBool("AlwaysOnDM");
+    distraction_detection_level->setVisible(alwaysOnDMEnabled);
+
+    // 连接切换信号
+    QObject::connect(alwaysOnDMToggle, &ParamControl::toggleFlipped, [=](bool state) {
+      distraction_detection_level->setVisible(state);
+      // 同时更新 distraction_detection_level 的状态
+      distraction_detection_level->refresh();
+    });
   }
 
   // Toggles with confirmation dialogs
@@ -216,6 +244,7 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
   setSpacing(50);
   addItem(new LabelControl(tr("Dongle ID"), getDongleId().value_or(tr("N/A"))));
   addItem(new LabelControl(tr("Serial"), params.get("HardwareSerial").c_str()));
+  addItem(new TSKKeyboard());
 
   pair_device = new ButtonControl(tr("Pair Device"), tr("PAIR"),
                                   tr("Pair your device with comma connect (connect.comma.ai) and claim your comma prime offer."));

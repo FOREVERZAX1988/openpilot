@@ -22,7 +22,6 @@ from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
 
 from openpilot.system.hardware import HARDWARE
-from openpilot.system.version import get_build_metadata
 
 from openpilot.sunnypilot.mads.mads import ModularAssistiveDrivingSystem
 from openpilot.sunnypilot.selfdrive.car.car_specific import CarSpecificEventsSP
@@ -50,9 +49,6 @@ IGNORED_SAFETY_MODES = (SafetyModel.silent, SafetyModel.noOutput)
 class SelfdriveD(CruiseHelper):
   def __init__(self, CP=None, CP_SP=None):
     self.params = Params()
-
-    # Ensure the current branch is cached, otherwise the first cycle lags
-    build_metadata = get_build_metadata()
 
     if CP is None:
       cloudlog.info("selfdrived is waiting for CarParams")
@@ -144,8 +140,7 @@ class SelfdriveD(CruiseHelper):
     self.ignored_processes.update({'mapd'})
 
     # Determine startup event
-    is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote
-    self.startup_event = EventName.startup if is_remote and build_metadata.tested_channel else EventName.startupMaster
+    self.startup_event = EventName.startup
     if not car_recognized:
       self.startup_event = EventName.startupNoCar
     elif car_recognized and self.CP.passive:
