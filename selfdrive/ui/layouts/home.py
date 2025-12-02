@@ -25,6 +25,7 @@ MODE_Y_OFFSET = 10
 MODE_SCALE_FACTOR = 0.9
 ALERT_ANIM_DURATION = 0.25
 SWIPE_RIGHT_EDGE = 80
+ALERT_OVERLAY_BASE = rl.Color(0, 0, 0, 220)
 NetworkType = log.DeviceState.NetworkType
 
 
@@ -304,14 +305,28 @@ class HomeLayout(Widget):
     else:
       self._alerts_layout.hide_event()
 
+  def _draw_alerts_backdrop(self, rect: rl.Rectangle, alpha: float):
+    alpha = max(0.0, min(1.0, alpha))
+    if alpha <= 0.0:
+      return
+
+    base = rl.Color(ALERT_OVERLAY_BASE.r, ALERT_OVERLAY_BASE.g, ALERT_OVERLAY_BASE.b, int(ALERT_OVERLAY_BASE.a * alpha))
+    # Solid, uniform blackout over the home view (no gradients/lines)
+    rl.draw_rectangle_rec(rect, base)
+
   def _render_alert_overlay(self):
     full_rect = self._content_panel_rect()
     now = rl.get_time()
     t = 1.0
+    fade = 1.0 if self.current_state == HomeLayoutState.ALERTS else 0.0
     if self._alerts_anim_active and self._alerts_anim_direction:
       elapsed = now - self._alerts_anim_start
       t = max(0.0, min(1.0, elapsed / ALERT_ANIM_DURATION))
       t = 1 - pow(1 - t, 3)  # easeOutCubic
+      if self._alerts_anim_direction == 'in':
+        fade = t
+      else:
+        fade = 1.0 - t
     # Slide from left
     if self._alerts_anim_direction == 'in':
       x = full_rect.x - full_rect.width * (1 - t)
@@ -321,7 +336,7 @@ class HomeLayout(Widget):
       x = full_rect.x if self.current_state == HomeLayoutState.ALERTS else full_rect.x - full_rect.width
 
     overlay_rect = rl.Rectangle(x, full_rect.y, full_rect.width, full_rect.height)
-    rl.draw_rectangle_rec(overlay_rect, rl.Color(0, 0, 0, 255))
+    self._draw_alerts_backdrop(overlay_rect, fade)
     self._alerts_layout.render(overlay_rect)
 
     if self._alerts_anim_active and t >= 1.0:
