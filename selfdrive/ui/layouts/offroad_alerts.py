@@ -8,6 +8,7 @@ from openpilot.common.params import Params
 from openpilot.selfdrive.selfdrived.alertmanager import OFFROAD_ALERTS
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.label import UnifiedLabel
+from openpilot.system.ui.lib.animation import smooth_towards
 from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.multilang import tr
 
@@ -103,7 +104,7 @@ class GlassAlertCard(Widget):
 
     # squish animation, anchored to TOP so it doesn’t move down when pressed
     target_scale = self.PRESS_SCALE if self.is_pressed else 1.0
-    self.scale_anim += (target_scale - self.scale_anim) * rl.get_frame_time() * self.PRESS_SPEED
+    self.scale_anim = smooth_towards(self.scale_anim, target_scale, self.PRESS_SPEED, rl.get_frame_time())
 
     rect = self._rect
 
@@ -118,14 +119,14 @@ class GlassAlertCard(Widget):
 
     # glass + glow
     if self.alert_data.severity == -1:
-      glow = rl.Color(100, 255, 150, 80)
+      glow = rl.Color(100, 255, 150, 255)
     elif self.alert_data.severity == 0:
-      glow = rl.Color(255, 190, 90, 80)
+      glow = rl.Color(255, 190, 90, 255)
     else:
-      glow = rl.Color(255, 95, 95, 90)
+      glow = rl.Color(255, 95, 95, 255)
 
-    bg = rl.Color(255, 255, 255, 28)
-    stroke = rl.Color(255, 255, 255, 70)
+    bg = rl.Color(255, 255, 255, 255)
+    stroke = rl.Color(255, 255, 255, 255)
 
     rl.draw_rectangle_rounded(rect, 0.14, 12, glow)
 
