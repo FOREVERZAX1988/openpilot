@@ -123,28 +123,19 @@ class PlatformSelector(Button):
     gui_app.set_modal_overlay(dialog, callback=callback)
 
   def refresh(self):
-<<<<<<< HEAD
-=======
     self.brand = ""
->>>>>>> 9560e30a5df614093c2d192d98755e2080aa6db1
     self.color = style.YELLOW
     self._platform = tr("Unrecognized Vehicle")
     self.set_text(tr("No vehicle selected"))
 
     if bundle := ui_state.params.get("CarPlatformBundle"):
       self._platform = bundle.get("name", "")
-<<<<<<< HEAD
-=======
       self.brand = bundle.get("brand", "")
->>>>>>> 9560e30a5df614093c2d192d98755e2080aa6db1
       self.set_text(self._platform)
       self.color = style.BLUE
     elif ui_state.CP and ui_state.CP.carFingerprint != "MOCK":
       self._platform = ui_state.CP.carFingerprint
-<<<<<<< HEAD
-=======
       self.brand = ui_state.CP.brand
->>>>>>> 9560e30a5df614093c2d192d98755e2080aa6db1
       self.set_text(self._platform)
       self.color = style.GREEN
     self.set_enabled(True)
