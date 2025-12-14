@@ -76,7 +76,7 @@ def startup_master_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
   if "REPLAY" in os.environ:
     branch = "回放模式"
 
-  return StartupAlert("警告：此分支未经测试", branch, alert_status=AlertStatus.userPrompt)
+  return StartupAlert("请注意安全，这不是自动驾驶", branch, alert_status=AlertStatus.userPrompt)
 
 def below_engage_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   """低于启用速度警报"""
