@@ -314,7 +314,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # 更多信息请参见 https://github.com/commaai/openpilot/wiki/Fingerprinting
   EventName.carUnrecognized: {  # 车辆未识别
     ET.PERMANENT: NormalPermanentAlert("行车记录仪模式",
-                                       "车辆未识别",
+                                       "请进入设置-车辆型号，选择车型后重启",
                                        priority=Priority.LOWEST),
   },
 
