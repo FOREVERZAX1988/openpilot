@@ -26,7 +26,7 @@ def register(show_spinner=False) -> str | None:
     with open(Paths.persist_root()+"/comma/dongle_id") as f:
       dongle_id = f.read().strip()
 
-  pubkey = Path(Paths.persist_root()+"/comma/id_rsa.pub")
+  #pubkey = Path(Paths.persist_root()+"/comma/id_rsa.pub")
   #if not pubkey.is_file():
     #dongle_id = UNREGISTERED_DONGLE_ID
     #cloudlog.warning(f"missing public key: {pubkey}")
@@ -37,9 +37,9 @@ def register(show_spinner=False) -> str | None:
       spinner.update("registering device")
 
     # Create registration token, in the future, this key will make JWTs directly
-    with open(Paths.persist_root()+"/comma/id_rsa.pub") as f1, open(Paths.persist_root()+"/comma/id_rsa") as f2:
-      public_key = f1.read()
-      private_key = f2.read()
+    #with open(Paths.persist_root()+"/comma/id_rsa.pub") as f1, open(Paths.persist_root()+"/comma/id_rsa") as f2:
+      #public_key = f1.read()
+      #private_key = f2.read()
 
     # Block until we get the imei
     serial = HARDWARE.get_serial()
@@ -59,10 +59,10 @@ def register(show_spinner=False) -> str | None:
     start_time = time.monotonic()
     while True:
       try:
-        register_token = jwt.encode({'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)}, private_key, algorithm='RS256')
+        #register_token = jwt.encode({'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)}, private_key, algorithm='RS256')
         cloudlog.info("getting pilotauth")
         resp = api_get("v2/pilotauth/", method='POST', timeout=15,
-                       imei=imei1, imei2=imei2, serial=serial, public_key=public_key, register_token=register_token)
+                       imei=imei1, imei2=imei2, serial=serial)
 
         # ========== 【唯一修改处】==========
         if resp.status_code in (402, 403):
