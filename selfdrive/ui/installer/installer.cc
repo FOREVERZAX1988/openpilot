@@ -80,6 +80,56 @@ void run(const char* cmd) {
   assert(err == 0);
 }
 
+static bool maybeRunAgnosUpdater() {
+  // The installer shows "Finishing install..." and then waits for openpilot UI to take over.
+  // If an OS (AGNOS) update is required for the newly installed software, run the updater UI
+  // here so we update before attempting to boot into an incompatible OS/software combo.
+  if (!util::file_exists("/AGNOS")) {
+    return false;
+  }
+
+  const std::string cur = util::strip(util::read_file("/VERSION"));
+  if (cur.empty()) {
+    return false;
+  }
+
+  // SunnyPilot's launcher uses the c3 env/manifest for devices reporting "comma tici".
+  const std::string model = util::strip(util::read_file("/sys/firmware/devicetree/base/model"));
+  const bool use_c3 = (model == "comma tici") && util::file_exists(INSTALL_PATH + "/sunnypilot/system/hardware/c3/launch_env.sh");
+
+  const std::string env_path = use_c3 ? (INSTALL_PATH + "/sunnypilot/system/hardware/c3/launch_env.sh")
+                                      : (INSTALL_PATH + "/launch_env.sh");
+  const std::string manifest_path = use_c3 ? (INSTALL_PATH + "/sunnypilot/system/hardware/c3/agnos.json")
+                                           : (INSTALL_PATH + "/system/hardware/tici/agnos.json");
+
+  if (!util::file_exists(env_path) || !util::file_exists(manifest_path)) {
+    return false;
+  }
+
+  std::string req;
+  try {
+    req = util::strip(util::check_output(util::string_format(
+      "bash -lc 'unset AGNOS_VERSION; source \"%s\"; echo -n \"$AGNOS_VERSION\"'",
+      env_path.c_str()
+    )));
+  } catch (...) {
+    req = "";
+  }
+  if (req.empty() || req == cur) {
+    return false;
+  }
+
+  const std::string agnos_py = INSTALL_PATH + "/system/hardware/tici/agnos.py";
+  const std::string updater = INSTALL_PATH + "/system/hardware/tici/updater";
+  if (!util::file_exists(agnos_py) || !util::file_exists(updater)) {
+    return false;
+  }
+
+  // This takes over the display and reboots on success.
+  std::system(util::string_format("%s %s %s", updater.c_str(), agnos_py.c_str(), manifest_path.c_str()).c_str());
+  return true;
+}
+
 void finishInstall() {
   BeginDrawing();
     ClearBackground(BLACK);
@@ -232,6 +282,10 @@ void cloneFinished(int exitCode) {
 
   run("chmod +x /data/continue.sh.new");
   run("mv /data/continue.sh.new " CONTINUE_PATH);
+
+  // If required, run AGNOS updater UI before we show the finishing screen.
+  // This matches the desired "update between download completion and finishing install" behavior.
+  maybeRunAgnosUpdater();
 
   // wait for the installed software's UI to take over
   finishInstall();
