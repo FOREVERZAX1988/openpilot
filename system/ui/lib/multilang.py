@@ -24,10 +24,13 @@ UNIFONT_LANGUAGES = [
   "ko",
   "ja",
 ]'''
-UNIFONT_LANGUAGES = ["ar","th","ja","ko"]
-CHINA_LANGUAGES = ["zh-CHT","zh-CHS"]
-
+# 只保留一个Multilang类，类属性正确缩进
 class Multilang:
+    # 修改1：将语言集合设为类属性（缩进4个空格/1个Tab，纳入类内部）
+    UNIFONT_LANGUAGES = ["ar","th","ja","ko"]
+    CHINA_LANGUAGES = ["zh-CHT","zh-CHS"]
+
+#定义上移：class Multilang:
   def __init__(self):
     self._params = Params() if Params is not None else None
     self._language: str = "en"
@@ -42,7 +45,7 @@ class Multilang:
 #修改2：增加中文字体
   def requires_china(self) -> bool:
     """Certain languages require china to render their glyphs."""
-    return self._language in CHINA_LANGUAGES
+    return self._language in self.CHINA_LANGUAGES  # 增加self.引用类属性
 
   def requires_unifont(self) -> bool:
     """Certain languages require unifont to render their glyphs."""
