@@ -45,11 +45,11 @@ class Multilang:
 #修改2：增加中文字体
   def requires_china(self) -> bool:
     """Certain languages require china to render their glyphs."""
-    return self._language in self.CHINA_LANGUAGES  # 增加self.引用类属性
+    return self._language in CHINA_LANGUAGES
 
   def requires_unifont(self) -> bool:
     """Certain languages require unifont to render their glyphs."""
-    return self._language in self.UNIFONT_LANGUAGES
+    return self._language in UNIFONT_LANGUAGES
 
   def setup(self):
     try:
