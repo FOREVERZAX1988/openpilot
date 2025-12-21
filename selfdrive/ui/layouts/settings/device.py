@@ -19,6 +19,10 @@ from openpilot.system.ui.widgets.list_view import text_item, button_item, dual_b
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 
+# 1. 全局定义服务器常量（避免重复声明）
+SERVER_KONIK_NAME = "konik"
+SERVER_COMMA_NAME = "comma"
+
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp as button_item
 
@@ -63,8 +67,13 @@ class DeviceLayout(Widget):
     self._power_off_btn = dual_button_item(lambda: tr("Reboot"), lambda: tr("Power Off"),
                                            left_callback=self._reboot_prompt, right_callback=self._power_off_prompt)
     #第三步：Add a server selection button.
-    self._server_btn = button_item(lambda: tr(DESCRIPTIONS['server_selection']),lambda: self._get_current_server(),lambda: tr(DESCRIPTIONS['server_selection']),
-                                        callback=self._show_server_dialog)
+    self._server_btn = button_item(
+            lambda: tr(DESCRIPTIONS['server_selection']),  # 主标题：Switch Server (Konik/Comma)
+            lambda: tr("Current Server: {}").format(self._get_current_server()),  # 副标题：当前服务器
+            lambda: tr(DESCRIPTIONS['server_selection']),  # 描述
+            callback=self._show_server_dialog,
+            enabled=lambda: ui_state.is_offroad  # 延迟判断，避免UI阻塞
+        )
 
     items = [
       text_item(lambda: tr("Dongle ID"), self._params.get("DongleId") or (lambda: tr("N/A"))),
@@ -223,15 +232,21 @@ class DeviceLayout(Widget):
     gui_app.set_modal_overlay(self._training_guide)
 
 # 第五步（共5）：添加服务器切换辅助方法
-  def _get_current_server(self):
+'''  def _get_current_server(self):
     server_type = self._params.get("ServerType", "konik")
     return "Konik" if server_type == "konik" else "Comma"
+'''
+  def _get_current_server(self):
+      server_type = self._params.get("ServerType", SERVER_KONIK_NAME)
+      return SERVER_KONIK_NAME.capitalize() if server_type == SERVER_KONIK_NAME else SERVER_COMMA_NAME.capitalize()
 
   def _show_server_dialog(self):
+      current_server = self._params.get("ServerType", SERVER_KONIK_NAME)
+
     def handle_server_selection(result: int):
         if result == 1 and self._server_dialog:
             selected = self._server_dialog.selection
-            server_type = "konik" if selected == 0 else "comma"
+            server_type = SERVER_KONIK_NAME if selected == 0 else SERVER_COMMA_NAME
             self._params.put("ServerType", server_type)
             # 提示需要重启
             gui_app.set_modal_overlay(alert_dialog(tr("服务器已切换，重启设备后生效")))
@@ -240,6 +255,6 @@ class DeviceLayout(Widget):
     self._server_dialog = MultiOptionDialog(
         tr(DESCRIPTIONS['select_server_title']),
         [tr(DESCRIPTIONS['konik_server']), tr(DESCRIPTIONS['comma_server'])],
-        0 if self._get_current_server() == "Konik" else 1
+        0 if current_server == SERVER_KONIK_NAME else 1  # 正确判断初始选中项
     )
     gui_app.set_modal_overlay(self._server_dialog, callback=handle_server_selection)
