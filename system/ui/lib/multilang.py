@@ -49,19 +49,19 @@ class Multilang:
 
   def requires_unifont(self) -> bool:
     """Certain languages require unifont to render their glyphs."""
-    return self._language in UNIFONT_LANGUAGES
+    return self._language in self.UNIFONT_LANGUAGES
 
   def setup(self):
     try:
-    with TRANSLATIONS_DIR.joinpath(f'app_{self._language}.mo').open('rb') as fh:
-        translation = gettext.GNUTranslations(fh)
-    translation.install()
-    self._translation = translation
-    cloudlog.warning(f"Loaded translations for language: {self._language}")
+        with TRANSLATIONS_DIR.joinpath(f'app_{self._language}.mo').open('rb') as fh:
+            translation = gettext.GNUTranslations(fh)
+        translation.install()
+        self._translation = translation
+        cloudlog.warning(f"Loaded translations for language: {self._language}")
     except FileNotFoundError:
-    cloudlog.error(f"No translation file found for language: {self._language}, using default.")
-    gettext.install('app')
-    self._translation = gettext.NullTranslations()
+        cloudlog.error(f"No translation file found for language: {self._language}, using default.")
+        gettext.install('app')
+        self._translation = gettext.NullTranslations()
 
   def change_language(self, language_code: str) -> None:
     # Reinstall gettext with the selected language
