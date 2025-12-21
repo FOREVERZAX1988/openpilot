@@ -105,7 +105,7 @@ class NavButton(Widget):
       rect.y + (OP.NAV_BTN_HEIGHT - text_size.y) / 2
     )
     # 【修改3（共3）：绘制翻译后的文本】
-#    rl.draw_text_ex(self.parent._font_medium, self.panel_info.name, text_pos, 55, 0, text_color)
+    #rl.draw_text_ex(self.parent._font_medium, self.panel_info.name, text_pos, 55, 0, text_color)
     rl.draw_text_ex(self.parent._font_medium, translated_text, text_pos, 55, 0, text_color)
     # Store button rect for click detection
     self.panel_info.button_rect = rect
