@@ -251,7 +251,7 @@ class DeviceLayout(Widget):
             server_type = SERVER_KONIK_NAME if selected == 0 else SERVER_COMMA_NAME
             self._params.put("ServerType", server_type)
             # 提示需要重启
-            gui_app.set_modal_overlay(alert_dialog(tr("服务器已切换，重启设备后生效")))
+            gui_app.set_modal_overlay(alert_dialog(tr("The server has been switched. The change will take effect after the device is restarted.")))
         self._server_dialog = None
 
     self._server_dialog = MultiOptionDialog(
