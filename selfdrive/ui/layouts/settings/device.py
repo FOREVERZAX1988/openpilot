@@ -28,6 +28,11 @@ DESCRIPTIONS = {
   'driver_camera': tr_noop("Preview the driver facing camera to ensure that driver monitoring has good visibility. (vehicle must be off)"),
   'reset_calibration': tr_noop("sunnypilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."),
   'review_guide': tr_noop("Review the rules, features, and limitations of sunnypilot"),
+  #第一步（共5）：Add a description to the new server switch button.
+  'server_selection': tr_noop("Switch the connected server (Konik or Comma)"),
+  'select_server_title': tr_noop("select server"), 
+  'konik_server': tr_noop("konik server"),
+  'comma_server': tr_noop("comma server"),
 }
 
 
@@ -41,7 +46,7 @@ class DeviceLayout(Widget):
     self._pair_device_dialog: PairingDialog | None = None
     self._fcc_dialog: HtmlModal | None = None
     self._training_guide: TrainingGuide | None = None
-
+    self._server_dialog: MultiOptionDialog | None = None  # 第二步（共5）：Add a description to the new server switch button.
     items = self._initialize_items()
     self._scroller = Scroller(items, line_separator=True, spacing=0)
 
@@ -57,6 +62,9 @@ class DeviceLayout(Widget):
 
     self._power_off_btn = dual_button_item(lambda: tr("Reboot"), lambda: tr("Power Off"),
                                            left_callback=self._reboot_prompt, right_callback=self._power_off_prompt)
+    #第三步：Add a server selection button.
+    self._server_btn = button_item(lambda: tr(DESCRIPTIONS['server_selection']),lambda: self._get_current_server(),lambda: tr(DESCRIPTIONS['server_selection']),
+                                        callback=self._show_server_dialog)
 
     items = [
       text_item(lambda: tr("Dongle ID"), self._params.get("DongleId") or (lambda: tr("N/A"))),
@@ -69,6 +77,8 @@ class DeviceLayout(Widget):
                   self._on_review_training_guide, enabled=ui_state.is_offroad),
       regulatory_btn := button_item(lambda: tr("Regulatory"), lambda: tr("VIEW"), callback=self._on_regulatory, enabled=ui_state.is_offroad),
       button_item(lambda: tr("Change Language"), lambda: tr("CHANGE"), callback=self._show_language_dialog),
+      # 第四步（共5）：Add a server selection button.
+      self._server_btn,  # 添加到项目列表中
       self._power_off_btn,
     ]
     regulatory_btn.set_visible(TICI)
@@ -211,3 +221,25 @@ class DeviceLayout(Widget):
 
       self._training_guide = TrainingGuide(completed_callback=completed_callback)
     gui_app.set_modal_overlay(self._training_guide)
+
+# 第五步（共5）：添加服务器切换辅助方法
+  def _get_current_server(self):
+    server_type = self._params.get("ServerType", "konik")
+    return "Konik" if server_type == "konik" else "Comma"
+
+  def _show_server_dialog(self):
+    def handle_server_selection(result: int):
+        if result == 1 and self._server_dialog:
+            selected = self._server_dialog.selection
+            server_type = "konik" if selected == 0 else "comma"
+            self._params.put("ServerType", server_type)
+            # 提示需要重启
+            gui_app.set_modal_overlay(alert_dialog(tr("服务器已切换，重启设备后生效")))
+        self._server_dialog = None
+
+    self._server_dialog = MultiOptionDialog(
+        tr(DESCRIPTIONS['select_server_title']),
+        [tr(DESCRIPTIONS['konik_server']), tr(DESCRIPTIONS['comma_server'])],
+        0 if self._get_current_server() == "Konik" else 1
+    )
+    gui_app.set_modal_overlay(self._server_dialog, callback=handle_server_selection)

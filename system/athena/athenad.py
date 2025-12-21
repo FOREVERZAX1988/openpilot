@@ -42,7 +42,19 @@ from openpilot.system.version import get_build_metadata
 from openpilot.system.hardware.hw import Paths
 
 
-ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.konik.ai')
+# 修改athenad.py顶部的ATHENA_HOST定义
+# 原代码:
+# ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
+# 替换为:
+def get_athena_host():
+    params = Params()
+    server_type = params.get("ServerType", "konik")
+    if server_type == "comma":
+        return os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
+    else:
+        return os.getenv('ATHENA_HOST', 'wss://athena.konik.ai')
+
+ATHENA_HOST = get_athena_host()
 HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
 LOCAL_PORT_WHITELIST = {22, }  # SSH
 

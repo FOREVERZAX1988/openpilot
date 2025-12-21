@@ -2,7 +2,17 @@ import os
 
 from openpilot.common.api.base import BaseApi
 
-API_HOST = os.getenv('API_HOST', 'https://api.konik.ai ')
+from openpilot.common.params import Params
+
+def get_api_host():
+    params = Params()
+    server_type = params.get("ServerType", "konik")
+    if server_type == "comma":
+        return os.getenv('API_HOST', 'https://api.commadotai.com')
+    else:
+        return os.getenv('API_HOST', 'https://api.konik.ai')
+
+API_HOST = get_api_host()
 
 
 class CommaConnectApi(BaseApi):
