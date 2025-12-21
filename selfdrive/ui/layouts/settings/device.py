@@ -18,6 +18,8 @@ from openpilot.system.ui.widgets.html_render import HtmlModal
 from openpilot.system.ui.widgets.list_view import text_item, button_item, dual_button_item
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
 from openpilot.system.ui.widgets.scroller_tici import Scroller
+#new add
+from system.ui.ui_state import ui_state  # 确保导入了ui_state
 
 # 1. 全局定义服务器常量（避免重复声明）
 SERVER_KONIK_NAME = "konik"
