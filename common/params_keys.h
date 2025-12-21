@@ -116,6 +116,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SshEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"TermsVersion", {PERSISTENT, STRING}},
     {"TrainingVersion", {PERSISTENT, STRING}},
+	{"ServerType", ParamKeyFlag::PERSISTENT, ParamKeyType::STRING, ""},
     {"UbloxAvailable", {PERSISTENT, BOOL}},
     {"UpdateAvailable", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"UpdateFailedCount", {CLEAR_ON_MANAGER_START, INT}},
