@@ -91,8 +91,41 @@ class DeviceLayout(Widget):
         self._update_calib_description()
       self._select_language_dialog = None
 
-    self._select_language_dialog = MultiOptionDialog(tr("Select a language"), multilang.languages, multilang.codes[multilang.language],
-                                                     option_font_weight=FontWeight.UNIFONT)
+    # 第一步：拆分语言组（避免穿插导致自动分组空行）
+    normal_langs = {}    # 普通语言（无需特殊字体）
+    unifont_langs = {}   # 需要Unifont的语言
+    china_langs = {}     # 需要中文字体的语言
+
+    for lang_name, lang_code in multilang.languages.items():
+        if lang_code in multilang.CHINA_LANGUAGES:
+            china_langs[lang_name] = lang_code
+        elif lang_code in multilang.UNIFONT_LANGUAGES:
+            unifont_langs[lang_name] = lang_code
+        else:
+            normal_langs[lang_name] = lang_code
+
+    # 有序合并（普通→Unifont→中文，避免布局错乱）
+    ordered_languages = {**normal_langs, **unifont_langs, **china_langs}
+
+    # 第二步：动态指定字体权重（根据当前语言适配，不再硬编码UNIFONT）
+    current_lang_code = multilang.language
+    if current_lang_code in multilang.CHINA_LANGUAGES:
+        target_font = FontWeight.CHINA
+    elif current_lang_code in multilang.UNIFONT_LANGUAGES:
+        target_font = FontWeight.UNIFONT
+    else:
+        target_font = FontWeight.NORMAL
+
+    # 第三步：传入优化后的参数创建对话框
+    self._select_language_dialog = MultiOptionDialog(
+        tr("Select a language"),
+        ordered_languages,  # 有序语言列表
+        multilang.codes[multilang.language],
+        option_font_weight=target_font  # 动态字体权重
+    )
+
+#    self._select_language_dialog = MultiOptionDialog(tr("Select a language"), multilang.languages, multilang.codes[multilang.language],
+#                                                     option_font_weight=FontWeight.UNIFONT)
     gui_app.set_modal_overlay(self._select_language_dialog, callback=handle_language_selection)
 
   def _show_driver_camera(self):
