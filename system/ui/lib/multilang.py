@@ -15,6 +15,7 @@ UI_DIR = files("openpilot.selfdrive.ui")
 TRANSLATIONS_DIR = UI_DIR.joinpath("translations")
 LANGUAGES_FILE = TRANSLATIONS_DIR.joinpath("languages.json")
 
+'''修改1：将中文字体从UNIFONT中独立出来
 UNIFONT_LANGUAGES = [
   "ar",
   "th",
@@ -22,8 +23,9 @@ UNIFONT_LANGUAGES = [
   "zh-CHS",
   "ko",
   "ja",
-]
-
+]'''
+UNIFONT_LANGUAGES = ["ar","th","ja","ko"]
+CHINA_LANGUAGES = ["zh-CHT","zh-CHS"]
 
 class Multilang:
   def __init__(self):

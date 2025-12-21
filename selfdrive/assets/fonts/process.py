@@ -11,7 +11,9 @@ LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
 
 GLYPH_PADDING = 6
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
-UNIFONT_LANGUAGES = {"ar", "th", "zh-CHT", "zh-CHS", "ko", "ja"}
+#修改1（共3步）:将中文字体独立出来。原代码：UNIFONT_LANGUAGES = {"ar", "th", "zh-CHT", "zh-CHS", "ko", "ja"}
+UNIFONT_LANGUAGES = {"ar", "th", "ko", "ja"}
+CHINA_LANGUAGES = {"zh-CHT", "zh-CHS"}
 
 
 def _languages():
@@ -32,7 +34,13 @@ def _char_sets():
       chars = set(po_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
       continue
-    (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
+#修改2（共3步）:扩容字符集：    (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
+    if code in CHINA_LANGUAGES:
+      unifont.update(chars)  # 中文的字符纳入unifont_cp（后续china字体用这个字符集）
+    elif code in UNIFONT_LANGUAGES:
+      unifont.update(chars)
+    else:
+      base.update(chars)
 
   return tuple(sorted(ord(c) for c in base)), tuple(sorted(ord(c) for c in unifont))
 
@@ -123,7 +131,10 @@ def main():
   for font in fonts:
     if "emoji" in font.name.lower():
       continue
-    glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
+#修改3（共3步）:按字体文件名特征动态选择字形编码集:    glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
+#    glyphs = unifont_cp if font.stem.lower().startswith("unifont") or font.stem.lower().startswith("china") else base_cp
+    target_prefixes = ["unifont", "china"]  # 修改为文件配置集合，方便后续增加字体
+    glyphs = unifont_cp if any(font.stem.lower().startswith(p) for p in target_prefixes) else base_cp
     _process_font(font, glyphs)
   return 0
 
