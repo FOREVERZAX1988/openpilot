@@ -15,75 +15,64 @@ UI_DIR = files("openpilot.selfdrive.ui")
 TRANSLATIONS_DIR = UI_DIR.joinpath("translations")
 LANGUAGES_FILE = TRANSLATIONS_DIR.joinpath("languages.json")
 
-'''修改1（共2）：将中文字体从UNIFONT中独立出来
-UNIFONT_LANGUAGES = [
-  "ar",
-  "th",
-  "zh-CHT",
-  "zh-CHS",
-  "ko",
-  "ja",
-]'''
-# 只保留一个Multilang类，类属性正确缩进
 class Multilang:
-    # 修改1：将语言集合设为类属性（缩进4个空格/1个Tab，纳入类内部）
-    UNIFONT_LANGUAGES = ["ar","th","ja","ko"]
-    CHINA_LANGUAGES = ["zh-CHT","zh-CHS"]
+    # 语言集合类属性
+    UNIFONT_LANGUAGES = ["ar", "th", "ja", "ko"]
+    CHINA_LANGUAGES = ["zh-CHT", "zh-CHS"]
 
-#定义上移：class Multilang:
-  def __init__(self):
-    self._params = Params() if Params is not None else None
-    self._language: str = "en"
-    self.languages = {}
-    self.codes = {}
-    self._translation: gettext.NullTranslations | gettext.GNUTranslations = gettext.NullTranslations()
-    self._load_languages()
+    def __init__(self):
+        self._params = Params() if Params is not None else None
+        self._language: str = "en"
+        self.languages = {}
+        self.codes = {}
+        self._translation: gettext.NullTranslations | gettext.GNUTranslations = gettext.NullTranslations()
+        self._load_languages()
 
-  @property
-  def language(self) -> str:
-    return self._language
-#修改2：增加中文字体
-  def requires_china(self) -> bool:
-    """Certain languages require china to render their glyphs."""
-    return self._language in CHINA_LANGUAGES
+    @property
+    def language(self) -> str:
+        return self._language
 
-  def requires_unifont(self) -> bool:
-    """Certain languages require unifont to render their glyphs."""
-    return self._language in UNIFONT_LANGUAGES
+    def requires_china(self) -> bool:
+        """Certain languages require china to render their glyphs."""
+        return self._language in self.CHINA_LANGUAGES  # 修正类属性引用
 
-  def setup(self):
-    try:
-        with TRANSLATIONS_DIR.joinpath(f'app_{self._language}.mo').open('rb') as fh:
-            translation = gettext.GNUTranslations(fh)
-        translation.install()
-        self._translation = translation
-        cloudlog.warning(f"Loaded translations for language: {self._language}")
-    except FileNotFoundError:
-        cloudlog.error(f"No translation file found for language: {self._language}, using default.")
-        gettext.install('app')
-        self._translation = gettext.NullTranslations()
+    def requires_unifont(self) -> bool:
+        """Certain languages require unifont to render their glyphs."""
+        return self._language in self.UNIFONT_LANGUAGES  # 修正类属性引用
 
-  def change_language(self, language_code: str) -> None:
-    # Reinstall gettext with the selected language
-    self._params.put("LanguageSetting", language_code)
-    self._language = language_code
-    self.setup()
+    def setup(self):
+        try:
+            with TRANSLATIONS_DIR.joinpath(f'app_{self._language}.mo').open('rb') as fh:
+                translation = gettext.GNUTranslations(fh)
+            translation.install()
+            self._translation = translation
+            cloudlog.warning(f"Loaded translations for language: {self._language}")
+        except FileNotFoundError:
+            cloudlog.error(f"No translation file found for language: {self._language}, using default.")
+            gettext.install('app')
+            self._translation = gettext.NullTranslations()
 
-  def tr(self, text: str) -> str:
-    return self._translation.gettext(text)
+    def change_language(self, language_code: str) -> None:
+        # Reinstall gettext with the selected language
+        self._params.put("LanguageSetting", language_code)
+        self._language = language_code
+        self.setup()
 
-  def trn(self, singular: str, plural: str, n: int) -> str:
-    return self._translation.ngettext(singular, plural, n)
+    def tr(self, text: str) -> str:
+        return self._translation.gettext(text)
 
-  def _load_languages(self):
-    with LANGUAGES_FILE.open(encoding='utf-8') as f:
-      self.languages = json.load(f)
-    self.codes = {v: k for k, v in self.languages.items()}
+    def trn(self, singular: str, plural: str, n: int) -> str:
+        return self._translation.ngettext(singular, plural, n)
 
-    if self._params is not None:
-      lang = str(self._params.get("LanguageSetting")).removeprefix("main_")
-      if lang in self.codes:
-        self._language = lang
+    def _load_languages(self):
+        with LANGUAGES_FILE.open(encoding='utf-8') as f:
+            self.languages = json.load(f)
+        self.codes = {v: k for k, v in self.languages.items()}
+
+        if self._params is not None:
+            lang = str(self._params.get("LanguageSetting")).removeprefix("main_")
+            if lang in self.codes:
+                self._language = lang
 
 
 multilang = Multilang()
@@ -94,4 +83,4 @@ tr, trn = multilang.tr, multilang.trn
 
 # no-op marker for static strings translated later
 def tr_noop(s: str) -> str:
-  return s
+    return s
