@@ -83,45 +83,53 @@ class DeviceLayout(Widget):
   def _render(self, rect):
     self._scroller.render(rect)
 
-  def _show_language_dialog(self):
+def _show_language_dialog(self):
     def handle_language_selection(result: int):
-      if result == 1 and self._select_language_dialog:
-        selected_language = multilang.languages[self._select_language_dialog.selection]
-        multilang.change_language(selected_language)
-        self._update_calib_description()
-      self._select_language_dialog = None
+        if result == 1 and self._select_language_dialog:
+            # 过滤可能的空选项，确保选中有效语言
+            selected_lang_name = self._select_language_dialog.selection
+            if selected_lang_name in multilang.languages:
+                selected_language = multilang.languages[selected_lang_name]
+                multilang.change_language(selected_language)
+                self._update_calib_description()
+        self._select_language_dialog = None
 
-    # 第一步：拆分语言组（避免穿插导致自动分组空行）
-    normal_langs = {}    # 普通语言（无需特殊字体）
-    unifont_langs = {}   # 需要Unifont的语言
-    china_langs = {}     # 需要中文字体的语言
+    # 1. 过滤空语言条目，确保列表无空白项
+    valid_languages = {
+        lang_name: lang_code
+        for lang_name, lang_code in multilang.languages.items()
+        if lang_name.strip() and lang_code.strip()  # 排除空名称/空代码
+    }
 
-    for lang_name, lang_code in multilang.languages.items():
-        if lang_code in multilang.CHINA_LANGUAGES:
-            china_langs[lang_name] = lang_code
-        elif lang_code in multilang.UNIFONT_LANGUAGES:
-            unifont_langs[lang_name] = lang_code
-        else:
-            normal_langs[lang_name] = lang_code
+    # 2. 按语言类型有序分组（避免字体切换导致的行高间隙）
+    china_langs = {k: v for k, v in valid_languages.items() if v in multilang.CHINA_LANGUAGES}
+    unifont_langs = {k: v for k, v in valid_languages.items() if v in multilang.UNIFONT_LANGUAGES}
+    normal_langs = {k: v for k, v in valid_languages.items() if v not in (multilang.CHINA_LANGUAGES | multilang.UNIFONT_LANGUAGES)}
 
-    # 有序合并（普通→Unifont→中文，避免布局错乱）
+    # 合并为「普通语言 → Unifont语言 → 中文语言」（避免字体频繁切换）
     ordered_languages = {**normal_langs, **unifont_langs, **china_langs}
 
-    # 第二步：动态指定字体权重（根据当前语言适配，不再硬编码UNIFONT）
+    # 3. 统一布局参数（强制行高一致，消除字体差异导致的空白）
     current_lang_code = multilang.language
+    # 选择对应字体权重，同时强制统一行高
     if current_lang_code in multilang.CHINA_LANGUAGES:
         target_font = FontWeight.CHINA
+        forced_line_height = 24  # 按中文字体行高统一
     elif current_lang_code in multilang.UNIFONT_LANGUAGES:
         target_font = FontWeight.UNIFONT
+        forced_line_height = 24  # 统一行高
     else:
         target_font = FontWeight.NORMAL
+        forced_line_height = 24  # 统一行高
 
-    # 第三步：传入优化后的参数创建对话框
+    # 4. 创建对话框时指定统一行高（若MultiOptionDialog支持line_height参数）
     self._select_language_dialog = MultiOptionDialog(
         tr("Select a language"),
-        ordered_languages,  # 有序语言列表
+        ordered_languages,
         multilang.codes[multilang.language],
-        option_font_weight=target_font  # 动态字体权重
+        option_font_weight=target_font,
+        line_height=forced_line_height,  # 强制统一行高（关键）
+        spacing=0  # 消除选项间多余间距
     )
 
 #    self._select_language_dialog = MultiOptionDialog(tr("Select a language"), multilang.languages, multilang.codes[multilang.language],
