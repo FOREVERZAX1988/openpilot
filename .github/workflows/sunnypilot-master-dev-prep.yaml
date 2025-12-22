@@ -3,8 +3,8 @@ name: Build dev
 env:
   DEFAULT_SOURCE_BRANCH: "master"
   DEFAULT_TARGET_BRANCH: "master-dev"
-  LFS_URL: 'https://gitlab.com/sunnypilot/public/sunnypilot-new-lfs.git/info/lfs'
-  LFS_PUSH_URL: 'ssh://git@gitlab.com/sunnypilot/public/sunnypilot-new-lfs.git'
+  LFS_URL: 'https://huggingface.co/hoofpilot/hoofpilot-lfs.git/info/lfs'
+  LFS_PUSH_URL: 'https://huggingface.co/hoofpilot/hoofpilot-lfs.git/info/lfs'
 
 on:
   push:
