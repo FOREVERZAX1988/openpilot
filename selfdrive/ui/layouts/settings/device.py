@@ -216,16 +216,16 @@ class DeviceLayout(Widget):
       self._training_guide = TrainingGuide(completed_callback=completed_callback)
     gui_app.set_modal_overlay(self._training_guide)
 
-# 服务器切换按钮增加-修改3：添加按钮回调函数（在device.py类中）
+  # 服务器切换按钮增加-修改3：调整缩进，作为类的成员方法
   def _toggle_server(self):
       def handle_confirm(result: int):
-        if result == DialogResult.CONFIRM:
-            params = Params()
-            current = params.get_bool("UseKonikServer", False)
-            params.put_bool("UseKonikServer", not current)
-            # 重新渲染更新按钮文本
-            if self._rect is not None:
-                self._scroller.render(self._rect)
+          if result == DialogResult.CONFIRM:
+              params = Params()
+              current = params.get_bool("UseKonikServer", False)
+              params.put_bool("UseKonikServer", not current)
+              # 重新渲染更新按钮文本
+              if self._rect is not None:
+                  self._scroller.render(self._rect)
 
       # 显示确认对话框
       target_server = tr("Konik") if not Params().get_bool("UseKonikServer", False) else tr("Comma")
