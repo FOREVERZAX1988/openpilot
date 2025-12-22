@@ -41,7 +41,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.system.version import get_build_metadata
 from openpilot.system.hardware.hw import Paths
 
-# --------------------------
+# 修改1增加动态切换服务器：
 def get_athena_host():
     from openpilot.common.params import Params
     return "wss://athena.konik.ai" if Params().get_bool("UseKonikServer") else "wss://athena.comma.ai"
@@ -517,7 +517,7 @@ def startLocalProxy(global_end_event: threading.Event, remote_ws_uri: str, local
   dongle_id = Params().get("DongleId")
   identity_token = Api(dongle_id).get_token()
 #  ws = create_connection(remote_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
-# 替换为动态生成的地址
+# 修改2：替换为动态生成的地址
   dynamic_ws_uri = get_athena_host() + "/ws/v2/" + dongle_id
   ws = create_connection(dynamic_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
 
@@ -921,7 +921,8 @@ def main(exit_event: threading.Event = None):
   dongle_id = params.get("DongleId")
   UploadQueueCache.initialize(upload_queue)
 
-  ws_uri = ATHENA_HOST + "/ws/v2/" + dongle_id
+  #修改3：获取方式改为上述动态函数；
+  ws_uri = get_athena_host() + "/ws/v2/" + dongle_id
   api = Api(dongle_id)
 
   conn_start = None
