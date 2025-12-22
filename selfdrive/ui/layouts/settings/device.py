@@ -227,6 +227,11 @@ class DeviceLayout(Widget):
               params = Params()
               current = params.get_bool("UseKonikServer", False)
               params.put_bool("UseKonikServer", not current)
+               # 新增：弹出重启提示
+              alert_dialog(tr("Server switched successfully! Please reboot the device to apply changes.")).show()
+               # 新增：触发athenad和manager重启（需设备支持该参数触发重启）
+              params.put_bool_nonblocking("RestartAthenad", True)
+              params.put_bool_nonblocking("DoReboot", True)  # 或仅重启服务，而非设备
               # 重新渲染更新按钮文本
               if self._rect is not None:
                   self._scroller.render(self._rect)
