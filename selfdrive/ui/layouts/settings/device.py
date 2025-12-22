@@ -20,6 +20,8 @@ from openpilot.system.ui.widgets.html_render import HtmlModal
 from openpilot.system.ui.widgets.list_view import text_item, button_item, dual_button_item
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
 from openpilot.system.ui.widgets.scroller_tici import Scroller
+#新增：导入获取API服务器的函数
+from openpilot.common.api.comma_connect import get_api_host  # 导入获取API服务器的函数
 
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp as button_item
@@ -63,6 +65,8 @@ class DeviceLayout(Widget):
     items = [
       text_item(lambda: tr("Dongle ID"), self._params.get("DongleId") or (lambda: tr("N/A"))),
       text_item(lambda: tr("Serial"), self._params.get("HardwareSerial") or (lambda: tr("N/A"))),
+      # 新增：显示当前API服务器
+      text_item(lambda: tr("Current API Server"), lambda: get_api_host()),  # 动态获取并显示服务器地址
       self._pair_device_btn,
       button_item(lambda: tr("Driver Camera"), lambda: tr("PREVIEW"), lambda: tr(DESCRIPTIONS['driver_camera']),
                   callback=self._show_driver_camera, enabled=ui_state.is_offroad),
