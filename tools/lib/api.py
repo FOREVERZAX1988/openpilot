@@ -4,7 +4,7 @@ from requests.adapters import HTTPAdapter, Retry
 #API_HOST = os.getenv('API_HOST', 'https://api.konik.ai')
 # 修改API_HOST为动态获取
 def get_api_host():
-    from common.params import Params
+    from openpilot.common.params import Params
     return "https://api.konik.ai" if Params().get_bool("UseKonikServer") else "https://api.commadotai.com"
 
 # TODO: this should be merged into common.api
