@@ -1,7 +1,5 @@
 import os
 import math
-#服务器切换按钮增加-修改1：标准库导入，前置更规整。
-from typing import Callable
 
 from cereal import messaging, log
 from openpilot.common.basedir import BASEDIR
@@ -71,8 +69,6 @@ class DeviceLayout(Widget):
                   self._on_review_training_guide, enabled=ui_state.is_offroad),
       regulatory_btn := button_item(lambda: tr("Regulatory"), lambda: tr("VIEW"), callback=self._on_regulatory, enabled=ui_state.is_offroad),
       button_item(lambda: tr("Change Language"), lambda: tr("CHANGE"), callback=self._show_language_dialog),
-      #服务器切换按钮增加-修改2：添加切换服务器的按钮，用于触发服务器切换逻辑。
-      button_item(lambda: tr("Server"), lambda: tr("KONIK") if Params().getBool("UseKonikServer") else tr("COMMA"), lambda: tr("Switch between Konik and Comma servers"), callback=self._toggle_server, enabled=ui_state.is_offroad),
       self._power_off_btn,
     ]
     regulatory_btn.set_visible(TICI)
@@ -215,22 +211,3 @@ class DeviceLayout(Widget):
 
       self._training_guide = TrainingGuide(completed_callback=completed_callback)
     gui_app.set_modal_overlay(self._training_guide)
-
-# 服务器切换按钮增加-修改3：添加按钮回调函数（在device.py类中）
-  def _toggle_server(self):
-      params = Params()
-      current = params.getBool("UseKonikServer")
-    # 切换状态并保存
-      params.putBool("UseKonikServer", not current)
-    # 可以添加提示重启的逻辑（如果需要立即生效）
-      self._show_restart_prompt()
-
-# 服务器切换按钮增加-修改3：可选：添加重启提示（如果需要）
-  def _show_restart_prompt(self):
-      from openpilot.common.alertmanager import AlertManager
-      AlertManager().show_alert(
-          tr("Server changed"), 
-          tr("Please reboot to apply server settings"), 
-          [tr("OK")], 
-          lambda res: None
-      )
