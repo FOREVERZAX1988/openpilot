@@ -225,9 +225,9 @@ class DeviceLayout(Widget):
       # 强制Scroller重新渲染，更新按钮文本
       self._scroller.render(self._rect)  # self._rect是当前布局的矩形区域，由父类Widget维护
       # 可以添加提示重启的逻辑（如果需要立即生效）
-    '''  self._show_restart_prompt()
+      self._show_restart_prompt()
 
- 服务器切换按钮增加-修改3：可选：添加重启提示（如果需要）
+ #服务器切换按钮增加-修改3：可选：添加重启提示（如果需要）
   def _show_restart_prompt(self):
       from openpilot.common.alertmanager import AlertManager
       AlertManager().show_alert(
@@ -235,4 +235,4 @@ class DeviceLayout(Widget):
           tr("Please reboot to apply server settings"), 
           [tr("OK")], 
           lambda res: None
-      )'''
+      )
