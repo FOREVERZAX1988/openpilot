@@ -227,10 +227,10 @@ class DeviceLayout(Widget):
             if self._rect is not None:
                 self._scroller.render(self._rect)
 
-    # 显示确认对话框
-    target_server = tr("Konik") if not Params().get_bool("UseKonikServer", False) else tr("Comma")
-    dialog = ConfirmDialog(
-        tr(f"Switch server to {target_server}?"),
-        tr("Confirm")
-    )
-    gui_app.set_modal_overlay(dialog, callback=handle_confirm)
+      # 显示确认对话框
+      target_server = tr("Konik") if not Params().get_bool("UseKonikServer", False) else tr("Comma")
+      dialog = ConfirmDialog(
+          tr(f"Switch server to {target_server}?"),
+          tr("Confirm")
+      )
+      gui_app.set_modal_overlay(dialog, callback=handle_confirm)
