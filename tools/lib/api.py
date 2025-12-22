@@ -1,7 +1,11 @@
 import os
 import requests
 from requests.adapters import HTTPAdapter, Retry
-API_HOST = os.getenv('API_HOST', 'https://api.konik.ai')
+#API_HOST = os.getenv('API_HOST', 'https://api.konik.ai')
+# 修改API_HOST为动态获取
+def get_api_host():
+    from common.params import Params
+    return "https://api.konik.ai" if Params().get_bool("UseKonikServer") else "https://api.commadotai.com"
 
 # TODO: this should be merged into common.api
 
@@ -16,7 +20,7 @@ class CommaApi:
     self.session.mount('https://', HTTPAdapter(max_retries=retries))
 
   def request(self, method, endpoint, **kwargs):
-    with self.session.request(method, API_HOST + '/' + endpoint, **kwargs) as resp:
+    with self.session.request(method, get_api_host() + '/' + endpoint, **kwargs) as resp:
       resp_json = resp.json()
       if isinstance(resp_json, dict) and resp_json.get('error'):
         if resp.status_code in [401, 403]:
