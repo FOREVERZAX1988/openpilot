@@ -76,7 +76,7 @@ class DeviceLayout(Widget):
       regulatory_btn := button_item(lambda: tr("Regulatory"), lambda: tr("VIEW"), callback=self._on_regulatory, enabled=ui_state.is_offroad),
       button_item(lambda: tr("Change Language"), lambda: tr("CHANGE"), callback=self._show_language_dialog),
       #服务器切换按钮增加-修改2：添加切换服务器的按钮，用于触发服务器切换逻辑。
-      button_item(lambda: tr("Server"), lambda: tr("KONIK") if Params().get_bool("UseKonikServer", False) else tr("COMMA"), lambda: tr("Switch between Konik and Comma servers"), callback=self._toggle_server, enabled=ui_state.is_offroad),
+      button_item(lambda: tr("Server"), lambda: tr("KONIK") if Params().get_bool("UseKonikServer", False) else tr("COMMA"), lambda: tr("Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"), callback=self._toggle_server, enabled=ui_state.is_offroad),
       self._power_off_btn,
     ]
     regulatory_btn.set_visible(TICI)
@@ -227,8 +227,6 @@ class DeviceLayout(Widget):
               params = Params()
               current = params.get_bool("UseKonikServer", False)
               params.put_bool("UseKonikServer", not current)
-               # 新增：弹出重启提示
-              alert_dialog(tr("Server switched successfully! Please reboot the device to apply changes.")).show()
                # 新增：触发athenad和manager重启（需设备支持该参数触发重启）
               params.put_bool_nonblocking("RestartAthenad", True)
               params.put_bool_nonblocking("DoReboot", True)  # 或仅重启服务，而非设备
