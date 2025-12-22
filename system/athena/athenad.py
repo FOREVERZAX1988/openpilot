@@ -31,7 +31,7 @@ from websocket import (ABNF, WebSocket, WebSocketException, WebSocketTimeoutExce
 import cereal.messaging as messaging
 from cereal import log
 from cereal.services import SERVICE_LIST
-from openpilot.common.api import Api, get_key_pair
+from openpilot.common.api import Api
 from openpilot.common.utils import CallbackReader, get_upload_stream
 from openpilot.common.params import Params
 from openpilot.common.realtime import set_core_affinity
@@ -41,8 +41,12 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.system.version import get_build_metadata
 from openpilot.system.hardware.hw import Paths
 
+# --------------------------
+def get_athena_host():
+    from openpilot.common.params import Params
+    return "wss://athena.konik.ai" if Params().get_bool("UseKonikServer") else "wss://athena.comma.ai"
 
-ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.konik.ai')
+#ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
 HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
 LOCAL_PORT_WHITELIST = {22, }  # SSH
 
@@ -512,7 +516,10 @@ def startLocalProxy(global_end_event: threading.Event, remote_ws_uri: str, local
   cloudlog.debug("athena.startLocalProxy.starting")
   dongle_id = Params().get("DongleId")
   identity_token = Api(dongle_id).get_token()
-  ws = create_connection(remote_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
+#  ws = create_connection(remote_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
+# 替换为动态生成的地址
+  dynamic_ws_uri = get_athena_host() + "/ws/v2/" + dongle_id
+  ws = create_connection(dynamic_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
 
   return start_local_proxy_shim(global_end_event, local_port, ws)
 
@@ -554,8 +561,11 @@ def start_local_proxy_shim(global_end_event: threading.Event, local_port: int, w
 
 @dispatcher.add_method
 def getPublicKey() -> str | None:
-  _, _, public_key = get_key_pair()
-  return public_key
+  if not os.path.isfile(Paths.persist_root() + '/comma/id_rsa.pub'):
+    return None
+
+  with open(Paths.persist_root() + '/comma/id_rsa.pub') as f:
+    return f.read()
 
 
 @dispatcher.add_method

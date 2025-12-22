@@ -218,9 +218,19 @@ class DeviceLayout(Widget):
 
 # 服务器切换按钮增加-修改3：添加按钮回调函数（在device.py类中）
   def _toggle_server(self):
-      params = Params()
-      current = params.get_bool("UseKonikServer", False)
-      # 切换状态并保存
-      params.put_bool("UseKonikServer", not current)
-      # 强制Scroller重新渲染，更新按钮文本
-      self._scroller.render(self._rect)  # self._rect是当前布局的矩形区域，由父类Widget维护
+      def handle_confirm(result: int):
+        if result == DialogResult.CONFIRM:
+            params = Params()
+            current = params.get_bool("UseKonikServer", False)
+            params.put_bool("UseKonikServer", not current)
+            # 重新渲染更新按钮文本
+            if self._rect is not None:
+                self._scroller.render(self._rect)
+
+    # 显示确认对话框
+    target_server = tr("Konik") if not Params().get_bool("UseKonikServer", False) else tr("Comma")
+    dialog = ConfirmDialog(
+        tr(f"Switch server to {target_server}?"),
+        tr("Confirm")
+    )
+    gui_app.set_modal_overlay(dialog, callback=handle_confirm)
