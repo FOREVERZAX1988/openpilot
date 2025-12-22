@@ -72,7 +72,7 @@ class DeviceLayout(Widget):
       regulatory_btn := button_item(lambda: tr("Regulatory"), lambda: tr("VIEW"), callback=self._on_regulatory, enabled=ui_state.is_offroad),
       button_item(lambda: tr("Change Language"), lambda: tr("CHANGE"), callback=self._show_language_dialog),
       #服务器切换按钮增加-修改2：添加切换服务器的按钮，用于触发服务器切换逻辑。
-      button_item(lambda: tr("Server"), lambda: tr("KONIK") if Params().get_bool("UseKonikServer") else tr("COMMA"), lambda: tr("Switch between Konik and Comma servers"), callback=self._toggle_server, enabled=ui_state.is_offroad),
+      button_item(lambda: tr("Server"), lambda: tr("KONIK") if Params().get_bool("UseKonikServer", False) else tr("COMMA"), lambda: tr("Switch between Konik and Comma servers"), callback=self._toggle_server, enabled=ui_state.is_offroad),
       self._power_off_btn,
     ]
     regulatory_btn.set_visible(TICI)
@@ -219,13 +219,15 @@ class DeviceLayout(Widget):
 # 服务器切换按钮增加-修改3：添加按钮回调函数（在device.py类中）
   def _toggle_server(self):
       params = Params()
-      current = params.getBool("UseKonikServer")
-    # 切换状态并保存
-      params.putBool("UseKonikServer", not current)
-    # 可以添加提示重启的逻辑（如果需要立即生效）
-      self._show_restart_prompt()
+      current = params.get_bool("UseKonikServer", False)
+      # 切换状态并保存
+      params.put_bool("UseKonikServer", not current)
+      # 强制Scroller重新渲染，更新按钮文本
+      self._scroller.render(self._rect)  # self._rect是当前布局的矩形区域，由父类Widget维护
+      # 可以添加提示重启的逻辑（如果需要立即生效）
+    '''  self._show_restart_prompt()
 
-# 服务器切换按钮增加-修改3：可选：添加重启提示（如果需要）
+ 服务器切换按钮增加-修改3：可选：添加重启提示（如果需要）
   def _show_restart_prompt(self):
       from openpilot.common.alertmanager import AlertManager
       AlertManager().show_alert(
@@ -233,4 +235,4 @@ class DeviceLayout(Widget):
           tr("Please reboot to apply server settings"), 
           [tr("OK")], 
           lambda res: None
-      )
+      )'''
