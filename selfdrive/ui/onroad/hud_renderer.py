@@ -36,20 +36,20 @@ class FontSizes:
 
 @dataclass(frozen=True)
 class Colors:
-  white: rl.Color = rl.WHITE
-  disengaged: rl.Color = rl.Color(125, 134, 130, 255)
-  override: rl.Color = rl.Color(210, 121, 76, 255)
-  engaged: rl.Color = rl.Color(41, 134, 93, 255)
-  disengaged_bg: rl.Color = rl.Color(125, 134, 120, 153)
-  override_bg: rl.Color = rl.Color(210, 121, 76, 204)
-  engaged_bg: rl.Color = rl.Color(41, 134, 93, 204)
-  grey: rl.Color = rl.Color(166, 166, 166, 255)
-  dark_grey: rl.Color = rl.Color(114, 114, 114, 255)
-  black_translucent: rl.Color = rl.Color(0, 0, 0, 166)
-  white_translucent: rl.Color = rl.Color(255, 255, 255, 200)
-  border_translucent: rl.Color = rl.Color(255, 255, 255, 75)
-  header_gradient_start: rl.Color = rl.Color(0, 0, 0, 114)
-  header_gradient_end: rl.Color = rl.BLANK
+  WHITE = rl.WHITE
+  DISENGAGED = rl.Color(145, 155, 149, 255)
+  OVERRIDE = rl.Color(145, 155, 149, 255)  # Added
+  ENGAGED = rl.Color(128, 216, 166, 255)
+  DISENGAGED_BG = rl.Color(0, 0, 0, 153)
+  OVERRIDE_BG = rl.Color(145, 155, 149, 204)
+  ENGAGED_BG = rl.Color(128, 216, 166, 204)
+  GREY = rl.Color(166, 166, 166, 255)
+  DARK_GREY = rl.Color(114, 114, 114, 255)
+  BLACK_TRANSLUCENT = rl.Color(0, 0, 0, 166)
+  WHITE_TRANSLUCENT = rl.Color(255, 255, 255, 200)
+  BORDER_TRANSLUCENT = rl.Color(255, 255, 255, 75)
+  HEADER_GRADIENT_START = rl.Color(0, 0, 0, 114)
+  HEADER_GRADIENT_END = rl.BLANK
 
 
 UI_CONFIG = UIConfig()
@@ -115,8 +115,8 @@ class HudRenderer(Widget):
       int(rect.y),
       int(rect.width),
       UI_CONFIG.header_height,
-      COLORS.header_gradient_start,
-      COLORS.header_gradient_end,
+      COLORS.HEADER_GRADIENT_START,
+      COLORS.HEADER_GRADIENT_END,
     )
 
     # Turn signals
