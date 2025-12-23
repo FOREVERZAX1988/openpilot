@@ -25,6 +25,8 @@ def _languages():
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
   unifont = set(base)
+   # 新增：中文专属字符集
+  china = set(base)
 
   for language, code in _languages().items():
     unifont.update(language)
@@ -34,15 +36,20 @@ def _char_sets():
     except FileNotFoundError:
       continue
 #修改2:扩容字符集：    (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
-    if code in CHINA_LANGUAGES:
+    if code in UNIFONT_LANGUAGES:
       unifont.update(chars)  # 中文的字符纳入unifont_cp（后续china字体用这个字符集）
-    elif code in UNIFONT_LANGUAGES:
-      unifont.update(chars)
+    elif code in CHINA_LANGUAGES:
+      china.update(chars)
     else:
       base.update(chars)
 
-  return tuple(sorted(ord(c) for c in base)), tuple(sorted(ord(c) for c in unifont))
-
+  #return tuple(sorted(ord(c) for c in base)), tuple(sorted(ord(c) for c in unifont))
+# 返回3个字符集：base（英文）、unifont（其他语言）、china（中文）
+  return (
+    tuple(sorted(ord(c) for c in base)), 
+    tuple(sorted(ord(c) for c in unifont)),
+    tuple(sorted(ord(c) for c in china))
+  )
 
 def _glyph_metrics(glyphs, rects, codepoints):
   entries = []
@@ -98,6 +105,8 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
   font_size = {
     "unifont.otf": 16,  # unifont is only 16x8 or 16x16 pixels per glyph
+    # 新增：china.ttf的字体大小（匹配style里的50）
+    "china.ttf": 50,  
   }.get(font_path.name, 200)
 
   data = font_path.read_bytes()
@@ -125,15 +134,29 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
 
 def main():
-  base_cp, unifont_cp = _char_sets()
+  #base_cp, unifont_cp = _char_sets()
+  # 接收新增的china_cp
+  base_cp, unifont_cp, china_cp = _char_sets()
   fonts = sorted(FONT_DIR.glob("*.ttf")) + sorted(FONT_DIR.glob("*.otf"))
   for font in fonts:
     if "emoji" in font.name.lower():
       continue
-#修改3（共3步）:按字体文件名特征动态选择字形编码集:    glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
+'''修改3（共3步）:按字体文件名特征动态选择字形编码集:    glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
     target_prefixes = ["unifont", "china"]  # 修改为文件配置集合，方便后续增加字体
-    glyphs = unifont_cp if any(font.stem.lower().startswith(p) for p in target_prefixes) else base_cp
+    glyphs = unifont_cp if any(font.stem.lower().startswith(p) for p in target_prefixes) else base_cp'''
+    # 动态选择字符集：
+    if font.stem.lower().startswith("china"):
+      # china.ttf→用中文专属字符集
+      glyphs = china_cp
+    elif any(font.stem.lower().startswith(p) for p in ["unifont"]):
+      # unifont→用原unifont字符集
+      glyphs = unifont_cp
+    else:
+      # 其他字体→用base字符集
+      glyphs = base_cp
+
     _process_font(font, glyphs)
+
   return 0
 
 
