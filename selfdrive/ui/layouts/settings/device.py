@@ -1,7 +1,6 @@
+# -*- coding: utf-8 -*-
 import os
 import math
-#服务器切换按钮增加-修改1：标准库导入，前置更规整。
-from typing import Callable
 
 from cereal import messaging, log
 from openpilot.common.basedir import BASEDIR
@@ -20,7 +19,7 @@ from openpilot.system.ui.widgets.html_render import HtmlModal
 from openpilot.system.ui.widgets.list_view import text_item, button_item, dual_button_item
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
 from openpilot.system.ui.widgets.scroller_tici import Scroller
-#新增：导入获取API服务器的函数
+#添加服务器切换按钮-修改2：导入获取API服务器的函数
 from openpilot.common.api.comma_connect import get_api_host  # 导入获取API服务器的函数
 
 if gui_app.sunnypilot_ui():
@@ -65,8 +64,8 @@ class DeviceLayout(Widget):
     items = [
       text_item(lambda: tr("Dongle ID"), self._params.get("DongleId") or (lambda: tr("N/A"))),
       text_item(lambda: tr("Serial"), self._params.get("HardwareSerial") or (lambda: tr("N/A"))),
-      # 新增：显示当前API服务器
-      text_item(lambda: tr("Current API Server"), lambda: get_api_host()),  # 动态获取并显示服务器地址
+      #添加服务器切换按钮-修改3：显示当前API服务器
+      text_item(lambda: tr("Current API Server"), lambda: get_api_host()),
       self._pair_device_btn,
       button_item(lambda: tr("Driver Camera"), lambda: tr("PREVIEW"), lambda: tr(DESCRIPTIONS['driver_camera']),
                   callback=self._show_driver_camera, enabled=ui_state.is_offroad),
@@ -75,7 +74,7 @@ class DeviceLayout(Widget):
                   self._on_review_training_guide, enabled=ui_state.is_offroad),
       regulatory_btn := button_item(lambda: tr("Regulatory"), lambda: tr("VIEW"), callback=self._on_regulatory, enabled=ui_state.is_offroad),
       button_item(lambda: tr("Change Language"), lambda: tr("CHANGE"), callback=self._show_language_dialog),
-      #服务器切换按钮增加-修改2：添加切换服务器的按钮，用于触发服务器切换逻辑。
+      #添加服务器切换按钮-修改4：添加按钮，用于触发服务器切换逻辑。
       button_item(lambda: tr("Server"), lambda: tr("KONIK") if Params().get_bool("UseKonikServer", False) else tr("COMMA"), lambda: tr("Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"), callback=self._toggle_server, enabled=ui_state.is_offroad),
       self._power_off_btn,
     ]
@@ -220,7 +219,7 @@ class DeviceLayout(Widget):
       self._training_guide = TrainingGuide(completed_callback=completed_callback)
     gui_app.set_modal_overlay(self._training_guide)
 
-  # 服务器切换按钮增加-修改3：调整缩进，作为类的成员方法
+  # 添加服务器切换按钮-修改5：调整缩进，作为类的成员方法
   def _toggle_server(self):
       def handle_confirm(result: int):
           if result == DialogResult.CONFIRM:
@@ -228,7 +227,6 @@ class DeviceLayout(Widget):
               current = params.get_bool("UseKonikServer", False)
               params.put_bool("UseKonikServer", not current)
                # 新增：触发athenad和manager重启（需设备支持该参数触发重启）
-              params.put_bool_nonblocking("RestartAthenad", True)
               params.put_bool_nonblocking("DoReboot", True)  # 或仅重启服务，而非设备
               # 重新渲染更新按钮文本
               if self._rect is not None:
