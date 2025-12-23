@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import pyray as rl
 
-style.ITEM_TEXT_FONT = rl.load_font("path/to/unifont.ttf")  # 与服务器切换按钮字体一致
+style.ITEM_TEXT_FONT = rl.load_font("selfdrive/assets/fonts/china.ttf")  # 与服务器切换按钮字体一致
 
 @dataclass
 class Base:
