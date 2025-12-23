@@ -106,7 +106,7 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
   font_size = {
     "unifont.otf": 16,  # unifont is only 16x8 or 16x16 pixels per glyph
     # 新增：china.ttf的字体大小（匹配style里的50）
-    "china.ttf": 50,  
+    "china.ttf": 188,  
   }.get(font_path.name, 200)
 
   data = font_path.read_bytes()
@@ -141,9 +141,9 @@ def main():
   for font in fonts:
     if "emoji" in font.name.lower():
       continue
-'''修改3（共3步）:按字体文件名特征动态选择字形编码集:    glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
-    target_prefixes = ["unifont", "china"]  # 修改为文件配置集合，方便后续增加字体
-    glyphs = unifont_cp if any(font.stem.lower().startswith(p) for p in target_prefixes) else base_cp'''
+    # 修改3（共3步）:按字体文件名特征动态选择字形编码集:    glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
+   # target_prefixes = ["unifont", "china"]  # 修改为文件配置集合，方便后续增加字体
+   # glyphs = unifont_cp if any(font.stem.lower().startswith(p) for p in target_prefixes) else base_cp'''
     # 动态选择字符集：
     if font.stem.lower().startswith("china"):
       # china.ttf→用中文专属字符集
