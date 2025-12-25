@@ -28,6 +28,7 @@ class MultiOptionDialog(Widget):
     self._result: DialogResult = DialogResult.NO_ACTION
 
         # 解决语言选择菜单字符问题修改3：新增：根据当前语言动态调整字体权重
+    self.option_buttons = []
     lang = multilang.language
     try:
       if lang in CHINA_LANGUAGES:
@@ -44,21 +45,30 @@ class MultiOptionDialog(Widget):
     for option in self.options:
         def on_click(opt=option): 
           self._on_option_clicked(opt)
-          btn = Button(
-            text=option,
-            click_callback=on_click,
-            font_weight=option_font_weight,
-            text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
-            button_style=ButtonStyle.NORMAL,
-            text_padding=50,
-            elide_right=True
-            )
-          self.option_buttons.append(btn)
+        btn = Button(
+          text=option,
+          click_callback=on_click,
+          font_weight=option_font_weight,
+          text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
+          button_style=ButtonStyle.NORMAL,
+          text_padding=50,
+          elide_right=True
+          )
+        self.option_buttons.append(btn)
+    
     self.scroller = Scroller(self.option_buttons, spacing=LIST_ITEM_SPACING)
 
     #解决语言选择菜单字符问题修改5：修复取消/确认按钮文本参数（原lambda传参错误）
-    self.cancel_button = Button(lambda: text = tr("Cancel"), click_callback=lambda: self._set_result(DialogResult.CANCEL))
-    self.select_button = Button(lambda: text = tr("Select"), click_callback=lambda: self._set_result(DialogResult.CONFIRM), button_style=ButtonStyle.PRIMARY)
+    self.cancel_button = Button(
+      text=tr("Cancel"), 
+      click_callback=lambda: self._set_result(DialogResult.CANCEL),
+      button_style=ButtonStyle.NORMAL
+      )
+    self.select_button = Button(
+      text=tr("Select"), 
+      click_callback=lambda: self._set_result(DialogResult.CONFIRM), 
+      button_style=ButtonStyle.PRIMARY
+      )
 
   def _set_result(self, result: DialogResult):
     self._result = result
