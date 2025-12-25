@@ -43,6 +43,7 @@ class MultiOptionDialog(Widget):
 
         # 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
     for option in self.options:
+        print(f"选项: {option}, 当前语言: {lang}, 字体权重: {option_font_weight}")  # 新增
         def on_click(opt=option): 
           self._on_option_clicked(opt)
         btn = Button(
