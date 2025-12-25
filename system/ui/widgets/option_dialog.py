@@ -27,21 +27,21 @@ class MultiOptionDialog(Widget):
     self.selection = current
     self._result: DialogResult = DialogResult.NO_ACTION
 
-    '''# 解决语言选择菜单字符问题修改3：新增：根据当前语言动态调整字体权重
+        # 解决语言选择菜单字符问题修改3：新增：根据当前语言动态调整字体权重
     self.option_buttons = []
     lang = multilang.language
     try:
       if lang in CHINA_LANGUAGES:
           # 中文使用中文字体
-          option_font_weight = FontWeight.CHINA  # 需确保该权重对应china.ttf
+          option_font_weight = FontWeight.UNIFONT  # 需确保该权重对应china.ttf
       elif lang in UNIFONT_LANGUAGES:
           # 其他特殊语言使用unifont
           option_font_weight = FontWeight.UNIFONT  # 需确保该权重对应unifont.otf
     except AttributeError:
       # 若FontWeight无对应枚举，降级为默认，避免崩溃
-      option_font_weight = FontWeight.MEDIUM'''
+      option_font_weight = FontWeight.MEDIUM
 
-    '''# 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
+        # 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
     for option in self.options:
         def on_click(opt=option): 
           self._on_option_clicked(opt)
@@ -54,33 +54,8 @@ class MultiOptionDialog(Widget):
           text_padding=50,
           elide_right=True
           )
-        self.option_buttons.append(btn)'''
-        # 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
-
-        # 解决语言选择菜单字符问题修改4：创建选项按钮（按选项自身语言代码设置字体+修复闭包）
-    self.option_buttons = []  # 显式初始化按钮列表
-    for option_text, lang_code in self.options:  # 遍历(文字, 语言代码)元组
-        def on_click(opt=option_text): 
-            self._on_option_clicked(opt)
-        
-        # 按选项自身的语言代码设置字体（关键！）
-        if lang_code in CHINA_LANGUAGES:
-            btn_font = FontWeight.CHINA  # 中文选项强制用china.fnt
-        elif lang_code in UNIFONT_LANGUAGES:
-            btn_font = FontWeight.UNIFONT  # 特殊语言用unifont.fnt
-        else:
-            btn_font = FontWeight.MEDIUM  # 其他语言用默认字体
-        
-        btn = Button(
-            text=option_text,
-            click_callback=on_click,
-            font_weight=btn_font,  # 用选项自身对应的字体
-            text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
-            button_style=ButtonStyle.NORMAL,
-            text_padding=50,
-            elide_right=True
-        )
         self.option_buttons.append(btn)
+    
     self.scroller = Scroller(self.option_buttons, spacing=LIST_ITEM_SPACING)
 
     #解决语言选择菜单字符问题修改5：修复取消/确认按钮文本参数（原lambda传参错误）
