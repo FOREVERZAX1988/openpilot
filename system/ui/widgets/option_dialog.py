@@ -1,5 +1,5 @@
 import pyray as rl
-from openpilot.system.ui.lib.application import FontWeight
+from openpilot.system.ui.lib.application import FontWeight, get_font  # 修复语言选择菜单：修改1-新增导入, get_font
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget, DialogResult
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
@@ -25,15 +25,24 @@ class MultiOptionDialog(Widget):
     self.selection = current
     self._result: DialogResult = DialogResult.NO_ACTION
 
+    # 修复语言选择菜单：修改2-获取支持多语言的字体（优先使用unifont，包含大部分语言字符）
+    self.multi_font = get_font("unifont")  # 新增：获取unifont字体
+
     # Create scroller with option buttons
     self.option_buttons = [Button(option, click_callback=lambda opt=option: self._on_option_clicked(opt),
                                   font_weight=option_font_weight,
                                   text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT, button_style=ButtonStyle.NORMAL,
-                                  text_padding=50, elide_right=True) for option in options]
+                                  text_padding=50, elide_right=True,font=self.multi_font  # 修复语言选择菜单：修改3-新增：指定字体
+                                  ) for option in options]
     self.scroller = Scroller(self.option_buttons, spacing=LIST_ITEM_SPACING)
 
-    self.cancel_button = Button(lambda: tr("Cancel"), click_callback=lambda: self._set_result(DialogResult.CANCEL))
-    self.select_button = Button(lambda: tr("Select"), click_callback=lambda: self._set_result(DialogResult.CONFIRM), button_style=ButtonStyle.PRIMARY)
+    self.cancel_button = Button(lambda: tr("Cancel"), click_callback=lambda: self._set_result(DialogResult.CANCEL),
+                                font=self.multi_font  # 修复语言选择菜单：修改4-新增：指定字体为确认/取消按钮也指定多语言字体
+                                )
+
+    self.select_button = Button(lambda: tr("Select"), click_callback=lambda: self._set_result(DialogResult.CONFIRM), button_style=ButtonStyle.PRIMARY,
+                                font=self.multi_font  # 修复语言选择菜单：修改5-新增：指定字体为确认/取消按钮也指定多语言字体
+                                )
 
   def _set_result(self, result: DialogResult):
     self._result = result
@@ -48,7 +57,9 @@ class MultiOptionDialog(Widget):
     content_rect = rl.Rectangle(dialog_rect.x + MARGIN, dialog_rect.y + MARGIN,
                                 dialog_rect.width - 2 * MARGIN, dialog_rect.height - 2 * MARGIN)
 
-    gui_label(rl.Rectangle(content_rect.x, content_rect.y, content_rect.width, TITLE_FONT_SIZE), self.title, 70, font_weight=FontWeight.BOLD)
+    gui_label(rl.Rectangle(content_rect.x, content_rect.y, content_rect.width, TITLE_FONT_SIZE), self.title, 70, font_weight=FontWeight.BOLD,
+              font=self.multi_font  # 修复语言选择菜单：修改6-新增：指定字体为标题渲染指定多语言字体
+              )
 
     # Options area
     options_y = content_rect.y + TITLE_FONT_SIZE + ITEM_SPACING
