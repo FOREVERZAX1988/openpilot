@@ -59,8 +59,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsEngaged", {PERSISTENT, BOOL}},
     {"IsLdwEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"IsMetric", {PERSISTENT | BACKUP, BOOL}},
+    {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"IsOffroad", {CLEAR_ON_MANAGER_START, BOOL}},
-    {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},//add for server change button
     {"IsOnroad", {PERSISTENT, BOOL}},
     {"IsRhdDetected", {PERSISTENT, BOOL}},
     {"IsReleaseBranch", {CLEAR_ON_MANAGER_START, BOOL}},
@@ -214,7 +214,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SubaruStopAndGo", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"SubaruStopAndGoManualParkingBrake", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TeslaCoopSteering", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"ToyotaEnforceStockLongitudinal", {PERSISTENT | BACKUP, BOOL, "0"}},
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
