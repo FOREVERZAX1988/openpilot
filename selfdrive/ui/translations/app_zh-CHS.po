@@ -11,7 +11,7 @@ msgstr ""
 "PO-Revision-Date: 2025-12-14 21:48+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
-"Language: zh_CN\n"
+"Language: zh-CHS\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -21,6 +21,33 @@ msgstr ""
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:199
 msgid " (Default)"
 msgstr "(默认)"
+
+# 👇 在这里添加语言菜单字符（复制以下内容粘贴）
+msgid "中文（简体）"
+msgstr "中文（简体）"
+
+msgid "中文（繁体）"
+msgstr "中文（繁体）"
+
+msgid "简"
+msgstr "简"
+
+msgid "繁"
+msgstr "繁"
+
+msgid "Українська"
+msgstr "Українська"
+
+msgid "العربية"
+msgstr "العربية"
+
+msgid "ไทย"
+msgstr "ไทย"
+
+msgid "한국어"
+msgstr "한국어"
+
+# 👆 添加结束
 
 #: selfdrive/ui/layouts/settings/device.py:171
 msgid " Steering torque response calibration is complete."
