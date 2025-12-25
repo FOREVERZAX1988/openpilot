@@ -26,12 +26,15 @@ class MultiOptionDialog(Widget):
     self.current = current
     self.selection = current
     self._result: DialogResult = DialogResult.NO_ACTION
-    # 新增：打印菜单文本的原始内容，验证是否为真实中文
+
+    # 新增：打印菜单文本的原始内容（修正缩进）
     print(f"当前语言：{multilang.language}")
     print(f"菜单标题原始内容：{self.title}")
     print(f"菜单选项原始内容：")
+    # for循环后的代码块必须缩进（4个空格）
     for idx, opt in enumerate(self.options):
-    print(f"  选项{idx}：{opt}，字节编码：{opt.encode('utf-8')}")
+      # 循环体内的print要和for保持缩进层级一致
+      print(f"  选项{idx}：{opt}，字节编码：{opt.encode('utf-8')}")
 
         # 解决语言选择菜单字符问题修改3：新增：根据当前语言动态调整字体权重
     self.option_buttons = []
