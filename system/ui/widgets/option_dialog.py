@@ -33,10 +33,10 @@ class MultiOptionDialog(Widget):
     try:
       if lang in CHINA_LANGUAGES:
           # 中文使用中文字体
-          option_font_weight = FontWeight.CHINA  # 需确保该权重对应china.ttf
+          option_font_weight = FontWeight.UNIFONT  # 需确保该权重对应china.ttf
       elif lang in UNIFONT_LANGUAGES:
           # 其他特殊语言使用unifont
-          option_font_weight = FontWeight.CHINA  # 需确保该权重对应unifont.otf
+          option_font_weight = FontWeight.UNIFONT  # 需确保该权重对应unifont.otf
     except AttributeError:
       # 若FontWeight无对应枚举，降级为默认，避免崩溃
       option_font_weight = FontWeight.MEDIUM
