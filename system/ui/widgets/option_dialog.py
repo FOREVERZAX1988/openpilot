@@ -1,5 +1,5 @@
 import pyray as rl
-from openpilot.system.ui.lib.application import FontWeight, get_font  # 修复语言选择菜单：修改1-新增导入, get_font
+from openpilot.system.ui.lib.application import FontWeight
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget, DialogResult
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
@@ -26,7 +26,7 @@ class MultiOptionDialog(Widget):
     self._result: DialogResult = DialogResult.NO_ACTION
 
     # 修复语言选择菜单：修改2-获取支持多语言的字体（优先使用unifont，包含大部分语言字符）
-    self.multi_font = get_font("unifont")  # 新增：获取unifont字体
+    self.multi_font = rl.load_font("/selfdrive/assets/fonts/unifont.otf")  # 新增：获取unifont字体
 
     # Create scroller with option buttons
     self.option_buttons = [Button(option, click_callback=lambda opt=option: self._on_option_clicked(opt),
