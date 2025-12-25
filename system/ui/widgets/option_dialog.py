@@ -26,7 +26,7 @@ class MultiOptionDialog(Widget):
     self._result: DialogResult = DialogResult.NO_ACTION
 
     # 修复语言选择菜单：修改2-获取支持多语言的字体（优先使用unifont，包含大部分语言字符）
-    self.multi_font = rl.load_font("/selfdrive/assets/fonts/unifont.otf")  # 新增：获取unifont字体
+    self.multi_font = rl.load_font("/selfdrive/assets/fonts/unifont.fnt")  # 新增：获取unifont字体
 
     # Create scroller with option buttons
     self.option_buttons = [Button(option, click_callback=lambda opt=option: self._on_option_clicked(opt),
