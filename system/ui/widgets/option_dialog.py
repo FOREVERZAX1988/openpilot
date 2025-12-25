@@ -1,12 +1,12 @@
 import pyray as rl
 from openpilot.system.ui.lib.application import FontWeight
-from openpilot.system.ui.lib.multilang import tr
+from openpilot.system.ui.lib.multilang import tr, multilang  # # 解决语言选择菜单字符问题修改1：导入全局实例multilang
+# 解决语言选择菜单字符问题修改2：添加以下导入
+from openpilot.system.ui.lib.multilang import CHINA_LANGUAGES, UNIFONT_LANGUAGES
 from openpilot.system.ui.widgets import Widget, DialogResult
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
 from openpilot.system.ui.widgets.label import gui_label
 from openpilot.system.ui.widgets.scroller_tici import Scroller
-# 解决语言选择菜单字符问题修改1：添加以下导入
-from openpilot.system.ui.lib.multilang import current_language, CHINA_LANGUAGES, UNIFONT_LANGUAGES
 
 # Constants
 MARGIN = 50
@@ -27,24 +27,38 @@ class MultiOptionDialog(Widget):
     self.selection = current
     self._result: DialogResult = DialogResult.NO_ACTION
 
-        # 解决语言选择菜单字符问题修改2：新增：根据当前语言动态调整字体权重
-    lang = current_language()
-    if lang in CHINA_LANGUAGES:
-        # 中文使用中文字体
-        option_font_weight = FontWeight.CHINA  # 需确保该权重对应china.ttf
-    elif lang in UNIFONT_LANGUAGES:
-        # 其他特殊语言使用unifont
-        option_font_weight = FontWeight.UNIFONT  # 需确保该权重对应unifont.otf
+        # 解决语言选择菜单字符问题修改3：新增：根据当前语言动态调整字体权重
+    lang = multilang.language
+    try:
+      if lang in CHINA_LANGUAGES:
+          # 中文使用中文字体
+          option_font_weight = FontWeight.CHINA  # 需确保该权重对应china.ttf
+      elif lang in UNIFONT_LANGUAGES:
+          # 其他特殊语言使用unifont
+          option_font_weight = FontWeight.UNIFONT  # 需确保该权重对应unifont.otf
+    except AttributeError:
+      # 若FontWeight无对应枚举，降级为默认，避免崩溃
+      option_font_weight = FontWeight.MEDIUM
 
-    # Create scroller with option buttons
-    self.option_buttons = [Button(option, click_callback=lambda opt=option: self._on_option_clicked(opt),
-                                  font_weight=option_font_weight,
-                                  text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT, button_style=ButtonStyle.NORMAL,
-                                  text_padding=50, elide_right=True) for option in options]
+        # 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
+    for option in self.options:
+        def on_click(opt=option): 
+          self._on_option_clicked(opt)
+          btn = Button(
+            text=option,
+            click_callback=on_click,
+            font_weight=option_font_weight,
+            text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
+            button_style=ButtonStyle.NORMAL,
+            text_padding=50,
+            elide_right=True
+            )
+          self.option_buttons.append(btn)
     self.scroller = Scroller(self.option_buttons, spacing=LIST_ITEM_SPACING)
 
-    self.cancel_button = Button(lambda: tr("Cancel"), click_callback=lambda: self._set_result(DialogResult.CANCEL))
-    self.select_button = Button(lambda: tr("Select"), click_callback=lambda: self._set_result(DialogResult.CONFIRM), button_style=ButtonStyle.PRIMARY)
+    #解决语言选择菜单字符问题修改5：修复取消/确认按钮文本参数（原lambda传参错误）
+    self.cancel_button = Button(lambda: text = tr("Cancel"), click_callback=lambda: self._set_result(DialogResult.CANCEL))
+    self.select_button = Button(lambda: text = tr("Select"), click_callback=lambda: self._set_result(DialogResult.CONFIRM), button_style=ButtonStyle.PRIMARY)
 
   def _set_result(self, result: DialogResult):
     self._result = result
