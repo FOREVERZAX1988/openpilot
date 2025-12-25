@@ -25,7 +25,7 @@ def _languages():
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
   unifont = set(base)
-   # 修改2:新增中文专属字符集
+  # 修改2:新增中文专属字符集
   china = set(base)
 
   for language, code in _languages().items():
@@ -45,15 +45,15 @@ def _char_sets():
 
   #return tuple(sorted(ord(c) for c in base)), tuple(sorted(ord(c) for c in unifont))
   #修改4: 返回3个字符集：base（英文）、unifont（其他语言）、china（中文）
-  '''return (
-    tuple(sorted(ord(c) for c in base)), 
-    tuple(sorted(ord(c) for c in unifont)),
-    tuple(sorted(ord(c) for c in china))'''
+
+  base_cp = tuple(sorted(ord(c) for c in base))
+  unifont_cp = tuple(sorted(ord(c) for c in unifont))
+  china_cp = tuple(sorted(ord(c) for c in china))
       # 临时打印：检查目标字符是否在china_cp中（以“简”为例）
-    target_char = "简"  # 替换为你遇到乱码的字符
-    target_ord = ord(target_char)
-    print(f"目标字符'{target_char}'（Unicode: {target_ord}）是否在china_cp中：{target_ord in china_cp}")
-    return (base_cp, unifont_cp, china_cp)  
+  target_char = "简"  # 替换为你遇到乱码的字符
+  target_ord = ord(target_char)
+  print(f"目标字符'{target_char}'（Unicode: {target_ord}）是否在china_cp中：{target_ord in china_cp}")
+  return (base_cp, unifont_cp, china_cp)  
 
 def _glyph_metrics(glyphs, rects, codepoints):
   entries = []
