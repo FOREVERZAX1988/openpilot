@@ -28,6 +28,24 @@ def _char_sets():
   # 修改2:新增中文专属字符集
   china = set(base)
 
+  # --------------------------
+  # 新增：提取languages.json键的字符（菜单显示文本），修复语言选择菜单乱码问题
+  # --------------------------
+  lang_dict = _languages()  # 复用已有的_languages()函数，获取键（语言名）→值（语言代码）
+  for lang_name, lang_code in lang_dict.items():
+      # lang_name就是菜单显示的文本（如“中文（简体）”“한국어”），提取其中所有字符
+      menu_chars = set(lang_name)
+      # 根据语言代码，把菜单字符加入对应集合
+      if lang_code in CHINA_LANGUAGES:
+          china.update(menu_chars)  # 中文菜单字符→加入china集合
+          print(f"已将中文菜单文本'{lang_name}'的字符加入china集合")
+      elif lang_code in UNIFONT_LANGUAGES:
+          unifont.update(menu_chars)  # 小语种菜单字符→加入unifont集合
+          print(f"已将小语种菜单文本'{lang_name}'的字符加入unifont集合")
+      else:
+          base.update(menu_chars)  # 其他语言（如英文）→加入base集合
+          print(f"已将其他菜单文本'{lang_name}'的字符加入base集合")
+
   for language, code in _languages().items():
     unifont.update(language)
     po_path = TRANSLATIONS_DIR / f"app_{code}.po"
@@ -53,7 +71,7 @@ def _char_sets():
   target_char = "简"  # 替换为你遇到乱码的字符
   target_ord = ord(target_char)
   print(f"目标字符'{target_char}'（Unicode: {target_ord}）是否在china_cp中：{target_ord in china_cp}")
-  return (base_cp, unifont_cp, china_cp)  
+  return (base_cp, unifont_cp, china_cp)
 
 def _glyph_metrics(glyphs, rects, codepoints):
   entries = []
@@ -110,7 +128,7 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
   font_size = {
     "unifont.otf": 16,  # unifont is only 16x8 or 16x16 pixels per glyph
     # 修改5:新增china.ttf的字体大小（匹配style里的50）
-    "china.ttf": 188,  
+    "china.ttf": 188,
   }.get(font_path.name, 200)
 
   data = font_path.read_bytes()
