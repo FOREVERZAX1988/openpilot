@@ -32,10 +32,10 @@ def register(show_spinner=False) -> str | None:
     #dongle_id = UNREGISTERED_DONGLE_ID
     #cloudlog.warning(f"missing public key: {pubkey}")
 
-  if dongle_id in (None, UNREGISTERED_DONGLE_ID):
-    if show_spinner:
-      spinner = Spinner()
-      spinner.update("registering device")
+  #if dongle_id in (None, UNREGISTERED_DONGLE_ID):
+    #if show_spinner:
+      #spinner = Spinner()
+      #spinner.update("registering device")
 
     # Create registration token, in the future, this key will make JWTs directly
     #with open(Paths.persist_root()+"/comma/id_rsa.pub") as f1, open(Paths.persist_root()+"/comma/id_rsa") as f2:
