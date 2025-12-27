@@ -4,6 +4,7 @@
 [submodule "opendbc"]
   path = opendbc_repo
   url = https://github.com/hoofpilot/opendbc.git
+	branch = master
 [submodule "msgq"]
   path = msgq_repo
   url = https://github.com/commaai/msgq.git
