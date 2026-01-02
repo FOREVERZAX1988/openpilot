@@ -100,7 +100,7 @@ class CarInterface(CarInterfaceBase):
     #  For now, don't list stop and go functionality in the docs
     if ret.flags & ToyotaFlags.SNG_WITHOUT_DSU:
       stop_and_go = stop_and_go or (ret.enableDsu and not docs)
-
+    stop_and_go = stop_and_go or bool(0x2FF in fingerprint[0] and 0x2AA in fingerprint[0])
     ret.centerToFront = ret.wheelbase * 0.44
 
     # TODO: Some TSS-P platforms have BSM, but are flipped based on region or driving direction.
