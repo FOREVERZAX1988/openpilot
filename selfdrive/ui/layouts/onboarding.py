@@ -11,7 +11,7 @@ from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
 from openpilot.system.ui.widgets.label import Label
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.version import terms_version, training_version
+from openpilot.system.version import terms_version, training_version, terms_version_sp
 
 DEBUG = False
 
@@ -117,7 +117,7 @@ class TermsPage(Widget):
     self._accept_btn = Button(tr("Agree"), button_style=ButtonStyle.PRIMARY, click_callback=on_accept)
 
   def _render(self, _):
-    welcome_x = self._rect.x + 165
+    welcome_x = self._rect.x + 95
     welcome_y = self._rect.y + 165
     welcome_rect = rl.Rectangle(welcome_x, welcome_y, self._rect.width - welcome_x, 90)
     self._title.render(welcome_rect)
@@ -180,6 +180,14 @@ class OnboardingWindow(Widget):
     self._training_guide: TrainingGuide | None = None
     self._decline_page = DeclinePage(back_callback=self._on_decline_back)
 
+    self._accepted_terms = self._accepted_terms and ui_state.params.get("HasAcceptedTermsSP") == terms_version_sp
+    if not self._accepted_terms:
+      self._state = OnboardingState.TERMS
+    elif not self._training_done:
+      self._state = OnboardingState.ONBOARDING
+    else:
+      self._state = OnboardingState.ONBOARDING
+
   @property
   def completed(self) -> bool:
     return self._accepted_terms and self._training_done
@@ -192,8 +200,10 @@ class OnboardingWindow(Widget):
 
   def _on_terms_accepted(self):
     ui_state.params.put("HasAcceptedTerms", terms_version)
-    self._state = OnboardingState.ONBOARDING
-    if self._training_done:
+    ui_state.params.put("HasAcceptedTermsSP", terms_version_sp)
+    if not self._training_done:
+      self._state = OnboardingState.ONBOARDING
+    else:
       gui_app.set_modal_overlay(None)
 
   def _on_completed_training(self):
@@ -206,8 +216,11 @@ class OnboardingWindow(Widget):
 
     if self._state == OnboardingState.TERMS:
       self._terms.render(self._rect)
-    if self._state == OnboardingState.ONBOARDING:
-      self._training_guide.render(self._rect)
+    elif self._state == OnboardingState.ONBOARDING:
+      if not self._training_done:
+        self._training_guide.render(self._rect)
+      else:
+        gui_app.set_modal_overlay(None)
     elif self._state == OnboardingState.DECLINE:
       self._decline_page.render(self._rect)
     return -1

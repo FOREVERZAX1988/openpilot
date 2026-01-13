@@ -103,6 +103,7 @@ class FontWeight(StrEnum):
   SEMI_BOLD = "Inter-SemiBold.fnt"
   UNIFONT = "unifont.fnt"
   AUDIOWIDE = "Audiowide-Regular.fnt"
+  JETBRAINS = "JetBrainsMono-Medium.ttf"
 
   # Small UI fonts
   DISPLAY_REGULAR = "Inter-Regular.fnt"
@@ -599,7 +600,10 @@ class GuiApplication(GuiApplicationExt):
     for font_weight_file in FontWeight:
       with as_file(FONT_DIR) as fspath:
         fnt_path = fspath / font_weight_file
-        font = rl.load_font(fnt_path.as_posix())
+        if font_weight_file == FontWeight.JETBRAINS:
+          font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
+        else:
+          font = rl.load_font(fnt_path.as_posix())
         if font_weight_file != FontWeight.UNIFONT:
           rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
         self._fonts[font_weight_file] = font

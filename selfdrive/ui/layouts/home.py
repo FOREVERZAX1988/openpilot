@@ -14,7 +14,7 @@ from openpilot.system.ui.widgets import Widget
 REFRESH_INTERVAL = 10.0
 BASE_WIDTH = 2560
 BASE_HEIGHT = 1080
-BRAND_FONT = 200
+BRAND_FONT = 170
 VERSION_FONT = 72
 META_FONT = 56
 PADDING = 48
@@ -78,7 +78,7 @@ class HomeLayout(Widget):
       "wheel": gui_app.texture("icons/chffr_wheel.png", 200, 200),
     }
 
-    self._font_brand = gui_app.font(FontWeight.SEMI_BOLD)
+    self._font_brand = gui_app.font(FontWeight.JETBRAINS)
     self._font_version = gui_app.font(FontWeight.MEDIUM)
     self._font_meta = gui_app.font(FontWeight.MEDIUM)
 
