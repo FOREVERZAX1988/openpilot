@@ -41,20 +41,35 @@ jobs:
           git config --global user.email 'action@github.com'
 
       - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.4  # 已升级到最新版
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add GitLab public keys
+        run: ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
+
+      - name: Configure SSH for GitLab
         run: |
-          ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
+          echo "Host gitlab.com" > ~/.ssh/config
+          echo "  IdentityFile ~/.ssh/id_ed25519" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking yes" >> ~/.ssh/config
+          echo "  User git" >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          chmod 700 ~/.ssh
+
+      - name: Verify SSH Connection to GitLab
+        run: |
+          echo "=== 加载的密钥指纹 ==="
+          ssh-add -l
+          echo "=== 测试GitLab SSH连接 ==="
+          ssh -vT git@gitlab.com 2>&1 | grep -E "Authenticated|Welcome to GitLab" && echo "✅ SSH认证成功" || (echo "❌ SSH认证失败" && exit 1)
 
       - name: Ensure branch
         run: |
           if git symbolic-ref -q HEAD >/dev/null; then
-              echo "Already on a branch, proceeding with push"
-            else
-              echo "Detached HEAD state detected, creating temporary branch"
+            echo "Already on a branch, proceeding with push"
+          else
+            echo "Detached HEAD state detected, creating temporary branch"
             git checkout -b temp_branch
           fi
 
@@ -68,5 +83,7 @@ jobs:
       - name: Push LFS
         id: sync-and-commit
         run: |
-          git lfs ls-files -l
-          git lfs push --all origin
+          echo "=== 列出要推送的LFS文件 ==="
+          git lfs ls-files -l || echo "⚠️  未找到LFS文件"
+          echo "=== 推送LFS到GitLab ==="
+          git lfs push --all ${{ env.LFS_PUSH_URL }}  # 已指定你的GitLab仓库
