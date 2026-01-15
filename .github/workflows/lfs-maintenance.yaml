@@ -9,14 +9,14 @@ on:
     - cron: '0 0 * * *'  # Runs at 00:00 UTC every day
   push:
     branches:
-      - 'master_zh'
+      - 'master'
   pull_request:
     branches:
-      - 'master_zh'
+      - 'master'
   workflow_dispatch: # enables manual triggering
     inputs:
       upstream_branch:
-        default: 'master_zh'
+        default: 'master'
         type: string
 
 jobs:
