@@ -42,13 +42,25 @@ POLICY_PKL_PATH = Path(__file__).parent / 'models/driving_policy_tinygrad.pkl'
 VISION_METADATA_PATH = Path(__file__).parent / 'models/driving_vision_metadata.pkl'
 POLICY_METADATA_PATH = Path(__file__).parent / 'models/driving_policy_metadata.pkl'
 
+# [全域設定] 保持 0.1
+# 這是給 controlsd 看的"招牌"。
+# 設為 0.1 可以避免彎道時補償力道過大，保持線性手感。
 LAT_SMOOTH_SECONDS = 0.1
+
 LONG_SMOOTH_SECONDS = 0.3
 MIN_LAT_CONTROL_SPEED = 0.3
 
+# [動態平滑設定]
+# 直路 0.1 (比全域慢 -> 超級穩)
+# 彎道 0.0 (比全域快 -> 反應快)
+# 中間會自動線性過渡
+LAT_SMOOTH_BP = [0., 0.002]
+LAT_SMOOTH_V = [0.1, 0.0]
+
 
 def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.ModelDataV2.Action,
-                          lat_action_t: float, long_action_t: float, v_ego: float) -> log.ModelDataV2.Action:
+                          lat_action_t: float, long_action_t: float, v_ego: float, 
+                          lat_smooth_seconds: float) -> log.ModelDataV2.Action:
     plan = model_output['plan'][0]
     desired_accel, should_stop = get_accel_from_plan(plan[:,Plan.VELOCITY][:,0],
                                                      plan[:,Plan.ACCELERATION][:,0],
@@ -62,7 +74,8 @@ def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.
                                                 v_ego,
                                                 lat_action_t)
     if v_ego > MIN_LAT_CONTROL_SPEED:
-      desired_curvature = smooth_value(desired_curvature, prev_action.desiredCurvature, LAT_SMOOTH_SECONDS)
+      # 使用傳入的動態平滑時間
+      desired_curvature = smooth_value(desired_curvature, prev_action.desiredCurvature, lat_smooth_seconds)
     else:
       desired_curvature = prev_action.desiredCurvature
 
@@ -339,7 +352,15 @@ def main(demo=False):
     is_rhd = dp_dev_is_rhd if LITE else sm["driverMonitoringState"].isRHD
     frame_id = sm["roadCameraState"].frameId
     v_ego = max(sm["carState"].vEgo, 0.)
-    lat_delay = sm["liveDelay"].lateralDelay + LAT_SMOOTH_SECONDS
+
+    # [核心修改]
+    # 全域設定為 0.1 (為了騙 controlsd 預期較小延遲)
+    current_curvature = abs(prev_action.desiredCurvature)
+    lat_smooth_seconds = float(np.interp(current_curvature, LAT_SMOOTH_BP, LAT_SMOOTH_V))
+
+    # 計算出的值只傳給 model 做平滑，不影響 controlsd
+    lat_delay = sm["liveDelay"].lateralDelay + lat_smooth_seconds
+
     if sm.updated["liveCalibration"] and sm.seen['roadCameraState'] and sm.seen['deviceState']:
       device_from_calib_euler = np.array(sm["liveCalibration"].rpyCalib, dtype=np.float32)
       dc = DEVICE_CAMERAS[(str(sm['deviceState'].deviceType), str(sm['roadCameraState'].sensor))]
@@ -385,7 +406,7 @@ def main(demo=False):
       posenet_send = messaging.new_message('cameraOdometry')
       model_ext_send = messaging.new_message('modelExt')
 
-      action = get_action_from_model(model_output, prev_action, lat_delay + DT_MDL, long_delay + DT_MDL, v_ego)
+      action = get_action_from_model(model_output, prev_action, lat_delay + DT_MDL, long_delay + DT_MDL, v_ego, lat_smooth_seconds)
       prev_action = action
       fill_model_msg(drivingdata_send, modelv2_send, model_output, action,
                      publish_state, meta_main.frame_id, meta_extra.frame_id, frame_id,
