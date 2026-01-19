@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import math
 import numpy as np
@@ -157,18 +158,36 @@ class LongitudinalPlanner:
     self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
 
-    # Apply DTSC curve speed constraints if enabled
+    # ============================================================
+    # DP DTSC 混合雙效控制 (Hybrid Control)
+    # ============================================================
     if dp_flags & DPFlags.DTSC:
-      # Get modified acceleration constraints based on curvature
+      # [第一層：規劃層] (Planning Level)
+      # 讀取 DTSC 建議的安全速度 (Suggested Speed)。
+      # 如果 DTSC 認為需要減速，我們會主動降低 v_cruise，讓 MPC 計算出一條平滑的減速曲線。
+      # 這類似 Sunnypilot 的做法，舒適度較高。
+      # 使用 getattr 防止 dtsc.py 尚未更新導致 crash
+      dtsc_suggested_speed = getattr(self.dtsc, 'get_suggested_speed', lambda: 255.0)()
+      if dtsc_suggested_speed < 254.0:
+          v_cruise = min(v_cruise, dtsc_suggested_speed)
+
+      # [第二層：限制層] (Constraint Level)
+      # 計算物理上的加減速限制 (a_min, a_max)。
+      # 這是最後一道防線，萬一 v_cruise 降得不夠快，這裡會強制限制加速度，防止失控。
       a_min_dtsc, a_max_dtsc = self.dtsc.get_mpc_constraints(
         sm['modelV2'], v_ego, accel_clip[0], accel_clip[1])
 
-      # Update MPC parameters with curve constraints
-      # This directly modifies the acceleration bounds in the MPC solver
       for i in range(len(a_min_dtsc)):
-        # Apply the more restrictive constraint
-        self.mpc.params[i, 0] = max(accel_clip[0], a_min_dtsc[i])  # a_min
-        self.mpc.params[i, 1] = min(accel_clip[1], a_max_dtsc[i])  # a_max
+        target_min = max(accel_clip[0], a_min_dtsc[i])
+        target_max = min(accel_clip[1], a_max_dtsc[i])
+
+        # [安全保護] 防止 min > max 導致 solver 崩潰
+        if target_min > target_max:
+             target_min = target_max - 0.05
+
+        self.mpc.params[i, 0] = target_min
+        self.mpc.params[i, 1] = target_max
+    # ============================================================
 
     self.mpc.update(sm['radarState'], v_cruise, x, v, a, j, personality=sm['selfdriveState'].personality)
 
@@ -204,8 +223,43 @@ class LongitudinalPlanner:
       output_a_target = min(output_a_target_mpc, output_a_target_e2e)
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
 
+    # ============================================================
+    # [第三層：快速響應通道] (Slew Rate Fix)
+    # 這是為瞭解決 DTSC 介入時「減速無感」的問題。
+    # 同時針對 AEM/Blended 模式放寬限制，避免紅燈停過頭。
+    # ============================================================
+    decel_slew_rate = 0.05 # 預設舒適值 (一般 ACC 模式非常柔和)
+    
+    # 1. 檢查 DTSC 是否正在介入
+    is_dtsc_active = False
+    if dp_flags & DPFlags.DTSC:
+        is_dtsc_active = getattr(self.dtsc, 'active', False)
+
+    # 2. 判斷是否為實驗模式/AEM (Blended Mode) 且正在減速 (output_a_target < 0)
+    # AEM 邏輯下，當進入 blended 模式代表系統認為需要較強的縱向控制
+    # 這裡放寬 slew rate (0.05 -> 0.15) 讓煞車力道建立更直接
+    is_aem_braking = (mode == 'blended' and output_a_target < 0.0)
+
+    # 3. 判斷是否為 DTSC 緊急煞車
+    is_dtsc_braking = (is_dtsc_active and output_a_target < 0.0)
+
+    # 4. 決策邏輯 (優先級：DTSC > AEM > ACC)
+    if is_dtsc_braking:
+        decel_slew_rate = 0.15  # DTSC 最緊急，給予最大權限 (0.15)
+    elif is_aem_braking:
+        decel_slew_rate = 0.15 # AEM/實驗模式，為了紅燈煞停精準度，比 ACC 兇一點
+
     for idx in range(2):
-      accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
+      # idx 0=min, 1=max
+      # 減速方向: 使用動態調整的 decel_slew_rate (0.05, 0.15, 或 0.2)
+      # 加速方向: 固定維持 +0.05 以保持舒適
+      accel_clip[idx] = np.clip(
+          accel_clip[idx], 
+          self.prev_accel_clip[idx] - decel_slew_rate, 
+          self.prev_accel_clip[idx] + 0.05
+      )
+    # ============================================================
+    
     self.output_a_target = np.clip(output_a_target, accel_clip[0], accel_clip[1])
     self.prev_accel_clip = accel_clip
 
