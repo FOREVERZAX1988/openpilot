@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-23 20:12+0800\n"
+"POT-Creation-Date: 2026-01-19 21:59+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -29,33 +29,34 @@ msgid_plural "{} ALERTS"
 msgstr[0] ""
 msgstr[1] ""
 
-#: selfdrive/ui/layouts/onboarding.py:112
+#: selfdrive/ui/layouts/onboarding.py:115
 msgid "Welcome to sunnypilot"
 msgstr ""
 
-#: selfdrive/ui/layouts/onboarding.py:113
+#: selfdrive/ui/layouts/onboarding.py:116
 msgid ""
-"You must accept the Terms and Conditions to use sunnypilot. Read the latest "
-"terms at https://comma.ai/terms before continuing."
+"You must accept the Terms of Service to use sunnypilot. Read the latest "
+"terms at https://sunnypilot.ai/terms before continuing."
 msgstr ""
 
-#: selfdrive/ui/layouts/onboarding.py:116
+#: selfdrive/ui/layouts/onboarding.py:119
 msgid "Decline"
 msgstr ""
 
-#: selfdrive/ui/layouts/onboarding.py:117
+#: selfdrive/ui/layouts/onboarding.py:120
 msgid "Agree"
 msgstr ""
 
-#: selfdrive/ui/layouts/onboarding.py:146
-msgid "You must accept the Terms and Conditions in order to use sunnypilot."
+#: selfdrive/ui/layouts/onboarding.py:149
+msgid "You must accept the Terms of Service in order to use sunnypilot."
 msgstr ""
 
-#: selfdrive/ui/layouts/onboarding.py:148
+#: selfdrive/ui/layouts/onboarding.py:151
+#: selfdrive/ui/sunnypilot/layouts/onboarding.py:37
 msgid "Back"
 msgstr ""
 
-#: selfdrive/ui/layouts/onboarding.py:149
+#: selfdrive/ui/layouts/onboarding.py:152
 msgid "Decline, uninstall sunnypilot"
 msgstr ""
 
@@ -89,211 +90,212 @@ msgstr ""
 
 #: selfdrive/ui/layouts/settings/developer.py:184
 #: selfdrive/ui/layouts/settings/toggles.py:232
+#: selfdrive/ui/sunnypilot/layouts/onboarding.py:29
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py:51
 msgid "Enable"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:55
+#: selfdrive/ui/layouts/settings/device.py:53
 msgid "Pair Device"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:55
+#: selfdrive/ui/layouts/settings/device.py:53
 msgid "PAIR"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:58
+#: selfdrive/ui/layouts/settings/device.py:56
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:179
 msgid "Reset Calibration"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:58
+#: selfdrive/ui/layouts/settings/device.py:56
 msgid "RESET"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:62
-#: selfdrive/ui/layouts/settings/device.py:186
+#: selfdrive/ui/layouts/settings/device.py:60
+#: selfdrive/ui/layouts/settings/device.py:184
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:107
 #: selfdrive/ui/sunnypilot/layouts/settings/software.py:50
 msgid "Reboot"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:62
-#: selfdrive/ui/layouts/settings/device.py:198
+#: selfdrive/ui/layouts/settings/device.py:60
+#: selfdrive/ui/layouts/settings/device.py:196
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:108
 msgid "Power Off"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:66
+#: selfdrive/ui/layouts/settings/device.py:64
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:114
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:321
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:337
 msgid "Dongle ID"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:66
-#: selfdrive/ui/layouts/settings/device.py:67
+#: selfdrive/ui/layouts/settings/device.py:64
+#: selfdrive/ui/layouts/settings/device.py:65
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:114
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:116
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:213
 msgid "N/A"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:67
+#: selfdrive/ui/layouts/settings/device.py:65
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:116
 msgid "Serial"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:69
+#: selfdrive/ui/layouts/settings/device.py:67
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:119
 msgid "Current API Server"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:71
+#: selfdrive/ui/layouts/settings/device.py:69
 msgid "Driver Camera"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:71
+#: selfdrive/ui/layouts/settings/device.py:69
 msgid "PREVIEW"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:74
+#: selfdrive/ui/layouts/settings/device.py:72
 msgid "Review Training Guide"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:74
+#: selfdrive/ui/layouts/settings/device.py:72
 msgid "REVIEW"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:76
+#: selfdrive/ui/layouts/settings/device.py:74
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:92
 msgid "Regulatory"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:76
+#: selfdrive/ui/layouts/settings/device.py:74
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py:53
 msgid "VIEW"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:77
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:133
+#: selfdrive/ui/layouts/settings/device.py:75
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:134
 msgid "Change Language"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:77
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:133
+#: selfdrive/ui/layouts/settings/device.py:75
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:134
 msgid "CHANGE"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:79
+#: selfdrive/ui/layouts/settings/device.py:77
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:123
 msgid "Server"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:79
+#: selfdrive/ui/layouts/settings/device.py:77
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:124
 msgid "KONIK"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:79
+#: selfdrive/ui/layouts/settings/device.py:77
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:124
 msgid "COMMA"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:79
+#: selfdrive/ui/layouts/settings/device.py:77
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:125
 msgid ""
 "Switch between Konik and Comma servers（Confirming the switch will cause the "
 "service to restart）"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:102
+#: selfdrive/ui/layouts/settings/device.py:100
 msgid "Select a language"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:114
+#: selfdrive/ui/layouts/settings/device.py:112
 msgid "Disengage to Reset Calibration"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:130
+#: selfdrive/ui/layouts/settings/device.py:128
 msgid "Are you sure you want to reset calibration?"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:130
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:177
+#: selfdrive/ui/layouts/settings/device.py:128
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:178
 msgid "Reset"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:144
+#: selfdrive/ui/layouts/settings/device.py:142
 #, python-brace-format
 msgid " Your device is pointed {:.1f}° {} and {:.1f}° {}."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:144
+#: selfdrive/ui/layouts/settings/device.py:142
 msgid "down"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:144
+#: selfdrive/ui/layouts/settings/device.py:142
 msgid "up"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:145
+#: selfdrive/ui/layouts/settings/device.py:143
 msgid "left"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:145
+#: selfdrive/ui/layouts/settings/device.py:143
 msgid "right"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:157
+#: selfdrive/ui/layouts/settings/device.py:155
 #, python-brace-format
 msgid "<br><br>Steering lag calibration is {}% complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:159
+#: selfdrive/ui/layouts/settings/device.py:157
 msgid "<br><br>Steering lag calibration is complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:169
+#: selfdrive/ui/layouts/settings/device.py:167
 #, python-brace-format
 msgid " Steering torque response calibration is {}% complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:171
+#: selfdrive/ui/layouts/settings/device.py:169
 msgid " Steering torque response calibration is complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:176
+#: selfdrive/ui/layouts/settings/device.py:174
 msgid ""
 "sunnypilot is continuously calibrating, resetting is rarely required. "
 "Resetting calibration will restart sunnypilot if the car is powered on."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:183
+#: selfdrive/ui/layouts/settings/device.py:181
 msgid "Disengage to Reboot"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:186
+#: selfdrive/ui/layouts/settings/device.py:184
 msgid "Are you sure you want to reboot?"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:195
+#: selfdrive/ui/layouts/settings/device.py:193
 msgid "Disengage to Power Off"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:198
+#: selfdrive/ui/layouts/settings/device.py:196
 msgid "Are you sure you want to power off?"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:238
+#: selfdrive/ui/layouts/settings/device.py:235
 msgid "Konik"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:238
+#: selfdrive/ui/layouts/settings/device.py:235
 msgid "Comma"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:241
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:172
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:194
+#: selfdrive/ui/layouts/settings/device.py:238
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:173
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:195
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:98
 msgid "Confirm"
 msgstr ""
@@ -523,7 +525,7 @@ msgstr ""
 msgid "no alerts"
 msgstr ""
 
-#: selfdrive/ui/mici/layouts/onboarding.py:42
+#: selfdrive/ui/mici/layouts/onboarding.py:45
 #: selfdrive/ui/mici/onroad/driver_camera_dialog.py:86
 #: selfdrive/ui/onroad/driver_camera_dialog.py:38
 msgid "camera starting"
@@ -584,6 +586,28 @@ msgstr ""
 
 #: selfdrive/ui/onroad/alert_renderer.py:66
 msgid "Reboot Device"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/onboarding.py:23
+msgid "sunnylink"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/onboarding.py:27
+msgid ""
+"sunnylink enables secured remote access to your comma device from anywhere, "
+"including settings management, remote monitoring, real-time dashboard, etc."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/onboarding.py:30
+#: selfdrive/ui/sunnypilot/layouts/onboarding.py:38
+msgid "Disable"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/onboarding.py:34
+msgid ""
+"sunnylink is designed to be enabled as part of sunnypilot's core "
+"functionality. If sunnylink is disabled, features such as settings "
+"management, remote monitoring, real-time dashboards will be unavailable."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py:39
@@ -654,7 +678,7 @@ msgid ""
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:49
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:209
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:210
 msgid "Enable Always Offroad"
 msgstr ""
 
@@ -674,6 +698,7 @@ msgid "Wake Up Behavior"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:77
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py:63
 msgid "Default"
 msgstr ""
 
@@ -701,58 +726,84 @@ msgstr ""
 msgid "Reset Settings"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:154
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:155
 msgid "Default: Device will boot/wake-up normally & will be ready to engage."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:155
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:156
 msgid "Offroad: Device will be in Always Offroad mode after boot/wake-up."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:156
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:157
 msgid "Controls state of the device after boot/sleep."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:171
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:172
 msgid "The reset cannot be undone. You have been warned."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:176
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:177
 msgid ""
 "Are you sure you want to reset all sunnypilot settings to default? Once the "
 "settings are reset, there is no going back."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:183
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:184
 msgid "Disengage to Enter Always Offroad Mode"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:187
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:188
 msgid "Are you sure you want to exit Always Offroad mode?"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:188
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:189
 msgid "Are you sure you want to enter Always Offroad mode?"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:198
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:199
 msgid "Always On"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:198
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:199
 msgid "m"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:198
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:199
 msgid "h"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:199
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:200
 msgid " (Default)"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py:209
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py:210
 msgid "Exit Always Offroad"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py:35
+msgid "Onroad Brightness"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py:45
+msgid "Onroad Brightness Delay"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py:56
+msgid "Interactivity Timeout"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py:57
+msgid ""
+"Apply a custom timeout for settings UI.<br>This is the time after which "
+"settings UI closes automatically if user is not interacting with the screen."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py:77
+msgid "Auto (Default)"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py:80
+msgid "Auto (Dark)"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:52
@@ -1007,7 +1058,7 @@ msgid "Sponsor Status"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:165
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:327
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:343
 msgid "SPONSOR"
 msgstr ""
 
@@ -1022,7 +1073,7 @@ msgid "Pair GitHub Account"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:172
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:333
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:349
 msgid "Not Paired"
 msgstr ""
 
@@ -1100,27 +1151,27 @@ msgstr ""
 msgid "Settings restored. Confirm to restart the interface."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:307
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:323
 msgid "Welcome back!! We're excited to see you've enabled sunnylink again!"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:310
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:326
 msgid "Not going to lie, it's sad to see you disabled sunnylink"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:311
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:327
 msgid ", but we'll be here when you're ready to come back."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:327
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:343
 msgid "THANKS ♥"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:328
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:344
 msgid "Not Sponsor"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:333
+#: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:349
 msgid "Paired"
 msgstr ""
 
@@ -1267,78 +1318,78 @@ msgstr ""
 msgid "REMOVE"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:36
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:166
-msgid "backup settings"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:38
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:169
-msgid "restore settings"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:40
-msgid "sunnylink uploader"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:55
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:32
 msgid "enable sunnylink"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:64
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:37
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:185
+msgid "backup settings"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:39
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:188
+msgid "restore settings"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:41
+msgid "sunnylink uploader"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:65
 msgid "thanks"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:68
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:69
 msgid "sponsor"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:72
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:73
 msgid "paired"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:74
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:75
 msgid "pair"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:94
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:113
 msgid "slide to restore"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:94
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:113
 msgid "slide to backup"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:123
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:142
 msgid "backing up"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:130
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:149
 msgid "backup"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:131
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:153
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:150
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:172
 msgid "failed"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:136
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:155
 msgid "settings backed up"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:145
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:164
 msgid "restoring"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:152
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:171
 msgid "restore"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:154
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:173
 msgid "unable to restore"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:186
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:205
 msgid "sunnylink Dongle ID not found. Please reboot & try again."
 msgstr ""
 
