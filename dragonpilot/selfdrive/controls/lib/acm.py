@@ -1,83 +1,91 @@
-"""
-Copyright (c) 2025, Rick Lan
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, and/or sublicense,
-for non-commercial purposes only, subject to the following conditions:
-
-- The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
-- Commercial use (e.g. use in a product, service, or activity intended to
-  generate revenue) is prohibited without explicit written permission from
-  the copyright holder.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
-
 import time
 import numpy as np
 from openpilot.common.swaglog import cloudlog
 
-# Configuration parameters
-SPEED_RATIO = 0.98  # Must be within 2% over cruise speed
-TTC_THRESHOLD = 3.0  # seconds - disable ACM when lead is within this time
+# =========================================================
+# ACM (Active Coasting Management) 參數設定區
+# =========================================================
 
-# Emergency thresholds - IMMEDIATELY disable ACM
-EMERGENCY_TTC = 2.0  # seconds - emergency situation
-EMERGENCY_RELATIVE_SPEED = 10.0  # m/s (~36 km/h closing speed - only for rapid closing)
-EMERGENCY_DECEL_THRESHOLD = -1.5  # m/s² - if MPC wants this much braking, emergency disable
+# --- 1. 滑行速度區間設定 (單位：km/h) ---
 
-# Safety cooldown after lead detection
-LEAD_COOLDOWN_TIME = 0.5  # seconds - brief cooldown to handle sensor glitches
+# [下限] 固定為「定速 - 2 km/h」 (低於此值補油)
+SPEED_OFFSET_MIN_KPH = 2.0 
 
-# Speed-based distance scaling - more practical for real traffic
-SPEED_BP = [0., 10., 20., 30.]  # m/s (0, 36, 72, 108 km/h)
-MIN_DIST_V = [15., 20., 25., 30.]  # meters - closer to original 25m baseline
+# [上限 - 雙模式設定]
+# 模式 A: 一般路況 (平路或緩下坡)，允許滑行至「定速 + 10 km/h」
+SPEED_OFFSET_MAX_FLAT_KPH = 10.0
+
+# 模式 B: 陡下坡時 (超過 3% 坡度)，為了安全，限制只允許滑行至「定速 + 5 km/h」
+# 說明：超過 5km/h 就會立刻關閉 ACM，讓 Openpilot 介入煞車
+SPEED_OFFSET_MAX_DOWNHILL_KPH = 5.0
+
+# --- 2. 坡度邏輯設定 (單位：弧度 Radians) ---
+# 0.015 rad 約等於 0.86 度 (1.5% 坡度)
+# 0.030 rad 約等於 1.72 度 (3.0% 坡度)
+
+# 上坡門檻：大於 1.5% (0.015) -> 禁止滑行，確保爬坡有力
+PITCH_UPHILL_THRESHOLD = 0.015    
+
+# 下坡門檻：小於 -3.0% (-0.03) -> 切換為嚴格模式 (+5km/h)
+# 意思：在 0% ~ 3% 的緩下坡，我們依然允許滑到 +10km/h (模式 A)
+PITCH_DOWNHILL_THRESHOLD = -0.030 
+
+# --- 3. 動態 TTC (碰撞時間) 安全設定 ---
+# 速度 [36kph, 108kph] -> TTC [2.0s, 3.0s] 平滑過渡
+TTC_BP = [10., 30.]
+TTC_V  = [2.0, 3.0]
+
+# --- 4. 緊急狀況閾值 ---
+EMERGENCY_TTC = 2.0
+EMERGENCY_RELATIVE_SPEED = 10.0
+EMERGENCY_DECEL_THRESHOLD = -1.5
+
+# --- 5. 其他安全設定 ---
+LEAD_COOLDOWN_TIME = 0.5
+SPEED_BP = [0., 10., 20., 30.]
+MIN_DIST_V = [15., 20., 25., 30.]
 
 
 class ACM:
   def __init__(self):
     self.enabled = False
-    self._is_speed_over_cruise = False
+    self._is_in_coast_window = False
     self._has_lead = False
     self._active_prev = False
-    self._last_lead_time = 0.0  # Track when we last saw a lead
+    self._last_lead_time = 0.0
 
     self.active = False
     self.just_disabled = False
+    
+    self.current_ttc_threshold = 3.0
+    self.current_pitch = 0.0
+    self.current_max_offset = 0.0 
 
   def _check_emergency_conditions(self, lead, v_ego, current_time):
-    """Check for emergency conditions that require immediate ACM disable."""
     if not lead or not lead.status:
       return False
 
     self.lead_ttc = lead.dRel / max(v_ego, 0.1)
-    relative_speed = v_ego - lead.vLead  # Positive = closing
-
-    # Speed-adaptive minimum distance
+    relative_speed = v_ego - lead.vLead
     min_dist_for_speed = np.interp(v_ego, SPEED_BP, MIN_DIST_V)
 
-    # Emergency disable conditions - only for truly dangerous situations
-    # Require BOTH close distance AND (fast closing OR very short TTC)
     if lead.dRel < min_dist_for_speed and (
         self.lead_ttc < EMERGENCY_TTC or
         relative_speed > EMERGENCY_RELATIVE_SPEED):
 
       self._last_lead_time = current_time
-      if self.active:  # Only log if we're actually disabling
-        cloudlog.warning(f"ACM emergency disable: dRel={lead.dRel:.1f}m, TTC={self.lead_ttc:.1f}s, relSpeed={relative_speed:.1f}m/s")
+      if self.active:
+        cloudlog.warning(f"ACM emergency disable: dRel={lead.dRel:.1f}m, TTC={self.lead_ttc:.1f}s")
       return True
 
     return False
 
   def _update_lead_status(self, lead, v_ego, current_time):
-    """Update lead vehicle detection status."""
     if lead and lead.status:
       self.lead_ttc = lead.dRel / max(v_ego, 0.1)
+      self.current_ttc_threshold = np.interp(v_ego, TTC_BP, TTC_V)
 
-      if self.lead_ttc < TTC_THRESHOLD:
+      if self.lead_ttc < self.current_ttc_threshold:
         self._has_lead = True
         self._last_lead_time = current_time
       else:
@@ -87,75 +95,75 @@ class ACM:
       self.lead_ttc = float('inf')
 
   def _check_cooldown(self, current_time):
-    """Check if we're still in cooldown period after lead detection."""
     time_since_lead = current_time - self._last_lead_time
     return time_since_lead < LEAD_COOLDOWN_TIME
 
-  def _should_activate(self, user_ctrl_lon, v_ego, v_cruise, in_cooldown):
-    """Determine if ACM should be active based on all conditions."""
-    self._is_speed_over_cruise = v_ego > (v_cruise * SPEED_RATIO)
+  def _should_activate(self, user_ctrl_lon, v_ego, v_cruise, in_cooldown, pitch):
+    # 1. 上坡判斷：大於 1.5% 禁止滑行 (保留原設定，確保爬坡不掉速)
+    if pitch > PITCH_UPHILL_THRESHOLD:
+        self._is_in_coast_window = False
+        return False
+
+    # 2. 決定「速度上限」是寬鬆 (+10) 還是嚴格 (+5)
+    # 修改點：只有坡度比 -3% 更陡 (例如 -4%, -5%) 才會觸發嚴格模式
+    if pitch < PITCH_DOWNHILL_THRESHOLD:
+        self.current_max_offset = SPEED_OFFSET_MAX_DOWNHILL_KPH # +5 km/h
+    else:
+        self.current_max_offset = SPEED_OFFSET_MAX_FLAT_KPH     # +10 km/h (平路或緩下坡)
+
+    # 3. 計算速度區間
+    lower_bound = v_cruise - (SPEED_OFFSET_MIN_KPH / 3.6)
+    upper_bound = v_cruise + (self.current_max_offset / 3.6)
+    
+    self._is_in_coast_window = lower_bound < v_ego < upper_bound
 
     return (not user_ctrl_lon and
             not self._has_lead and
             not in_cooldown and
-            self._is_speed_over_cruise)
+            self._is_in_coast_window)
 
   def update_states(self, cc, rs, user_ctrl_lon, v_ego, v_cruise):
-    """Update ACM state with multiple safety checks."""
-    # Basic validation
     if not self.enabled or len(cc.orientationNED) != 3:
       self.active = False
       return
 
+    self.current_pitch = cc.orientationNED[1]
     current_time = time.monotonic()
     lead = rs.leadOne
 
-    # Check emergency conditions first (highest priority)
     if self._check_emergency_conditions(lead, v_ego, current_time):
       self.active = False
       self._active_prev = self.active
       return
 
-    # Update normal lead status
     self._update_lead_status(lead, v_ego, current_time)
-
-    # Check cooldown period
     in_cooldown = self._check_cooldown(current_time)
+    
+    self.active = self._should_activate(user_ctrl_lon, v_ego, v_cruise, in_cooldown, self.current_pitch)
 
-    # Determine if ACM should be active
-    self.active = self._should_activate(user_ctrl_lon, v_ego, v_cruise, in_cooldown)
-
-    # Track state changes for logging
     self.just_disabled = self._active_prev and not self.active
     if self.active and not self._active_prev:
-      cloudlog.info(f"ACM activated: v_ego={v_ego*3.6:.1f} km/h, v_cruise={v_cruise*3.6:.1f} km/h")
+      pitch_deg = self.current_pitch * 57.2958
+      # Log 顯示當下的上限設定
+      cloudlog.info(f"ACM ON: v={v_ego*3.6:.0f}, pitch={pitch_deg:.1f}deg, Max+{self.current_max_offset:.0f}kph")
     elif self.just_disabled:
-      cloudlog.info("ACM deactivated")
+      cloudlog.info("ACM OFF")
 
     self._active_prev = self.active
 
   def update_a_desired_trajectory(self, a_desired_trajectory):
-    """
-    Modify acceleration trajectory to allow coasting.
-    SAFETY: Check for any strong braking request and abort.
-    """
     if not self.active:
       return a_desired_trajectory
 
-    # SAFETY CHECK: If MPC wants significant braking, DON'T suppress it
     min_accel = np.min(a_desired_trajectory)
     if min_accel < EMERGENCY_DECEL_THRESHOLD:
       cloudlog.warning(f"ACM aborting: MPC requested {min_accel:.2f} m/s² braking")
-      self.active = False  # Immediately deactivate
-      return a_desired_trajectory  # Return unmodified trajectory
+      self.active = False
+      return a_desired_trajectory
 
-    # Only suppress very mild braking (> -1.0 m/s²)
-    # This allows coasting but preserves any meaningful braking
     modified_trajectory = np.copy(a_desired_trajectory)
     for i in range(len(modified_trajectory)):
       if -1.0 < modified_trajectory[i] < 0:
-        # Only suppress very gentle braking for cruise control
         modified_trajectory[i] = 0.0
-      # Any braking stronger than -1.0 m/s² is preserved!
-
+    
     return modified_trajectory
