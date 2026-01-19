@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import json
+import sys
 
 import pyray as rl
 
+# 設定 OpenPilot 的根目錄
+# 通常是 /data/openpilot/selfdrive
 FONT_DIR = Path(__file__).resolve().parent
-SELFDRIVE_DIR = FONT_DIR.parents[1]
+SELFDRIVE_DIR = Path("/data/openpilot/selfdrive")
 TRANSLATIONS_DIR = SELFDRIVE_DIR / "ui" / "translations"
 LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
 
@@ -23,6 +26,42 @@ def _languages():
 
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
+
+  # --- 新增：多路徑搜尋 events.py ---
+  # 我們會依序檢查這些位置，找到第一個存在的就讀取
+  possible_paths = [
+      # 1. 您提供的路徑 (優先檢查)
+      Path("/data/openpilot/selfdrive/selfdrived/events.py"),
+      SELFDRIVE_DIR / "selfdrived" / "events.py",
+      
+      # 2. 官方標準路徑 (作為備用)
+      SELFDRIVE_DIR / "controls" / "lib" / "events.py",
+      Path("/data/openpilot/selfdrive/controls/lib/events.py"),
+  ]
+
+  found = False
+  print("\n--- Searching for events.py ---")
+  for events_path in possible_paths:
+      print(f"DEBUG: Checking: {events_path}")
+      if events_path.exists():
+          print(f"SUCCESS: Found events.py at {events_path}")
+          try:
+              # 讀取檔案內容
+              content = events_path.read_text(encoding="utf-8")
+              chars = set(content)
+              base.update(chars)
+              print(f"SUCCESS: Added {len(chars)} characters from events.py")
+              found = True
+              break
+          except Exception as e:
+              print(f"ERROR: Could not read file: {e}")
+  
+  if not found:
+      print("WARNING: Could not find events.py in any known location!")
+      print("WARNING: Chinese characters WILL BE MISSING in the output images.")
+  print("-------------------------------\n")
+  # --- 搜尋結束 ---
+
   unifont = set(base)
 
   for language, code in _languages().items():
@@ -69,9 +108,7 @@ def _glyph_metrics(glyphs, rects, codepoints):
 
 
 def _write_bmfont(path: Path, font_size: int, face: str, atlas_name: str, line_height: int, base: int, atlas_size, entries):
-  # TODO: why doesn't raylib calculate these metrics correctly?
   if line_height != font_size:
-    print("using font size for line height", atlas_name)
     line_height = font_size
   lines = [
     f"info face=\"{face}\" size=-{font_size} bold=0 italic=0 charset=\"\" unicode=1 stretchH=100 smooth=0 aa=1 padding=0,0,0,0 spacing=0,0 outline=0",
@@ -91,8 +128,8 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
   print(f"Processing {font_path.name}...")
 
   font_size = {
-    "unifont.otf": 16,  # unifont is only 16x8 or 16x16 pixels per glyph
-  }.get(font_path.name, 200)
+    "unifont.otf": 60,
+  }.get(font_path.name, 350)
 
   data = font_path.read_bytes()
   file_buf = rl.ffi.new("unsigned char[]", data)
@@ -119,6 +156,7 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
 
 def main():
+  print(f"DEBUG: Script started in {FONT_DIR}")
   base_cp, unifont_cp = _char_sets()
   fonts = sorted(FONT_DIR.glob("*.ttf")) + sorted(FONT_DIR.glob("*.otf"))
   for font in fonts:
@@ -130,4 +168,8 @@ def main():
 
 
 if __name__ == "__main__":
-  raise SystemExit(main())
+  try:
+      main()
+  except Exception as e:
+      print(f"FATAL ERROR: {e}")
+      sys.exit(1)
