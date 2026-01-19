@@ -54,10 +54,10 @@ def _char_sets():
     except FileNotFoundError:
       continue
    #修改3:扩容字符集：    (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
-    if code in UNIFONT_LANGUAGES:
-      unifont.update(chars)  # 中文的字符纳入unifont_cp（后续china字体用这个字符集）
-    elif code in CHINA_LANGUAGES:
-      china.update(chars)
+    if code in CHINA_LANGUAGES:
+      china.update(chars)  # 中文的字符纳入china_cp（后续china字体用这个字符集）
+    elif code in UNIFONT_LANGUAGES:
+      unifont.update(chars)
     else:
       base.update(chars)
 
