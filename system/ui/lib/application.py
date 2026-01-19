@@ -83,7 +83,7 @@ void main() {
 }
 """
 
-DEFAULT_TEXT_SIZE = 100
+DEFAULT_TEXT_SIZE = 60
 DEFAULT_TEXT_COLOR = rl.Color(255, 255, 255, int(255 * 0.9))
 
 # Qt draws fonts accounting for ascent/descent differently, so compensate to match old styles
