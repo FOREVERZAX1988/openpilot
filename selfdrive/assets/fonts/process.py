@@ -27,6 +27,24 @@ def _languages():
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
 
+  # --- 新增：讀取 CHANGELOGS.md ---
+  # OpenPilot 根目錄通常是 selfdrive 的上一層
+  changelog_path = SELFDRIVE_DIR.parent / "CHANGELOGS.md"
+  
+  print(f"\n--- Checking {changelog_path} ---")
+  if changelog_path.exists():
+      try:
+          content = changelog_path.read_text(encoding="utf-8")
+          chars = set(content)
+          base.update(chars)
+          print(f"SUCCESS: Added {len(chars)} characters from CHANGELOGS.md")
+      except Exception as e:
+          print(f"ERROR: Could not read CHANGELOGS.md: {e}")
+  else:
+      print("WARNING: CHANGELOGS.md not found! (Characters in logs might be missing)")
+  print("-------------------------------\n")
+  # --- 讀取結束 ---
+
   # --- 新增：多路徑搜尋 events.py ---
   # 我們會依序檢查這些位置，找到第一個存在的就讀取
   possible_paths = [
