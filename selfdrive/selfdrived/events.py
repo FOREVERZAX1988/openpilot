@@ -88,16 +88,6 @@ def below_steer_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.S
     AlertStatus.userPrompt, AlertSize.small,
     Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.4)
 
-'''新版删除以下这段
-def steer_saturated_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  steer_text2 = tr("Steer Left") if sm['carControl'].actuators.torque > 0 else tr("Steer Right")
-  return Alert(
-    tr("Take Control"),
-    steer_text2,
-    AlertStatus.userPrompt, AlertSize.mid,
-    Priority.LOW, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 2.)'''
-
-
 def calibration_incomplete_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   first_word = tr('Recalibrating') if sm['liveCalibration'].calStatus == log.LiveCalibrationData.Status.recalibrating else tr('Calibrating')
   return Alert(
@@ -312,6 +302,15 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.critical, AlertSize.full,
       Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.none, 2.),
     ET.NO_ENTRY: NoEntryAlert(tr("Stock AEB: Risk of Collision")),
+  },
+
+  EventName.stockLkas: {
+    ET.PERMANENT: Alert(
+      "TAKE CONTROL",
+      "Stock LKAS: Lane Departure Detected",
+      AlertStatus.critical, AlertSize.full,
+      Priority.HIGH, VisualAlert.fcw, AudibleAlert.none, 2.),
+    ET.NO_ENTRY: NoEntryAlert("Stock LKAS: Lane Departure Detected"),
   },
 
   EventName.fcw: {
@@ -769,13 +768,13 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # - CAN data is received, but some message are not received at the right frequency
   # If you're not writing a new car port, this is usually cause by faulty wiring
   EventName.canError: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert(tr("CAN Error")),
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert(tr("Unknown Vehicle Variant")),
     ET.PERMANENT: Alert(
-      tr("CAN Error: Check Connections"),
+      tr("Unknown Vehicle Variant"),
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., creation_delay=1.),
-    ET.NO_ENTRY: NoEntryAlert(tr("CAN Error: Check Connections")),
+    ET.NO_ENTRY: NoEntryAlert(tr("Unknown Vehicle Variant")),
   },
 
   EventName.canBusMissing: {
