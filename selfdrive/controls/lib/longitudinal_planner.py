@@ -247,7 +247,7 @@ class LongitudinalPlanner:
     if is_dtsc_braking:
         decel_slew_rate = 0.15  # DTSC 最緊急，給予最大權限 (0.15)
     elif is_aem_braking:
-        decel_slew_rate = 0.15 # AEM/實驗模式，為了紅燈煞停精準度，比 ACC 兇一點
+        decel_slew_rate = 0.05 # AEM/實驗模式，為了紅燈煞停精準度，比 ACC 兇一點
 
     for idx in range(2):
       # idx 0=min, 1=max
