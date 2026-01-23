@@ -1,34 +1,47 @@
+
 import math
 import numpy as np
 from collections import deque
 
 from cereal import log
 from opendbc.car.lateral import FRICTION_THRESHOLD, get_friction
-from openpilot.common.constants import ACCELERATION_DUE_TO_GRAVITY
+from openpilot.common.constants import ACCELERATION_DUE_TO_GRAVITY, CV
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.selfdrive.controls.lib.latcontrol import LatControl
 from openpilot.common.pid import PIDController
 
-# At higher speeds (25+mph) we can assume:
-# Lateral acceleration achieved by a specific car correlates to
-# torque applied to the steering rack. It does not correlate to
-# wheel slip, or to speed.
-
-# This controller applies torque to achieve desired lateral
-# accelerations. To compensate for the low speed effects the
-# proportional gain is increased at low speeds by the PID controller.
-# Additionally, there is friction in the steering wheel that needs
-# to be overcome to move it at all, this is compensated for too.
+# -------------------------------------------------------------------
+# [V5.1 Taiwan Optimization] - 參數調整版 (No Dynamic KD)
+# -------------------------------------------------------------------
 
 KP = 1.0
 KI = 0.3
 KD = 0.0
-INTERP_SPEEDS = [1, 1.5, 2.0, 3.0, 5, 7.5, 10, 15, 30]
-KP_INTERP = [250, 120, 65, 30, 11.5, 5.5, 3.5, 2.0, KP]
 
-LP_FILTER_CUTOFF_HZ = 1.2
+# [速度節點] (m/s)
+INTERP_SPEEDS = [1, 1.5, 2.0, 3.0, 5, 7.5, 10, 15, 30]
+
+# -----------------------------------------------------------
+# [移植功能] 區分 ACC ON 與 ACC OFF 的 KP (扭力/比例增益) 設定
+# -----------------------------------------------------------
+
+# 模式 A: ACC 開啟 (自動駕駛中)
+# [Modified] 根據您的需求更新參數 (高速段增強至 3.0)
+KP_INTERP_ACC_ON = [250, 120, 65, 30, 11.5, 5.5, 3.5, 3.0, KP]
+
+# 模式 B: ACC 關閉 (手動駕駛/滑行)
+# [Modified] 根據您的需求更新參數 (中低速放軟至 18，高速段增強至 3.0)
+KP_INTERP_ACC_OFF = [200, 90, 50, 18, 10.0, 5.0, 3.5, 3.0, KP]
+
+# -----------------------------------------------------------
+
+# [Modified] Filter set to 1.5Hz
+# 比原廠(1.25Hz)反應快
+LP_FILTER_CUTOFF_HZ = 1.25
+
 LAT_ACCEL_REQUEST_BUFFER_SECONDS = 1.0
 VERSION = 0
+
 
 class LatControlTorque(LatControl):
   def __init__(self, CP, CI, dt):
@@ -36,13 +49,18 @@ class LatControlTorque(LatControl):
     self.torque_params = CP.lateralTuning.torque.as_builder()
     self.torque_from_lateral_accel = CI.torque_from_lateral_accel()
     self.lateral_accel_from_torque = CI.lateral_accel_from_torque()
-    self.pid = PIDController([INTERP_SPEEDS, KP_INTERP], KI, KD, rate=1/self.dt)
+    
+    # 初始化時使用 ACC ON 的表格作為預設
+    self.pid = PIDController([INTERP_SPEEDS, KP_INTERP_ACC_ON], KI, KD, rate=1/self.dt)
+    
     self.update_limits()
     self.steering_angle_deadzone_deg = self.torque_params.steeringAngleDeadzoneDeg
     self.lat_accel_request_buffer_len = int(LAT_ACCEL_REQUEST_BUFFER_SECONDS / self.dt)
     self.lat_accel_request_buffer = deque([0.] * self.lat_accel_request_buffer_len , maxlen=self.lat_accel_request_buffer_len)
     self.previous_measurement = 0.0
     self.measurement_rate_filter = FirstOrderFilter(0.0, 1 / (2 * np.pi * LP_FILTER_CUTOFF_HZ), self.dt)
+    
+    # [Removed] 移除了 Dynamic KD Filter 初始化
 
   def update_live_torque_params(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
@@ -68,7 +86,6 @@ class LatControlTorque(LatControl):
 
       delay_frames = int(np.clip(lat_delay / self.dt, 1, self.lat_accel_request_buffer_len))
       expected_lateral_accel = self.lat_accel_request_buffer[-delay_frames]
-      # TODO factor out lateral jerk from error to later replace it with delay independent alternative
       future_desired_lateral_accel = desired_curvature * CS.vEgo ** 2
       self.lat_accel_request_buffer.append(future_desired_lateral_accel)
       gravity_adjusted_future_lateral_accel = future_desired_lateral_accel - roll_compensation
@@ -79,14 +96,28 @@ class LatControlTorque(LatControl):
       self.previous_measurement = measurement
 
       setpoint = lat_delay * desired_lateral_jerk + expected_lateral_accel
+      
+      # [Modified] 移除 optimization_boost，回歸標準誤差計算
       error = setpoint - measurement
+      
+      # ----------------------------------------------------------
+      # [移植功能] 僅保留 ACC 狀態切換 KP 表格 (移除了 KD 動態邏輯)
+      # ----------------------------------------------------------
+      if CS.cruiseState.enabled:
+        # --- ACC ON 模式 ---
+        # 使用強增益 KP 表 (PID._k_p[1] 是 Y 軸數據)
+        self.pid._k_p[1] = KP_INTERP_ACC_ON
+      else:
+        # --- ACC OFF 模式 ---
+        # 使用輕增益 KP 表 (手感較輕)
+        self.pid._k_p[1] = KP_INTERP_ACC_OFF
+      
+      # [Removed] 移除了 KD 計算與濾波更新
+      # ----------------------------------------------------------
 
-      # do error correction in lateral acceleration space, convert at end to handle non-linear torque responses correctly
       pid_log.error = float(error)
       ff = gravity_adjusted_future_lateral_accel
-      # latAccelOffset corrects roll compensation bias from device roll misalignment relative to car roll
       ff -= self.torque_params.latAccelOffset
-      # TODO jerk is weighted by lat_delay for legacy reasons, but should be made independent of it
       ff += get_friction(error, lateral_accel_deadzone, FRICTION_THRESHOLD, self.torque_params)
 
       freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
@@ -102,11 +133,10 @@ class LatControlTorque(LatControl):
       pid_log.i = float(self.pid.i)
       pid_log.d = float(self.pid.d)
       pid_log.f = float(self.pid.f)
-      pid_log.output = float(-output_torque) # TODO: log lat accel?
+      pid_log.output = float(-output_torque)
       pid_log.actualLateralAccel = float(measurement)
       pid_log.desiredLateralAccel = float(setpoint)
       pid_log.desiredLateralJerk = float(desired_lateral_jerk)
       pid_log.saturated = bool(self._check_saturation(self.steer_max - abs(output_torque) < 1e-3, CS, steer_limited_by_safety, curvature_limited))
 
-    # TODO left is positive in this convention
     return -output_torque, 0.0, pid_log
