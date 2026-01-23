@@ -21,10 +21,10 @@ WIDE_CAM = VisionStreamType.VISION_STREAM_WIDE_ROAD
 DEFAULT_DEVICE_CAMERA = DEVICE_CAMERAS["tici", "ar0231"]
 
 BORDER_COLORS = {
-  UIStatus.DISENGAGED: rl.Color(0x12, 0x28, 0x39, 0xFF),  # Blue for disengaged state
+  UIStatus.DISENGAGED: rl.Color(0x12, 0x28, 0x39, 0x80),  # Blue for disengaged state 降低亮度 
   UIStatus.OVERRIDE: rl.Color(0x89, 0x92, 0x8D, 0xFF),  # Gray for override state
-  UIStatus.ENGAGED: rl.Color(0x16, 0x7F, 0x40, 0xFF),  # Green for engaged state
-  UIStatus.ALKA: rl.Color(0x22, 0xa0, 0xdc, 0xf1),  # Blue for ALKA state
+  UIStatus.ENGAGED: rl.Color(0x16, 0x7F, 0x40, 0x80),  # Green for engaged state 降低亮度
+  UIStatus.ALKA: rl.Color(0x22, 0xa0, 0xdc, 0x60),  # Blue for ALKA state 降低亮度
 }
 
 WIDE_CAM_MAX_SPEED = 10.0  # m/s (22 mph)
