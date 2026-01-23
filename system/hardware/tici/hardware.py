@@ -1,3 +1,4 @@
+
 import math
 import os
 import subprocess
@@ -348,9 +349,9 @@ class Tici(HardwareBase):
       pass
 
   def set_screen_brightness(self, percentage):
-    # 設定亮度縮放比例 (0.4 代表限制最大亮度為硬體的 40%)
+    # 設定亮度縮放比例 (0.3 代表限制最大亮度為硬體的 30%)
     # 您可以隨時修改這個數字 (例如 0.5 = 50%, 1.0 = 100%)
-    BRIGHTNESS_SCALE = 0.4 
+    BRIGHTNESS_SCALE = 0.3 
 
     try:
       # 讀取螢幕硬體支援的最大亮度數值
@@ -360,7 +361,7 @@ class Tici(HardwareBase):
       # 計算目標亮度數值：
       # 原始公式: percentage * (max_brightness / 100.)
       # 修改後: 將最大亮度乘上縮放比例 (max_brightness * BRIGHTNESS_SCALE)
-      # 這樣當 UI 傳入 100% 時，實際只會達到硬體的 40%
+      # 這樣當 UI 傳入 100% 時，實際只會達到硬體的 30%
       val = int(percentage * (max_brightness * BRIGHTNESS_SCALE / 100.))
       
       # 將計算後的數值寫入系統檔案以變更亮度
@@ -371,7 +372,7 @@ class Tici(HardwareBase):
 
   def get_screen_brightness(self):
     # 必須與 set_screen_brightness 使用相同的縮放比例，以確保 UI 顯示一致
-    BRIGHTNESS_SCALE = 0.4
+    BRIGHTNESS_SCALE = 0.3
 
     try:
       # 讀取螢幕硬體支援的最大亮度數值
@@ -383,7 +384,7 @@ class Tici(HardwareBase):
         current_brightness = float(f.read())
         
         # 反向計算回百分比：
-        # 我們需要讓 UI 認為現在是 "100%" (即使硬體只有 40%)
+        # 我們需要讓 UI 認為現在是 "100%" (即使硬體只有 30%)
         # 因此除數也必須包含 BRIGHTNESS_SCALE
         return int(current_brightness / (max_brightness * BRIGHTNESS_SCALE / 100.))
     except Exception:
