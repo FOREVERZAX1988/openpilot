@@ -1,3 +1,4 @@
+
 import pyray as rl
 from dataclasses import dataclass
 from openpilot.common.constants import CV
@@ -7,7 +8,7 @@ from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
-from openpilot.selfdrive.ui.mici.onroad.torque_bar import TorqueBar
+#from openpilot.selfdrive.ui.mici.onroad.torque_bar import TorqueBar
 
 # Constants
 SET_SPEED_NA = 255
@@ -73,7 +74,7 @@ class HudRenderer(Widget):
 
     self._exp_button: ExpButton = ExpButton(UI_CONFIG.button_size, UI_CONFIG.wheel_icon_size)
 
-    self._torque_bar = TorqueBar(scale=4.0)
+    #self._torque_bar = TorqueBar(scale=4.0)
 
   def _update_state(self) -> None:
     """Update HUD state based on car state and controls state."""
@@ -124,8 +125,8 @@ class HudRenderer(Widget):
     button_y = rect.y + UI_CONFIG.border_size
     self._exp_button.render(rl.Rectangle(button_x, button_y, UI_CONFIG.button_size, UI_CONFIG.button_size))
 
-    if ui_state.sm['controlsState'].lateralControlState.which() != 'angleState':
-      self._torque_bar.render(rect)
+    #if ui_state.sm['controlsState'].lateralControlState.which() != 'angleState':
+    #  self._torque_bar.render(rect)
 
   def user_interacting(self) -> bool:
     return self._exp_button.is_pressed
