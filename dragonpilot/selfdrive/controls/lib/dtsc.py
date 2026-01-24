@@ -2,9 +2,6 @@
 Dynamic Turn Speed Controller (DTSC) - Final Production Edition
 版本: v25 Final (High Res BP)
 日期: 2026-01-13
-
-[版本狀態]: 正式版 (Production)
-- 日誌功能: [已關閉] (True or False)
 """
 
 import time
@@ -25,35 +22,50 @@ FILE_LOG_ENABLED = False
 # --- 安全係數 ---
 SAFETY_SPEED_FACTOR = 0.9 
 
-# --- 1. 側向加速度極限表 (LAT_LIMIT) ---
+# --- 1. 側向加速度極限表 (LAT_LIMIT) [G值天花板核心] ---
+# 用途：定義車輛在不同速度下，允許的最大側向加速度 (即過彎的"G值天花板")
+# 邏輯：速度越快，為了安全與舒適，允許的 G 值通常會稍微提高或保持穩定，但不能無限大。
+
+# [速度節點] 單位: m/s (已換算為 km/h)
+# 5.0=18km/h, 10.0=36km/h, 15.0=54km/h, 20.0=72km/h, 25.0=90km/h, 30.0=108km/h
 LAT_LIMIT_BP = [5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 25.0, 30.0]
+
+# [G值天花板] 單位: m/s² (除以 9.8 約等於 G力)
+# 1.6 m/s² ≈ 0.16G (舒適)
+# 2.0 m/s² ≈ 0.20G (一般過彎)
+# 2.3 m/s² ≈ 0.23G (稍微激進)
 LAT_LIMIT_V  = [1.6, 1.6,  1.8,  1.8,  1.9,  2.0,  2.1,  2.2,  2.3]
 
 # --- 2. 5段式漸進減速邏輯 (DECEL) ---
+# 用途：當預測的側向 G 值超過多少時，需要減速多少
+# BP: 預測的側向加速度 (m/s²)
+# V : 對應的減速度 (m/s²), 負值代表煞車
 DECEL_BP = np.array([1.0, 1.5, 2.0, 2.5, 3.0])
 DECEL_V  = np.array([0.0, -0.6, -1.8, -3.0, -3.5])
 
 # --- 減速度與遲滯限制 ---
-MAX_COMFORT_DECEL = -3.0       
-EMERGENCY_DECEL   = -3.5       
-MIN_CURVE_DISTANCE = 10.0      
-MAX_EXIT_ACCEL = 0.5           
+MAX_COMFORT_DECEL = -3.0       # 最大舒適減速度 (-3.0 m/s²)
+EMERGENCY_DECEL   = -3.5       # 緊急減速極限
+MIN_CURVE_DISTANCE = 10.0      # 彎道距離小於 10m 視為緊急
+MAX_EXIT_ACCEL = 0.5           # 出彎最大加速度
 
 # ==========================================================
 # [3. 智慧備援機制參數 (Smart Backup v25)]
 # ==========================================================
-BACKUP_LAT_G_TH = 1.2          
-BACKUP_BASE_DECEL = -0.5       
+BACKUP_LAT_G_TH = 1.2          # [觸發閾值] 當預測側向 G > 1.2 m/s² (約0.12G) 時進入監控
+BACKUP_BASE_DECEL = -0.5       # 備援基礎減速
 
 # --- [A. 切西瓜 (Inner Cut)] ---
-INNER_DEV_TH = 2.0             
-INNER_GAIN_PER_10CM = 0.04     
-INNER_MAX_DECEL = -0.5         
+# 車輛往彎道內側偏移 (壓線)
+INNER_DEV_TH = 2.0             # 容許內側偏移量 (公尺)
+INNER_GAIN_PER_10CM = 0.04     # 每偏 10cm 增加的煞車力道
+INNER_MAX_DECEL = -0.5         # 內側最大修正減速
 
 # --- [B. 外拋 (Outer Wide)] ---
-OUTER_DEV_TH = 0.2            
-OUTER_GAIN_PER_10CM = 0.8     
-OUTER_MAX_DECEL = -3.5         
+# 車輛往彎道外側偏移 (推頭) -> 危險度較高，參數較嚴格
+OUTER_DEV_TH = 0.2             # 容許外側偏移量 (僅 20cm)
+OUTER_GAIN_PER_10CM = 0.8      # 每偏 10cm 增加的煞車力道 (很強)
+OUTER_MAX_DECEL = -3.5         # 外拋最大修正減速 (強力煞車)
 
 # --- 濾波器與防抖動參數 ---
 LPF_ALPHA = 0.15                
@@ -129,6 +141,8 @@ class DTSC:
         return v_pred, rel_pos, yaw, pos_y
 
     def _compute_safe_speeds(self, v_pred, yaw_rates):
+        # 根據當前車速查表，找出對應的"G值天花板" (LAT_LIMIT_V)
+        # 並乘上 aggressiveness (激進係數) 進行調整
         raw_lat_limits = np.interp(v_pred, LAT_LIMIT_BP, LAT_LIMIT_V) * self.aggressiveness
 
         if self.filtered_lat_limits is None:
@@ -140,6 +154,9 @@ class DTSC:
         current_lat_limits = np.maximum(self.filtered_lat_limits, 1.0)
         v_clip = np.clip(v_pred, 1.0, 100.0)
         curvatures = np.abs(yaw_rates / v_clip)
+        
+        # 核心公式：V_max = sqrt( a_lat_max / curvature )
+        # 計算出在 G 值天花板限制下的最高安全速度
         safe_speeds = np.sqrt(current_lat_limits / (curvatures + 1e-6)) * SAFETY_SPEED_FACTOR
         return safe_speeds, curvatures
 
