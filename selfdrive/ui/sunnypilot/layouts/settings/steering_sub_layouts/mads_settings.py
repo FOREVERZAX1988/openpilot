@@ -9,16 +9,16 @@ import pyray as rl
 
 from opendbc.sunnypilot.car.tesla.values import TeslaFlagsSP
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.ui.lib.multilang import tr, tr_noop
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.network import NavButton
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from openpilot.system.ui.sunnypilot.widgets.list_view import multiple_button_item_sp, toggle_item_sp
 
 MADS_STEERING_MODE_OPTIONS = [
-  (tr("Remain Active"), tr_noop("Remain Active: ALC will remain active when the brake pedal is pressed.")),
-  (tr("Pause"), tr_noop("Pause: ALC will pause when the brake pedal is pressed.")),
-  (tr("Disengage"), tr_noop("Disengage: ALC will disengage when the brake pedal is pressed.")),
+  (tr("Remain Active"), tr("Remain Active: ALC will remain active when the brake pedal is pressed.")),
+  (tr("Pause"), tr("Pause: ALC will pause when the brake pedal is pressed.")),
+  (tr("Disengage"), tr("Disengage: ALC will disengage when the brake pedal is pressed.")),
 ]
 
 MADS_MAIN_CRUISE_BASE_DESC = tr("Note: For vehicles without LFA/LKAS button, disabling this will prevent lateral control engagement.")
