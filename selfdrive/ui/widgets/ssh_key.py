@@ -1,3 +1,4 @@
+
 import pyray as rl
 import requests
 import threading
@@ -22,7 +23,7 @@ from openpilot.system.ui.widgets.list_view import (
   BUTTON_WIDTH,
 )
 
-VALUE_FONT_SIZE = 55
+VALUE_FONT_SIZE = 48
 
 
 class SshKeyActionState(Enum):
