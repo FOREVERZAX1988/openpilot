@@ -22,7 +22,7 @@ from openpilot.system.ui.widgets.list_view import (
   BUTTON_WIDTH,
 )
 
-VALUE_FONT_SIZE = 48
+VALUE_FONT_SIZE = 55
 
 
 class SshKeyActionState(Enum):
