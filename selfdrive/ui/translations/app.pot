@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 19:42+0800\n"
+"POT-Creation-Date: 2026-01-24 14:15+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -35,6 +35,10 @@ msgid "Recording Audio Feedback"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:104
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:43
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:44
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:45
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:46
 msgid "s"
 msgstr ""
 
@@ -596,6 +600,9 @@ msgstr ""
 
 #: selfdrive/ui/layouts/onboarding.py:151
 #: selfdrive/ui/sunnypilot/layouts/onboarding.py:37
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:23
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:39
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:21
 #: system/ui/widgets/network.py:105
 msgid "Back"
 msgstr ""
@@ -1574,6 +1581,225 @@ msgstr ""
 msgid "System reboot required for changes to take effect. Reboot now?"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:40
+msgid ""
+"Enable the beloved MADS feature. Disable toggle to revert back to stock "
+"sunnypilot engagement/disengagement."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:42
+msgid "This platform supports limited MADS settings."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:43
+msgid "This platform supports all MADS settings."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:44
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:30
+msgid "Start the vehicle to check vehicle compatibility."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:48
+msgid "Modular Assistive Driving System (MADS)"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:52
+msgid "Customize MADS"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:57
+msgid "Customize Lane Change"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:63
+msgid ""
+"Pause lateral control with blinker when traveling below the desired speed "
+"selected."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:64
+msgid "Pause Lateral Control with Blinker"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:68
+msgid "Minimum Speed to Pause Lateral Control"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:77
+msgid "Enforce Torque Lateral Control"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:78
+msgid "Enable this to enforce sunnypilot to steer with Torque lateral control."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:81
+msgid "Customize Torque Params"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:87
+msgid "Neural Network Lateral Control (NNLC)"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:31
+msgid "Auto Lane Change by Blinker"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:33
+msgid ""
+"Set a timer to delay the auto lane change operation when the blinker is "
+"used. No nudge on the steering wheel is required to auto lane change if a "
+"timer is set. Default is Nudge.<br>Please use caution when using this "
+"feature. Only use the blinker when traffic and road conditions permit."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:40
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19
+msgid "Off"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:41
+msgid "Nudge"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:42
+msgid "Nudgeless"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:50
+msgid "Auto Lane Change: Delay with Blind Spot"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:51
+msgid ""
+"Toggle to enable a delay timer for seamless lane changes when blind spot "
+"monitoring (BSM) detects a obstructing vehicle, ensuring safe maneuvering."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:19
+msgid "Remain Active"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:20
+msgid "Pause"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:21
+msgid "Disengage"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:24
+msgid ""
+"Note: For vehicles without LFA/LKAS button, disabling this will prevent "
+"lateral control engagement."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:26
+msgid "Engage lateral and longitudinal control with cruise control engagement."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:27
+msgid ""
+"Note: Once lateral control is engaged via UEM, it will remain engaged until "
+"it is manually disabled via the MADS button or car shut off."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:31
+msgid ""
+"This feature defaults to OFF, and does not allow selection due to vehicle "
+"limitations."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:32
+msgid ""
+"This feature defaults to ON, and does not allow selection due to vehicle "
+"limitations."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:33
+msgid "This platform only supports Disengage mode due to vehicle limitations."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:46
+msgid "Toggle with Main Cruise"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:51
+msgid "Unified Engagement Mode (UEM)"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:57
+msgid "Steering Mode on Brake Pedal"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:102
+msgid ""
+"Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is "
+"manually pressed in sunnypilot."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:29
+msgid "Self-Tune"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:30
+msgid ""
+"Enables self-tune for Torque lateral control for platforms that do not use "
+"Torque lateral control by default."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:35
+msgid "Less Restrict Settings for Self-Tune (Beta)"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:36
+msgid ""
+"Less strict settings when using Self-Tune. This allows torqued to be more "
+"forgiving when learning values."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:41
+msgid "Enable Custom Tuning"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:42
+msgid ""
+"Enables custom tuning for Torque lateral control. Modifying Lateral "
+"Acceleration Factor and Friction below will override the offline values "
+"indicated in the YAML files within \"opendbc/car/torque_data\". The values "
+"will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:49
+msgid "Manual Real-Time Tuning"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:50
+msgid ""
+"Enforces the torque lateral controller to use the fixed values instead of "
+"the learned values from Self-Tune. Enabling this toggle overrides Self-Tune "
+"values."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:54
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:104
+msgid "Lateral Acceleration Factor"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:65
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:105
+msgid "Friction"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:103
+msgid "Real-Time & Offline"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:103
+msgid "Offline Only"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:42
 msgid "For secure backup, restore, and remote configuration"
 msgstr ""
@@ -1716,10 +1942,6 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:349
 msgid "Paired"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19
-msgid "Off"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19

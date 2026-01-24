@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 19:42+0800\n"
+"POT-Creation-Date: 2026-01-24 14:15+0800\n"
 "PO-Revision-Date: 2025-12-14 21:48+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -203,6 +203,14 @@ msgstr "自动（深色）"
 msgid "Auto (Default)"
 msgstr "自动（默认）"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:31
+msgid "Auto Lane Change by Blinker"
+msgstr "转向灯触发自动变道"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:50
+msgid "Auto Lane Change: Delay with Blind Spot"
+msgstr "自动变道：盲区检测延迟"
+
 #: sunnypilot/selfdrive/selfdrived/events.py:86
 msgid "Automatic Lane Centering is OFF"
 msgstr "自动车道居中已关闭"
@@ -222,6 +230,9 @@ msgstr "刹车！"
 
 #: selfdrive/ui/layouts/onboarding.py:151
 #: selfdrive/ui/sunnypilot/layouts/onboarding.py:37
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:23
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:39
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:21
 #: system/ui/widgets/network.py:105
 msgid "Back"
 msgstr "返回"
@@ -390,6 +401,12 @@ msgstr "若车辆处于通电状态，修改此设置将重启sunnypilot。"
 msgid "Check Hardware"
 msgstr "请检查硬件"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:102
+msgid ""
+"Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is "
+"manually pressed in sunnypilot."
+msgstr "选择在sunnypilot中手动踩下制动踏板后，自动车道居中（ALC）的工作方式"
+
 #: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py:102
 msgid "Choose your sponsorship tier and confirm your support"
 msgstr "选择你的赞助等级并确认你的支持"
@@ -487,6 +504,18 @@ msgstr "当前版本"
 msgid "Custom Longitudinal Tuning"
 msgstr "自定义纵向调校"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:57
+msgid "Customize Lane Change"
+msgstr "自定义变道"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:52
+msgid "Customize MADS"
+msgstr "自定义MADS"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:81
+msgid "Customize Torque Params"
+msgstr "自定义扭矩参数"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:50
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:86
 msgid "DELETE"
@@ -572,6 +601,10 @@ msgstr "禁用更新"
 #: selfdrive/selfdrived/events.py:215
 msgid "Disable your car's stock LKAS to engage"
 msgstr "请关闭车辆原厂的车道保持辅助系统（LKAS）以启用该功能"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:21
+msgid "Disengage"
+msgstr "退出功能"
 
 #: selfdrive/ui/layouts/settings/toggles.py:62
 msgid "Disengage on Accelerator Pedal"
@@ -708,6 +741,10 @@ msgstr "启用ADB"
 msgid "Enable Always Offroad"
 msgstr "启动始终非行驶模式"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:41
+msgid "Enable Custom Tuning"
+msgstr "启用自定义调校"
+
 #: selfdrive/ui/layouts/settings/toggles.py:68
 msgid "Enable Lane Departure Warnings"
 msgstr "启用车道偏离警示"
@@ -743,6 +780,12 @@ msgstr ""
 msgid "Enable sunnypilot"
 msgstr "启用sunnypilot"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:40
+msgid ""
+"Enable the beloved MADS feature. Disable toggle to revert back to stock "
+"sunnypilot engagement/disengagement."
+msgstr "启用备受青睐的MADS功能。关闭此开关，即可恢复sunnypilot默认的功能启用/退出逻辑"
+
 #: selfdrive/ui/layouts/settings/toggles.py:193
 msgid ""
 "Enable the sunnypilot longitudinal control (alpha) toggle to allow "
@@ -759,17 +802,58 @@ msgstr ""
 "关闭则使用固定的转向响应时间。\n"
 "保持开启可获得原生 openpilot 使用体验。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:78
+msgid "Enable this to enforce sunnypilot to steer with Torque lateral control."
+msgstr "启用此功能可强制sunnypilot采用扭矩横向控制进行转向"
+
 #: selfdrive/selfdrived/events.py:213
 msgid "Enable your car's LKAS to engage"
 msgstr "请启用车辆的车道保持辅助系统（LKAS）以启用该功能"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:42
+msgid ""
+"Enables custom tuning for Torque lateral control. Modifying Lateral "
+"Acceleration Factor and Friction below will override the offline values "
+"indicated in the YAML files within \"opendbc/car/torque_data\". The values "
+"will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
+msgstr ""
+"启用扭矩横向控制的自定义调校功能。\n"
+"修改下方的横向加速度系数与摩擦系数，将覆盖 opendbc/car/torque_data 目录下 YAML 文件中预设的离线参数。\n"
+"当「手动实时调校」开关启用时，修改后的参数也将实时生效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py:43
 msgid "Enables or disables the GitHub runner service."
 msgstr "启用或禁用GitHub运行器服务。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:30
+msgid ""
+"Enables self-tune for Torque lateral control for platforms that do not use "
+"Torque lateral control by default."
+msgstr ""
+"启用扭矩横向控制的自定义调校功能。\n"
+"修改下方的横向加速度系数与摩擦系数，将覆盖 opendbc/car/torque_data 目录下 YAML 文件中预设的离线参数。\n"
+"当「手动实时调校」开关启用时，修改后的参数也将实时生效。"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py:28
 msgid "Enforce Factory Longitudinal Control"
 msgstr "强制启用原厂纵向控制"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:77
+msgid "Enforce Torque Lateral Control"
+msgstr "强制启用扭矩横向控制"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:50
+msgid ""
+"Enforces the torque lateral controller to use the fixed values instead of "
+"the learned values from Self-Tune. Enabling this toggle overrides Self-Tune "
+"values."
+msgstr ""
+"强制扭矩横向控制器使用固定值，而非自调校（Self-Tune）生成的自学习值。\n"
+"启用此开关将覆盖自调校（Self-Tune）的参数值。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:26
+msgid "Engage lateral and longitudinal control with cruise control engagement."
+msgstr "启用巡航控制时，同步启用横向与纵向控制"
 
 #: selfdrive/selfdrived/events.py:236
 msgid "Ensure road ahead is clear"
@@ -896,6 +980,11 @@ msgstr "忘记"
 msgid "Forget Wi-Fi Network \"{}\"?"
 msgstr "要忘记 Wi‑Fi 网络“{}”吗？"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:65
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:105
+msgid "Friction"
+msgstr "摩擦系数"
+
 #: selfdrive/selfdrived/events.py:629 selfdrive/selfdrived/events.py:630
 #: sunnypilot/selfdrive/selfdrived/events.py:120
 msgid "Gear not D"
@@ -1008,6 +1097,23 @@ msgstr "检测到车道偏离"
 msgid "Last checked {}"
 msgstr "最后检查：{}"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:54
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:104
+msgid "Lateral Acceleration Factor"
+msgstr "横向加速度系数"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:35
+msgid "Less Restrict Settings for Self-Tune (Beta)"
+msgstr "自调校宽松模式（测试版）"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:36
+msgid ""
+"Less strict settings when using Self-Tune. This allows torqued to be more "
+"forgiving when learning values."
+msgstr ""
+"启用自调校（Self-Tune）时采用更宽松的设置规则。\n"
+"此模式下扭矩控制系统学习参数值时，容错性更高。"
+
 #: selfdrive/selfdrived/events.py:452
 msgid "Likely Hardware Issue"
 msgstr "疑似硬件问题"
@@ -1046,6 +1152,10 @@ msgstr "内存不足：请重启设备"
 msgid "MAX"
 msgstr "最大"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:49
+msgid "Manual Real-Time Tuning"
+msgstr "手动实时调校"
+
 #: sunnypilot/selfdrive/selfdrived/events.py:95
 msgid "Manual Speed Control Required"
 msgstr "需手动控制车速"
@@ -1071,6 +1181,10 @@ msgid ""
 "Maximize your training data uploads to improve openpilot's driving models."
 msgstr "最大化上传训练数据，以改进 openpilot 的驾驶模型。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:68
+msgid "Minimum Speed to Pause Lateral Control"
+msgstr "横向控制暂停最低车速"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:178
 msgid ""
 "Model download has started in the background. We suggest resetting "
@@ -1084,6 +1198,10 @@ msgstr ""
 msgid "Model uncertain at this speed"
 msgstr "当前车速下驾驶模型决策不确定"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:48
+msgid "Modular Assistive Driving System (MADS)"
+msgstr "模块化辅助驾驶系统（MADS）"
+
 #: selfdrive/ui/layouts/settings/device.py:64
 #: selfdrive/ui/layouts/settings/device.py:65
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:114
@@ -1091,6 +1209,10 @@ msgstr "当前车速下驾驶模型决策不确定"
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:213
 msgid "N/A"
 msgstr "无"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:87
+msgid "Neural Network Lateral Control (NNLC)"
+msgstr "神经网络横向控制（NNLC）"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py:72
 msgid "No"
@@ -1130,13 +1252,42 @@ msgstr "未指纹适配或手动选择"
 msgid "Not going to lie, it's sad to see you disabled sunnylink"
 msgstr "说实话，看到你关闭sunnylink还挺遗憾的"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:24
+msgid ""
+"Note: For vehicles without LFA/LKAS button, disabling this will prevent "
+"lateral control engagement."
+msgstr ""
+"注意：对于无LFA/LKAS按键的车型，\n"
+"关闭此功能将无法启用横向控制。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:27
+msgid ""
+"Note: Once lateral control is engaged via UEM, it will remain engaged until "
+"it is manually disabled via the MADS button or car shut off."
+msgstr ""
+"注意：通过统一启用模式（UEM）启用横向控制后，\n"
+"该功能将持续生效，直至通过MADS按键手动关闭或车辆熄火。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:41
+msgid "Nudge"
+msgstr "轻推变道"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:42
+msgid "Nudgeless"
+msgstr "无需轻推直接变道"
+
 #: system/ui/widgets/confirm_dialog.py:93 system/ui/widgets/html_render.py:263
 msgid "OK"
 msgstr "确定"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:40
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19
 msgid "Off"
 msgstr "关闭"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:103
+msgid "Offline Only"
+msgstr "仅限离线"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:77
 msgid "Offroad"
@@ -1227,6 +1378,22 @@ msgstr "已匹配"
 #: sunnypilot/selfdrive/selfdrived/events.py:159
 msgid "Parking Brake Engaged"
 msgstr "驻车制动已拉起"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:20
+msgid "Pause"
+msgstr "暂停功能"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:64
+msgid "Pause Lateral Control with Blinker"
+msgstr "转向灯触发横向控制暂停"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:63
+msgid ""
+"Pause lateral control with blinker when traveling below the desired speed "
+"selected."
+msgstr ""
+"当车速低于选定的目标车速时，\n"
+"开启转向灯即可暂停横向控制功能。"
 
 #: selfdrive/selfdrived/events.py:344 selfdrive/selfdrived/events.py:352
 #: selfdrive/selfdrived/events.py:864 selfdrive/selfdrived/events.py:871
@@ -1349,6 +1516,10 @@ msgstr "雷达暂时不可用"
 msgid "Re-enter the \"sunnylink\" panel to verify sponsorship status"
 msgstr "重新进入「sunnylink」面板，以验证赞助状态"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:103
+msgid "Real-Time & Offline"
+msgstr "实时&离线"
+
 #: selfdrive/ui/layouts/settings/device.py:60
 #: selfdrive/ui/layouts/settings/device.py:184
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:107
@@ -1400,6 +1571,10 @@ msgstr "从容"
 #: selfdrive/selfdrived/events.py:545
 msgid "Release Brake to Engage"
 msgstr "松开制动踏板以启用"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:19
+msgid "Remain Active"
+msgstr "保持激活"
 
 #: selfdrive/ui/widgets/prime.py:47
 msgid "Remote access"
@@ -1551,6 +1726,10 @@ msgstr "选择车辆"
 msgid "Select vehicle to force fingerprint manually."
 msgstr "选择车辆以手动强制指纹适配。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:29
+msgid "Self-Tune"
+msgstr "自调校"
+
 #: selfdrive/selfdrived/events.py:691
 msgid "Selfdrive Process Lagging: Reboot Your Device"
 msgstr "辅助驾驶进程滞后：请重启设备"
@@ -1569,6 +1748,17 @@ msgstr "序列号"
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:123
 msgid "Server"
 msgstr "服务器"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:33
+msgid ""
+"Set a timer to delay the auto lane change operation when the blinker is "
+"used. No nudge on the steering wheel is required to auto lane change if a "
+"timer is set. Default is Nudge.<br>Please use caution when using this "
+"feature. Only use the blinker when traffic and road conditions permit."
+msgstr ""
+"设置计时器，使开启转向灯时自动变道操作延迟执行。\n"
+"若设置了延迟时间，自动变道无需轻拨方向盘即可触发，默认模式为轻拨触发。\n"
+"⚠️使用此功能时请务必谨慎，仅在交通及道路条件允许的情况下开启转向灯。"
 
 #: sunnypilot/selfdrive/selfdrived/events.py:205
 msgid "Set speed changed"
@@ -1636,6 +1826,11 @@ msgstr "标准"
 msgid "Start Download"
 msgstr "开始下载"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:44
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:30
+msgid "Start the vehicle to check vehicle compatibility."
+msgstr "启动车辆以检查车辆兼容性"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:54
 msgid "State"
 msgstr "状态"
@@ -1663,6 +1858,10 @@ msgstr "转向传动比不匹配"
 #: selfdrive/selfdrived/events.py:336 selfdrive/selfdrived/events.py:582
 msgid "Steering Assist Temporarily Unavailable"
 msgstr "转向辅助暂时不可用"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:57
+msgid "Steering Mode on Brake Pedal"
+msgstr "制动踏板控制转向模式"
 
 #: selfdrive/selfdrived/events.py:540
 msgid "Steering Pressed"
@@ -1749,6 +1948,18 @@ msgstr "网络共享密码"
 msgid "The reset cannot be undone. You have been warned."
 msgstr "重置操作不可撤销，特此提醒。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:31
+msgid ""
+"This feature defaults to OFF, and does not allow selection due to vehicle "
+"limitations."
+msgstr "受车辆硬件限制，此功能默认关闭且暂不支持手动选择。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:32
+msgid ""
+"This feature defaults to ON, and does not allow selection due to vehicle "
+"limitations."
+msgstr "受车辆硬件限制，此功能默认开启且暂不支持手动选择。"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/subaru.py:31
 msgid "This feature is currently not available on this platform."
 msgstr "该功能目前暂不适用于此车型平台。"
@@ -1773,6 +1984,18 @@ msgstr "这是总开关，如需切断所有sunnylink请求，可开启此开关
 msgid ""
 "This may be due to weak internet connection or sunnylink registration issue. "
 msgstr "这可能是由于网络连接不佳，或sunnylink注册异常导致。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:33
+msgid "This platform only supports Disengage mode due to vehicle limitations."
+msgstr "受车辆硬件限制，本平台仅支持退出模式"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:43
+msgid "This platform supports all MADS settings."
+msgstr "本平台支持所有MADS功能设置"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py:42
+msgid "This platform supports limited MADS settings."
+msgstr "本平台仅支持部分MADS功能设置"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:95
 msgid "This setting will take effect immediately."
@@ -1807,6 +2030,14 @@ msgstr "此操作将启动下载流程，可能需要一段时间才能完成。
 msgid "Toggle stock LKAS on or off to engage"
 msgstr "切换原厂LKAS开启或关闭以启用"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:51
+msgid ""
+"Toggle to enable a delay timer for seamless lane changes when blind spot "
+"monitoring (BSM) detects a obstructing vehicle, ensuring safe maneuvering."
+msgstr ""
+"启用此开关后，当盲区监测（BSM）检测到障碍车辆时，\n"
+"系统将启动延迟计时器，保障平稳且安全的变道操作。"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py:40
 msgid ""
 "Toggle visibility of advanced sunnypilot controls.<br>This only changes the "
@@ -1815,6 +2046,10 @@ msgid ""
 msgstr ""
 "切换阳光领航高级控制项的显示状态。\n"
 "此操作仅改变开关的显示状态，不会修改其实际的启用/禁用状态。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:46
+msgid "Toggle with Main Cruise"
+msgstr "与主巡航联动开关"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:105
 msgid "Total Delay:"
@@ -1864,6 +2099,10 @@ msgstr "USB 错误：请重启设备"
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:288
 msgid "Unable to restore the settings, try again later."
 msgstr "无法恢复设置，请重试。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:51
+msgid "Unified Engagement Mode (UEM)"
+msgstr "统一启用模式（UEM）"
 
 #: selfdrive/ui/layouts/settings/software.py:82
 #: selfdrive/ui/layouts/settings/software.py:175
@@ -2187,6 +2426,10 @@ msgid "right"
 msgstr "右"
 
 #: selfdrive/selfdrived/events.py:104
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:43
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:44
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:45
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:46
 msgid "s"
 msgstr "s"
 
