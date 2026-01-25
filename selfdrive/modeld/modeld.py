@@ -43,10 +43,7 @@ VISION_METADATA_PATH = Path(__file__).parent / 'models/driving_vision_metadata.p
 POLICY_METADATA_PATH = Path(__file__).parent / 'models/driving_policy_metadata.pkl'
 
 # [全域設定] 保持 0.1
-# 這是給 controlsd 看的"招牌"。
-# 設為 0.1 可以避免彎道時補償力道過大，保持線性手感。
 LAT_SMOOTH_SECONDS = 0.1
-
 LONG_SMOOTH_SECONDS = 0.3
 MIN_LAT_CONTROL_SPEED = 0.3
 
