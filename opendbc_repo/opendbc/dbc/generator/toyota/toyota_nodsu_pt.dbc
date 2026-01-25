@@ -13,8 +13,7 @@ BO_ 401 STEERING_LTA: 8 XXX
  SG_ CLEAR_HOLD_STEERING_ALERT : 30|1@0+ (1,0) [0|1] "" XXX
  SG_ COUNTER : 6|6@0+ (1,0) [0|255] "" XXX
  SG_ STEER_REQUEST : 0|1@0+ (1,0) [0|1] "" XXX
- SG_ 
- SETME_X1 : 7|1@0+ (1,0) [0|1] "" XXX
+ SG_ SETME_X1 : 7|1@0+ (1,0) [0|1] "" XXX
 
 BO_ 550 BRAKE_MODULE: 8 XXX
  SG_ BRAKE_PRESSURE : 0|9@0+ (1,0) [0|511] "" XXX
@@ -31,8 +30,7 @@ BO_ 610 EPS_STATUS: 8 EPS
 BO_ 881 LTA_RELATED: 8 FCM
  SG_ GAS_PEDAL : 15|8@0+ (0.005,0) [0|1] "" XXX
  SG_ STEER_ANGLE : 23|16@0- (0.0573,0) [-500|500] "" XXX
- SG_ 
- TURN_SIGNALS : 35|2@0+ (1,0) [0|3] "" XXX
+ SG_ TURN_SIGNALS : 35|2@0+ (1,0) [0|3] "" XXX
  SG_ UNKNOWN_2 : 58|1@0+ (1,0) [0|1] "" XXX
  SG_ LDA_SA_TOGGLE : 59|1@0+ (1,0) [0|1] "" XXX
  SG_ LTA_STEER_REQUEST : 60|1@0+ (1,0) [0|1] "" XXX
@@ -49,8 +47,7 @@ BO_ 1014 BSM: 8 XXX
  SG_ R_LIGHT : 25|2@0+ (1,0) [0|3] "" XXX
  SG_ L_LIGHT : 27|2@0+ (1,0) [0|3] "" XXX
 
-CM_ SG_ 
- 401 PERCENTAGE "driver override percentage (0-100), very close to steeringPressed in OP";
+CM_ SG_ 401 PERCENTAGE "driver override percentage (0-100), very close to steeringPressed in OP";
 CM_ SG_ 401 TORQUE_WIND_DOWN "used to wind down torque on user override";
 CM_ SG_ 401 ANGLE "angle of car relative to lane center on LTA camera";
 CM_ SG_ 401 STEER_ANGLE_CMD "desired angle, OEM steers up to 95 degrees, no angle limit but torque will bottom out";
