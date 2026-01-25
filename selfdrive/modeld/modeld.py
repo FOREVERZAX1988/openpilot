@@ -54,7 +54,7 @@ MIN_LAT_CONTROL_SPEED = 0.3
 # 直路 0.1 (比全域慢 -> 超級穩)
 # 彎道 0.0 (比全域快 -> 反應快)
 # 中間會自動線性過渡
-LAT_SMOOTH_BP = [0., 0.002]
+LAT_SMOOTH_BP = [0.002, 0.003]
 LAT_SMOOTH_V = [0.1, 0.0]
 
 
