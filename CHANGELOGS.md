@@ -1,17 +1,17 @@
 dragonpilot 0.10.3 r1 (2026-01-26)
 =======================
-🚧 Model Update: Switched to SC Model (#36986) with dynamic lateral smoothing; reduced lateral smoothing latency (#36987).
-🚧 Localization: Traditional Chinese localization for Events.
-🚧 Localization: Traditional Chinese localization for Training Data.
-🚧 ACM (Adaptive Coasting Mode): * Modified dynamic TCC to 2–3 seconds.
+* 🚧 Model Update: Switched to SC Model (#36986) with dynamic lateral smoothing; reduced lateral smoothing latency (#36987).
+* 🚧 Localization: Traditional Chinese localization for Events.
+* 🚧 Localization: Traditional Chinese localization for Training Data.
+* 🚧 ACM (Adaptive Coasting Mode): * Modified dynamic TCC to 2–3 seconds.
    Set coasting speed limits: Upper limit 10km/h, Lower limit 2km/h.
    Downhill upper limit set to 5km/h.
    Disabled on uphill sections to maintain power.
-🚧 DTSC (Curve Speed Control): * Enhanced deceleration for curves at speeds below 60km/h.
+* 🚧 DTSC (Curve Speed Control): * Enhanced deceleration for curves at speeds below 60km/h.
    Added redundant deceleration for lane departures.
-🚧 System Optimization: Video recording disabled to reduce power consumption.
-🚧 UI/UX: Reduced auto-brightness maximum to 40%.
-🚧 Testing: Added CAN bus data for Corolla Cross side-mirror Blind Spot Monitoring (BSM). (Special thanks to Candy from Kaohsiung).
+* 🚧 System Optimization: Video recording disabled to reduce power consumption.
+* 🚧 UI/UX: Reduced auto-brightness maximum to 40%.
+* 🚧 Testing: Added CAN bus data for Corolla Cross side-mirror Blind Spot Monitoring (BSM). (Special thanks to Candy from Kaohsiung).
 
 dragonpilot 0.10.3 r1 (2025-12-26)
 =======================
