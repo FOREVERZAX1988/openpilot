@@ -1,13 +1,17 @@
-dragonpilot 0.10.3 r1 (2026-01-20)
+dragonpilot 0.10.3 r1 (2026-01-26)
 =======================
-* 🚧更換為SC模型 (#36986) 動態橫向平滑 Modeld: less lat smoothing (#36987) 
-* 🚧事件繁體中文化 
-* 🚧訓練資料繁體中文化 
-* 🚧ACM  自適應滑行模式:修改動態TCC 2~3秒 滑行車速改為上限10km 下限2km  下坡路段上限5km 上坡為保持動力禁用
-* 🚧DTSC 彎道減速:增強60KM以下車速彎道減速 增加偏離車道備援減速 
-* 🚧錄影功能關閉(降低功耗) 
-* 🚧螢幕自動亮度降低為40%
-* 🚧測試增加corolla cross後視鏡盲點can資料(感謝高雄candy)
+🚧 Model Update: Switched to SC Model (#36986) with dynamic lateral smoothing; reduced lateral smoothing latency (#36987).
+🚧 Localization: Traditional Chinese localization for Events.
+🚧 Localization: Traditional Chinese localization for Training Data.
+🚧 ACM (Adaptive Coasting Mode): * Modified dynamic TCC to 2–3 seconds.
+   Set coasting speed limits: Upper limit 10km/h, Lower limit 2km/h.
+   Downhill upper limit set to 5km/h.
+   Disabled on uphill sections to maintain power.
+🚧 DTSC (Curve Speed Control): * Enhanced deceleration for curves at speeds below 60km/h.
+   Added redundant deceleration for lane departures.
+🚧 System Optimization: Video recording disabled to reduce power consumption.
+🚧 UI/UX: Reduced auto-brightness maximum to 40%.
+🚧 Testing: Added CAN bus data for Corolla Cross side-mirror Blind Spot Monitoring (BSM). (Special thanks to Candy from Kaohsiung).
 
 dragonpilot 0.10.3 r1 (2025-12-26)
 =======================
