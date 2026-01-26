@@ -12,7 +12,8 @@ SELFDRIVE_DIR = Path("/data/openpilot/selfdrive")
 TRANSLATIONS_DIR = SELFDRIVE_DIR / "ui" / "translations"
 LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
 
-GLYPH_PADDING = 6
+# [優化] 將間距從 6 改為 2，節省圖片空間
+GLYPH_PADDING = 2
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
 UNIFONT_LANGUAGES = {"ar", "th", "zh-CHT", "zh-CHS", "ko", "ja"}
 
@@ -27,22 +28,22 @@ def _languages():
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
 
-  # --- 新增：讀取 CHANGELOGS.md ---
+  # --- [已修改] 停用讀取 CHANGELOGS.md 以節省記憶體 ---
   # OpenPilot 根目錄通常是 selfdrive 的上一層
-  changelog_path = SELFDRIVE_DIR.parent / "CHANGELOGS.md"
-  
-  print(f"\n--- Checking {changelog_path} ---")
-  if changelog_path.exists():
-      try:
-          content = changelog_path.read_text(encoding="utf-8")
-          chars = set(content)
-          base.update(chars)
-          print(f"SUCCESS: Added {len(chars)} characters from CHANGELOGS.md")
-      except Exception as e:
-          print(f"ERROR: Could not read CHANGELOGS.md: {e}")
-  else:
-      print("WARNING: CHANGELOGS.md not found! (Characters in logs might be missing)")
-  print("-------------------------------\n")
+  # changelog_path = SELFDRIVE_DIR.parent / "CHANGELOGS.md"
+  # 
+  # print(f"\n--- Checking {changelog_path} ---")
+  # if changelog_path.exists():
+  #     try:
+  #         content = changelog_path.read_text(encoding="utf-8")
+  #         chars = set(content)
+  #         base.update(chars)
+  #         print(f"SUCCESS: Added {len(chars)} characters from CHANGELOGS.md")
+  #     except Exception as e:
+  #         print(f"ERROR: Could not read CHANGELOGS.md: {e}")
+  # else:
+  #     print("WARNING: CHANGELOGS.md not found! (Characters in logs might be missing)")
+  # print("-------------------------------\n")
   # --- 讀取結束 ---
 
   # --- 新增：多路徑搜尋 events.py ---
@@ -145,9 +146,10 @@ def _write_bmfont(path: Path, font_size: int, face: str, atlas_name: str, line_h
 def _process_font(font_path: Path, codepoints: tuple[int, ...]):
   print(f"Processing {font_path.name}...")
 
+  # [已修改] 將預設字體大小從 350 改為 100，避免記憶體不足
   font_size = {
     "unifont.otf": 60,
-  }.get(font_path.name, 350)
+  }.get(font_path.name, 100)
 
   data = font_path.read_bytes()
   file_buf = rl.ffi.new("unsigned char[]", data)
