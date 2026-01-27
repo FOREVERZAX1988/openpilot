@@ -245,7 +245,7 @@ class LongitudinalPlanner:
 
     # 4. 決策邏輯 (優先級：DTSC > AEM > ACC)
     if is_dtsc_braking:
-        decel_slew_rate = 0.15  # DTSC 最緊急，給予最大權限 (0.15)
+        decel_slew_rate = 0.10  # DTSC 最緊急，給予最大權限 (0.15)
     elif is_aem_braking:
         decel_slew_rate = 0.05 # AEM/實驗模式，為了紅燈煞停精準度，比 ACC 兇一點
 
