@@ -37,6 +37,20 @@ LEAD_COOLDOWN_TIME = 0.5
 SPEED_BP = [0., 10., 20., 30.]
 MIN_DIST_V = [15., 20., 25., 30.]
 
+# =========================================================
+# [新增] Smart Log 設定 (移植自 DTSC)
+# =========================================================
+FILE_LOG_ENABLED = False  # 若要啟用檔案紀錄，請改為 True
+
+def write_file_log(msg):
+    if not FILE_LOG_ENABLED: return
+    try:
+        # 寫入至 /data/media/0/acm_log.txt
+        with open("/data/media/0/acm_log.txt", "a") as f:
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            f.write(f"[{timestamp}] {msg}\n")
+    except Exception:
+        pass
 
 class ACM:
   def __init__(self):
@@ -53,6 +67,9 @@ class ACM:
     self.current_pitch = 0.0
     self.current_max_offset = 0.0 
     self.is_radar_lead = False # 用於 Debug 顯示
+    
+    # [新增] Log 計時變數 (保持結構一致性)
+    self.last_log_time = 0.0
 
   def _check_emergency_conditions(self, lead, v_ego, current_time):
     if not lead or not lead.status:
@@ -68,7 +85,9 @@ class ACM:
 
       self._last_lead_time = current_time
       if self.active:
-        cloudlog.warning(f"ACM emergency disable: dRel={lead.dRel:.1f}m, TTC={self.lead_ttc:.1f}s")
+        msg = f"ACM emergency disable: dRel={lead.dRel:.1f}m, TTC={self.lead_ttc:.1f}s"
+        cloudlog.warning(msg)
+        write_file_log(msg) # [新增] 寫入 Log
       return True
 
     return False
@@ -143,11 +162,17 @@ class ACM:
     self.just_disabled = self._active_prev and not self.active
     if self.active and not self._active_prev:
       pitch_deg = self.current_pitch * 57.2958
-      # 可以在 log 中加入是否為雷達判斷的資訊，方便除錯
+      # 判斷是否為雷達訊號，並轉為字串紀錄
       source_str = "RADAR" if getattr(self, 'is_radar_lead', False) else "VISION"
-      cloudlog.info(f"ACM ON: v={v_ego*3.6:.0f}, pitch={pitch_deg:.1f}deg, Max+{self.current_max_offset:.0f}kph, TTC_Src={source_str}")
+      
+      msg = f"ACM ON: v={v_ego*3.6:.0f}, pitch={pitch_deg:.1f}deg, Max+{self.current_max_offset:.0f}kph, TTC_Src={source_str}"
+      cloudlog.info(msg)
+      write_file_log(msg) # [新增] 寫入 Log，這裡可以清楚看到是用 Radar 還是 Vision
+      
     elif self.just_disabled:
-      cloudlog.info("ACM OFF")
+      msg = "ACM OFF"
+      cloudlog.info(msg)
+      write_file_log(msg) # [新增] 寫入 Log
 
     self._active_prev = self.active
 
@@ -157,7 +182,9 @@ class ACM:
 
     min_accel = np.min(a_desired_trajectory)
     if min_accel < EMERGENCY_DECEL_THRESHOLD:
-      cloudlog.warning(f"ACM aborting: MPC requested {min_accel:.2f} m/s² braking")
+      msg = f"ACM aborting: MPC requested {min_accel:.2f} m/s² braking"
+      cloudlog.warning(msg)
+      write_file_log(msg) # [新增] 寫入 Log
       self.active = False
       return a_desired_trajectory
 
