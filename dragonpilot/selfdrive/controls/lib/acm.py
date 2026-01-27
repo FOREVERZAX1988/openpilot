@@ -40,7 +40,7 @@ MIN_DIST_V = [15., 20., 25., 30.]
 # =========================================================
 # [新增] Smart Log 設定 (移植自 DTSC)
 # =========================================================
-FILE_LOG_ENABLED = True  # 若要啟用檔案紀錄，請改為 True or False
+FILE_LOG_ENABLED = False  # 若要啟用檔案紀錄，請改為 True
 
 def write_file_log(msg):
     if not FILE_LOG_ENABLED: return
