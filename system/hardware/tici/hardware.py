@@ -351,7 +351,7 @@ class Tici(HardwareBase):
   def set_screen_brightness(self, percentage):
     # 設定亮度縮放比例 (0.3 代表限制最大亮度為硬體的 30%)
     # 您可以隨時修改這個數字 (例如 0.5 = 50%, 1.0 = 100%)
-    BRIGHTNESS_SCALE = 0.3 
+    BRIGHTNESS_SCALE = 0.6 
 
     try:
       # 讀取螢幕硬體支援的最大亮度數值
@@ -372,7 +372,7 @@ class Tici(HardwareBase):
 
   def get_screen_brightness(self):
     # 必須與 set_screen_brightness 使用相同的縮放比例，以確保 UI 顯示一致
-    BRIGHTNESS_SCALE = 0.3
+    BRIGHTNESS_SCALE = 0.6
 
     try:
       # 讀取螢幕硬體支援的最大亮度數值
