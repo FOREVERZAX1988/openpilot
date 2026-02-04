@@ -94,6 +94,7 @@ class LatControlTorque(LatControl):
       output_torque = 0.0
       pid_log.active = False
     else:
+<<<<<<< HEAD
       measured_curvature = -VM.calc_curvature(math.radians(CS.steeringAngleDeg - params.angleOffsetDeg), CS.vEgo, params.roll)
       roll_compensation = params.roll * ACCELERATION_DUE_TO_GRAVITY
       curvature_deadzone = abs(VM.calc_curvature(math.radians(self.steering_angle_deadzone_deg), CS.vEgo, 0.0))
@@ -112,6 +113,8 @@ class LatControlTorque(LatControl):
       measurement = measured_curvature * CS.vEgo ** 2
       error = setpoint - measurement
 
+=======
+>>>>>>> 5c12a7cfc3a199270379d9fb49bd6b309588a844
       # do error correction in lateral acceleration space, convert at end to handle non-linear torque responses correctly
       pid_log.error = float(error)
 
