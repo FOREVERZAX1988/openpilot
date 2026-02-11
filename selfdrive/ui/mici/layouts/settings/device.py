@@ -224,7 +224,7 @@ class UpdateOpenpilotBigButton(BigButton):
 
       if self._waiting_for_updater_t is not None and rl.get_time() - self._waiting_for_updater_t > UPDATER_TIMEOUT:
         self.set_rotate_icon(False)
-        self.set_value("updater failed to respond")
+        self.set_value("updater failed\nto respond")
         self._state = UpdaterState.IDLE
         self._hide_value_t = rl.get_time()
 
