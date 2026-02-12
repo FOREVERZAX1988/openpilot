@@ -10,7 +10,6 @@ from openpilot.selfdrive.ui.mici.layouts.settings.toggles import TogglesLayoutMi
 from openpilot.selfdrive.ui.mici.layouts.settings.network import NetworkLayoutMici
 from openpilot.selfdrive.ui.mici.layouts.settings.device import DeviceLayoutMici, PairBigButton
 from openpilot.selfdrive.ui.mici.layouts.settings.developer import DeveloperLayoutMici
-from openpilot.selfdrive.ui.mici.layouts.settings.firehose import FirehoseLayout
 from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.widgets import Widget, NavWidget
 
@@ -21,7 +20,6 @@ class PanelType(IntEnum):
   DEVICE = 2
   DEVELOPER = 3
   USER_MANUAL = 4
-  FIREHOSE = 5
 
 
 @dataclass
@@ -30,21 +28,25 @@ class PanelInfo:
   instance: Widget
 
 
+class SettingsBigButton(BigButton):
+  def _get_label_font_size(self):
+    return 64
+
+
 class SettingsLayout(NavWidget):
   def __init__(self):
     super().__init__()
     self._params = Params()
     self._current_panel = None  # PanelType.DEVICE
 
-    toggles_btn = BigButton("toggles", "", "icons_mici/settings/toggles_icon.png")
+    toggles_btn = SettingsBigButton("toggles", "", "icons_mici/settings.png")
     toggles_btn.set_click_callback(lambda: self._set_current_panel(PanelType.TOGGLES))
-    network_btn = BigButton("network", "", "icons_mici/settings/network/wifi_strength_full.png")
+    network_btn = SettingsBigButton("network", "", "icons_mici/settings/network/wifi_strength_full.png", icon_size=(76, 56))
     network_btn.set_click_callback(lambda: self._set_current_panel(PanelType.NETWORK))
-    device_btn = BigButton("device", "", "icons_mici/settings/device_icon.png")
+    device_btn = SettingsBigButton("device", "", "icons_mici/settings/device_icon.png", icon_size=(74, 60))
     device_btn.set_click_callback(lambda: self._set_current_panel(PanelType.DEVICE))
-    developer_btn = BigButton("developer", "", "icons_mici/settings/developer_icon.png")
+    developer_btn = SettingsBigButton("developer", "", "icons_mici/settings/developer_icon.png", icon_size=(64, 60))
     developer_btn.set_click_callback(lambda: self._set_current_panel(PanelType.DEVELOPER))
-
 
     self._scroller = Scroller([
       toggles_btn,

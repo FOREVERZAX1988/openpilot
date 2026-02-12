@@ -143,7 +143,7 @@ class TermsPage(Widget):
 class DeclinePage(Widget):
   def __init__(self, back_callback=None):
     super().__init__()
-    self._text = Label(tr("You must accept the Terms and Conditions in order to use hoofpilot."),
+    self._text = Label(tr("You must accept the Terms of Service in order to use hoofpilot."),
                        font_size=90, font_weight=FontWeight.MEDIUM, text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT)
     self._back_btn = Button(tr("Back"), click_callback=back_callback)
     self._uninstall_btn = Button(tr("Decline, uninstall hoofpilot"), button_style=ButtonStyle.DANGER,

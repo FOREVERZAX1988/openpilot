@@ -9,7 +9,6 @@ from enum import IntEnum
 
 import pyray as rl
 from openpilot.selfdrive.ui.layouts.settings import settings as OP
-from openpilot.selfdrive.ui.layouts.settings.firehose import FirehoseLayout
 from openpilot.selfdrive.ui.layouts.settings.toggles import TogglesLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise import CruiseLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.developer import DeveloperLayoutSP
@@ -19,12 +18,12 @@ from openpilot.selfdrive.ui.sunnypilot.layouts.settings.models import ModelsLayo
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.network import NetworkUISP
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.osm import OSMLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.software import SoftwareLayoutSP
-from openpilot.selfdrive.ui.sunnypilot.layouts.settings.steering import SteeringLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.stable import StableLayout
-from openpilot.selfdrive.ui.sunnypilot.layouts.settings.sunnylink import SunnylinkLayout
+from openpilot.selfdrive.ui.sunnypilot.layouts.settings.steering import SteeringLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.trips import TripsLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.vehicle import VehicleLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.visuals import VisualsLayout
+from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app, MousePos
 from openpilot.system.ui.lib.multilang import tr_noop
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -38,11 +37,11 @@ from openpilot.system.ui.widgets.scroller_tici import Scroller
 OP.PANEL_COLOR = rl.Color(10, 10, 10, 255)
 ICON_SIZE = 70
 
-OP.PanelType = IntEnum(  # type: ignore
+OP.PanelType = IntEnum(
   "PanelType",
   [es.name for es in OP.PanelType] + [
-    "STABLE",
     "SUNNYLINK",
+    "STABLE",
     "MODELS",
     "STEERING",
     "CRUISE",
@@ -103,6 +102,7 @@ class SettingsLayoutSP(OP.SettingsLayout):
   def __init__(self):
     OP.SettingsLayout.__init__(self)
     self._nav_items: list[Widget] = []
+    self._nav_buttons: dict[IntEnum, NavButton] = {}
 
     # Create sidebar scroller
     self._sidebar_scroller = Scroller([], spacing=0, line_separator=False, pad_end=False)
@@ -126,7 +126,7 @@ class SettingsLayoutSP(OP.SettingsLayout):
       # OP.PanelType.NAVIGATION: PanelInfo(tr_noop("Navigation"), NavigationLayout(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_map.png"),
       OP.PanelType.TRIPS: PanelInfo(tr_noop("Trips"), TripsLayout(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_trips.png"),
       OP.PanelType.VEHICLE: PanelInfo(tr_noop("Vehicle"), VehicleLayout(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_vehicle.png"),
-      OP.PanelType.DEVELOPER: PanelInfo(tr_noop("Developer"), DeveloperLayoutSP(), icon="icons/developer_icon.png"),
+      OP.PanelType.DEVELOPER: PanelInfo(tr_noop("Developer"), DeveloperLayoutSP(), icon="icons/shell.png"),
     }
 
   def _draw_sidebar(self, rect: rl.Rectangle):
@@ -168,23 +168,37 @@ class SettingsLayoutSP(OP.SettingsLayout):
         nav_button.rect.width = rect.width - 100  # Full width minus padding
         nav_button.rect.height = OP.NAV_BTN_HEIGHT
         self._nav_items.append(nav_button)
+        self._nav_buttons[panel_type] = nav_button
         self._sidebar_scroller.add_widget(nav_button)
+      self._sync_stable_visibility()
 
     # Draw navigation section with scroller
     nav_rect = rl.Rectangle(
       rect.x,
-      self._close_btn_rect.y + self._close_btn_rect.height + style.ITEM_PADDING * 2,
+      self._close_btn_rect.height + style.ITEM_PADDING * 4,  # Starting Y position for nav items
       rect.width,
-      rect.height - (self._close_btn_rect.height + style.ITEM_PADDING * 4)
+      rect.height - 300  # Remaining height after close button
     )
 
     if self._nav_items:
       self._sidebar_scroller.render(nav_rect)
       return
 
+  def _sync_stable_visibility(self):
+    paired = ui_state.prime_state.is_paired()
+    stable_btn = self._nav_buttons.get(OP.PanelType.STABLE)
+    if stable_btn is not None:
+      stable_btn.set_visible(paired)
+    if not paired and self._current_panel == OP.PanelType.STABLE:
+      self.set_current_panel(OP.PanelType.DEVICE)
+
+  def _update_state(self):
+    super()._update_state()
+    self._sync_stable_visibility()
+
   def _handle_mouse_release(self, mouse_pos: MousePos) -> bool:
     # Check close button
-    if hasattr(self, "_close_btn_rect") and rl.check_collision_point_rec(mouse_pos, self._close_btn_rect):
+    if rl.check_collision_point_rec(mouse_pos, self._close_btn_rect):
       if self._close_callback:
         self._close_callback()
       return True

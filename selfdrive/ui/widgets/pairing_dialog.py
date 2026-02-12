@@ -89,7 +89,7 @@ class PairingDialog(Widget):
     y += close_size + 40
 
     # Title
-    title = tr("Pair your device to your Konik account")
+    title = tr("Pair your device to Konik Stable")
     title_font = gui_app.font(FontWeight.NORMAL)
     left_width = int(content_rect.width * 0.5 - 15)
 
@@ -114,9 +114,9 @@ class PairingDialog(Widget):
 
   def _render_instructions(self, rect: rl.Rectangle) -> None:
     instructions = [
-      tr("Go to https://stable.konik.ai on your phone"),
-      tr("Click \"add new device\" and scan the QR code on the right"),
-      tr("Bookmark stable.konik.ai to your home screen to use it like an app"),
+      tr("Open the camera app on your phone"),
+      tr("Scan the QR code on the right"),
+      tr("Add Konik Stable to your home screen to use it like an app"),
     ]
 
     font = gui_app.font(FontWeight.BOLD)

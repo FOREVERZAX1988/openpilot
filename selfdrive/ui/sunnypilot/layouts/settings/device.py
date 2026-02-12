@@ -159,7 +159,7 @@ class DeviceLayoutSP(DeviceLayout):
         ), callback=_do_reset)
 
     gui_app.set_modal_overlay(ConfirmDialog(
-      text=tr("Are you sure you want to reset all sunnypilot settings to default? Once the settings are reset, there is no going back."),
+      text=tr("Are you sure you want to reset all hoofpilot settings to default? Once the settings are reset, there is no going back."),
       confirm_text=tr("Reset")
     ), callback=_second_confirm)
 
@@ -193,7 +193,7 @@ class DeviceLayoutSP(DeviceLayout):
 
     # Text & Color
     offroad_mode_btn_text = tr("Exit Always Offroad") if always_offroad else tr("Enable Always Offroad")
-    offroad_mode_btn_style = ButtonStyle.NORMAL if always_offroad else ButtonStyle.DANGER
+    offroad_mode_btn_style = ButtonStyle.PRIMARY if always_offroad else ButtonStyle.DANGER
     self._always_offroad_btn.action_item.left_button.set_text(offroad_mode_btn_text)
     self._always_offroad_btn.action_item.left_button.set_button_style(offroad_mode_btn_style)
 

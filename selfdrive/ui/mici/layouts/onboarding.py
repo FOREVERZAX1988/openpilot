@@ -19,6 +19,7 @@ from openpilot.system.ui.widgets.label import gui_label
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.version import terms_version, training_version, terms_version_sp
 
+
 class OnboardingState(IntEnum):
   TERMS = 0
   ONBOARDING = 1
@@ -123,9 +124,9 @@ class TrainingGuideDMTutorial(Widget):
 
   def __init__(self, continue_callback):
     super().__init__()
-    self._back_button = SmallCircleIconButton(gui_app.texture("icons_mici/setup/driver_monitoring/dm_question.png", 48, 48))
+    self._back_button = SmallCircleIconButton(gui_app.texture("icons_mici/setup/driver_monitoring/dm_question.png", 28, 48))
     self._back_button.set_click_callback(self._show_bad_face_page)
-    self._good_button = SmallCircleIconButton(gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 48, 35))
+    self._good_button = SmallCircleIconButton(gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 42, 42))
 
     # Wrap the continue callback to restore settings
     def wrapped_continue_callback():
@@ -165,8 +166,8 @@ class TrainingGuideDMTutorial(Widget):
 
   def _update_state(self):
     super()._update_state()
-    if device.awake:
-      ui_state.params.put_bool("IsDriverViewEnabled", True)
+    if device.awake and not ui_state.params.get_bool("IsDriverViewEnabled"):
+      ui_state.params.put_bool_nonblocking("IsDriverViewEnabled", True)
 
     sm = ui_state.sm
     if sm.recv_frame.get("driverMonitoringState", 0) == 0:
@@ -236,19 +237,20 @@ class TrainingGuideDMTutorial(Widget):
       ring_color,
     )
 
-    self._back_button.render(rl.Rectangle(
-      self._rect.x + 8,
-      self._rect.y + self._rect.height - self._back_button.rect.height,
-      self._back_button.rect.width,
-      self._back_button.rect.height,
-    ))
+    if self._dialog._camera_view.frame:
+      self._back_button.render(rl.Rectangle(
+        self._rect.x + 8,
+        self._rect.y + self._rect.height - self._back_button.rect.height,
+        self._back_button.rect.width,
+        self._back_button.rect.height,
+      ))
 
-    self._good_button.render(rl.Rectangle(
-      self._rect.x + self._rect.width - self._good_button.rect.width - 8,
-      self._rect.y + self._rect.height - self._good_button.rect.height,
-      self._good_button.rect.width,
-      self._good_button.rect.height,
-    ))
+      self._good_button.render(rl.Rectangle(
+        self._rect.x + self._rect.width - self._good_button.rect.width - 8,
+        self._rect.y + self._rect.height - self._good_button.rect.height,
+        self._good_button.rect.width,
+        self._good_button.rect.height,
+      ))
 
     # rounded border
     rl.draw_rectangle_rounded_lines_ex(self._rect, 0.2 * 1.02, 10, 50, rl.BLACK)
@@ -412,9 +414,10 @@ class TermsPage(SetupTermsPage):
 
     info_txt = gui_app.texture("icons_mici/setup/green_info.png", 60, 60)
     self._title_header = TermsHeader("terms of service", info_txt)
+    self._title_header = TermsHeader("terms of service", info_txt)
 
     self._terms_label = UnifiedLabel("You must accept the Terms of Service to use hoofpilot. " +
-                                     "Read the latest terms at https://comma.ai/terms before continuing.", 36,
+                                     "Read the latest terms online before continuing.", 36,
                                      FontWeight.ROMAN)
 
   @property

@@ -25,16 +25,19 @@ void msgq_to_zmq(const std::vector<std::string> &endpoints, const std::string &i
 }
 
 void zmq_to_msgq(const std::vector<std::string> &endpoints, const std::string &ip) {
-  auto poller = std::make_unique<ZMQPoller>();
-  auto pub_context = std::make_unique<MSGQContext>();
-  auto sub_context = std::make_unique<ZMQContext>();
-  std::map<SubSocket *, PubSocket *> sub2pub;
+  auto poller = std::make_unique<BridgeZmqPoller>();
+  auto pub_context = std::unique_ptr<Context>(Context::create());
+  auto sub_context = std::make_unique<BridgeZmqContext>();
+  std::map<BridgeZmqSubSocket *, PubSocket *> sub2pub;
 
   for (auto endpoint : endpoints) {
-    auto pub_sock = new MSGQPubSocket();
-    auto sub_sock = new ZMQSubSocket();
-    pub_sock->connect(pub_context.get(), endpoint);
+    auto pub_sock = PubSocket::create(pub_context.get(), endpoint, true, services.at(endpoint).queue_size);
+    auto sub_sock = new BridgeZmqSubSocket();
     sub_sock->connect(sub_context.get(), endpoint, ip, false);
+    if (pub_sock == nullptr) {
+      delete sub_sock;
+      continue;
+    }
 
     poller->registerSocket(sub_sock);
     sub2pub[sub_sock] = pub_sock;

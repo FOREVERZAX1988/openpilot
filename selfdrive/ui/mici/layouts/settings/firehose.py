@@ -1,3 +1,4 @@
+import requests
 import threading
 import time
 import pyray as rl
@@ -16,9 +17,9 @@ from openpilot.system.ui.widgets import Widget, NavWidget
 
 TITLE = tr_noop("Firehose Mode")
 DESCRIPTION = tr_noop(
-  "sunnypilot learns to drive by watching humans, like you, drive.\n\n"
+  "hoofpilot learns to drive by watching humans, like you, drive.\n\n"
   + "Firehose Mode allows you to maximize your training data uploads to improve "
-  + "openpilot's driving models. More data means bigger models, which means better Experimental Mode."
+  + "hoofpilot's driving models. More data means bigger models, which means better Experimental Mode."
 )
 INSTRUCTIONS_INTRO = tr_noop(
   "For maximum effectiveness, bring your device inside and connect to a good USB-C adapter and Wi-Fi weekly.\n\n"
@@ -29,7 +30,7 @@ FAQ_ITEMS = [
   (tr_noop("Does it matter how or where I drive?"), tr_noop("Nope, just drive as you normally would.")),
   (tr_noop("Do all of my segments get pulled in Firehose Mode?"), tr_noop("No, we selectively pull a subset of your segments.")),
   (tr_noop("What's a good USB-C adapter?"), tr_noop("Any fast phone or laptop charger should be fine.")),
-  (tr_noop("Does it matter which software I run?"), tr_noop("Yes, only upstream openpilot (and particular forks) are able to be used for training.")),
+  (tr_noop("Does it matter which software I run?"), tr_noop("Yes, only upstream hoofpilot (and particular forks) are able to be used for training.")),
 ]
 
 
@@ -44,6 +45,7 @@ class FirehoseLayoutBase(Widget):
   def __init__(self):
     super().__init__()
     self._params = Params()
+    self._session = requests.Session()  # reuse session to reduce SSL handshake overhead
     self._segment_count = self._get_segment_count()
 
     self._scroll_panel = GuiScrollPanel2(horizontal=False)
@@ -203,7 +205,7 @@ class FirehoseLayoutBase(Widget):
       if not dongle_id or dongle_id == UNREGISTERED_DONGLE_ID:
         return
       identity_token = get_token(dongle_id)
-      response = api_get(f"v1/devices/{dongle_id}/firehose_stats", access_token=identity_token)
+      response = api_get(f"v1/devices/{dongle_id}/firehose_stats", access_token=identity_token, session=self._session)
       if response.status_code == 200:
         data = response.json()
         self._segment_count = data.get("firehose", 0)

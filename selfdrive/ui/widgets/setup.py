@@ -2,71 +2,49 @@ import pyray as rl
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.widgets.pairing_dialog import PairingDialog
-from openpilot.system.ui.lib.application import gui_app, FontWeight, FONT_SCALE
+from openpilot.system.ui.lib.application import FontWeight, gui_app
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.wrap_text import wrap_text
 from openpilot.system.ui.widgets import Widget
-from openpilot.system.ui.widgets.confirm_dialog import alert_dialog
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
+from openpilot.system.ui.widgets.confirm_dialog import alert_dialog
+from openpilot.system.ui.widgets.label import gui_label
 
 
 class SetupWidget(Widget):
   def __init__(self):
     super().__init__()
-    self._open_settings_callback = None
     self._pairing_dialog: PairingDialog | None = None
-
-    self._pair_device_btn = Button(
-      lambda: tr("Pair device"),
-      self._show_pairing,
-      button_style=ButtonStyle.PRIMARY
-    )
-
-  def set_open_settings_callback(self, callback):
-    self._open_settings_callback = callback
+    self._pair_device_btn = Button(lambda: tr("Pair device"), self._show_pairing, button_style=ButtonStyle.PRIMARY)
 
   def _render(self, rect: rl.Rectangle):
-    if not ui_state.prime_state.is_paired():
-      self._render_registration(rect)
-    else:
-      # 🔥 FIREHOSE BOX REMOVED – DO NOTHING WHEN PAIRED
-      pass
+    if ui_state.prime_state.is_paired():
+      return
 
-  # -----------------------------
-  # Registration / pairing screen
-  # -----------------------------
-  def _render_registration(self, rect: rl.Rectangle):
+    self._render_setup_card(rect, title=tr("Finish Setup"), description=tr("Pair your device with Konik Stable."))
 
-    rl.draw_rectangle_rounded(
-      rl.Rectangle(rect.x, rect.y, rect.width, rect.height),
-      0.03, 20,
-      rl.Color(51, 51, 51, 255)
-    )
+  def _render_setup_card(self, rect: rl.Rectangle, title: str, description: str):
+    rl.draw_rectangle_rounded(rect, 0.083, 24, rl.Color(51, 51, 51, 255))
 
-    x = rect.x + 64
-    y = rect.y + 48
-    w = rect.width - 128
+    content_w = rect.width - 64
+    x = rect.x + 32
+    y = rect.y + 36
 
-    # Title
-    font = gui_app.font(FontWeight.BOLD)
-    rl.draw_text_ex(font, tr("Finish Setup"), rl.Vector2(x, y), 75, 0, rl.WHITE)
-    y += 113
+    gui_label(rl.Rectangle(x, y, content_w, 88), title, 75, font_weight=FontWeight.BOLD,
+              alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER)
+    y += 120
 
-    # Description
-    desc = tr("Pair your device with Konik Stable (stable.konik.ai)")
-    light_font = gui_app.font(FontWeight.NORMAL)
-    wrapped = wrap_text(light_font, desc, 50, int(w))
+    desc_font = gui_app.font(FontWeight.NORMAL)
+    wrapped = wrap_text(desc_font, description, 58, int(content_w))
+    line_y = y
+    for line in wrapped[:3]:
+      gui_label(rl.Rectangle(x, line_y, content_w, 62), line, 58,
+                alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER)
+      line_y += 62
 
-    for line in wrapped:
-      rl.draw_text_ex(light_font, line, rl.Vector2(x, y), 50, 0, rl.WHITE)
-      y += 50 * FONT_SCALE
-
-    button_rect = rl.Rectangle(x, y + 30, w, 200)
+    button_rect = rl.Rectangle(rect.x + 40, rect.y + rect.height - 170, rect.width - 80, 120)
     self._pair_device_btn.render(button_rect)
 
-  # -----------------------------
-  # Pairing dialog handler
-  # -----------------------------
   def _show_pairing(self):
     if not system_time_valid():
       dlg = alert_dialog(tr("Please connect to Wi-Fi to complete initial pairing"))
@@ -75,11 +53,7 @@ class SetupWidget(Widget):
 
     if not self._pairing_dialog:
       self._pairing_dialog = PairingDialog()
-
-    gui_app.set_modal_overlay(
-      self._pairing_dialog,
-      lambda result: setattr(self, '_pairing_dialog', None)
-    )
+    gui_app.set_modal_overlay(self._pairing_dialog, lambda result: setattr(self, '_pairing_dialog', None))
 
   def __del__(self):
     if self._pairing_dialog:
