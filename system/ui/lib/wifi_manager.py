@@ -25,7 +25,7 @@ from openpilot.system.ui.lib.networkmanager import (NM, NM_WIRELESS_IFACE, NM_80
                                                     NM_SETTINGS_IFACE, NM_CONNECTION_IFACE, NM_DEVICE_IFACE,
                                                     NM_DEVICE_TYPE_WIFI, NM_DEVICE_TYPE_MODEM, NM_DEVICE_STATE_REASON_SUPPLICANT_DISCONNECT,
                                                     NM_DEVICE_STATE_REASON_NEW_ACTIVATION, NM_ACTIVE_CONNECTION_IFACE,
-                                                    NM_IP4_CONFIG_IFACE, NMDeviceState)
+                                                    NM_IP4_CONFIG_IFACE, NM_PROPERTIES_IFACE, NMDeviceState)
 
 try:
   from openpilot.common.params import Params
@@ -153,7 +153,7 @@ class WifiManager:
     self._tethering_password: str = ""
     self._ipv4_forward = False
 
-    self._last_network_update: float = 0.0
+    self._last_network_scan: float = 0.0
     self._callback_queue: list[Callable] = []
 
     self._tethering_ssid = "weedle"
@@ -232,10 +232,6 @@ class WifiManager:
   def set_active(self, active: bool):
     self._active = active
 
-    # Scan immediately if we haven't scanned in a while
-    if active and time.monotonic() - self._last_network_update > SCAN_PERIOD_SECONDS / 2:
-      self._last_network_update = 0.0
-
   def _monitor_state(self):
     # Filter for signals
     rules = (
@@ -256,7 +252,13 @@ class WifiManager:
         interface=NM_SETTINGS_IFACE,
         member="ConnectionRemoved",
         path=NM_SETTINGS_PATH,
-      )
+      ),
+      MatchRule(
+        type="signal",
+        interface=NM_PROPERTIES_IFACE,
+        member="PropertiesChanged",
+        path=self._wifi_device,
+      ),
     )
 
     for rule in rules:
@@ -264,7 +266,8 @@ class WifiManager:
 
     with (self._conn_monitor.filter(rules[0], bufsize=SIGNAL_QUEUE_SIZE) as state_q,
           self._conn_monitor.filter(rules[1], bufsize=SIGNAL_QUEUE_SIZE) as new_conn_q,
-          self._conn_monitor.filter(rules[2], bufsize=SIGNAL_QUEUE_SIZE) as removed_conn_q):
+          self._conn_monitor.filter(rules[2], bufsize=SIGNAL_QUEUE_SIZE) as removed_conn_q,
+          self._conn_monitor.filter(rules[3], bufsize=SIGNAL_QUEUE_SIZE) as props_q):
       while not self._exit:
         try:
           self._conn_monitor.recv_messages(timeout=1)
@@ -278,6 +281,12 @@ class WifiManager:
         while len(new_conn_q):
           conn_path = new_conn_q.popleft().body[0]
           self._new_connection(conn_path)
+
+        # PropertiesChanged on wifi device (LastScan = scan complete)
+        while len(props_q):
+          iface, changed, _ = props_q.popleft().body
+          if iface == NM_WIRELESS_IFACE and 'LastScan' in changed:
+            self._update_networks()
 
         # Device state changes
         while len(state_q):
@@ -302,12 +311,9 @@ class WifiManager:
   def _network_scanner(self):
     while not self._exit:
       if self._active:
-        if time.monotonic() - self._last_network_update > SCAN_PERIOD_SECONDS:
-          # Scan for networks every 10 seconds
-          # TODO: should update when scan is complete (PropertiesChanged), but this is more than good enough for now
-          self._update_networks()
+        if time.monotonic() - self._last_network_scan > SCAN_PERIOD_SECONDS:
           self._request_scan()
-          self._last_network_update = time.monotonic()
+          self._last_network_scan = time.monotonic()
       time.sleep(1 / 2.)
 
   def _wait_for_wifi_device(self):
@@ -655,7 +661,13 @@ class WifiManager:
 
     for active_conn in self._get_active_connections():
       conn_addr = DBusAddress(active_conn, bus_name=NM, interface=NM_ACTIVE_CONNECTION_IFACE)
-      props = self._router_main.send_and_get_reply(Properties(conn_addr).get_all()).body[0]
+      reply = self._router_main.send_and_get_reply(Properties(conn_addr).get_all())
+
+      if reply.header.message_type == MessageType.error:
+        cloudlog.warning(f"Failed to get active connection properties for {active_conn}: {reply}")
+        continue
+
+      props = reply.body[0]
 
       if props.get('Type', ('s', ''))[1] == '802-11-wireless':
         # IPv4 address
