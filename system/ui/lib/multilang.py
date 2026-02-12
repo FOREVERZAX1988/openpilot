@@ -17,7 +17,6 @@ LANGUAGES_FILE = TRANSLATIONS_DIR.joinpath("languages.json")
 
 '''修改1（共2）：将中文字体从UNIFONT中独立出来
 UNIFONT_LANGUAGES = [
-  "ar",
   "th",
   "zh-CHT",
   "zh-CHS",

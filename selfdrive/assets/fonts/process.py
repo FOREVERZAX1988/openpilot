@@ -12,8 +12,9 @@ LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
 GLYPH_PADDING = 6
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
 #修改1:将中文字体独立出来。原代码：UNIFONT_LANGUAGES = {"ar", "th", "zh-CHT", "zh-CHS", "ko", "ja"}
-UNIFONT_LANGUAGES = {"ar", "th", "ko", "ja"}
 CHINA_LANGUAGES = {"zh-CHT", "zh-CHS"}
+UNIFONT_LANGUAGES = {"th", "ko", "ja"}
+
 
 def _languages():
   if not LANGUAGES_FILE.exists():
