@@ -1,4 +1,4 @@
-hoofpilot Version Appaloosa (20xx-xx-xx)
+hoofpilot Version Appaloosa
 ========================
 * What's New
   * Support for Konik Stable
