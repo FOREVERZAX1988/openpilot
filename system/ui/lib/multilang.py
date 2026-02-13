@@ -15,14 +15,8 @@ UI_DIR = files("openpilot.selfdrive.ui")
 TRANSLATIONS_DIR = UI_DIR.joinpath("translations")
 LANGUAGES_FILE = TRANSLATIONS_DIR.joinpath("languages.json")
 
-UNIFONT_LANGUAGES = [
-  "ar",
-  "th",
-  "zh-CHT",
-  "zh-CHS",
-  "ko",
-  "ja",
-]
+UNIFONT_LANGUAGES = ["ar","th","ja","ko"]
+CHINA_LANGUAGES = ["zh-CHT","zh-CHS"]
 
 
 class Multilang:
