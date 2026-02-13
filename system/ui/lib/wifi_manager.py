@@ -183,7 +183,7 @@ class WifiManager:
     # Callbacks
     self._need_auth: list[Callable[[str], None]] = []
     self._activated: list[Callable[[], None]] = []
-    self._forgotten: list[Callable[[], None]] = []
+    self._forgotten: list[Callable[[str], None]] = []
     self._networks_updated: list[Callable[[list[Network]], None]] = []
     self._disconnected: list[Callable[[], None]] = []
 
@@ -211,7 +211,7 @@ class WifiManager:
 
   def add_callbacks(self, need_auth: Callable[[str], None] | None = None,
                     activated: Callable[[], None] | None = None,
-                    forgotten: Callable[[], None] | None = None,
+                    forgotten: Callable[[str], None] | None = None,
                     networks_updated: Callable[[list[Network]], None] | None = None,
                     disconnected: Callable[[], None] | None = None):
     if need_auth is not None:
@@ -316,8 +316,8 @@ class WifiManager:
 
           # BAD PASSWORD
           if new_state == NMDeviceState.NEED_AUTH and change_reason == NM_DEVICE_STATE_REASON_SUPPLICANT_DISCONNECT and len(self._connecting_to_ssid):
-            self.forget_connection(self._connecting_to_ssid, block=True)
             self._enqueue_callbacks(self._need_auth, self._connecting_to_ssid)
+            self.forget_connection(self._connecting_to_ssid, block=True)
             self._connecting_to_ssid = ""
 
           elif new_state == NMDeviceState.ACTIVATED:
@@ -327,8 +327,8 @@ class WifiManager:
             self._connecting_to_ssid = ""
 
           elif new_state == NMDeviceState.DISCONNECTED and change_reason != NM_DEVICE_STATE_REASON_NEW_ACTIVATION:
+            self._enqueue_callbacks(self._forgotten, self._connecting_to_ssid)
             self._connecting_to_ssid = ""
-            self._enqueue_callbacks(self._forgotten)
 
   def _network_scanner(self):
     while not self._exit:
@@ -484,7 +484,7 @@ class WifiManager:
 
         if len(self._forgotten):
           self._update_networks()
-        self._enqueue_callbacks(self._forgotten)
+        self._enqueue_callbacks(self._forgotten, ssid)
 
     if block:
       worker()
