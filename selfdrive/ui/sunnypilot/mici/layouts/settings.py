@@ -8,15 +8,10 @@ from openpilot.selfdrive.ui.ui_state import ui_state
 
 ICON_SIZE = 70
 
-OP.PanelType = IntEnum(
-  "PanelType",
-  [es.name for es in OP.PanelType] + [
-    "SUNNYLINK",
-    "STABLE",
-    "MODELS",
-  ],
-  start=0,
-)
+# Extend base PanelType while avoiding duplicate names (base may already include some panels).
+_base_panel_names = [es.name for es in OP.PanelType]
+_extra_panel_names = [name for name in ("SUNNYLINK", "STABLE", "MODELS") if name not in _base_panel_names]
+OP.PanelType = IntEnum("PanelType", _base_panel_names + _extra_panel_names, start=0)
 
 
 class SettingsLayoutSP(OP.SettingsLayout):
@@ -49,4 +44,3 @@ class SettingsLayoutSP(OP.SettingsLayout):
     self._stable_btn.set_visible(paired)
     if not paired and self._current_panel == OP.PanelType.STABLE:
       self._set_current_panel(None)
-

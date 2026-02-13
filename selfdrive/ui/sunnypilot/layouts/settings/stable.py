@@ -209,4 +209,3 @@ class StableLayout(Widget):
 
   def show_event(self):
     self._scroller.show_event()
-
