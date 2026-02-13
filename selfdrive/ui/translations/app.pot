@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-13 11:03+0800\n"
+"POT-Creation-Date: 2026-02-14 07:33+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -63,6 +63,19 @@ msgstr ""
 msgid "Decline, uninstall IQ.Pilot"
 msgstr ""
 
+#: selfdrive/ui/layouts/settings/developer.py:16
+msgid ""
+"ADB (Android Debug Bridge) allows connecting to your device over USB or over "
+"the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:20
+msgid ""
+"Warning: This grants SSH access to all public keys in your GitHub settings. "
+"Never enter a GitHub username other than your own. A comma employee will "
+"NEVER ask you to add their GitHub username."
+msgstr ""
+
 #: selfdrive/ui/layouts/settings/developer.py:34
 msgid "Enable ADB"
 msgstr ""
@@ -87,165 +100,210 @@ msgstr ""
 msgid "UI Debug Mode"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:51
+#: selfdrive/ui/layouts/settings/device.py:28 selfdrive/ui/widgets/setup.py:38
+msgid "Pair your device in the Konn3kt app."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/device.py:29
+msgid ""
+"Preview the driver facing camera to ensure that driver monitoring has good "
+"visibility. (vehicle must be off)"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/device.py:30
+msgid ""
+"IQ.Pilot requires the device to be mounted within 4° left or right and "
+"within 5° up or 9° down."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/device.py:31
+msgid "Review the rules, features, and limitations of IQ.Pilot"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/device.py:52
 msgid "Pair Device"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:51
+#: selfdrive/ui/layouts/settings/device.py:52
 msgid "PAIR"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:54
+#: selfdrive/ui/layouts/settings/device.py:55
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:179
 msgid "Reset Calibration"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:54
+#: selfdrive/ui/layouts/settings/device.py:55
 msgid "RESET"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:58
-#: selfdrive/ui/layouts/settings/device.py:178
+#: selfdrive/ui/layouts/settings/device.py:59
+#: selfdrive/ui/layouts/settings/device.py:179
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:104
 #: selfdrive/ui/sunnypilot/layouts/settings/software.py:50
 msgid "Reboot"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:58
-#: selfdrive/ui/layouts/settings/device.py:190
+#: selfdrive/ui/layouts/settings/device.py:59
+#: selfdrive/ui/layouts/settings/device.py:191
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:105
 msgid "Power Off"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:62
+#: selfdrive/ui/layouts/settings/device.py:63
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:111
 msgid "Dongle ID"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:62
 #: selfdrive/ui/layouts/settings/device.py:63
+#: selfdrive/ui/layouts/settings/device.py:64
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:111
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:113
 msgid "N/A"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:63
+#: selfdrive/ui/layouts/settings/device.py:64
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:113
 msgid "Serial"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:65
+#: selfdrive/ui/layouts/settings/device.py:66
 msgid "Driver Camera"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:65
+#: selfdrive/ui/layouts/settings/device.py:66
 msgid "PREVIEW"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:68
+#: selfdrive/ui/layouts/settings/device.py:69
 msgid "Review Training Guide"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:68
+#: selfdrive/ui/layouts/settings/device.py:69
 msgid "REVIEW"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:70
+#: selfdrive/ui/layouts/settings/device.py:71
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:89
 msgid "Regulatory"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:70
+#: selfdrive/ui/layouts/settings/device.py:71
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py:53
 msgid "VIEW"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:71
+#: selfdrive/ui/layouts/settings/device.py:72
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:119
 msgid "Change Language"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:71
+#: selfdrive/ui/layouts/settings/device.py:72
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:119
 msgid "CHANGE"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:94
+#: selfdrive/ui/layouts/settings/device.py:95
 msgid "Select a language"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:106
+#: selfdrive/ui/layouts/settings/device.py:107
 msgid "Disengage to Reset Calibration"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:122
+#: selfdrive/ui/layouts/settings/device.py:123
 msgid "Are you sure you want to reset calibration?"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:122
+#: selfdrive/ui/layouts/settings/device.py:123
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:163
 msgid "Reset"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:136
+#: selfdrive/ui/layouts/settings/device.py:137
 #, python-brace-format
 msgid " Your device is pointed {:.1f}° {} and {:.1f}° {}."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:136
+#: selfdrive/ui/layouts/settings/device.py:137
 msgid "down"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:136
+#: selfdrive/ui/layouts/settings/device.py:137
 msgid "up"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:137
+#: selfdrive/ui/layouts/settings/device.py:138
 msgid "left"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:137
+#: selfdrive/ui/layouts/settings/device.py:138
 msgid "right"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:149
+#: selfdrive/ui/layouts/settings/device.py:150
 #, python-brace-format
 msgid "<br><br>Steering lag calibration is {}% complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:151
+#: selfdrive/ui/layouts/settings/device.py:152
 msgid "<br><br>Steering lag calibration is complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:161
+#: selfdrive/ui/layouts/settings/device.py:162
 #, python-brace-format
 msgid " Steering torque response calibration is {}% complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:163
+#: selfdrive/ui/layouts/settings/device.py:164
 msgid " Steering torque response calibration is complete."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:168
+#: selfdrive/ui/layouts/settings/device.py:169
 msgid ""
 "IQ.Pilot is continuously calibrating, resetting is rarely required. "
 "Resetting calibration will restart IQ.Pilot if the car is powered on."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:175
+#: selfdrive/ui/layouts/settings/device.py:176
 msgid "Disengage to Reboot"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:178
+#: selfdrive/ui/layouts/settings/device.py:179
 msgid "Are you sure you want to reboot?"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:187
+#: selfdrive/ui/layouts/settings/device.py:188
 msgid "Disengage to Power Off"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:190
+#: selfdrive/ui/layouts/settings/device.py:191
 msgid "Are you sure you want to power off?"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/settings.py:57
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:121
+msgid "Device"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/settings.py:58
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:122
+msgid "Network"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/settings.py:59
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:123
+msgid "Toggles"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/settings.py:60
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:124
+msgid "Software"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/settings.py:61
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:134
+msgid "Developer"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/software.py:23
@@ -282,8 +340,8 @@ msgid_plural "{} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: selfdrive/ui/layouts/settings/software.py:40
-#, python-format
+#: selfdrive/ui/layouts/settings/software.py:64
+#, python-brace-format
 msgid "{} day ago"
 msgid_plural "{} days ago"
 msgstr[0] ""
@@ -369,6 +427,63 @@ msgstr ""
 #: selfdrive/ui/layouts/settings/software.py:209
 #: selfdrive/ui/sunnypilot/layouts/settings/software.py:84
 msgid "Select a branch"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:21
+msgid ""
+"Use the IQ.Pilot system for adaptive cruise control and lane keep driver "
+"assistance. Your attention is required at all times to use this feature."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:24
+msgid "When enabled, pressing the accelerator pedal will disengage IQ.Pilot."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:26
+msgid ""
+"Standard is recommended. In aggressive mode, IQ.Pilot will follow lead cars "
+"closer and be more aggressive with the gas and brake. In relaxed mode "
+"IQ.Pilot will stay further away from lead cars. On supported cars, you can "
+"cycle through these personalities with your steering wheel distance button."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:31
+msgid ""
+"Receive alerts to steer back into the lane when your vehicle drifts over a "
+"detected lane line without a turn signal activated while driving over 31 mph "
+"(50 km/h)."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:34
+msgid "Enable driver monitoring even when IQ.Pilot is not engaged."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:35
+msgid ""
+"Upload data from the driver facing camera and help improve the driver "
+"monitoring algorithm."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:36
+msgid "Display speed in km/h instead of mph."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:37
+msgid ""
+"Record and store microphone audio while driving. The audio will be included "
+"in the dashcam video in Konn3kt."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:39
+msgid ""
+"When enabled, IQ.Pilot uses Traffic-Aware Cruise Control (TACC). When "
+"disabled, IQ.Pilot uses end-to-end longitudinal control."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:43
+msgid ""
+"Enable IQ.Pilot longitudinal control on supported vehicles. This switches "
+"longitudinal control from stock ACC to IQ.Pilot."
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py:60
@@ -479,6 +594,87 @@ msgstr ""
 msgid "Enable"
 msgstr ""
 
+#: selfdrive/ui/layouts/sidebar.py:43
+msgid "--"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:44
+msgid "Wi-Fi"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:45
+msgid "ETH"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:46
+msgid "2G"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:47
+msgid "3G"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:48
+msgid "LTE"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:49
+msgid "5G"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:71 selfdrive/ui/layouts/sidebar.py:125
+#: selfdrive/ui/layouts/sidebar.py:127 selfdrive/ui/layouts/sidebar.py:129
+msgid "TEMP"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:71 selfdrive/ui/layouts/sidebar.py:125
+msgid "GOOD"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:72 selfdrive/ui/layouts/sidebar.py:144
+msgid "VEHICLE"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:72 selfdrive/ui/layouts/sidebar.py:136
+#: selfdrive/ui/layouts/sidebar.py:144
+msgid "ONLINE"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:73 selfdrive/ui/layouts/sidebar.py:134
+#: selfdrive/ui/layouts/sidebar.py:136 selfdrive/ui/layouts/sidebar.py:138
+#: selfdrive/ui/widgets/prime.py:68
+msgid "Konn3kt"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:73 selfdrive/ui/layouts/sidebar.py:134
+msgid "OFFLINE"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:117
+msgid "Unknown"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:127 system/ui/widgets/confirm_dialog.py:93
+#: system/ui/widgets/html_render.py:263
+msgid "OK"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:129
+msgid "HIGH"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:138
+msgid "ERROR"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:142
+msgid "NO"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:142
+msgid "PANDA"
+msgstr ""
+
 #: selfdrive/ui/mici/layouts/offroad_alerts.py:203
 msgid "no alerts"
 msgstr ""
@@ -493,16 +689,16 @@ msgstr ""
 msgid "No camera detected in dev mode. Tap check to continue."
 msgstr ""
 
-#: selfdrive/ui/mici/layouts/settings/device.py:157
+#: selfdrive/ui/mici/layouts/settings/device.py:160
 #: selfdrive/ui/widgets/setup.py:50
 msgid "Please connect to Wi-Fi to complete initial pairing"
 msgstr ""
 
-#: selfdrive/ui/mici/layouts/settings/device.py:159
+#: selfdrive/ui/mici/layouts/settings/device.py:169
 msgid "No device keys found"
 msgstr ""
 
-#: selfdrive/ui/mici/layouts/settings/device.py:187
+#: selfdrive/ui/mici/layouts/settings/device.py:197
 msgid "Please connect to Wi-Fi to update"
 msgstr ""
 
@@ -537,7 +733,6 @@ msgstr ""
 
 #: selfdrive/ui/onroad/alert_renderer.py:59
 #: selfdrive/ui/onroad/alert_renderer.py:65
-#, python-format
 msgid "System Unresponsive"
 msgstr ""
 
@@ -966,6 +1161,51 @@ msgstr ""
 msgid "Last checked {}"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:125
+msgid "Models"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:126
+msgid "Steering"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:127
+msgid "Cruise"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:128
+msgid "Visuals"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:129
+msgid "Display"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:130
+msgid "OSM"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:132
+msgid "Trips"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:133
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:60
+msgid "Vehicle"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/software.py:23
+msgid ""
+"When enabled, automatic software updates will be off.<br><b>This requires a "
+"reboot to take effect.</b>"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/software.py:26
+msgid ""
+"Please enable \"Always Offroad\" mode or turn off the vehicle to adjust "
+"these toggles."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/software.py:35
 msgid "Disable Updates"
 msgstr ""
@@ -1083,12 +1323,24 @@ msgstr ""
 msgid "Remain Active"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:19
+msgid "Remain Active: ALC will remain active when the brake pedal is pressed."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:20
 msgid "Pause"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:20
+msgid "Pause: ALC will pause when the brake pedal is pressed."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:21
 msgid "Disengage"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:21
+msgid "Disengage: ALC will disengage when the brake pedal is pressed."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:24
@@ -1305,8 +1557,26 @@ msgid ""
 "engaged."
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py:18
+msgid ""
+"sunnypilot will not take over control of gas and brakes. Factory Toyota "
+"longitudinal control will be used."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py:28
 msgid "Enforce Factory Longitudinal Control"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py:16
+msgid ""
+"Use HCA Status 7 instead of Status 5 for steering control on PQ platform "
+"vehicles. This may help with compatibility on some older Volkswagen models."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py:20
+msgid ""
+"Allow lateral control (steering) to remain active even when longitudinal "
+"control (gas/brake) is temporarily unavailable due to a cruise control fault."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py:31
@@ -1335,10 +1605,6 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:46
 msgid "Not fingerprinted or manually selected"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:60
-msgid "Vehicle"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:95
@@ -1370,7 +1636,18 @@ msgid "No vehicle selected"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/__init__.py:45
+#: selfdrive/ui/widgets/ssh_key.py:31
 msgid "REMOVE"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:15
+msgid ""
+"Display useful metrics below the chevron that tracks the lead car only "
+"applicable to cars with sunnypilot longitudinal control."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:17
+msgid "This feature requires sunnypilot longitudinal control to be available."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:32
@@ -1573,23 +1850,23 @@ msgstr ""
 msgid "No release notes available."
 msgstr ""
 
-#: selfdrive/ui/widgets/pairing_dialog.py:143
+#: selfdrive/ui/widgets/pairing_dialog.py:171
 msgid "Pair your device to your Konn3kt account"
 msgstr ""
 
-#: selfdrive/ui/widgets/pairing_dialog.py:168
-msgid "Go to https://konn3kt.com on your phone"
+#: selfdrive/ui/widgets/pairing_dialog.py:196
+msgid "Open the Konn3kt app on your phone"
 msgstr ""
 
-#: selfdrive/ui/widgets/pairing_dialog.py:169
-msgid "Click \"add new device\" and scan the QR code on the right"
+#: selfdrive/ui/widgets/pairing_dialog.py:197
+msgid "Tap \"Add Device\" and scan the QR code on the right"
 msgstr ""
 
-#: selfdrive/ui/widgets/pairing_dialog.py:170
-msgid "Bookmark konn3kt.com to your home screen to use it like an app"
+#: selfdrive/ui/widgets/pairing_dialog.py:198
+msgid "Follow the prompts in the app to finish pairing"
 msgstr ""
 
-#: selfdrive/ui/widgets/pairing_dialog.py:201
+#: selfdrive/ui/widgets/pairing_dialog.py:229
 msgid "QR Code Error"
 msgstr ""
 
@@ -1598,11 +1875,11 @@ msgid "Pair Your Device"
 msgstr ""
 
 #: selfdrive/ui/widgets/prime.py:44
-msgid "Pair your device with Konn3kt at konn3kt.com"
+msgid "Pair your device in the Konn3kt app"
 msgstr ""
 
 #: selfdrive/ui/widgets/prime.py:50
-msgid "FEATURES:"
+msgid "Konn3kt Features:"
 msgstr ""
 
 #: selfdrive/ui/widgets/prime.py:53
@@ -1610,19 +1887,15 @@ msgid "Remote access"
 msgstr ""
 
 #: selfdrive/ui/widgets/prime.py:53
-msgid "24/7 LTE connectivity"
+msgid "Live streaming"
 msgstr ""
 
 #: selfdrive/ui/widgets/prime.py:53
-msgid "1 year of drive storage"
+msgid "Unlimited route storage"
 msgstr ""
 
 #: selfdrive/ui/widgets/prime.py:53
-msgid "Remote snapshots"
-msgstr ""
-
-#: selfdrive/ui/widgets/prime.py:68
-msgid "Konn3kt"
+msgid "And so much more"
 msgstr ""
 
 #: selfdrive/ui/widgets/prime.py:70
@@ -1637,8 +1910,12 @@ msgstr ""
 msgid "Finish Setup"
 msgstr ""
 
-#: selfdrive/ui/widgets/setup.py:38
-msgid "Pair your device with Konn3kt (konn3kt.com)."
+#: selfdrive/ui/widgets/ssh_key.py:29
+msgid "LOADING"
+msgstr ""
+
+#: selfdrive/ui/widgets/ssh_key.py:30
+msgid "ADD"
 msgstr ""
 
 #: selfdrive/ui/widgets/ssh_key.py:89
@@ -1747,10 +2024,6 @@ msgstr ""
 
 #: system/ui/sunnypilot/widgets/tree_dialog.py:99
 msgid "Enter search query"
-msgstr ""
-
-#: system/ui/widgets/confirm_dialog.py:93 system/ui/widgets/html_render.py:263
-msgid "OK"
 msgstr ""
 
 #: system/ui/widgets/list_view.py:123 system/ui/widgets/list_view.py:160
