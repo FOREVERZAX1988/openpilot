@@ -73,7 +73,6 @@ def _char_sets():
   print(f"目标字符'{target_char}'（Unicode: {target_ord}）是否在china_cp中：{target_ord in china_cp}")
   return (base_cp, unifont_cp, china_cp)
 
-
 def _glyph_metrics(glyphs, rects, codepoints):
   entries = []
   min_offset_y, max_extent = None, 0
