@@ -38,7 +38,12 @@ class StableLayout(Widget):
     self._remote_pin_button = button_item_sp(
       title=lambda: tr("PIN"),
       button_text=self._remote_pin_button_text,
-      description=lambda: tr("Set or change the PIN required to use Remote SSH and Live View from Konik Stable."),
+      description=lambda: (
+        tr("Set or change the PIN required to use Remote SSH and Live View from Konik Stable.") + " " +
+        (f"<b>{tr('The PIN is currently configured.')}</b>"
+         if self._remote_pin_is_set()
+         else f"<b>{tr('The PIN is not currently configured.')}</b>")
+      ),
       callback=self._on_remote_pin_pressed,
       enabled=lambda: ui_state.is_offroad(),
     )
@@ -60,7 +65,7 @@ class StableLayout(Widget):
       enabled=lambda: self._remote_pin_is_set(),
     )
 
-    # put destructive reset at the bottom like other device controls
+    # Put destructive reset at the bottom like other device controls.
     self._scroller = Scroller([self._remote_pin_button, self._live_view_toggle, self._remote_ssh_toggle, Spacer(10), self._reset_pin_buttons],
                               line_separator=True, spacing=0)
 
@@ -140,11 +145,6 @@ class StableLayout(Widget):
     def handle_new_pin(_result: DialogResult, new_pin: str):
       if _result != DialogResult.CONFIRM:
         return
-      if new_pin == "":
-        # Treat empty input as "clear PIN" and return to factory state.
-        self._remote_pin_clear()
-        self._show_alert(tr("PIN cleared."))
-        return
       if not new_pin.isdigit():
         _numbers_only_alert()
         return
@@ -182,8 +182,12 @@ class StableLayout(Widget):
     if self._remote_pin_is_set():
       prompt_pin(tr("PIN"), tr("Enter current PIN"), 4, handle_old_pin)
     else:
-      # min_text_size=0 so the user can submit empty to clear and return to factory state
-      prompt_pin(tr("PIN"), tr("Enter new PIN (4-12 digits) or leave blank to clear"), 0, handle_new_pin)
+      prompt_pin(tr("PIN"), tr("Enter new PIN (4-12 digits)"), 4, handle_new_pin)
+
+  @staticmethod
+  def _on_live_view_toggled(enabled: bool):
+    if not enabled:
+      ui_state.params.put_bool("LiveView", False)
 
   def _on_reset_pin_pressed(self) -> None:
     if not self._remote_pin_is_set():
@@ -198,11 +202,6 @@ class StableLayout(Widget):
         self._show_alert(tr("PIN reset."))
 
     gui_app.set_modal_overlay(dlg, cb)
-
-  @staticmethod
-  def _on_live_view_toggled(enabled: bool):
-    if not enabled:
-      ui_state.params.put_bool("LiveView", False)
 
   def _render(self, rect):
     self._scroller.render(rect)
