@@ -11,7 +11,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.common.git import get_commit, get_origin, get_branch, get_short_branch, get_commit_date
 
 RELEASE_SP_BRANCHES = ['release']
-TESTED_SP_BRANCHES = ['release', 'nightly']
+TESTED_SP_BRANCHES = ['release', 'staging']
 MASTER_SP_BRANCHES = ['master']
 RELEASE_BRANCHES = ['release']
 TESTED_BRANCHES = RELEASE_SP_BRANCHES + TESTED_SP_BRANCHES + RELEASE_BRANCHES
