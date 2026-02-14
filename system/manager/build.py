@@ -17,7 +17,70 @@ CACHE_DIR = Path("/data/scons_cache" if AGNOS else "/tmp/scons_cache")
 TOTAL_SCONS_NODES = 2705
 MAX_BUILD_PROGRESS = 100
 
+def _parse_version_tuple(v: str) -> tuple[int, ...] | None:
+  # Accept "16", "10.1", "12.8.3", etc.
+  parts = []
+  for p in v.strip().split("."):
+    if p == "":
+      return None
+    try:
+      parts.append(int(p))
+    except ValueError:
+      return None
+  # Treat trailing ".0" segments as equivalent (e.g. "16" == "16.0").
+  while len(parts) > 1 and parts[-1] == 0:
+    parts.pop()
+  return tuple(parts)
+
+
+def _required_agnos_version() -> str | None:
+  # Primary source is environment, since launch scripts source launch_env.sh before build.py.
+  req = os.environ.get("AGNOS_VERSION")
+  if req:
+    return req.strip()
+
+  # Fallback to repo launch_env.sh if build.py is run manually without env.
+  try:
+    out = subprocess.check_output(
+      ["bash", "-lc", f"unset AGNOS_VERSION; source \"{BASEDIR}/launch_env.sh\"; echo -n \"$AGNOS_VERSION\""],
+      stderr=subprocess.DEVNULL,
+      text=True,
+    )
+    req = out.strip()
+    return req if req else None
+  except Exception:
+    return None
+
+
+def _ensure_agnos_matches_required() -> None:
+  if not AGNOS:
+    return
+
+  cur = (HARDWARE.get_os_version() or "").strip()
+  req = (_required_agnos_version() or "").strip()
+  if not cur or not req:
+    return
+
+  cur_t = _parse_version_tuple(cur)
+  req_t = _parse_version_tuple(req)
+  if cur_t is None or req_t is None:
+    return
+
+  # Block build unless the OS matches the required AGNOS version for this fork.
+  if cur_t != req_t:
+    msg = (
+      f"This build requires AGNOS {req}, but this device is running AGNOS {cur}.\n\n"
+      "Install the required AGNOS version and reboot, then try again."
+    )
+    if not os.getenv("CI"):
+      with TextWindow(msg) as t:
+        t.wait_for_exit()
+    raise SystemExit(msg)
+
+
 def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
+  _ensure_agnos_matches_required()
+
   env = os.environ.copy()
   env['SCONS_PROGRESS'] = "1"
   nproc = os.cpu_count()
