@@ -1,7 +1,8 @@
-﻿import requests
 import threading
 import time
+
 import pyray as rl
+import requests
 
 from openpilot.common.api import api_get
 from openpilot.common.constants import CV
@@ -16,7 +17,12 @@ from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 
 
-class TripsLayout(Widget):
+class TripsWidget(Widget):
+  """
+  Offroad sidebar widget showing drive stats, modeled after the Settings -> Trips page.
+  Only intended to be visible once the device is paired with Konik Stable.
+  """
+
   PARAM_KEY = "ApiCache_DriveStats"
   UPDATE_INTERVAL = 30  # seconds
 
@@ -53,6 +59,10 @@ class TripsLayout(Widget):
       return {}
 
   def _fetch_drive_stats(self):
+    # This widget is only shown after pairing; avoid hitting the API if unpaired.
+    if not ui_state.prime_state.is_paired():
+      return
+
     try:
       dongle_id = self._params.get("DongleId")
       if not dongle_id or dongle_id == UNREGISTERED_DONGLE_ID:
@@ -68,27 +78,22 @@ class TripsLayout(Widget):
 
   def _update_loop(self):
     while self._running:
-      if not ui_state.started and device._awake:
+      if not ui_state.started and device._awake and ui_state.prime_state.is_paired():
         self._fetch_drive_stats()
       time.sleep(self.UPDATE_INTERVAL)
 
   def _render_stat_group(self, x, y, width, height, title, data, is_metric):
-    # Card Background
     rl.draw_rectangle_rounded(rl.Rectangle(x, y, width, height), 0.05, 10, rl.Color(30, 30, 30, 255))
 
-    # Title
     title_font = gui_app.font(FontWeight.BOLD)
     title_font_size = 50 * FONT_SCALE
     title_size = measure_text_cached(title_font, title, title_font_size)
     title_x = x + (width - title_size.x) / 2
     rl.draw_text_ex(title_font, title, rl.Vector2(int(round(title_x)), y + 30), title_font_size, 0, rl.Color(200, 200, 200, 255))
 
-    # Internal content area
-    # Center the content block (Icon + Value + Unit) vertically
     content_y = y + (height / 2) - (140 * FONT_SCALE)
     col_width = width / 3
 
-    # Values
     number_font = gui_app.font(FontWeight.BOLD)
     unit_font = gui_app.font(FontWeight.LIGHT)
     number_base_size = 92
@@ -108,16 +113,13 @@ class TripsLayout(Widget):
       col_x = x + (col_width * col_idx)
       center_x = col_x + (col_width / 2)
 
-      # Icon
       icon_x = int(center_x - (icon.width / 2))
       icon_y = int(content_y + 60)
       rl.draw_texture(icon, icon_x, icon_y, rl.WHITE)
 
-      # Value
       val_size = measure_text_cached(number_font, value, number_base_size)
       rl.draw_text_ex(number_font, value, rl.Vector2(center_x - val_size.x / 1.65, content_y + 145 * FONT_SCALE), number_size, 0, rl.WHITE)
 
-      # Unit
       unit_size_vec = measure_text_cached(unit_font, unit, unit_base_size)
       rl.draw_text_ex(unit_font, unit, rl.Vector2(center_x - unit_size_vec.x / 1.65, content_y + 255 * FONT_SCALE), unit_size, 0, color_unit)
 
@@ -128,6 +130,9 @@ class TripsLayout(Widget):
     return y + height
 
   def _render(self, rect: rl.Rectangle):
+    if not ui_state.prime_state.is_paired():
+      return
+
     x = rect.x
     y = rect.y
     w = rect.width
@@ -137,12 +142,9 @@ class TripsLayout(Widget):
     card_height = available_h / 2
 
     is_metric = self._params.get_bool("IsMetric")
-
     all_time = self._stats.get("all", {})
     week = self._stats.get("week", {})
 
     y = self._render_stat_group(x, y, w, card_height, tr("ALL TIME"), all_time, is_metric)
     y += spacing
-    y = self._render_stat_group(x, y, w, card_height, tr("PAST WEEK"), week, is_metric)
-
-    return -1
+    self._render_stat_group(x, y, w, card_height, tr("PAST WEEK"), week, is_metric)
