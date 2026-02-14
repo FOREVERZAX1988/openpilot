@@ -175,7 +175,8 @@ class SelfdriveD:
 
     # Block resume if cruise never previously enabled
     resume_pressed = any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents)
-    if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed:
+    set_pressed = any(be.type == ButtonType.setCruise for be in CS.buttonEvents)
+    if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed and not set_pressed:
       self.events.add(EventName.resumeBlocked)
 
     if not self.CP.notCar:
