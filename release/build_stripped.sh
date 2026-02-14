@@ -57,7 +57,7 @@ echo -n "$GIT_COMMIT_DATE" > git_src_commit_date
 echo "[-] committing version $VERSION T=$SECONDS"
 git add -f .
 git status
-git commit -a -m "hoofpilot $VERSION release
+git commit -a -m "hoofpilot $VERSION staging
 
 date: $DATETIME
 master commit: $GIT_HASH
