@@ -1,0 +1,22 @@
+{
+  "python/iqpilot_private/__init__.py": {
+    "mode": 436,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+  },
+  "python/iqpilot_private/konn3kt/__init__.py": {
+    "mode": 436,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+  },
+  "python/iqpilot_private/konn3kt/athena/__init__.py": {
+    "mode": 436,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+  },
+  "python/iqpilot_private/konn3kt/athena/hephaestusd.cpython-312-aarch64-linux-gnu.so": {
+    "mode": 509,
+    "sha256": "9bbcfa90af8de59ee1ddee0a1157aa2428fda139c47d327383ab217168ea93f3",
+    "size": 1130800
+  }
+}
