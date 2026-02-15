@@ -5,7 +5,7 @@ set -x
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 
 SOURCE_DIR="$(git -C $DIR rev-parse --show-toplevel)"
-if [ -z "$TARGET_DIR" ]; then
+if [ -z "${TARGET_DIR:-}" ]; then
   TARGET_DIR="$(mktemp -d)"
 else
   # If user specifies TARGET_DIR, require explicit opt-in before deleting it.
@@ -15,7 +15,7 @@ else
     exit 1
   fi
 fi
-if [ -z "$TARGET_DIR" ] || [ "$TARGET_DIR" = "/" ]; then
+if [ -z "${TARGET_DIR:-}" ] || [ "$TARGET_DIR" = "/" ]; then
   echo "Refusing to run with unsafe TARGET_DIR=$TARGET_DIR"
   exit 1
 fi
@@ -52,7 +52,12 @@ fi
 # do the files copy
 echo "[-] copying files T=$SECONDS"
 cd $SOURCE_DIR
-cp -pR --parents $(./release/release_files.py) $TARGET_DIR/
+# Avoid "Argument list too long" by streaming the file list to tar.
+FILES_LIST="$(mktemp -t hoofpilot_release_files_XXXXXX)"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+"$PYTHON_BIN" ./release/release_files.py > "$FILES_LIST"
+tar -C "$SOURCE_DIR" -cf - -T "$FILES_LIST" | tar -C "$TARGET_DIR" -xpf -
+rm -f "$FILES_LIST"
 
 # in the directory
 cd $TARGET_DIR
@@ -95,7 +100,7 @@ if [ ! -z "$BIG_FILES" ]; then
   exit 1
 fi
 
-if [ ! -z "$BRANCH" ]; then
+if [ ! -z "${BRANCH:-}" ]; then
   echo "[-] Pushing to $BRANCH T=$SECONDS"
   git push -f origin tmp:$BRANCH
 fi

@@ -44,7 +44,12 @@ git checkout --orphan "$RELEASE_BRANCH"
 
 echo "[-] copying files T=$SECONDS"
 cd "$SOURCE_DIR"
-cp -pR --parents $(./release/release_files.py) "$BUILD_DIR/"
+# Avoid "Argument list too long" by streaming the file list to tar.
+FILES_LIST="$(mktemp -t hoofpilot_release_files_XXXXXX)"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+"$PYTHON_BIN" ./release/release_files.py > "$FILES_LIST"
+tar -C "$SOURCE_DIR" -cf - -T "$FILES_LIST" | tar -C "$BUILD_DIR" -xpf -
+rm -f "$FILES_LIST"
 
 cd "$BUILD_DIR"
 
