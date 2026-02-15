@@ -63,6 +63,12 @@ class LongitudinalPlanner:
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
 
+    # Follow distance from stalk button (separate from personality)
+    from openpilot.common.params import Params
+    self._params = Params()
+    self.follow_distance = int(self._params.get("FollowDistance", return_default=True))
+    self._follow_distance_frame = 0
+
   @staticmethod
   def parse_model(model_msg):
     if (len(model_msg.position.x) == ModelConstants.IDX_N and
@@ -128,9 +134,14 @@ class LongitudinalPlanner:
     if force_slow_decel:
       v_cruise = 0.0
 
+    # Read follow distance from params every ~1 second (avoid reading every frame)
+    self._follow_distance_frame += 1
+    if self._follow_distance_frame % 20 == 0:
+      self.follow_distance = int(self._params.get("FollowDistance", return_default=True))
+
     self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
-    self.mpc.update(sm['radarState'], v_cruise, personality=sm['selfdriveState'].personality)
+    self.mpc.update(sm['radarState'], v_cruise, personality=sm['selfdriveState'].personality, follow_distance=self.follow_distance)
 
     self.v_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.v_solution)
     self.a_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
