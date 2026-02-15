@@ -3,7 +3,7 @@ set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 ROOT="$(cd $DIR/../ && pwd)"
-ARCH=$(uname -m)
+source $ROOT/scripts/platform.sh
 
 # homebrew update is slow
 export HOMEBREW_NO_AUTO_UPDATE=1
@@ -21,13 +21,8 @@ if [[ $(command -v brew) == "" ]]; then
   echo "[ ] installed brew t=$SECONDS"
 
   # make brew available now
-  if [[ $ARCH == "x86_64" ]]; then
-    echo 'eval "$(/usr/local/bin/brew shellenv)"' >> $RC_FILE
-    eval "$(/usr/local/bin/brew shellenv)"
-  else
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $RC_FILE
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  fi
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $RC_FILE
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 else
     brew up
 fi
