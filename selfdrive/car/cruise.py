@@ -130,7 +130,9 @@ class VCruiseHelper:
 
     initial = V_CRUISE_INITIAL
 
-    if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
+    set_pressed = any(b.type == ButtonType.setCruise for b in CS.buttonEvents)
+    resume_pressed = any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents)
+    if resume_pressed and not set_pressed and self.v_cruise_initialized:
       self.v_cruise_kph = self.v_cruise_kph_last
     else:
       self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))

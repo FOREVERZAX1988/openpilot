@@ -395,12 +395,11 @@ class SelfdriveD:
       if self.sm['modelV2'].frameDropPerc > 20:
         self.events.add(EventName.modeldLagging)
 
-    # Decrement personality on distance button press
+    # Follow distance button is handled by carstate (car-specific) writing to FollowDistance param.
+    # Personality (driving smoothness) is set in the UI, not cycled by the stalk button.
     if self.CP.openpilotLongitudinalControl:
       if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents):
-        self.personality = (self.personality - 1) % 3
-        self.params.put_nonblocking('LongitudinalPersonality', self.personality)
-        self.events.add(EventName.personalityChanged)
+        self.events.add(EventName.personalityChanged)  # show alert that distance changed
 
   def data_sample(self):
     _car_state = messaging.recv_one(self.car_state_sock)
