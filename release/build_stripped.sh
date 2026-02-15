@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
-set -ex
+set -euo pipefail
+set -x
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 
 SOURCE_DIR="$(git -C $DIR rev-parse --show-toplevel)"
 if [ -z "$TARGET_DIR" ]; then
   TARGET_DIR="$(mktemp -d)"
+else
+  # If user specifies TARGET_DIR, require explicit opt-in before deleting it.
+  if [ "${ALLOW_WIPE_TARGET_DIR:-0}" != "1" ]; then
+    echo "TARGET_DIR is set to '$TARGET_DIR'."
+    echo "Refusing to delete it without ALLOW_WIPE_TARGET_DIR=1."
+    exit 1
+  fi
+fi
+if [ -z "$TARGET_DIR" ] || [ "$TARGET_DIR" = "/" ]; then
+  echo "Refusing to run with unsafe TARGET_DIR=$TARGET_DIR"
+  exit 1
 fi
 
 # set git identity
@@ -30,10 +42,12 @@ git submodule deinit -f --all
 git rm -rf --cached .
 find . -maxdepth 1 -not -path './.git' -not -name '.' -not -name '..' -exec rm -rf '{}' \;
 
-# cleanup before the copy
-cd $SOURCE_DIR
-git clean -xdff
-git submodule foreach --recursive git clean -xdff
+# cleanup before the copy (opt-in, destructive to SOURCE_DIR)
+if [ "${CLEAN_SOURCE:-0}" = "1" ]; then
+  cd $SOURCE_DIR
+  git clean -xdff
+  git submodule foreach --recursive git clean -xdff
+fi
 
 # do the files copy
 echo "[-] copying files T=$SECONDS"
@@ -65,9 +79,11 @@ master commit: $GIT_HASH
 
 # should be no submodules or LFS files
 git submodule status
-if [ ! -z "$(git lfs ls-files)" ]; then
-  echo "LFS files detected!"
-  exit 1
+if command -v git-lfs >/dev/null 2>&1 || git lfs env >/dev/null 2>&1; then
+  if [ ! -z "$(git lfs ls-files)" ]; then
+    echo "LFS files detected!"
+    exit 1
+  fi
 fi
 
 # ensure files are within GitHub's limit
