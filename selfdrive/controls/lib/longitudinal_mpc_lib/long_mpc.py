@@ -70,7 +70,15 @@ def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
     raise NotImplementedError("Longitudinal personality not supported")
 
 
-def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard):
+def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard, follow_distance=None):
+  # If follow_distance is set (0-3), use it directly for time gap (wider spread than personality)
+  # This allows the stalk button to control distance independently of driving personality
+  if follow_distance is not None:
+    # 4 levels: closest (1.0s) to farthest (2.2s), matching typical stock ACC range
+    t_follow_map = {0: 1.0, 1: 1.4, 2: 1.8, 3: 2.2}
+    return t_follow_map.get(follow_distance, 1.8)
+
+  # Fallback to personality-based T_FOLLOW (original behavior)
   if personality==log.LongitudinalPersonality.relaxed:
     return 1.75
   elif personality==log.LongitudinalPersonality.standard:
@@ -313,8 +321,8 @@ class LongitudinalMpc:
     lead_xv = self.extrapolate_lead(x_lead, v_lead, a_lead, a_lead_tau)
     return lead_xv
 
-  def update(self, radarstate, v_cruise, personality=log.LongitudinalPersonality.standard):
-    t_follow = get_T_FOLLOW(personality)
+  def update(self, radarstate, v_cruise, personality=log.LongitudinalPersonality.standard, follow_distance=None):
+    t_follow = get_T_FOLLOW(personality, follow_distance)
     v_ego = self.x0[1]
     self.status = radarstate.leadOne.status or radarstate.leadTwo.status
 
