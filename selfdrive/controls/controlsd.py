@@ -56,7 +56,8 @@ class Controls(ControlsExt):
 
     self.LoC = LongControl(self.CP, self.CP_SP)
     self.VM = VehicleModel(self.CP)
-    self.follow_distance = int(self.params.get("FollowDistance", return_default=True))
+    fd_val = self.params.get("FollowDistance", return_default=True)
+    self.follow_distance = int(fd_val) if fd_val is not None else 2
     self._follow_distance_frame = 0
     self.LaC: LatControl
     if self.CP.steerControlType == car.CarParams.SteerControlType.angle:
@@ -179,7 +180,8 @@ class Controls(ControlsExt):
     # Show follow distance from stalk button (1-4 bars), not personality
     self._follow_distance_frame += 1
     if self._follow_distance_frame % 100 == 0:  # refresh every ~1 second
-      self.follow_distance = int(self.params.get("FollowDistance", return_default=True))
+      fd_val = self.params.get("FollowDistance", return_default=True)
+      self.follow_distance = int(fd_val) if fd_val is not None else self.follow_distance
     hudControl.leadDistanceBars = self.follow_distance + 1  # 0-3 → 1-4 bars
     hudControl.visualAlert = self.sm['selfdriveState'].alertHudVisual
 
