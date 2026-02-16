@@ -22,7 +22,6 @@ def _languages():
   with LANGUAGES_FILE.open(encoding="utf-8") as f:
     return json.load(f)
 
-
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
   unifont = set(base)
