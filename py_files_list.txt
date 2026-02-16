@@ -646,6 +646,3 @@
 ./system/webrtc/webrtcd.py
 ./system/webrtc/__init__.py
 ./system/__init__.py
-./selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-./selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
-./selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
