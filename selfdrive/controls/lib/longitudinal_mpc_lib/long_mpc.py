@@ -73,10 +73,10 @@ def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
 def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard, follow_distance=None):
   # If follow_distance is set (0-3), use it directly for time gap (wider spread than personality)
   # This allows the stalk button to control distance independently of driving personality
+  # 4 levels map to stock radar's Zeitluecke 1-4 (derived in carstate from ext bus)
   if follow_distance is not None:
-    # 4 levels: closest (1.0s) to farthest (2.2s), matching typical stock ACC range
-    t_follow_map = {0: 1.0, 1: 1.4, 2: 1.8, 3: 2.2}
-    return t_follow_map.get(follow_distance, 1.8)
+    t_follow_map = {0: 1.2, 1: 1.6, 2: 2.0, 3: 2.4}
+    return t_follow_map.get(follow_distance, 1.6)
 
   # Fallback to personality-based T_FOLLOW (original behavior)
   if personality==log.LongitudinalPersonality.relaxed:

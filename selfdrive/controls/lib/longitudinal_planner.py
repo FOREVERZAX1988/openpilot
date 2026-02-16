@@ -66,7 +66,8 @@ class LongitudinalPlanner:
     # Follow distance from stalk button (separate from personality)
     from openpilot.common.params import Params
     self._params = Params()
-    self.follow_distance = int(self._params.get("FollowDistance", return_default=True))
+    fd_val = self._params.get("FollowDistance", return_default=True)
+    self.follow_distance = int(fd_val) if fd_val is not None else 2
     self._follow_distance_frame = 0
 
   @staticmethod
@@ -137,7 +138,8 @@ class LongitudinalPlanner:
     # Read follow distance from params every ~1 second (avoid reading every frame)
     self._follow_distance_frame += 1
     if self._follow_distance_frame % 20 == 0:
-      self.follow_distance = int(self._params.get("FollowDistance", return_default=True))
+      fd_val = self._params.get("FollowDistance", return_default=True)
+      self.follow_distance = int(fd_val) if fd_val is not None else self.follow_distance
 
     self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
