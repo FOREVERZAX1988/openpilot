@@ -48,19 +48,12 @@ Font font_display;
 const bool tici_device = Hardware::get_device_type() == cereal::InitData::DeviceType::TICI ||
                          Hardware::get_device_type() == cereal::InitData::DeviceType::TIZI;
 
-std::vector<std::string> tici_prebuilt_branches = {"release3", "release-tizi", "release3-staging", "nightly", "nightly-dev"};
 std::string migrated_branch;
 
 void branchMigration() {
   migrated_branch = BRANCH_STR;
   cereal::InitData::DeviceType device_type = Hardware::get_device_type();
-  if (device_type == cereal::InitData::DeviceType::TICI) {
-    if (std::find(tici_prebuilt_branches.begin(), tici_prebuilt_branches.end(), BRANCH_STR) != tici_prebuilt_branches.end()) {
-      migrated_branch = "release-tici";
-    } else if (BRANCH_STR == "master") {
-      migrated_branch = "master-tici";
-    }
-  } else if (device_type == cereal::InitData::DeviceType::TIZI) {
+  if (device_type == cereal::InitData::DeviceType::TIZI) {
     if (BRANCH_STR == "release3") {
       migrated_branch = "release-tizi";
     } else if (BRANCH_STR == "release3-staging") {
@@ -93,14 +86,12 @@ static bool maybeRunAgnosUpdater() {
     return false;
   }
 
-  // SunnyPilot's launcher uses the c3 env/manifest for devices reporting "comma tici".
-  const std::string model = util::strip(util::read_file("/sys/firmware/devicetree/base/model"));
-  const bool use_c3 = (model == "comma tici") && util::file_exists(INSTALL_PATH + "/sunnypilot/system/hardware/c3/launch_env.sh");
+  // Use the normal launch_env.sh, which already handles device-specific AGNOS selection.
+  const std::string env_path = INSTALL_PATH + "/launch_env.sh";
 
-  const std::string env_path = use_c3 ? (INSTALL_PATH + "/sunnypilot/system/hardware/c3/launch_env.sh")
-                                      : (INSTALL_PATH + "/launch_env.sh");
-  const std::string manifest_path = use_c3 ? (INSTALL_PATH + "/sunnypilot/system/hardware/c3/agnos.json")
-                                           : (INSTALL_PATH + "/system/hardware/tici/agnos.json");
+  const bool is_tici = Hardware::get_device_type() == cereal::InitData::DeviceType::TICI;
+  const std::string manifest_path = is_tici ? (INSTALL_PATH + "/sunnypilot/system/hardware/c3/agnos.json")
+                                            : (INSTALL_PATH + "/system/hardware/tici/agnos.json");
 
   if (!util::file_exists(env_path) || !util::file_exists(manifest_path)) {
     return false;
