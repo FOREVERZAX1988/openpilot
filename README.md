@@ -1,5 +1,5 @@
 ## 🐎 What is hoofpilot?
-**hoofpilot** is a fork of comma.ai's openpilot, an open-source driver assistance system. **hoofpilot** offers an intuitive, simple-to-use experience for driver assistance, supporting over 300 different car makes and models.
+**hoofpilot** is a fork of sunnypilot, an open-source driver assistance system. **hoofpilot** offers an intuitive, simple-to-use experience for driver assistance, supporting over 300 different car makes and models.
 
 ## ❔ Supported devices
 
