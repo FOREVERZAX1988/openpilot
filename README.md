@@ -38,9 +38,7 @@ Read `docs/SAFETY.md` for more information.
 
 ## 🛠️ Contributing
 
-If you have any bugs, issues, or ideas for new features, please post about them on the **[Konik.ai Discord](https://discord.com/invite/vXG2eq5KSZ)** in the appropriate channel! 
-
-Please include as much detail as possible! Photos, videos, log files, or anything that can help explain the issue or idea are very helpful!
+If you have any bugs, issues, or ideas for new features, please post about them on the **[Konik.ai Discord](https://discord.com/invite/vXG2eq5KSZ)** in the appropriate channel. Please include as much detail as possible! Photos, videos, log files, or anything that can help explain the issue or idea are very helpful!
 
 ## License
 
