@@ -16,6 +16,6 @@
 [submodule "tinygrad"]
   path = tinygrad_repo
   url = https://github.com/hoofpilot/tinygrad.git
-[submodule "sunnypilot/neural_network_data"]
+[submodule "hoofpilot/neural_network_data"]
 	path = hoofpilot/neural_network_data
   url = https://github.com/sunnypilot/neural-network-data.git
