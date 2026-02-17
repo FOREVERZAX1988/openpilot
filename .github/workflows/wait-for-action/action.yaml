@@ -35,9 +35,16 @@ runs:
       shell: bash
       run: |
         BRANCH="${{ inputs.branch || github.head_ref || github.ref_name }}"
+        COMMIT_SHA="${{ github.sha }}"
 
-        echo "Looking for workflow runs of ${{ inputs.workflow }} on branch $BRANCH"
-        RUN_ID=$(gh run list --workflow=${{ inputs.workflow }} --branch="$BRANCH" --limit=1 --json databaseId --jq '.[0].databaseId')
+        echo "Looking for workflow runs of ${{ inputs.workflow }} on branch $BRANCH for commit $COMMIT_SHA"
+        RUN_ID=$(gh run list --workflow=${{ inputs.workflow }} --branch="$BRANCH" --commit="$COMMIT_SHA" --limit=1 --json databaseId --jq '.[0].databaseId')
+
+        if [[ -z "$RUN_ID" || "$RUN_ID" == "null" ]]; then
+          echo "⚠️ No workflow run found for commit $COMMIT_SHA on branch $BRANCH. Skipping wait."
+          exit 0
+        fi
+
         echo "Watching run ID: $RUN_ID"
         gh run watch "$RUN_ID"
 
