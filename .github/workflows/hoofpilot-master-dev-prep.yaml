@@ -3,8 +3,6 @@ name: Build dev
 env:
   DEFAULT_SOURCE_BRANCH: "master"
   DEFAULT_TARGET_BRANCH: "master-dev"
-  LFS_URL: 'https://huggingface.co/hoofpilot/hoofpilot-lfs.git/info/lfs'
-  LFS_PUSH_URL: 'https://huggingface.co/hoofpilot/hoofpilot-lfs.git/info/lfs'
 
 on:
   push:
@@ -162,13 +160,6 @@ jobs:
             --squash-script-path '/tmp/squash_and_merge.py'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update LFS Config
-        run: |
-          echo '[lfs]' > .lfsconfig
-          echo '    url = ${{ env.LFS_URL }}' >> .lfsconfig
-          echo '    pushurl = ${{ env.LFS_PUSH_URL }}' >> .lfsconfig
-          echo '    locksverify = false' >> .lfsconfig
 
       - name: Restore workflows from source
         run: |
