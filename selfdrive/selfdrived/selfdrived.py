@@ -24,12 +24,12 @@ from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroa
 from openpilot.system.version import get_build_metadata
 from openpilot.system.hardware import HARDWARE
 
-from openpilot.sunnypilot.mads.mads import ModularAssistiveDrivingSystem
-from openpilot.sunnypilot import get_sanitize_int_param
-from openpilot.sunnypilot.selfdrive.car.car_specific import CarSpecificEventsSP
-from openpilot.sunnypilot.selfdrive.car.cruise_helpers import CruiseHelper
-from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.controller import IntelligentCruiseButtonManagement
-from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
+from hoofpilot.mads.mads import ModularAssistiveDrivingSystem
+from hoofpilot import get_sanitize_int_param
+from hoofpilot.selfdrive.car.car_specific import CarSpecificEventsSP
+from hoofpilot.selfdrive.car.cruise_helpers import CruiseHelper
+from hoofpilot.selfdrive.car.intelligent_cruise_button_management.controller import IntelligentCruiseButtonManagement
+from hoofpilot.selfdrive.selfdrived.events import EventsSP
 
 REPLAY = "REPLAY" in os.environ
 SIMULATION = "SIMULATION" in os.environ
@@ -146,7 +146,7 @@ class SelfdriveD(CruiseHelper):
     self.ignored_processes = {'mapd', }
 
     # Determine startup event
-    is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote
+    is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote or build_metadata.openpilot.hoofpilot_remote
     self.startup_event = EventName.startup if is_remote and build_metadata.tested_channel else EventName.startupMaster
     if HARDWARE.get_device_type() == 'mici':
       self.startup_event = None

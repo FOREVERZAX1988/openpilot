@@ -20,7 +20,7 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.modeld.modeld import LAT_SMOOTH_SECONDS
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 
-from openpilot.sunnypilot.selfdrive.controls.controlsd_ext import ControlsExt
+from hoofpilot.selfdrive.controls.controlsd_ext import ControlsExt
 
 State = log.SelfdriveState.OpenpilotState
 LaneChangeState = log.LaneChangeState
@@ -36,7 +36,7 @@ class Controls(ControlsExt):
     self.CP = messaging.log_from_bytes(self.params.get("CarParams", block=True), car.CarParams)
     cloudlog.info("controlsd got CarParams")
 
-    # Initialize sunnypilot controlsd extension and base model state
+    # Initialize hoofpilot controlsd extension and base model state
     ControlsExt.__init__(self, self.CP, self.params)
 
     self.CI = interfaces[self.CP.carFingerprint](self.CP, self.CP_SP)

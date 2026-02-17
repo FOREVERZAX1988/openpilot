@@ -26,7 +26,7 @@ sunnylink_consent_declined: str = "-1"
 
 
 def get_version(path: str = BASEDIR) -> str:
-  with open(os.path.join(path, "sunnypilot", "common", "version.h")) as _versionf:
+  with open(os.path.join(path, "hoofpilot", "common", "version.h")) as _versionf:
     version = _versionf.read().split('"')[1]
   return version
 
@@ -93,6 +93,11 @@ class OpenpilotMetadata:
                                           "github.com/sunnypilot/openpilot",
                                           "github.com/sunnyhaibin/sunnypilot",
                                           "github.com/sunnyhaibin/openpilot")
+
+  @property
+  def hoofpilot_remote(self) -> bool:
+    return self.git_normalized_origin in ("github.com/hoofpilot/hoofpilot",
+                                          "github.com/hoofpilot/openpilot")
 
   @property
   def git_normalized_origin(self) -> str:
