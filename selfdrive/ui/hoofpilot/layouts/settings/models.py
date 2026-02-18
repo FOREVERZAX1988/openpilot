@@ -4,11 +4,11 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+
 import os
 import re
 import time
 import pyray as rl
-
 from cereal import custom
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import device, ui_state

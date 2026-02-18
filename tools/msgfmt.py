@@ -54,6 +54,14 @@ def add(ctxt, id, str, fuzzy):
             MESSAGES[id] = str
         else:
             MESSAGES[b"%b\x04%b" % (ctxt, id)] = str
+    def add(ctxt, msg_id, msg_str, fuzzy):
+        "Add a non-fuzzy translation to the dictionary."
+        global MESSAGES
+        if not fuzzy and msg_str:
+            if ctxt is None:
+                MESSAGES[msg_id] = msg_str
+            else:
+                MESSAGES[b"%b\x04%b" % (ctxt, msg_id)] = msg_str
 
 
 def generate():
@@ -63,12 +71,12 @@ def generate():
     keys = sorted(MESSAGES.keys())
     offsets = []
     ids = strs = b""
-    for id in keys:
+        for msg_id in keys:
         # For each string, we need size and file offset.  Each string is NUL
         # terminated; the NUL does not count into the size.
-        offsets.append((len(ids), len(id), len(strs), len(MESSAGES[id])))
-        ids += id + b"\0"
-        strs += MESSAGES[id] + b"\0"
+            offsets.append((len(ids), len(msg_id), len(strs), len(MESSAGES[msg_id])))
+            ids += msg_id + b"\0"
+            strs += MESSAGES[msg_id] + b"\0"
     # The header is 7 32-bit unsigned integers. We don't use hash tables, so
     # the keys start right after the index tables.
     keystart = 7 * 4 + 16 * len(keys)

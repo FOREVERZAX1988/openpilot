@@ -551,7 +551,7 @@ def remoteSshStart(cols: int = 120, rows: int = 32, authToken: str | None = None
 
 
 @dispatcher.add_method
-def remoteSshWrite(sessionId: str, data: str, authToken: str | None = None) -> dict[str, bool | int]:
+def remoteSshWrite(sessionId: str, data: str, authToken: str | None = None) -> dict[str, bool | int | str]:
   _remote_pin_require_auth(authToken)
   if not _is_remote_ssh_enabled():
     _close_all_remote_ssh_sessions()
