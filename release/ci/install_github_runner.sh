@@ -2,7 +2,7 @@
 set -e
 
 # Default values
-DEFAULT_REPO_URL="https://github.com/sunnypilot"
+DEFAULT_REPO_URL="https://github.com/hoofpilot"
 START_AT_BOOT=false
 RESTORE_MODE=false
 RUNNER_VERSION="2.325.0"
@@ -154,7 +154,7 @@ install_service() {
     if [ -f "${RUNNER_DIR}/.service" ]; then
         service_name=$(cat "${RUNNER_DIR}/.service")
     else
-        service_name="actions.runner.sunnypilot.$(uname -n)"
+        service_name="actions.runner.hoofpilot.$(uname -n)"
     fi
   
     create_service_template
