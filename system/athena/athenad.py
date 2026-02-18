@@ -633,7 +633,7 @@ def remoteSshRead(sessionId: str, maxBytes: int = 65536, authToken: str | None =
 
 
 @dispatcher.add_method
-def remoteSshResize(sessionId: str, cols: int = 120, rows: int = 32, authToken: str | None = None) -> dict[str, bool]:
+def remoteSshResize(sessionId: str, cols: int = 120, rows: int = 32, authToken: str | None = None) -> dict[str, bool | str]:
   _remote_pin_require_auth(authToken)
   if not _is_remote_ssh_enabled():
     _close_all_remote_ssh_sessions()
@@ -655,7 +655,7 @@ def remoteSshResize(sessionId: str, cols: int = 120, rows: int = 32, authToken: 
 
 
 @dispatcher.add_method
-def remoteSshStop(sessionId: str, authToken: str | None = None) -> dict[str, bool]:
+def remoteSshStop(sessionId: str, authToken: str | None = None) -> dict[str, bool | str]:
   _remote_pin_require_auth(authToken)
   if not _is_remote_ssh_enabled():
     _close_all_remote_ssh_sessions()

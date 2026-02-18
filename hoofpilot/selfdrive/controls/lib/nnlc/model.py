@@ -10,7 +10,7 @@ import numpy as np
 from openpilot.selfdrive.modeld.parse_model_outputs import safe_exp
 
 # dict used to rename activation functions whose names aren't valid python identifiers
-ACTIVATION_FUNCTION_NAMES = {'Ïƒ': 'sigmoid'}
+ACTIVATION_FUNCTION_NAMES = {'Ïƒ': 'sigmoid', 'σ': 'sigmoid'}
 
 
 class NNTorqueModel:
