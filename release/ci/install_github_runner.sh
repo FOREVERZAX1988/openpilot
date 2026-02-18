@@ -119,7 +119,7 @@ configure_runner() {
     remount_rw
     echo "Configuring runner..."
     cd "$RUNNER_DIR"
-    sudo -u ${RUNNER_USER} ./config.sh --url "$REPO_URL" --token "$GITHUB_TOKEN" --name $(hostname) --labels "tici" --work "$BUILDS_DIR" --unattended
+    sudo -u ${RUNNER_USER} ./config.sh --url "$REPO_URL" --token "$GITHUB_TOKEN" --name $(hostname) --runnergroup "tici-tizi" --labels "tici" --work "$BUILDS_DIR" --unattended
     remount_ro
 }
 
