@@ -39,4 +39,6 @@ jobs:
         git config --global --add safe.directory '*'
         git lfs pull
     - name: Push __nightly
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: BRANCH=__nightly release/build_stripped.sh
