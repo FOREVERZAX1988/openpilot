@@ -38,7 +38,7 @@ runs:
         COMMIT_SHA="${{ github.sha }}"
 
         echo "Looking for workflow runs of ${{ inputs.workflow }} on branch $BRANCH for commit $COMMIT_SHA"
-        RUN_ID=$(gh run list --workflow=${{ inputs.workflow }} --branch="$BRANCH" --commit="$COMMIT_SHA" --limit=1 --json databaseId --jq '.[0].databaseId')
+        RUN_ID=$(gh run list --workflow=${{ inputs.workflow }} --branch="$BRANCH" --limit=10 --json databaseId,headSha --jq "[.[] | select(.headSha == \"$COMMIT_SHA\")] | .[0].databaseId")
 
         if [[ -z "$RUN_ID" || "$RUN_ID" == "null" ]]; then
           echo "⚠️ No workflow run found for commit $COMMIT_SHA on branch $BRANCH. Skipping wait."
