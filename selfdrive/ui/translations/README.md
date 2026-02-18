@@ -1,3 +1,3 @@
 # Multilanguage
 
-[![languages](https://raw.githubusercontent.com/commaai/openpilot/badges/translation_badge.svg)](#)
+[![languages](https://github.com/hoofpilot/hoofpilot/blob/badges/translation_badge.svg)](#)
