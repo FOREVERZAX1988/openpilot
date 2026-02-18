@@ -100,6 +100,7 @@ jobs:
       custom_name: ${{ matrix.model.display_name }}
       recompiled_dir: ${{ needs.setup.outputs.recompiled_dir }}
       json_version: ${{ needs.setup.outputs.json_version }}
+      is_20hz: ${{ matrix.model.is_20hz }}
     secrets: inherit
 
   retry_failed_models:
@@ -138,6 +139,7 @@ jobs:
       recompiled_dir: ${{ needs.setup.outputs.recompiled_dir }}
       json_version: ${{ needs.setup.outputs.json_version }}
       artifact_suffix: -retry
+      is_20hz: ${{ matrix.model.is_20hz }}
     secrets: inherit
 
   publish_models:

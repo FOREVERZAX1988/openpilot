@@ -29,6 +29,11 @@ on:
         required: false
         default: true
         type: boolean
+      is_20hz:
+        description: 'Is this a 20Hz model'
+        required: false
+        default: true
+        type: boolean
   workflow_dispatch:
     inputs:
       upstream_branch:
@@ -72,6 +77,11 @@ on:
         description: 'Minimum selector version'
         required: false
         type: string
+      is_20hz:
+        description: 'Is this a 20Hz model'
+        required: false
+        type: boolean
+        default: true
 env:
   RECOMPILED_DIR: recompiled${{ inputs.recompiled_dir }}
   JSON_FILE: driving_models_v${{ inputs.json_version }}.json
@@ -82,7 +92,7 @@ jobs:
     with:
       upstream_branch: ${{ inputs.upstream_branch }}
       custom_name: ${{ inputs.custom_name || inputs.upstream_branch }}
-      is_20hz: true
+      is_20hz: ${{ inputs.is_20hz }}
       artifact_suffix: ${{ inputs.artifact_suffix }}
     secrets: inherit
 
