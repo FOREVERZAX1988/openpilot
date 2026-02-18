@@ -103,6 +103,7 @@ def _create_redirect_server(preferred_port: int) -> ClientRedirectServer:
       if port != 0:
         continue
       raise e
+  raise OSError("Failed to create redirect server")
 
 
 def login(method):

@@ -380,9 +380,9 @@ def setSdpAnswer(answer, authToken: str | None = None):
 @dispatcher.add_method
 def getSdp(authToken: str | None = None):
   _remote_pin_require_auth(authToken)
-  start_time = time.time()
+  start_time = time.time()  # noqa: TID251
   timeout = 10
-  while time.time() - start_time < timeout:
+  while time.time() - start_time < timeout:  # noqa: TID251
     try:
       sdp = json.loads(sdp_send_queue.get(timeout=0.1))
       if sdp:

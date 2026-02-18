@@ -4,9 +4,9 @@ from pathlib import Path
 
 try:
   # Preferred on-device / in-repo path resolution.
-  from openpilot.system.hardware.hw import Paths  # type: ignore
+  from openpilot.system.hardware.hw import Paths
 except Exception:
-  Paths = None  # type: ignore
+  Paths = None
 
 
 class MissingAuthConfigError(Exception):

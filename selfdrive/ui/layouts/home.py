@@ -12,7 +12,6 @@ from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
 from openpilot.system.ui.lib.multilang import tr, trn
-from openpilot.system.ui.widgets.label import gui_label
 from openpilot.system.ui.widgets import Widget
 
 HEADER_HEIGHT = 80

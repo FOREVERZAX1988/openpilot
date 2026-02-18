@@ -89,10 +89,7 @@ def _ensure_agnos_matches_required() -> None:
 
   # Block build unless the OS matches the required AGNOS version for this fork.
   if cur_t != req_t:
-    msg = (
-      f"This build requires AGNOS {req}, but this device is running AGNOS {cur}.\n\n"
-      "Install the required AGNOS version and reboot, then try again."
-    )
+    msg = f"This build requires AGNOS {req}, but this device is running AGNOS {cur}.\n\nInstall the required AGNOS version and reboot, then try again."
     if not os.getenv("CI"):
       with TextWindow(msg) as t:
         t.wait_for_exit()

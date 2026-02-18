@@ -4,12 +4,10 @@ from cereal import log
 import pyray as rl
 from collections.abc import Callable
 from openpilot.system.ui.widgets.label import gui_label, MiciLabel, UnifiedLabel
-from openpilot.system.ui.widgets.label import gui_label, MiciLabel, UnifiedLabel
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.lib.application import gui_app, FontWeight, DEFAULT_TEXT_COLOR, MousePos
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.text import wrap_text
-from openpilot.system.version import training_version, RELEASE_BRANCHES
 from openpilot.system.version import training_version, RELEASE_BRANCHES
 
 HEAD_BUTTON_FONT_SIZE = 40

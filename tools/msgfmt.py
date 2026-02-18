@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 # Copied from CPython (Tools/i18n/msgfmt.py), under the PSF license.
 # Original author: Martin v. Loewis <loewis@informatik.hu-berlin.de>
 
@@ -114,7 +114,7 @@ def make(filename, outfile):
     try:
         with open(infile, "rb") as f:
             lines = f.readlines()
-    except IOError as msg:
+    except OSError as msg:
         print(msg, file=sys.stderr)
         sys.exit(1)
 
@@ -217,7 +217,7 @@ def make(filename, outfile):
     try:
         with open(outfile, "wb") as f:
             f.write(output)
-    except IOError as msg:
+    except OSError as msg:
         print(msg, file=sys.stderr)
 
 
