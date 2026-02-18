@@ -115,8 +115,12 @@ if [ "$RUN_TESTS" = "1" ]; then
   RELEASE=1 pytest -n0 -s selfdrive/test/test_onroad.py
 fi
 
+
 if [ "$DO_PUSH" = "1" ]; then
   echo "[-] pushing release to $REMOTE_URL ($RELEASE_BRANCH) T=$SECONDS"
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    git remote set-url origin "https://${GITHUB_TOKEN}:x-oauth-basic@github.com/hoofpilot/hoofpilot.git"
+  fi
   git push -f origin "$RELEASE_BRANCH:$RELEASE_BRANCH"
 else
   echo "[-] skipping push (set DO_PUSH=1 to push) T=$SECONDS"

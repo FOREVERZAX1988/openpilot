@@ -100,8 +100,12 @@ if [ ! -z "$BIG_FILES" ]; then
   exit 1
 fi
 
+
 if [ ! -z "${BRANCH:-}" ]; then
   echo "[-] Pushing to $BRANCH T=$SECONDS"
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    git remote set-url origin "https://${GITHUB_TOKEN}:x-oauth-basic@github.com/hoofpilot/hoofpilot.git"
+  fi
   git push -f origin tmp:$BRANCH
 fi
 
