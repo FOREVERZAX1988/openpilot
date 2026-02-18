@@ -81,6 +81,9 @@ jobs:
 
       - name: Check branches exist
         run: |
+          # Configure git to use GITHUB_TOKEN for authentication
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
           # Check if source branch exists
           if ! git ls-remote --heads origin ${{ inputs.source_branch || env.DEFAULT_SOURCE_BRANCH }} | grep -q "${{ inputs.source_branch || env.DEFAULT_SOURCE_BRANCH }}"; then
             echo "Source branch ${{ inputs.source_branch || env.DEFAULT_SOURCE_BRANCH }} does not exist!"
