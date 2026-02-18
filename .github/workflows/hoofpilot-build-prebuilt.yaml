@@ -167,7 +167,7 @@ jobs:
           if [[ "${{ runner.debug }}" == "1" ]]; then
             printenv
           fi
-          PYTHONPATH=$PYTHONPATH:${{ github.workspace }}/ ${{ github.workspace }}/scripts/manage-powersave.py --disable
+          PYTHONPATH=$PYTHONPATH:${{ github.workspace }}/ ${{ github.workspace }}/hoofpilot/scripts/manage-powersave.py --disable
 
       - name: Build Main Project
         run: |
@@ -235,7 +235,7 @@ jobs:
       - name: Re-enable powersave
         if: always()
         run: |
-          PYTHONPATH=$PYTHONPATH:${{ github.workspace }}/ ${{ github.workspace }}/scripts/manage-powersave.py --enable
+          PYTHONPATH=$PYTHONPATH:${{ github.workspace }}/ ${{ github.workspace }}/hoofpilot/scripts/manage-powersave.py --enable
 
 
   publish:
