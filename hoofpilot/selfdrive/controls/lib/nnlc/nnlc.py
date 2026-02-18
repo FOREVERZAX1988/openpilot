@@ -9,8 +9,8 @@ import math
 import numpy as np
 
 from opendbc.car.lateral import FRICTION_THRESHOLD, get_friction
-from opendbc.hoofpilot.car.interfaces import LatControlInputs
-from opendbc.hoofpilot.car.lateral_ext import get_friction as get_friction_in_torque_space
+from opendbc.sunnypilot.car.interfaces import LatControlInputs
+from opendbc.sunnypilot.car.lateral_ext import get_friction as get_friction_in_torque_space
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.params import Params
 from openpilot.selfdrive.modeld.constants import ModelConstants
