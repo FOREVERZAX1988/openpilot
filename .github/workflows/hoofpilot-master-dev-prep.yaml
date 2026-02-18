@@ -182,19 +182,13 @@ jobs:
             echo "Workflows match $SOURCE_BRANCH."
           fi
 
-      - uses: actions/create-github-app-token@v2
-        id: ci-token
-        with:
-          app-id: ${{ secrets.CI_GITHUB_ACTIONS_TOKEN_APP_ID }}
-          private-key: ${{ secrets.CI_GITHUB_ACTIONS_TOKEN_APP_PRIVATE_KEY }}
-
       - name: Push changes if there are diffs
         id: push-changes
         run: |
           TARGET_BRANCH="${{ inputs.target_branch || env.DEFAULT_TARGET_BRANCH }}"
 
-          # Use the App Token to set the remote URL with authentication
-          git remote set-url origin "https://x-access-token:${{ steps.ci-token.outputs.token }}@github.com/${{ github.repository }}.git"
+          # Use the GITHUB_TOKEN to set the remote URL with authentication
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
           # Fetch the latest from remote
           git fetch origin $TARGET_BRANCH
