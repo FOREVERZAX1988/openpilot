@@ -13,8 +13,7 @@
 | Branch                 | URL                                    | Description                                                                         |
 |------------------------|----------------------------------------|-------------------------------------------------------------------------------------|
 | `release`              | https://hp.konik.ai/release            | This is the release branch, great for everyday use and stability.                   |
-| `staging`              | https://hp.konik.ai/staging            | This is the stable branch based on master, similar to production.                   |
-| `master`               | https://hp.konik.ai/master             | This is the bleeding edge development branch. Do not expect this to be stable.      |
+| `master`               | https://hp.konik.ai/master             | This is the bleeding edge development branch. **Do not expect this to be stable.**      |
 
 ## 🧰 Installation
 
