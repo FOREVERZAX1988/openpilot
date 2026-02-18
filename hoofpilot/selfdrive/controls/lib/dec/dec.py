@@ -1,4 +1,4 @@
-﻿# Version = 2025-6-30
+# Version = 2025-6-30
 
 from cereal import messaging
 from opendbc.car import structs

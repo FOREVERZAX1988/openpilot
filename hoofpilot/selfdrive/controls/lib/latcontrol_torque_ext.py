@@ -4,7 +4,7 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-﻿from hoofpilot.selfdrive.controls.lib.nnlc.nnlc import NeuralNetworkLateralControl
+from hoofpilot.selfdrive.controls.lib.nnlc.nnlc import NeuralNetworkLateralControl
 from hoofpilot.selfdrive.controls.lib.latcontrol_torque_ext_override import LatControlTorqueExtOverride
 
 

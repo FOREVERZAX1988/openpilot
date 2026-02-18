@@ -4,7 +4,7 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-﻿from hoofpilot import get_file_hash
+from hoofpilot import get_file_hash
 from hoofpilot.mapd import MAPD_PATH
 from hoofpilot.mapd.update_version import MAPD_HASH_PATH
 
