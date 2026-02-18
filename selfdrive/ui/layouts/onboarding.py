@@ -119,8 +119,7 @@ class TermsPage(Widget):
     self._title = Label(tr("Welcome to hoofpilot!"), font_size=90, font_weight=FontWeight.BOLD, text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT)
     self._desc = Label(
       tr(
-        "You must accept the Terms and Conditions in order to use hoofpilot. "
-        "Read the latest terms at https://comma.ai/terms before continuing."
+        "You must accept the Terms and Conditions in order to use hoofpilot. Read the latest terms at https://comma.ai/terms before continuing."
       ),
       font_size=90,
       font_weight=FontWeight.MEDIUM,
