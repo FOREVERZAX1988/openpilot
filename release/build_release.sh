@@ -119,7 +119,7 @@ fi
 if [ "$DO_PUSH" = "1" ]; then
   echo "[-] pushing release to $REMOTE_URL ($RELEASE_BRANCH) T=$SECONDS"
   if [ -n "${GITHUB_TOKEN:-}" ]; then
-    git remote set-url origin "https://${GITHUB_TOKEN}:x-oauth-basic@github.com/hoofpilot/hoofpilot.git"
+    git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/hoofpilot/hoofpilot.git"
   fi
   git push -f origin "$RELEASE_BRANCH:$RELEASE_BRANCH"
 else
