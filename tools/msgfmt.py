@@ -120,6 +120,9 @@ def make(filename, outfile):
 
     section = msgctxt = None
     fuzzy = 0
+    msgid = b""
+    msgstr = b""
+    is_plural = False
 
     # Start off assuming Latin-1, so everything decodes without failure,
     # until we know the exact encoding
