@@ -1,3 +1,4 @@
+selfdrive/modeld/models/*.onnx filter=lfs diff=lfs merge=lfs -text
 * text=auto
 
 # to move existing files into LFS:
@@ -21,7 +22,6 @@ third_party/**/lib/**             -filter -diff -merge
 third_party/**/bin/**             -filter -diff -merge
 third_party/acados/**             -filter -diff -merge
 third_party/acados/*/t_renderer   -filter -diff -merge
-
 
 selfdrive/car/tests/test_models_segs.txt filter=lfs diff=lfs merge=lfs -text
 system/hardware/tici/updater_weston filter=lfs diff=lfs merge=lfs -text
