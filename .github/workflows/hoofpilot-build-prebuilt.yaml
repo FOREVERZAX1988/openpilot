@@ -14,11 +14,6 @@ env:
   SOURCE_BRANCH: "${{ github.head_ref || github.ref_name }}"
 
 on:
-  push:
-    branches: [ master, master-dev ]
-    tags: [ 'release/*' ]
-  pull_request_target:
-    types: [ labeled ]
   workflow_dispatch:
     inputs:
       wait_for_tests:
