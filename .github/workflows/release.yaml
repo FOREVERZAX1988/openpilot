@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build___nightly:
-    name: build __nightly
+  build_nightly:
+    name: build nightly
     env:
       ImageOS: ubuntu24
     container:
@@ -27,7 +27,7 @@ jobs:
       with:
         ref: master
         wait-interval: 30
-        running-workflow-name: 'build __nightly'
+        running-workflow-name: 'build nightly'
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         check-regexp: ^((?!.*(build prebuilt).*).)*$
     - uses: actions/checkout@v6
@@ -38,7 +38,7 @@ jobs:
       run: |
         git config --global --add safe.directory '*'
         git lfs pull
-    - name: Push __nightly
+    - name: Push nightly
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: BRANCH=__nightly release/build_stripped.sh
+      run: BRANCH=nightly release/build_stripped.sh
