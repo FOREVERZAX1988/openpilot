@@ -15,7 +15,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.system.hardware.hw import Paths
 
 from cereal import messaging, custom
-from hoofpilot.models.fetcher import ModelFetcher
+from hoofpilot.models.fetcher import ModelFetcher, ModelParser
 from hoofpilot.models.helpers import verify_file, get_active_bundle
 
 
@@ -28,9 +28,31 @@ class ModelManagerSP:
     self.pm = messaging.PubMaster(["modelManagerSP"])
     self.available_models: list[custom.ModelManagerSP.ModelBundle] = []
     self.selected_bundle: custom.ModelManagerSP.ModelBundle = None
-    self.active_bundle: custom.ModelManagerSP.ModelBundle = get_active_bundle(self.params)
+    self.active_bundle: custom.ModelManagerSP.ModelBundle = self._resolve_active_bundle()
     self._chunk_size = 128 * 1000  # 128 KB chunks
     self._download_start_times: dict[str, float] = {}  # Track start time per model
+
+  def _resolve_active_bundle(self):
+    """Return the active bundle as a proper capnp ModelBundle object."""
+    bundle = get_active_bundle(self.params)
+    if bundle is None:
+      return None
+    if isinstance(bundle, dict):
+      if 'short_name' in bundle:
+        # Raw JSON snake_case format — parse through ModelParser
+        try:
+          return ModelParser._parse_bundle(bundle)
+        except Exception as e:
+          cloudlog.warning(f"Failed to parse active bundle dict: {e}")
+          return None
+      # camelCase dict from old to_dict() storage — find matching capnp object by ref
+      bundle_ref = bundle.get('ref')
+      if bundle_ref and self.available_models:
+        for m in self.available_models:
+          if m.ref == bundle_ref:
+            return m
+      return None
+    return bundle
 
   def _calculate_eta(self, filename: str, progress: float) -> int:
     """Calculate ETA based on elapsed time and current progress"""
@@ -147,7 +169,14 @@ class ModelManagerSP:
       await asyncio.gather(*tasks)
       self.active_bundle = self.selected_bundle
       self.active_bundle.status = custom.ModelManagerSP.DownloadStatus.downloaded
-      self.params.put("ModelManager_ActiveBundle", self.active_bundle.to_dict())
+      # Store the raw JSON bundle dict (snake_case) so it can be re-parsed on next boot
+      active_ref = self.active_bundle.ref
+      cached_data, _ = self.model_fetcher.model_cache.get()
+      raw_bundle = next(
+        (b for b in cached_data.get('bundles', []) if b.get('ref') == active_ref),
+        None
+      )
+      self.params.put("ModelManager_ActiveBundle", raw_bundle or {})
       self.selected_bundle = None
 
     except Exception:
@@ -161,6 +190,18 @@ class ModelManagerSP:
     """Main entry point for downloading a model bundle"""
     asyncio.run(self._download_bundle(model_bundle, destination_path))
 
+  def _mark_active_bundle_cached(self) -> None:
+    """After resolving active bundle from JSON, mark files that exist on disk as cached."""
+    if self.active_bundle is None:
+      return
+    dest = Paths.model_root()
+    for model in self.active_bundle.models:
+      for artifact in [model.artifact, model.metadata]:
+        if artifact.fileName and os.path.exists(os.path.join(dest, artifact.fileName)):
+          artifact.downloadProgress.status = custom.ModelManagerSP.DownloadStatus.cached
+          artifact.downloadProgress.progress = 100
+          artifact.downloadProgress.eta = 0
+
   def main_thread(self) -> None:
     """Main thread for model management"""
     rk = Ratekeeper(1, print_delay_threshold=None)
@@ -168,7 +209,8 @@ class ModelManagerSP:
     while True:
       try:
         self.available_models = self.model_fetcher.get_available_bundles()
-        self.active_bundle = get_active_bundle(self.params)
+        self.active_bundle = self._resolve_active_bundle()
+        self._mark_active_bundle_cached()
 
         if index_to_download := self.params.get("ModelManager_DownloadIndex"):
           if model_to_download := next((model for model in self.available_models if model.index == index_to_download), None):
