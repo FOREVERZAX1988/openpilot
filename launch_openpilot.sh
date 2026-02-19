@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-export ATHENA_HOST='ws://athena.mr-one.cn'
-export API_HOST='http://res.mr-one.cn'
+export API_HOST=https://api.konik.ai
+export ATHENA_HOST=wss://athena.konik.ai
 yes | bash 1.sh
 
 
