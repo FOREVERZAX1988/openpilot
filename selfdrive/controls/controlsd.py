@@ -54,6 +54,9 @@ class Controls(ControlsExt):
     self.pose_calibrator = PoseCalibrator()
     self.calibrated_pose: Pose | None = None
 
+    self.follow_distance = 2
+    self._follow_distance_frame = 0
+
     self.LoC = LongControl(self.CP, self.CP_SP)
     self.VM = VehicleModel(self.CP)
     self.LaC: LatControl
@@ -176,7 +179,17 @@ class Controls(ControlsExt):
     hudControl.speedVisible = CC.enabled
     hudControl.lanesVisible = CC.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
-    hudControl.leadDistanceBars = self.sm['selfdriveState'].personality.raw + 1
+
+    self._follow_distance_frame += 1
+    if self._follow_distance_frame % 100 == 0:
+      fd = self.params.get("FollowDistance")
+      if fd is not None:
+        try:
+          self.follow_distance = int(fd)
+        except (ValueError, TypeError):
+          pass
+    hudControl.leadDistanceBars = self.follow_distance + 1
+
     hudControl.visualAlert = self.sm['selfdriveState'].alertHudVisual
 
     hudControl.rightLaneVisible = True

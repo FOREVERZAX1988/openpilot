@@ -140,8 +140,11 @@ class VCruiseHelper(VCruiseHelperSP):
     if self.CP.pcmCruise:
       return
 
-    initial_experimental_mode = experimental_mode and not dynamic_experimental_control
-    initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if initial_experimental_mode else V_CRUISE_INITIAL
+    # Use current speed as initial cruise speed, with a low minimum floor.
+    # Sunnypilot's default E2E behavior sets initial to 105 kph (65 mph) to let
+    # the model manage speed autonomously, but for openpilot longitudinal with
+    # stalk-based speed control we want Set to use the current car speed.
+    initial = V_CRUISE_INITIAL
 
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
       self.v_cruise_kph = self.v_cruise_kph_last
