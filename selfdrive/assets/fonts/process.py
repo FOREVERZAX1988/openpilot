@@ -8,7 +8,8 @@ FONT_DIR = Path(__file__).resolve().parent
 SELFDRIVE_DIR = FONT_DIR.parents[1]
 TRANSLATIONS_DIR = SELFDRIVE_DIR / "ui" / "translations"
 LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
-
+# 正确定义CHANGELOG.md路径（原仓库根目录），适配标准目录结构
+CHANGELOG_PATH = SELFDRIVE_DIR.parent / "CHANGELOG.md"
 
 GLYPH_PADDING = 6
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
