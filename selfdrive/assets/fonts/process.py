@@ -174,7 +174,6 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
   _write_bmfont(FONT_DIR / f"{font_path.stem}.fnt", font_size, font_path.stem, atlas_name, line_height, base, (image.width, image.height), entries)
 
-
 def main():
   #修改6: 接收新增的china_cp
   base_cp, unifont_cp, china_cp = _char_sets()
