@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-16 23:02+0800\n"
-"PO-Revision-Date: 2026-02-17 00:50+0800\n"
+"POT-Creation-Date: 2026-02-19 15:26+0800\n"
+"PO-Revision-Date: 2026-02-20 19:05+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Poedit 3.8\n"
 
-#: selfdrive/ui/layouts/home.py:168
+#: selfdrive/ui/layouts/home.py:433
 msgid "UPDATE"
 msgstr "更新"
 
-#: selfdrive/ui/layouts/home.py:182
+#: selfdrive/ui/layouts/home.py:447
 #, python-brace-format
 msgid "{} ALERT"
 msgid_plural "{} ALERTS"
@@ -289,27 +289,27 @@ msgid "Are you sure you want to power off?"
 msgstr "确定要关机吗?"
 
 #: selfdrive/ui/layouts/settings/settings.py:57
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:121
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:119
 msgid "Device"
 msgstr "设备"
 
 #: selfdrive/ui/layouts/settings/settings.py:58
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:122
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:120
 msgid "Network"
 msgstr "网络"
 
 #: selfdrive/ui/layouts/settings/settings.py:59
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:123
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:121
 msgid "Toggles"
 msgstr "切换"
 
 #: selfdrive/ui/layouts/settings/settings.py:60
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:124
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:122
 msgid "Software"
 msgstr "软件"
 
 #: selfdrive/ui/layouts/settings/settings.py:61
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:134
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:131
 msgid "Developer"
 msgstr "开发者"
 
@@ -459,6 +459,18 @@ msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py:31
 msgid ""
+"Controls IQ.Pilot speed limit behavior. Off disables speed limit features, "
+"Information only displays limits, Warning highlights overspeed, and Assist "
+"adjusts set speed using detected limits."
+msgstr ""
+"控制 IQ.Pilot 的限速行为：\n"
+"关闭（Off）：禁用所有限速功能；\n"
+"仅显示信息（Information only）：只显示限速值;超速提醒（Warning）：超速时高亮"
+"提醒；\n"
+"辅助调节（Assist）：根据检测到的限速自动调整设定车速."
+
+#: selfdrive/ui/layouts/settings/toggles.py:34
+msgid ""
 "Receive alerts to steer back into the lane when your vehicle drifts over a "
 "detected lane line without a turn signal activated while driving over 31 mph "
 "(50 km/h)."
@@ -466,27 +478,27 @@ msgstr ""
 "当车辆以超过 31 mph（50 km/h）行驶且未打转向灯越过检测到的车道线时，接收引导"
 "回车道的警报."
 
-#: selfdrive/ui/layouts/settings/toggles.py:34
+#: selfdrive/ui/layouts/settings/toggles.py:37
 msgid "Enable driver monitoring even when IQ.Pilot is not engaged."
 msgstr "即使未启用IQ.Pilot也启用驾驶员监控."
 
-#: selfdrive/ui/layouts/settings/toggles.py:35
+#: selfdrive/ui/layouts/settings/toggles.py:38
 msgid ""
 "Upload data from the driver facing camera and help improve the driver "
 "monitoring algorithm."
 msgstr "上传车内摄像头数据，帮助改进驾驶员监控算法."
 
-#: selfdrive/ui/layouts/settings/toggles.py:36
+#: selfdrive/ui/layouts/settings/toggles.py:39
 msgid "Display speed in km/h instead of mph."
 msgstr "以 km/h 显示速度（非 mph）."
 
-#: selfdrive/ui/layouts/settings/toggles.py:37
+#: selfdrive/ui/layouts/settings/toggles.py:40
 msgid ""
 "Record and store microphone audio while driving. The audio will be included "
 "in the dashcam video in Konn3kt."
 msgstr "行驶时录制并保存麦克风音频.音频将包含在 Konn3kt 的行车记录视频中."
 
-#: selfdrive/ui/layouts/settings/toggles.py:39
+#: selfdrive/ui/layouts/settings/toggles.py:42
 msgid ""
 "When enabled, IQ.Pilot uses Traffic-Aware Cruise Control (TACC). When "
 "disabled, IQ.Pilot uses end-to-end longitudinal control."
@@ -494,7 +506,7 @@ msgstr ""
 "开启时，IQ.Pilot 使用交通感知巡航控制（TACC）.\n"
 "关闭时，IQ.Pilot 使用端到端纵向控制."
 
-#: selfdrive/ui/layouts/settings/toggles.py:43
+#: selfdrive/ui/layouts/settings/toggles.py:46
 msgid ""
 "Enable IQ.Pilot longitudinal control on supported vehicles. This switches "
 "longitudinal control from stock ACC to IQ.Pilot."
@@ -502,75 +514,95 @@ msgstr ""
 "在支持的车型上启用 IQ.Pilot 纵向控制.此操作会将纵向控制从原厂 ACC 切换为 "
 "IQ.Pilot."
 
-#: selfdrive/ui/layouts/settings/toggles.py:60
+#: selfdrive/ui/layouts/settings/toggles.py:63
 msgid "Longitudinal Control"
 msgstr "纵向控制"
 
-#: selfdrive/ui/layouts/settings/toggles.py:66
+#: selfdrive/ui/layouts/settings/toggles.py:69
 msgid "Long Mode"
 msgstr "纵向模式"
 
-#: selfdrive/ui/layouts/settings/toggles.py:72
+#: selfdrive/ui/layouts/settings/toggles.py:75
 msgid "Disengage on Accelerator Pedal"
 msgstr "踩下加速踏板时脱离"
 
-#: selfdrive/ui/layouts/settings/toggles.py:78
+#: selfdrive/ui/layouts/settings/toggles.py:81
 msgid "Enable Lane Departure Warnings"
 msgstr "启用车道偏离警示"
 
-#: selfdrive/ui/layouts/settings/toggles.py:84
-msgid "Always-On Driver Monitoring"
-msgstr "始终启用驾驶员监控"
-
-#: selfdrive/ui/layouts/settings/toggles.py:90
+#: selfdrive/ui/layouts/settings/toggles.py:87
 msgid "Record and Upload Driver Camera"
 msgstr "录制并上传车内摄像头"
 
-#: selfdrive/ui/layouts/settings/toggles.py:96
+#: selfdrive/ui/layouts/settings/toggles.py:93
 msgid "Record and Upload Microphone Audio"
 msgstr "录制并上传麦克风音频"
 
-#: selfdrive/ui/layouts/settings/toggles.py:102
+#: selfdrive/ui/layouts/settings/toggles.py:99
 msgid "Use Metric System"
 msgstr "使用公制"
 
-#: selfdrive/ui/layouts/settings/toggles.py:110
+#: selfdrive/ui/layouts/settings/toggles.py:107
 msgid "Driving Personality"
 msgstr "驾驶风格"
 
-#: selfdrive/ui/layouts/settings/toggles.py:112
+#: selfdrive/ui/layouts/settings/toggles.py:109
 msgid "Aggressive"
 msgstr "激进"
 
-#: selfdrive/ui/layouts/settings/toggles.py:112
+#: selfdrive/ui/layouts/settings/toggles.py:109
 msgid "Standard"
 msgstr "标准"
 
-#: selfdrive/ui/layouts/settings/toggles.py:112
+#: selfdrive/ui/layouts/settings/toggles.py:109
 msgid "Relaxed"
 msgstr "从容"
 
-#: selfdrive/ui/layouts/settings/toggles.py:127
+#: selfdrive/ui/layouts/settings/toggles.py:116
+msgid "Speed Limit"
+msgstr "速度限制"
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:40
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:111
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:118
+msgid "Off"
+msgstr "关闭"
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+msgid "Info"
+msgstr "仅显示信息"
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+msgid "Warning"
+msgstr "警告提醒"
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+msgid "Assist"
+msgstr "辅助调节"
+
+#: selfdrive/ui/layouts/settings/toggles.py:133
 msgid "IQ.Pilot Longitudinal Control"
 msgstr "IQ.Pilot纵向控制"
 
-#: selfdrive/ui/layouts/settings/toggles.py:127
+#: selfdrive/ui/layouts/settings/toggles.py:133
 msgid "Stock ACC"
 msgstr "原厂自适应巡航"
 
-#: selfdrive/ui/layouts/settings/toggles.py:138
+#: selfdrive/ui/layouts/settings/toggles.py:144
 msgid "IQ.Pilot"
 msgstr "IQ.Pilot"
 
-#: selfdrive/ui/layouts/settings/toggles.py:138
+#: selfdrive/ui/layouts/settings/toggles.py:144
 msgid "TACC"
 msgstr "TACC"
 
-#: selfdrive/ui/layouts/settings/toggles.py:163
+#: selfdrive/ui/layouts/settings/toggles.py:169
 msgid "Changing this setting will restart IQ.Pilot if the car is powered on."
 msgstr "车辆上电时，修改该设置将重启 IQ.Pilot."
 
-#: selfdrive/ui/layouts/settings/toggles.py:195
+#: selfdrive/ui/layouts/settings/toggles.py:203
 msgid ""
 "IQ.Pilot defaults to end-to-end longitudinal control. Traffic-Aware Cruise "
 "Control is an optional mode. IQ.Pilot features are listed below:"
@@ -591,28 +623,28 @@ msgstr ""
 "车速由驾驶模型决定，设定车速仅作为最高限速.该功能仍在优化中，可能存在误判情"
 "况."
 
-#: selfdrive/ui/layouts/settings/toggles.py:231
+#: selfdrive/ui/layouts/settings/toggles.py:239
 msgid ""
 "IQ.Pilot is currently unavailable on this car since the car's stock ACC is "
 "used for longitudinal control."
 msgstr "当前车辆正使用原厂 ACC 进行纵向控制,因此 IQ.Pilot 暂不可用."
 
-#: selfdrive/ui/layouts/settings/toggles.py:233
+#: selfdrive/ui/layouts/settings/toggles.py:241
 msgid "IQ.Pilot longitudinal control may come in a future update."
 msgstr "IQ.Pilot 纵向控制功能或将在后续更新中推出."
 
-#: selfdrive/ui/layouts/settings/toggles.py:236
+#: selfdrive/ui/layouts/settings/toggles.py:244
 msgid ""
 "IQ.Pilot longitudinal control can be tested, along with IQ.Pilot, on non-"
 "release branches."
 msgstr "在非发布分支中，可同时测试 IQ.Pilot 及其纵向控制功能."
 
-#: selfdrive/ui/layouts/settings/toggles.py:238
+#: selfdrive/ui/layouts/settings/toggles.py:246
 msgid "Enable the IQ.Pilot longitudinal control toggle to allow IQ.Pilot."
 msgstr "启用 IQ.Pilot 纵向控制开关，即可使用 IQ.Pilot 功能."
 
-#: selfdrive/ui/layouts/settings/toggles.py:280
-#: selfdrive/ui/layouts/settings/toggles.py:325
+#: selfdrive/ui/layouts/settings/toggles.py:288
+#: selfdrive/ui/layouts/settings/toggles.py:336
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py:51
 msgid "Enable"
 msgstr "启用"
@@ -1201,35 +1233,31 @@ msgstr "下载地图中..."
 msgid "Last checked {}"
 msgstr "最后检查{}"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:125
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:123
 msgid "Models"
 msgstr "模型"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:126
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:124
 msgid "Steering"
 msgstr "转向"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:127
-msgid "Cruise"
-msgstr "巡航"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:128
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:125
 msgid "Visuals"
 msgstr "视觉效果"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:129
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:126
 msgid "Display"
 msgstr "显示"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:130
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:127
 msgid "OSM"
 msgstr "地图"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:132
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:129
 msgid "Trips"
 msgstr "行程"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:133
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:130
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:60
 msgid "Vehicle"
 msgstr "车辆"
@@ -1331,13 +1359,6 @@ msgstr ""
 "设置计时器后，无需轻拨方向盘即可触发自动变道.\n"
 "默认模式为:轻拨方向盘变道.\n"
 "使用此功能时请注意安全，仅在路况允许时使用转向灯."
-
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:40
-#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19
-#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:111
-#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:118
-msgid "Off"
-msgstr "关闭"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:41
 msgid "Nudge"
@@ -2222,6 +2243,12 @@ msgstr "正在遗忘..."
 msgid "Select"
 msgstr "选择"
 
+msgid "Always-On Driver Monitoring"
+msgstr "始终启用驾驶员监控"
+
+msgid "Cruise"
+msgstr "巡航"
+
 #, python-format
 msgid "1 year of drive storage"
 msgstr "1 年行驶数据存储"
@@ -2231,18 +2258,18 @@ msgid "24/7 LTE connectivity"
 msgstr "全天候 LTE 连接"
 
 msgid ""
-"<b>WARNING: openpilot longitudinal control is in alpha for this car and will "
-"disable Automatic Emergency Braking (AEB).</b><br><br>On this car, openpilot "
-"defaults to the car's built-in ACC instead of openpilot's longitudinal "
-"control. Enable this to switch to openpilot longitudinal control. Enabling "
-"Experimental mode is recommended when enabling openpilot longitudinal "
-"control alpha. Changing this setting will restart openpilot if the car is "
-"powered on."
+"<b>WARNING: openpilot longitudinal control is in alpha for this car and "
+"will disable Automatic Emergency Braking (AEB).</b><br><br>On this car, "
+"openpilot defaults to the car's built-in ACC instead of openpilot's "
+"longitudinal control. Enable this to switch to openpilot longitudinal "
+"control. Enabling Experimental mode is recommended when enabling "
+"openpilot longitudinal control alpha. Changing this setting will restart "
+"openpilot if the car is powered on."
 msgstr ""
-"<b>警告：此车型的 openpilot 纵向控制仍为 alpha，将会停用自动紧急制动 (AEB).</"
-"b><br><br>在此车型上，openpilot 默认使用车载 ACC，而非 openpilot 的纵向控制."
-"启用此选项可切换为 openpilot 纵向控制.建议同时启用实验模式.若车辆通电，更改此"
-"设置将会重启 openpilot."
+"<b>警告：此车型的 openpilot 纵向控制仍为 alpha，将会停用自动紧急制动 "
+"(AEB).</b><br><br>在此车型上，openpilot 默认使用车载 ACC，而非 openpilot "
+"的纵向控制.启用此选项可切换为 openpilot 纵向控制.建议同时启用实验模式.若车"
+"辆通电，更改此设置将会重启 openpilot."
 
 #, python-format
 msgid "ACTIVE"
@@ -2271,8 +2298,8 @@ msgid ""
 "For maximum effectiveness, bring your device inside and connect to a good "
 "USB-C adapter and Wi-Fi weekly.\n"
 "\n"
-"Firehose Mode can also work while you're driving if connected to a hotspot "
-"or unlimited SIM card.\n"
+"Firehose Mode can also work while you're driving if connected to a "
+"hotspot or unlimited SIM card.\n"
 "\n"
 "\n"
 "Frequently Asked Questions\n"
@@ -2280,8 +2307,8 @@ msgid ""
 "Does it matter how or where I drive? Nope, just drive as you normally "
 "would.\n"
 "\n"
-"Do all of my segments get pulled in Firehose Mode? No, we selectively pull a "
-"subset of your segments.\n"
+"Do all of my segments get pulled in Firehose Mode? No, we selectively "
+"pull a subset of your segments.\n"
 "\n"
 "What's a good USB-C adapter? Any fast phone or laptop charger should be "
 "fine.\n"
@@ -2319,7 +2346,8 @@ msgstr "功能特性:"
 
 #, python-format
 msgid ""
-"Pair your device with Konn3kt (konn3kt.com) and claim your comma prime offer."
+"Pair your device with Konn3kt (konn3kt.com) and claim your comma prime "
+"offer."
 msgstr "将设备与 Konn3kt（konn3kt.com）配对，领取您的 Konn3kt 优惠."
 
 #, python-format
@@ -2329,18 +2357,19 @@ msgstr "远程快照"
 msgid ""
 "openpilot learns to drive by watching humans, like you, drive.\n"
 "\n"
-"Firehose Mode allows you to maximize your training data uploads to improve "
-"openpilot's driving models. More data means bigger models, which means "
-"better Experimental Mode."
+"Firehose Mode allows you to maximize your training data uploads to "
+"improve openpilot's driving models. More data means bigger models, which "
+"means better Experimental Mode."
 msgstr ""
 "openpilot 通过观察人类（例如您）的驾驶来学习.\n"
 "\n"
-"Firehose 模式可让您最大化上传训练数据，以改进 openpilot 的驾驶模型.更多数据意"
-"味着更大的模型，也意味着更好的实验模式."
+"Firehose 模式可让您最大化上传训练数据，以改进 openpilot 的驾驶模型.更多数"
+"据意味着更大的模型，也意味着更好的实验模式."
 
 #, python-format
 msgid "{} segment of your driving is in the training dataset so far."
-msgid_plural "{} segments of your driving is in the training dataset so far."
+msgid_plural ""
+"{} segments of your driving is in the training dataset so far."
 msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集."
 
 #, python-format

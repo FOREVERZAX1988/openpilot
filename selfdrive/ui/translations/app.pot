@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-16 23:02+0800\n"
+"POT-Creation-Date: 2026-02-19 15:26+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: selfdrive/ui/layouts/home.py:168
+#: selfdrive/ui/layouts/home.py:433
 msgid "UPDATE"
 msgstr ""
 
-#: selfdrive/ui/layouts/home.py:182
+#: selfdrive/ui/layouts/home.py:447
 #, python-brace-format
 msgid "{} ALERT"
 msgid_plural "{} ALERTS"
@@ -282,27 +282,27 @@ msgid "Are you sure you want to power off?"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/settings.py:57
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:121
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:119
 msgid "Device"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/settings.py:58
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:122
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:120
 msgid "Network"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/settings.py:59
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:123
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:121
 msgid "Toggles"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/settings.py:60
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:124
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:122
 msgid "Software"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/settings.py:61
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:134
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:131
 msgid "Developer"
 msgstr ""
 
@@ -449,112 +449,139 @@ msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py:31
 msgid ""
+"Controls IQ.Pilot speed limit behavior. Off disables speed limit features, "
+"Information only displays limits, Warning highlights overspeed, and Assist "
+"adjusts set speed using detected limits."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:34
+msgid ""
 "Receive alerts to steer back into the lane when your vehicle drifts over a "
 "detected lane line without a turn signal activated while driving over 31 mph "
 "(50 km/h)."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:34
+#: selfdrive/ui/layouts/settings/toggles.py:37
 msgid "Enable driver monitoring even when IQ.Pilot is not engaged."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:35
+#: selfdrive/ui/layouts/settings/toggles.py:38
 msgid ""
 "Upload data from the driver facing camera and help improve the driver "
 "monitoring algorithm."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:36
+#: selfdrive/ui/layouts/settings/toggles.py:39
 msgid "Display speed in km/h instead of mph."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:37
+#: selfdrive/ui/layouts/settings/toggles.py:40
 msgid ""
 "Record and store microphone audio while driving. The audio will be included "
 "in the dashcam video in Konn3kt."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:39
+#: selfdrive/ui/layouts/settings/toggles.py:42
 msgid ""
 "When enabled, IQ.Pilot uses Traffic-Aware Cruise Control (TACC). When "
 "disabled, IQ.Pilot uses end-to-end longitudinal control."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:43
+#: selfdrive/ui/layouts/settings/toggles.py:46
 msgid ""
 "Enable IQ.Pilot longitudinal control on supported vehicles. This switches "
 "longitudinal control from stock ACC to IQ.Pilot."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:60
+#: selfdrive/ui/layouts/settings/toggles.py:63
 msgid "Longitudinal Control"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:66
+#: selfdrive/ui/layouts/settings/toggles.py:69
 msgid "Long Mode"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:72
+#: selfdrive/ui/layouts/settings/toggles.py:75
 msgid "Disengage on Accelerator Pedal"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:78
+#: selfdrive/ui/layouts/settings/toggles.py:81
 msgid "Enable Lane Departure Warnings"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:84
-msgid "Always-On Driver Monitoring"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/toggles.py:90
+#: selfdrive/ui/layouts/settings/toggles.py:87
 msgid "Record and Upload Driver Camera"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:96
+#: selfdrive/ui/layouts/settings/toggles.py:93
 msgid "Record and Upload Microphone Audio"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:102
+#: selfdrive/ui/layouts/settings/toggles.py:99
 msgid "Use Metric System"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:110
+#: selfdrive/ui/layouts/settings/toggles.py:107
 msgid "Driving Personality"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:112
+#: selfdrive/ui/layouts/settings/toggles.py:109
 msgid "Aggressive"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:112
+#: selfdrive/ui/layouts/settings/toggles.py:109
 msgid "Standard"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:112
+#: selfdrive/ui/layouts/settings/toggles.py:109
 msgid "Relaxed"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:127
+#: selfdrive/ui/layouts/settings/toggles.py:116
+msgid "Speed Limit"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:40
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:111
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:118
+msgid "Off"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+msgid "Info"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+msgid "Warning"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:118
+msgid "Assist"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py:133
 msgid "IQ.Pilot Longitudinal Control"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:127
+#: selfdrive/ui/layouts/settings/toggles.py:133
 msgid "Stock ACC"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:138
+#: selfdrive/ui/layouts/settings/toggles.py:144
 msgid "IQ.Pilot"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:138
+#: selfdrive/ui/layouts/settings/toggles.py:144
 msgid "TACC"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:163
+#: selfdrive/ui/layouts/settings/toggles.py:169
 msgid "Changing this setting will restart IQ.Pilot if the car is powered on."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:195
+#: selfdrive/ui/layouts/settings/toggles.py:203
 msgid ""
 "IQ.Pilot defaults to end-to-end longitudinal control. Traffic-Aware Cruise "
 "Control is an optional mode. IQ.Pilot features are listed below:"
@@ -568,28 +595,28 @@ msgid ""
 "some turns. The IQ.Pilot logo will also be shown in the top right corner."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:231
+#: selfdrive/ui/layouts/settings/toggles.py:239
 msgid ""
 "IQ.Pilot is currently unavailable on this car since the car's stock ACC is "
 "used for longitudinal control."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:233
+#: selfdrive/ui/layouts/settings/toggles.py:241
 msgid "IQ.Pilot longitudinal control may come in a future update."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:236
+#: selfdrive/ui/layouts/settings/toggles.py:244
 msgid ""
 "IQ.Pilot longitudinal control can be tested, along with IQ.Pilot, on non-"
 "release branches."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:238
+#: selfdrive/ui/layouts/settings/toggles.py:246
 msgid "Enable the IQ.Pilot longitudinal control toggle to allow IQ.Pilot."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/toggles.py:280
-#: selfdrive/ui/layouts/settings/toggles.py:325
+#: selfdrive/ui/layouts/settings/toggles.py:288
+#: selfdrive/ui/layouts/settings/toggles.py:336
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py:51
 msgid "Enable"
 msgstr ""
@@ -1161,35 +1188,31 @@ msgstr ""
 msgid "Last checked {}"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:125
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:123
 msgid "Models"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:126
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:124
 msgid "Steering"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:127
-msgid "Cruise"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:128
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:125
 msgid "Visuals"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:129
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:126
 msgid "Display"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:130
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:127
 msgid "OSM"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:132
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:129
 msgid "Trips"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:133
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py:130
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:60
 msgid "Vehicle"
 msgstr ""
@@ -1285,13 +1308,6 @@ msgid ""
 "used. No nudge on the steering wheel is required to auto lane change if a "
 "timer is set. Default is Nudge.<br>Please use caution when using this "
 "feature. Only use the blinker when traffic and road conditions permit."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:40
-#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py:19
-#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:111
-#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:118
-msgid "Off"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:41
