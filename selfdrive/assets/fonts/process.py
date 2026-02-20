@@ -9,6 +9,7 @@ SELFDRIVE_DIR = FONT_DIR.parents[1]
 TRANSLATIONS_DIR = SELFDRIVE_DIR / "ui" / "translations"
 LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
 
+
 GLYPH_PADDING = 6
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
 #修改1:将中文字体独立出来。原代码：UNIFONT_LANGUAGES = {"ar", "th", "zh-CHT", "zh-CHS", "ko", "ja"}
@@ -21,6 +22,23 @@ def _languages():
     return {}
   with LANGUAGES_FILE.open(encoding="utf-8") as f:
     return json.load(f)
+
+# 新增：提取CHANGELOG.md中的所有中文字符
+def _extract_chinese_from_changelog():
+    chinese_chars = set()
+    # 检查CHANGELOG.md是否存在，避免报错
+    if not CHANGELOG_PATH.exists():
+        return chinese_chars
+    # 读取CHANGELOG.md内容，编码默认为utf-8，兼容中文
+    try:
+        changelog_content = CHANGELOG_PATH.read_text(encoding="utf-8")
+    except Exception as e:
+        return chinese_chars
+    # 提取所有中文字符（Unicode范围：\u4e00-\u9fff，包含简体、繁体）
+    for char in changelog_content:
+        if "\u4e00" <= char <= "\u9fff":
+            chinese_chars.add(char)
+    return chinese_chars
 
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
@@ -38,13 +56,10 @@ def _char_sets():
       # 根据语言代码，把菜单字符加入对应集合
       if lang_code in CHINA_LANGUAGES:
           china.update(menu_chars)  # 中文菜单字符→加入china集合
-         # print(f"已将中文菜单文本'{lang_name}'的字符加入china集合")
       elif lang_code in UNIFONT_LANGUAGES:
           unifont.update(menu_chars)  # 小语种菜单字符→加入unifont集合
-         # print(f"已将小语种菜单文本'{lang_name}'的字符加入unifont集合")
       else:
           base.update(menu_chars)  # 其他语言（如英文）→加入base集合
-         # print(f"已将其他菜单文本'{lang_name}'的字符加入base集合")
 
   for language, code in _languages().items():
     unifont.update(language)
@@ -61,15 +76,17 @@ def _char_sets():
     else:
       base.update(chars)
 
-  #修改4: 返回3个字符集：base（英文）、unifont（其他语言）、china（中文）
+  # --------------------------
+  # 新增：提取CHANGELOG.md中的中文字符，加入中文专属字符集
+  # --------------------------
+  changelog_chinese = _extract_chinese_from_changelog()
+  if changelog_chinese:
+      china.update(changelog_chinese)
 
+  #修改4: 返回3个字符集：base（英文）、unifont（其他语言）、china（中文）
   base_cp = tuple(sorted(ord(c) for c in base))
   unifont_cp = tuple(sorted(ord(c) for c in unifont))
   china_cp = tuple(sorted(ord(c) for c in china))
-      # 临时打印：检查目标字符是否在china_cp中（以“简”为例）
-  target_char = "简"  # 替换为你遇到乱码的字符
-  target_ord = ord(target_char)
-  print(f"目标字符'{target_char}'（Unicode: {target_ord}）是否在china_cp中：{target_ord in china_cp}")
   return (base_cp, unifont_cp, china_cp)
 
 def _glyph_metrics(glyphs, rects, codepoints):
