@@ -327,6 +327,8 @@
 ./selfdrive/ui/widgets/__init__.py
 ./selfdrive/ui/__init__.py
 ./selfdrive/__init__.py
+./sunnypilot/common/slc_utilities.py
+./sunnypilot/common/slc_variables.py
 ./sunnypilot/konn3kt/api.py
 ./sunnypilot/konn3kt/athena/hephaestusd.py
 ./sunnypilot/konn3kt/athena/manage_hephaestusd.py
@@ -448,6 +450,7 @@
 ./sunnypilot/selfdrive/controls/lib/nnlc/tests/test_nnlc.py
 ./sunnypilot/selfdrive/controls/lib/nnlc/tests/__init__.py
 ./sunnypilot/selfdrive/controls/lib/nnlc/__init__.py
+./sunnypilot/selfdrive/controls/lib/slc_vcruise.py
 ./sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py
 ./sunnypilot/selfdrive/controls/lib/smart_cruise_control/smart_cruise_control.py
 ./sunnypilot/selfdrive/controls/lib/smart_cruise_control/tests/test_map_controller.py
@@ -462,6 +465,7 @@
 ./sunnypilot/selfdrive/controls/lib/speed_limit/tests/test_speed_limit_resolver.py
 ./sunnypilot/selfdrive/controls/lib/speed_limit/tests/__init__.py
 ./sunnypilot/selfdrive/controls/lib/speed_limit/__init__.py
+./sunnypilot/selfdrive/controls/lib/speed_limit_controller.py
 ./sunnypilot/selfdrive/controls/lib/tests/test_auto_lane_change.py
 ./sunnypilot/selfdrive/controls/lib/tests/test_blinker_pause_lateral.py
 ./sunnypilot/selfdrive/controls/lib/tests/test_lane_turn_desire.py
@@ -646,3 +650,6 @@
 ./system/webrtc/webrtcd.py
 ./system/webrtc/__init__.py
 ./system/__init__.py
+./selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+./selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
+./selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
