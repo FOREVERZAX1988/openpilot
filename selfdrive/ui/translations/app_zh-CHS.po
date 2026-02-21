@@ -186,11 +186,11 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:174
 msgid "Are you sure you want to enter Always Offroad mode?"
-msgstr "你确定要进入离线模式吗?"
+msgstr "你确定要进入恒定离线设置模式吗?"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:173
 msgid "Are you sure you want to exit Always Offroad mode?"
-msgstr "你确定要退出离线模式吗?"
+msgstr "你确定要退出恒定离线设置模式吗?"
 
 #: selfdrive/ui/layouts/settings/device.py:191
 msgid "Are you sure you want to power off?"
@@ -458,7 +458,7 @@ msgstr "踩下加速踏板时脱离"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:169
 msgid "Disengage to Enter Always Offroad Mode"
-msgstr "解除激活以进入离线模式"
+msgstr "解除激活以进入恒定离线设置模式"
 
 #: selfdrive/ui/layouts/settings/device.py:188
 msgid "Disengage to Power Off"
@@ -597,7 +597,7 @@ msgstr "启用"
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py:30
 msgid ""
 "Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle."
-msgstr "在设备面板中开启永久离线模式,或熄火车辆进行切换."
+msgstr "在设备面板中开启恒定离线设置模式,或熄火车辆进行切换."
 
 #: selfdrive/ui/layouts/settings/developer.py:34
 msgid "Enable ADB"
@@ -606,7 +606,7 @@ msgstr "启用 ADB"
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:46
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:195
 msgid "Enable Always Offroad"
-msgstr "开启离线模式"
+msgstr "开启恒定离线设置模式"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering.py:40
 msgid ""
@@ -1067,7 +1067,7 @@ msgstr "地图版本"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:54
 msgid "Max Time Offroad"
-msgstr "最大离线时间"
+msgstr "最大恒定离线设置时间"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/trips.py:108
 msgid "Miles"
@@ -1308,7 +1308,7 @@ msgstr "连接Wi-Fi更新"
 msgid ""
 "Please enable \"Always Offroad\" mode or turn off the vehicle to adjust "
 "these toggles."
-msgstr "请启用 “始终离线设置” 模式，或关闭车辆以调整这些开关"
+msgstr "请启用 “恒定离线设置” 模式，或关闭车辆以调整这些开关"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:60
 msgid "Policy Model"
