@@ -8,10 +8,14 @@ FONT_DIR = Path(__file__).resolve().parent
 SELFDRIVE_DIR = FONT_DIR.parents[1]
 TRANSLATIONS_DIR = SELFDRIVE_DIR / "ui" / "translations"
 LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
+# 正确定义CHANGELOG.md路径（原仓库根目录），适配标准目录结构
+CHANGELOG_PATH = SELFDRIVE_DIR.parent / "CHANGELOG.md"
 
 GLYPH_PADDING = 6
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
-UNIFONT_LANGUAGES = {"ar", "th", "zh-CHT", "zh-CHS", "ko", "ja"}
+#修改1:将中文字体独立出来。原代码：UNIFONT_LANGUAGES = {"ar", "th", "zh-CHT", "zh-CHS", "ko", "ja"}
+CHINA_LANGUAGES = {"zh-CHT", "zh-CHS"}
+UNIFONT_LANGUAGES = {"ar", "th", "ko", "ja"}
 
 
 def _languages():
@@ -20,10 +24,43 @@ def _languages():
   with LANGUAGES_FILE.open(encoding="utf-8") as f:
     return json.load(f)
 
+# 新增：提取CHANGELOG.md中的所有中文字符
+def _extract_chinese_from_changelog():
+    chinese_chars = set()
+    # 检查CHANGELOG.md是否存在，避免报错
+    if not CHANGELOG_PATH.exists():
+        return chinese_chars
+    # 读取CHANGELOG.md内容，编码默认为utf-8，兼容中文
+    try:
+        changelog_content = CHANGELOG_PATH.read_text(encoding="utf-8")
+    except Exception as e:
+        return chinese_chars
+    # 提取所有中文字符（Unicode范围：\u4e00-\u9fff，包含简体、繁体）
+    for char in changelog_content:
+        if "\u4e00" <= char <= "\u9fff":
+            chinese_chars.add(char)
+    return chinese_chars
 
 def _char_sets():
   base = set(map(chr, range(32, 127))) | set(EXTRA_CHARS)
   unifont = set(base)
+  # 修改2:新增中文专属字符集
+  china = set(base)
+
+  # --------------------------
+  # 新增：提取languages.json键的字符（菜单显示文本），修复语言选择菜单乱码问题
+  # --------------------------
+  lang_dict = _languages()  # 复用已有的_languages()函数，获取键（语言名）→值（语言代码）
+  for lang_name, lang_code in lang_dict.items():
+      # lang_name就是菜单显示的文本（如“中文（简体）”“한국어”），提取其中所有字符
+      menu_chars = set(lang_name)
+      # 根据语言代码，把菜单字符加入对应集合
+      if lang_code in CHINA_LANGUAGES:
+          china.update(menu_chars)  # 中文菜单字符→加入china集合
+      elif lang_code in UNIFONT_LANGUAGES:
+          unifont.update(menu_chars)  # 小语种菜单字符→加入unifont集合
+      else:
+          base.update(menu_chars)  # 其他语言（如英文）→加入base集合
 
   for language, code in _languages().items():
     unifont.update(language)
@@ -32,10 +69,26 @@ def _char_sets():
       chars = set(po_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
       continue
-    (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
+   #修改3:扩容字符集：    (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
+    if code in CHINA_LANGUAGES:
+      china.update(chars)  # 中文的字符纳入china_cp（后续china字体用这个字符集）
+    elif code in UNIFONT_LANGUAGES:
+      unifont.update(chars)
+    else:
+      base.update(chars)
 
-  return tuple(sorted(ord(c) for c in base)), tuple(sorted(ord(c) for c in unifont))
+  # --------------------------
+  # 新增：提取CHANGELOG.md中的中文字符，加入中文专属字符集
+  # --------------------------
+  changelog_chinese = _extract_chinese_from_changelog()
+  if changelog_chinese:
+      china.update(changelog_chinese)
 
+  #修改4: 返回3个字符集：base（英文）、unifont（其他语言）、china（中文）
+  base_cp = tuple(sorted(ord(c) for c in base))
+  unifont_cp = tuple(sorted(ord(c) for c in unifont))
+  china_cp = tuple(sorted(ord(c) for c in china))
+  return (base_cp, unifont_cp, china_cp)
 
 def _glyph_metrics(glyphs, rects, codepoints):
   entries = []
@@ -100,6 +153,8 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
   font_size = {
     "unifont.otf": 16,  # unifont is only 16x8 or 16x16 pixels per glyph
+    # 修改5:新增china.ttf的字体大小（匹配style里的50）
+    "china.ttf": 188,
   }.get(font_path.name, 200)
 
   data = font_path.read_bytes()
@@ -137,17 +192,26 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
   _write_bmfont(FONT_DIR / f"{font_path.stem}.fnt", font_size, font_path.stem, atlas_name, line_height, base, (image.width, image.height), entries)
 
-
 def main():
-  base_cp, unifont_cp = _char_sets()
+  #修改6: 接收新增的china_cp
+  base_cp, unifont_cp, china_cp = _char_sets()
   fonts = sorted(FONT_DIR.glob("*.ttf")) + sorted(FONT_DIR.glob("*.otf"))
   for font in fonts:
     if "emoji" in font.name.lower():
       continue
-    glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
+    # 修改7::动态选择字形编码集:
+    if font.stem.lower().startswith("china"):
+      # china.ttf→用中文专属字符集
+      glyphs = china_cp
+    elif any(font.stem.lower().startswith(p) for p in ["unifont"]):
+      # unifont→用原unifont字符集
+      glyphs = unifont_cp
+    else:
+      # 其他字体→用base字符集
+      glyphs = base_cp
+
     _process_font(font, glyphs)
   return 0
-
 
 if __name__ == "__main__":
   raise SystemExit(main())

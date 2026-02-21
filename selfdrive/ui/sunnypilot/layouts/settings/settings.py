@@ -23,7 +23,7 @@ from openpilot.selfdrive.ui.sunnypilot.layouts.settings.trips import TripsLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.vehicle import VehicleLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.visuals import VisualsLayout
 from openpilot.system.ui.lib.application import gui_app, MousePos
-from openpilot.system.ui.lib.multilang import tr_noop
+from openpilot.system.ui.lib.multilang import tr_noop, tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.lib.wifi_manager import WifiManager
 from openpilot.system.ui.sunnypilot.lib.styles import style
@@ -68,7 +68,18 @@ class NavButton(Widget):
     is_selected = self.panel_type == self.parent._current_panel
     text_color = OP.TEXT_SELECTED if is_selected else OP.TEXT_NORMAL
     content_x = rect.x + 90
-    text_size = measure_text_cached(self.parent._font_medium, self.panel_info.name, 65)
+    # 【修改2（共3）：先处理翻译，再计算文本尺寸（避免中文尺寸计算错误）】
+    # 第一步：安全获取待翻译文本（校验类型）
+    raw_text = self.panel_info.name if isinstance(self.panel_info.name, str) else ""
+    # 第二步：安全执行翻译（加异常捕获，翻译失败用原文本兜底）
+    try:
+      translated_text = tr(raw_text)  # fallback：翻译缺失时用原文本，二次修改删除
+    except Exception as e:
+      # 打印报错（方便排查），但不崩溃
+      print(f"翻译失败 [{raw_text}]: {str(e)}")
+      translated_text = raw_text
+      # 第三步：用翻译后的文本计算尺寸（否则中文会显示错位）
+    text_size = measure_text_cached(self.parent._font_medium, translated_text, 65)
 
     # Draw background if selected
     if is_selected:
@@ -88,7 +99,8 @@ class NavButton(Widget):
       content_x,
       rect.y + (OP.NAV_BTN_HEIGHT - text_size.y) / 2
     )
-    rl.draw_text_ex(self.parent._font_medium, self.panel_info.name, text_pos, 55, 0, text_color)
+    # 【修改3（共3）：绘制翻译后的文本】
+    rl.draw_text_ex(self.parent._font_medium, translated_text, text_pos, 55, 0, text_color)
 
     # Store button rect for click detection
     self.panel_info.button_rect = rect

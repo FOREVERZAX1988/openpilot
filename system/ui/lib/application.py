@@ -97,6 +97,8 @@ class FontWeight(StrEnum):
   MEDIUM = "Inter-Medium.fnt"
   BOLD = "Inter-Bold.fnt"
   SEMI_BOLD = "Inter-SemiBold.fnt"
+  #修改1(共2):add Chinese font
+  CHINA = "china.fnt"
   UNIFONT = "unifont.fnt"
   AUDIOWIDE = "Audiowide-Regular.fnt"
   SYNCOPATE = "Syncopate-Regular.fnt"
@@ -109,7 +111,10 @@ class FontWeight(StrEnum):
 
 def font_fallback(font: rl.Font) -> rl.Font:
   """Fall back to unifont for languages that require it."""
-  if multilang.requires_unifont():
+  #修改二（共2）：增加中文字体支持，优先级高于unifont
+  if multilang.requires_china():
+    return gui_app.font(FontWeight.CHINA)
+  elif multilang.requires_unifont():
     return gui_app.font(FontWeight.UNIFONT)
   return font
 

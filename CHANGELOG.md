@@ -1,51 +1,50 @@
-# IQ.Pilot User Changelog
+# IQ.Pilot 用户更新日志
 
-This changelog is written for everyday users and focuses on what changed in real-world use.
+本文为普通用户编写，重点说明实际使用中能感受到的变化.
 
-## February 9, 2026 - IQ.Pilot Launch
-- IQ.Pilot v1.0a launched.
-- Core IQ.Pilot + Konn3kt integration work was added.
-- UI branding pass completed (fonts, styling, visuals).
-- Firehose was removed from the UI.
-- Sunnylink was removed.
-- Early setup and reliability improvements landed (error handling, API/setup cleanup).
+## 2026 年 2 月 9 日 - IQ.Pilot 首发
+- Q.Pilot v1.0a 正式发布.
+- 完成 IQ.Pilot 核心功能 + Konn3kt 集成.
+- 完成界面视觉统一（字体、样式、视觉效果）.
+- 从界面中移除 Firehose.
+- 移除 Sunnylink.
+- 优化初始安装与稳定性（异常处理、API/安装流程清理）.
 
-## February 10, 2026 - Device Support and Stability
-- Better support for mici + tizi devices.
-- Manual registration by QR was added.
-- Volkswagen PQ support was enabled and expanded.
-- Large bugfix pass improved stability, controls behavior, and general reliability.
-- Cruise/button logic and control flow were further refined.
+## 2026年2月10日 - 设备支持与稳定性
+- 更好地支持 mici + tizi 设备.
+- 新增二维码手动注册功能.
+- 开放并扩展大众 PQ 平台支持.
+- 集中修复大量问题，提升稳定性、控制逻辑与整体可靠性.
+- 进一步优化定速巡航/按键逻辑与控制流程.
 
-## February 11, 2026 - Major Vehicle Expansion
-- Tesla vehicle control support was expanded.
-- Honda MVL tuning (lateral + longitudinal) was added.
-- Volkswagen support expanded across PQ and MLB with multiple fixes.
-- Additional PQ bring-up improvements were added (including Passat NMS-focused work).
-- More runtime bugfixes landed (including joystick and icon related fixes).
+## 2026年2月11日 - 大幅扩展支持车型
+- 扩展特斯拉车型控制支持.
+- 新增本田 MVL 调校（横向 + 纵向控制）.
+- 扩展大众 PQ 和 MLB 平台支持，并修复多项问题.
+- 新增更多 PQ 平台适配优化（含针对帕萨特 NMS 的专门优化）.
+- 修复更多运行时问题（含摇杆和图标相关修复）.
 
-## February 12, 2026 - Sensor/Data Fixes
-- Higher steering-angle offset tolerance was added (helps users with temporary steering sensor misalignment).
-- Fuel level handling was fixed and improved.
-- Additional Volkswagen PQ follow-up fixes were merged.
+## 2026年2月12日 - 传感器/数据修复
+- 提高转向角度偏移容错（缓解转向传感器临时异常问题）.
+- 修复并优化油量显示逻辑.
+- 合并更多大众 PQ 平台后续修复.
 
-## February 13, 2026 - Driver Monitoring Rollback
-- Driver Monitoring model changes were reverted to the previous behavior to reduce over-aggressive alerts.
+## 2026年2月13日 - 驾驶员监测回退
+- 驾驶员监测模型回退至旧版逻辑，减少过于频繁的提醒.
+## 2026年2月15-16日 - 大众 PQ 平台成熟优化
+- 针对大众 PQ 平台进行大量控制逻辑开发与问题修复.
+- 提升激活一致性与整体驾驶体验.
+- 优化横向/纵向控制配合逻辑与定速巡航响应调校.
 
-## February 15-16, 2026 - Volkswagen PQ Maturity
-- Heavy Volkswagen PQ control development and bugfixes.
-- Improved engagement consistency and overall drive behavior.
-- Better lateral/longitudinal interaction and cruise-control response tuning.
+## 2026年2月17日 - 大众车型停车逻辑调校
+- 对大众车型停车/制动逻辑进行额外调校更新.
+- 继续优化舒适性与停车响应，提升实际驾驶体验.
 
-## February 17, 2026 - Volkswagen Stopping Behavior Tuning
-- Volkswagen stopping/braking behavior received additional tuning updates.
-- Continued comfort and stop-response refinements for better real-world behavior.
-
-## Summary
-- IQ.Pilot moved quickly from initial launch to broad stabilization.
-- Biggest user-facing gains in this period were:
-  - Better Tesla and Volkswagen support.
-  - Added Honda MVL tuning support.
-  - Fewer false/noisy fault behaviors.
-  - Driver Monitoring behavior rollback.
-  - Better onboarding/registration and UI polish.
+## 总结
+- IQ.Pilot 从首发快速实现全面稳定.
+- 这段时间用户最直观的提升：
+  - 更好地支持特斯拉与大众车型.
+  - 新增本田 MVL 调校支持.
+  - 减少误报 / 多余故障提示.
+  - 回滚驾驶员监控相关行为.
+  - 优化引导注册流程与界面体验.
