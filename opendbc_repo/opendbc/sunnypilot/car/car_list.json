@@ -4075,11 +4075,7 @@
     ],
     "package": "Adaptive Cruise Control (ACC) & Lane Assist"
   },
-<<<<<<< HEAD
-  "Volkswagen Passat 2015-22": {
-=======
   "Volkswagen Passat 2015-22 (B8)": {
->>>>>>> 591e7bd3a74ab6423ed2e0d6b680bd4bfb4f7ccc
     "platform": "VOLKSWAGEN_PASSAT_MK8",
     "make": "Volkswagen",
     "brand": "volkswagen",
