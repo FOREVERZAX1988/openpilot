@@ -10,7 +10,7 @@ from openpilot.common.basedir import BASEDIR
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.git import get_commit, get_origin, get_branch, get_short_branch, get_commit_date
 
-RELEASE_SP_BRANCHES = ['release-c3', 'release', 'release-tizi', 'release-tici', 'release-tizi-staging', 'release-tici-staging']
+RELEASE_SP_BRANCHES = ['release-c3', 'release', 'release-tizi', 'release-tici', 'release-tizi-staging', 'release-tici-staging', 'IQ_CHS' ,'IQ_TICI', 'IQ_TICI_CHS']
 TESTED_SP_BRANCHES = ['staging-c3', 'staging-c3-new', 'staging']
 MASTER_SP_BRANCHES = ['master']
 RELEASE_BRANCHES = ['release-tizi-staging', 'release-mici-staging', 'release-tizi', 'release-mici', 'nightly']
@@ -146,7 +146,10 @@ class BuildMetadata:
 
   @property
   def channel_type(self) -> str:
-    if self.channel.endswith("-tici"):
+    # 新增：优先判断 IQ_TICI/IQ_TIZI_CHS/IQ_CHS 这类自定义分支
+    if self.channel in ["IQ_TICI", "IQ_TICI_CHS"]:
+      return "tici" if "TICI" in self.channel else "release"
+    elif self.channel.endswith("-tici"):
       return "tici"
     elif self.development_channel:
       return "development"

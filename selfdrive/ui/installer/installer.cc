@@ -55,6 +55,10 @@ void branchMigration() {
   migrated_branch = BRANCH_STR;
   cereal::InitData::DeviceType device_type = Hardware::get_device_type();
   if (device_type == cereal::InitData::DeviceType::TICI) {
+      // 新增：IQ_TICI 分支直接保留，不迁移
+    if (BRANCH_STR == "IQ_TICI") {
+      migrated_branch = "IQ_TICI";
+    }
     if (std::find(tici_prebuilt_branches.begin(), tici_prebuilt_branches.end(), BRANCH_STR) != tici_prebuilt_branches.end()) {
       migrated_branch = "release-tici";
     } else if (BRANCH_STR == "master") {
