@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IQ.Pilot tici Port Tracker</title>
+  <style>
+    :root {
+      --bg: #0b1114;
+      --panel: #111a20;
+      --muted: #91a1ad;
+      --text: #e8f0f5;
+      --ok: #2ecc71;
+      --wip: #f39c12;
+      --todo: #5dade2;
+      --line: #1f2f3a;
+      --accent: #33d17a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(1000px 500px at 85% -5%, #1a2b33 0%, var(--bg) 60%);
+      color: var(--text);
+      font: 14px/1.45 "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+    }
+    .wrap { max-width: 1100px; margin: 28px auto; padding: 0 16px; }
+    .head { display: grid; gap: 8px; margin-bottom: 16px; }
+    h1 { margin: 0; font: 600 26px/1.15 "IBM Plex Sans", "Segoe UI", sans-serif; letter-spacing: .2px; }
+    .sub { color: var(--muted); }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+    .meta .item { padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #0f171d; }
+    .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+    .v { margin-top: 4px; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; text-align: left; }
+    .pill {
+      display: inline-block;
+      min-width: 82px;
+      text-align: center;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .done { color: #0b2b17; background: #a8f0c7; border-color: #8be6b4; }
+    .wip  { color: #3c2500; background: #ffd9a0; border-color: #ffc76b; }
+    .todo { color: #0f2a3a; background: #bfe6ff; border-color: #93d2ff; }
+    ul { margin: 0; padding-left: 18px; }
+    code { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="head">
+      <h1>IQ.Pilot tici Port Tracker</h1>
+      <div class="sub">Checklist-driven port from IQ.Pilot <code>master-mici</code> into tici base <code>sync-20251218-tici</code> (no blanket submodule pinning).</div>
+    </section>
+
+    <section class="card meta" id="meta"></section>
+
+    <section class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 190px;">Status</th>
+            <th style="width: 260px;">Checklist Item</th>
+            <th>Implementation Notes</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <div class="k" style="margin-bottom:10px;">Execution Log</div>
+      <ul id="log"></ul>
+    </section>
+  </div>
+
+  <script src="./iqpilot_tici_port_progress_state.js"></script>
+  <script>
+    const s = window.IQTICI_PORT_STATE || {};
+    const pill = (st) => {
+      const map = {done: ['DONE', 'done'], in_progress: ['IN PROGRESS', 'wip'], pending: ['PENDING', 'todo']};
+      const [txt, cls] = map[st] || [st, 'todo'];
+      return `<span class="pill ${cls}">${txt}</span>`;
+    };
+
+    const meta = [
+      ['Updated (UTC)', s.updated || '-'],
+      ['Port Branch', s.port_branch || '-'],
+      ['Base Branch', s.base_branch || '-'],
+      ['Release Ref', s.release_ref || '-'],
+      ['Replay Summary', s.replay_summary || '-'],
+      ['opendbc Targeted Port', s.opendbc_port || '-'],
+      ['panda Cleanup', s.panda_port || '-'],
+      ['Build', s.build || 'pending'],
+      ['Tests', s.tests || 'pending'],
+    ];
+
+    document.getElementById('meta').innerHTML = meta.map(([k,v]) => `
+      <div class="item"><div class="k">${k}</div><div class="v">${v}</div></div>
+    `).join('');
+
+    const rows = (s.steps || []).map(it => `
+      <tr>
+        <td>${pill(it.status)}</td>
+        <td><strong>${it.name}</strong></td>
+        <td>${it.note || ''}</td>
+      </tr>
+    `).join('');
+    document.getElementById('rows').innerHTML = rows;
+
+    document.getElementById('log').innerHTML = (s.log || []).map(x => `<li>${x}</li>`).join('');
+  </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+* text=auto
+
+# to move existing files into LFS:
+# git add --renormalize .
+
+# IQ-added assets kept in regular git (not LFS).
+selfdrive/assets/icons_mici/** -filter -diff -merge -text
+selfdrive/assets/icons_mici/experimental_mode_mici.png -filter -diff -merge -text
+selfdrive/assets/icons_mici/experimental_mode_tizi.png -filter -diff -merge -text
+selfdrive/assets/icons_mici/settings/konn3kt_icon.png -filter -diff -merge -text
+selfdrive/assets/images/spinner_comma.png -filter -diff -merge -text
+selfdrive/assets/fonts/Syncopate-Regular.ttf -filter -diff -merge -text
+selfdrive/assets/fonts/Tektur-Variable.ttf -filter -diff -merge -text
+
