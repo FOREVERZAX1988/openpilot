@@ -365,6 +365,12 @@ class CAR(Platforms):
     chassis_codes={"3C", "3G"},
     wmis={WMI.VOLKSWAGEN_EUROPE_CAR},
   )
+  VOLKSWAGEN_PASSAT_MK7 = VolkswagenPQPlatformConfig(
+    [VWCarDocs("Volkswagen Passat 2.0 TDI 2014")],
+    VolkswagenCarSpecs(mass=1836, wheelbase=2.70, steerRatio=13.0, minSteerSpeed=31 * CV.KPH_TO_MS),
+    chassis_codes={"3C"},
+    wmis={WMI.VOLKSWAGEN_EUROPE_CAR},
+  )
   VOLKSWAGEN_PASSAT_NMS = VolkswagenPQPlatformConfig(
     [VWCarDocs("Volkswagen Passat NMS 2017-22")],
     VolkswagenCarSpecs(mass=1503, wheelbase=2.80),

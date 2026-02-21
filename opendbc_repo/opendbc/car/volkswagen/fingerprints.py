@@ -516,12 +516,21 @@ FW_VERSIONS = {
       b'\xf1\x875Q0907572S \xf1\x890780',
     ],
   },
+  CAR.VOLKSWAGEN_PASSAT_MK7: {
+    (Ecu.engine, 0x7e0, None): [
+      b'\xf1\x8703L906018RE\xf1\x899979',
+    ],
+    (Ecu.fwdCamera, 0x74f, None): [
+      b'\xf1\x873AA980654D \xf1\x890300\xf1\x82\x0143',
+    ],
+  },
   CAR.VOLKSWAGEN_PASSAT_NMS: {
     (Ecu.engine, 0x7e0, None): [
       b'\xf1\x8706K906016C \xf1\x899609',
       b'\xf1\x8706K906016E \xf1\x899830',
       b'\xf1\x8706K906016G \xf1\x891124',
       b'\xf1\x8706K906071BJ\xf1\x894891',
+      b'\xf1\x8706K906071AF\xf1\x894869',
     ],
     (Ecu.transmission, 0x7e1, None): [
       b'\xf1\x8709G927158AB\xf1\x893318',

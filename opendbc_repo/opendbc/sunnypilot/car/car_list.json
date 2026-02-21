@@ -4075,7 +4075,11 @@
     ],
     "package": "Adaptive Cruise Control (ACC) & Lane Assist"
   },
+<<<<<<< HEAD
   "Volkswagen Passat 2015-22": {
+=======
+  "Volkswagen Passat 2015-22 (B8)": {
+>>>>>>> 591e7bd3a74ab6423ed2e0d6b680bd4bfb4f7ccc
     "platform": "VOLKSWAGEN_PASSAT_MK8",
     "make": "Volkswagen",
     "brand": "volkswagen",
@@ -4089,6 +4093,18 @@
       "2020",
       "2021",
       "2022"
+    ],
+    "package": "Adaptive Cruise Control (ACC) & Lane Assist"
+  },
+  "Volkswagen Passat 2012-2014 (B7)": {
+    "platform": "VOLKSWAGEN_PASSAT_MK7",
+    "make": "Volkswagen",
+    "brand": "volkswagen",
+    "model": "Passat",
+    "year": [
+      "2012",
+      "2013",
+      "2014"
     ],
     "package": "Adaptive Cruise Control (ACC) & Lane Assist"
   },
