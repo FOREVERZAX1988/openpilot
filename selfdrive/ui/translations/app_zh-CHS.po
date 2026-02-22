@@ -2272,7 +2272,7 @@ msgstr "SSH 密钥"
 #: selfdrive/ui/layouts/sidebar.py:73 selfdrive/ui/layouts/sidebar.py:134
 #: selfdrive/ui/layouts/sidebar.py:136 selfdrive/ui/layouts/sidebar.py:138
 msgid "STABLE"
-msgstr "KONIK服务器"
+msgstr "远程"
 
 #: selfdrive/ui/hoofpilot/layouts/sidebar.py:55
 #: selfdrive/ui/hoofpilot/layouts/sidebar.py:59
@@ -2509,7 +2509,7 @@ msgstr "基础备份/恢复功能无需赞助身份"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:129
 msgid "Stable"
-msgstr "稳定版"
+msgstr "远程"
 
 #: selfdrive/ui/layouts/settings/toggles.py:102
 msgid "Standard"
