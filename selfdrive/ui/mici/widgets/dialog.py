@@ -4,7 +4,8 @@ import pyray as rl
 from typing import Union
 from collections.abc import Callable
 from typing import cast
-from openpilot.system.ui.widgets import Widget, NavWidget
+from openpilot.system.ui.widgets import Widget
+from openpilot.system.ui.widgets.nav_widget import NavWidget
 from openpilot.system.ui.widgets.label import UnifiedLabel, gui_label
 from openpilot.system.ui.widgets.mici_keyboard import MiciKeyboard
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -296,7 +297,7 @@ class BigMultiOptionDialog(BigDialogBase):
     # Widget doesn't differentiate between click and drag
     self._can_click = True
 
-    self._scroller = Scroller([], horizontal=False, pad_start=100, pad_end=100, spacing=0, snap_items=True)
+    self._scroller = Scroller([], horizontal=False, pad=100, spacing=0, snap_items=True)
 
     for option in options:
       self._scroller.add_widget(BigDialogOptionButton(option))
