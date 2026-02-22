@@ -13,6 +13,8 @@ from openpilot.system.hardware.hw import Paths
 from openpilot.common.swaglog import cloudlog
 
 UNREGISTERED_DONGLE_ID = "UnregisteredDevice"
+# 新增：设置最大重试次数，避免无限循环
+MAX_RETRY_TIMES = 3
 
 def is_registered_device() -> bool:
   dongle = Params().get("DongleId")
@@ -47,6 +49,7 @@ def register(show_spinner=False) -> str | None:
     start_time = time.monotonic()
     imei1='865420071781912'
     imei2='865420071781904'
+    # 循环获取IMEI（最多等60秒）
     while imei1 is None and imei2 is None:
       try:
         imei1, imei2 = HARDWARE.get_imei(0), HARDWARE.get_imei(1)
@@ -55,39 +58,52 @@ def register(show_spinner=False) -> str | None:
         time.sleep(1)
       if time.monotonic() - start_time > 60 and show_spinner:
         spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
-
+        break  # IMEI获取超时，直接终止
+    # 核心修改：用重试次数替代无限循环
     backoff = 0
+    retry_count = 0 # 初始化重试计数器
     start_time = time.monotonic()
-    while True:
+    register_success = False  # 标记是否注册成功
+    # 循环条件：未超过最大重试次数 + 未超时（可选60秒）
+    while retry_count < MAX_RETRY_TIMES and time.monotonic() - start_time < 60:
       try:
         #register_token = jwt.encode({'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)}, private_key, algorithm='RS256')
-        cloudlog.info("getting pilotauth")
+        cloudlog.info(f"getting pilotauth (retry {retry_count + 1}/{MAX_RETRY_TIMES})")
         resp = api_get("v2/pilotauth/", method='POST', timeout=15,
                        imei=imei1, imei2=imei2, serial=serial)
 
-        # ========== 【唯一修改处】==========
+        # 处理402/403错误（注册失败）
         if resp.status_code in (402, 403):
-          cloudlog.info(f"Unable to register device, got {resp.status_code}, retrying...")
+          cloudlog.info(f"Unable to register device, got {resp.status_code}, retry {retry_count + 1} failed")
           dongle_id = UNREGISTERED_DONGLE_ID
           if show_spinner:
             spinner.update(f"registering device - serial: {serial}, contact MR.ONE")
-          time.sleep(2)  # 避免请求过快
-          continue  # 继续下一次注册尝试
-        # =====================================
+          retry_count += 1  # 重试次数+1
+          time.sleep(2)
+          continue  # 继续下一次重试
 
-        else:
-          dongleauth = json.loads(resp.text)
-          dongle_id = dongleauth["dongle_id"]
-        break
+        # 注册成功
+        dongleauth = json.loads(resp.text)
+        dongle_id = dongleauth["dongle_id"]
+        register_success = True
+        break  # 成功后跳出循环
 
       except Exception:
-        cloudlog.exception("failed to authenticate")
+        cloudlog.exception(f"failed to authenticate (retry {retry_count + 1})")
+        retry_count += 1  # 异常也计入重试次数
         backoff = min(backoff + 1, 15)
         time.sleep(backoff)
 
+      # 超时提示
       if time.monotonic() - start_time > 60 and show_spinner:
         spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
+        break  # 注册超时，直接终止
         #return UNREGISTERED_DONGLE_ID # hotfix to prevent an infinite wait for registration
+
+    # 重试次数耗尽/超时，直接标记为未注册
+    if not register_success:
+      cloudlog.warning(f"Register failed after {retry_count} retries, skip registration")
+      dongle_id = UNREGISTERED_DONGLE_ID
 
     if show_spinner:
       spinner.close()
