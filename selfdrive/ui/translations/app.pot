@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-23 00:52+0800\n"
+"POT-Creation-Date: 2026-02-23 07:42+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -105,7 +105,7 @@ msgid "Invalid LKAS setting"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:236
-#: selfdrive/ui/layouts/settings/developer.py:78
+#: selfdrive/ui/layouts/settings/developer.py:68
 msgid "Longitudinal Maneuver Mode"
 msgstr ""
 
@@ -555,7 +555,7 @@ msgstr ""
 #: selfdrive/ui/hoofpilot/layouts/onboarding.py:29
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:51
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:82
-#: selfdrive/ui/layouts/settings/developer.py:206
+#: selfdrive/ui/layouts/settings/developer.py:184
 #: selfdrive/ui/layouts/settings/toggles.py:232
 msgid "Enable"
 msgstr ""
@@ -811,73 +811,113 @@ msgstr ""
 msgid "mph"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:39
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:40
 msgid "Show Advanced Controls"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:40
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:41
 msgid ""
 "Toggle visibility of advanced hoofpilot controls.<br>This only changes the "
 "visibility of the toggles; it does not change the actual enabled/disabled "
 "state."
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:43
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:44
 msgid "GitHub Runner Service"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:43
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:44
 msgid "Enables or disables the GitHub runner service."
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:46
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:47
 msgid "copyparty Service"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:47
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:48
 msgid ""
 "copyparty is a very capable file server, you can use it to download your "
 "routes, view your logs and even make some edits on some files from your "
 "browser. Requires you to connect to your comma locally via its IP address."
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:51
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:52
 msgid "Quickboot Mode"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:53
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:55
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:121
+msgid "Delete Driving Data"
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:55
+#: selfdrive/ui/hoofpilot/layouts/settings/osm.py:50
+#: selfdrive/ui/hoofpilot/layouts/settings/osm.py:86
+msgid "DELETE"
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:56
+msgid "Delete all files in the realdata directory (/data/media/0/realdata)."
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:59
 msgid "Error Log"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:53
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:59
 #: selfdrive/ui/layouts/settings/device.py:70
 msgid "VIEW"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:53
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:59
 msgid "View the error log for hoofpilot crashes."
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:72
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:78
 msgid "Would you like to delete this log?"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:72
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:78
 msgid "Yes"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:72
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:78
 msgid "No"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:99
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:114
+msgid "Confirm Delete Driving Data"
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:115
+msgid "Are you sure you want to delete ALL driving data?"
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
+msgid "Delete"
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
+#: selfdrive/ui/hoofpilot/layouts/settings/models.py:73
+#: selfdrive/ui/hoofpilot/layouts/settings/stable.py:197
+#: selfdrive/ui/layouts/onboarding.py:347
+#: system/ui/widgets/confirm_dialog.py:23 system/ui/widgets/keyboard.py:81
+#: system/ui/widgets/network.py:324 system/ui/widgets/option_dialog.py:35
+msgid "Cancel"
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:120
+msgid "Driving data directory does not exist or is empty."
+msgstr ""
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:136
 msgid ""
 "When toggled on, this creates a prebuilt file to allow accelerated boot "
 "times. When toggled off, it removes the prebuilt file so compilation of "
 "locally edited cpp files can be made."
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:102
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:139
 msgid ""
 "Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' "
 "in the Software panel first."
@@ -1122,15 +1162,6 @@ msgstr ""
 msgid "Cancel Download"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/models.py:73
-#: selfdrive/ui/hoofpilot/layouts/settings/stable.py:197
-#: selfdrive/ui/layouts/onboarding.py:347
-#: selfdrive/ui/layouts/settings/developer.py:259
-#: system/ui/widgets/confirm_dialog.py:23 system/ui/widgets/keyboard.py:81
-#: system/ui/widgets/network.py:324 system/ui/widgets/option_dialog.py:35
-msgid "Cancel"
-msgstr ""
-
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:75
 msgid "Adjust Lane Turn Speed"
 msgstr ""
@@ -1245,11 +1276,6 @@ msgstr ""
 
 #: selfdrive/ui/hoofpilot/layouts/settings/osm.py:50
 msgid "Downloaded Maps"
-msgstr ""
-
-#: selfdrive/ui/hoofpilot/layouts/settings/osm.py:50
-#: selfdrive/ui/hoofpilot/layouts/settings/osm.py:86
-msgid "DELETE"
 msgstr ""
 
 #: selfdrive/ui/hoofpilot/layouts/settings/osm.py:51
@@ -2480,20 +2506,20 @@ msgstr ""
 msgid "Download"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:21
+#: selfdrive/ui/layouts/settings/developer.py:18
 msgid ""
 "ADB (Android Debug Bridge) allows connecting to your device over USB or over "
 "the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:25
+#: selfdrive/ui/layouts/settings/developer.py:22
 msgid ""
 "Warning: This grants SSH access to all public keys in your GitHub settings. "
 "Never enter a GitHub username other than your own. A comma employee will "
 "NEVER ask you to add their GitHub username."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:29
+#: selfdrive/ui/layouts/settings/developer.py:26
 msgid ""
 "<b>WARNING: hoofpilot longitudinal control is in alpha for this car and will "
 "disable Automatic Emergency Braking (AEB).</b><br><br>On this car, hoofpilot "
@@ -2504,68 +2530,28 @@ msgid ""
 "powered on."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:36
-msgid ""
-"<b>WARNING: This will permanently delete all driving data stored on the "
-"device.</b><br><br>This includes all logs, realdata, and any other files in "
-"the /data/realdata directory. This action cannot be undone. Make sure to "
-"back up any important data before proceeding."
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:53
+#: selfdrive/ui/layouts/settings/developer.py:43
 msgid "Enable ADB"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:62
+#: selfdrive/ui/layouts/settings/developer.py:52
 msgid "Enable SSH"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:67
+#: selfdrive/ui/layouts/settings/developer.py:57
 msgid "SSH Keys"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:70
+#: selfdrive/ui/layouts/settings/developer.py:60
 msgid "Joystick Debug Mode"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:85
+#: selfdrive/ui/layouts/settings/developer.py:75
 msgid "hoofpilot Longitudinal Control (Alpha)"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:93
+#: selfdrive/ui/layouts/settings/developer.py:83
 msgid "UI Debug Mode"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:102
-msgid "Delete Driving Data"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:243
-msgid "Driving data deleted successfully!"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:244
-#: selfdrive/ui/layouts/sidebar.py:127 system/ui/widgets/confirm_dialog.py:93
-#: system/ui/widgets/html_render.py:263
-msgid "OK"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:251
-msgid "Confirm Delete"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:252
-msgid "WARNING: This action cannot be undone!"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:253
-msgid ""
-"Are you sure you want to delete all driving data? This will remove all files "
-"in:"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/developer.py:258
-msgid "Delete"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/device.py:27
@@ -3017,6 +3003,11 @@ msgstr ""
 
 #: selfdrive/ui/layouts/sidebar.py:117
 msgid "Unknown"
+msgstr ""
+
+#: selfdrive/ui/layouts/sidebar.py:127 system/ui/widgets/confirm_dialog.py:93
+#: system/ui/widgets/html_render.py:263
+msgid "OK"
 msgstr ""
 
 #: selfdrive/ui/layouts/sidebar.py:129

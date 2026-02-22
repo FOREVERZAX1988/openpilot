@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-23 00:52+0800\n"
-"PO-Revision-Date: 2026-02-23 01:03+0800\n"
+"POT-Creation-Date: 2026-02-23 07:42+0800\n"
+"PO-Revision-Date: 2026-02-23 07:46+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -67,15 +67,7 @@ msgstr "3G"
 msgid "5G"
 msgstr "5G"
 
-#: selfdrive/ui/layouts/settings/developer.py:36
-msgid ""
-"<b>WARNING: This will permanently delete all driving data stored on the "
-"device.</b><br><br>This includes all logs, realdata, and any other files in "
-"the /data/realdata directory. This action cannot be undone. Make sure to "
-"back up any important data before proceeding."
-msgstr "警告：此操作将永久删除设备上存储的所有行车数据。"
-
-#: selfdrive/ui/layouts/settings/developer.py:29
+#: selfdrive/ui/layouts/settings/developer.py:26
 msgid ""
 "<b>WARNING: hoofpilot longitudinal control is in alpha for this car and will "
 "disable Automatic Emergency Braking (AEB).</b><br><br>On this car, hoofpilot "
@@ -131,7 +123,7 @@ msgstr ""
 msgid "ACTIVE"
 msgstr "已启用"
 
-#: selfdrive/ui/layouts/settings/developer.py:21
+#: selfdrive/ui/layouts/settings/developer.py:18
 msgid ""
 "ADB (Android Debug Bridge) allows connecting to your device over USB or over "
 "the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
@@ -259,11 +251,9 @@ msgstr ""
 msgid "Are you sure you want to backup your current sunnypilot settings?"
 msgstr "您确定要备份当前的sunnypilot设置吗？"
 
-#: selfdrive/ui/layouts/settings/developer.py:253
-msgid ""
-"Are you sure you want to delete all driving data? This will remove all files "
-"in:"
-msgstr "确定要删除所有行驶数据吗？这将会删除以下目录的所有文件:"
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:115
+msgid "Are you sure you want to delete ALL driving data?"
+msgstr "确认删除所有行驶数据?"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/device.py:174
 msgid "Are you sure you want to enter Always Offroad mode?"
@@ -442,10 +432,10 @@ msgstr "摄像头故障"
 msgid "Camera Malfunction: Reboot Your Device"
 msgstr "摄像头故障：请重启设备"
 
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:73
 #: selfdrive/ui/hoofpilot/layouts/settings/stable.py:197
 #: selfdrive/ui/layouts/onboarding.py:347
-#: selfdrive/ui/layouts/settings/developer.py:259
 #: system/ui/widgets/confirm_dialog.py:23 system/ui/widgets/keyboard.py:81
 #: system/ui/widgets/network.py:324 system/ui/widgets/option_dialog.py:35
 msgid "Cancel"
@@ -560,9 +550,9 @@ msgstr "进程间通信异常"
 msgid "Confirm"
 msgstr "确认"
 
-#: selfdrive/ui/layouts/settings/developer.py:251
-msgid "Confirm Delete"
-msgstr "确认删除"
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:114
+msgid "Confirm Delete Driving Data"
+msgstr "确认删除行驶数据"
 
 #: selfdrive/selfdrived/events.py:882 selfdrive/selfdrived/events.py:889
 msgid "Confirm Lane Change"
@@ -641,6 +631,7 @@ msgstr "自定义数据源"
 msgid "Customize Torque Params"
 msgstr "自定义扭矩参数"
 
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:55
 #: selfdrive/ui/hoofpilot/layouts/settings/osm.py:50
 #: selfdrive/ui/hoofpilot/layouts/settings/osm.py:86
 msgid "DELETE"
@@ -701,13 +692,18 @@ msgstr "默认：设备将正常启动/唤醒，并随时可启用功能。"
 msgid "Delay before lateral control resumes after the turn signal ends."
 msgstr "转向灯关闭后，横向控制恢复前的延迟时间。"
 
-#: selfdrive/ui/layouts/settings/developer.py:258
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
 msgid "Delete"
 msgstr "删除"
 
-#: selfdrive/ui/layouts/settings/developer.py:102
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:55
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:121
 msgid "Delete Driving Data"
 msgstr "删除行驶数据"
+
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:56
+msgid "Delete all files in the realdata directory (/data/media/0/realdata)."
+msgstr "删除realdata(/data/media/0/realdata)目录下的所有数据."
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:143
 #: selfdrive/ui/layouts/settings/settings.py:61
@@ -933,9 +929,9 @@ msgstr "驾驶模型响应延迟"
 msgid "Driving Personality"
 msgstr "驾驶风格"
 
-#: selfdrive/ui/layouts/settings/developer.py:243
-msgid "Driving data deleted successfully!"
-msgstr "成功删除数据！"
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:120
+msgid "Driving data directory does not exist or is empty."
+msgstr "行驶数据目录不存在或者已经清空."
 
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/hyundai.py:19
 msgid "Dynamic"
@@ -973,7 +969,7 @@ msgstr "紧急制动：存在碰撞风险"
 #: selfdrive/ui/hoofpilot/layouts/onboarding.py:29
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:51
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:82
-#: selfdrive/ui/layouts/settings/developer.py:206
+#: selfdrive/ui/layouts/settings/developer.py:184
 #: selfdrive/ui/layouts/settings/toggles.py:232
 msgid "Enable"
 msgstr "启用"
@@ -984,7 +980,7 @@ msgid ""
 "Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle."
 msgstr "请在设备面板启用“离线设置模式”，或关闭车辆电源以切换该模式。"
 
-#: selfdrive/ui/layouts/settings/developer.py:53
+#: selfdrive/ui/layouts/settings/developer.py:43
 msgid "Enable ADB"
 msgstr "启用 ADB"
 
@@ -1009,7 +1005,7 @@ msgstr "启用车道偏离警示"
 msgid "Enable Roaming"
 msgstr "启用漫游"
 
-#: selfdrive/ui/layouts/settings/developer.py:62
+#: selfdrive/ui/layouts/settings/developer.py:52
 msgid "Enable SSH"
 msgstr "启用 SSH"
 
@@ -1103,7 +1099,7 @@ msgstr ""
 "盖\"opendbc/car/torque_data\"目录下YAML文件中的离线参数值。启用“手动实时调校”"
 "开关后，修改后的参数将实时生效。"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:43
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:44
 msgid "Enables or disables the GitHub runner service."
 msgstr "启用或禁用GitHub运行器服务。"
 
@@ -1191,7 +1187,7 @@ msgstr "输入您的 GitHub 用户名"
 msgid "Error"
 msgstr "错误"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:53
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:59
 msgid "Error Log"
 msgstr "错误日志"
 
@@ -1367,7 +1363,7 @@ msgstr "良好"
 msgid "Gear not D"
 msgstr "未挂入D挡"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:43
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:44
 msgid "GitHub Runner Service"
 msgstr "GitHub运行器服务"
 
@@ -1466,7 +1462,7 @@ msgstr ""
 "如遇问题，请访问我们的社区论坛：https://community.sunnypilot.ai，联系版主寻求"
 "帮助。"
 
-#: selfdrive/ui/layouts/settings/developer.py:70
+#: selfdrive/ui/layouts/settings/developer.py:60
 msgid "Joystick Debug Mode"
 msgstr "摇杆调试模式"
 
@@ -1550,7 +1546,7 @@ msgid "Long Press Increment"
 msgstr "长按增减量"
 
 #: selfdrive/selfdrived/events.py:236
-#: selfdrive/ui/layouts/settings/developer.py:78
+#: selfdrive/ui/layouts/settings/developer.py:68
 msgid "Longitudinal Maneuver Mode"
 msgstr "纵向操作模式"
 
@@ -1663,7 +1659,7 @@ msgstr "网络"
 msgid "Neural Network Lateral Control (NNLC)"
 msgstr "神经网络横向控制（NNLC）"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:72
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:78
 msgid "No"
 msgstr "否"
 
@@ -1761,7 +1757,6 @@ msgstr "仅限数字，不允许输入字符。"
 msgid "OFFLINE"
 msgstr "离线"
 
-#: selfdrive/ui/layouts/settings/developer.py:244
 #: selfdrive/ui/layouts/sidebar.py:127 system/ui/widgets/confirm_dialog.py:93
 #: system/ui/widgets/html_render.py:263
 msgid "OK"
@@ -2034,11 +2029,11 @@ msgstr "进程未运行"
 msgid "QR Code Error"
 msgstr "二维码错误"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:51
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:52
 msgid "Quickboot Mode"
 msgstr "快速启动模式"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:102
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:139
 msgid ""
 "Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' "
 "in the Software panel first."
@@ -2265,7 +2260,7 @@ msgstr "设定"
 msgid "SPONSOR"
 msgstr "赞助用户"
 
-#: selfdrive/ui/layouts/settings/developer.py:67
+#: selfdrive/ui/layouts/settings/developer.py:57
 msgid "SSH Keys"
 msgstr "SSH 密钥"
 
@@ -2409,7 +2404,7 @@ msgstr "设置已恢复，确认重启界面？"
 msgid "Short Press Increment"
 msgstr "短按增减量"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:39
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:40
 msgid "Show Advanced Controls"
 msgstr "显示高级控制选项"
 
@@ -2785,7 +2780,7 @@ msgstr ""
 "启用此开关后，当盲点监测（BSM）检测到障碍物车辆时，自动变道会触发延迟计时器，"
 "确保变道操作安全进行。"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:40
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:41
 msgid ""
 "Toggle visibility of advanced hoofpilot controls.<br>This only changes the "
 "visibility of the toggles; it does not change the actual enabled/disabled "
@@ -2831,7 +2826,7 @@ msgstr "转向角度超出限制"
 msgid "Turn exceeds limit"
 msgstr "转向超出限制"
 
-#: selfdrive/ui/layouts/settings/developer.py:93
+#: selfdrive/ui/layouts/settings/developer.py:83
 msgid "UI Debug Mode"
 msgstr "界面调试模式"
 
@@ -2915,7 +2910,7 @@ msgstr "利用视觉路径预测估算通过前方弯道的合适车速。"
 msgid "VEHICLE"
 msgstr "车辆"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:53
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:59
 #: selfdrive/ui/layouts/settings/device.py:70
 msgid "VIEW"
 msgstr "查看"
@@ -2937,7 +2932,7 @@ msgstr "车辆传感器数据无效"
 msgid "Vehicle Steering Time Limit"
 msgstr "车辆转向时长限制"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:53
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:59
 msgid "View the error log for hoofpilot crashes."
 msgstr "查看hoofpilot崩溃的错误日志。"
 
@@ -2948,10 +2943,6 @@ msgstr "视觉模型"
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:137
 msgid "Visuals"
 msgstr "视觉"
-
-#: selfdrive/ui/layouts/settings/developer.py:252
-msgid "WARNING: This action cannot be undone!"
-msgstr "警告:此操作无法回退!"
 
 #: selfdrive/selfdrived/events.py:78
 msgid "WARNING: This branch is not tested"
@@ -2974,7 +2965,7 @@ msgid ""
 "Warning: Provides a warning when exceeding the current road's speed limit."
 msgstr "警示：当车速超过当前道路限速时发出提醒。"
 
-#: selfdrive/ui/layouts/settings/developer.py:25
+#: selfdrive/ui/layouts/settings/developer.py:22
 msgid ""
 "Warning: This grants SSH access to all public keys in your GitHub settings. "
 "Never enter a GitHub username other than your own. A comma employee will "
@@ -3021,7 +3012,7 @@ msgstr "启用后，行驶界面上将不显示车速表。"
 msgid "When enabled, visual turn indicators are drawn on the HUD."
 msgstr "启用后，抬头显示（HUD）上将绘制转向视觉指示器。"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:99
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:136
 msgid ""
 "When toggled on, this creates a prebuilt file to allow accelerated boot "
 "times. When toggled off, it removes the prebuilt file so compilation of "
@@ -3038,7 +3029,7 @@ msgstr "Wi‑Fi"
 msgid "Wi-Fi Network Metered"
 msgstr "Wi‑Fi 计量网络"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:72
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:78
 msgid "Would you like to delete this log?"
 msgstr "确定要删除此日志吗？"
 
@@ -3051,7 +3042,7 @@ msgstr "PIN码错误。"
 msgid "Wrong password"
 msgstr "密码错误"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:72
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:78
 msgid "Yes"
 msgstr "是"
 
@@ -3124,11 +3115,11 @@ msgstr "修改"
 msgid "checking..."
 msgstr "检查中..."
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:46
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:47
 msgid "copyparty Service"
 msgstr "copyparty文件服务"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:47
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:48
 msgid ""
 "copyparty is a very capable file server, you can use it to download your "
 "routes, view your logs and even make some edits on some files from your "
@@ -3189,7 +3180,7 @@ msgstr "来自缓存"
 msgid "h"
 msgstr "小时"
 
-#: selfdrive/ui/layouts/settings/developer.py:85
+#: selfdrive/ui/layouts/settings/developer.py:75
 msgid "hoofpilot Longitudinal Control (Alpha)"
 msgstr "hoofpilot纵向控制（内测版）"
 
@@ -3498,6 +3489,13 @@ msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
 #~ msgstr "全天候 LTE 连接"
 
 #~ msgid ""
+#~ "<b>WARNING: This will permanently delete all driving data stored on the "
+#~ "device.</b><br><br>This includes all logs, realdata, and any other files "
+#~ "in the /data/realdata directory. This action cannot be undone. Make sure "
+#~ "to back up any important data before proceeding."
+#~ msgstr "警告：此操作将永久删除设备上存储的所有行车数据。"
+
+#~ msgid ""
 #~ "<b>WARNING: openpilot longitudinal control is in alpha for this car and "
 #~ "will disable Automatic Emergency Braking (AEB).</b><br><br>On this car, "
 #~ "openpilot defaults to the car's built-in ACC instead of openpilot's "
@@ -3516,6 +3514,11 @@ msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
 #~ "An alpha version of openpilot longitudinal control can be tested, along "
 #~ "with Experimental mode, on non-release branches."
 #~ msgstr "openpilot 纵向控制的 alpha 版本可在非发布分支搭配实验模式进行测试。"
+
+#~ msgid ""
+#~ "Are you sure you want to delete all driving data? This will remove all "
+#~ "files in:"
+#~ msgstr "确定要删除所有行驶数据吗？这将会删除以下目录的所有文件:"
 
 #, python-format
 #~ msgid "Become a comma prime member at connect.comma.ai"
@@ -3538,9 +3541,15 @@ msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
 #~ msgid "Click \"add new device\" and scan the QR code on the right"
 #~ msgstr "点击“添加新设备”，扫描右侧二维码"
 
+#~ msgid "Confirm Delete"
+#~ msgstr "确认删除"
+
 #, python-format
 #~ msgid "Decline, uninstall openpilot"
 #~ msgstr "拒绝并卸载 openpilot"
+
+#~ msgid "Driving data deleted successfully!"
+#~ msgstr "成功删除数据！"
 
 #, python-format
 #~ msgid "EXPERIMENTAL MODE ON"
@@ -3652,6 +3661,9 @@ msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
 #~ msgstr ""
 #~ "使用 openpilot 进行自适应巡航与车道保持辅助。使用此功能时，您必须始终保持"
 #~ "专注。"
+
+#~ msgid "WARNING: This action cannot be undone!"
+#~ msgstr "警告:此操作无法回退!"
 
 #, python-format
 #~ msgid "Welcome to openpilot"
