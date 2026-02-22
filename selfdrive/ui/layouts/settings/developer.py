@@ -8,6 +8,9 @@ from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.widgets import DialogResult
+# 新增依赖：文件操作、路径处理、异常捕获
+import os
+import shutil
 
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.hoofpilot.widgets.list_view import toggle_item_sp as toggle_item
@@ -87,6 +90,15 @@ class DeveloperLayout(Widget):
     )
     self._on_enable_ui_debug(self._params.get_bool("ShowDebugInfo"))
 
+    # 新增：删除行驶数据按钮（复用toggle_item改为按钮逻辑，仅保留点击回调）
+    self._delete_data_btn = toggle_item(
+      lambda: tr("Delete Driving Data"),
+      description=lambda: tr(DESCRIPTIONS["delete_driving_data"]),
+      initial_state=False,  # 仅作为按钮，初始状态无意义
+      callback=self._on_delete_driving_data,
+      enabled=ui_state.is_offroad,  # 仅离线时可操作（防止行车中误删）
+    )
+
     self._scroller = Scroller([
       self._adb_toggle,
       self._ssh_toggle,
@@ -95,6 +107,7 @@ class DeveloperLayout(Widget):
       self._long_maneuver_toggle,
       self._alpha_long_toggle,
       self._ui_debug_toggle,
+      self._delete_data_btn,  # 添加删除数据按钮到滚动列表
     ], line_separator=True, spacing=0)
 
     # Toggles should be not available to change in onroad state
@@ -132,6 +145,8 @@ class DeveloperLayout(Widget):
     else:
       self._long_maneuver_toggle.action_item.set_enabled(False)
       self._alpha_long_toggle.set_visible(False)
+        # 刷新删除按钮状态（仅离线时可用）
+    self._delete_data_btn.action_item.set_enabled(ui_state.is_offroad)
 
     # TODO: make a param control list item so we don't need to manage internal state as much here
     # refresh toggles from params to mirror external changes
@@ -188,3 +203,53 @@ class DeveloperLayout(Widget):
       self._params.put_bool("AlphaLongitudinalEnabled", False)
       self._params.put_bool("OnroadCycleRequested", True)
       self._update_toggles()
+
+  # 新增：删除行驶数据核心逻辑
+  def _delete_realdata_files(self):
+    """递归删除realdata目录下所有文件/文件夹"""
+    if not os.path.exists(self._realdata_path):
+      return  # 路径不存在，无需处理
+
+    # 遍历目录并删除所有内容
+    for item in os.listdir(self._realdata_path):
+      item_path = os.path.join(self._realdata_path, item)
+      try:
+        if os.path.isfile(item_path) or os.path.islink(item_path):
+          os.unlink(item_path)  # 删除文件/软链接
+        elif os.path.isdir(item_path):
+          shutil.rmtree(item_path)  # 删除文件夹
+      except Exception as e:
+        print(f"Failed to delete {item_path}: {e}")  # 打印异常（可根据需要改为弹窗提示）
+
+  # 新增：删除数据按钮点击回调
+  def _on_delete_driving_data(self, state: bool):
+    # 重置按钮状态（仅作为按钮使用，无需保持开启状态）
+    self._delete_data_btn.action_item.set_state(False)
+
+    # 确认弹窗回调
+    def confirm_delete(result: int):
+      if result == DialogResult.CONFIRM:
+        # 确认删除：执行文件删除逻辑
+        self._delete_realdata_files()
+        # 可选：删除后弹出提示（如需可视化反馈可添加）
+        success_dlg = ConfirmDialog(
+          tr("Driving data deleted successfully!"),
+          tr("OK"),
+          rich=True
+        )
+        gui_app.set_modal_overlay(success_dlg, callback=lambda _: None)
+
+    # 显示删除确认弹窗
+    confirm_content = (
+      f"<h1>{tr('Confirm Delete')}</h1><br>" +
+      f"<p><b>{tr('WARNING: This action cannot be undone!')}</b></p><br>" +
+      f"<p>{tr('Are you sure you want to delete all driving data? This will remove all files in:')}</p>" +
+      f"<p>{self._realdata_path}</p>"
+    )
+    confirm_dlg = ConfirmDialog(
+      confirm_content,
+      tr("Delete"),
+      cancel_text=tr("Cancel"),
+      rich=True
+    )
+    gui_app.set_modal_overlay(confirm_dlg, callback=confirm_delete)
