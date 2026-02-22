@@ -32,6 +32,11 @@ DESCRIPTIONS = {
     "Enabling Experimental mode is recommended when enabling hoofpilot longitudinal control alpha. " +
     "Changing this setting will restart hoofpilot if the car is powered on."
   ),
+  'delete_driving_data': tr_noop(
+    "<b>WARNING: This will permanently delete all driving data stored on the device.</b><br><br>" +
+    "This includes all logs, realdata, and any other files in the /data/realdata directory. " +
+    "This action cannot be undone. Make sure to back up any important data before proceeding."
+  ),
 }
 
 
@@ -40,6 +45,8 @@ class DeveloperLayout(Widget):
     super().__init__()
     self._params = Params()
     self._is_release = self._params.get_bool("IsReleaseBranch")
+    # 新增：定义行驶数据存储路径（根据comma设备实际路径调整）
+    self._realdata_path = "/data/media/0/realdata"  # comma设备realdata默认路径
 
     # Build items and keep references for callbacks/state updates
     self._adb_toggle = toggle_item(
@@ -145,7 +152,7 @@ class DeveloperLayout(Widget):
     else:
       self._long_maneuver_toggle.action_item.set_enabled(False)
       self._alpha_long_toggle.set_visible(False)
-        # 刷新删除按钮状态（仅离线时可用）
+    # 刷新删除按钮状态（仅离线时可用）
     self._delete_data_btn.action_item.set_enabled(ui_state.is_offroad)
 
     # TODO: make a param control list item so we don't need to manage internal state as much here
