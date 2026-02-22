@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-22 21:46+0800\n"
+"POT-Creation-Date: 2026-02-23 00:52+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -105,7 +105,7 @@ msgid "Invalid LKAS setting"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:236
-#: selfdrive/ui/layouts/settings/developer.py:68
+#: selfdrive/ui/layouts/settings/developer.py:78
 msgid "Longitudinal Maneuver Mode"
 msgstr ""
 
@@ -555,7 +555,7 @@ msgstr ""
 #: selfdrive/ui/hoofpilot/layouts/onboarding.py:29
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:51
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:82
-#: selfdrive/ui/layouts/settings/developer.py:184
+#: selfdrive/ui/layouts/settings/developer.py:206
 #: selfdrive/ui/layouts/settings/toggles.py:232
 msgid "Enable"
 msgstr ""
@@ -1125,6 +1125,7 @@ msgstr ""
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:73
 #: selfdrive/ui/hoofpilot/layouts/settings/stable.py:197
 #: selfdrive/ui/layouts/onboarding.py:347
+#: selfdrive/ui/layouts/settings/developer.py:259
 #: system/ui/widgets/confirm_dialog.py:23 system/ui/widgets/keyboard.py:81
 #: system/ui/widgets/network.py:324 system/ui/widgets/option_dialog.py:35
 msgid "Cancel"
@@ -2479,20 +2480,20 @@ msgstr ""
 msgid "Download"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:18
+#: selfdrive/ui/layouts/settings/developer.py:21
 msgid ""
 "ADB (Android Debug Bridge) allows connecting to your device over USB or over "
 "the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:22
+#: selfdrive/ui/layouts/settings/developer.py:25
 msgid ""
 "Warning: This grants SSH access to all public keys in your GitHub settings. "
 "Never enter a GitHub username other than your own. A comma employee will "
 "NEVER ask you to add their GitHub username."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:26
+#: selfdrive/ui/layouts/settings/developer.py:29
 msgid ""
 "<b>WARNING: hoofpilot longitudinal control is in alpha for this car and will "
 "disable Automatic Emergency Braking (AEB).</b><br><br>On this car, hoofpilot "
@@ -2503,28 +2504,68 @@ msgid ""
 "powered on."
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:43
+#: selfdrive/ui/layouts/settings/developer.py:36
+msgid ""
+"<b>WARNING: This will permanently delete all driving data stored on the "
+"device.</b><br><br>This includes all logs, realdata, and any other files in "
+"the /data/realdata directory. This action cannot be undone. Make sure to "
+"back up any important data before proceeding."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:53
 msgid "Enable ADB"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:52
+#: selfdrive/ui/layouts/settings/developer.py:62
 msgid "Enable SSH"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:57
+#: selfdrive/ui/layouts/settings/developer.py:67
 msgid "SSH Keys"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:60
+#: selfdrive/ui/layouts/settings/developer.py:70
 msgid "Joystick Debug Mode"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:75
+#: selfdrive/ui/layouts/settings/developer.py:85
 msgid "hoofpilot Longitudinal Control (Alpha)"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/developer.py:83
+#: selfdrive/ui/layouts/settings/developer.py:93
 msgid "UI Debug Mode"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:102
+msgid "Delete Driving Data"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:243
+msgid "Driving data deleted successfully!"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:244
+#: selfdrive/ui/layouts/sidebar.py:127 system/ui/widgets/confirm_dialog.py:93
+#: system/ui/widgets/html_render.py:263
+msgid "OK"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:251
+msgid "Confirm Delete"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:252
+msgid "WARNING: This action cannot be undone!"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:253
+msgid ""
+"Are you sure you want to delete all driving data? This will remove all files "
+"in:"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/developer.py:258
+msgid "Delete"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/device.py:27
@@ -2976,11 +3017,6 @@ msgstr ""
 
 #: selfdrive/ui/layouts/sidebar.py:117
 msgid "Unknown"
-msgstr ""
-
-#: selfdrive/ui/layouts/sidebar.py:127 system/ui/widgets/confirm_dialog.py:93
-#: system/ui/widgets/html_render.py:263
-msgid "OK"
 msgstr ""
 
 #: selfdrive/ui/layouts/sidebar.py:129

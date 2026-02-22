@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-22 21:46+0800\n"
-"PO-Revision-Date: 2026-02-22 22:40+0800\n"
+"POT-Creation-Date: 2026-02-23 00:52+0800\n"
+"PO-Revision-Date: 2026-02-23 01:03+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -67,7 +67,15 @@ msgstr "3G"
 msgid "5G"
 msgstr "5G"
 
-#: selfdrive/ui/layouts/settings/developer.py:26
+#: selfdrive/ui/layouts/settings/developer.py:36
+msgid ""
+"<b>WARNING: This will permanently delete all driving data stored on the "
+"device.</b><br><br>This includes all logs, realdata, and any other files in "
+"the /data/realdata directory. This action cannot be undone. Make sure to "
+"back up any important data before proceeding."
+msgstr "警告：此操作将永久删除设备上存储的所有行车数据。"
+
+#: selfdrive/ui/layouts/settings/developer.py:29
 msgid ""
 "<b>WARNING: hoofpilot longitudinal control is in alpha for this car and will "
 "disable Automatic Emergency Braking (AEB).</b><br><br>On this car, hoofpilot "
@@ -123,7 +131,7 @@ msgstr ""
 msgid "ACTIVE"
 msgstr "已启用"
 
-#: selfdrive/ui/layouts/settings/developer.py:18
+#: selfdrive/ui/layouts/settings/developer.py:21
 msgid ""
 "ADB (Android Debug Bridge) allows connecting to your device over USB or over "
 "the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
@@ -250,6 +258,12 @@ msgstr ""
 #: selfdrive/ui/hoofpilot/layouts/settings/sunnylink.py:226
 msgid "Are you sure you want to backup your current sunnypilot settings?"
 msgstr "您确定要备份当前的sunnypilot设置吗？"
+
+#: selfdrive/ui/layouts/settings/developer.py:253
+msgid ""
+"Are you sure you want to delete all driving data? This will remove all files "
+"in:"
+msgstr "确定要删除所有行驶数据吗？这将会删除以下目录的所有文件:"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/device.py:174
 msgid "Are you sure you want to enter Always Offroad mode?"
@@ -431,6 +445,7 @@ msgstr "摄像头故障：请重启设备"
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:73
 #: selfdrive/ui/hoofpilot/layouts/settings/stable.py:197
 #: selfdrive/ui/layouts/onboarding.py:347
+#: selfdrive/ui/layouts/settings/developer.py:259
 #: system/ui/widgets/confirm_dialog.py:23 system/ui/widgets/keyboard.py:81
 #: system/ui/widgets/network.py:324 system/ui/widgets/option_dialog.py:35
 msgid "Cancel"
@@ -544,6 +559,10 @@ msgstr "进程间通信异常"
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/platform_selector.py:98
 msgid "Confirm"
 msgstr "确认"
+
+#: selfdrive/ui/layouts/settings/developer.py:251
+msgid "Confirm Delete"
+msgstr "确认删除"
 
 #: selfdrive/selfdrived/events.py:882 selfdrive/selfdrived/events.py:889
 msgid "Confirm Lane Change"
@@ -681,6 +700,14 @@ msgstr "默认：设备将正常启动/唤醒，并随时可启用功能。"
 #: selfdrive/ui/hoofpilot/layouts/settings/steering.py:81
 msgid "Delay before lateral control resumes after the turn signal ends."
 msgstr "转向灯关闭后，横向控制恢复前的延迟时间。"
+
+#: selfdrive/ui/layouts/settings/developer.py:258
+msgid "Delete"
+msgstr "删除"
+
+#: selfdrive/ui/layouts/settings/developer.py:102
+msgid "Delete Driving Data"
+msgstr "删除行驶数据"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:143
 #: selfdrive/ui/layouts/settings/settings.py:61
@@ -906,6 +933,10 @@ msgstr "驾驶模型响应延迟"
 msgid "Driving Personality"
 msgstr "驾驶风格"
 
+#: selfdrive/ui/layouts/settings/developer.py:243
+msgid "Driving data deleted successfully!"
+msgstr "成功删除数据！"
+
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/hyundai.py:19
 msgid "Dynamic"
 msgstr "动态模式"
@@ -942,7 +973,7 @@ msgstr "紧急制动：存在碰撞风险"
 #: selfdrive/ui/hoofpilot/layouts/onboarding.py:29
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:51
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/brands/toyota.py:82
-#: selfdrive/ui/layouts/settings/developer.py:184
+#: selfdrive/ui/layouts/settings/developer.py:206
 #: selfdrive/ui/layouts/settings/toggles.py:232
 msgid "Enable"
 msgstr "启用"
@@ -953,7 +984,7 @@ msgid ""
 "Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle."
 msgstr "请在设备面板启用“离线设置模式”，或关闭车辆电源以切换该模式。"
 
-#: selfdrive/ui/layouts/settings/developer.py:43
+#: selfdrive/ui/layouts/settings/developer.py:53
 msgid "Enable ADB"
 msgstr "启用 ADB"
 
@@ -978,7 +1009,7 @@ msgstr "启用车道偏离警示"
 msgid "Enable Roaming"
 msgstr "启用漫游"
 
-#: selfdrive/ui/layouts/settings/developer.py:52
+#: selfdrive/ui/layouts/settings/developer.py:62
 msgid "Enable SSH"
 msgstr "启用 SSH"
 
@@ -1435,7 +1466,7 @@ msgstr ""
 "如遇问题，请访问我们的社区论坛：https://community.sunnypilot.ai，联系版主寻求"
 "帮助。"
 
-#: selfdrive/ui/layouts/settings/developer.py:60
+#: selfdrive/ui/layouts/settings/developer.py:70
 msgid "Joystick Debug Mode"
 msgstr "摇杆调试模式"
 
@@ -1519,7 +1550,7 @@ msgid "Long Press Increment"
 msgstr "长按增减量"
 
 #: selfdrive/selfdrived/events.py:236
-#: selfdrive/ui/layouts/settings/developer.py:68
+#: selfdrive/ui/layouts/settings/developer.py:78
 msgid "Longitudinal Maneuver Mode"
 msgstr "纵向操作模式"
 
@@ -1600,7 +1631,7 @@ msgstr "当前车速下模型预测结果不确定"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:134
 msgid "Models"
-msgstr "驾驶模型"
+msgstr "模型"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/steering.py:48
 msgid "Modular Assistive Driving System (MADS)"
@@ -1730,6 +1761,7 @@ msgstr "仅限数字，不允许输入字符。"
 msgid "OFFLINE"
 msgstr "离线"
 
+#: selfdrive/ui/layouts/settings/developer.py:244
 #: selfdrive/ui/layouts/sidebar.py:127 system/ui/widgets/confirm_dialog.py:93
 #: system/ui/widgets/html_render.py:263
 msgid "OK"
@@ -2233,7 +2265,7 @@ msgstr "设定"
 msgid "SPONSOR"
 msgstr "赞助用户"
 
-#: selfdrive/ui/layouts/settings/developer.py:57
+#: selfdrive/ui/layouts/settings/developer.py:67
 msgid "SSH Keys"
 msgstr "SSH 密钥"
 
@@ -2799,7 +2831,7 @@ msgstr "转向角度超出限制"
 msgid "Turn exceeds limit"
 msgstr "转向超出限制"
 
-#: selfdrive/ui/layouts/settings/developer.py:83
+#: selfdrive/ui/layouts/settings/developer.py:93
 msgid "UI Debug Mode"
 msgstr "界面调试模式"
 
@@ -2917,6 +2949,10 @@ msgstr "视觉模型"
 msgid "Visuals"
 msgstr "视觉"
 
+#: selfdrive/ui/layouts/settings/developer.py:252
+msgid "WARNING: This action cannot be undone!"
+msgstr "警告:此操作无法回退!"
+
 #: selfdrive/selfdrived/events.py:78
 msgid "WARNING: This branch is not tested"
 msgstr "警告：此分支未经测试"
@@ -2938,7 +2974,7 @@ msgid ""
 "Warning: Provides a warning when exceeding the current road's speed limit."
 msgstr "警示：当车速超过当前道路限速时发出提醒。"
 
-#: selfdrive/ui/layouts/settings/developer.py:22
+#: selfdrive/ui/layouts/settings/developer.py:25
 msgid ""
 "Warning: This grants SSH access to all public keys in your GitHub settings. "
 "Never enter a GitHub username other than your own. A comma employee will "
@@ -3153,7 +3189,7 @@ msgstr "来自缓存"
 msgid "h"
 msgstr "小时"
 
-#: selfdrive/ui/layouts/settings/developer.py:75
+#: selfdrive/ui/layouts/settings/developer.py:85
 msgid "hoofpilot Longitudinal Control (Alpha)"
 msgstr "hoofpilot纵向控制（内测版）"
 
@@ -3454,252 +3490,255 @@ msgid_plural "{} segments of your driving is in the training dataset so far."
 msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
 
 #, python-format
-msgid "1 year of drive storage"
-msgstr "1 年行驶数据存储"
+#~ msgid "1 year of drive storage"
+#~ msgstr "1 年行驶数据存储"
 
 #, python-format
-msgid "24/7 LTE connectivity"
-msgstr "全天候 LTE 连接"
+#~ msgid "24/7 LTE connectivity"
+#~ msgstr "全天候 LTE 连接"
 
-msgid ""
-"<b>WARNING: openpilot longitudinal control is in alpha for this car and will "
-"disable Automatic Emergency Braking (AEB).</b><br><br>On this car, openpilot "
-"defaults to the car's built-in ACC instead of openpilot's longitudinal "
-"control. Enable this to switch to openpilot longitudinal control. Enabling "
-"Experimental mode is recommended when enabling openpilot longitudinal "
-"control alpha. Changing this setting will restart openpilot if the car is "
-"powered on."
-msgstr ""
-"<b>警告：此车型的 openpilot 纵向控制仍为 alpha，将会停用自动紧急制动 (AEB)。"
-"</b><br><br>在此车型上，openpilot 默认使用车载 ACC，而非 openpilot 的纵向控"
-"制。启用此选项可切换为 openpilot 纵向控制。建议同时启用实验模式。若车辆通电，"
-"更改此设置将会重启 openpilot。"
-
-#, python-format
-msgid ""
-"An alpha version of openpilot longitudinal control can be tested, along with "
-"Experimental mode, on non-release branches."
-msgstr "openpilot 纵向控制的 alpha 版本可在非发布分支搭配实验模式进行测试。"
+#~ msgid ""
+#~ "<b>WARNING: openpilot longitudinal control is in alpha for this car and "
+#~ "will disable Automatic Emergency Braking (AEB).</b><br><br>On this car, "
+#~ "openpilot defaults to the car's built-in ACC instead of openpilot's "
+#~ "longitudinal control. Enable this to switch to openpilot longitudinal "
+#~ "control. Enabling Experimental mode is recommended when enabling "
+#~ "openpilot longitudinal control alpha. Changing this setting will restart "
+#~ "openpilot if the car is powered on."
+#~ msgstr ""
+#~ "<b>警告：此车型的 openpilot 纵向控制仍为 alpha，将会停用自动紧急制动 "
+#~ "(AEB)。</b><br><br>在此车型上，openpilot 默认使用车载 ACC，而非 openpilot "
+#~ "的纵向控制。启用此选项可切换为 openpilot 纵向控制。建议同时启用实验模式。"
+#~ "若车辆通电，更改此设置将会重启 openpilot。"
 
 #, python-format
-msgid "Become a comma prime member at connect.comma.ai"
-msgstr "前往 connect.comma.ai 成为 comma prime 会员"
+#~ msgid ""
+#~ "An alpha version of openpilot longitudinal control can be tested, along "
+#~ "with Experimental mode, on non-release branches."
+#~ msgstr "openpilot 纵向控制的 alpha 版本可在非发布分支搭配实验模式进行测试。"
 
 #, python-format
-msgid "Bookmark connect.comma.ai to your home screen to use it like an app"
-msgstr "将 connect.comma.ai 添加到主屏幕，像应用一样使用"
+#~ msgid "Become a comma prime member at connect.comma.ai"
+#~ msgstr "前往 connect.comma.ai 成为 comma prime 会员"
 
 #, python-format
-msgid "CHILL MODE ON"
-msgstr "安稳模式已开启"
+#~ msgid "Bookmark connect.comma.ai to your home screen to use it like an app"
+#~ msgstr "将 connect.comma.ai 添加到主屏幕，像应用一样使用"
 
 #, python-format
-msgid "Changing this setting will restart openpilot if the car is powered on."
-msgstr "若车辆通电，更改此设置将重启 openpilot。"
+#~ msgid "CHILL MODE ON"
+#~ msgstr "安稳模式已开启"
 
 #, python-format
-msgid "Click \"add new device\" and scan the QR code on the right"
-msgstr "点击“添加新设备”，扫描右侧二维码"
+#~ msgid ""
+#~ "Changing this setting will restart openpilot if the car is powered on."
+#~ msgstr "若车辆通电，更改此设置将重启 openpilot。"
 
 #, python-format
-msgid "Decline, uninstall openpilot"
-msgstr "拒绝并卸载 openpilot"
+#~ msgid "Click \"add new device\" and scan the QR code on the right"
+#~ msgstr "点击“添加新设备”，扫描右侧二维码"
 
 #, python-format
-msgid "EXPERIMENTAL MODE ON"
-msgstr "实验模式已开启"
-
-msgid "Enable driver monitoring even when openpilot is not engaged."
-msgstr "即使未启用 openpilot 也启用驾驶员监控。"
+#~ msgid "Decline, uninstall openpilot"
+#~ msgstr "拒绝并卸载 openpilot"
 
 #, python-format
-msgid "Enable openpilot"
-msgstr "启用 openpilot"
+#~ msgid "EXPERIMENTAL MODE ON"
+#~ msgstr "实验模式已开启"
+
+#~ msgid "Enable driver monitoring even when openpilot is not engaged."
+#~ msgstr "即使未启用 openpilot 也启用驾驶员监控。"
 
 #, python-format
-msgid ""
-"Enable the openpilot longitudinal control (alpha) toggle to allow "
-"Experimental mode."
-msgstr "启用 openpilot 纵向控制（alpha）开关，以使用实验模式。"
-
-msgid "Firehose"
-msgstr "Firehose"
-
-msgid ""
-"For maximum effectiveness, bring your device inside and connect to a good "
-"USB-C adapter and Wi-Fi weekly.\n"
-"\n"
-"Firehose Mode can also work while you're driving if connected to a hotspot "
-"or unlimited SIM card.\n"
-"\n"
-"\n"
-"Frequently Asked Questions\n"
-"\n"
-"Does it matter how or where I drive? Nope, just drive as you normally "
-"would.\n"
-"\n"
-"Do all of my segments get pulled in Firehose Mode? No, we selectively pull a "
-"subset of your segments.\n"
-"\n"
-"What's a good USB-C adapter? Any fast phone or laptop charger should be "
-"fine.\n"
-"\n"
-"Does it matter which software I run? Yes, only upstream openpilot (and "
-"particular forks) are able to be used for training."
-msgstr ""
-"为达到最佳效果，请将设备带到室内，并每周连接优质 USB‑C 充电器与 Wi‑Fi。\n"
-"\n"
-"若连接热点或不限流量卡，行车中也可使用 Firehose 模式。\n"
-"\n"
-"\n"
-"常见问题\n"
-"\n"
-"我怎么开、在哪开有区别吗？没有，平常怎么开就怎么开。\n"
-"\n"
-"Firehose 模式会拉取我所有片段吗？不会，我们会选择性拉取部分片段。\n"
-"\n"
-"什么是好的 USB‑C 充电器？任何快速的手机或笔电充电器都可以。\n"
-"\n"
-"我跑什么软件有区别吗？有，只有上游 openpilot（及特定分支）可用于训练。"
+#~ msgid "Enable openpilot"
+#~ msgstr "启用 openpilot"
 
 #, python-format
-msgid "Go to https://connect.comma.ai on your phone"
-msgstr "在手机上前往 https://connect.comma.ai"
+#~ msgid ""
+#~ "Enable the openpilot longitudinal control (alpha) toggle to allow "
+#~ "Experimental mode."
+#~ msgstr "启用 openpilot 纵向控制（alpha）开关，以使用实验模式。"
+
+#~ msgid "Firehose"
+#~ msgstr "Firehose"
+
+#~ msgid ""
+#~ "For maximum effectiveness, bring your device inside and connect to a good "
+#~ "USB-C adapter and Wi-Fi weekly.\n"
+#~ "\n"
+#~ "Firehose Mode can also work while you're driving if connected to a "
+#~ "hotspot or unlimited SIM card.\n"
+#~ "\n"
+#~ "\n"
+#~ "Frequently Asked Questions\n"
+#~ "\n"
+#~ "Does it matter how or where I drive? Nope, just drive as you normally "
+#~ "would.\n"
+#~ "\n"
+#~ "Do all of my segments get pulled in Firehose Mode? No, we selectively "
+#~ "pull a subset of your segments.\n"
+#~ "\n"
+#~ "What's a good USB-C adapter? Any fast phone or laptop charger should be "
+#~ "fine.\n"
+#~ "\n"
+#~ "Does it matter which software I run? Yes, only upstream openpilot (and "
+#~ "particular forks) are able to be used for training."
+#~ msgstr ""
+#~ "为达到最佳效果，请将设备带到室内，并每周连接优质 USB‑C 充电器与 Wi‑Fi。\n"
+#~ "\n"
+#~ "若连接热点或不限流量卡，行车中也可使用 Firehose 模式。\n"
+#~ "\n"
+#~ "\n"
+#~ "常见问题\n"
+#~ "\n"
+#~ "我怎么开、在哪开有区别吗？没有，平常怎么开就怎么开。\n"
+#~ "\n"
+#~ "Firehose 模式会拉取我所有片段吗？不会，我们会选择性拉取部分片段。\n"
+#~ "\n"
+#~ "什么是好的 USB‑C 充电器？任何快速的手机或笔电充电器都可以。\n"
+#~ "\n"
+#~ "我跑什么软件有区别吗？有，只有上游 openpilot（及特定分支）可用于训练。"
 
 #, python-format
-msgid ""
-"Maximize your training data uploads to improve openpilot's driving models."
-msgstr "最大化上传训练数据，以改进 openpilot 的驾驶模型。"
+#~ msgid "Go to https://connect.comma.ai on your phone"
+#~ msgstr "在手机上前往 https://connect.comma.ai"
 
 #, python-format
-msgid "Open"
-msgstr "打开"
+#~ msgid ""
+#~ "Maximize your training data uploads to improve openpilot's driving models."
+#~ msgstr "最大化上传训练数据，以改进 openpilot 的驾驶模型。"
 
 #, python-format
-msgid "PRIME FEATURES:"
-msgstr "PRIME 功能："
+#~ msgid "Open"
+#~ msgstr "打开"
 
 #, python-format
-msgid "Pair your device to your comma account"
-msgstr "将设备配对到您的 comma 账号"
+#~ msgid "PRIME FEATURES:"
+#~ msgstr "PRIME 功能："
 
 #, python-format
-msgid "Remote access"
-msgstr "远程访问"
+#~ msgid "Pair your device to your comma account"
+#~ msgstr "将设备配对到您的 comma 账号"
 
 #, python-format
-msgid "Remote snapshots"
-msgstr "远程快照"
-
-msgid "Review the rules, features, and limitations of openpilot"
-msgstr "查看 openpilot 的规则、功能与限制"
-
-msgid ""
-"Standard is recommended. In aggressive mode, openpilot will follow lead cars "
-"closer and be more aggressive with the gas and brake. In relaxed mode "
-"openpilot will stay further away from lead cars. On supported cars, you can "
-"cycle through these personalities with your steering wheel distance button."
-msgstr ""
-"建议使用标准模式。激进模式下，openpilot 会更贴近前车，油门与刹车更为激进；从"
-"容模式下，会与前车保持更远距离。在支持的车型上，可用方向盘距离按钮切换这些风"
-"格。"
+#~ msgid "Remote access"
+#~ msgstr "远程访问"
 
 #, python-format
-msgid "Upgrade Now"
-msgstr "立即升级"
+#~ msgid "Remote snapshots"
+#~ msgstr "远程快照"
 
-msgid ""
-"Use the openpilot system for adaptive cruise control and lane keep driver "
-"assistance. Your attention is required at all times to use this feature."
-msgstr ""
-"使用 openpilot 进行自适应巡航与车道保持辅助。使用此功能时，您必须始终保持专"
-"注。"
+#~ msgid "Review the rules, features, and limitations of openpilot"
+#~ msgstr "查看 openpilot 的规则、功能与限制"
 
-#, python-format
-msgid "Welcome to openpilot"
-msgstr "欢迎使用 openpilot"
-
-msgid "When enabled, pressing the accelerator pedal will disengage openpilot."
-msgstr "启用后，踩下加速踏板将会脱离 openpilot。"
-
-#, python-format
-msgid "You must accept the Terms and Conditions in order to use openpilot."
-msgstr "您必须接受条款与条件才能使用 openpilot。"
+#~ msgid ""
+#~ "Standard is recommended. In aggressive mode, openpilot will follow lead "
+#~ "cars closer and be more aggressive with the gas and brake. In relaxed "
+#~ "mode openpilot will stay further away from lead cars. On supported cars, "
+#~ "you can cycle through these personalities with your steering wheel "
+#~ "distance button."
+#~ msgstr ""
+#~ "建议使用标准模式。激进模式下，openpilot 会更贴近前车，油门与刹车更为激进；"
+#~ "从容模式下，会与前车保持更远距离。在支持的车型上，可用方向盘距离按钮切换这"
+#~ "些风格。"
 
 #, python-format
-msgid ""
-"You must accept the Terms and Conditions to use openpilot. Read the latest "
-"terms at https://comma.ai/terms before continuing."
-msgstr ""
-"您必须接受条款与条件才能使用 openpilot。继续前请阅读 https://comma.ai/terms "
-"上的最新条款。"
+#~ msgid "Upgrade Now"
+#~ msgstr "立即升级"
+
+#~ msgid ""
+#~ "Use the openpilot system for adaptive cruise control and lane keep driver "
+#~ "assistance. Your attention is required at all times to use this feature."
+#~ msgstr ""
+#~ "使用 openpilot 进行自适应巡航与车道保持辅助。使用此功能时，您必须始终保持"
+#~ "专注。"
 
 #, python-format
-msgid "comma prime"
-msgstr "comma prime"
+#~ msgid "Welcome to openpilot"
+#~ msgstr "欢迎使用 openpilot"
+
+#~ msgid ""
+#~ "When enabled, pressing the accelerator pedal will disengage openpilot."
+#~ msgstr "启用后，踩下加速踏板将会脱离 openpilot。"
 
 #, python-format
-msgid "openpilot Longitudinal Control (Alpha)"
-msgstr "openpilot 纵向控制（Alpha）"
+#~ msgid "You must accept the Terms and Conditions in order to use openpilot."
+#~ msgstr "您必须接受条款与条件才能使用 openpilot。"
 
 #, python-format
-msgid "openpilot Unavailable"
-msgstr "openpilot 无法使用"
+#~ msgid ""
+#~ "You must accept the Terms and Conditions to use openpilot. Read the "
+#~ "latest terms at https://comma.ai/terms before continuing."
+#~ msgstr ""
+#~ "您必须接受条款与条件才能使用 openpilot。继续前请阅读 https://comma.ai/"
+#~ "terms 上的最新条款。"
 
 #, python-format
-msgid ""
-"openpilot defaults to driving in chill mode. Experimental mode enables alpha-"
-"level features that aren't ready for chill mode. Experimental features are "
-"listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving "
-"model control the gas and brakes. openpilot will drive as it thinks a human "
-"would, including stopping for red lights and stop signs. Since the driving "
-"model decides the speed to drive, the set speed will only act as an upper "
-"bound. This is an alpha quality feature; mistakes should be expected."
-"<br><h4>New Driving Visualization</h4><br>The driving visualization will "
-"transition to the road-facing wide-angle camera at low speeds to better show "
-"some turns. The Experimental mode logo will also be shown in the top right "
-"corner."
-msgstr ""
-"openpilot 默认以安稳模式行驶。实验模式会启用尚未准备好用于安稳模式的 Alpha 级"
-"功能。实验功能如下：<br><h4>端到端纵向控制</h4><br>让驾驶模型控制油门与刹车。"
-"openpilot 会像人类一样驾驶，包括在红灯与停牌前停车。由于驾驶模型决定行驶速"
-"度，设定速度仅作为上限。这是 Alpha 质量功能；预期会有错误。<br><h4>全新驾驶可"
-"视化</h4><br>在低速时，驾驶可视化将切换至面向道路的广角摄像头以更好显示部分转"
-"弯。右上角也会显示实验模式图标。"
+#~ msgid "comma prime"
+#~ msgstr "comma prime"
 
 #, python-format
-msgid ""
-"openpilot is continuously calibrating, resetting is rarely required. "
-"Resetting calibration will restart openpilot if the car is powered on."
-msgstr ""
-"openpilot 持续进行校准，通常无需重置。若车辆通电，重置校准将会重启 "
-"openpilot。"
-
-msgid ""
-"openpilot learns to drive by watching humans, like you, drive.\n"
-"\n"
-"Firehose Mode allows you to maximize your training data uploads to improve "
-"openpilot's driving models. More data means bigger models, which means "
-"better Experimental Mode."
-msgstr ""
-"openpilot 通过观察人类（例如您）的驾驶来学习。\n"
-"\n"
-"Firehose 模式可让您最大化上传训练数据，以改进 openpilot 的驾驶模型。更多数据"
-"意味着更大的模型，也意味着更好的实验模式。"
+#~ msgid "openpilot Longitudinal Control (Alpha)"
+#~ msgstr "openpilot 纵向控制（Alpha）"
 
 #, python-format
-msgid "openpilot longitudinal control may come in a future update."
-msgstr "openpilot 纵向控制可能会在未来更新中提供。"
-
-msgid ""
-"openpilot requires the device to be mounted within 4° left or right and "
-"within 5° up or 9° down."
-msgstr "openpilot 要求设备安装在左右 4°、上 5° 或下 9° 以内。"
+#~ msgid "openpilot Unavailable"
+#~ msgstr "openpilot 无法使用"
 
 #, python-format
-msgid "✓ SUBSCRIBED"
-msgstr "✓ 已订阅"
+#~ msgid ""
+#~ "openpilot defaults to driving in chill mode. Experimental mode enables "
+#~ "alpha-level features that aren't ready for chill mode. Experimental "
+#~ "features are listed below:<br><h4>End-to-End Longitudinal Control</"
+#~ "h4><br>Let the driving model control the gas and brakes. openpilot will "
+#~ "drive as it thinks a human would, including stopping for red lights and "
+#~ "stop signs. Since the driving model decides the speed to drive, the set "
+#~ "speed will only act as an upper bound. This is an alpha quality feature; "
+#~ "mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The "
+#~ "driving visualization will transition to the road-facing wide-angle "
+#~ "camera at low speeds to better show some turns. The Experimental mode "
+#~ "logo will also be shown in the top right corner."
+#~ msgstr ""
+#~ "openpilot 默认以安稳模式行驶。实验模式会启用尚未准备好用于安稳模式的 "
+#~ "Alpha 级功能。实验功能如下：<br><h4>端到端纵向控制</h4><br>让驾驶模型控制"
+#~ "油门与刹车。openpilot 会像人类一样驾驶，包括在红灯与停牌前停车。由于驾驶模"
+#~ "型决定行驶速度，设定速度仅作为上限。这是 Alpha 质量功能；预期会有错误。"
+#~ "<br><h4>全新驾驶可视化</h4><br>在低速时，驾驶可视化将切换至面向道路的广角"
+#~ "摄像头以更好显示部分转弯。右上角也会显示实验模式图标。"
 
 #, python-format
-msgid "🔥 Firehose Mode 🔥"
-msgstr "🔥 Firehose 模式 🔥"
+#~ msgid ""
+#~ "openpilot is continuously calibrating, resetting is rarely required. "
+#~ "Resetting calibration will restart openpilot if the car is powered on."
+#~ msgstr ""
+#~ "openpilot 持续进行校准，通常无需重置。若车辆通电，重置校准将会重启 "
+#~ "openpilot。"
+
+#~ msgid ""
+#~ "openpilot learns to drive by watching humans, like you, drive.\n"
+#~ "\n"
+#~ "Firehose Mode allows you to maximize your training data uploads to "
+#~ "improve openpilot's driving models. More data means bigger models, which "
+#~ "means better Experimental Mode."
+#~ msgstr ""
+#~ "openpilot 通过观察人类（例如您）的驾驶来学习。\n"
+#~ "\n"
+#~ "Firehose 模式可让您最大化上传训练数据，以改进 openpilot 的驾驶模型。更多数"
+#~ "据意味着更大的模型，也意味着更好的实验模式。"
+
+#, python-format
+#~ msgid "openpilot longitudinal control may come in a future update."
+#~ msgstr "openpilot 纵向控制可能会在未来更新中提供。"
+
+#~ msgid ""
+#~ "openpilot requires the device to be mounted within 4° left or right and "
+#~ "within 5° up or 9° down."
+#~ msgstr "openpilot 要求设备安装在左右 4°、上 5° 或下 9° 以内。"
+
+#, python-format
+#~ msgid "✓ SUBSCRIBED"
+#~ msgstr "✓ 已订阅"
+
+#, python-format
+#~ msgid "🔥 Firehose Mode 🔥"
+#~ msgstr "🔥 Firehose 模式 🔥"
