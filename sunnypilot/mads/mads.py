@@ -174,6 +174,11 @@ class ModularAssistiveDrivingSystem:
 
     selfdrive_enable_events = self.events.has(EventName.pcmEnable) or self.events.has(EventName.buttonEnable)
     set_speed_btns_enable = any(be.type in SET_SPEED_BUTTONS for be in CS.buttonEvents)
+    lateral_available = getattr(CS, 'lateralAvailable', CS.cruiseState.available)
+    lateral_available_prev = getattr(self.selfdrive.CS_prev, 'lateralAvailable', self.selfdrive.CS_prev.cruiseState.available)
+    # Toyota AOL should be toggleable from LKAS button before first full engagement.
+    # Some Toyota states can report lateral unavailable until after a full engage cycle.
+    lkas_toggle_allowed = lateral_available or self.allow_always or self.CP.brand == "toyota"
 
     # wrongCarMode alert only or actively block control
     self.get_wrong_car_mode(selfdrive_enable_events or set_speed_btns_enable)
@@ -187,8 +192,6 @@ class ModularAssistiveDrivingSystem:
         self.events.remove(EventName.buttonEnable)
     else:
       if self.main_enabled_toggle:
-        lateral_available = getattr(CS, 'lateralAvailable', CS.cruiseState.available)
-        lateral_available_prev = getattr(self.selfdrive.CS_prev, 'lateralAvailable', self.selfdrive.CS_prev.cruiseState.available)
         if lateral_available and not lateral_available_prev:
           self.events_sp.add(EventNameSP.lkasEnable)
 
@@ -196,8 +199,7 @@ class ModularAssistiveDrivingSystem:
       if be.type == ButtonType.cancel:
         if not self.selfdrive.enabled and self.selfdrive.enabled_prev:
           self.events_sp.add(EventNameSP.manualLongitudinalRequired)
-      lateral_available = getattr(CS, 'lateralAvailable', CS.cruiseState.available)
-      if be.type == ButtonType.lkas and be.pressed and (lateral_available or self.allow_always):
+      if be.type == ButtonType.lkas and be.pressed and lkas_toggle_allowed:
         if self.enabled:
           if self.selfdrive.enabled:
             self.events_sp.add(EventNameSP.manualSteeringRequired)
@@ -206,8 +208,6 @@ class ModularAssistiveDrivingSystem:
         else:
           self.events_sp.add(EventNameSP.lkasEnable)
 
-    lateral_available = getattr(CS, 'lateralAvailable', CS.cruiseState.available)
-    lateral_available_prev = getattr(self.selfdrive.CS_prev, 'lateralAvailable', self.selfdrive.CS_prev.cruiseState.available)
     if not lateral_available and not self.no_main_cruise:
       self.events.remove(EventName.buttonEnable)
       if lateral_available_prev:

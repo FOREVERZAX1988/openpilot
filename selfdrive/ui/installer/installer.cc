@@ -59,6 +59,9 @@ void branchMigration() {
     if (BRANCH_STR == "IQ_TICI") {
       migrated_branch = "IQ_TICI";
     }
+    if (BRANCH_STR == "IQ_TICI_CHS") {
+      migrated_branch = "IQ_TICI_CHS";
+    }
     if (std::find(tici_prebuilt_branches.begin(), tici_prebuilt_branches.end(), BRANCH_STR) != tici_prebuilt_branches.end()) {
       migrated_branch = "release-tici";
     } else if (BRANCH_STR == "master") {
