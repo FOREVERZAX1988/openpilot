@@ -685,7 +685,7 @@ msgstr "转向灯关闭后，横向控制恢复前的延迟时间。"
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:143
 #: selfdrive/ui/layouts/settings/settings.py:61
 msgid "Developer"
-msgstr "开发者"
+msgstr "开发"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/visuals.py:116
 msgid "Developer UI"
@@ -895,7 +895,7 @@ msgstr "行驶记录"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:58
 msgid "Driving Model"
-msgstr "驾驶模型"
+msgstr "模型"
 
 #: selfdrive/selfdrived/events.py:184 selfdrive/selfdrived/events.py:710
 #: selfdrive/selfdrived/events.py:711
@@ -1174,7 +1174,7 @@ msgstr "作动过度"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/device.py:195
 msgid "Exit Always Offroad"
-msgstr "退出始终越野模式"
+msgstr "退出始终离线设置模式"
 
 #: selfdrive/ui/layouts/settings/toggles.py:56
 msgid "Experimental Mode"
@@ -1577,7 +1577,7 @@ msgstr "地图数据库版本"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/device.py:54
 msgid "Max Time Offroad"
-msgstr "最大越野模式时长"
+msgstr "最大离线设置模式时长"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/trips.py:111
 #: selfdrive/ui/widgets/trips.py:110
@@ -1600,7 +1600,7 @@ msgstr "当前车速下模型预测结果不确定"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:134
 msgid "Models"
-msgstr "模型设置"
+msgstr "驾驶模型"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/steering.py:48
 msgid "Modular Assistive Driving System (MADS)"
@@ -1743,7 +1743,7 @@ msgstr "在线"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:139
 msgid "OSM"
-msgstr "开源地图"
+msgstr "地图"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py:22
 #: selfdrive/ui/hoofpilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:40
@@ -1763,15 +1763,15 @@ msgstr "仅离线"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/device.py:74
 msgid "Offroad"
-msgstr "越野模式"
+msgstr "离线设置模式"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/device.py:141
 msgid "Offroad: Device will be in Always Offroad mode after boot/wake-up."
-msgstr "越野模式：设备启动/唤醒后将进入始终越野模式。"
+msgstr "离线设置模式：设备启动/唤醒后将进入始终离线设置模式。"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:245
 msgid "Only available when vehicle is off, or always offroad mode is on"
-msgstr "仅在车辆熄火或始终越野模式开启时可用"
+msgstr "仅在车辆熄火或始终离线设置模式开启时可用"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/display.py:35
 msgid "Onroad Brightness"
@@ -1932,7 +1932,7 @@ msgstr "请连接Wi-Fi以进行更新"
 msgid ""
 "Please enable \"Always Offroad\" mode or turn off the vehicle to adjust "
 "these toggles."
-msgstr "请启用“始终越野模式”或关闭车辆电源，方可调整这些开关。"
+msgstr "请启用“始终离线设置模式”或关闭车辆电源，方可调整这些开关。"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/sunnylink.py:220
 msgid "Please reboot and try again."
@@ -2240,7 +2240,7 @@ msgstr "SSH 密钥"
 #: selfdrive/ui/layouts/sidebar.py:73 selfdrive/ui/layouts/sidebar.py:134
 #: selfdrive/ui/layouts/sidebar.py:136 selfdrive/ui/layouts/sidebar.py:138
 msgid "STABLE"
-msgstr "稳定版"
+msgstr "KONIK服务器"
 
 #: selfdrive/ui/hoofpilot/layouts/sidebar.py:55
 #: selfdrive/ui/hoofpilot/layouts/sidebar.py:59
@@ -2540,7 +2540,7 @@ msgstr "安全时向右打方向开始变道"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:135
 msgid "Steering"
-msgstr "转向设置"
+msgstr "转向"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/visuals.py:38
 msgid "Steering Arc"
@@ -2714,7 +2714,7 @@ msgstr "此设置将立即生效。"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/platform_selector.py:96
 msgid "This setting will take effect once the device enters offroad state."
-msgstr "此设置将在设备进入越野模式后生效。"
+msgstr "此设置将在设备进入离线设置模式后生效。"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/osm.py:95
 msgid ""
@@ -2789,7 +2789,7 @@ msgstr "训练指南"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:141
 msgid "Trips"
-msgstr "行程记录"
+msgstr "行程"
 
 #: selfdrive/selfdrived/events.py:441
 msgid "Turn Exceeds Steering Limit"
@@ -2891,7 +2891,7 @@ msgstr "查看"
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:142
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/platform_selector.py:60
 msgid "Vehicle"
-msgstr "车辆设置"
+msgstr "车辆"
 
 #: selfdrive/selfdrived/events.py:838 selfdrive/selfdrived/events.py:839
 msgid "Vehicle Sensors Calibrating"
@@ -2915,7 +2915,7 @@ msgstr "视觉模型"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/settings.py:137
 msgid "Visuals"
-msgstr "视觉显示"
+msgstr "视觉"
 
 #: selfdrive/selfdrived/events.py:78
 msgid "WARNING: This branch is not tested"
