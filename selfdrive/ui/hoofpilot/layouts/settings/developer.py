@@ -105,8 +105,7 @@ class DeveloperLayoutSP(DeveloperLayout):
           except Exception as e:
             # 捕获异常，避免删除失败导致程序崩溃
             print(f"Failed to delete {file_path}: {e}")
-        success_dialog = HtmlModalSP(text=tr("All driving data has been deleted successfully!"), 
-                                     title=tr("Delete Complete"))
+        success_dialog = HtmlModalSP(text=tr("All driving data has been deleted successfully!"))
         gui_app.set_modal_overlay(success_dialog)
   
   # 新增：点击删除行车数据按钮的处理逻辑
@@ -123,8 +122,7 @@ class DeveloperLayoutSP(DeveloperLayout):
       gui_app.set_modal_overlay(dialog, callback=self._on_delete_realdata_confirm)
     else:
       # 目录不存在时显示提示
-      dialog = HtmlModalSP(text=tr("Driving data directory does not exist or is empty."), 
-                           title=tr("Delete Driving Data"))
+      dialog = HtmlModalSP(text=tr("Driving data directory does not exist or is empty."))
       gui_app.set_modal_overlay(dialog)
 
   def _update_state(self):
