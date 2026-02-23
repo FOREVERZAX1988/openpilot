@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-23 07:42+0800\n"
+"POT-Creation-Date: 2026-02-23 08:12+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -846,7 +846,6 @@ msgid "Quickboot Mode"
 msgstr ""
 
 #: selfdrive/ui/hoofpilot/layouts/settings/developer.py:55
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:121
 msgid "Delete Driving Data"
 msgstr ""
 
@@ -885,19 +884,19 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:114
-msgid "Confirm Delete Driving Data"
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:108
+msgid "All driving data has been deleted successfully!"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:115
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:117
 msgid "Are you sure you want to delete ALL driving data?"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:118
 msgid "Delete"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:119
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:73
 #: selfdrive/ui/hoofpilot/layouts/settings/stable.py:197
 #: selfdrive/ui/layouts/onboarding.py:347
@@ -906,18 +905,18 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:120
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:125
 msgid "Driving data directory does not exist or is empty."
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:136
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:140
 msgid ""
 "When toggled on, this creates a prebuilt file to allow accelerated boot "
 "times. When toggled off, it removes the prebuilt file so compilation of "
 "locally edited cpp files can be made."
 msgstr ""
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:139
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:143
 msgid ""
 "Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' "
 "in the Software panel first."

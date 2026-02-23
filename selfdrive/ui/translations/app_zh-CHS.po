@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-23 07:42+0800\n"
-"PO-Revision-Date: 2026-02-23 07:46+0800\n"
+"POT-Creation-Date: 2026-02-23 08:12+0800\n"
+"PO-Revision-Date: 2026-02-23 08:16+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -198,6 +198,10 @@ msgstr "同意"
 msgid "All"
 msgstr "全部"
 
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:108
+msgid "All driving data has been deleted successfully!"
+msgstr "所有行驶数据已成功删除!"
+
 #: selfdrive/ui/layouts/onboarding.py:236
 msgid "All provinces"
 msgstr "全部省份"
@@ -251,7 +255,7 @@ msgstr ""
 msgid "Are you sure you want to backup your current sunnypilot settings?"
 msgstr "您确定要备份当前的sunnypilot设置吗？"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:115
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:117
 msgid "Are you sure you want to delete ALL driving data?"
 msgstr "确认删除所有行驶数据?"
 
@@ -432,7 +436,7 @@ msgstr "摄像头故障"
 msgid "Camera Malfunction: Reboot Your Device"
 msgstr "摄像头故障：请重启设备"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:119
 #: selfdrive/ui/hoofpilot/layouts/settings/models.py:73
 #: selfdrive/ui/hoofpilot/layouts/settings/stable.py:197
 #: selfdrive/ui/layouts/onboarding.py:347
@@ -549,10 +553,6 @@ msgstr "进程间通信异常"
 #: selfdrive/ui/hoofpilot/layouts/settings/vehicle/platform_selector.py:98
 msgid "Confirm"
 msgstr "确认"
-
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:114
-msgid "Confirm Delete Driving Data"
-msgstr "确认删除行驶数据"
 
 #: selfdrive/selfdrived/events.py:882 selfdrive/selfdrived/events.py:889
 msgid "Confirm Lane Change"
@@ -692,12 +692,11 @@ msgstr "默认：设备将正常启动/唤醒，并随时可启用功能。"
 msgid "Delay before lateral control resumes after the turn signal ends."
 msgstr "转向灯关闭后，横向控制恢复前的延迟时间。"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:116
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:118
 msgid "Delete"
 msgstr "删除"
 
 #: selfdrive/ui/hoofpilot/layouts/settings/developer.py:55
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:121
 msgid "Delete Driving Data"
 msgstr "删除行驶数据"
 
@@ -929,7 +928,7 @@ msgstr "驾驶模型响应延迟"
 msgid "Driving Personality"
 msgstr "驾驶风格"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:120
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:125
 msgid "Driving data directory does not exist or is empty."
 msgstr "行驶数据目录不存在或者已经清空."
 
@@ -2033,7 +2032,7 @@ msgstr "二维码错误"
 msgid "Quickboot Mode"
 msgstr "快速启动模式"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:139
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:143
 msgid ""
 "Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' "
 "in the Software panel first."
@@ -3012,7 +3011,7 @@ msgstr "启用后，行驶界面上将不显示车速表。"
 msgid "When enabled, visual turn indicators are drawn on the HUD."
 msgstr "启用后，抬头显示（HUD）上将绘制转向视觉指示器。"
 
-#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:136
+#: selfdrive/ui/hoofpilot/layouts/settings/developer.py:140
 msgid ""
 "When toggled on, this creates a prebuilt file to allow accelerated boot "
 "times. When toggled off, it removes the prebuilt file so compilation of "
@@ -3543,6 +3542,9 @@ msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
 
 #~ msgid "Confirm Delete"
 #~ msgstr "确认删除"
+
+#~ msgid "Confirm Delete Driving Data"
+#~ msgstr "确认删除行驶数据"
 
 #, python-format
 #~ msgid "Decline, uninstall openpilot"
