@@ -1,0 +1,1 @@
+#define SUNNYPILOT_VERSION "IQ.Pilot 1.0a"
