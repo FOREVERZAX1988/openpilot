@@ -15,13 +15,16 @@ UI_DIR = files("openpilot.selfdrive.ui")
 TRANSLATIONS_DIR = UI_DIR.joinpath("translations")
 LANGUAGES_FILE = TRANSLATIONS_DIR.joinpath("languages.json")
 
+'''修改1（共2）：将中文字体从UNIFONT中独立出来
 UNIFONT_LANGUAGES = [
   "th",
   "zh-CHT",
   "zh-CHS",
   "ko",
   "ja",
-]
+]'''
+UNIFONT_LANGUAGES = ["ar","th","ja","ko"]
+CHINA_LANGUAGES = ["zh-CHT","zh-CHS"]
 
 
 class Multilang:
@@ -36,6 +39,10 @@ class Multilang:
   @property
   def language(self) -> str:
     return self._language
+#修改2：增加中文字体
+  def requires_china(self) -> bool:
+    """Certain languages require china to render their glyphs."""
+    return self._language in CHINA_LANGUAGES
 
   def requires_unifont(self) -> bool:
     """Certain languages require unifont to render their glyphs."""
