@@ -3,6 +3,9 @@
 #include <cassert>
 #include <cmath>
 #include <string>
+// 新增头文件：用于文件操作
+#include <filesystem>
+#include <QDir>
 
 #include <QDebug>
 #include <QLabel>
@@ -18,6 +21,38 @@
 
 void SoftwarePanel::checkForUpdates() {
   std::system("pkill -SIGUSR1 -f system.updated.updated");
+}
+
+// 新增：清空行驶数据的核心函数
+void SoftwarePanel::clearDrivingData() {
+  // 定义要清空的目录路径
+  const QString dataPath = "/data/media/0/realdata";
+  QDir dir(dataPath);
+
+  // 检查目录是否存在
+  if (!dir.exists()) {
+    qWarning() << "行驶数据目录不存在：" << dataPath;
+    return;
+  }
+
+  // 遍历并删除目录下所有文件和子目录
+  QStringList filters;
+  filters << "*"; // 匹配所有文件
+  QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+
+  for (const QFileInfo& fileInfo : fileList) {
+    QFile file(fileInfo.absoluteFilePath());
+    if (fileInfo.isDir()) {
+      // 删除子目录（递归删除）
+      QDir subDir(fileInfo.absoluteFilePath());
+      subDir.removeRecursively();
+    } else {
+      // 删除文件
+      file.remove();
+    }
+  }
+
+  qInfo() << "已清空行驶数据目录：" << dataPath;
 }
 
 SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
@@ -71,6 +106,24 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
     }
   });
   addItem(targetBranchBtn);
+
+  // ======================== 新增：行驶数据删除按钮 ========================
+  auto clearDataBtn = new ButtonControl(tr("行驶数据删除"), tr("删除"));
+  connect(clearDataBtn, &ButtonControl::clicked, [&]() {
+    // 弹出确认对话框
+    bool confirmDelete = ConfirmationDialog::confirm(
+      tr("是否删除所有行驶数据？"),  // 提示文本
+      tr("删除"),                  // 确认按钮文本
+      this                         // 父窗口
+    );
+    if (confirmDelete) {
+      // 确认删除：执行清空逻辑
+      clearDrivingData();
+    }
+    // 取消删除：不执行任何操作，自动退出
+  });
+  addItem(clearDataBtn);
+  // =======================================================================
 
   // uninstall button
   auto uninstallBtn = new ButtonControl(tr("Uninstall %1").arg(getBrand()), tr("UNINSTALL"));

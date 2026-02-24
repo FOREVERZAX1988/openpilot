@@ -96,6 +96,9 @@ class SoftwarePanel : public ListWidget {
   Q_OBJECT
 public:
   explicit SoftwarePanel(QWidget* parent = nullptr);
+  // ======================== 新增这一行 ========================
+  void clearDrivingData();  // 声明清空行驶数据的成员函数
+  // ===========================================================
 
 protected:
   void showEvent(QShowEvent *event) override;
