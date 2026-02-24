@@ -135,7 +135,8 @@ class BuildMetadata:
 
   @property
   def channel_type(self) -> str:
-    if self.channel.endswith("-tici"):
+    # ========== 关键修改：不区分大小写匹配 -tici/-TICI 结尾 ==========
+    if self.channel.lower().endswith("-tici"):
       return "tici"
     elif self.development_channel:
       return "development"

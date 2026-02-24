@@ -37,7 +37,10 @@ class PrimeState:
   def __init__(self):
     self._params = Params()
     self._lock = threading.Lock()
-    self.prime_type: PrimeType = self._load_initial_state()
+    # ========== 关键修改1：强制初始化为已注册的Prime状态（MAGENTA） ==========
+    self.prime_type: PrimeType = PrimeType.MAGENTA  # 直接设为有效Prime类型，跳过初始UNKNOWN/UNPAIRED
+    # 强制写入参数，覆盖原有未注册状态
+    self._params.put("PrimeType", int(self.prime_type))
 
     self._running = False
     self._thread = None
@@ -53,8 +56,13 @@ class PrimeState:
     return PrimeType.UNKNOWN
 
   def _fetch_prime_status(self) -> None:
+    # ========== 关键修改2：完全跳过服务器状态校验，始终保持强制的Prime状态 ==========
+    # 注释/删除原有校验逻辑，直接强制设置为已注册状态
+    # 如果你想保留校验但强制覆盖结果，也可以保留原有代码，最后加一行 self.set_type(PrimeType.MAGENTA)
     dongle_id = self._params.get("DongleId")
     if not dongle_id or dongle_id == UNREGISTERED_DONGLE_ID:
+      # 即使设备ID未注册，也强制设为已注册状态
+      self.set_type(PrimeType.MAGENTA)
       return
 
     try:
@@ -64,18 +72,25 @@ class PrimeState:
         data = response.json()
         is_paired = data.get("is_paired", False)
         prime_type = data.get("prime_type", 0)
-        self.set_type(PrimeType(prime_type) if is_paired else PrimeType.UNPAIRED)
+        # ========== 关键修改3：强制覆盖服务器返回的状态，始终设为已注册 ==========
+        self.set_type(PrimeType.MAGENTA)  # 忽略服务器返回的is_paired/prime_type，强制设为MAGENTA
       elif response.status_code == 401:
         get_token.cache_clear()
+        # 即使token失效，也强制设为已注册状态
+        self.set_type(PrimeType.MAGENTA)
     except Exception as e:
       cloudlog.error(f"Failed to fetch prime status: {e}")
+      # ========== 关键修改4：即使请求失败，也强制设为已注册状态 ==========
+      self.set_type(PrimeType.MAGENTA)
 
   def set_type(self, prime_type: PrimeType) -> None:
     with self._lock:
-      if prime_type != self.prime_type:
-        self.prime_type = prime_type
-        self._params.put("PrimeType", int(prime_type))
-        cloudlog.info(f"Prime type updated to {prime_type}")
+      # ========== 关键修改5：强制锁定为MAGENTA，忽略传入的其他值 ==========
+      force_prime_type = PrimeType.MAGENTA  # 可根据需要改为LITE(2)/BLUE(3)等
+      if force_prime_type != self.prime_type:
+        self.prime_type = force_prime_type
+        self._params.put("PrimeType", int(force_prime_type))
+        cloudlog.info(f"Prime type forced to {force_prime_type} (ignoring actual status)")
 
   def _worker_thread(self) -> None:
     while self._running:
@@ -100,11 +115,12 @@ class PrimeState:
 
   def get_type(self) -> PrimeType:
     with self._lock:
-      return self.prime_type
+      return self.prime_type  # 始终返回强制的Prime类型
 
   def is_prime(self) -> bool:
     with self._lock:
-      return bool(self.prime_type > PrimeType.NONE)
+      # ========== 关键修改6：强制返回True，判定为Prime设备 ==========
+      return True  # 忽略实际prime_type，直接返回True
 
   def __del__(self):
     self.stop()

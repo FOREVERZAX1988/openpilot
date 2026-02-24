@@ -16,18 +16,24 @@ SoftwarePanelSP::SoftwarePanelSP(QWidget *parent) : SoftwarePanel(parent) {
       QStringList allBranches = QString::fromStdString(params.get("UpdaterAvailableBranches")).split(",");
       QStringList branches;
       for (const QString &b : allBranches) {
-        if (b.endsWith("-tici")) {
+        if (b.endsWith("-tici", Qt::CaseInsensitive)) {
           branches.append(b);
         }
       }
 
-      for (QString b : {current.c_str(), "master-tici", "staging-tici", "release-tici"}) {
+      QStringList priorityBranches = {
+        QString::fromStdString(current),
+        "master-tici", "staging-tici", "release-tici",
+        "master-TICI", "staging-TICI", "release-TICI",
+        "SP_TICI", "IQ_TICI"
+      };
+      for (QString b : priorityBranches) {
         auto i = branches.indexOf(b);
         if (i >= 0) {
           branches.removeAt(i);
           branches.insert(0, b);
         }
-      }
+      } 
 
       QString cur = QString::fromStdString(params.get("UpdaterTargetBranch"));
       QString selection = MultiOptionDialog::getSelection(tr("Select a branch"), branches, cur, this);
