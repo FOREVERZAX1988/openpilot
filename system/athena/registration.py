@@ -98,7 +98,9 @@ def register(show_spinner=False) -> str | None:
 
   if dongle_id:
     params.put("DongleId", dongle_id)
-    set_offroad_alert("Offroad_UnregisteredHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
+    # ========== 关键修改：强制关闭未注册警告 ==========
+    # 把原条件改为 False，无论设备是否注册，都不显示警告
+    set_offroad_alert("Offroad_UnregisteredHardware", False)
   return dongle_id
 
 
