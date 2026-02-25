@@ -3,12 +3,14 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
+#: selfdrive/selfdrived/events.py:547 selfdrive/selfdrived/events.py:548
+#: selfdrive/selfdrived/events.py:555 selfdrive/selfdrived/events.py:556
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-14 08:23+0800\n"
+"POT-Creation-Date: 2026-02-26 00:15+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,23 +20,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: selfdrive/selfdrived/events.py:78
+#: selfdrive/selfdrived/events.py:77
 msgid "WARNING: This branch is not tested"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:92
+#: selfdrive/selfdrived/events.py:91
 msgid "Recalibrating"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:92 selfdrive/selfdrived/events.py:911
+#: selfdrive/selfdrived/events.py:91 selfdrive/selfdrived/events.py:910
 msgid "Calibrating"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:103
+#: selfdrive/selfdrived/events.py:102
 msgid "Recording Audio Feedback"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:104
+#: selfdrive/selfdrived/events.py:103
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:43
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:44
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:45
@@ -42,526 +44,530 @@ msgstr ""
 msgid "s"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:112 selfdrive/selfdrived/events.py:588
+#: selfdrive/selfdrived/events.py:111 selfdrive/selfdrived/events.py:587
 msgid "Out of Storage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:119 selfdrive/selfdrived/events.py:720
+#: selfdrive/selfdrived/events.py:118 selfdrive/selfdrived/events.py:719
 msgid "Posenet Speed Invalid"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:125 selfdrive/selfdrived/events.py:692
+#: selfdrive/selfdrived/events.py:124 selfdrive/selfdrived/events.py:691
 msgid "Process Not Running"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:131 selfdrive/selfdrived/events.py:676
+#: selfdrive/selfdrived/events.py:130 selfdrive/selfdrived/events.py:675
 msgid "Communication Issue Between Processes"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:137 selfdrive/selfdrived/events.py:453
+#: selfdrive/selfdrived/events.py:136 selfdrive/selfdrived/events.py:452
 msgid "Camera Malfunction"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:145
+#: selfdrive/selfdrived/events.py:144
 msgid "Calibration Invalid"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:151
+#: selfdrive/selfdrived/events.py:150
 msgid "Steering misalignment detected"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:155
+#: selfdrive/selfdrived/events.py:154
 msgid "Steer ratio mismatch"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:159
+#: selfdrive/selfdrived/events.py:158
 msgid "Abnormal tire stiffness"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:162 selfdrive/selfdrived/events.py:486
+#: selfdrive/selfdrived/events.py:161 selfdrive/selfdrived/events.py:485
 msgid "paramsd Temporary Error"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:170 selfdrive/selfdrived/events.py:619
-#: selfdrive/selfdrived/events.py:620
+#: selfdrive/selfdrived/events.py:169 selfdrive/selfdrived/events.py:618
+#: selfdrive/selfdrived/events.py:619
 msgid "System Overheated"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:174
+#: selfdrive/selfdrived/events.py:173
 msgid "Low Memory"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:179
+#: selfdrive/selfdrived/events.py:178
 msgid "High CPU Usage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:183 selfdrive/selfdrived/events.py:709
-#: selfdrive/selfdrived/events.py:710
+#: selfdrive/selfdrived/events.py:182 selfdrive/selfdrived/events.py:708
+#: selfdrive/selfdrived/events.py:709
 msgid "Driving Model Lagging"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:190 selfdrive/selfdrived/events.py:230
+#: selfdrive/selfdrived/events.py:189 selfdrive/selfdrived/events.py:229
 msgid "Joystick Mode"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:195 selfdrive/selfdrived/events.py:196
+#: selfdrive/selfdrived/events.py:194 selfdrive/selfdrived/events.py:195
 msgid "Active"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:209
+#: selfdrive/selfdrived/events.py:208
 msgid "Toggle stock LKAS on or off to engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:211
+#: selfdrive/selfdrived/events.py:210
 msgid "Switch to Traffic-Aware Cruise Control to engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:213
+#: selfdrive/selfdrived/events.py:212
 msgid "Enable your car's LKAS to engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:215
+#: selfdrive/selfdrived/events.py:214
 msgid "Disable your car's stock LKAS to engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:216 selfdrive/selfdrived/events.py:273
+#: selfdrive/selfdrived/events.py:215 selfdrive/selfdrived/events.py:272
 msgid "Invalid LKAS setting"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:235
+#: selfdrive/selfdrived/events.py:234
 #: selfdrive/ui/layouts/settings/developer.py:68
 msgid "Longitudinal Maneuver Mode"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:236
+#: selfdrive/selfdrived/events.py:235
 msgid "Ensure road ahead is clear"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:240
+#: selfdrive/selfdrived/events.py:239
 msgid "System Initializing"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:244
+#: selfdrive/selfdrived/events.py:243
 msgid "Be ready to take over at any time"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:252 selfdrive/selfdrived/events.py:253
+#: selfdrive/selfdrived/events.py:251 selfdrive/selfdrived/events.py:252
 msgid "Dashcam mode"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:257
+#: selfdrive/selfdrived/events.py:256
 msgid "Dashcam mode for unsupported car"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:261 selfdrive/selfdrived/events.py:267
-#: selfdrive/selfdrived/events.py:284
+#: selfdrive/selfdrived/events.py:260 selfdrive/selfdrived/events.py:266
+#: selfdrive/selfdrived/events.py:283
 msgid "Dashcam Mode"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:262
+#: selfdrive/selfdrived/events.py:261
 msgid "Security Key Not Available"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:285
+#: selfdrive/selfdrived/events.py:284
 msgid "Car Unrecognized"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:291 selfdrive/selfdrived/events.py:300
-#: selfdrive/selfdrived/events.py:313
+#: selfdrive/selfdrived/events.py:290 selfdrive/selfdrived/events.py:299
+#: selfdrive/selfdrived/events.py:312
 msgid "BRAKE!"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:292
+#: selfdrive/selfdrived/events.py:291
 msgid "Emergency Braking: Risk of Collision"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:295
+#: selfdrive/selfdrived/events.py:294
 msgid "AEB: Risk of Collision"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:301 selfdrive/selfdrived/events.py:304
+#: selfdrive/selfdrived/events.py:300 selfdrive/selfdrived/events.py:303
 msgid "Stock AEB: Risk of Collision"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:314
+#: selfdrive/selfdrived/events.py:307
+msgid "Stock LKAS: Lane Departure Detected"
+msgstr ""
+
+#: selfdrive/selfdrived/events.py:313
 msgid "Risk of Collision"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:321
+#: selfdrive/selfdrived/events.py:320
 msgid "Lane Departure Detected"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:331 selfdrive/selfdrived/events.py:577
+#: selfdrive/selfdrived/events.py:330 selfdrive/selfdrived/events.py:576
 msgid "Steering Assist Temporarily Unavailable"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:339 selfdrive/selfdrived/events.py:347
-#: selfdrive/selfdrived/events.py:859 selfdrive/selfdrived/events.py:866
+#: selfdrive/selfdrived/events.py:338 selfdrive/selfdrived/events.py:346
+#: selfdrive/selfdrived/events.py:858 selfdrive/selfdrived/events.py:865
 msgid "Pay Attention"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:348 selfdrive/selfdrived/events.py:356
-#: selfdrive/selfdrived/events.py:867
+#: selfdrive/selfdrived/events.py:347 selfdrive/selfdrived/events.py:355
+#: selfdrive/selfdrived/events.py:866
 msgid "Driver Distracted"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:355 selfdrive/selfdrived/events.py:379
+#: selfdrive/selfdrived/events.py:354 selfdrive/selfdrived/events.py:378
 msgid "DISENGAGE IMMEDIATELY"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:363
+#: selfdrive/selfdrived/events.py:362
 msgid "Touch Steering Wheel: No Face Detected"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:371
+#: selfdrive/selfdrived/events.py:370
 msgid "Touch Steering Wheel"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:372 selfdrive/selfdrived/events.py:380
+#: selfdrive/selfdrived/events.py:371 selfdrive/selfdrived/events.py:379
 msgid "Driver Unresponsive"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:387
+#: selfdrive/selfdrived/events.py:386
 msgid "TAKE CONTROL"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:388
+#: selfdrive/selfdrived/events.py:387
 msgid "Resume Driving Manually"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:395
+#: selfdrive/selfdrived/events.py:394
 msgid "Press Resume to Exit Standstill"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:407
+#: selfdrive/selfdrived/events.py:406
 msgid "Steer Left to Start Lane Change Once Safe"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:415
+#: selfdrive/selfdrived/events.py:414
 msgid "Steer Right to Start Lane Change Once Safe"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:423
+#: selfdrive/selfdrived/events.py:422
 msgid "Car Detected in Blindspot"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:431
+#: selfdrive/selfdrived/events.py:430
 msgid "Changing Lanes"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:439
+#: selfdrive/selfdrived/events.py:438
 msgid "Take Control"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:440
+#: selfdrive/selfdrived/events.py:439
 msgid "Turn Exceeds Steering Limit"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:447
+#: selfdrive/selfdrived/events.py:446
 msgid "Fan Malfunction"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:447
+#: selfdrive/selfdrived/events.py:446
 msgid "Likely Hardware Issue"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:454
+#: selfdrive/selfdrived/events.py:453
 msgid "Camera Malfunction: Reboot Your Device"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:458 selfdrive/selfdrived/events.py:459
+#: selfdrive/selfdrived/events.py:457 selfdrive/selfdrived/events.py:458
 msgid "Camera Frame Rate Low"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:458
+#: selfdrive/selfdrived/events.py:457
 msgid "Reboot your Device"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:460
+#: selfdrive/selfdrived/events.py:459
 msgid "Camera Frame Rate Low: Reboot Your Device"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:466 selfdrive/selfdrived/events.py:467
+#: selfdrive/selfdrived/events.py:465 selfdrive/selfdrived/events.py:466
 msgid "locationd Temporary Error"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:471 selfdrive/selfdrived/events.py:472
-#: selfdrive/selfdrived/events.py:473
+#: selfdrive/selfdrived/events.py:470 selfdrive/selfdrived/events.py:471
+#: selfdrive/selfdrived/events.py:472
 msgid "locationd Permanent Error"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:490 selfdrive/selfdrived/events.py:491
-#: selfdrive/selfdrived/events.py:492
+#: selfdrive/selfdrived/events.py:489 selfdrive/selfdrived/events.py:490
+#: selfdrive/selfdrived/events.py:491
 msgid "paramsd Permanent Error"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:511
+#: selfdrive/selfdrived/events.py:510
 msgid "Cancel Pressed"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:516
+#: selfdrive/selfdrived/events.py:515
 msgid "Press Resume to Exit Brake Hold"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:524
+#: selfdrive/selfdrived/events.py:523
 #: sunnypilot/selfdrive/selfdrived/events.py:159
 msgid "Parking Brake Engaged"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:529
+#: selfdrive/selfdrived/events.py:528
 #: sunnypilot/selfdrive/selfdrived/events.py:176
 msgid "Pedal Pressed"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:535
+#: selfdrive/selfdrived/events.py:534
 msgid "Steering Pressed"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:540
+#: selfdrive/selfdrived/events.py:539
 msgid "Release Brake to Engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:568
+#: selfdrive/selfdrived/events.py:567
 msgid "Press Set to Engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:573
+#: selfdrive/selfdrived/events.py:572
 msgid "Adaptive Cruise Disabled"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:578
+#: selfdrive/selfdrived/events.py:577
 msgid "Steering Temporarily Unavailable"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:582 selfdrive/selfdrived/events.py:583
+#: selfdrive/selfdrived/events.py:581 selfdrive/selfdrived/events.py:582
 msgid "Vehicle Steering Time Limit"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:597 selfdrive/selfdrived/events.py:601
-#: selfdrive/selfdrived/events.py:602
+#: selfdrive/selfdrived/events.py:596 selfdrive/selfdrived/events.py:600
+#: selfdrive/selfdrived/events.py:601
 msgid "Sensor Data Invalid"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:598
+#: selfdrive/selfdrived/events.py:597
 msgid "Possible Hardware Issue"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:609
+#: selfdrive/selfdrived/events.py:608
 msgid "Distraction Level Too High"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:613 selfdrive/selfdrived/events.py:614
+#: selfdrive/selfdrived/events.py:612 selfdrive/selfdrived/events.py:613
 msgid "Excessive Actuation"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:624 selfdrive/selfdrived/events.py:625
+#: selfdrive/selfdrived/events.py:623 selfdrive/selfdrived/events.py:624
 #: sunnypilot/selfdrive/selfdrived/events.py:120
 msgid "Gear not D"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:635 selfdrive/selfdrived/events.py:636
+#: selfdrive/selfdrived/events.py:634 selfdrive/selfdrived/events.py:635
 msgid "Calibration Invalid: Remount Device & Recalibrate"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:641 selfdrive/selfdrived/events.py:910
+#: selfdrive/selfdrived/events.py:640 selfdrive/selfdrived/events.py:909
 msgid "Calibration Incomplete"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:642
+#: selfdrive/selfdrived/events.py:641
 msgid "Calibration in Progress"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:647
+#: selfdrive/selfdrived/events.py:646
 msgid "Device Remount Detected: Recalibrating"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:648
+#: selfdrive/selfdrived/events.py:647
 msgid "Remount Detected: Recalibrating"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:652 selfdrive/selfdrived/events.py:653
+#: selfdrive/selfdrived/events.py:651 selfdrive/selfdrived/events.py:652
 #: sunnypilot/selfdrive/selfdrived/events.py:141
 msgid "Door Open"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:657 selfdrive/selfdrived/events.py:658
+#: selfdrive/selfdrived/events.py:656 selfdrive/selfdrived/events.py:657
 #: sunnypilot/selfdrive/selfdrived/events.py:150
 msgid "Seatbelt Unlatched"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:662 selfdrive/selfdrived/events.py:663
+#: selfdrive/selfdrived/events.py:661 selfdrive/selfdrived/events.py:662
 msgid "Electronic Stability Control Disabled"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:667 selfdrive/selfdrived/events.py:668
+#: selfdrive/selfdrived/events.py:666 selfdrive/selfdrived/events.py:667
 msgid "Low Battery"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:680 selfdrive/selfdrived/events.py:681
+#: selfdrive/selfdrived/events.py:679 selfdrive/selfdrived/events.py:680
 msgid "Low Communication Rate Between Processes"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:685
+#: selfdrive/selfdrived/events.py:684
 msgid "System Lagging"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:686
+#: selfdrive/selfdrived/events.py:685
 msgid "Selfdrive Process Lagging: Reboot Your Device"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:696 selfdrive/selfdrived/events.py:697
+#: selfdrive/selfdrived/events.py:695 selfdrive/selfdrived/events.py:696
 msgid "Radar Error: Restart the Car"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:701 selfdrive/selfdrived/events.py:702
+#: selfdrive/selfdrived/events.py:700 selfdrive/selfdrived/events.py:701
 msgid "Radar Temporarily Unavailable"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:727 selfdrive/selfdrived/events.py:728
+#: selfdrive/selfdrived/events.py:726 selfdrive/selfdrived/events.py:727
 msgid "Device Fell Off Mount"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:732 selfdrive/selfdrived/events.py:734
+#: selfdrive/selfdrived/events.py:731 selfdrive/selfdrived/events.py:733
 msgid "Low Memory: Reboot Your Device"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:738 selfdrive/selfdrived/events.py:740
+#: selfdrive/selfdrived/events.py:737 selfdrive/selfdrived/events.py:739
 msgid "Cruise Fault: Restart the Car"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:739
+#: selfdrive/selfdrived/events.py:738
 msgid "Cruise Fault: Restart the car to engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:744 selfdrive/selfdrived/events.py:745
+#: selfdrive/selfdrived/events.py:743 selfdrive/selfdrived/events.py:744
 msgid "Electronic Stability Control Active"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:749 selfdrive/selfdrived/events.py:750
+#: selfdrive/selfdrived/events.py:748 selfdrive/selfdrived/events.py:749
 msgid "Controls Mismatch"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:756 selfdrive/selfdrived/events.py:757
-#: selfdrive/selfdrived/events.py:758
+#: selfdrive/selfdrived/events.py:755 selfdrive/selfdrived/events.py:756
+#: selfdrive/selfdrived/events.py:757
 msgid "USB Error: Reboot Your Device"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:766 selfdrive/selfdrived/events.py:768
-#: selfdrive/selfdrived/events.py:772
+#: selfdrive/selfdrived/events.py:765 selfdrive/selfdrived/events.py:767
+#: selfdrive/selfdrived/events.py:771
 msgid "Unknown Vehicle Variant"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:776
+#: selfdrive/selfdrived/events.py:775
 msgid "CAN Bus Disconnected"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:778
+#: selfdrive/selfdrived/events.py:777
 msgid "CAN Bus Disconnected: Likely Faulty Cable"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:782
+#: selfdrive/selfdrived/events.py:781
 msgid "CAN Bus Disconnected: Check Connections"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:786 selfdrive/selfdrived/events.py:788
+#: selfdrive/selfdrived/events.py:785 selfdrive/selfdrived/events.py:787
 msgid "LKAS Fault: Restart the Car"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:787
+#: selfdrive/selfdrived/events.py:786
 msgid "LKAS Fault: Restart the car to engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:793
+#: selfdrive/selfdrived/events.py:792
 #: sunnypilot/selfdrive/selfdrived/events.py:128
 msgid ""
 "Reverse\n"
 "Gear"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:797 selfdrive/selfdrived/events.py:798
+#: selfdrive/selfdrived/events.py:796 selfdrive/selfdrived/events.py:797
 #: sunnypilot/selfdrive/selfdrived/events.py:132
 msgid "Reverse Gear"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:804
+#: selfdrive/selfdrived/events.py:803
 msgid "Cruise Is Off"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:812 selfdrive/selfdrived/events.py:813
-#: selfdrive/selfdrived/events.py:814
+#: selfdrive/selfdrived/events.py:811 selfdrive/selfdrived/events.py:812
+#: selfdrive/selfdrived/events.py:813
 msgid "Harness Relay Malfunction"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:813
+#: selfdrive/selfdrived/events.py:812
 msgid "Check Hardware"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:819
+#: selfdrive/selfdrived/events.py:818
 msgid "openpilot Canceled"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:820
+#: selfdrive/selfdrived/events.py:819
 msgid "Speed too low"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:828
+#: selfdrive/selfdrived/events.py:827
 msgid "Speed Too High"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:829
+#: selfdrive/selfdrived/events.py:828
 msgid "Model uncertain at this speed"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:832
+#: selfdrive/selfdrived/events.py:831
 msgid "Slow down to engage"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:836
+#: selfdrive/selfdrived/events.py:835
 msgid "Vehicle Sensors Invalid"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:837 selfdrive/selfdrived/events.py:838
+#: selfdrive/selfdrived/events.py:836 selfdrive/selfdrived/events.py:837
 msgid "Vehicle Sensors Calibrating"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:837
+#: selfdrive/selfdrived/events.py:836
 msgid "Drive to Calibrate"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:846
+#: selfdrive/selfdrived/events.py:845
 msgid "Bookmark Saved"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:873
+#: selfdrive/selfdrived/events.py:872
 msgid "Press Resume"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:880
+#: selfdrive/selfdrived/events.py:879
 msgid "Steer Left"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:881 selfdrive/selfdrived/events.py:888
+#: selfdrive/selfdrived/events.py:880 selfdrive/selfdrived/events.py:887
 msgid "Confirm Lane Change"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:887
+#: selfdrive/selfdrived/events.py:886
 msgid "Steer Right"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:894
+#: selfdrive/selfdrived/events.py:893
 msgid "Car in Blindspot"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:903
+#: selfdrive/selfdrived/events.py:902
 msgid "take control"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:904
+#: selfdrive/selfdrived/events.py:903
 msgid "turn exceeds limit"
 msgstr ""
 
-#: selfdrive/selfdrived/events.py:915 selfdrive/selfdrived/events.py:919
-#: selfdrive/selfdrived/events.py:920
+#: selfdrive/selfdrived/events.py:914 selfdrive/selfdrived/events.py:918
+#: selfdrive/selfdrived/events.py:919
 msgid "Reverse"
 msgstr ""
 
@@ -604,7 +610,7 @@ msgstr ""
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py:49
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:23
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py:40
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:21
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:30
 #: system/ui/widgets/network.py:105
 msgid "Back"
 msgstr ""
@@ -1052,6 +1058,7 @@ msgstr ""
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:53
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:54
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:146
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:46
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/__init__.py:26
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/__init__.py:45
 msgid "SELECT"
@@ -1762,6 +1769,10 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:77
 #: selfdrive/ui/sunnypilot/layouts/settings/display.py:63
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:144
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:154
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:167
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:178
 msgid "Default"
 msgstr ""
 
@@ -2309,31 +2320,35 @@ msgid ""
 "manually pressed in sunnypilot."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:29
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:44
+msgid "Torque Control Tune Version"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:51
 msgid "Self-Tune"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:30
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:52
 msgid ""
 "Enables self-tune for Torque lateral control for platforms that do not use "
 "Torque lateral control by default."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:35
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:57
 msgid "Less Restrict Settings for Self-Tune (Beta)"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:36
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:58
 msgid ""
 "Less strict settings when using Self-Tune. This allows torqued to be more "
 "forgiving when learning values."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:41
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:63
 msgid "Enable Custom Tuning"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:42
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:64
 msgid ""
 "Enables custom tuning for Torque lateral control. Modifying Lateral "
 "Acceleration Factor and Friction below will override the offline values "
@@ -2341,33 +2356,37 @@ msgid ""
 "will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:49
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:71
 msgid "Manual Real-Time Tuning"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:50
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:72
 msgid ""
 "Enforces the torque lateral controller to use the fixed values instead of "
 "the learned values from Self-Tune. Enabling this toggle overrides Self-Tune "
 "values."
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:54
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:104
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:76
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:127
 msgid "Lateral Acceleration Factor"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:65
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:105
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:87
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:128
 msgid "Friction"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:103
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:126
 msgid "Real-Time & Offline"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:103
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:126
 msgid "Offline Only"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py:185
+msgid "Select Torque Control Tune Version"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:42
@@ -2954,8 +2973,8 @@ msgstr ""
 msgid "become a sunnypilot sponsor"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/onroad/speed_limit.py:262
-#: selfdrive/ui/sunnypilot/onroad/speed_limit.py:273
+#: selfdrive/ui/sunnypilot/onroad/speed_limit.py:278
+#: selfdrive/ui/sunnypilot/onroad/speed_limit.py:289
 msgid "Near"
 msgstr ""
 
