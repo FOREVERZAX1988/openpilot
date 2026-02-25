@@ -12,7 +12,7 @@ import requests
 TRANSLATIONS_DIR = pathlib.Path(__file__).resolve().parent
 TRANSLATIONS_LANGUAGES = TRANSLATIONS_DIR / "languages.json"
 
-OPENAI_MODEL = "gpt-4"
+OPENAI_MODEL = "deepseek-chat"
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_PROMPT = "You are a professional translator from English to {language} (ISO 639 language code). " + \
                 "The following sentence or word is in the GUI of a software called openpilot, translate it accordingly."
@@ -36,7 +36,7 @@ def get_language_files(languages: list[str] = None) -> dict[str, pathlib.Path]:
 
 def translate_phrase(text: str, language: str) -> str:
   response = requests.post(
-    "https://api.openai.com/v1/chat/completions",
+    "https://api.deepseek.com/chat/completions",
     json={
       "model": OPENAI_MODEL,
       "messages": [
@@ -96,6 +96,7 @@ def translate_file(path: pathlib.Path, language: str, all_: bool) -> None:
             f"LLM translation: {llm_translation}")
 
       translation.text = llm_translation
+      translation.set("type", f"{OPENAI_MODEL}")
 
   with path.open("w", encoding="utf-8") as fp:
     fp.write('<?xml version="1.0" encoding="utf-8"?>\n' +
