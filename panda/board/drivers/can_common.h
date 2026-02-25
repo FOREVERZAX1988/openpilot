@@ -158,6 +158,9 @@ void can_set_forwarding(uint8_t from, uint8_t to) {
 void ignition_can_hook(CANPacket_t *msg) {
   if (msg->bus == 0U) {
     int len = GET_LEN(msg);
+    const int TESLA_DI_GEAR_P = 1;
+    static bool tesla_gear_seen = false;
+    static int tesla_gear = TESLA_DI_GEAR_P;
 
     // GM exception
     if ((msg->addr == 0x1F1U) && (len == 8)) {
@@ -189,10 +192,16 @@ void ignition_can_hook(CANPacket_t *msg) {
       if ((counter == ((prev_counter_tesla + 1) % 16)) && (prev_counter_tesla != -1)) {
         // VCFRONT_LVPowerState->VCFRONT_vehiclePowerState
         int power_state = (msg->data[0] >> 5U) & 0x3U;
-        ignition_can = power_state == 0x3;  // VEHICLE_POWER_STATE_DRIVE=3
+        bool tesla_in_park = !tesla_gear_seen || (tesla_gear == TESLA_DI_GEAR_P);
+        ignition_can = (power_state == 0x3) && !tesla_in_park;  // VEHICLE_POWER_STATE_DRIVE=3
         ignition_can_cnt = 0U;
       }
       prev_counter_tesla = counter;
+    }
+
+    if ((msg->addr == 0x118U) && (len == 8)) {
+      tesla_gear = (msg->data[2] >> 5) & 0x7;
+      tesla_gear_seen = true;
     }
 
     // Mazda exception

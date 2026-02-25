@@ -25,6 +25,8 @@ class SLCVCruise:
     self.slc_source = "None"
     self.slc_unconfirmed = 0
     self.slc_overridden_speed = 0
+    self.slc_active_target = 0
+    self.slc_active_source = "None"
 
   def _get_slc_params(self):
     """
@@ -173,6 +175,8 @@ class SLCVCruise:
       self.slc_offset = self.slc.get_offset(is_metric)
       self.slc_target = self.slc.target
       self.slc_source = self.slc.source
+      self.slc_active_target = self.slc.active_target
+      self.slc_active_source = self.slc.active_source
       self.slc_unconfirmed = self.slc.unconfirmed_speed_limit
       self.slc_overridden_speed = self.slc.overridden_speed
 
@@ -183,6 +187,8 @@ class SLCVCruise:
       self.slc_offset = 0
       self.slc_target = self.slc.target
       self.slc_source = self.slc.source
+      self.slc_active_target = self.slc.active_target
+      self.slc_active_source = self.slc.active_source
       self.slc_unconfirmed = self.slc.unconfirmed_speed_limit
       self.slc_overridden_speed = 0
 
@@ -191,6 +197,8 @@ class SLCVCruise:
       self.slc_offset = 0
       self.slc_target = 0
       self.slc_source = "None"
+      self.slc_active_target = 0
+      self.slc_active_source = "None"
       self.slc_unconfirmed = 0
       self.slc_overridden_speed = 0
 

@@ -547,6 +547,21 @@ FW_VERSIONS = {
       b'\xf1\x877N0907572C \xf1\x890211\xf1\x82\x0152',
     ],
   },
+  CAR.VOLKSWAGEN_PASSAT_NMS_PLUS: {
+    (Ecu.engine, 0x7e0, None): [
+      b'\xf1\x8706K906016J\xf1\x891409',
+    ],
+    (Ecu.transmission, 0x7e1, None): [
+      b'\xf1\x8709G927158FQ\xf1\x893745',
+    ],
+    (Ecu.srs, 0x715, None): [
+      b'\xf1\x87561959655D \xf1\x890508\xf1\x82\x1215141111121100314919--153015--304831',
+    ],
+    (Ecu.fwdRadar, 0x757, None): [
+      b'\xf1\x87561907567A \xf1\x890132',
+      b'\xf1\x873QF907572A \xf1\x890132',
+    ],
+  },
   CAR.VOLKSWAGEN_POLO_MK6: {
     (Ecu.engine, 0x7e0, None): [
       b'\xf1\x8704C906025H \xf1\x895177',

@@ -46,6 +46,10 @@ class SpeedLimitController:
 
     self.previous_source = "None"
     self.source = "None"
+    # UI-facing resolved source/target from current SLC policy selection
+    # (before confirmation/override state machine mutates controller target).
+    self.active_source = "None"
+    self.active_target = 0.0
 
     # Temporary flag for speed limit acceptance (not persisted)
     self.speed_limit_accepted = False
@@ -404,6 +408,11 @@ class SpeedLimitController:
       elif sm["selfdriveState"].enabled and slc_params.get("slc_fallback_set_speed", False):
         desired_source = "None"
         desired_target = v_cruise
+
+    # Store resolved policy output for UI/telemetry so display matches
+    # user-selected SLC priority mode (Dashboard/Mapbox/Map Data/highest/lowest).
+    self.active_source = desired_source
+    self.active_target = float(desired_target)
 
     if abs(desired_target - self.previous_target) >= 1:
       self.handle_limit_change(desired_source, desired_target, sm, slc_params)

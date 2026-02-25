@@ -61,15 +61,20 @@ class LongitudinalPlannerSP:
     now = datetime.now()
     time_validated = sm.alive.get('clocks', False) and getattr(sm['clocks'], 'timeValid', False)
     slc_v_cruise = self.slc.update(long_enabled, now, time_validated, v_cruise, v_ego, sm)
-    self.speed_limit_last = self.slc.slc_target if self.slc.slc_target > 0 else self.speed_limit_last
-    self.speed_limit_final_last = self.slc.slc_target + self.slc.slc_offset if self.slc.slc_target > 0 else self.speed_limit_final_last
+    # Prefer confirmed controller output for UI/planner rendering.
+    # Fall back to active (policy-resolved) target/source when confirmed is unavailable.
+    display_speed_limit = self.slc.slc_target if self.slc.slc_target > 0 else self.slc.slc_active_target
+    display_source = self.slc.slc_source if self.slc.slc_source != "None" else self.slc.slc_active_source
+
+    self.speed_limit_last = display_speed_limit if display_speed_limit > 0 else self.speed_limit_last
+    self.speed_limit_final_last = display_speed_limit + self.slc.slc_offset if display_speed_limit > 0 else self.speed_limit_final_last
     source_map = {
       "Dashboard": SpeedLimitSource.car,
       "Map Data": SpeedLimitSource.map,
       "Mapbox": SpeedLimitSource.map,
       "None": SpeedLimitSource.none,
     }
-    self.speed_limit_source = source_map.get(self.slc.slc_source, SpeedLimitSource.none)
+    self.speed_limit_source = source_map.get(display_source, SpeedLimitSource.none)
 
     targets = {
       LongitudinalPlanSource.cruise: (v_cruise, a_ego),
@@ -126,7 +131,7 @@ class LongitudinalPlannerSP:
     # Speed Limit
     speedLimit = longitudinalPlanSP.speedLimit
     resolver = speedLimit.resolver
-    speed_limit = float(self.slc.slc_target)
+    speed_limit = float(self.slc.slc_target if self.slc.slc_target > 0 else self.slc.slc_active_target)
     speed_limit_offset = float(self.slc.slc_offset)
     speed_limit_final = speed_limit + speed_limit_offset if speed_limit > 0 else 0.
     speed_limit_valid = speed_limit > 0.

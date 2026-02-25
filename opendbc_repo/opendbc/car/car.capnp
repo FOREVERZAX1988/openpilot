@@ -232,6 +232,19 @@ struct CarState {
   fuelGauge @41 :Float32; # battery or fuel tank level from [0.0, 1.0]
   charging @43 :Bool;
   fuelTankLevelL @63 :Float32; # raw fuel tank level in liters (konn3kt: VW PQ Kombi_1.Tankinhalt)
+  batteryDetails @64 :BatteryDetails;
+
+  struct BatteryDetails {
+    capacity @0 :Float32;
+    charge @1 :Float32;
+    soc @2 :Float32;
+    temperature @3 :Float32;
+    heaterActive @4 :Bool;
+    voltage @5 :Float32;
+    current @6 :Float32;
+    power @7 :Float32;
+    chargingMode @8 :UInt8;
+  }
 
   struct WheelSpeeds {
     # optional wheel speeds

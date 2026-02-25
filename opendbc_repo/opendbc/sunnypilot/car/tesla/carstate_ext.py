@@ -1,8 +1,5 @@
 """
-Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
-
-This file is part of sunnypilot and is licensed under the MIT License.
-See the LICENSE.md file in the root directory for more details.
+Copyright © IQ.Lvbs, apart of Project Teal Lvbs, All Rights Reserved, licensed under https://konn3kt.com/tos
 """
 from enum import StrEnum
 
@@ -31,6 +28,25 @@ class CarStateExt:
 
       ret.buttonEvents = [*create_button_events(self.infotainment_3_finger_press, prev_infotainment_3_finger_press,
                                                 {3: ButtonType.lkas})]
+
+      ui_soc = float(cp_adas.vl["ID33AUI_rangeSOC"].get("UI_SOC", 0.0))
+      ui_range_mi = float(cp_adas.vl["ID33AUI_rangeSOC"].get("UI_Range", 0.0))
+      hv_batt_voltage_v = float(cp_adas.vl["ID132HVBattAmpVolt"].get("BattVoltage132", 0.0))
+      battery_details = None
+      try:
+        battery_details = ret.batteryDetails
+      except Exception:
+        battery_details = None
+
+      if 0.0 <= ui_soc <= 100.0:
+        ret.fuelGauge = ui_soc / 100.0
+        if battery_details is not None:
+          battery_details.soc = ui_soc
+          battery_details.charge = ui_soc
+      if 0.0 <= ui_range_mi <= 1023.0 and battery_details is not None:
+        battery_details.capacity = ui_range_mi
+      if 0.0 < hv_batt_voltage_v <= 800.0 and battery_details is not None:
+        battery_details.voltage = hv_batt_voltage_v
 
     cp_party = can_parsers[Bus.party]
     cp_ap_party = can_parsers[Bus.ap_party]

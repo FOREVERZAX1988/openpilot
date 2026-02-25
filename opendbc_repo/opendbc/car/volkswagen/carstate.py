@@ -68,7 +68,8 @@ class CarState(CarStateBase):
     if self.CP.flags & VolkswagenFlags.PQ:
       return self.update_pq(pt_cp, cam_cp, ext_cp)
     elif self.CP.flags & VolkswagenFlags.MLB:
-      return self.update_mlb(pt_cp, cam_cp, ext_cp)
+      br_cp = can_parsers[Bus.aux]
+      return self.update_mlb(pt_cp, br_cp, cam_cp, ext_cp)
 
     ret = structs.CarState()
     ret_sp = structs.CarStateSP()
@@ -323,7 +324,7 @@ class CarState(CarStateBase):
     self.frame += 1
     return ret, ret_sp
 
-  def update_mlb(self, pt_cp, cam_cp, ext_cp) -> structs.CarState:
+  def update_mlb(self, pt_cp, br_cp, cam_cp, ext_cp) -> structs.CarState:
     ret = structs.CarState()
     ret_sp = structs.CarStateSP()
 
@@ -384,8 +385,8 @@ class CarState(CarStateBase):
     self.ldw_stock_values = cam_cp.vl["LDW_02"] if self.CP.networkLocation == NetworkLocation.fwdCamera else {}
     self.gra_stock_values = pt_cp.vl["LS_01"]
 
-    # ret.fuelGauge = br_cp.vl["Kombi_02"]["KBI_Inhalt_Tank"] / 55.0
-    # ret.fuelTankLevelL = br_cp.vl["Kombi_02"]["KBI_Inhalt_Tank"]  # raw liters for konn3kt
+    ret.fuelGauge = br_cp.vl["Kombi_02"]["KBI_Inhalt_Tank"] / 55.0
+    ret.fuelTankLevelL = br_cp.vl["Kombi_02"]["KBI_Inhalt_Tank"]  # raw liters for konn3kt
 
     ret.buttonEvents = self.create_button_events(pt_cp, self.CCP.BUTTONS)
 
@@ -447,6 +448,7 @@ class CarState(CarStateBase):
 
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, CanBus(CP).pt),
+      Bus.aux: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, CanBus(CP).aux),
       Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], cam_messages, CanBus(CP).cam),
     }
 
