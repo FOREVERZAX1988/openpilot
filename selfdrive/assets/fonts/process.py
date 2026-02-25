@@ -47,7 +47,6 @@ def _char_sets():
           print(f"已将其他菜单文本'{lang_name}'的字符加入base集合")
 
   for language, code in _languages().items():
-    unifont.update(language)
     po_path = TRANSLATIONS_DIR / f"app_{code}.po"
     try:
       chars = set(po_path.read_text(encoding="utf-8"))
