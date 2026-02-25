@@ -948,7 +948,7 @@ msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py:118
 msgid "Info"
-msgstr "信息模式"
+msgstr "信息"
 
 #: selfdrive/ui/layouts/settings/software.py:77
 msgid "Install Update"
@@ -1705,7 +1705,7 @@ msgstr "修改已完成,需重启系统方可生效.是否立即重启?"
 
 #: selfdrive/ui/layouts/settings/toggles.py:144
 msgid "TACC"
-msgstr "TACC(纵向控制非实验模式)"
+msgstr "TACC"
 
 #: selfdrive/ui/onroad/alert_renderer.py:58
 msgid "TAKE CONTROL IMMEDIATELY"
