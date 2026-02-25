@@ -372,8 +372,14 @@ class CAR(Platforms):
     wmis={WMI.VOLKSWAGEN_EUROPE_CAR},
   )
   VOLKSWAGEN_PASSAT_NMS = VolkswagenPQPlatformConfig(
-    [VWCarDocs("Volkswagen Passat NMS 2017-22")],
+    [VWCarDocs("Volkswagen Passat NMS 2015-17")],
     VolkswagenCarSpecs(mass=1503, wheelbase=2.80),
+    chassis_codes={"A3"},
+    wmis={WMI.VOLKSWAGEN_USA_CAR},
+  )
+  VOLKSWAGEN_PASSAT_NMS_PLUS = VolkswagenPQPlatformConfig(
+    [VWCarDocs("Volkswagen Passat NMS 2018-22")],
+    VolkswagenCarSpecs(mass=1503, wheelbase=2.80, minEnableSpeed=20 * CV.KPH_TO_MS),
     chassis_codes={"A3"},
     wmis={WMI.VOLKSWAGEN_USA_CAR},
   )
