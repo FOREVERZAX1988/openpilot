@@ -12,11 +12,7 @@ from openpilot.system.micd import SAMPLE_RATE, SAMPLE_BUFFER
 from openpilot.selfdrive.ui.feedback.feedbackd import FEEDBACK_MAX_DURATION
 from openpilot.system.hardware import HARDWARE
 #ADD TR/TR_NOOP TO Translate
-<<<<<<< HEAD
 from openpilot.system.ui.lib.multilang import tr
-=======
-from openpilot.system.ui.lib.multilang import tr, tr_noop
->>>>>>> 4342968c66be7f57fcef54373cd479ec55d47783
 
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Priority, ET, Alert, \
   NoEntryAlert, SoftDisableAlert, UserSoftDisableAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, \
