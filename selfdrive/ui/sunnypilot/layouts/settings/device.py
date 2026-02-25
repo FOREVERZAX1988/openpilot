@@ -16,6 +16,9 @@ from openpilot.system.ui.widgets.button import ButtonStyle
 from openpilot.system.ui.widgets.confirm_dialog import alert_dialog, ConfirmDialog
 from openpilot.system.ui.widgets.list_view import text_item
 from openpilot.system.ui.widgets.scroller_tici import LineSeparator
+#  添加服务器切换按钮修改1：导入需要的模块， 与device.py保持一致
+from openpilot.common.params import Params
+from openpilot.common.api.comma_connect import get_api_host
 
 offroad_time_options = {
   0: 0,
@@ -111,6 +114,18 @@ class DeviceLayoutSP(DeviceLayout):
       text_item(lambda: tr("Dongle ID"), self._params.get("DongleId") or (lambda: tr("N/A"))),
       LineSeparator(),
       text_item(lambda: tr("Serial"), self._params.get("HardwareSerial") or (lambda: tr("N/A"))),
+      LineSeparator(),
+      # 添加服务器切换按钮修改2：显示当前API服务器（与device.py中对应）
+      text_item(lambda: tr("Current API Server"), lambda: get_api_host()),
+      LineSeparator(),
+      # 添加服务器切换按钮修改3：服务器切换按钮（与device.py中对应）
+      button_item_sp(
+      lambda: tr("Server"),
+      lambda: tr("KONIK") if Params().get_bool("UseKonikServer", False) else tr("COMMA"),
+      lambda: tr("Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"),
+      callback=self._toggle_server,
+      enabled=ui_state.is_offroad()
+      ),
       LineSeparator(),
       self._pair_device_btn,
       LineSeparator(),

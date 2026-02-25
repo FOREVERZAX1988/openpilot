@@ -16,7 +16,6 @@ CHINA_LANGUAGES = {"zh-CHT", "zh-CHS"}
 UNIFONT_LANGUAGES = {"th", "ko", "ja"}
 
 
-
 def _languages():
   if not LANGUAGES_FILE.exists():
     return {}
@@ -154,7 +153,6 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
   _write_bmfont(FONT_DIR / f"{font_path.stem}.fnt", font_size, font_path.stem, atlas_name, line_height, base, (image.width, image.height), entries)
 
-
 def main():
   #修改6: 接收新增的china_cp
   base_cp, unifont_cp, china_cp = _char_sets()
@@ -172,9 +170,10 @@ def main():
     else:
       # 其他字体→用base字符集
       glyphs = base_cp
-    _process_font(font, glyphs)
-  return 0
 
+    _process_font(font, glyphs)
+
+  return 0
 
 if __name__ == "__main__":
   raise SystemExit(main())

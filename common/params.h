@@ -29,7 +29,7 @@ enum ParamKeyType {
   FLOAT = 3,
   TIME = 4, // ISO 8601
   JSON = 5,
-  BYTES = 6
+  BYTES = 6,
 };
 
 struct ParamKeyAttributes {

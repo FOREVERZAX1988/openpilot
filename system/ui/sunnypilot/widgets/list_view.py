@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 

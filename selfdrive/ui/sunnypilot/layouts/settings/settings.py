@@ -83,6 +83,7 @@ class NavButton(Widget):
       print(f"翻译失败 [{raw_text}]: {str(e)}")
       translated_text = raw_text
     # 第三步：用翻译后的文本计算尺寸（否则中文会显示错位）
+    #text_size = measure_text_cached(self.parent._font_medium, self.panel_info.name, 65)
     text_size = measure_text_cached(self.parent._font_medium, translated_text, 65)
 
     # Draw background if selected
@@ -104,6 +105,7 @@ class NavButton(Widget):
       rect.y + (OP.NAV_BTN_HEIGHT - text_size.y) / 2
     )
     # 【修改3（共3）：绘制翻译后的文本】
+    #rl.draw_text_ex(self.parent._font_medium, self.panel_info.name, text_pos, 55, 0, text_color)
     rl.draw_text_ex(self.parent._font_medium, translated_text, text_pos, 55, 0, text_color)
     # Store button rect for click detection
     self.panel_info.button_rect = rect

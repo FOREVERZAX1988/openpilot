@@ -12,7 +12,11 @@ from openpilot.system.micd import SAMPLE_RATE, SAMPLE_BUFFER
 from openpilot.selfdrive.ui.feedback.feedbackd import FEEDBACK_MAX_DURATION
 from openpilot.system.hardware import HARDWARE
 #ADD TR/TR_NOOP TO Translate
+<<<<<<< HEAD
 from openpilot.system.ui.lib.multilang import tr
+=======
+from openpilot.system.ui.lib.multilang import tr, tr_noop
+>>>>>>> 4342968c66be7f57fcef54373cd479ec55d47783
 
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Priority, ET, Alert, \
   NoEntryAlert, SoftDisableAlert, UserSoftDisableAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, \
@@ -59,15 +63,15 @@ def get_display_speed(speed_ms: float, metric: bool) -> str:
 def soft_disable_alert(alert_text_2: str) -> AlertCallbackType:
   def func(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
     if soft_disable_time < int(0.5 / DT_CTRL):
-      return ImmediateDisableAlert(alert_text_2)
-    return SoftDisableAlert(alert_text_2)
+      return ImmediateDisableAlert(tr(alert_text_2))
+    return SoftDisableAlert(tr(alert_text_2))
   return func
 
 def user_soft_disable_alert(alert_text_2: str) -> AlertCallbackType:
   def func(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
     if soft_disable_time < int(0.5 / DT_CTRL):
-      return ImmediateDisableAlert(alert_text_2)
-    return UserSoftDisableAlert(alert_text_2)
+      return ImmediateDisableAlert(tr(alert_text_2))
+    return UserSoftDisableAlert(tr(alert_text_2))
   return func
 
 def startup_master_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -83,10 +87,9 @@ def below_engage_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.
 def below_steer_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   return Alert(
     tr(f"Steer Assist Unavailable Below {get_display_speed(CP.minSteerSpeed, metric)}"),
-    tr(""),
+    "",
     AlertStatus.userPrompt, AlertSize.small,
     Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.4)
-
 
 def calibration_incomplete_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   first_word = tr('Recalibrating') if sm['liveCalibration'].calStatus == log.LiveCalibrationData.Status.recalibrating else tr('Calibrating')
@@ -115,34 +118,34 @@ def out_of_space_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMas
 def posenet_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   mdl = sm['modelV2'].velocity.x[0] if len(sm['modelV2'].velocity.x) else math.nan
   err = CS.vEgo - mdl
-  msg = f"Speed Error: {err:.1f} m/s"
-  return NoEntryAlert(tr(msg), alert_text_1=tr("Posenet Speed Invalid"))
+  msg = tr(f"Speed Error: {err:.1f} m/s")
+  return NoEntryAlert(msg, alert_text_1=tr("Posenet Speed Invalid"))
 
 
 def process_not_running_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   not_running = [p.name for p in sm['managerState'].processes if not p.running and p.shouldBeRunning]
   msg = ', '.join(not_running)
-  return NoEntryAlert(tr(msg), alert_text_1=tr("Process Not Running"))
+  return NoEntryAlert(msg, alert_text_1=tr("Process Not Running"))
 
 
 def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   bs = [s for s in sm.data.keys() if not sm.all_checks([s, ])]
   msg = ', '.join(bs[:4])  # can't fit too many on one line
-  return NoEntryAlert(tr(msg), alert_text_1=tr("Communication Issue Between Processes"))
+  return NoEntryAlert(msg, alert_text_1=tr("Communication Issue Between Processes"))
 
 
 def camera_malfunction_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   all_cams = ('roadCameraState', 'driverCameraState', 'wideRoadCameraState')
   bad_cams = [s.replace('State', '') for s in all_cams if s in sm.data.keys() and not sm.all_checks([s, ])]
-  return NormalPermanentAlert(tr("Camera Malfunction"), tr(', '.join(bad_cams)))
+  return NormalPermanentAlert(tr("Camera Malfunction"), ', '.join(bad_cams))
 
 
 def calibration_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   rpy = sm['liveCalibration'].rpyCalib
   yaw = math.degrees(rpy[2] if len(rpy) == 3 else math.nan)
   pitch = math.degrees(rpy[1] if len(rpy) == 3 else math.nan)
-  angles = f"Remount Device (Pitch: {pitch:.1f}°, Yaw: {yaw:.1f}°)"
-  return NormalPermanentAlert(tr("Calibration Invalid"), tr(angles))
+  angles = tr(f"Remount Device (Pitch: {pitch:.1f}°, Yaw: {yaw:.1f}°)")
+  return NormalPermanentAlert(tr("Calibration Invalid"), angles)
 
 
 def paramsd_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -186,14 +189,14 @@ def modeld_lagging_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
 def joystick_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   gb = sm['carControl'].actuators.accel / 4.
   steer = sm['carControl'].actuators.torque
-  vals = f"Gas: {round(gb * 100.)}%, Steer: {round(steer * 100.)}%"
-  return NormalPermanentAlert(tr("Joystick Mode"), tr(vals))
+  vals = tr(f"Gas: {round(gb * 100.)}%, Steer: {round(steer * 100.)}%")
+  return NormalPermanentAlert(tr("Joystick Mode"), vals)
 
 
 def longitudinal_maneuver_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   ad = sm['alertDebug']
-  audible_alert = AudibleAlert.prompt if 'Active' in ad.alertText1 else AudibleAlert.none
-  alert_status = AlertStatus.userPrompt if 'Active' in ad.alertText1 else AlertStatus.normal
+  audible_alert = AudibleAlert.prompt if tr('Active') in ad.alertText1 else AudibleAlert.none
+  alert_status = AlertStatus.userPrompt if tr('Active') in ad.alertText1 else AlertStatus.normal
   alert_size = AlertSize.mid if ad.alertText2 else AlertSize.small
   return Alert(tr(ad.alertText1), tr(ad.alertText2),
                alert_status, alert_size,
@@ -274,7 +277,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.cruiseMismatch: {
-    #ET.PERMANENT: ImmediateDisableAlert("openpilot failed to cancel cruise"),
+    #ET.PERMANENT: ImmediateDisableAlert(tr("openpilot failed to cancel cruise")),
   },
 
   # openpilot doesn't recognize the car. This switches openpilot into a
@@ -405,7 +408,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.preLaneChangeLeft: {
     ET.WARNING: Alert(
       tr("Steer Left to Start Lane Change Once Safe"),
-      tr(""),
+      "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
   },
@@ -413,7 +416,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.preLaneChangeRight: {
     ET.WARNING: Alert(
       tr("Steer Right to Start Lane Change Once Safe"),
-      tr(""),
+      "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
   },
@@ -421,7 +424,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.laneChangeBlocked: {
     ET.WARNING: Alert(
       tr("Car Detected in Blindspot"),
-      tr(""),
+      "",
       AlertStatus.userPrompt, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
   },
@@ -429,7 +432,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.laneChange: {
     ET.WARNING: Alert(
       tr("Changing Lanes"),
-      tr(""),
+      "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
   },
@@ -514,7 +517,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.brakeHold: {
     ET.WARNING: Alert(
       tr("Press Resume to Exit Brake Hold"),
-      tr(""),
+      "",
       AlertStatus.userPrompt, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, .2),
   },
@@ -538,7 +541,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.preEnableStandstill: {
     ET.PRE_ENABLE: Alert(
       tr("Release Brake to Engage"),
-      tr(""),
+      "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1, creation_delay=1.),
   },
@@ -766,7 +769,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.IMMEDIATE_DISABLE: ImmediateDisableAlert(tr("Unknown Vehicle Variant")),
     ET.PERMANENT: Alert(
       tr("Unknown Vehicle Variant"),
-      tr(""),
+      "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., creation_delay=1.),
     ET.NO_ENTRY: NoEntryAlert(tr("Unknown Vehicle Variant")),
@@ -776,7 +779,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.IMMEDIATE_DISABLE: ImmediateDisableAlert(tr("CAN Bus Disconnected")),
     ET.PERMANENT: Alert(
       tr("CAN Bus Disconnected: Likely Faulty Cable"),
-      tr(""),
+      "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., creation_delay=1.),
     ET.NO_ENTRY: NoEntryAlert(tr("CAN Bus Disconnected: Check Connections")),
@@ -791,7 +794,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.reverseGear: {
     ET.PERMANENT: Alert(
       tr("Reverse\nGear"),
-      tr(""),
+      "",
       AlertStatus.normal, AlertSize.full,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
     ET.USER_DISABLE: ImmediateDisableAlert(tr("Reverse Gear")),
@@ -897,16 +900,18 @@ if HARDWARE.get_device_type() == 'mici':
         Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
     },
     EventName.steerSaturated: {
+    #  ET.WARNING: steer_saturated_alert,
+    #新增以下：
       ET.WARNING: Alert(
-        tr("Take Control"),
-        tr("Turn exceeds limit"),
+        tr("take control"),
+        tr("turn exceeds limit"),
         AlertStatus.userPrompt, AlertSize.mid,
         Priority.LOW, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 2.),
     },
     EventName.calibrationIncomplete: {
       ET.PERMANENT: calibration_incomplete_alert,
-      ET.SOFT_DISABLE: soft_disable_alert("Calibration Incomplete"),
-      ET.NO_ENTRY: NoEntryAlert("Calibrating"),
+      ET.SOFT_DISABLE: soft_disable_alert(tr("Calibration Incomplete")),
+      ET.NO_ENTRY: NoEntryAlert(tr("Calibrating")),
     },
     EventName.reverseGear: {
       ET.PERMANENT: Alert(
