@@ -27,7 +27,7 @@ _TURNING_LAT_ACC_TH = 1.6  # Lat Acc threshold to trigger turning state.
 _LEAVING_LAT_ACC_TH = 1.3  # Lat Acc threshold to trigger leaving turn state.
 _FINISH_LAT_ACC_TH = 1.1  # Lat Acc threshold to trigger the end of the turn cycle.
 
-_A_LAT_REG_MAX = 2.  # Maximum lateral acceleration
+_A_LAT_REG_MAX = 2.5  # Maximum lateral acceleration
 
 _NO_OVERSHOOT_TIME_HORIZON = 4.  # s. Time to use for velocity desired based on a_target when not overshooting.
 

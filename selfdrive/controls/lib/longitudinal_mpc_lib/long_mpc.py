@@ -70,7 +70,11 @@ def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
     raise NotImplementedError("Longitudinal personality not supported")
 
 
-def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard):
+FOLLOW_DISTANCE_MAP = {0: 1.2, 1: 1.6, 2: 2.0, 3: 2.4}
+
+def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard, follow_distance=None):
+  if follow_distance is not None and follow_distance in FOLLOW_DISTANCE_MAP:
+    return FOLLOW_DISTANCE_MAP[follow_distance]
   if personality==log.LongitudinalPersonality.relaxed:
     return 1.75
   elif personality==log.LongitudinalPersonality.standard:
@@ -313,8 +317,8 @@ class LongitudinalMpc:
     lead_xv = self.extrapolate_lead(x_lead, v_lead, a_lead, a_lead_tau)
     return lead_xv
 
-  def update(self, radarstate, v_cruise, personality=log.LongitudinalPersonality.standard):
-    t_follow = get_T_FOLLOW(personality)
+  def update(self, radarstate, v_cruise, personality=log.LongitudinalPersonality.standard, follow_distance=None):
+    t_follow = get_T_FOLLOW(personality, follow_distance=follow_distance)
     v_ego = self.x0[1]
     self.status = radarstate.leadOne.status or radarstate.leadTwo.status
 
