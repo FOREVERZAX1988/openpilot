@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-01 15:36+0800\n"
+"POT-Creation-Date: 2026-03-01 19:25+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -304,12 +304,12 @@ msgid "Press Resume to Exit Brake Hold"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:524
-#: sunnypilot/selfdrive/selfdrived/events.py:176
+#: sunnypilot/selfdrive/selfdrived/events.py:177
 msgid "Parking Brake Engaged"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:529
-#: sunnypilot/selfdrive/selfdrived/events.py:193
+#: sunnypilot/selfdrive/selfdrived/events.py:194
 msgid "Pedal Pressed"
 msgstr ""
 
@@ -355,7 +355,7 @@ msgid "Excessive Actuation"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:624 selfdrive/selfdrived/events.py:625
-#: sunnypilot/selfdrive/selfdrived/events.py:137
+#: sunnypilot/selfdrive/selfdrived/events.py:138
 msgid "Gear not D"
 msgstr ""
 
@@ -380,12 +380,12 @@ msgid "Remount Detected: Recalibrating"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:652 selfdrive/selfdrived/events.py:653
-#: sunnypilot/selfdrive/selfdrived/events.py:158
+#: sunnypilot/selfdrive/selfdrived/events.py:159
 msgid "Door Open"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:657 selfdrive/selfdrived/events.py:658
-#: sunnypilot/selfdrive/selfdrived/events.py:167
+#: sunnypilot/selfdrive/selfdrived/events.py:168
 msgid "Seatbelt Unlatched"
 msgstr ""
 
@@ -472,14 +472,14 @@ msgid "LKAS Fault: Restart the car to engage"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:793
-#: sunnypilot/selfdrive/selfdrived/events.py:145
+#: sunnypilot/selfdrive/selfdrived/events.py:146
 msgid ""
 "Reverse\n"
 "Gear"
 msgstr ""
 
 #: selfdrive/selfdrived/events.py:797 selfdrive/selfdrived/events.py:798
-#: sunnypilot/selfdrive/selfdrived/events.py:149
+#: sunnypilot/selfdrive/selfdrived/events.py:150
 msgid "Reverse Gear"
 msgstr ""
 
@@ -880,15 +880,20 @@ msgstr ""
 msgid "Are you sure you want to power off?"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:221
+#: selfdrive/ui/layouts/settings/device.py:223
 msgid "Konik"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:221
+#: selfdrive/ui/layouts/settings/device.py:223
 msgid "Comma"
 msgstr ""
 
-#: selfdrive/ui/layouts/settings/device.py:224
+#: selfdrive/ui/layouts/settings/device.py:225
+#, python-brace-format
+msgid "Switch server to {}?"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/device.py:226
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:174
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:196
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:99
@@ -1405,7 +1410,7 @@ msgstr ""
 #: selfdrive/ui/onroad/hud_renderer.py:177
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py:115
 #: selfdrive/ui/sunnypilot/onroad/speed_renderer.py:43
-#: sunnypilot/selfdrive/selfdrived/events.py:33
+#: sunnypilot/selfdrive/selfdrived/events.py:34
 msgid "km/h"
 msgstr ""
 
@@ -1921,7 +1926,7 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:73
 #: system/ui/widgets/confirm_dialog.py:24 system/ui/widgets/keyboard.py:83
-#: system/ui/widgets/network.py:333 system/ui/widgets/option_dialog.py:73
+#: system/ui/widgets/network.py:333 system/ui/widgets/option_dialog.py:82
 msgid "Cancel"
 msgstr ""
 
@@ -3107,64 +3112,64 @@ msgstr ""
 msgid "No SSH keys found for user '{}'"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:63
+#: sunnypilot/selfdrive/selfdrived/events.py:64
 msgid "Press + to confirm speed limit"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:65
+#: sunnypilot/selfdrive/selfdrived/events.py:66
 msgid "Press - to confirm speed limit"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:103
+#: sunnypilot/selfdrive/selfdrived/events.py:104
 msgid "Automatic Lane Centering is OFF"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:104
+#: sunnypilot/selfdrive/selfdrived/events.py:105
 msgid "Manual Steering Required"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:111
+#: sunnypilot/selfdrive/selfdrived/events.py:112
 msgid "Smart/Adaptive Cruise Control: OFF"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:112
+#: sunnypilot/selfdrive/selfdrived/events.py:113
 msgid "Manual Speed Control Required"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:127
+#: sunnypilot/selfdrive/selfdrived/events.py:128
 msgid "Brake Hold Active"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:138
+#: sunnypilot/selfdrive/selfdrived/events.py:139
 msgid "openpilot Unavailable"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:180
 #: sunnypilot/selfdrive/selfdrived/events.py:181
+#: sunnypilot/selfdrive/selfdrived/events.py:182
 msgid "Controls Mismatch: Lateral"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:185
+#: sunnypilot/selfdrive/selfdrived/events.py:186
 msgid "Experimental Mode Switched"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:198
+#: sunnypilot/selfdrive/selfdrived/events.py:199
 msgid "Turning Left"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:206
+#: sunnypilot/selfdrive/selfdrived/events.py:207
 msgid "Turning Right"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:214
+#: sunnypilot/selfdrive/selfdrived/events.py:215
 msgid "Auto adjusting to speed limit"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:222
+#: sunnypilot/selfdrive/selfdrived/events.py:223
 msgid "Set speed changed"
 msgstr ""
 
-#: sunnypilot/selfdrive/selfdrived/events.py:234
+#: sunnypilot/selfdrive/selfdrived/events.py:235
 msgid "Auto adjusting to last speed limit"
 msgstr ""
 
@@ -3330,6 +3335,6 @@ msgstr ""
 msgid "FORGETTING..."
 msgstr ""
 
-#: system/ui/widgets/option_dialog.py:78
+#: system/ui/widgets/option_dialog.py:87
 msgid "Select"
 msgstr ""

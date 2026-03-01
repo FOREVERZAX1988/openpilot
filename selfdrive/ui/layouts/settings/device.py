@@ -222,7 +222,7 @@ class DeviceLayout(Widget):
       # 显示确认对话框（使用push_widget替代set_modal_overlay）
       target_server = tr("Konik") if not Params().get_bool("UseKonikServer", False) else tr("Comma")
       dialog = ConfirmDialog(
-          tr(f"Switch server to {target_server}?"),
+          tr("Switch server to {}?").format(target_server),  # 关键修改：动态显示目标服务器名称
           tr("Confirm"),
           callback=handle_confirm
       )
