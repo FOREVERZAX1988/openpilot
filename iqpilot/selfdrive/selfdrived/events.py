@@ -4,6 +4,8 @@ from openpilot.common.constants import CV
 from openpilot.iqpilot.selfdrive.selfdrived.events_base import EventsBase, Priority, ET, Alert, \
   NoEntryAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, AlertCallbackType, wrong_car_mode_alert
 from openpilot.iqpilot.selfdrive.controls.lib.speed_limit import PCM_LONG_REQUIRED_MAX_SET_SPEED, CONFIRM_SPEED_THRESHOLD
+#ADD TR TO Translate
+from openpilot.system.ui.lib.multilang import tr
 
 
 AlertSize = log.SelfdriveState.AlertSize
@@ -25,7 +27,7 @@ def _get_longitudinal_plan_ext(sm: messaging.SubMaster):
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   speedLimit = _get_longitudinal_plan_ext(sm).speedLimit.resolver.speedLimit
   speed = round(speedLimit * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH))
-  message = f'Adjusting to {speed} {"km/h" if metric else "mph"} speed limit'
+  message = tr("Adjusting to {speed} {unit} speed limit", speed=speed, unit="km/h" if metric else "mph")
   return Alert(
     message,
     "",
@@ -48,8 +50,8 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     pcm_long_required_max_set_speed_conv = round(pcm_long_required_max * speed_conv)
     speed_unit = "km/h" if metric else "mph"
 
-    alert_1_str = "Speed Limit Assist: Activation Required"
-    alert_2_str = f"Manually change set speed to {pcm_long_required_max_set_speed_conv} {speed_unit} to activate"
+    alert_1_str = tr("Speed Limit Assist: Activation Required")
+    alert_2_str = tr("Manually change set speed to {speed} {unit} to activate", speed=pcm_long_required_max_set_speed_conv, unit=speed_unit)
     alert_size = AlertSize.mid
 
   return Alert(
@@ -86,16 +88,16 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameIQ.manualSteeringRequired: {
     ET.USER_DISABLE: Alert(
-      "Automatic Lane Centering is OFF",
-      "Manual Steering Required",
+      tr("Automatic Lane Centering is OFF"),
+      tr("Manual Steering Required"),
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.disengage, 1.),
   },
 
   EventNameIQ.manualLongitudinalRequired: {
     ET.WARNING: Alert(
-      "Smart/Adaptive Cruise Control: OFF",
-      "Manual Speed Control Required",
+      tr("Smart/Adaptive Cruise Control: OFF"),
+      tr("Manual Speed Control Required"),
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
   },
@@ -110,7 +112,7 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameIQ.silentBrakeHold: {
     ET.WARNING: EngagementAlert(AudibleAlert.none),
-    ET.NO_ENTRY: NoEntryAlert("Brake Hold Active"),
+    ET.NO_ENTRY: NoEntryAlert(tr("Brake Hold Active")),
   },
 
   EventNameIQ.silentWrongGear: {
@@ -120,19 +122,19 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
     ET.NO_ENTRY: Alert(
-      "Gear not D",
-      "openpilot Unavailable",
+      tr("Gear not D"),
+      tr("openpilot Unavailable"),
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 0.),
   },
 
   EventNameIQ.silentReverseGear: {
     ET.PERMANENT: Alert(
-      "Reverse\nGear",
+      tr("Reverse\nGear"),
       "",
       AlertStatus.normal, AlertSize.full,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-    ET.NO_ENTRY: NoEntryAlert("Reverse Gear"),
+    ET.NO_ENTRY: NoEntryAlert(tr("Reverse Gear")),
   },
 
   EventNameIQ.silentDoorOpen: {
@@ -141,7 +143,7 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("Door Open"),
+    ET.NO_ENTRY: NoEntryAlert(tr("Door Open")),
   },
 
   EventNameIQ.silentSeatbeltNotLatched: {
@@ -150,7 +152,7 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("Seatbelt Unlatched"),
+    ET.NO_ENTRY: NoEntryAlert(tr("Seatbelt Unlatched")),
   },
 
   EventNameIQ.silentParkBrake: {
@@ -159,16 +161,16 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("Parking Brake Engaged"),
+    ET.NO_ENTRY: NoEntryAlert(tr("Parking Brake Engaged")),
   },
 
   EventNameIQ.controlsMismatchLateral: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("Controls Mismatch: Lateral"),
-    ET.NO_ENTRY: NoEntryAlert("Controls Mismatch: Lateral"),
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert(tr("Controls Mismatch: Lateral")),
+    ET.NO_ENTRY: NoEntryAlert(tr("Controls Mismatch: Lateral")),
   },
 
   EventNameIQ.experimentalModeSwitched: {
-    ET.WARNING: NormalPermanentAlert("Experimental Mode Switched", duration=1.5)
+    ET.WARNING: NormalPermanentAlert(tr("Experimental Mode Switched"), duration=1.5)
   },
 
   EventNameIQ.wrongCarModeAlertOnly: {
@@ -176,12 +178,12 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventNameIQ.pedalPressedAlertOnly: {
-    ET.WARNING: NoEntryAlert("Pedal Pressed")
+    ET.WARNING: NoEntryAlert(tr("Pedal Pressed"))
   },
 
   EventNameIQ.laneTurnLeft: {
     ET.WARNING: Alert(
-      "Turning Left",
+      tr("Turning Left"),
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
@@ -189,7 +191,7 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameIQ.laneTurnRight: {
     ET.WARNING: Alert(
-      "Turning Right",
+      tr("Turning Right"),
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
@@ -197,7 +199,7 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameIQ.speedLimitActive: {
     ET.WARNING: Alert(
-      "Automatically adjusting to the posted speed limit",
+      tr("Automatically adjusting to the posted speed limit"),
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertIQ.promptSingleHigh, 5.),
@@ -205,7 +207,7 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameIQ.speedLimitChanged: {
     ET.WARNING: Alert(
-      "Set speed changed",
+      tr("Set speed changed"),
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertIQ.promptSingleHigh, 5.),
@@ -217,7 +219,7 @@ EVENTS_IQ: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameIQ.speedLimitPending: {
     ET.WARNING: Alert(
-      "Automatically adjusting to the last speed limit",
+      tr("Automatically adjusting to the last speed limit"),
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertIQ.promptSingleHigh, 5.),

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-01 01:31+0800\n"
-"PO-Revision-Date: 2026-03-01 07:42+0800\n"
+"POT-Creation-Date: 2026-03-01 08:18+0800\n"
+"PO-Revision-Date: 2026-03-01 08:27+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -63,17 +63,17 @@ msgstr "<br><br>转向延迟校准已完成 {}%。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:41
 msgid ""
-"A beautiful rainbow effect on the path the model wants to take. It does not affect driving in any "
-"way."
+"A beautiful rainbow effect on the path the model wants to take. It does not "
+"affect driving in any way."
 msgstr "在模型规划的路径上显示漂亮的彩虹效果，对驾驶无任何影响。"
 
 #: selfdrive/ui/layouts/settings/developer.py:16
 msgid ""
-"ADB (Android Debug Bridge) allows connecting to your device over USB or over the network. See "
-"https://docs.comma.ai/how-to/connect-to-comma for more info."
+"ADB (Android Debug Bridge) allows connecting to your device over USB or over "
+"the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
 msgstr ""
-"ADB（Android 调试桥）可通过 USB 或网络连接到您的设备。详见 https://docs.comma.ai/how-to/connect-to-"
-"comma。"
+"ADB（Android 调试桥）可通过 USB 或网络连接到您的设备。详见 https://"
+"docs.comma.ai/how-to/connect-to-comma。"
 
 #: selfdrive/ui/widgets/ssh_key.py:30
 msgid "ADD"
@@ -83,7 +83,8 @@ msgstr "添加"
 msgid "AEB: Risk of Collision"
 msgstr "自动紧急制动：存在碰撞风险"
 
-#: selfdrive/ui/iqpilot/layouts/settings/trips.py:144 selfdrive/ui/widgets/prime.py:138
+#: selfdrive/ui/iqpilot/layouts/settings/trips.py:144
+#: selfdrive/ui/widgets/prime.py:138
 msgid "ALL TIME"
 msgstr "全部时间"
 
@@ -117,9 +118,14 @@ msgstr "调整软件延迟"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:85
 msgid ""
-"Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay "
-"value is 0.2"
+"Adjust the software delay when Live Learning Steer Delay is toggled off. The "
+"default software delay value is 0.2"
 msgstr "关闭实时学习转向延迟时，调整软件延迟。默认软件延迟值为 0.2。"
+
+#: iqpilot/selfdrive/selfdrived/events.py:30
+#, python-brace-format
+msgid "Adjusting to {speed} {unit} speed limit"
+msgstr "正在调整至限速{speed} {unit}"
 
 #: system/ui/widgets/network.py:80 system/ui/widgets/network.py:101
 msgid "Advanced"
@@ -143,17 +149,26 @@ msgstr "所有州/省（约 6.0 GB）"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/volkswagen.py:17
 msgid ""
-"Allow lateral control (steering) to remain active even when longitudinal control (gas/brake) is "
-"temporarily unavailable due to a cruise control fault."
-msgstr "即使因巡航故障导致纵向控制（油门/刹车）暂时失效，仍允许横向控制（转向）保持激活。"
+"Allow lateral control (steering) to remain active even when longitudinal "
+"control (gas/brake) is temporarily unavailable due to a cruise control fault."
+msgstr ""
+"即使因巡航故障导致纵向控制（油门/刹车）暂时失效，仍允许横向控制（转向）保持激"
+"活。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/tesla.py:32
-msgid "Allows the driver to provide limited steering input while openpilot is engaged."
+msgid ""
+"Allows the driver to provide limited steering input while openpilot is "
+"engaged."
 msgstr "允许驾驶员在 openpilot 激活时进行有限的转向输入。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:268
 msgid "Always On"
 msgstr "始终开启"
+
+#: iqpilot/selfdrive/selfdrived/events_base.py:237
+#: iqpilot/selfdrive/selfdrived/events_base.py:240
+msgid "Always keep hands on wheel and eyes on road"
+msgstr "请始终手握方向盘，目视前方道路。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering.py:45
 msgid "Always on Lateral (AOL)"
@@ -165,9 +180,10 @@ msgstr "以及更多功能"
 
 #: selfdrive/ui/iqpilot/layouts/settings/display.py:54
 msgid ""
-"Apply a custom timeout for settings UI.<br>This is the time after which settings UI closes "
-"automatically if user is not interacting with the screen."
-msgstr "为设置界面自定义超时时间。<br>若用户无操作，设置界面将在此时间后自动关闭。"
+"Apply a custom timeout for settings UI.<br>This is the time after which "
+"settings UI closes automatically if user is not interacting with the screen."
+msgstr ""
+"为设置界面自定义超时时间。<br>若用户无操作，设置界面将在此时间后自动关闭。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:230
 msgid "Are you sure you want to enter Always Offroad mode?"
@@ -187,8 +203,8 @@ msgstr "确定要重启吗？"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:218
 msgid ""
-"Are you sure you want to reset all IQ.Pilot settings to default? Once the settings are reset, there "
-"is no going back."
+"Are you sure you want to reset all IQ.Pilot settings to default? Once the "
+"settings are reset, there is no going back."
 msgstr "确定要将所有 IQ.Pilot 设置恢复为默认值吗？重置后无法撤销。"
 
 #: selfdrive/ui/layouts/settings/device.py:123
@@ -219,6 +235,18 @@ msgstr "转向灯自动变道"
 msgid "Auto Lane Change: Delay with Blind Spot"
 msgstr "自动变道：盲区检测延迟"
 
+#: iqpilot/selfdrive/selfdrived/events.py:91
+msgid "Automatic Lane Centering is OFF"
+msgstr "自动车道居中已关闭"
+
+#: iqpilot/selfdrive/selfdrived/events.py:222
+msgid "Automatically adjusting to the last speed limit"
+msgstr "自动车道居中已关闭."
+
+#: iqpilot/selfdrive/selfdrived/events.py:202
+msgid "Automatically adjusting to the posted speed limit"
+msgstr "正在自动调整至限速标志所示车速"
+
 #: selfdrive/selfdrived/events.py:292 selfdrive/selfdrived/events.py:301
 #: selfdrive/selfdrived/events.py:319
 msgid "BRAKE!"
@@ -244,6 +272,10 @@ msgstr "书签已保存"
 msgid "Bottom"
 msgstr "底部"
 
+#: iqpilot/selfdrive/selfdrived/events.py:115
+msgid "Brake Hold Active"
+msgstr "自动驻车已激活"
+
 #: selfdrive/selfdrived/events.py:782
 msgid "CAN Bus Disconnected"
 msgstr "CAN 总线已断开"
@@ -256,12 +288,15 @@ msgstr "CAN 总线断开：检查连接"
 msgid "CAN Bus Disconnected: Likely Faulty Cable"
 msgstr "CAN 总线断开：线缆可能故障"
 
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:98 selfdrive/ui/layouts/settings/device.py:72
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:98
+#: selfdrive/ui/layouts/settings/device.py:72
 msgid "CHANGE"
 msgstr "更改"
 
-#: selfdrive/ui/iqpilot/layouts/settings/osm.py:49 selfdrive/ui/layouts/settings/software.py:75
-#: selfdrive/ui/layouts/settings/software.py:134 selfdrive/ui/layouts/settings/software.py:145
+#: selfdrive/ui/iqpilot/layouts/settings/osm.py:49
+#: selfdrive/ui/layouts/settings/software.py:75
+#: selfdrive/ui/layouts/settings/software.py:134
+#: selfdrive/ui/layouts/settings/software.py:145
 #: selfdrive/ui/layouts/settings/software.py:174
 msgid "CHECK"
 msgstr "检查"
@@ -314,9 +349,9 @@ msgstr "摄像头故障"
 msgid "Camera Malfunction: Reboot Your Device"
 msgstr "摄像头故障：重启设备"
 
-#: selfdrive/ui/iqpilot/layouts/settings/models.py:70 system/ui/widgets/confirm_dialog.py:23
-#: system/ui/widgets/keyboard.py:81 system/ui/widgets/network.py:324
-#: system/ui/widgets/option_dialog.py:35
+#: selfdrive/ui/iqpilot/layouts/settings/models.py:70
+#: system/ui/widgets/confirm_dialog.py:23 system/ui/widgets/keyboard.py:81
+#: system/ui/widgets/network.py:324 system/ui/widgets/option_dialog.py:35
 msgid "Cancel"
 msgstr "取消"
 
@@ -344,7 +379,8 @@ msgstr "盲区有车辆"
 msgid "Cellular Metered"
 msgstr "蜂窝计量网络"
 
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:98 selfdrive/ui/layouts/settings/device.py:72
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:98
+#: selfdrive/ui/layouts/settings/device.py:72
 msgid "Change Language"
 msgstr "更改语言"
 
@@ -362,17 +398,18 @@ msgstr "检查硬件"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/aol_settings.py:88
 msgid ""
-"Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in "
-"IQ.Pilot."
+"Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is "
+"manually pressed in IQ.Pilot."
 msgstr "选择在 IQ.Pilot 中手动踩下刹车后，自动车道居中（ALC）的行为模式。"
 
 #: selfdrive/ui/layouts/settings/toggles.py:44
 msgid ""
-"Choose longitudinal behavior: IQ.Pilot (IQ longitudinal + end-to-end), IQ.Dynamic (IQ longitudinal "
-"+ dynamic mode), IQ.Standard (IQ longitudinal + relaxed personality), or Stock ACC."
+"Choose longitudinal behavior: IQ.Pilot (IQ longitudinal + end-to-end), "
+"IQ.Dynamic (IQ longitudinal + dynamic mode), IQ.Standard (IQ longitudinal + "
+"relaxed personality), or Stock ACC."
 msgstr ""
-"选择纵向控制模式：IQ.Pilot（IQ 纵向+端到端）、IQ.Dynamic（IQ 纵向+动态模式）、IQ.Standard（IQ 纵向"
-"+从容风格）或原厂 ACC。"
+"选择纵向控制模式：IQ.Pilot（IQ 纵向+端到端）、IQ.Dynamic（IQ 纵向+动态模"
+"式）、IQ.Standard（IQ 纵向+从容风格）或原厂 ACC。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:123
 msgid "Clear Cache"
@@ -407,15 +444,21 @@ msgstr "确认变道"
 
 #: selfdrive/ui/layouts/settings/toggles.py:33
 msgid ""
-"Controls IQ.Pilot speed limit behavior. Off disables speed limit features, Information only "
-"displays limits, Warning highlights overspeed, and Assist adjusts set speed using detected limits."
+"Controls IQ.Pilot speed limit behavior. Off disables speed limit features, "
+"Information only displays limits, Warning highlights overspeed, and Assist "
+"adjusts set speed using detected limits."
 msgstr ""
-"控制 IQ.Pilot 限速行为。关闭：禁用限速功能；信息：仅显示限速；警告：超速高亮；辅助：根据检测到的限速"
-"调整设定速度。"
+"控制 IQ.Pilot 限速行为。关闭：禁用限速功能；信息：仅显示限速；警告：超速高"
+"亮；辅助：根据检测到的限速调整设定速度。"
 
 #: selfdrive/selfdrived/events.py:755 selfdrive/selfdrived/events.py:756
 msgid "Controls Mismatch"
 msgstr "控制不匹配"
+
+#: iqpilot/selfdrive/selfdrived/events.py:168
+#: iqpilot/selfdrive/selfdrived/events.py:169
+msgid "Controls Mismatch: Lateral"
+msgstr "控制不匹配：横向控制"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:198
 msgid "Controls state of the device after boot/sleep."
@@ -461,7 +504,8 @@ msgstr "自定义变道"
 msgid "Customize Torque Params"
 msgstr "自定义扭矩参数"
 
-#: selfdrive/ui/iqpilot/layouts/settings/osm.py:47 selfdrive/ui/iqpilot/layouts/settings/osm.py:83
+#: selfdrive/ui/iqpilot/layouts/settings/osm.py:47
+#: selfdrive/ui/iqpilot/layouts/settings/osm.py:83
 msgid "DELETE"
 msgstr "删除"
 
@@ -506,10 +550,11 @@ msgid "Default Model"
 msgstr "默认模型"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:196
-msgid "Default: Device will boot/wake-up normally & be ready to engage."
-msgstr "默认：设备正常开机/唤醒并准备就绪。"
+msgid "Default: Device will boot/wake-up normally & will be ready to engage."
+msgstr "默认模式：设备将正常启动 / 唤醒，并准备就绪可启用。"
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:114 selfdrive/ui/layouts/settings/settings.py:61
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:114
+#: selfdrive/ui/layouts/settings/settings.py:61
 msgid "Developer"
 msgstr "开发者"
 
@@ -517,7 +562,8 @@ msgstr "开发者"
 msgid "Developer UI"
 msgstr "开发者界面"
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:103 selfdrive/ui/layouts/settings/settings.py:57
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:103
+#: selfdrive/ui/layouts/settings/settings.py:57
 msgid "Device"
 msgstr "设备"
 
@@ -531,7 +577,8 @@ msgstr "检测到设备重新安装：正在重新校准"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:74
 msgid ""
-"Device will automatically shutdown after set time once the engine is turned off.\n"
+"Device will automatically shutdown after set time once the engine is turned "
+"off.\n"
 "(30h is the default)"
 msgstr ""
 "发动机关闭后，设备将在设定时间后自动关机。\n"
@@ -602,20 +649,25 @@ msgid "Display speed in km/h instead of mph."
 msgstr "以 km/h 显示速度（非 mph）。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:36
-msgid "Display steering arc on the driving screen when lateral control is enabled."
+msgid ""
+"Display steering arc on the driving screen when lateral control is enabled."
 msgstr "启用横向控制时，在驾驶界面显示转向弧线。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:12
 msgid ""
-"Display useful metrics below the chevron that tracks the lead car only applicable to cars with "
-"IQ.Pilot longitudinal control."
-msgstr "在追踪前车的导向箭头下方显示实用指标，仅适用于配备 IQ.Pilot 纵向控制的车辆。"
+"Display useful metrics below the chevron that tracks the lead car only "
+"applicable to cars with IQ.Pilot longitudinal control."
+msgstr ""
+"在追踪前车的导向箭头下方显示实用指标，仅适用于配备 IQ.Pilot 纵向控制的车辆。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:47
 msgid ""
-"Displays the name of the road the car is traveling on.<br>The OpenStreetMap database of the "
-"location must be downloaded from the OSM panel to fetch the road name."
-msgstr "显示车辆行驶的道路名称。<br>需从 OSM 面板下载对应地区的地图数据才能获取道路名称。"
+"Displays the name of the road the car is traveling on.<br>The OpenStreetMap "
+"database of the location must be downloaded from the OSM panel to fetch the "
+"road name."
+msgstr ""
+"显示车辆行驶的道路名称。<br>需从 OSM 面板下载对应地区的地图数据才能获取道路名"
+"称。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:88
 msgid "Distance"
@@ -625,11 +677,13 @@ msgstr "距离"
 msgid "Distraction Level Too High"
 msgstr "分心程度过高"
 
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:161 selfdrive/ui/layouts/settings/device.py:63
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:161
+#: selfdrive/ui/layouts/settings/device.py:63
 msgid "Dongle ID"
 msgstr "Dongle ID"
 
 #: selfdrive/selfdrived/events.py:658 selfdrive/selfdrived/events.py:659
+#: iqpilot/selfdrive/selfdrived/events.py:146
 msgid "Door Open"
 msgstr "车门未关"
 
@@ -670,7 +724,8 @@ msgstr "驾驶员分心"
 msgid "Driver Unresponsive"
 msgstr "驾驶员无响应"
 
-#: selfdrive/ui/iqpilot/layouts/settings/trips.py:124 selfdrive/ui/widgets/prime.py:181
+#: selfdrive/ui/iqpilot/layouts/settings/trips.py:124
+#: selfdrive/ui/widgets/prime.py:181
 msgid "Drives"
 msgstr "行程"
 
@@ -722,12 +777,17 @@ msgstr "启用"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/subaru.py:30
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/tesla.py:27
-msgid "Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle."
+msgid ""
+"Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle."
 msgstr "在设备面板启用“始终离线”，或关闭车辆进行切换。"
 
 #: selfdrive/ui/layouts/settings/developer.py:34
 msgid "Enable ADB"
 msgstr "启用 ADB"
+
+#: iqpilot/selfdrive/selfdrived/events_base.py:93
+msgid "Enable Adaptive Cruise to Engage"
+msgstr "请启用自适应巡航以激活"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:58
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:282
@@ -736,8 +796,8 @@ msgstr "启用始终离线"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering.py:37
 msgid ""
-"Enable Always on Lateral (AOL). Disable toggle to revert back to stock IQ.Pilot engagement/"
-"disengagement."
+"Enable Always on Lateral (AOL). Disable toggle to revert back to stock "
+"IQ.Pilot engagement/disengagement."
 msgstr "启用持续横向控制（AOL）。关闭将恢复为 IQ.Pilot 原厂激活/退出逻辑。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/torque_settings.py:38
@@ -747,6 +807,10 @@ msgstr "启用自定义调校"
 #: selfdrive/ui/layouts/settings/toggles.py:68
 msgid "Enable Lane Departure Warnings"
 msgstr "启用车道偏离警示"
+
+#: iqpilot/selfdrive/selfdrived/events_base.py:95
+msgid "Enable Main Switch to Engage"
+msgstr "请开启主开关以激活"
 
 #: system/ui/widgets/network.py:135
 msgid "Enable Roaming"
@@ -770,10 +834,12 @@ msgstr "即使未激活 IQ.Pilot，也启用驾驶员监控。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:95
 msgid ""
-"Enable this for the car to learn and adapt its steering response time. Disable to use a fixed "
-"steering response time. Keeping this on provides the stock openpilot experience."
+"Enable this for the car to learn and adapt its steering response time. "
+"Disable to use a fixed steering response time. Keeping this on provides the "
+"stock openpilot experience."
 msgstr ""
-"启用后车辆会学习并适配转向响应时间。关闭则使用固定转向响应时间。保持开启可获得原厂 openpilot 体验。"
+"启用后车辆会学习并适配转向响应时间。关闭则使用固定转向响应时间。保持开启可获"
+"得原厂 openpilot 体验。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering.py:61
 msgid "Enable this to enforce IQ.Pilot to steer with Torque lateral control."
@@ -785,12 +851,14 @@ msgstr "启用车辆原厂车道保持以激活"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/torque_settings.py:39
 msgid ""
-"Enables custom tuning for Torque lateral control. Modifying Lateral Acceleration Factor and "
-"Friction below will override the offline values indicated in the YAML files within \"opendbc/car/"
-"torque_data\". The values will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
+"Enables custom tuning for Torque lateral control. Modifying Lateral "
+"Acceleration Factor and Friction below will override the offline values "
+"indicated in the YAML files within \"opendbc/car/torque_data\". The values "
+"will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
 msgstr ""
-"启用扭矩横向控制自定义调校。修改下方横向加速度系数与摩擦系数将覆盖 opendbc/car/torque_data 中 YAML "
-"文件的离线值。启用“手动实时调校”后，这些值将实时生效。"
+"启用扭矩横向控制自定义调校。修改下方横向加速度系数与摩擦系数将覆盖 opendbc/"
+"car/torque_data 中 YAML 文件的离线值。启用“手动实时调校”后，这些值将实时生"
+"效。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/developer.py:40
 msgid "Enables or disables the GitHub runner service."
@@ -798,14 +866,14 @@ msgstr "启用或禁用 GitHub 运行服务。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/torque_settings.py:27
 msgid ""
-"Enables self-tune for Torque lateral control for platforms that do not use Torque lateral control "
-"by default."
+"Enables self-tune for Torque lateral control for platforms that do not use "
+"Torque lateral control by default."
 msgstr "为默认不使用扭矩横向控制的平台启用扭矩横向控制自调校。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:30
 msgid ""
-"Enabling this will display warnings when a vehicle is detected in your blind spot as long as your "
-"car has BSM supported."
+"Enabling this will display warnings when a vehicle is detected in your blind "
+"spot as long as your car has BSM supported."
 msgstr "车辆支持盲区监测（BSM）时，启用后在盲区检测到车辆时显示警告。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/toyota.py:25
@@ -814,9 +882,11 @@ msgstr "强制使用原厂纵向控制"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/torque_settings.py:47
 msgid ""
-"Enforces the torque lateral controller to use the fixed values instead of the learned values from "
-"Self-Tune. Enabling this toggle overrides Self-Tune values."
-msgstr "强制扭矩横向控制器使用固定值，而非自调校学习值。启用后将覆盖自调校参数。"
+"Enforces the torque lateral controller to use the fixed values instead of "
+"the learned values from Self-Tune. Enabling this toggle overrides Self-Tune "
+"values."
+msgstr ""
+"强制扭矩横向控制器使用固定值，而非自调校学习值。启用后将覆盖自调校参数。"
 
 #: selfdrive/selfdrived/events.py:237
 msgid "Ensure road ahead is clear"
@@ -870,19 +940,24 @@ msgstr "过度作动"
 msgid "Exit Always Offroad"
 msgstr "退出始终离线"
 
+#: iqpilot/selfdrive/selfdrived/events.py:173
+msgid "Experimental Mode Switched"
+msgstr "实验模式已切换"
+
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/subaru.py:44
 msgid ""
-"Experimental feature to enable auto-resume during stop-and-go for certain supported Subaru "
-"platforms."
+"Experimental feature to enable auto-resume during stop-and-go for certain "
+"supported Subaru platforms."
 msgstr "实验功能：为部分支持的斯巴鲁平台启用拥堵路段自动恢复。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/subaru.py:45
 msgid ""
-"Experimental feature to enable stop and go for Subaru Global models with manual handbrake. Models "
-"with electric parking brake should keep this disabled. Thanks to martinl for this implementation!"
+"Experimental feature to enable stop and go for Subaru Global models with "
+"manual handbrake. Models with electric parking brake should keep this "
+"disabled. Thanks to martinl for this implementation!"
 msgstr ""
-"实验功能：为配备机械手刹的斯巴鲁全球车型启用走走停停功能。电子手刹车型请保持关闭。感谢 martinl 实现"
-"此功能！"
+"实验功能：为配备机械手刹的斯巴鲁全球车型启用走走停停功能。电子手刹车型请保持"
+"关闭。感谢 martinl 实现此功能！"
 
 #: selfdrive/ui/iqpilot/layouts/settings/osm.py:103
 msgid "FETCHING..."
@@ -914,14 +989,16 @@ msgstr "按照应用内提示完成配对"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:54
 msgid ""
-"For applicable vehicles, always display the true vehicle current speed from wheel speed sensors."
+"For applicable vehicles, always display the true vehicle current speed from "
+"wheel speed sensors."
 msgstr "对适用车型，始终显示来自轮速传感器的真实车速。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:256
 msgid ""
-"Force IQ.Pilot on-road for 10 minutes? Always Offroad will be enabled automatically and it will "
-"return to offroad after the timer."
-msgstr "强制 IQ.Pilot 上路模式 10 分钟？始终离线将自动启用，计时结束后恢复离线。"
+"Force IQ.Pilot on-road for 10 minutes? Always Offroad will be enabled "
+"automatically and it will return to offroad after the timer."
+msgstr ""
+"强制 IQ.Pilot 上路模式 10 分钟？始终离线将自动启用，计时结束后恢复离线。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:65
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:307
@@ -959,6 +1036,7 @@ msgid "GOOD"
 msgstr "良好"
 
 #: selfdrive/selfdrived/events.py:630 selfdrive/selfdrived/events.py:631
+#: iqpilot/selfdrive/selfdrived/events.py:125
 msgid "Gear not D"
 msgstr "未挂 D 挡"
 
@@ -983,11 +1061,13 @@ msgstr "隐藏网络"
 msgid "High CPU Usage"
 msgstr "CPU 占用过高"
 
-#: selfdrive/ui/iqpilot/layouts/settings/trips.py:126 selfdrive/ui/widgets/prime.py:183
+#: selfdrive/ui/iqpilot/layouts/settings/trips.py:126
+#: selfdrive/ui/widgets/prime.py:183
 msgid "Hours"
 msgstr "小时"
 
-#: selfdrive/ui/layouts/settings/software.py:78 selfdrive/ui/layouts/settings/software.py:163
+#: selfdrive/ui/layouts/settings/software.py:78
+#: selfdrive/ui/layouts/settings/software.py:163
 msgid "INSTALL"
 msgstr "安装"
 
@@ -1017,19 +1097,21 @@ msgstr "IQ.Pilot 不可用"
 
 #: selfdrive/ui/layouts/settings/device.py:169
 msgid ""
-"IQ.Pilot is continuously calibrating, resetting is rarely required. Resetting calibration will "
-"restart IQ.Pilot if the car is powered on."
-msgstr "IQ.Pilot 正在持续校准，通常无需重置。车辆通电时，重置校准将重启 IQ.Pilot。"
+"IQ.Pilot is continuously calibrating, resetting is rarely required. "
+"Resetting calibration will restart IQ.Pilot if the car is powered on."
+msgstr ""
+"IQ.Pilot 正在持续校准，通常无需重置。车辆通电时，重置校准将重启 IQ.Pilot。"
 
 #: selfdrive/ui/layouts/settings/device.py:30
 msgid ""
-"IQ.Pilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."
+"IQ.Pilot requires the device to be mounted within 4° left or right and "
+"within 5° up or 9° down."
 msgstr "IQ.Pilot 要求设备安装在左右 4°、上 5° 或下 9° 范围内。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/toyota.py:15
 msgid ""
-"IQ.Pilot will not take over control of gas and brakes. Factory Toyota longitudinal control will be "
-"used."
+"IQ.Pilot will not take over control of gas and brakes. Factory Toyota "
+"longitudinal control will be used."
 msgstr "IQ.Pilot 不接管油门与刹车，使用丰田原厂纵向控制。"
 
 #: selfdrive/ui/widgets/exp_mode_button.py:67
@@ -1042,12 +1124,13 @@ msgstr "IQ.Standard"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:79
 msgid ""
-"If you're driving at 20 mph (32 km/h) or below and have your blinker on, the car will plan a turn "
-"in that direction at the nearest drivable path. This prevents situations (like at red lights) where "
-"the car might plan the wrong turn direction."
+"If you're driving at 20 mph (32 km/h) or below and have your blinker on, the "
+"car will plan a turn in that direction at the nearest drivable path. This "
+"prevents situations (like at red lights) where the car might plan the wrong "
+"turn direction."
 msgstr ""
-"车速 20 mph（32 km/h）及以下且开启转向灯时，车辆会在最近可行驶路径规划转向。避免在红灯等场景下规划错"
-"误转向方向。"
+"车速 20 mph（32 km/h）及以下且开启转向灯时，车辆会在最近可行驶路径规划转向。"
+"避免在红灯等场景下规划错误转向方向。"
 
 #: selfdrive/ui/layouts/settings/toggles.py:105
 msgid "Info"
@@ -1073,7 +1156,8 @@ msgstr "摇杆调试模式"
 msgid "Joystick Mode"
 msgstr "摇杆模式"
 
-#: selfdrive/ui/iqpilot/layouts/settings/trips.py:105 selfdrive/ui/widgets/prime.py:182
+#: selfdrive/ui/iqpilot/layouts/settings/trips.py:105
+#: selfdrive/ui/widgets/prime.py:182
 msgid "KM"
 msgstr "公里"
 
@@ -1131,8 +1215,8 @@ msgstr "自调校宽松模式（测试版）"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/torque_settings.py:33
 msgid ""
-"Less strict settings when using Self-Tune. This allows torqued to be more forgiving when learning "
-"values."
+"Less strict settings when using Self-Tune. This allows torqued to be more "
+"forgiving when learning values."
 msgstr "使用自调校时采用宽松设置，让扭矩学习更宽容。"
 
 #: selfdrive/selfdrived/events.py:453
@@ -1157,25 +1241,29 @@ msgstr "纵向控制"
 
 #: selfdrive/ui/layouts/settings/toggles.py:175
 msgid ""
-"Longitudinal Control modes:<br>IQ.Pilot features are listed below:<br><h4>IQ.Pilot End-to-End "
-"Longitudinal Control</h4><br>Let the driving model control the gas and brakes. IQ.Pilot will drive "
-"as it thinks a human would, including stopping for red lights and stop signs. Since the driving "
-"model decides the speed to drive, the set speed will only act as an upper bound. This feature is "
-"still being improved; mistakes should be expected.<br><h4>IQ.Dynamic</h4><br>Dynamically blends "
-"between adaptive cruise behavior and end-to-end behavior based on scene/context."
-"<br><h4>IQ.Standard</h4><br>Uses standard traffic-aware cruise behavior for longitudinal control."
-"<br><h4>New Driving Visualization</h4><br>The driving visualization will transition to the road-"
-"facing wide-angle camera at low speeds to better show some turns. The IQ.Pilot logo will also be "
-"shown in the top right corner."
+"Longitudinal Control modes:<br>IQ.Pilot features are listed below:"
+"<br><h4>IQ.Pilot End-to-End Longitudinal Control</h4><br>Let the driving "
+"model control the gas and brakes. IQ.Pilot will drive as it thinks a human "
+"would, including stopping for red lights and stop signs. Since the driving "
+"model decides the speed to drive, the set speed will only act as an upper "
+"bound. This feature is still being improved; mistakes should be expected."
+"<br><h4>IQ.Dynamic</h4><br>Dynamically blends between adaptive cruise "
+"behavior and end-to-end behavior based on scene/context.<br><h4>IQ.Standard</"
+"h4><br>Uses standard traffic-aware cruise behavior for longitudinal control."
+"<br><h4>New Driving Visualization</h4><br>The driving visualization will "
+"transition to the road-facing wide-angle camera at low speeds to better show "
+"some turns. The IQ.Pilot logo will also be shown in the top right corner."
 msgstr ""
-"纵向控制模式：<br>IQ.Pilot 功能如下：<br><h4>IQ.Pilot 端到端纵向控制</h4><br>由驾驶模型控制油门与刹"
-"车，IQ.Pilot 会模拟人类驾驶方式行驶，包括在红灯和停车标志前停车。由于行驶速度由驾驶模型决定，设定速"
-"度仅作为上限。此功能仍在优化中，可能会出现失误。<br><h4>IQ.Dynamic</h4><br>根据场景/环境动态融合自适"
-"应巡航与端到端控制逻辑。<br><h4>IQ.Standard</h4><br>采用标准的交通感知巡航逻辑进行纵向控制。<br><h4>"
-"全新驾驶可视化</h4><br>低速时，驾驶可视化界面将切换为朝前的广角摄像头画面，更清晰地显示转弯路况。"
-"IQ.Pilot 标识也将显示在右上角。"
+"纵向控制模式：<br>IQ.Pilot 功能如下：<br><h4>IQ.Pilot 端到端纵向控制</h4><br>"
+"由驾驶模型控制油门与刹车，IQ.Pilot 会模拟人类驾驶方式行驶，包括在红灯和停车标"
+"志前停车。由于行驶速度由驾驶模型决定，设定速度仅作为上限。此功能仍在优化中，"
+"可能会出现失误。<br><h4>IQ.Dynamic</h4><br>根据场景/环境动态融合自适应巡航与"
+"端到端控制逻辑。<br><h4>IQ.Standard</h4><br>采用标准的交通感知巡航逻辑进行纵"
+"向控制。<br><h4>全新驾驶可视化</h4><br>低速时，驾驶可视化界面将切换为朝前的广"
+"角摄像头画面，更清晰地显示转弯路况。IQ.Pilot 标识也将显示在右上角。"
 
-#: selfdrive/selfdrived/events.py:236 selfdrive/ui/layouts/settings/developer.py:59
+#: selfdrive/selfdrived/events.py:236
+#: selfdrive/ui/layouts/settings/developer.py:59
 msgid "Longitudinal Maneuver Mode"
 msgstr "纵向操作模式"
 
@@ -1195,7 +1283,8 @@ msgstr "内存不足"
 msgid "Low Memory: Reboot Your Device"
 msgstr "内存不足：请重启设备"
 
-#: selfdrive/ui/mici/onroad/hud_renderer.py:259 selfdrive/ui/onroad/hud_renderer.py:148
+#: selfdrive/ui/mici/onroad/hud_renderer.py:259
+#: selfdrive/ui/onroad/hud_renderer.py:148
 msgid "MAX"
 msgstr "最大"
 
@@ -1206,6 +1295,19 @@ msgstr "维护"
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/torque_settings.py:46
 msgid "Manual Real-Time Tuning"
 msgstr "手动实时调校"
+
+#: iqpilot/selfdrive/selfdrived/events.py:100
+msgid "Manual Speed Control Required"
+msgstr "需要手动控制车速"
+
+#: iqpilot/selfdrive/selfdrived/events.py:92
+msgid "Manual Steering Required"
+msgstr "需要手动控制方向盘"
+
+#: iqpilot/selfdrive/selfdrived/events.py:54
+#, python-brace-format
+msgid "Manually change set speed to {speed} {unit} to activate"
+msgstr "请手动将设定车速调整为 {speed} {unit} 以激活"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/platform_selector.py:42
 msgid "Manually selected fingerprint"
@@ -1219,14 +1321,15 @@ msgstr "地图数据库版本"
 msgid "Max Time Offroad"
 msgstr "最大离线时长"
 
-#: selfdrive/ui/iqpilot/layouts/settings/trips.py:105 selfdrive/ui/widgets/prime.py:182
+#: selfdrive/ui/iqpilot/layouts/settings/trips.py:105
+#: selfdrive/ui/widgets/prime.py:182
 msgid "Miles"
 msgstr "英里"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:175
 msgid ""
-"Model download has started in the background. We suggest resetting calibration. Would you like to "
-"do that now?"
+"Model download has started in the background. We suggest resetting "
+"calibration. Would you like to do that now?"
 msgstr "模型已在后台开始下载。建议重置校准，是否立即执行？"
 
 #: selfdrive/selfdrived/events.py:835
@@ -1238,7 +1341,8 @@ msgid "Models"
 msgstr "模型"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:161
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:163 selfdrive/ui/layouts/settings/device.py:63
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:163
+#: selfdrive/ui/layouts/settings/device.py:63
 #: selfdrive/ui/layouts/settings/device.py:64
 msgid "N/A"
 msgstr "无"
@@ -1247,11 +1351,13 @@ msgstr "无"
 msgid "NO"
 msgstr "否"
 
-#: selfdrive/ui/iqpilot/onroad/speed_limit.py:261 selfdrive/ui/iqpilot/onroad/speed_limit.py:272
+#: selfdrive/ui/iqpilot/onroad/speed_limit.py:261
+#: selfdrive/ui/iqpilot/onroad/speed_limit.py:272
 msgid "Near"
 msgstr "临近"
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:104 selfdrive/ui/layouts/settings/settings.py:58
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:104
+#: selfdrive/ui/layouts/settings/settings.py:58
 msgid "Network"
 msgstr "网络"
 
@@ -1294,7 +1400,8 @@ msgstr "未识别车型且未手动选择"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/aol_settings.py:21
 msgid ""
-"Note: For vehicles without LFA/LKAS button, disabling this will prevent lateral control engagement."
+"Note: For vehicles without LFA/LKAS button, disabling this will prevent "
+"lateral control engagement."
 msgstr "注意：对于无LFA/LKAS按键的车辆，关闭此项将导致横向控制无法激活。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:38
@@ -1326,7 +1433,8 @@ msgstr "开源地图"
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:37
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/hyundai.py:16
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:88
-#: selfdrive/ui/iqpilot/layouts/settings/visuals.py:95 selfdrive/ui/layouts/settings/toggles.py:105
+#: selfdrive/ui/iqpilot/layouts/settings/visuals.py:95
+#: selfdrive/ui/layouts/settings/toggles.py:105
 msgid "Off"
 msgstr "关闭"
 
@@ -1411,6 +1519,7 @@ msgid "Pair your device to your Konn3kt account"
 msgstr "将设备配对到您的 comma 账号"
 
 #: selfdrive/selfdrived/events.py:530
+#: iqpilot/selfdrive/selfdrived/events.py:164
 msgid "Parking Brake Engaged"
 msgstr "驻车制动已启用"
 
@@ -1428,10 +1537,12 @@ msgid "Pay Attention"
 msgstr "请注意"
 
 #: selfdrive/selfdrived/events.py:535
+#: iqpilot/selfdrive/selfdrived/events.py:181
 msgid "Pedal Pressed"
 msgstr "踏板已踩下"
 
-#: selfdrive/ui/mici/layouts/settings/device.py:160 selfdrive/ui/widgets/setup.py:50
+#: selfdrive/ui/mici/layouts/settings/device.py:160
+#: selfdrive/ui/widgets/setup.py:50
 msgid "Please connect to Wi-Fi to complete initial pairing"
 msgstr "请连接 Wi‑Fi 以完成初始配对"
 
@@ -1440,7 +1551,9 @@ msgid "Please connect to Wi-Fi to update"
 msgstr "请连接Wi-Fi以进行更新"
 
 #: selfdrive/ui/iqpilot/layouts/settings/software.py:23
-msgid "Please enable \"Always Offroad\" mode or turn off the vehicle to adjust these toggles."
+msgid ""
+"Please enable \"Always Offroad\" mode or turn off the vehicle to adjust "
+"these toggles."
 msgstr "请启用“始终离线”模式或关闭车辆后再调整这些开关。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:57
@@ -1455,7 +1568,8 @@ msgstr "位置网络速度无效"
 msgid "Possible Hardware Issue"
 msgstr "可能存在硬件问题"
 
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:125 selfdrive/ui/layouts/settings/device.py:59
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:125
+#: selfdrive/ui/layouts/settings/device.py:59
 #: selfdrive/ui/layouts/settings/device.py:191
 msgid "Power Off"
 msgstr "关机"
@@ -1490,8 +1604,8 @@ msgstr "在计量制蜂窝网络时避免大量上传"
 
 #: selfdrive/ui/layouts/settings/device.py:29
 msgid ""
-"Preview the driver facing camera to ensure that driver monitoring has good visibility. (vehicle "
-"must be off)"
+"Preview the driver facing camera to ensure that driver monitoring has good "
+"visibility. (vehicle must be off)"
 msgstr "预览车内摄像头以确保驾驶员监控视野良好。（车辆必须熄火）"
 
 #: selfdrive/selfdrived/events.py:126 selfdrive/selfdrived/events.py:698
@@ -1508,8 +1622,8 @@ msgstr "快速启动模式"
 
 #: selfdrive/ui/iqpilot/layouts/settings/developer.py:99
 msgid ""
-"Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' in the Software panel "
-"first."
+"Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' "
+"in the Software panel first."
 msgstr "快速启动模式需要禁用更新。<br>请先在软件面板启用“禁用更新”。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:101
@@ -1520,7 +1634,8 @@ msgstr "静音模式"
 msgid "REFRESH"
 msgstr "刷新"
 
-#: selfdrive/ui/iqpilot/layouts/settings/vehicle/__init__.py:42 selfdrive/ui/widgets/ssh_key.py:31
+#: selfdrive/ui/iqpilot/layouts/settings/vehicle/__init__.py:42
+#: selfdrive/ui/widgets/ssh_key.py:31
 msgid "REMOVE"
 msgstr "移除"
 
@@ -1549,7 +1664,8 @@ msgid "Real-time Acceleration Bar"
 msgstr "实时加速度条"
 
 #: selfdrive/ui/iqpilot/layouts/settings/device.py:124
-#: selfdrive/ui/iqpilot/layouts/settings/software.py:47 selfdrive/ui/layouts/settings/device.py:59
+#: selfdrive/ui/iqpilot/layouts/settings/software.py:47
+#: selfdrive/ui/layouts/settings/device.py:59
 #: selfdrive/ui/layouts/settings/device.py:179
 msgid "Reboot"
 msgstr "重启"
@@ -1568,9 +1684,12 @@ msgstr "重启您的设备"
 
 #: selfdrive/ui/layouts/settings/toggles.py:36
 msgid ""
-"Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line "
-"without a turn signal activated while driving over 31 mph (50 km/h)."
-msgstr "当车辆以超过 31 mph（50 km/h）行驶且未打转向灯越过检测到的车道线时，接收引导回车道的警报。"
+"Receive alerts to steer back into the lane when your vehicle drifts over a "
+"detected lane line without a turn signal activated while driving over 31 mph "
+"(50 km/h)."
+msgstr ""
+"当车辆以超过 31 mph（50 km/h）行驶且未打转向灯越过检测到的车道线时，接收引导"
+"回车道的警报。"
 
 #: selfdrive/ui/layouts/settings/toggles.py:74
 msgid "Record and Upload Driver Camera"
@@ -1582,8 +1701,8 @@ msgstr "录制并上传麦克风音频"
 
 #: selfdrive/ui/layouts/settings/toggles.py:42
 msgid ""
-"Record and store microphone audio while driving. The audio will be included in the dashcam video in "
-"Konn3kt."
+"Record and store microphone audio while driving. The audio will be included "
+"in the dashcam video in Konn3kt."
 msgstr "行驶时录制并保存麦克风音频。音频将包含在 Konn3kt 的行车记录视频中。"
 
 #: selfdrive/selfdrived/events.py:104
@@ -1594,7 +1713,8 @@ msgstr "正在录制音频反馈"
 msgid "Refresh Model List"
 msgstr "刷新模型列表"
 
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:109 selfdrive/ui/layouts/settings/device.py:71
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:109
+#: selfdrive/ui/layouts/settings/device.py:71
 msgid "Regulatory"
 msgstr "法规"
 
@@ -1626,11 +1746,13 @@ msgstr "检测到重新安装：正在重新校准"
 msgid "Request timed out"
 msgstr "请求超时"
 
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:219 selfdrive/ui/layouts/settings/device.py:123
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:219
+#: selfdrive/ui/layouts/settings/device.py:123
 msgid "Reset"
 msgstr "重置"
 
-#: selfdrive/ui/iqpilot/layouts/settings/models.py:176 selfdrive/ui/layouts/settings/device.py:55
+#: selfdrive/ui/iqpilot/layouts/settings/models.py:176
+#: selfdrive/ui/layouts/settings/device.py:55
 msgid "Reset Calibration"
 msgstr "重置校准"
 
@@ -1648,6 +1770,7 @@ msgid "Reverse"
 msgstr "倒车"
 
 #: selfdrive/selfdrived/events.py:799
+#: iqpilot/selfdrive/selfdrived/events.py:133
 msgid ""
 "Reverse\n"
 "Gear"
@@ -1656,6 +1779,7 @@ msgstr ""
 "挡"
 
 #: selfdrive/selfdrived/events.py:803 selfdrive/selfdrived/events.py:804
+#: iqpilot/selfdrive/selfdrived/events.py:137
 msgid "Reverse Gear"
 msgstr "倒挡"
 
@@ -1679,8 +1803,10 @@ msgstr "右侧和底部"
 msgid "Risk of Collision"
 msgstr "存在碰撞风险"
 
-#: selfdrive/ui/iqpilot/layouts/settings/models.py:51 selfdrive/ui/iqpilot/layouts/settings/osm.py:50
-#: selfdrive/ui/iqpilot/layouts/settings/osm.py:51 selfdrive/ui/iqpilot/layouts/settings/osm.py:143
+#: selfdrive/ui/iqpilot/layouts/settings/models.py:51
+#: selfdrive/ui/iqpilot/layouts/settings/osm.py:50
+#: selfdrive/ui/iqpilot/layouts/settings/osm.py:51
+#: selfdrive/ui/iqpilot/layouts/settings/osm.py:143
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/__init__.py:23
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/__init__.py:42
 #: selfdrive/ui/layouts/settings/software.py:86
@@ -1717,6 +1843,7 @@ msgid "Search your vehicle"
 msgstr "搜索您的车辆"
 
 #: selfdrive/selfdrived/events.py:663 selfdrive/selfdrived/events.py:664
+#: iqpilot/selfdrive/selfdrived/events.py:155
 msgid "Seatbelt Unlatched"
 msgstr "安全带未扣紧"
 
@@ -1732,7 +1859,8 @@ msgstr "选择"
 msgid "Select a Model"
 msgstr "选择模型"
 
-#: selfdrive/ui/iqpilot/layouts/settings/software.py:81 selfdrive/ui/layouts/settings/software.py:210
+#: selfdrive/ui/iqpilot/layouts/settings/software.py:81
+#: selfdrive/ui/layouts/settings/software.py:210
 msgid "Select a branch"
 msgstr "选择分支"
 
@@ -1761,18 +1889,25 @@ msgstr "自动驾驶进程运行滞后：请重启设备"
 msgid "Sensor Data Invalid"
 msgstr "传感器数据无效"
 
-#: selfdrive/ui/iqpilot/layouts/settings/device.py:163 selfdrive/ui/layouts/settings/device.py:64
+#: selfdrive/ui/iqpilot/layouts/settings/device.py:163
+#: selfdrive/ui/layouts/settings/device.py:64
 msgid "Serial"
 msgstr "序列号"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:30
 msgid ""
-"Set a timer to delay the auto lane change operation when the blinker is used. No nudge on the "
-"steering wheel is required to auto lane change if a timer is set. Default is Nudge.<br>Please use "
-"caution when using this feature. Only use the blinker when traffic and road conditions permit."
+"Set a timer to delay the auto lane change operation when the blinker is "
+"used. No nudge on the steering wheel is required to auto lane change if a "
+"timer is set. Default is Nudge.<br>Please use caution when using this "
+"feature. Only use the blinker when traffic and road conditions permit."
 msgstr ""
-"设置转向灯触发自动变道的延迟计时器。设置计时器后，自动变道无需轻推方向盘确认。默认模式为轻推确认。"
-"<br>使用此功能时请务必小心。仅在交通和道路条件允许时使用转向灯。"
+"设置转向灯触发自动变道的延迟计时器。设置计时器后，自动变道无需轻推方向盘确"
+"认。默认模式为轻推确认。<br>使用此功能时请务必小心。仅在交通和道路条件允许时"
+"使用转向灯。"
+
+#: iqpilot/selfdrive/selfdrived/events.py:210
+msgid "Set speed changed"
+msgstr "设定车速已更改"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:73
 msgid "Set the maximum speed for lane turn desires. Default is 19 mph."
@@ -1788,20 +1923,27 @@ msgstr "显示盲区警告"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:69
 msgid ""
-"Show an indicator on the left side of the screen to display real-time vehicle acceleration and "
-"deceleration. This displays what the car is currently doing, not what the planner is requesting."
+"Show an indicator on the left side of the screen to display real-time "
+"vehicle acceleration and deceleration. This displays what the car is "
+"currently doing, not what the planner is requesting."
 msgstr ""
-"在屏幕左侧显示指示器，展示车辆实时加减速状态。该指示器显示车辆当前实际状态，而非规划器请求的状态。"
+"在屏幕左侧显示指示器，展示车辆实时加减速状态。该指示器显示车辆当前实际状态，"
+"而非规划器请求的状态。"
 
 #: selfdrive/selfdrived/events.py:838
 msgid "Slow down to engage"
 msgstr "请减速以激活"
 
+#: iqpilot/selfdrive/selfdrived/events.py:99
+msgid "Smart/Adaptive Cruise Control: OFF"
+msgstr "智能 / 自适应巡航控制：已关闭."
+
 #: selfdrive/ui/widgets/offroad_alerts.py:106
 msgid "Snooze Update"
 msgstr "延后更新"
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:106 selfdrive/ui/layouts/settings/settings.py:60
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:106
+#: selfdrive/ui/layouts/settings/settings.py:60
 msgid "Software"
 msgstr "软件"
 
@@ -1816,6 +1958,10 @@ msgstr "速度"
 #: selfdrive/ui/layouts/settings/toggles.py:103
 msgid "Speed Limit"
 msgstr "限速"
+
+#: iqpilot/selfdrive/selfdrived/events.py:53
+msgid "Speed Limit Assist: Activation Required"
+msgstr "限速辅助：需要激活"
 
 #: selfdrive/selfdrived/events.py:834
 msgid "Speed Too High"
@@ -1839,13 +1985,14 @@ msgstr "标准"
 
 #: selfdrive/ui/layouts/settings/toggles.py:28
 msgid ""
-"Standard is recommended. In aggressive mode, IQ.Pilot will follow lead cars closer and be more "
-"aggressive with the gas and brake. In relaxed mode IQ.Pilot will stay further away from lead cars. "
-"On supported cars, you can cycle through these personalities with your steering wheel distance "
-"button."
+"Standard is recommended. In aggressive mode, IQ.Pilot will follow lead cars "
+"closer and be more aggressive with the gas and brake. In relaxed mode "
+"IQ.Pilot will stay further away from lead cars. On supported cars, you can "
+"cycle through these personalities with your steering wheel distance button."
 msgstr ""
-"建议使用标准模式。激进模式下，IQ.Pilot会更贴近前车，油门和刹车操作更激进；从容模式下，IQ.Pilot会与前"
-"车保持更远距离。在支持的车型上，可通过方向盘距离按钮切换这些驾驶风格。"
+"建议使用标准模式。激进模式下，IQ.Pilot会更贴近前车，油门和刹车操作更激进；从"
+"容模式下，IQ.Pilot会与前车保持更远距离。在支持的车型上，可通过方向盘距离按钮"
+"切换这些驾驶风格。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/osm.py:96
 msgid "Start Download"
@@ -1949,7 +2096,8 @@ msgstr "系统运行滞后"
 msgid "System Overheated"
 msgstr "系统过热"
 
-#: selfdrive/ui/onroad/alert_renderer.py:59 selfdrive/ui/onroad/alert_renderer.py:65
+#: selfdrive/ui/onroad/alert_renderer.py:59
+#: selfdrive/ui/onroad/alert_renderer.py:65
 msgid "System Unresponsive"
 msgstr "系统无响应"
 
@@ -1962,6 +2110,8 @@ msgid "TAKE CONTROL"
 msgstr "接管控制"
 
 #: selfdrive/ui/onroad/alert_renderer.py:58
+#: iqpilot/selfdrive/selfdrived/events_base.py:200
+#: iqpilot/selfdrive/selfdrived/events_base.py:215
 msgid "TAKE CONTROL IMMEDIATELY"
 msgstr "请立即接管控制"
 
@@ -1991,7 +2141,9 @@ msgid "The reset cannot be undone. You have been warned."
 msgstr "重置操作不可撤销，特此提醒。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/aol_settings.py:24
-msgid "This feature defaults to OFF, and does not allow selection due to vehicle limitations."
+msgid ""
+"This feature defaults to OFF, and does not allow selection due to vehicle "
+"limitations."
 msgstr "受车辆限制，此功能默认关闭且不允许选择。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/subaru.py:28
@@ -1999,7 +2151,9 @@ msgid "This feature is currently not available on this platform."
 msgstr "此功能当前在该平台不可用。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/hyundai.py:50
-msgid "This feature is unavailable because IQ.Pilot Longitudinal Control (Alpha) is not enabled."
+msgid ""
+"This feature is unavailable because IQ.Pilot Longitudinal Control (Alpha) is "
+"not enabled."
 msgstr "此功能不可用，因为IQ.Pilot纵向控制（测试版）未启用。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/hyundai.py:48
@@ -2042,12 +2196,13 @@ msgstr ""
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:122
 msgid ""
-"This will delete ALL downloaded models from the cache except the currently active model. Are you "
-"sure?"
+"This will delete ALL downloaded models from the cache except the currently "
+"active model. Are you sure?"
 msgstr "此操作将删除缓存中除当前激活模型外的所有已下载模型，确定吗？"
 
 #: selfdrive/ui/iqpilot/layouts/settings/osm.py:96
-msgid "This will start the download process and it might take a while to complete."
+msgid ""
+"This will start the download process and it might take a while to complete."
 msgstr "此操作将开始下载流程，可能需要一段时间完成。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/visuals.py:88
@@ -2060,21 +2215,27 @@ msgstr "切换原厂车道保持系统开关以激活"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/lane_change_settings.py:48
 msgid ""
-"Toggle to enable a delay timer for seamless lane changes when blind spot monitoring (BSM) detects a "
-"obstructing vehicle, ensuring safe maneuvering."
-msgstr "开启后，当盲区监测（BSM）检测到障碍车辆时，将启用延迟计时器实现平稳变道，确保操作安全。"
+"Toggle to enable a delay timer for seamless lane changes when blind spot "
+"monitoring (BSM) detects a obstructing vehicle, ensuring safe maneuvering."
+msgstr ""
+"开启后，当盲区监测（BSM）检测到障碍车辆时，将启用延迟计时器实现平稳变道，确保"
+"操作安全。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/developer.py:37
 msgid ""
-"Toggle visibility of advanced IQ.Pilot controls.<br>This only changes the visibility of the "
-"toggles; it does not change the actual enabled/disabled state."
-msgstr "切换IQ.Pilot高级控制项的显示状态。<br>此操作仅改变开关的可见性，不改变其实际启用/禁用状态。"
+"Toggle visibility of advanced IQ.Pilot controls.<br>This only changes the "
+"visibility of the toggles; it does not change the actual enabled/disabled "
+"state."
+msgstr ""
+"切换IQ.Pilot高级控制项的显示状态。<br>此操作仅改变开关的可见性，不改变其实际"
+"启用/禁用状态。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/steering_sub_layouts/aol_settings.py:38
 msgid "Toggle with Main Cruise"
 msgstr "随主巡航开关联动"
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:105 selfdrive/ui/layouts/settings/settings.py:59
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:105
+#: selfdrive/ui/layouts/settings/settings.py:59
 msgid "Toggles"
 msgstr "切换"
 
@@ -2106,6 +2267,14 @@ msgstr "转向角度超出限制"
 msgid "Turn exceeds limit"
 msgstr "转向超出限制"
 
+#: iqpilot/selfdrive/selfdrived/events.py:186
+msgid "Turning Left"
+msgstr "左转中"
+
+#: iqpilot/selfdrive/selfdrived/events.py:194
+msgid "Turning Right"
+msgstr "右转中"
+
 #: selfdrive/ui/layouts/settings/developer.py:66
 msgid "UI Debug Mode"
 msgstr "界面调试模式"
@@ -2123,7 +2292,8 @@ msgstr "更新"
 msgid "USB Error: Reboot Your Device"
 msgstr "USB错误：请重启设备"
 
-#: selfdrive/ui/layouts/settings/software.py:97 selfdrive/ui/layouts/settings/software.py:190
+#: selfdrive/ui/layouts/settings/software.py:97
+#: selfdrive/ui/layouts/settings/software.py:190
 msgid "Uninstall"
 msgstr "卸载"
 
@@ -2149,14 +2319,18 @@ msgid "Updates are only downloaded while the car is off."
 msgstr "仅在车辆熄火时下载更新。"
 
 #: selfdrive/ui/layouts/settings/toggles.py:40
-msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
+msgid ""
+"Upload data from the driver facing camera and help improve the driver "
+"monitoring algorithm."
 msgstr "上传车内摄像头数据，帮助改进驾驶员监控算法。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/volkswagen.py:13
 msgid ""
-"Use HCA Status 7 instead of Status 5 for steering control on PQ platform vehicles. This may help "
-"with compatibility on some older Volkswagen models."
-msgstr "PQ平台车辆使用HCA Status 7而非Status 5进行转向控制。这可能提升部分老款大众车型的兼容性。"
+"Use HCA Status 7 instead of Status 5 for steering control on PQ platform "
+"vehicles. This may help with compatibility on some older Volkswagen models."
+msgstr ""
+"PQ平台车辆使用HCA Status 7而非Status 5进行转向控制。这可能提升部分老款大众车"
+"型的兼容性。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/models.py:78
 msgid "Use Lane Turn Desires"
@@ -2168,15 +2342,18 @@ msgstr "使用公制"
 
 #: selfdrive/ui/layouts/settings/toggles.py:23
 msgid ""
-"Use the IQ.Pilot system for adaptive cruise control and lane keep driver assistance. Your attention "
-"is required at all times to use this feature."
-msgstr "使用IQ.Pilot系统进行自适应巡航和车道保持辅助驾驶。使用此功能时，您必须始终保持注意力集中。"
+"Use the IQ.Pilot system for adaptive cruise control and lane keep driver "
+"assistance. Your attention is required at all times to use this feature."
+msgstr ""
+"使用IQ.Pilot系统进行自适应巡航和车道保持辅助驾驶。使用此功能时，您必须始终保"
+"持注意力集中。"
 
 #: selfdrive/ui/layouts/sidebar.py:72 selfdrive/ui/layouts/sidebar.py:145
 msgid "VEHICLE"
 msgstr "车辆"
 
-#: selfdrive/ui/iqpilot/layouts/settings/developer.py:50 selfdrive/ui/layouts/settings/device.py:71
+#: selfdrive/ui/iqpilot/layouts/settings/developer.py:50
+#: selfdrive/ui/layouts/settings/device.py:71
 msgid "VIEW"
 msgstr "查看"
 
@@ -2231,11 +2408,12 @@ msgstr "警告"
 
 #: selfdrive/ui/layouts/settings/developer.py:20
 msgid ""
-"Warning: This grants SSH access to all public keys in your GitHub settings. Never enter a GitHub "
-"username other than your own. A comma employee will NEVER ask you to add their GitHub username."
+"Warning: This grants SSH access to all public keys in your GitHub settings. "
+"Never enter a GitHub username other than your own. A comma employee will "
+"NEVER ask you to add their GitHub username."
 msgstr ""
-"警告：这将授予对您 GitHub 设置中所有公钥的 SSH 访问权限。请勿输入非您本人的 GitHub 用户名。comma 员"
-"工绝不会要求您添加他们的用户名。"
+"警告：这将授予对您 GitHub 设置中所有公钥的 SSH 访问权限。请勿输入非您本人的 "
+"GitHub 用户名。comma 员工绝不会要求您添加他们的用户名。"
 
 #: selfdrive/ui/layouts/onboarding.py:112
 msgid "Welcome to IQ.Pilot"
@@ -2243,8 +2421,8 @@ msgstr "欢迎使用IQ.Pilot"
 
 #: selfdrive/ui/iqpilot/layouts/settings/software.py:20
 msgid ""
-"When enabled, automatic software updates will be off.<br><b>This requires a reboot to take effect.</"
-"b>"
+"When enabled, automatic software updates will be off.<br><b>This requires a "
+"reboot to take effect.</b>"
 msgstr "启用后，自动软件更新将关闭。<br><b>此设置需要重启才能生效。</b>"
 
 #: selfdrive/ui/layouts/settings/toggles.py:26
@@ -2261,9 +2439,12 @@ msgstr "启用后，抬头显示（HUD）将绘制可视化转向指示器。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/developer.py:96
 msgid ""
-"When toggled on, this creates a prebuilt file to allow accelerated boot times. When toggled off, it "
-"removes the prebuilt file so compilation of locally edited cpp files can be made."
-msgstr "开启后，将创建预编译文件以加快启动速度。关闭后，将移除预编译文件，以便编译本地修改的C++文件。"
+"When toggled on, this creates a prebuilt file to allow accelerated boot "
+"times. When toggled off, it removes the prebuilt file so compilation of "
+"locally edited cpp files can be made."
+msgstr ""
+"开启后，将创建预编译文件以加快启动速度。关闭后，将移除预编译文件，以便编译本"
+"地修改的C++文件。"
 
 #: selfdrive/ui/layouts/sidebar.py:44
 msgid "Wi-Fi"
@@ -2295,9 +2476,11 @@ msgstr "您必须接受服务条款才能使用IQ.Pilot。"
 
 #: selfdrive/ui/layouts/onboarding.py:113
 msgid ""
-"You must accept the Terms of Service to use IQ.Pilot. Read the latest terms before continuing at "
-"https://iqlvbs.com/tos."
-msgstr "您必须接受服务条款才能使用IQ.Pilot。继续前请阅读https://iqlvbs.com/tos上的最新条款。"
+"You must accept the Terms of Service to use IQ.Pilot. Read the latest terms "
+"before continuing at https://iqlvbs.com/tos."
+msgstr ""
+"您必须接受服务条款才能使用IQ.Pilot。继续前请阅读https://iqlvbs.com/tos上的最"
+"新条款。"
 
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/brands/hyundai.py:39
 msgid "Your vehicle will use the Default longitudinal tuning."
@@ -2311,7 +2494,8 @@ msgstr "您的车辆将使用动态纵向控制调校。"
 msgid "Your vehicle will use the Predictive longitudinal tuning."
 msgstr "您的车辆将使用预测型纵向控制调校。"
 
-#: selfdrive/ui/mici/layouts/onboarding.py:43 selfdrive/ui/mici/onroad/driver_camera_dialog.py:86
+#: selfdrive/ui/mici/layouts/onboarding.py:43
+#: selfdrive/ui/mici/onroad/driver_camera_dialog.py:86
 #: selfdrive/ui/onroad/driver_camera_dialog.py:38
 msgid "camera starting"
 msgstr "相机启动中"
@@ -2330,14 +2514,15 @@ msgstr "copyparty服务"
 
 #: selfdrive/ui/iqpilot/layouts/settings/developer.py:44
 msgid ""
-"copyparty is a very capable file server, you can use it to download your routes, view your logs and "
-"even make some edits on some files from your browser. Requires you to connect to your comma locally "
-"via its IP address."
+"copyparty is a very capable file server, you can use it to download your "
+"routes, view your logs and even make some edits on some files from your "
+"browser. Requires you to connect to your comma locally via its IP address."
 msgstr ""
-"copyparty是一款功能强大的文件服务器，您可通过它下载行程数据、查看日志，甚至从浏览器编辑部分文件。需"
-"要通过IP地址本地连接到您的comma设备。"
+"copyparty是一款功能强大的文件服务器，您可通过它下载行程数据、查看日志，甚至从"
+"浏览器编辑部分文件。需要通过IP地址本地连接到您的comma设备。"
 
-#: selfdrive/ui/iqpilot/mici/layouts/models.py:21 selfdrive/ui/iqpilot/mici/layouts/models.py:112
+#: selfdrive/ui/iqpilot/mici/layouts/models.py:21
+#: selfdrive/ui/iqpilot/mici/layouts/models.py:112
 msgid "current model"
 msgstr "当前模型"
 
@@ -2345,7 +2530,8 @@ msgstr "当前模型"
 msgid "default"
 msgstr "默认"
 
-#: selfdrive/ui/iqpilot/mici/layouts/models.py:53 selfdrive/ui/iqpilot/mici/layouts/models.py:109
+#: selfdrive/ui/iqpilot/mici/layouts/models.py:53
+#: selfdrive/ui/iqpilot/mici/layouts/models.py:109
 msgid "default model"
 msgstr "默认模型"
 
@@ -2378,7 +2564,8 @@ msgstr "来自缓存"
 msgid "h"
 msgstr "小时"
 
-#: selfdrive/ui/iqpilot/onroad/speed_renderer.py:40 selfdrive/ui/mici/onroad/hud_renderer.py:276
+#: selfdrive/ui/iqpilot/onroad/speed_renderer.py:40
+#: selfdrive/ui/mici/onroad/hud_renderer.py:276
 #: selfdrive/ui/onroad/hud_renderer.py:177
 msgid "km/h"
 msgstr "km/h"
@@ -2408,7 +2595,8 @@ msgstr "分钟"
 msgid "metered"
 msgstr "计量"
 
-#: selfdrive/ui/iqpilot/onroad/speed_renderer.py:40 selfdrive/ui/mici/onroad/hud_renderer.py:276
+#: selfdrive/ui/iqpilot/onroad/speed_renderer.py:40
+#: selfdrive/ui/mici/onroad/hud_renderer.py:276
 #: selfdrive/ui/onroad/hud_renderer.py:177
 msgid "mph"
 msgstr "mph"
@@ -2428,6 +2616,15 @@ msgstr "现在"
 #: selfdrive/selfdrived/events.py:825
 msgid "openpilot Canceled"
 msgstr "openpilot已取消"
+
+#: iqpilot/selfdrive/selfdrived/events.py:126
+#: iqpilot/selfdrive/selfdrived/events_base.py:189
+msgid "openpilot Unavailable"
+msgstr "openpilot 无法使用"
+
+#: iqpilot/selfdrive/selfdrived/events_base.py:210
+msgid "openpilot will disengage"
+msgstr "openpilot 即将退出"
 
 #: selfdrive/selfdrived/events.py:496 selfdrive/selfdrived/events.py:497
 #: selfdrive/selfdrived/events.py:498
@@ -2504,248 +2701,275 @@ msgid_plural "{} minutes ago"
 msgstr[0] "{} 分钟前"
 
 #, python-format
-msgid "1 year of drive storage"
-msgstr "1 年行驶数据存储"
+#~ msgid "1 year of drive storage"
+#~ msgstr "1 年行驶数据存储"
 
 #, python-format
-msgid "24/7 LTE connectivity"
-msgstr "全天候 LTE 连接"
+#~ msgid "24/7 LTE connectivity"
+#~ msgstr "全天候 LTE 连接"
 
-msgid ""
-"<b>WARNING: openpilot longitudinal control is in alpha for this car and will disable Automatic "
-"Emergency Braking (AEB).</b><br><br>On this car, openpilot defaults to the car's built-in ACC "
-"instead of openpilot's longitudinal control. Enable this to switch to openpilot longitudinal "
-"control. Enabling Experimental mode is recommended when enabling openpilot longitudinal control "
-"alpha. Changing this setting will restart openpilot if the car is powered on."
-msgstr ""
-"<b>警告：此车型的 openpilot 纵向控制仍为 alpha，将会停用自动紧急制动 (AEB)。</b><br><br>在此车型上，"
-"openpilot 默认使用车载 ACC，而非 openpilot 的纵向控制。启用此选项可切换为 openpilot 纵向控制。建议同"
-"时启用实验模式。若车辆通电，更改此设置将会重启 openpilot。"
-
-#, python-format
-msgid "ACTIVE"
-msgstr "已启用"
-
-#, python-format
-msgid "Always-On Driver Monitoring"
-msgstr "始终启用驾驶员监控"
+#~ msgid ""
+#~ "<b>WARNING: openpilot longitudinal control is in alpha for this car and "
+#~ "will disable Automatic Emergency Braking (AEB).</b><br><br>On this car, "
+#~ "openpilot defaults to the car's built-in ACC instead of openpilot's "
+#~ "longitudinal control. Enable this to switch to openpilot longitudinal "
+#~ "control. Enabling Experimental mode is recommended when enabling "
+#~ "openpilot longitudinal control alpha. Changing this setting will restart "
+#~ "openpilot if the car is powered on."
+#~ msgstr ""
+#~ "<b>警告：此车型的 openpilot 纵向控制仍为 alpha，将会停用自动紧急制动 "
+#~ "(AEB)。</b><br><br>在此车型上，openpilot 默认使用车载 ACC，而非 openpilot "
+#~ "的纵向控制。启用此选项可切换为 openpilot 纵向控制。建议同时启用实验模式。"
+#~ "若车辆通电，更改此设置将会重启 openpilot。"
 
 #, python-format
-msgid ""
-"An alpha version of openpilot longitudinal control can be tested, along with Experimental mode, on "
-"non-release branches."
-msgstr "openpilot 纵向控制的 alpha 版本可在非发布分支搭配实验模式进行测试。"
+#~ msgid "ACTIVE"
+#~ msgstr "已启用"
 
 #, python-format
-msgid "Bookmark konn3kt.com to your home screen to use it like an app"
-msgstr "将 konn3kt.com 添加到主屏幕，像应用一样使用"
+#~ msgid "Always-On Driver Monitoring"
+#~ msgstr "始终启用驾驶员监控"
 
 #, python-format
-msgid "CHILL MODE ON"
-msgstr "安稳模式已开启"
+#~ msgid ""
+#~ "An alpha version of openpilot longitudinal control can be tested, along "
+#~ "with Experimental mode, on non-release branches."
+#~ msgstr "openpilot 纵向控制的 alpha 版本可在非发布分支搭配实验模式进行测试。"
 
 #, python-format
-msgid "Changing this setting will restart openpilot if the car is powered on."
-msgstr "若车辆通电，更改此设置将重启 openpilot。"
+#~ msgid "Bookmark konn3kt.com to your home screen to use it like an app"
+#~ msgstr "将 konn3kt.com 添加到主屏幕，像应用一样使用"
 
 #, python-format
-msgid "Click \"add new device\" and scan the QR code on the right"
-msgstr "点击“添加新设备”，扫描右侧二维码"
+#~ msgid "CHILL MODE ON"
+#~ msgstr "安稳模式已开启"
 
 #, python-format
-msgid "Decline, uninstall openpilot"
-msgstr "拒绝并卸载 openpilot"
+#~ msgid ""
+#~ "Changing this setting will restart openpilot if the car is powered on."
+#~ msgstr "若车辆通电，更改此设置将重启 openpilot。"
 
 #, python-format
-msgid "EXPERIMENTAL MODE ON"
-msgstr "实验模式已开启"
-
-msgid "Enable driver monitoring even when openpilot is not engaged."
-msgstr "即使未启用 openpilot 也启用驾驶员监控。"
+#~ msgid "Click \"add new device\" and scan the QR code on the right"
+#~ msgstr "点击“添加新设备”，扫描右侧二维码"
 
 #, python-format
-msgid "Enable openpilot"
-msgstr "启用 openpilot"
+#~ msgid "Decline, uninstall openpilot"
+#~ msgstr "拒绝并卸载 openpilot"
+
+#~ msgid "Default: Device will boot/wake-up normally & be ready to engage."
+#~ msgstr "默认：设备正常开机/唤醒并准备就绪。"
 
 #, python-format
-msgid "Enable the openpilot longitudinal control (alpha) toggle to allow Experimental mode."
-msgstr "启用 openpilot 纵向控制（alpha）开关，以使用实验模式。"
+#~ msgid "EXPERIMENTAL MODE ON"
+#~ msgstr "实验模式已开启"
+
+#~ msgid "Enable driver monitoring even when openpilot is not engaged."
+#~ msgstr "即使未启用 openpilot 也启用驾驶员监控。"
 
 #, python-format
-msgid "Experimental Mode"
-msgstr "实验模式"
+#~ msgid "Enable openpilot"
+#~ msgstr "启用 openpilot"
 
 #, python-format
-msgid ""
-"Experimental mode is currently unavailable on this car since the car's stock ACC is used for "
-"longitudinal control."
-msgstr "此车型当前无法使用实验模式，因为纵向控制使用的是原厂 ACC。"
+#~ msgid ""
+#~ "Enable the openpilot longitudinal control (alpha) toggle to allow "
+#~ "Experimental mode."
+#~ msgstr "启用 openpilot 纵向控制（alpha）开关，以使用实验模式。"
 
 #, python-format
-msgid "FEATURES:"
-msgstr "PRIME 功能："
-
-msgid "Firehose"
-msgstr "Firehose"
-
-msgid "Firehose Mode"
-msgstr "Firehose 模式"
-
-msgid ""
-"For maximum effectiveness, bring your device inside and connect to a good USB-C adapter and Wi-Fi "
-"weekly.\n"
-"\n"
-"Firehose Mode can also work while you're driving if connected to a hotspot or unlimited SIM card.\n"
-"\n"
-"\n"
-"Frequently Asked Questions\n"
-"\n"
-"Does it matter how or where I drive? Nope, just drive as you normally would.\n"
-"\n"
-"Do all of my segments get pulled in Firehose Mode? No, we selectively pull a subset of your "
-"segments.\n"
-"\n"
-"What's a good USB-C adapter? Any fast phone or laptop charger should be fine.\n"
-"\n"
-"Does it matter which software I run? Yes, only upstream openpilot (and particular forks) are able "
-"to be used for training."
-msgstr ""
-"为达到最佳效果，请将设备带到室内，并每周连接优质 USB‑C 充电器与 Wi‑Fi。\n"
-"\n"
-"若连接热点或不限流量卡，行车中也可使用 Firehose 模式。\n"
-"\n"
-"\n"
-"常见问题\n"
-"\n"
-"我怎么开、在哪开有区别吗？没有，平常怎么开就怎么开。\n"
-"\n"
-"Firehose 模式会拉取我所有片段吗？不会，我们会选择性拉取部分片段。\n"
-"\n"
-"什么是好的 USB‑C 充电器？任何快速的手机或笔电充电器都可以。\n"
-"\n"
-"我跑什么软件有区别吗？有，只有上游 openpilot（及特定分支）可用于训练。"
+#~ msgid "Experimental Mode"
+#~ msgstr "实验模式"
 
 #, python-format
-msgid "Go to https://konn3kt.com on your phone"
-msgstr "在手机上前往 https://konn3kt.com"
+#~ msgid ""
+#~ "Experimental mode is currently unavailable on this car since the car's "
+#~ "stock ACC is used for longitudinal control."
+#~ msgstr "此车型当前无法使用实验模式，因为纵向控制使用的是原厂 ACC。"
 
 #, python-format
-msgid "INACTIVE: connect to an unmetered network"
-msgstr "未启用：请连接不限流量网络"
+#~ msgid "FEATURES:"
+#~ msgstr "PRIME 功能："
+
+#~ msgid "Firehose"
+#~ msgstr "Firehose"
+
+#~ msgid "Firehose Mode"
+#~ msgstr "Firehose 模式"
+
+#~ msgid ""
+#~ "For maximum effectiveness, bring your device inside and connect to a good "
+#~ "USB-C adapter and Wi-Fi weekly.\n"
+#~ "\n"
+#~ "Firehose Mode can also work while you're driving if connected to a "
+#~ "hotspot or unlimited SIM card.\n"
+#~ "\n"
+#~ "\n"
+#~ "Frequently Asked Questions\n"
+#~ "\n"
+#~ "Does it matter how or where I drive? Nope, just drive as you normally "
+#~ "would.\n"
+#~ "\n"
+#~ "Do all of my segments get pulled in Firehose Mode? No, we selectively "
+#~ "pull a subset of your segments.\n"
+#~ "\n"
+#~ "What's a good USB-C adapter? Any fast phone or laptop charger should be "
+#~ "fine.\n"
+#~ "\n"
+#~ "Does it matter which software I run? Yes, only upstream openpilot (and "
+#~ "particular forks) are able to be used for training."
+#~ msgstr ""
+#~ "为达到最佳效果，请将设备带到室内，并每周连接优质 USB‑C 充电器与 Wi‑Fi。\n"
+#~ "\n"
+#~ "若连接热点或不限流量卡，行车中也可使用 Firehose 模式。\n"
+#~ "\n"
+#~ "\n"
+#~ "常见问题\n"
+#~ "\n"
+#~ "我怎么开、在哪开有区别吗？没有，平常怎么开就怎么开。\n"
+#~ "\n"
+#~ "Firehose 模式会拉取我所有片段吗？不会，我们会选择性拉取部分片段。\n"
+#~ "\n"
+#~ "什么是好的 USB‑C 充电器？任何快速的手机或笔电充电器都可以。\n"
+#~ "\n"
+#~ "我跑什么软件有区别吗？有，只有上游 openpilot（及特定分支）可用于训练。"
 
 #, python-format
-msgid "Maximize your training data uploads to improve openpilot's driving models."
-msgstr "最大化上传训练数据，以改进 openpilot 的驾驶模型。"
+#~ msgid "Go to https://konn3kt.com on your phone"
+#~ msgstr "在手机上前往 https://konn3kt.com"
 
 #, python-format
-msgid "Open"
-msgstr "打开"
+#~ msgid "INACTIVE: connect to an unmetered network"
+#~ msgstr "未启用：请连接不限流量网络"
 
 #, python-format
-msgid "Pair your device with Konn3kt (konn3kt.com) and claim your comma prime offer."
-msgstr "将设备与 Konn3kt（konn3kt.com）配对，领取您的 Konn3kt 优惠。"
+#~ msgid ""
+#~ "Maximize your training data uploads to improve openpilot's driving models."
+#~ msgstr "最大化上传训练数据，以改进 openpilot 的驾驶模型。"
 
 #, python-format
-msgid "Pair your device with Konn3kt at konn3kt.com"
-msgstr "前往 konn3kt.com 成为 Konn3kt 会员"
+#~ msgid "Open"
+#~ msgstr "打开"
 
 #, python-format
-msgid "Remote snapshots"
-msgstr "远程快照"
-
-msgid "Review the rules, features, and limitations of openpilot"
-msgstr "查看 openpilot 的规则、功能与限制"
-
-msgid ""
-"Standard is recommended. In aggressive mode, openpilot will follow lead cars closer and be more "
-"aggressive with the gas and brake. In relaxed mode openpilot will stay further away from lead cars. "
-"On supported cars, you can cycle through these personalities with your steering wheel distance "
-"button."
-msgstr ""
-"建议使用标准模式。激进模式下，openpilot 会更贴近前车，油门与刹车更为激进；从容模式下，会与前车保持更"
-"远距离。在支持的车型上，可用方向盘距离按钮切换这些风格。"
-
-msgid ""
-"Use the openpilot system for adaptive cruise control and lane keep driver assistance. Your "
-"attention is required at all times to use this feature."
-msgstr "使用 openpilot 进行自适应巡航与车道保持辅助。使用此功能时，您必须始终保持专注。"
+#~ msgid ""
+#~ "Pair your device with Konn3kt (konn3kt.com) and claim your comma prime "
+#~ "offer."
+#~ msgstr "将设备与 Konn3kt（konn3kt.com）配对，领取您的 Konn3kt 优惠。"
 
 #, python-format
-msgid "Welcome to openpilot"
-msgstr "欢迎使用 openpilot"
-
-msgid "When enabled, pressing the accelerator pedal will disengage openpilot."
-msgstr "启用后，踩下加速踏板将会脱离 openpilot。"
+#~ msgid "Pair your device with Konn3kt at konn3kt.com"
+#~ msgstr "前往 konn3kt.com 成为 Konn3kt 会员"
 
 #, python-format
-msgid "You must accept the Terms and Conditions in order to use openpilot."
-msgstr "您必须接受条款与条件才能使用 openpilot。"
+#~ msgid "Remote snapshots"
+#~ msgstr "远程快照"
+
+#~ msgid "Review the rules, features, and limitations of openpilot"
+#~ msgstr "查看 openpilot 的规则、功能与限制"
+
+#~ msgid ""
+#~ "Standard is recommended. In aggressive mode, openpilot will follow lead "
+#~ "cars closer and be more aggressive with the gas and brake. In relaxed "
+#~ "mode openpilot will stay further away from lead cars. On supported cars, "
+#~ "you can cycle through these personalities with your steering wheel "
+#~ "distance button."
+#~ msgstr ""
+#~ "建议使用标准模式。激进模式下，openpilot 会更贴近前车，油门与刹车更为激进；"
+#~ "从容模式下，会与前车保持更远距离。在支持的车型上，可用方向盘距离按钮切换这"
+#~ "些风格。"
+
+#~ msgid ""
+#~ "Use the openpilot system for adaptive cruise control and lane keep driver "
+#~ "assistance. Your attention is required at all times to use this feature."
+#~ msgstr ""
+#~ "使用 openpilot 进行自适应巡航与车道保持辅助。使用此功能时，您必须始终保持"
+#~ "专注。"
 
 #, python-format
-msgid ""
-"You must accept the Terms and Conditions to use openpilot. Read the latest terms at https://"
-"comma.ai/terms before continuing."
-msgstr "您必须接受条款与条件才能使用 openpilot。继续前请阅读 https://comma.ai/terms 上的最新条款。"
+#~ msgid "Welcome to openpilot"
+#~ msgstr "欢迎使用 openpilot"
+
+#~ msgid ""
+#~ "When enabled, pressing the accelerator pedal will disengage openpilot."
+#~ msgstr "启用后，踩下加速踏板将会脱离 openpilot。"
 
 #, python-format
-msgid "openpilot Longitudinal Control (Alpha)"
-msgstr "openpilot 纵向控制（Alpha）"
+#~ msgid "You must accept the Terms and Conditions in order to use openpilot."
+#~ msgstr "您必须接受条款与条件才能使用 openpilot。"
 
 #, python-format
-msgid "openpilot Unavailable"
-msgstr "openpilot 无法使用"
+#~ msgid ""
+#~ "You must accept the Terms and Conditions to use openpilot. Read the "
+#~ "latest terms at https://comma.ai/terms before continuing."
+#~ msgstr ""
+#~ "您必须接受条款与条件才能使用 openpilot。继续前请阅读 https://comma.ai/"
+#~ "terms 上的最新条款。"
 
 #, python-format
-msgid ""
-"openpilot defaults to driving in chill mode. Experimental mode enables alpha-level features that "
-"aren't ready for chill mode. Experimental features are listed below:<br><h4>End-to-End Longitudinal "
-"Control</h4><br>Let the driving model control the gas and brakes. openpilot will drive as it thinks "
-"a human would, including stopping for red lights and stop signs. Since the driving model decides "
-"the speed to drive, the set speed will only act as an upper bound. This is an alpha quality "
-"feature; mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The driving "
-"visualization will transition to the road-facing wide-angle camera at low speeds to better show "
-"some turns. The Experimental mode logo will also be shown in the top right corner."
-msgstr ""
-"openpilot 默认以安稳模式行驶。实验模式会启用尚未准备好用于安稳模式的 Alpha 级功能。实验功能如下："
-"<br><h4>端到端纵向控制</h4><br>让驾驶模型控制油门与刹车。openpilot 会像人类一样驾驶，包括在红灯与停"
-"牌前停车。由于驾驶模型决定行驶速度，设定速度仅作为上限。这是 Alpha 质量功能；预期会有错误。<br><h4>"
-"全新驾驶可视化</h4><br>在低速时，驾驶可视化将切换至面向道路的广角摄像头以更好显示部分转弯。右上角也"
-"会显示实验模式图标。"
+#~ msgid "openpilot Longitudinal Control (Alpha)"
+#~ msgstr "openpilot 纵向控制（Alpha）"
 
 #, python-format
-msgid ""
-"openpilot is continuously calibrating, resetting is rarely required. Resetting calibration will "
-"restart openpilot if the car is powered on."
-msgstr "openpilot 持续进行校准，通常无需重置。若车辆通电，重置校准将会重启 openpilot。"
-
-msgid ""
-"openpilot learns to drive by watching humans, like you, drive.\n"
-"\n"
-"Firehose Mode allows you to maximize your training data uploads to improve openpilot's driving "
-"models. More data means bigger models, which means better Experimental Mode."
-msgstr ""
-"openpilot 通过观察人类（例如您）的驾驶来学习。\n"
-"\n"
-"Firehose 模式可让您最大化上传训练数据，以改进 openpilot 的驾驶模型。更多数据意味着更大的模型，也意味"
-"着更好的实验模式。"
-
-#, python-format
-msgid "openpilot longitudinal control may come in a future update."
-msgstr "openpilot 纵向控制可能会在未来更新中提供。"
-
-msgid ""
-"openpilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."
-msgstr "openpilot 要求设备安装在左右 4°、上 5° 或下 9° 以内。"
+#~ msgid ""
+#~ "openpilot defaults to driving in chill mode. Experimental mode enables "
+#~ "alpha-level features that aren't ready for chill mode. Experimental "
+#~ "features are listed below:<br><h4>End-to-End Longitudinal Control</"
+#~ "h4><br>Let the driving model control the gas and brakes. openpilot will "
+#~ "drive as it thinks a human would, including stopping for red lights and "
+#~ "stop signs. Since the driving model decides the speed to drive, the set "
+#~ "speed will only act as an upper bound. This is an alpha quality feature; "
+#~ "mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The "
+#~ "driving visualization will transition to the road-facing wide-angle "
+#~ "camera at low speeds to better show some turns. The Experimental mode "
+#~ "logo will also be shown in the top right corner."
+#~ msgstr ""
+#~ "openpilot 默认以安稳模式行驶。实验模式会启用尚未准备好用于安稳模式的 "
+#~ "Alpha 级功能。实验功能如下：<br><h4>端到端纵向控制</h4><br>让驾驶模型控制"
+#~ "油门与刹车。openpilot 会像人类一样驾驶，包括在红灯与停牌前停车。由于驾驶模"
+#~ "型决定行驶速度，设定速度仅作为上限。这是 Alpha 质量功能；预期会有错误。"
+#~ "<br><h4>全新驾驶可视化</h4><br>在低速时，驾驶可视化将切换至面向道路的广角"
+#~ "摄像头以更好显示部分转弯。右上角也会显示实验模式图标。"
 
 #, python-format
-msgid "{} segment of your driving is in the training dataset so far."
-msgid_plural "{} segments of your driving is in the training dataset so far."
-msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
+#~ msgid ""
+#~ "openpilot is continuously calibrating, resetting is rarely required. "
+#~ "Resetting calibration will restart openpilot if the car is powered on."
+#~ msgstr ""
+#~ "openpilot 持续进行校准，通常无需重置。若车辆通电，重置校准将会重启 "
+#~ "openpilot。"
+
+#~ msgid ""
+#~ "openpilot learns to drive by watching humans, like you, drive.\n"
+#~ "\n"
+#~ "Firehose Mode allows you to maximize your training data uploads to "
+#~ "improve openpilot's driving models. More data means bigger models, which "
+#~ "means better Experimental Mode."
+#~ msgstr ""
+#~ "openpilot 通过观察人类（例如您）的驾驶来学习。\n"
+#~ "\n"
+#~ "Firehose 模式可让您最大化上传训练数据，以改进 openpilot 的驾驶模型。更多数"
+#~ "据意味着更大的模型，也意味着更好的实验模式。"
 
 #, python-format
-msgid "✓ PAIRED"
-msgstr "✓ 已订阅"
+#~ msgid "openpilot longitudinal control may come in a future update."
+#~ msgstr "openpilot 纵向控制可能会在未来更新中提供。"
+
+#~ msgid ""
+#~ "openpilot requires the device to be mounted within 4° left or right and "
+#~ "within 5° up or 9° down."
+#~ msgstr "openpilot 要求设备安装在左右 4°、上 5° 或下 9° 以内。"
 
 #, python-format
-msgid "🔥 Firehose Mode 🔥"
-msgstr "🔥 Firehose 模式 🔥"
+#~ msgid "{} segment of your driving is in the training dataset so far."
+#~ msgid_plural ""
+#~ "{} segments of your driving is in the training dataset so far."
+#~ msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
+
+#, python-format
+#~ msgid "✓ PAIRED"
+#~ msgstr "✓ 已订阅"
+
+#, python-format
+#~ msgid "🔥 Firehose Mode 🔥"
+#~ msgstr "🔥 Firehose 模式 🔥"
