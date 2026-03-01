@@ -197,30 +197,33 @@ class DeviceLayout(Widget):
     gui_app.push_widget(self._fcc_dialog)
 
   def _on_review_training_guide(self):
+    """修复：替换set_modal_overlay为push_widget"""
     if not self._training_guide:
       def completed_callback():
-        gui_app.set_modal_overlay(None)
+        # 移除已打开的TrainingGuide组件
+        gui_app.pop_widget(self._training_guide)
 
       self._training_guide = TrainingGuide(completed_callback=completed_callback)
-    gui_app.set_modal_overlay(self._training_guide)
+    # 使用push_widget替代不存在的set_modal_overlay
+    gui_app.push_widget(self._training_guide)
 
-  # 添加服务器切换按钮-修改5：调整缩进，作为类的成员方法
+  # 添加服务器切换按钮-修改5：修复set_modal_overlay调用，改用push_widget
   def _toggle_server(self):
-      def handle_confirm(result: int):
+      def handle_confirm(result: DialogResult):
           if result == DialogResult.CONFIRM:
               params = Params()
               current = params.get_bool("UseKonikServer", False)
               params.put_bool("UseKonikServer", not current)
-               # 新增：触发athenad和manager重启（需设备支持该参数触发重启）
-              params.put_bool_nonblocking("DoReboot", True)  # 或仅重启服务，而非设备
-              # 重新渲染更新按钮文本
-              if self._rect is not None:
-                  self._scroller.render(self._rect)
+              # 新增：触发重启（仅重启服务，而非设备，避免误操作）
+              params.put_bool_nonblocking("RestartManager", True)
+              # 重新初始化items以更新按钮文本
+              self._scroller.set_items(self._initialize_items())
 
-      # 显示确认对话框
+      # 显示确认对话框（使用push_widget替代set_modal_overlay）
       target_server = tr("Konik") if not Params().get_bool("UseKonikServer", False) else tr("Comma")
       dialog = ConfirmDialog(
           tr(f"Switch server to {target_server}?"),
-          tr("Confirm")
+          tr("Confirm"),
+          callback=handle_confirm
       )
-      gui_app.set_modal_overlay(dialog, callback=handle_confirm)
+      gui_app.push_widget(dialog)
