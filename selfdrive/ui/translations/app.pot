@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-01 08:18+0800\n"
+"POT-Creation-Date: 2026-03-01 08:40+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1097,52 +1097,52 @@ msgstr ""
 msgid "Last checked {}"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:103
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:106
 #: selfdrive/ui/layouts/settings/settings.py:57
 msgid "Device"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:104
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:107
 #: selfdrive/ui/layouts/settings/settings.py:58
 msgid "Network"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:105
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:108
 #: selfdrive/ui/layouts/settings/settings.py:59
 msgid "Toggles"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:106
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:109
 #: selfdrive/ui/layouts/settings/settings.py:60
 msgid "Software"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:107
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:110
 msgid "Models"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:108
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:111
 msgid "Steering"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:109
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:112
 msgid "Visuals"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:110
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:113
 msgid "Display"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:111
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:114
 msgid "OSM"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:113
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:116
 #: selfdrive/ui/iqpilot/layouts/settings/vehicle/platform_selector.py:57
 msgid "Vehicle"
 msgstr ""
 
-#: selfdrive/ui/iqpilot/layouts/settings/settings.py:114
+#: selfdrive/ui/iqpilot/layouts/settings/settings.py:117
 #: selfdrive/ui/layouts/settings/settings.py:61
 msgid "Developer"
 msgstr ""
