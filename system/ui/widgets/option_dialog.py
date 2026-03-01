@@ -19,13 +19,13 @@ LIST_ITEM_SPACING = 25
 
 
 class MultiOptionDialog(Widget):
-  def __init__(self, title, options, current="", option_font_weight=FontWeight.MEDIUM):
+  def __init__(self, title, options, current="", option_font_weight=FontWeight.MEDIUM, callback: Callable[[DialogResult], None] | None = None):
     super().__init__()
     self.title = title
     self.options = options
     self.current = current
     self.selection = current
-    self._result: DialogResult = DialogResult.NO_ACTION
+    self._callback = callback
 
     # 新增：打印菜单文本的原始内容（修正缩进）
     print(f"当前语言：{multilang.language}")
@@ -53,7 +53,7 @@ class MultiOptionDialog(Widget):
         # 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
     for option in self.options:
         print(f"选项: {option}, 当前语言: {lang}, 字体权重: {option_font_weight}")  # 新增调试输出
-        def on_click(opt=option): 
+        def on_click(opt=option):
           self._on_option_clicked(opt)
         btn = Button(
           text=option,
@@ -65,23 +65,25 @@ class MultiOptionDialog(Widget):
           elide_right=True
           )
         self.option_buttons.append(btn)
-    
+
     self.scroller = Scroller(self.option_buttons, spacing=LIST_ITEM_SPACING)
 
     #解决语言选择菜单字符问题修改5：修复取消/确认按钮文本参数（原lambda传参错误）
     self.cancel_button = Button(
-      text=tr("Cancel"), 
+      text=tr("Cancel"),
       click_callback=lambda: self._set_result(DialogResult.CANCEL),
       button_style=ButtonStyle.NORMAL
       )
     self.select_button = Button(
-      text=tr("Select"), 
-      click_callback=lambda: self._set_result(DialogResult.CONFIRM), 
+      text=tr("Select"),
+      click_callback=lambda: self._set_result(DialogResult.CONFIRM),
       button_style=ButtonStyle.PRIMARY
       )
 
   def _set_result(self, result: DialogResult):
-    self._result = result
+    gui_app.pop_widget()
+    if self._callback:
+      self._callback(result)
 
   def _on_option_clicked(self, option):
     self.selection = option
@@ -119,5 +121,3 @@ class MultiOptionDialog(Widget):
     select_rect = rl.Rectangle(content_rect.x + button_w + BUTTON_SPACING, button_y, button_w, BUTTON_HEIGHT)
     self.select_button.set_enabled(self.selection != self.current)
     self.select_button.render(select_rect)
-
-    return self._result
