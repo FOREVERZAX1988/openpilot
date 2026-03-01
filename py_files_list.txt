@@ -292,6 +292,7 @@
 ./selfdrive/ui/sunnypilot/mici/widgets/sunnylink_pairing_dialog.py
 ./selfdrive/ui/sunnypilot/mici/widgets/__init__.py
 ./selfdrive/ui/sunnypilot/mici/__init__.py
+./selfdrive/ui/sunnypilot/onroad/alert_renderer.py
 ./selfdrive/ui/sunnypilot/onroad/augmented_road_view.py
 ./selfdrive/ui/sunnypilot/onroad/blind_spot_indicators.py
 ./selfdrive/ui/sunnypilot/onroad/chevron_metrics.py

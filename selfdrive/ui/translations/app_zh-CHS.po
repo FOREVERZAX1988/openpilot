@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-01 15:36+0800\n"
-"PO-Revision-Date: 2026-03-01 15:45+0800\n"
+"POT-Creation-Date: 2026-03-01 19:25+0800\n"
+"PO-Revision-Date: 2026-03-01 19:27+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -230,7 +230,7 @@ msgstr "始终启用驾驶员监控"
 msgid ""
 "An alpha version of sunnypilot longitudinal control can be tested, along "
 "with Experimental mode, on non-release branches."
-msgstr "sunnypilot纵向控制的Alpha版本可在非发布分支上,结合实验模式进行测试"
+msgstr "可在非发布分支上测试 sunnypilot 纵向控制的alpha版本及实验模式."
 
 #: selfdrive/ui/mici/layouts/settings/firehose.py:33
 msgid "Any fast phone or laptop charger should be fine."
@@ -309,15 +309,15 @@ msgstr "转向灯触发自动变道"
 msgid "Auto Lane Change: Delay with Blind Spot"
 msgstr "自动变道：盲区检测延迟"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:234
+#: sunnypilot/selfdrive/selfdrived/events.py:235
 msgid "Auto adjusting to last speed limit"
 msgstr "自动调整至上次限速"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:214
+#: sunnypilot/selfdrive/selfdrived/events.py:215
 msgid "Auto adjusting to speed limit"
 msgstr "正在自动调整至限速"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:103
+#: sunnypilot/selfdrive/selfdrived/events.py:104
 msgid "Automatic Lane Centering is OFF"
 msgstr "自动车道居中已关闭"
 
@@ -372,7 +372,7 @@ msgstr "将 connect.comma.ai 添加到主屏幕,像应用一样使用"
 msgid "Bottom"
 msgstr "底部"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:127
+#: sunnypilot/selfdrive/selfdrived/events.py:128
 msgid "Brake Hold Active"
 msgstr "自动驻车已激活"
 
@@ -462,7 +462,7 @@ msgstr "摄像头故障：请重启设备"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:73
 #: system/ui/widgets/confirm_dialog.py:24 system/ui/widgets/keyboard.py:83
-#: system/ui/widgets/network.py:333 system/ui/widgets/option_dialog.py:73
+#: system/ui/widgets/network.py:333 system/ui/widgets/option_dialog.py:82
 msgid "Cancel"
 msgstr "取消"
 
@@ -569,7 +569,7 @@ msgstr "综合模式"
 msgid "Combined: Use combined Speed Limit data from Car & OpenStreetMaps"
 msgstr "综合模式：综合使用车辆与 OpenStreetMap 提供的限速数据"
 
-#: selfdrive/ui/layouts/settings/device.py:221
+#: selfdrive/ui/layouts/settings/device.py:223
 msgid "Comma"
 msgstr "Comma"
 
@@ -577,7 +577,7 @@ msgstr "Comma"
 msgid "Communication Issue Between Processes"
 msgstr "进程间通信问题"
 
-#: selfdrive/ui/layouts/settings/device.py:224
+#: selfdrive/ui/layouts/settings/device.py:226
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:174
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py:196
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py:99
@@ -592,8 +592,8 @@ msgstr "确认变道"
 msgid "Controls Mismatch"
 msgstr "控制项不匹配"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:180
 #: sunnypilot/selfdrive/selfdrived/events.py:181
+#: sunnypilot/selfdrive/selfdrived/events.py:182
 msgid "Controls Mismatch: Lateral"
 msgstr "控制模式不匹配：横向"
 
@@ -879,7 +879,7 @@ msgid "Dongle ID"
 msgstr "Dongle ID"
 
 #: selfdrive/selfdrived/events.py:652 selfdrive/selfdrived/events.py:653
-#: sunnypilot/selfdrive/selfdrived/events.py:158
+#: sunnypilot/selfdrive/selfdrived/events.py:159
 msgid "Door Open"
 msgstr "车门打开"
 
@@ -1206,7 +1206,7 @@ msgstr "退出始终非行驶模式"
 msgid "Experimental Mode"
 msgstr "实验模式"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:185
+#: sunnypilot/selfdrive/selfdrived/events.py:186
 msgid "Experimental Mode Switched"
 msgstr "实验模式已切换"
 
@@ -1367,7 +1367,7 @@ msgid "GOOD"
 msgstr "良好"
 
 #: selfdrive/selfdrived/events.py:624 selfdrive/selfdrived/events.py:625
-#: sunnypilot/selfdrive/selfdrived/events.py:137
+#: sunnypilot/selfdrive/selfdrived/events.py:138
 msgid "Gear not D"
 msgstr "挡位未在D挡"
 
@@ -1491,7 +1491,7 @@ msgstr "公里"
 msgid "KONIK"
 msgstr "KONIK"
 
-#: selfdrive/ui/layouts/settings/device.py:221
+#: selfdrive/ui/layouts/settings/device.py:223
 msgid "Konik"
 msgstr "Konik"
 
@@ -1588,11 +1588,11 @@ msgstr "最大"
 msgid "Manual Real-Time Tuning"
 msgstr "手动实时调校"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:112
+#: sunnypilot/selfdrive/selfdrived/events.py:113
 msgid "Manual Speed Control Required"
 msgstr "需手动控制车速"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:104
+#: sunnypilot/selfdrive/selfdrived/events.py:105
 msgid "Manual Steering Required"
 msgstr "需手动控制转向"
 
@@ -1898,7 +1898,7 @@ msgid "Paired"
 msgstr "已匹配"
 
 #: selfdrive/selfdrived/events.py:524
-#: sunnypilot/selfdrive/selfdrived/events.py:176
+#: sunnypilot/selfdrive/selfdrived/events.py:177
 msgid "Parking Brake Engaged"
 msgstr "驻车制动已拉起"
 
@@ -1928,7 +1928,7 @@ msgid "Pay Attention"
 msgstr "保持注意力"
 
 #: selfdrive/selfdrived/events.py:529
-#: sunnypilot/selfdrive/selfdrived/events.py:193
+#: sunnypilot/selfdrive/selfdrived/events.py:194
 msgid "Pedal Pressed"
 msgstr "踏板已踩下"
 
@@ -1981,11 +1981,11 @@ msgstr "关机"
 msgid "Predictive"
 msgstr "预测"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:63
+#: sunnypilot/selfdrive/selfdrived/events.py:64
 msgid "Press + to confirm speed limit"
 msgstr "按 + 键确认限速"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:65
+#: sunnypilot/selfdrive/selfdrived/events.py:66
 msgid "Press - to confirm speed limit"
 msgstr "按 - 键确认限速"
 
@@ -2209,14 +2209,14 @@ msgid "Reverse"
 msgstr "倒车"
 
 #: selfdrive/selfdrived/events.py:793
-#: sunnypilot/selfdrive/selfdrived/events.py:145
+#: sunnypilot/selfdrive/selfdrived/events.py:146
 msgid ""
 "Reverse\n"
 "Gear"
 msgstr "倒车中"
 
 #: selfdrive/selfdrived/events.py:797 selfdrive/selfdrived/events.py:798
-#: sunnypilot/selfdrive/selfdrived/events.py:149
+#: sunnypilot/selfdrive/selfdrived/events.py:150
 msgid "Reverse Gear"
 msgstr "倒车挡"
 
@@ -2300,7 +2300,7 @@ msgid "Search your vehicle"
 msgstr "搜索你的车辆"
 
 #: selfdrive/selfdrived/events.py:657 selfdrive/selfdrived/events.py:658
-#: sunnypilot/selfdrive/selfdrived/events.py:167
+#: sunnypilot/selfdrive/selfdrived/events.py:168
 msgid "Seatbelt Unlatched"
 msgstr "安全带未扣紧"
 
@@ -2308,7 +2308,7 @@ msgstr "安全带未扣紧"
 msgid "Security Key Not Available"
 msgstr "安全密钥不可用"
 
-#: system/ui/widgets/option_dialog.py:78
+#: system/ui/widgets/option_dialog.py:87
 msgid "Select"
 msgstr "选择"
 
@@ -2371,7 +2371,7 @@ msgstr ""
 "若设置了延迟时间,自动变道无需轻拨方向盘即可触发,默认模式为轻拨触发.\n"
 "⚠️使用此功能时请务必谨慎,仅在交通及道路条件允许的情况下开启转向灯."
 
-#: sunnypilot/selfdrive/selfdrived/events.py:222
+#: sunnypilot/selfdrive/selfdrived/events.py:223
 msgid "Set speed changed"
 msgstr "设定车速已变更"
 
@@ -2426,7 +2426,7 @@ msgstr "智能巡航控制 - 地图"
 msgid "Smart Cruise Control - Vision"
 msgstr "智能巡航控制 - 视觉"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:111
+#: sunnypilot/selfdrive/selfdrived/events.py:112
 msgid "Smart/Adaptive Cruise Control: OFF"
 msgstr "智能/自适应巡航：已关闭"
 
@@ -2583,7 +2583,12 @@ msgid ""
 "service to restart）"
 msgstr "切换konik&Comma服务器(确认切换将重启服务)"
 
-#: selfdrive/selfdrived/events.py:210
+#: selfdrive/ui/layouts/settings/device.py:225
+#, python-brace-format
+msgid "Switch server to {}?"
+msgstr "切换服务器为 {}?"
+
+#: selfdrive/selfdrived/events.py:211
 msgid "Switch to Traffic-Aware Cruise Control to engage"
 msgstr "切换至交通感知巡航控制以启用"
 
@@ -2796,11 +2801,11 @@ msgstr "行程"
 msgid "Turn Exceeds Steering Limit"
 msgstr "转向超出极限"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:198
+#: sunnypilot/selfdrive/selfdrived/events.py:199
 msgid "Turning Left"
 msgstr "左转中"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:206
+#: sunnypilot/selfdrive/selfdrived/events.py:207
 msgid "Turning Right"
 msgstr "右转中"
 
@@ -3161,7 +3166,7 @@ msgstr "h"
 #: selfdrive/ui/onroad/hud_renderer.py:177
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py:115
 #: selfdrive/ui/sunnypilot/onroad/speed_renderer.py:43
-#: sunnypilot/selfdrive/selfdrived/events.py:33
+#: sunnypilot/selfdrive/selfdrived/events.py:34
 msgid "km/h"
 msgstr "km/h"
 
@@ -3213,7 +3218,7 @@ msgstr "现在"
 msgid "openpilot Canceled"
 msgstr "openpilot已取消"
 
-#: sunnypilot/selfdrive/selfdrived/events.py:138
+#: sunnypilot/selfdrive/selfdrived/events.py:139
 msgid "openpilot Unavailable"
 msgstr "openpilot不可用"
 
@@ -3294,7 +3299,7 @@ msgstr "sunnylink"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:218
 msgid "sunnylink Dongle ID not found. "
-msgstr "sunnylink的Dongle ID未找到."
+msgstr "sunnylink的Dongle ID未找到. "
 
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py:199
 msgid "sunnylink Dongle ID not found. Please reboot & try again."
