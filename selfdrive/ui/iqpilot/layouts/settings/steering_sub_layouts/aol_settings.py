@@ -12,17 +12,21 @@ from openpilot.system.ui.widgets.network import NavButton
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from openpilot.system.ui.iqpilot.widgets.list_view import multiple_button_item, toggle_item
 
+# raw english tuples; tr_noop ensures extraction but actual translation happens when
+# the strings are rendered (otherwise they stay English if evaluated at import time).
 AOL_STEERING_MODE_OPTIONS = [
-  (tr("Remain Active"), tr_noop("Remain Active: ALC will remain active when the brake pedal is pressed.")),
-  (tr("Pause"), tr_noop("Pause: ALC will pause when the brake pedal is pressed.")),
-  (tr("Disengage"), tr_noop("Disengage: ALC will disengage when the brake pedal is pressed.")),
+  (tr_noop("Remain Active"), tr_noop("Remain Active: ALC will remain active when the brake pedal is pressed.")),
+  (tr_noop("Pause"), tr_noop("Pause: ALC will pause when the brake pedal is pressed.")),
+  (tr_noop("Disengage"), tr_noop("Disengage: ALC will disengage when the brake pedal is pressed.")),
 ]
 
-AOL_MAIN_CRUISE_BASE_DESC = tr("Note: For vehicles without LFA/LKAS button, disabling this will prevent lateral control engagement.")
+# constant stored as plain English; translated lazily when used so language changes take effect
+AOL_MAIN_CRUISE_BASE_DESC = "Note: For vehicles without LFA/LKAS button, disabling this will prevent lateral control engagement."
 
-STATUS_CHECK_COMPATIBILITY = tr("Start the vehicle to check vehicle compatibility.")
-DEFAULT_TO_OFF = tr("This feature defaults to OFF, and does not allow selection due to vehicle limitations.")
-STATUS_DISENGAGE_ONLY = tr("This platform only supports Disengage mode due to vehicle limitations.")
+# these status strings are also translated lazily
+STATUS_CHECK_COMPATIBILITY = "Start the vehicle to check vehicle compatibility."
+DEFAULT_TO_OFF = "This feature defaults to OFF, and does not allow selection due to vehicle limitations."
+STATUS_DISENGAGE_ONLY = "This platform only supports Disengage mode due to vehicle limitations."
 
 
 class AolSettingsLayout(Widget):
@@ -36,14 +40,14 @@ class AolSettingsLayout(Widget):
   def _initialize_items(self):
     self._main_cruise_toggle = toggle_item(
       title=lambda: tr("Toggle with Main Cruise"),
-      description=AOL_MAIN_CRUISE_BASE_DESC,
+      description=lambda: tr(AOL_MAIN_CRUISE_BASE_DESC),
       param="AolMainCruiseAllowed",
     )
     self._steering_mode = multiple_button_item(
       param="AolSteeringMode",
       title=lambda: tr("Steering Mode on Brake Pedal"),
       description="",
-      buttons=[opt[0] for opt in AOL_STEERING_MODE_OPTIONS],
+      buttons=[tr(opt[0]) for opt in AOL_STEERING_MODE_OPTIONS],
       inline=False,
       button_width=350,
       callback=self._update_steering_mode_description,
@@ -87,8 +91,12 @@ class AolSettingsLayout(Widget):
   def _update_steering_mode_description(self, button_index: int):
     base_desc = tr("Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in IQ.Pilot.")
     result = base_desc + "<br><br>"
-    for opt in AOL_STEERING_MODE_OPTIONS:
-      desc = "<b>" + opt[1] + "</b>" if button_index == AOL_STEERING_MODE_OPTIONS.index(opt) else opt[1]
+    for i, opt in enumerate(AOL_STEERING_MODE_OPTIONS):
+      # translate the stored english strings on the fly
+      label = tr(opt[0])
+      desc = tr(opt[1])
+      if button_index == i:
+        desc = "<b>" + desc + "</b>"
       result += desc + "<br>"
     self._steering_mode.set_description(result)
     self._steering_mode.show_description(True)
