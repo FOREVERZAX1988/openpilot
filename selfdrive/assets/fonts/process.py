@@ -99,8 +99,10 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
   print(f"Processing {font_path.name}...")
 
   font_size = {
-    "unifont.ttf": 188,  # unifont is only 16x8 or 16x16 pixels per glyph
-  }.get(font_path.name, 200)
+    # unifont.ttf is created by deleting unifont.otf, replacing it with NotoSansMultilanguage-Regular.ttf, and then renaming the latter to unifont.ttf.
+    # The purpose of renaming is to minimize code modifications while achieving a better font appearance.
+    "unifont.ttf": 188,
+ }.get(font_path.name, 200)
 
   data = font_path.read_bytes()
   file_buf = rl.ffi.new("unsigned char[]", data)
