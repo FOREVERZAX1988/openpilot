@@ -1,6 +1,8 @@
 import pyray as rl
-from openpilot.system.ui.lib.application import FontWeight
-from openpilot.system.ui.lib.multilang import tr, multilang  # # 解决语言选择菜单字符问题修改1：导入全局实例multilang
+from collections.abc import Callable
+from typing import List  # 新增：补充类型注解所需的导入
+from openpilot.system.ui.lib.application import FontWeight, gui_app  # 修复：导入缺失的gui_app
+from openpilot.system.ui.lib.multilang import tr, multilang  # 解决语言选择菜单字符问题修改1：导入全局实例multilang
 # 解决语言选择菜单字符问题修改2：添加以下导入
 from openpilot.system.ui.lib.multilang import CHINA_LANGUAGES, UNIFONT_LANGUAGES
 from openpilot.system.ui.widgets import Widget, DialogResult
@@ -19,13 +21,19 @@ LIST_ITEM_SPACING = 25
 
 
 class MultiOptionDialog(Widget):
-  def __init__(self, title, options, current="", option_font_weight=FontWeight.MEDIUM):
+  # 修复：补充类型注解，增强代码健壮性
+  def __init__(self,
+               title: str,
+               options: List[str],
+               current: str = "",
+               option_font_weight: FontWeight = FontWeight.MEDIUM,
+               callback: Callable[[DialogResult], None] | None = None):
     super().__init__()
     self.title = title
     self.options = options
     self.current = current
     self.selection = current
-    self._result: DialogResult = DialogResult.NO_ACTION
+    self._callback = callback
 
     # 新增：打印菜单文本的原始内容（修正缩进）
     print(f"当前语言：{multilang.language}")
@@ -36,24 +44,25 @@ class MultiOptionDialog(Widget):
       # 循环体内的print要和for保持缩进层级一致
       print(f"  选项{idx}：{opt}，字节编码：{opt.encode('utf-8')}")
 
-        # 解决语言选择菜单字符问题修改3：新增：根据当前语言动态调整字体权重
+    # 解决语言选择菜单字符问题修改3：新增：根据当前语言动态调整字体权重
     self.option_buttons = []
     lang = multilang.language
     try:
-      if lang in CHINA_LANGUAGES:
+      # 先校验枚举值是否存在，避免AttributeError
+      if hasattr(FontWeight, 'CHINA') and lang in CHINA_LANGUAGES:
           # 中文使用中文字体
           option_font_weight = FontWeight.CHINA  # 需确保该权重对应china.ttf
-      elif lang in UNIFONT_LANGUAGES:
+      elif hasattr(FontWeight, 'UNIFONT') and lang in UNIFONT_LANGUAGES:
           # 其他特殊语言使用unifont
           option_font_weight = FontWeight.UNIFONT  # 需确保该权重对应unifont.otf
     except AttributeError:
       # 若FontWeight无对应枚举，降级为默认，避免崩溃
       option_font_weight = FontWeight.MEDIUM
 
-        # 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
+    # 解决语言选择菜单字符问题修改4：创建选项按钮（修复闭包问题+明确参数）
     for option in self.options:
         print(f"选项: {option}, 当前语言: {lang}, 字体权重: {option_font_weight}")  # 新增调试输出
-        def on_click(opt=option): 
+        def on_click(opt=option):
           self._on_option_clicked(opt)
         btn = Button(
           text=option,
@@ -63,25 +72,29 @@ class MultiOptionDialog(Widget):
           button_style=ButtonStyle.NORMAL,
           text_padding=50,
           elide_right=True
-          )
+        )
         self.option_buttons.append(btn)
-    
+
     self.scroller = Scroller(self.option_buttons, spacing=LIST_ITEM_SPACING)
 
-    #解决语言选择菜单字符问题修改5：修复取消/确认按钮文本参数（原lambda传参错误）
+    # 解决语言选择菜单字符问题修改5：修复取消/确认按钮文本参数（原lambda传参错误）
     self.cancel_button = Button(
-      text=tr("Cancel"), 
+      text=tr("Cancel"),
       click_callback=lambda: self._set_result(DialogResult.CANCEL),
       button_style=ButtonStyle.NORMAL
-      )
+    )
     self.select_button = Button(
-      text=tr("Select"), 
-      click_callback=lambda: self._set_result(DialogResult.CONFIRM), 
+      text=tr("Select"),
+      click_callback=lambda: self._set_result(DialogResult.CONFIRM),
       button_style=ButtonStyle.PRIMARY
-      )
+    )
 
   def _set_result(self, result: DialogResult):
-    self._result = result
+    # 修复：gui_app已导入，且增加空值校验
+    if gui_app and hasattr(gui_app, 'pop_widget'):
+      gui_app.pop_widget()
+    if self._callback and callable(self._callback):
+      self._callback(result)
 
   def _on_option_clicked(self, option):
     self.selection = option
@@ -105,7 +118,8 @@ class MultiOptionDialog(Widget):
       selected = option == self.selection
       button = self.option_buttons[i]
       button.set_button_style(ButtonStyle.PRIMARY if selected else ButtonStyle.NORMAL)
-      button.set_rect(rl.Rectangle(0, 0, options_rect.width, ITEM_HEIGHT))
+      # 修复：按钮位置基于options_rect，避免x/y为0的潜在问题
+      button.set_rect(rl.Rectangle(options_rect.x, 0, options_rect.width, ITEM_HEIGHT))
 
     self.scroller.render(options_rect)
 
@@ -119,5 +133,3 @@ class MultiOptionDialog(Widget):
     select_rect = rl.Rectangle(content_rect.x + button_w + BUTTON_SPACING, button_y, button_w, BUTTON_HEIGHT)
     self.select_button.set_enabled(self.selection != self.current)
     self.select_button.render(select_rect)
-
-    return self._result
