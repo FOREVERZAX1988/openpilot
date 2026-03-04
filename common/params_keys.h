@@ -252,6 +252,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"OsmWayTest", {PERSISTENT, STRING}},
     {"RoadName", {CLEAR_ON_ONROAD_TRANSITION, STRING}},
     {"RoadNameToggle", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DistractionDetectionLevel", {PERSISTENT | BACKUP, STRING, "1"}},
 
     // Speed Limit
     {"SpeedLimitMode", {PERSISTENT | BACKUP, INT, "1"}},
