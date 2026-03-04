@@ -13,7 +13,11 @@ def dmonitoringd_thread():
   sm = messaging.SubMaster(['driverStateV2', 'liveCalibration', 'carState', 'selfdriveState', 'modelV2',
                             'carControl'], poll='driverStateV2')
 
-  DM = DriverMonitoring(rhd_saved=params.get_bool("IsRhdDetected"), always_on=params.get_bool("AlwaysOnDM"))
+  DM = DriverMonitoring(
+    rhd_saved=params.get_bool("IsRhdDetected"),
+    always_on=params.get_bool("AlwaysOnDM"),
+    distraction_detection_level=int(params.get("DistractionDetectionLevel") or 1)
+  )
   demo_mode=False
 
   # 20Hz <- dmonitoringmodeld
@@ -23,11 +27,17 @@ def dmonitoringd_thread():
       # iterate when model has new output
       continue
 
+    # 1. 基础状态检查
     valid = sm.all_checks()
+    # 2. 分支1：演示模式（无需always_on，仅driverStateV2有效即可）
     if demo_mode and sm.valid['driverStateV2']:
-      DM.run_step(sm, demo=demo_mode)
-    elif valid:
-      DM.run_step(sm, demo=demo_mode)
+        DM.run_step(sm, demo=demo_mode)
+        # 演示模式下也可按需配置分心率
+        DM.set_distract_level_params()
+    # 3. 分支2：正式运行（需同时满足always_on和整体有效）
+    elif DM.always_on and valid:
+        DM.run_step(sm)  # 正式模式不传demo参数
+        DM.set_distract_level_params()  # 必配分心率参数
 
     # publish
     dat = DM.get_state_packet(valid=valid)
@@ -37,6 +47,7 @@ def dmonitoringd_thread():
     if sm['driverStateV2'].frameId % 40 == 1:
       DM.always_on = params.get_bool("AlwaysOnDM")
       demo_mode = params.get_bool("IsDriverViewEnabled")
+      DM.distraction_detection_level = int(params.get("DistractionDetectionLevel") or 1)
 
     # save rhd virtual toggle every 5 mins
     if (sm['driverStateV2'].frameId % 6000 == 0 and not demo_mode and

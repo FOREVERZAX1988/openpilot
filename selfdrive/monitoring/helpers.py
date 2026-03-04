@@ -139,7 +139,7 @@ def face_orientation_from_net(angles_desc, pos_desc, rpy_calib):
 
 
 class DriverMonitoring:
-  def __init__(self, rhd_saved=False, settings=None, always_on=False):
+  def __init__(self, rhd_saved=False, settings=None, always_on=False ,distraction_detection_level=None):
     # init policy settings
     self.settings = settings if settings is not None else DRIVER_MONITOR_SETTINGS(device_type=HARDWARE.get_device_type())
 
@@ -151,6 +151,7 @@ class DriverMonitoring:
     self.phone_prob = 0.
 
     self.always_on = always_on
+    self.distraction_detection_level = distraction_detection_level
     self.distracted_types = []
     self.driver_distracted = False
     self.driver_distraction_filter = FirstOrderFilter(0., self.settings._DISTRACTED_FILTER_TS, self.settings._DT_DMON)
@@ -461,3 +462,21 @@ class DriverMonitoring:
       wrong_gear=wrong_gear,
       car_speed=highway_speed
     )
+
+  def set_distract_level_params(self):
+    if self.distraction_detection_level == 0:
+      self.settings._DISTRACTED_TIME = 8.0
+      self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL = 5.0
+      self.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 4.0
+    elif self.distraction_detection_level == 1:
+      self.settings._DISTRACTED_TIME = 11.0
+      self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL = 8.
+      self.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 6.
+    elif self.distraction_detection_level == 1:
+      self.settings._DISTRACTED_TIME = 20.0
+      self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL = 10.0
+      self.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 7.0
+    else:
+      self.settings._DISTRACTED_TIME = float('inf')
+      self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL = float('inf')
+      self.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL = float('inf')

@@ -66,7 +66,6 @@ def _glyph_metrics(glyphs, rects, codepoints):
   base = int(round(max_extent))
   return entries, line_height, base
 
-
 def _write_bmfont(path: Path, font_size: int, face: str, atlas_name: str, line_height: int, base: int, atlas_size, entries):
   # TODO: why doesn't raylib calculate these metrics correctly?
   if line_height != font_size:
