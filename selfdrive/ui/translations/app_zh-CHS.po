@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-04 19:42+0800\n"
-"PO-Revision-Date: 2026-03-04 19:53+0800\n"
+"POT-Creation-Date: 2026-03-04 20:59+0800\n"
+"PO-Revision-Date: 2026-03-04 21:51+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -420,8 +420,6 @@ msgstr "清除"
 msgid "COMMA"
 msgstr "COMMA"
 
-#: selfdrive/ui/layouts/sidebar.py:76 selfdrive/ui/layouts/sidebar.py:138
-#: selfdrive/ui/layouts/sidebar.py:140 selfdrive/ui/layouts/sidebar.py:142
 #: system/ui/widgets/network.py:161
 msgid "CONNECT"
 msgstr "连接"
@@ -429,6 +427,16 @@ msgstr "连接"
 #: system/ui/widgets/network.py:383
 msgid "CONNECTING..."
 msgstr "连接中..."
+
+#: selfdrive/ui/layouts/sidebar.py:75 selfdrive/ui/layouts/sidebar.py:136
+#: selfdrive/ui/layouts/sidebar.py:138 selfdrive/ui/layouts/sidebar.py:140
+msgid "CPU TEMP"
+msgstr "CPU温度"
+
+#: selfdrive/ui/sunnypilot/layouts/sidebar.py:56
+#: selfdrive/ui/sunnypilot/layouts/sidebar.py:85
+msgid "CPU%"
+msgstr "CPU负载"
 
 #: selfdrive/selfdrived/events.py:910
 msgid "Calibrating"
@@ -669,10 +677,6 @@ msgstr "自定义扭矩参数"
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:86
 msgid "DELETE"
 msgstr "删除"
-
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:59
-msgid "DISABLED"
-msgstr "关闭"
 
 #: selfdrive/selfdrived/events.py:356 selfdrive/selfdrived/events.py:380
 msgid "DISENGAGE IMMEDIATELY"
@@ -964,11 +968,6 @@ msgstr "动态"
 msgid "EDIT"
 msgstr "编辑"
 
-#: selfdrive/ui/layouts/sidebar.py:142
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:71
-msgid "ERROR"
-msgstr "错误"
-
 #: selfdrive/ui/layouts/sidebar.py:47
 msgid "ETH"
 msgstr "ETH"
@@ -1258,10 +1257,6 @@ msgid ""
 "ACC is used for longitudinal control."
 msgstr "此车型当前无法使用实验模式,因为纵向控制使用的是原厂ACC."
 
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:73
-msgid "FAULT"
-msgstr "故障"
-
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py:106
 msgid "FETCHING..."
 msgstr "获取中..."
@@ -1386,10 +1381,6 @@ msgstr "常见问题解答"
 msgid "Friction"
 msgstr "摩擦系数"
 
-#: selfdrive/ui/layouts/sidebar.py:74 selfdrive/ui/layouts/sidebar.py:129
-msgid "GOOD"
-msgstr "良好"
-
 #: selfdrive/selfdrived/events.py:625 selfdrive/selfdrived/events.py:626
 #: sunnypilot/selfdrive/selfdrived/events.py:138
 msgid "Gear not D"
@@ -1406,10 +1397,6 @@ msgstr "在手机上前往 https://connect.comma.ai"
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py:61
 msgid "Green Traffic Light Alert (Beta)"
 msgstr "绿灯提醒（测试版）"
-
-#: selfdrive/ui/layouts/sidebar.py:133
-msgid "HIGH"
-msgstr "高"
 
 #: selfdrive/selfdrived/events.py:813 selfdrive/selfdrived/events.py:814
 #: selfdrive/selfdrived/events.py:815
@@ -1698,7 +1685,7 @@ msgstr "模块化辅助驾驶系统（MADS）"
 msgid "N/A"
 msgstr "无"
 
-#: selfdrive/ui/layouts/sidebar.py:146
+#: selfdrive/ui/layouts/sidebar.py:157
 msgid "NO"
 msgstr "否"
 
@@ -1794,21 +1781,12 @@ msgstr "轻推变道"
 msgid "Nudgeless"
 msgstr "无需轻推直接变道"
 
-#: selfdrive/ui/layouts/sidebar.py:76 selfdrive/ui/layouts/sidebar.py:138
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:55
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:77
-msgid "OFFLINE"
-msgstr "离线"
-
-#: selfdrive/ui/layouts/sidebar.py:131
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:296
 #: system/ui/widgets/confirm_dialog.py:93 system/ui/widgets/html_render.py:263
 msgid "OK"
 msgstr "确定"
 
-#: selfdrive/ui/layouts/sidebar.py:75 selfdrive/ui/layouts/sidebar.py:140
-#: selfdrive/ui/layouts/sidebar.py:148
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:71
+#: selfdrive/ui/layouts/sidebar.py:76 selfdrive/ui/layouts/sidebar.py:159
 msgid "ONLINE"
 msgstr "在线"
 
@@ -1871,7 +1849,7 @@ msgstr "存储空间不足"
 msgid "PAIR"
 msgstr "配对"
 
-#: selfdrive/ui/layouts/sidebar.py:146
+#: selfdrive/ui/layouts/sidebar.py:157
 msgid "PANDA"
 msgstr "PANDA"
 
@@ -2072,13 +2050,14 @@ msgstr ""
 msgid "Quiet Mode"
 msgstr "静音模式"
 
+#: selfdrive/ui/layouts/sidebar.py:78 selfdrive/ui/layouts/sidebar.py:149
+#: selfdrive/ui/layouts/sidebar.py:151 selfdrive/ui/layouts/sidebar.py:153
+msgid "RAM"
+msgstr "RAM内存"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py:62
 msgid "REFRESH"
 msgstr "更新"
-
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:75
-msgid "REGIST..."
-msgstr "注册中..."
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/__init__.py:45
 #: selfdrive/ui/widgets/ssh_key.py:31
@@ -2284,12 +2263,6 @@ msgstr "捐助者"
 #: selfdrive/ui/layouts/settings/developer.py:57
 msgid "SSH Keys"
 msgstr "SSH 密钥"
-
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:55
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:59
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:79
-msgid "SUNNYLINK"
-msgstr "SUNNYLINK"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/network.py:20
 #: selfdrive/ui/sunnypilot/layouts/settings/network.py:38
@@ -2669,11 +2642,6 @@ msgstr "请接管控制"
 msgid "TAKE CONTROL IMMEDIATELY"
 msgstr "请立即接管控制"
 
-#: selfdrive/ui/layouts/sidebar.py:74 selfdrive/ui/layouts/sidebar.py:129
-#: selfdrive/ui/layouts/sidebar.py:131 selfdrive/ui/layouts/sidebar.py:133
-msgid "TEMP"
-msgstr "温度"
-
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py:345
 msgid "THANKS ♥"
 msgstr "感谢 ♥"
@@ -2890,7 +2858,7 @@ msgstr "统一启用模式（UEM）"
 msgid "Uninstall"
 msgstr "卸载"
 
-#: selfdrive/ui/layouts/sidebar.py:121
+#: selfdrive/ui/layouts/sidebar.py:123
 msgid "Unknown"
 msgstr "未知"
 
@@ -2943,7 +2911,7 @@ msgid ""
 "through turns ahead."
 msgstr "利用视觉路径预测,估算通过前方弯道的合适行驶速度."
 
-#: selfdrive/ui/layouts/sidebar.py:75 selfdrive/ui/layouts/sidebar.py:148
+#: selfdrive/ui/layouts/sidebar.py:76 selfdrive/ui/layouts/sidebar.py:159
 msgid "VEHICLE"
 msgstr "车辆"
 
@@ -3590,9 +3558,15 @@ msgstr "🔥 Firehose 模式 🔥"
 #~ msgid "Comma"
 #~ msgstr "Comma"
 
+#~ msgid "DISABLED"
+#~ msgstr "关闭"
+
 #, python-format
 #~ msgid "Decline, uninstall openpilot"
 #~ msgstr "拒绝并卸载 openpilot"
+
+#~ msgid "ERROR"
+#~ msgstr "错误"
 
 #~ msgid "Emergency Braking: Risk of Collision"
 #~ msgstr "紧急制动：碰撞风险"
@@ -3607,14 +3581,32 @@ msgstr "🔥 Firehose 模式 🔥"
 #~ "Experimental mode."
 #~ msgstr "启用 openpilot 纵向控制（alpha）开关,以使用实验模式."
 
+#~ msgid "FAULT"
+#~ msgstr "故障"
+
+#~ msgid "GOOD"
+#~ msgstr "良好"
+
+#~ msgid "HIGH"
+#~ msgstr "高"
+
 #~ msgid "Konik"
 #~ msgstr "Konik"
+
+#~ msgid "OFFLINE"
+#~ msgstr "离线"
+
+#~ msgid "REGIST..."
+#~ msgstr "注册中..."
 
 #~ msgid "Recalibrating"
 #~ msgstr "重新校准中"
 
 #~ msgid "Remove"
 #~ msgstr "移除"
+
+#~ msgid "SUNNYLINK"
+#~ msgstr "SUNNYLINK"
 
 #~ msgid ""
 #~ "Set how sensitive the driver distraction detection should be. Strict: "
@@ -3630,6 +3622,9 @@ msgstr "🔥 Firehose 模式 🔥"
 
 #~ msgid "Speed Limit Assist: Activation Required"
 #~ msgstr "限速辅助：需激活"
+
+#~ msgid "TEMP"
+#~ msgstr "温度"
 
 #, python-format
 #~ msgid "Welcome to openpilot"

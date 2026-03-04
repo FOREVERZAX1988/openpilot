@@ -71,9 +71,11 @@ class Sidebar(Widget, SidebarSP):
     self._net_type = NETWORK_TYPES.get(NetworkType.none)
     self._net_strength = 0
 
-    self._temp_status = MetricData(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+    # 初始化：温度标签改为CPU，默认值保留1位小数
+    self._temp_status = MetricData(tr_noop("CPU TEMP"), "0.0°C", Colors.GOOD)
     self._panda_status = MetricData(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
-    self._connect_status = MetricData(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
+    # 内存状态初始化保留1位小数
+    self._memory_status = MetricData(tr_noop("RAM"), "0.0%", Colors.GOOD)
     self._recording_audio = False
 
     self._home_img = gui_app.texture("images/button_home.png", HOME_BTN.width, HOME_BTN.height)
@@ -113,8 +115,8 @@ class Sidebar(Widget, SidebarSP):
     self._recording_audio = ui_state.recording_audio
     self._update_network_status(device_state)
     self._update_temperature_status(device_state)
-    self._update_connection_status(device_state)
     self._update_panda_status()
+    self._update_memory_status(device_state)
     SidebarSP._update_sunnylink_status(self)
 
   def _update_network_status(self, device_state):
@@ -123,23 +125,32 @@ class Sidebar(Widget, SidebarSP):
     self._net_strength = max(0, min(5, strength.raw + 1)) if strength.raw > 0 else 0
 
   def _update_temperature_status(self, device_state):
+    """显示CPU温度数值，保留1位小数"""
     thermal_status = device_state.thermalStatus
+    max_temp_c = device_state.maxTempC
+
+    # 格式化：保留1位小数，标签改为CPU
+    temp_value = f"{max_temp_c:.1f}°C"
 
     if thermal_status == ThermalStatus.green:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+      self._temp_status.update(tr_noop("CPU TEMP"), temp_value, Colors.GOOD)
     elif thermal_status == ThermalStatus.yellow:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("OK"), Colors.WARNING)
+      self._temp_status.update(tr_noop("CPU TEMP"), temp_value, Colors.WARNING)
     else:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("HIGH"), Colors.DANGER)
+      self._temp_status.update(tr_noop("CPU TEMP"), temp_value, Colors.DANGER)
 
-  def _update_connection_status(self, device_state):
-    last_ping = device_state.lastAthenaPingTime
-    if last_ping == 0:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
-    elif time.monotonic_ns() - last_ping < 80_000_000_000:  # 80 seconds in nanoseconds
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ONLINE"), Colors.GOOD)
+  def _update_memory_status(self, device_state):
+    """更新内存（RAM）使用率，保留1位小数"""
+    memory_usage = device_state.memoryUsagePercent
+    # 格式化：保留1位小数
+    memory_value = f"{memory_usage:.1f}%"
+
+    if memory_usage >= 85:
+      self._memory_status.update(tr_noop("RAM"), memory_value, Colors.DANGER)
+    elif memory_usage >= 70:
+      self._memory_status.update(tr_noop("RAM"), memory_value, Colors.WARNING)
     else:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ERROR"), Colors.DANGER)
+      self._memory_status.update(tr_noop("RAM"), memory_value, Colors.GOOD)
 
   def _update_panda_status(self):
     if ui_state.panda_type == log.PandaState.PandaType.unknown:
@@ -205,13 +216,17 @@ class Sidebar(Widget, SidebarSP):
 
   def _draw_metrics(self, rect: rl.Rectangle):
     if gui_app.sunnypilot_ui():
-      metrics, start_y, spacing = SidebarSP._draw_metrics_w_sunnylink(self, rect, self._temp_status, self._panda_status, self._connect_status)
+      # 修正：调用SidebarSP的方法获取排序后的metrics（CPU温度→CPU使用率→RAM→PANDA）
+      metrics, start_y, spacing = SidebarSP._draw_metrics_w_sunnylink(self, rect, self._temp_status, self._panda_status, self._memory_status)
       for idx, metric in enumerate(metrics):
         self._draw_metric(rect, metric, start_y + idx * spacing)
-
       return
 
-    metrics = [(self._temp_status, 338), (self._panda_status, 496), (self._connect_status, 654)]
+    # 修正：非SunnyPilot UI也同步调整顺序（如果需要显示4项，需补充CPU使用率；如果只显示3项，按你需求调整）
+    # 这里按「CPU温度→CPU使用率→RAM」（如果不需要PANDA，可去掉）
+    metrics = [(self._temp_status, 338), (getattr(self, '_cpu_usage_status', self._temp_status), 496), (self._memory_status, 654)]
+    # 如果需要显示PANDA（4项），用这行：
+    # metrics = [(self._temp_status, 338), (getattr(self, '_cpu_usage_status', self._temp_status), 496), (self._memory_status, 654), (self._panda_status, 812)]
 
     for metric, y_offset in metrics:
       self._draw_metric(rect, metric, rect.y + y_offset)
