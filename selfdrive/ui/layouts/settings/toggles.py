@@ -36,15 +36,13 @@ DESCRIPTIONS = {
   "IsMetric": tr_noop("Display speed in km/h instead of mph."),
   "RecordAudio": tr_noop("Record and store microphone audio while driving. The audio will be included in the dashcam video in comma connect."),
   # 新增：分心率检测级别描述
-  "DistractionDetectionLevel": tr_noop("""
-  Set how sensitive the driver distraction detection should be.
-  Strict: Very sensitive, warns on minor distractions.
-  Moderate: Balanced between sensitivity and false positives.
-  Lenient: Only alerts on clear distractions.
-  Off: Disable Driver Distraction Detection and Control.
-  """),
+  "DistractionDetectionLevel": tr_noop(
+  "Set how sensitive the driver distraction detection should be.<br>"
+  "Strict: Very sensitive, warns on minor distractions.<br>"
+  "Moderate: Balanced between sensitivity and false positives.<br>"
+  "Lenient: Only alerts on clear distractions.<br>"
+  "Off: Disable Driver Distraction Detection and Control.<br>"),
 }
-
 
 class TogglesLayout(Widget):
   def __init__(self):
@@ -117,7 +115,7 @@ class TogglesLayout(Widget):
     # ========== 新增：分心率检测级别设置 ==========
     self._distraction_level_setting = multiple_button_item(
       lambda: tr("Distraction Detection Level"),  # 标题
-      lambda: DESCRIPTIONS["DistractionDetectionLevel"],  # 描述
+      lambda: tr(DESCRIPTIONS["DistractionDetectionLevel"]),  # 描述
       buttons=[
         lambda: tr("Strict"),
         lambda: tr("Moderate"),
