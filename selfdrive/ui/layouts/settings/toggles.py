@@ -42,7 +42,7 @@ DESCRIPTIONS = {
   Moderate: Balanced between sensitivity and false positives.
   Lenient: Only alerts on clear distractions.
   Off: Disable Driver Distraction Detection and Control.
-  """.strip()),  # strip() 去除首尾空行，避免多余空格
+  """),
 }
 
 
@@ -117,7 +117,7 @@ class TogglesLayout(Widget):
     # ========== 新增：分心率检测级别设置 ==========
     self._distraction_level_setting = multiple_button_item(
       lambda: tr("Distraction Detection Level"),  # 标题
-      lambda: tr(DESCRIPTIONS["DistractionDetectionLevel"]),  # 描述
+      lambda: DESCRIPTIONS["DistractionDetectionLevel"],  # 描述
       buttons=[
         lambda: tr("Strict"),
         lambda: tr("Moderate"),
