@@ -38,7 +38,7 @@ class CarInterface(CarInterfaceBase):
       safety_configs = [get_safety_config(structs.CarParams.SafetyModel.volkswagenMlb)]
       ret.enableBsm = 0x30F in fingerprint[0]  # SWA_01
       ret.networkLocation = NetworkLocation.gateway
-      ret.dashcamOnly = is_release  # Release support needs HCA timeout fix, safety validation, revised J533 harness
+     # ret.dashcamOnly = is_release  # Release support needs HCA timeout fix, safety validation, revised J533 harness
 
     else:
       # Set global MQB parameters

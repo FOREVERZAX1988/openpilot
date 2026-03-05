@@ -40,7 +40,6 @@ def get_params_for_docs(platform) -> tuple[CarParams, CarParamsSP]:
                                                              alpha_long=True, is_release_sp=True, docs=True)
   return CP, CP_SP
 
-
 def get_all_footnotes() -> dict[Enum, int]:
   all_footnotes = list(CommonFootnote)
   for footnotes in get_interface_attr("Footnote", ignore_none=True).values():

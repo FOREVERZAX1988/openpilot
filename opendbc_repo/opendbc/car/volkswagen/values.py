@@ -60,9 +60,8 @@ class CarControllerParams:
   STEER_DRIVER_MULTIPLIER = 3              # weight driver torque heavily
   STEER_DRIVER_FACTOR = 1                  # from dbc
 
-  STEER_TIME_MAX = 360                     # Max time that EPS allows uninterrupted HCA steering control
-  STEER_TIME_ALERT = STEER_TIME_MAX - 10   # If mitigation fails, time to soft disengage before EPS timer expires
   STEER_TIME_STUCK_TORQUE = 1.9            # EPS limits same torque to 6 seconds, reset timer 3x within that period
+  STEER_TIME_RESET = 1.1                   # Duration of HCA disable needed for effective EPS timer reset
 
   DEFAULT_MIN_STEER_SPEED = 0.4            # m/s, newer EPS racks fault below this speed, don't show a low speed alert
 
@@ -112,6 +111,7 @@ class CarControllerParams:
         self.STEER_DELTA_UP = 9  # Max HCA reached in 0.66s (STEER_MAX / (50Hz * 0.66))
         self.STEER_DELTA_DOWN = 10  # Min HCA reached in 0.60s (STEER_MAX / (50Hz * 0.60))
 
+    #    self.shifter_values = None
         self.shifter_values = can_define.dv["Getriebe_03"]["GE_Waehlhebel"]
 
         self.BUTTONS = [
@@ -359,6 +359,12 @@ class CAR(Platforms):
     chassis_codes={"A3"},
     wmis={WMI.VOLKSWAGEN_USA_CAR},
   )
+  AUDI_A4_MK4 = VolkswagenMLBPlatformConfig(
+    [VWCarDocs("Audi A4 B8.5 2012-15")],
+    VolkswagenCarSpecs(mass=1650, wheelbase=2.81),
+    chassis_codes={"8K"},
+    wmis={WMI.AUDI_GERMANY_CAR},
+  )
   VOLKSWAGEN_POLO_MK6 = VolkswagenMQBPlatformConfig(
     [
       VWCarDocs("Volkswagen Polo 2018-23", footnotes=[Footnote.VW_MQB_A0]),
@@ -441,6 +447,12 @@ class CAR(Platforms):
     VolkswagenCarSpecs(mass=1623, wheelbase=2.68),
     chassis_codes={"8U", "F3", "FS"},
     wmis={WMI.AUDI_EUROPE_MPV, WMI.AUDI_GERMANY_CAR, WMI.VOLKSWAGEN_CHINA_FAW},
+  )
+  AUDI_Q5_MK1 = VolkswagenMLBPlatformConfig(
+    [VWCarDocs("Audi Q5 2013-17")],
+    VolkswagenCarSpecs(mass=1895, wheelbase=2.81),
+    chassis_codes={"8R"},
+    wmis={WMI.AUDI_EUROPE_MPV, WMI.AUDI_GERMANY_CAR},
   )
   PORSCHE_MACAN_MK1 = VolkswagenMLBPlatformConfig(
     [VWCarDocs("Porsche Macan 2017-24")],

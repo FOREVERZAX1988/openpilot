@@ -127,6 +127,37 @@
     ],
     "package": "Adaptive Cruise Control (ACC) & Lane Assist"
   },
+    "Audi Q5 2013-2017": {
+    "platform": "AUDI_Q5_MK1",
+    "make": "Audi",
+    "brand": "volkswagen",
+    "model": "Q5",
+    "year": [
+      "2013",
+      "2014",
+      "2015",
+      "2016",
+      "2017"
+    ],
+    "package": "Adaptive Cruise Control (ACC) & Lane Assist"
+  },
+    "Porsche Macan B95": {
+    "platform": "PORSCHE_MACAN_MK1",
+    "make": "Porsche",
+    "brand": "volkswagen",
+    "model": "Macan",
+    "year": [
+      "2017",
+      "2018",
+      "2019",
+      "2020",
+      "2021",
+      "2022",
+      "2023",
+      "2024"
+    ],
+    "package": "Adaptive Cruise Control (ACC) & Lane Assist"
+  },
   "Audi RS3 2018": {
     "platform": "AUDI_A3_MK3",
     "make": "Audi",

@@ -94,7 +94,6 @@ class RadarInterfaceBase(ABC):
       return structs.RadarData()
     return None
 
-
 class CarInterfaceBase(ABC, CarInterfaceBaseSP):
   CarState: type['CarStateBase']
   CarController: type['CarControllerBase']
