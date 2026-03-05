@@ -71,10 +71,16 @@ class Sidebar(Widget, SidebarSP):
     self._net_type = NETWORK_TYPES.get(NetworkType.none)
     self._net_strength = 0
 
-    self._temp_status = MetricData(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+    # 初始化：温度标签改为CPU，默认值保留1位小数
+    self._temp_status = MetricData(tr_noop("CPU TEMP"), "0.0°C", Colors.GOOD)
     self._panda_status = MetricData(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
-    self._connect_status = MetricData(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
+    # 内存状态初始化保留1位小数
+    self._memory_status = MetricData(tr_noop("RAM"), "0.0%", Colors.GOOD)
     self._recording_audio = False
+
+    # ========== 新增：硬盘显示缓存变量 ==========
+    self._frame_count = 0  # 帧计数器（控制更新频率）
+    self._storage_cache = 0.0  # 硬盘使用率缓存值
 
     self._home_img = gui_app.texture("images/button_home.png", HOME_BTN.width, HOME_BTN.height)
     self._flag_img = gui_app.texture("images/button_flag.png", HOME_BTN.width, HOME_BTN.height)
@@ -113,8 +119,8 @@ class Sidebar(Widget, SidebarSP):
     self._recording_audio = ui_state.recording_audio
     self._update_network_status(device_state)
     self._update_temperature_status(device_state)
-    self._update_connection_status(device_state)
     self._update_panda_status()
+    self._update_memory_status(device_state)
     SidebarSP._update_sunnylink_status(self)
 
   def _update_network_status(self, device_state):
@@ -123,29 +129,75 @@ class Sidebar(Widget, SidebarSP):
     self._net_strength = max(0, min(5, strength.raw + 1)) if strength.raw > 0 else 0
 
   def _update_temperature_status(self, device_state):
+    """显示CPU温度数值，保留1位小数"""
     thermal_status = device_state.thermalStatus
+    max_temp_c = device_state.maxTempC
+
+    # 格式化：保留1位小数，标签改为CPU
+    temp_value = f"{max_temp_c:.1f}°C"
 
     if thermal_status == ThermalStatus.green:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+      self._temp_status.update(tr_noop("CPU TEMP"), temp_value, Colors.GOOD)
     elif thermal_status == ThermalStatus.yellow:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("OK"), Colors.WARNING)
+      self._temp_status.update(tr_noop("CPU TEMP"), temp_value, Colors.WARNING)
     else:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("HIGH"), Colors.DANGER)
+      self._temp_status.update(tr_noop("CPU TEMP"), temp_value, Colors.DANGER)
 
-  def _update_connection_status(self, device_state):
-    last_ping = device_state.lastAthenaPingTime
-    if last_ping == 0:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
-    elif time.monotonic_ns() - last_ping < 80_000_000_000:  # 80 seconds in nanoseconds
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ONLINE"), Colors.GOOD)
+  def _update_memory_status(self, device_state):
+    """更新内存（RAM）使用率，保留1位小数"""
+    memory_usage = device_state.memoryUsagePercent
+    # 格式化：保留1位小数
+    memory_value = f"{memory_usage:.1f}%"
+
+    if memory_usage >= 85:
+      self._memory_status.update(tr_noop("RAM"), memory_value, Colors.DANGER)
+    elif memory_usage >= 70:
+      self._memory_status.update(tr_noop("RAM"), memory_value, Colors.WARNING)
     else:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ERROR"), Colors.DANGER)
+      self._memory_status.update(tr_noop("RAM"), memory_value, Colors.GOOD)
 
+  # ========== 修改：_update_panda_status 函数 ==========
   def _update_panda_status(self):
-    if ui_state.panda_type == log.PandaState.PandaType.unknown:
-      self._panda_status.update(tr_noop("NO"), tr_noop("PANDA"), Colors.DANGER)
-    else:
-      self._panda_status.update(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
+    """PANDA离线显示NO PANDA，在线显示/data硬盘使用率（缓存+低频更新）"""
+    try:
+      if ui_state.panda_type == log.PandaState.PandaType.unknown:
+        # PANDA离线：显示NO PANDA
+        self._panda_status.update(tr_noop("NO"), tr_noop("PANDA"), Colors.DANGER)
+      else:
+        # PANDA在线：每30帧更新一次硬盘使用率（≈0.5秒，不卡UI）
+        self._frame_count += 1
+        if self._frame_count % 30 == 0:
+          import os
+          target_dir = "/data" if os.path.exists("/data") else "/"
+          stat = os.statvfs(target_dir)
+          total = stat.f_blocks
+          avail = stat.f_bavail
+          used = total - avail
+          if total == 0:
+            self._storage_cache = 0.0
+          else:
+            self._storage_cache = round((used / total)*100, 1)
+          self._frame_count = 0  # 重置计数器
+
+        # 使用缓存值更新UI，不实时读硬盘
+        if self._storage_cache < 0 or self._storage_cache > 100:
+          val = "--"
+          col = Colors.GRAY
+        else:
+          val = f"{self._storage_cache:.1f}%"
+          # 按使用率分色（和内存逻辑一致）
+          if self._storage_cache >= 85:
+            col = Colors.DANGER
+          elif self._storage_cache >= 70:
+            col = Colors.WARNING
+          else:
+            col = Colors.GOOD
+
+        # 替换原VEHICLE标签为STORAGE，显示硬盘使用率
+        self._panda_status.update(tr_noop("STORAGE"), val, col)
+    except Exception:
+      # 异常兜底：显示--，不崩溃
+      self._panda_status.update(tr_noop("STORAGE"), "--", Colors.GRAY)
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     if rl.check_collision_point_rec(mouse_pos, SETTINGS_BTN):
@@ -203,15 +255,22 @@ class Sidebar(Widget, SidebarSP):
     text_pos = rl.Vector2(rect.x + 58, text_y)
     rl.draw_text_ex(self._font_regular, tr(self._net_type), text_pos, FONT_SIZE, 0, Colors.WHITE)
 
+  # ========== 修改：_draw_metrics 函数 ==========
   def _draw_metrics(self, rect: rl.Rectangle):
     if gui_app.sunnypilot_ui():
-      metrics, start_y, spacing = SidebarSP._draw_metrics_w_sunnylink(self, rect, self._temp_status, self._panda_status, self._connect_status)
+      # 显示4项：CPU温度→CPU使用率→RAM→STORAGE（硬盘）
+      metrics, start_y, spacing = SidebarSP._draw_metrics_w_sunnylink(self, rect, self._temp_status, self._panda_status, self._memory_status)
       for idx, metric in enumerate(metrics):
         self._draw_metric(rect, metric, start_y + idx * spacing)
-
       return
 
-    metrics = [(self._temp_status, 338), (self._panda_status, 496), (self._connect_status, 654)]
+    # 非SunnyPilot UI：强制显示4项（包含硬盘使用率）
+    metrics = [
+      (self._temp_status, 338),
+      (getattr(self, '_cpu_usage_status', self._temp_status), 496),
+      (self._memory_status, 654),
+      (self._panda_status, 812)  # 加入硬盘使用率项
+    ]
 
     for metric, y_offset in metrics:
       self._draw_metric(rect, metric, rect.y + y_offset)
