@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-04 20:59+0800\n"
-"PO-Revision-Date: 2026-03-04 21:51+0800\n"
+"POT-Creation-Date: 2026-03-05 21:11+0800\n"
+"PO-Revision-Date: 2026-03-05 21:18+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: chs\n"
@@ -428,13 +428,13 @@ msgstr "连接"
 msgid "CONNECTING..."
 msgstr "连接中..."
 
-#: selfdrive/ui/layouts/sidebar.py:75 selfdrive/ui/layouts/sidebar.py:136
-#: selfdrive/ui/layouts/sidebar.py:138 selfdrive/ui/layouts/sidebar.py:140
+#: selfdrive/ui/layouts/sidebar.py:75 selfdrive/ui/layouts/sidebar.py:140
+#: selfdrive/ui/layouts/sidebar.py:142 selfdrive/ui/layouts/sidebar.py:144
 msgid "CPU TEMP"
 msgstr "CPU温度"
 
 #: selfdrive/ui/sunnypilot/layouts/sidebar.py:56
-#: selfdrive/ui/sunnypilot/layouts/sidebar.py:85
+#: selfdrive/ui/sunnypilot/layouts/sidebar.py:91
 msgid "CPU%"
 msgstr "CPU负载"
 
@@ -1685,7 +1685,7 @@ msgstr "模块化辅助驾驶系统（MADS）"
 msgid "N/A"
 msgstr "无"
 
-#: selfdrive/ui/layouts/sidebar.py:157
+#: selfdrive/ui/layouts/sidebar.py:165
 msgid "NO"
 msgstr "否"
 
@@ -1786,7 +1786,7 @@ msgstr "无需轻推直接变道"
 msgid "OK"
 msgstr "确定"
 
-#: selfdrive/ui/layouts/sidebar.py:76 selfdrive/ui/layouts/sidebar.py:159
+#: selfdrive/ui/layouts/sidebar.py:76
 msgid "ONLINE"
 msgstr "在线"
 
@@ -1849,7 +1849,7 @@ msgstr "存储空间不足"
 msgid "PAIR"
 msgstr "配对"
 
-#: selfdrive/ui/layouts/sidebar.py:157
+#: selfdrive/ui/layouts/sidebar.py:165
 msgid "PANDA"
 msgstr "PANDA"
 
@@ -2050,8 +2050,8 @@ msgstr ""
 msgid "Quiet Mode"
 msgstr "静音模式"
 
-#: selfdrive/ui/layouts/sidebar.py:78 selfdrive/ui/layouts/sidebar.py:149
-#: selfdrive/ui/layouts/sidebar.py:151 selfdrive/ui/layouts/sidebar.py:153
+#: selfdrive/ui/layouts/sidebar.py:78 selfdrive/ui/layouts/sidebar.py:153
+#: selfdrive/ui/layouts/sidebar.py:155 selfdrive/ui/layouts/sidebar.py:157
 msgid "RAM"
 msgstr "RAM内存"
 
@@ -2263,6 +2263,10 @@ msgstr "捐助者"
 #: selfdrive/ui/layouts/settings/developer.py:57
 msgid "SSH Keys"
 msgstr "SSH 密钥"
+
+#: selfdrive/ui/layouts/sidebar.py:197 selfdrive/ui/layouts/sidebar.py:200
+msgid "STORAGE"
+msgstr "ROM存储"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/network.py:20
 #: selfdrive/ui/sunnypilot/layouts/settings/network.py:38
@@ -2858,7 +2862,7 @@ msgstr "统一启用模式（UEM）"
 msgid "Uninstall"
 msgstr "卸载"
 
-#: selfdrive/ui/layouts/sidebar.py:123
+#: selfdrive/ui/layouts/sidebar.py:127
 msgid "Unknown"
 msgstr "未知"
 
@@ -2911,7 +2915,7 @@ msgid ""
 "through turns ahead."
 msgstr "利用视觉路径预测,估算通过前方弯道的合适行驶速度."
 
-#: selfdrive/ui/layouts/sidebar.py:76 selfdrive/ui/layouts/sidebar.py:159
+#: selfdrive/ui/layouts/sidebar.py:76
 msgid "VEHICLE"
 msgstr "车辆"
 

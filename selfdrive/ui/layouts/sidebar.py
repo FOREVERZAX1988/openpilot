@@ -78,6 +78,10 @@ class Sidebar(Widget, SidebarSP):
     self._memory_status = MetricData(tr_noop("RAM"), "0.0%", Colors.GOOD)
     self._recording_audio = False
 
+    # ========== 新增：硬盘显示缓存变量 ==========
+    self._frame_count = 0  # 帧计数器（控制更新频率）
+    self._storage_cache = 0.0  # 硬盘使用率缓存值
+
     self._home_img = gui_app.texture("images/button_home.png", HOME_BTN.width, HOME_BTN.height)
     self._flag_img = gui_app.texture("images/button_flag.png", HOME_BTN.width, HOME_BTN.height)
     self._settings_img = gui_app.texture("images/button_settings.png", SETTINGS_BTN.width, SETTINGS_BTN.height)
@@ -152,11 +156,48 @@ class Sidebar(Widget, SidebarSP):
     else:
       self._memory_status.update(tr_noop("RAM"), memory_value, Colors.GOOD)
 
+  # ========== 修改：_update_panda_status 函数 ==========
   def _update_panda_status(self):
-    if ui_state.panda_type == log.PandaState.PandaType.unknown:
-      self._panda_status.update(tr_noop("NO"), tr_noop("PANDA"), Colors.DANGER)
-    else:
-      self._panda_status.update(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
+    """PANDA离线显示NO PANDA，在线显示/data硬盘使用率（缓存+低频更新）"""
+    try:
+      if ui_state.panda_type == log.PandaState.PandaType.unknown:
+        # PANDA离线：显示NO PANDA
+        self._panda_status.update(tr_noop("NO"), tr_noop("PANDA"), Colors.DANGER)
+      else:
+        # PANDA在线：每30帧更新一次硬盘使用率（≈0.5秒，不卡UI）
+        self._frame_count += 1
+        if self._frame_count % 30 == 0:
+          import os
+          target_dir = "/data" if os.path.exists("/data") else "/"
+          stat = os.statvfs(target_dir)
+          total = stat.f_blocks
+          avail = stat.f_bavail
+          used = total - avail
+          if total == 0:
+            self._storage_cache = 0.0
+          else:
+            self._storage_cache = round((used / total)*100, 1)
+          self._frame_count = 0  # 重置计数器
+
+        # 使用缓存值更新UI，不实时读硬盘
+        if self._storage_cache < 0 or self._storage_cache > 100:
+          val = "--"
+          col = Colors.GRAY
+        else:
+          val = f"{self._storage_cache:.1f}%"
+          # 按使用率分色（和内存逻辑一致）
+          if self._storage_cache >= 85:
+            col = Colors.DANGER
+          elif self._storage_cache >= 70:
+            col = Colors.WARNING
+          else:
+            col = Colors.GOOD
+
+        # 替换原VEHICLE标签为STORAGE，显示硬盘使用率
+        self._panda_status.update(tr_noop("STORAGE"), val, col)
+    except Exception:
+      # 异常兜底：显示--，不崩溃
+      self._panda_status.update(tr_noop("STORAGE"), "--", Colors.GRAY)
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     if rl.check_collision_point_rec(mouse_pos, SETTINGS_BTN):
@@ -214,19 +255,22 @@ class Sidebar(Widget, SidebarSP):
     text_pos = rl.Vector2(rect.x + 58, text_y)
     rl.draw_text_ex(self._font_regular, tr(self._net_type), text_pos, FONT_SIZE, 0, Colors.WHITE)
 
+  # ========== 修改：_draw_metrics 函数 ==========
   def _draw_metrics(self, rect: rl.Rectangle):
     if gui_app.sunnypilot_ui():
-      # 修正：调用SidebarSP的方法获取排序后的metrics（CPU温度→CPU使用率→RAM→PANDA）
+      # 显示4项：CPU温度→CPU使用率→RAM→STORAGE（硬盘）
       metrics, start_y, spacing = SidebarSP._draw_metrics_w_sunnylink(self, rect, self._temp_status, self._panda_status, self._memory_status)
       for idx, metric in enumerate(metrics):
         self._draw_metric(rect, metric, start_y + idx * spacing)
       return
 
-    # 修正：非SunnyPilot UI也同步调整顺序（如果需要显示4项，需补充CPU使用率；如果只显示3项，按你需求调整）
-    # 这里按「CPU温度→CPU使用率→RAM」（如果不需要PANDA，可去掉）
-    metrics = [(self._temp_status, 338), (getattr(self, '_cpu_usage_status', self._temp_status), 496), (self._memory_status, 654)]
-    # 如果需要显示PANDA（4项），用这行：
-    # metrics = [(self._temp_status, 338), (getattr(self, '_cpu_usage_status', self._temp_status), 496), (self._memory_status, 654), (self._panda_status, 812)]
+    # 非SunnyPilot UI：强制显示4项（包含硬盘使用率）
+    metrics = [
+      (self._temp_status, 338),
+      (getattr(self, '_cpu_usage_status', self._temp_status), 496),
+      (self._memory_status, 654),
+      (self._panda_status, 812)  # 加入硬盘使用率项
+    ]
 
     for metric, y_offset in metrics:
       self._draw_metric(rect, metric, rect.y + y_offset)
