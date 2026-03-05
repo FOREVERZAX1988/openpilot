@@ -35,8 +35,14 @@ DESCRIPTIONS = {
   'RecordFront': tr_noop("Upload data from the driver facing camera and help improve the driver monitoring algorithm."),
   "IsMetric": tr_noop("Display speed in km/h instead of mph."),
   "RecordAudio": tr_noop("Record and store microphone audio while driving. The audio will be included in the dashcam video in comma connect."),
+  # 新增：分心率检测级别描述
+  "DistractionDetectionLevel": tr_noop(
+  "Set how sensitive the driver distraction detection should be.<br>"
+  "Strict: Very sensitive, warns on minor distractions.<br>"
+  "Moderate: Balanced between sensitivity and false positives.<br>"
+  "Lenient: Only alerts on clear distractions.<br>"
+  "Off: Disable Driver Distraction Detection and Control.<br>"),
 }
-
 
 class TogglesLayout(Widget):
   def __init__(self):
@@ -106,8 +112,27 @@ class TogglesLayout(Widget):
       icon="speed_limit.png"
     )
 
+    # ========== 新增：分心率检测级别设置 ==========
+    self._distraction_level_setting = multiple_button_item(
+      lambda: tr("Distraction Detection Level"),  # 标题
+      lambda: tr(DESCRIPTIONS["DistractionDetectionLevel"]),  # 描述
+      buttons=[
+        lambda: tr("Strict"),
+        lambda: tr("Moderate"),
+        lambda: tr("Lenient"),
+        lambda: tr("Off")
+      ],  # 4个级别选项
+      button_width=250,  # 按钮宽度（适配UI）
+      callback=self._set_distraction_level,  # 选择后的回调
+      selected_index=self._get_distraction_level_index(),  # 初始选中项
+      icon="monitoring.png"  # 图标（和AlwaysOnDM一致）
+    )
+    # 初始隐藏分心率设置（AlwaysOnDM默认关闭）
+    self._distraction_level_setting.set_visible(self._params.get_bool("AlwaysOnDM", False))
+
     self._toggles = {}
     self._locked_toggles = set()
+    scroller_items = []  # 一次性构建scroller列表，不动态重建
     for param, (title, desc, icon, needs_restart) in self._toggle_defs.items():
       toggle = toggle_item(
         title,
@@ -134,15 +159,52 @@ class TogglesLayout(Widget):
         self._locked_toggles.add(param)
 
       self._toggles[param] = toggle
+      scroller_items.append(toggle)
 
       # insert longitudinal personality after NDOG toggle
       if param == "DisengageOnAccelerator":
         self._toggles["LongitudinalPersonality"] = self._long_personality_setting
+        scroller_items.append(self._long_personality_setting)
+
+      # ========== 新增：在AlwaysOnDM后添加分心率设置（一次性加入列表） ==========
+      if param == "AlwaysOnDM":
+        self._toggles["DistractionDetectionLevel"] = self._distraction_level_setting
+        scroller_items.append(self._distraction_level_setting)
 
     self._update_experimental_mode_icon()
-    self._scroller = Scroller(list(self._toggles.values()), line_separator=True, spacing=0)
+    # ========== 关键修复：只初始化一次Scroller，不动态重建 ==========
+    self._scroller = Scroller(scroller_items, line_separator=True, spacing=0)
 
     ui_state.add_engaged_transition_callback(self._update_toggles)
+
+  # ========== 新增：分心率级别相关方法 ==========
+  def _get_distraction_level_index(self):
+    """从params读取分心率级别，转换为按钮索引"""
+    try:
+      level_str = self._params.get("DistractionDetectionLevel", "moderate")
+      level_map = {
+        "strict": 0,
+        "moderate": 1,
+        "lenient": 2,
+        "off": 3
+      }
+      return level_map.get(level_str.lower(), 1)  # 默认选中Moderate（索引1）
+    except Exception:
+      return 1
+
+  def _set_distraction_level(self, button_index: int):
+    """选择分心率级别后写入params"""
+    level_map = {
+      0: "strict",
+      1: "moderate",
+      2: "lenient",
+      3: "off"
+    }
+    self._params.put("DistractionDetectionLevel", level_map.get(button_index, "moderate"))
+
+  def _update_distraction_visibility(self):
+    always_on_dm_enabled = self._params.get_bool("AlwaysOnDM", False)
+    self._distraction_level_setting.set_visible(always_on_dm_enabled)
 
   def _update_state(self):
     if ui_state.sm.updated["selfdriveState"]:
@@ -150,10 +212,12 @@ class TogglesLayout(Widget):
       if personality != ui_state.personality and ui_state.started:
         self._long_personality_setting.action_item.set_selected_button(personality)
       ui_state.personality = personality
+    self._update_distraction_visibility()
 
   def show_event(self):
     self._scroller.show_event()
     self._update_toggles()
+    self._update_distraction_visibility()
 
   def _update_toggles(self):
     ui_state.update_params()
@@ -198,7 +262,6 @@ class TogglesLayout(Widget):
 
     self._update_experimental_mode_icon()
 
-    # TODO: make a param control list item so we don't need to manage internal state as much here
     # refresh toggles from params to mirror external changes
     for param in self._toggle_defs:
       self._toggles[param].action_item.set_state(self._params.get_bool(param))
@@ -207,6 +270,9 @@ class TogglesLayout(Widget):
     for toggle_def in self._toggle_defs:
       if self._toggle_defs[toggle_def][3] and toggle_def not in self._locked_toggles:
         self._toggles[toggle_def].action_item.set_enabled(not ui_state.engaged)
+
+    # ========== 新增：刷新分心率设置的选中状态 ==========
+    self._distraction_level_setting.action_item.set_selected_button(self._get_distraction_level_index())
 
   def _render(self, rect):
     self._scroller.render(rect)
@@ -243,6 +309,10 @@ class TogglesLayout(Widget):
     self._params.put_bool(param, state)
     if self._toggle_defs[param][3]:
       self._params.put_bool("OnroadCycleRequested", True)
+
+    # ========== 修复：切换AlwaysOnDM时仅更新可见性 ==========
+    if param == "AlwaysOnDM":
+      self._update_distraction_visibility()
 
   def _set_longitudinal_personality(self, button_index: int):
     self._params.put("LongitudinalPersonality", button_index)
