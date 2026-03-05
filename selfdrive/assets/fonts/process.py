@@ -90,7 +90,7 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
   print(f"Processing {font_path.name}...")
 
   font_size = {
-    "unifont.otf": 16,  # unifont is only 16x8 or 16x16 pixels per glyph
+    "unifont.ttf": 188,  # unifont is only 16x8 or 16x16 pixels per glyph
   }.get(font_path.name, 200)
 
   data = font_path.read_bytes()

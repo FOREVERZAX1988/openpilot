@@ -57,7 +57,7 @@ class MadsSettingsLayout(Widget):
       param="MadsSteeringMode",
       title=lambda: tr("Steering Mode on Brake Pedal"),
       description="",
-      buttons=[opt[0] for opt in MADS_STEERING_MODE_OPTIONS],
+      buttons=[tr(opt[0]) for opt in MADS_STEERING_MODE_OPTIONS],
       inline=False,
       button_width=350,
       callback=self._update_steering_mode_description,
@@ -103,7 +103,7 @@ class MadsSettingsLayout(Widget):
     base_desc = tr("Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in sunnypilot.")
     result = base_desc + "<br><br>"
     for opt in MADS_STEERING_MODE_OPTIONS:
-      desc = "<b>" + opt[1] + "</b>" if button_index == MADS_STEERING_MODE_OPTIONS.index(opt) else opt[1]
+      desc = "<b>" + tr(opt[1]) + "</b>" if button_index == MADS_STEERING_MODE_OPTIONS.index(opt) else tr(opt[1])
       result += desc + "<br>"
     self._steering_mode.set_description(result)
     self._steering_mode.show_description(True)
@@ -117,21 +117,21 @@ class MadsSettingsLayout(Widget):
 
       self._main_cruise_toggle.action_item.set_enabled(False)
       self._main_cruise_toggle.action_item.set_state(False)
-      self._main_cruise_toggle.set_description("<b>" + DEFAULT_TO_OFF + "</b><br>" + MADS_MAIN_CRUISE_BASE_DESC)
+      self._main_cruise_toggle.set_description("<b>" + tr(DEFAULT_TO_OFF) + "</b><br>" + tr(MADS_MAIN_CRUISE_BASE_DESC))
 
       self._unified_engagement_toggle.action_item.set_enabled(False)
       self._unified_engagement_toggle.action_item.set_state(True)
-      self._unified_engagement_toggle.set_description("<b>" + DEFAULT_TO_ON + "</b><br>" + MADS_UNIFIED_ENGAGEMENT_MODE_BASE_DESC)
+      self._unified_engagement_toggle.set_description("<b>" + tr(DEFAULT_TO_ON) + "</b><br>" + tr(MADS_UNIFIED_ENGAGEMENT_MODE_BASE_DESC))
 
-      self._steering_mode.set_description(STATUS_DISENGAGE_ONLY)
+      self._steering_mode.set_description(tr(STATUS_DISENGAGE_ONLY))
       self._steering_mode.action_item.set_selected_button(MadsSteeringModeOnBrake.DISENGAGE)
       self._steering_mode.action_item.set_enabled_buttons({MadsSteeringModeOnBrake.DISENGAGE})
     else:
       self._main_cruise_toggle.action_item.set_enabled(True)
-      self._main_cruise_toggle.set_description(MADS_MAIN_CRUISE_BASE_DESC)
+      self._main_cruise_toggle.set_description(tr(MADS_MAIN_CRUISE_BASE_DESC))
 
       self._unified_engagement_toggle.action_item.set_enabled(True)
-      self._unified_engagement_toggle.set_description(MADS_UNIFIED_ENGAGEMENT_MODE_BASE_DESC)
+      self._unified_engagement_toggle.set_description(tr(MADS_UNIFIED_ENGAGEMENT_MODE_BASE_DESC))
 
       self._steering_mode.action_item.set_enabled(True)
       self._steering_mode.action_item.set_enabled_buttons(None)

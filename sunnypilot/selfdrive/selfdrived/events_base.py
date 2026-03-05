@@ -7,6 +7,7 @@ from cereal import log, car
 import cereal.messaging as messaging
 from openpilot.common.realtime import DT_CTRL
 from openpilot.system.hardware import HARDWARE
+from openpilot.system.ui.lib.multilang import tr
 
 AlertSize = log.SelfdriveState.AlertSize
 AlertStatus = log.SelfdriveState.AlertStatus
@@ -50,8 +51,8 @@ class Alert:
                duration: float,
                creation_delay: float = 0.):
 
-    self.alert_text_1 = alert_text_1
-    self.alert_text_2 = alert_text_2
+    self.alert_text_1 = tr(alert_text_1)
+    self.alert_text_2 = tr(alert_text_2)
     self.alert_status = alert_status
     self.alert_size = alert_size
     self.priority = priority
@@ -78,7 +79,7 @@ class AlertBase(Alert):
                alert_size: log.SelfdriveState.AlertSize, priority: Priority,
                visual_alert: car.CarControl.HUDControl.VisualAlert,
                audible_alert: car.CarControl.HUDControl.AudibleAlert, duration: float):
-    super().__init__(alert_text_1, alert_text_2, alert_status, alert_size, priority, visual_alert, audible_alert, duration)
+    super().__init__(tr(alert_text_1), tr(alert_text_2), alert_status, alert_size, priority, visual_alert, audible_alert, duration)
 
 
 AlertCallbackType = Callable[[car.CarParams, car.CarState, messaging.SubMaster, bool, int, log.ControlsState], Alert]
@@ -88,9 +89,9 @@ AlertCallbackType = Callable[[car.CarParams, car.CarState, messaging.SubMaster, 
 
 
 def wrong_car_mode_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  text = "Enable Adaptive Cruise to Engage"
+  text = tr("Enable Adaptive Cruise to Engage")
   if CP.brand == "honda":
-    text = "Enable Main Switch to Engage"
+    text = tr("Enable Main Switch to Engage")
   return NoEntryAlert(text)
 
 
@@ -184,7 +185,7 @@ EmptyAlert = Alert("" , "", AlertStatus.normal, AlertSize.none, Priority.LOWEST,
 
 class NoEntryAlert(Alert):
   def __init__(self, alert_text_2: str,
-               alert_text_1: str = "openpilot Unavailable",
+               alert_text_1: str = tr("openpilot Unavailable"),
                visual_alert: car.CarControl.HUDControl.VisualAlert=VisualAlert.none):
     if HARDWARE.get_device_type() == 'mici':
       alert_text_1, alert_text_2 = alert_text_2, alert_text_1
@@ -195,25 +196,25 @@ class NoEntryAlert(Alert):
 
 class SoftDisableAlert(Alert):
   def __init__(self, alert_text_2: str):
-    super().__init__("TAKE CONTROL IMMEDIATELY", alert_text_2,
+    super().__init__(tr("TAKE CONTROL IMMEDIATELY"), tr(alert_text_2),
                      AlertStatus.userPrompt, AlertSize.full,
                      Priority.MID, VisualAlert.steerRequired,
-                     AudibleAlert.warningSoft, 2.),
+                     AudibleAlert.warningSoft, 2.)
 
 
 # less harsh version of SoftDisable, where the condition is user-triggered
 class UserSoftDisableAlert(SoftDisableAlert):
   def __init__(self, alert_text_2: str):
-    super().__init__(alert_text_2),
-    self.alert_text_1 = "openpilot will disengage"
+    super().__init__(tr(alert_text_2))
+    self.alert_text_1 = tr("openpilot will disengage")
 
 
 class ImmediateDisableAlert(Alert):
   def __init__(self, alert_text_2: str):
-    super().__init__("TAKE CONTROL IMMEDIATELY", alert_text_2,
+    super().__init__(tr("TAKE CONTROL IMMEDIATELY"), tr(alert_text_2),
                      AlertStatus.critical, AlertSize.full,
                      Priority.HIGHEST, VisualAlert.steerRequired,
-                     AudibleAlert.warningImmediate, 4.),
+                     AudibleAlert.warningImmediate, 4.)
 
 
 class EngagementAlert(Alert):
@@ -221,23 +222,23 @@ class EngagementAlert(Alert):
     super().__init__("", "",
                      AlertStatus.normal, AlertSize.none,
                      Priority.MID, VisualAlert.none,
-                     audible_alert, .2),
+                     audible_alert, .2)
 
 
 class NormalPermanentAlert(Alert):
   def __init__(self, alert_text_1: str, alert_text_2: str = "", duration: float = 0.2, priority: Priority = Priority.LOWER, creation_delay: float = 0.):
-    super().__init__(alert_text_1, alert_text_2,
+    super().__init__(tr(alert_text_1), tr(alert_text_2),
                      AlertStatus.normal, AlertSize.mid if len(alert_text_2) else AlertSize.small,
-                     priority, VisualAlert.none, AudibleAlert.none, duration, creation_delay=creation_delay),
+                     priority, VisualAlert.none, AudibleAlert.none, duration, creation_delay=creation_delay)
 
 
 class StartupAlert(Alert):
-  def __init__(self, alert_text_1: str, alert_text_2: str = "Always keep hands on wheel and eyes on road", alert_status=AlertStatus.normal):
+  def __init__(self, alert_text_1: str, alert_text_2: str = tr("Always keep hands on wheel and eyes on road"), alert_status=AlertStatus.normal):
     alert_size = AlertSize.mid
     if HARDWARE.get_device_type() == 'mici':
-      if alert_text_2 == "Always keep hands on wheel and eyes on road":
+      if alert_text_2 == tr("Always keep hands on wheel and eyes on road"):
         alert_text_2 = ""
       alert_size = AlertSize.small
     super().__init__(alert_text_1, alert_text_2,
                      alert_status, alert_size,
-                     Priority.LOWER, VisualAlert.none, AudibleAlert.none, 5.),
+                     Priority.LOWER, VisualAlert.none, AudibleAlert.none, 5.)
