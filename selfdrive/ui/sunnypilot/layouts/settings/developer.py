@@ -6,6 +6,7 @@ See the LICENSE.md file in the root directory for more details.
 """
 import datetime
 import os
+import shutil  # 新增：导入shutil依赖，用于删除文件夹
 from pathlib import Path
 
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -22,7 +23,7 @@ from openpilot.system.ui.sunnypilot.widgets.html_render import HtmlModalSP
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
 
 PREBUILT_PATH = os.path.join(Paths.comma_home(), "prebuilt") if PC else "/data/openpilot/prebuilt"
-
+REALDATA_PATH = "/data/media/0/realdata"  # 行车数据目录
 
 class DeveloperLayoutSP(DeveloperLayout):
   def __init__(self):
@@ -50,9 +51,14 @@ class DeveloperLayoutSP(DeveloperLayout):
 
     self.prebuilt_toggle = toggle_item_sp(tr("Quickboot Mode"), "", param="QuickBootToggle", callback=self._on_prebuilt_toggled)
 
+    # 新增：删除行车数据按钮
+    self.delete_realdata_btn = button_item(tr("Delete Driving Data"), tr("DELETE"),
+                                           tr("Delete all files in the realdata directory (/data/media/0/realdata)."),
+                                           callback=self._on_delete_realdata_clicked)
+
     self.error_log_btn = button_item(tr("Error Log"), tr("VIEW"), tr("View the error log for sunnypilot crashes."), callback=self._on_error_log_clicked)
 
-    self.items: list = [self.show_advanced_controls, self.enable_github_runner_toggle, self.enable_copyparty_toggle, self.prebuilt_toggle, self.error_log_btn,]
+    self.items: list = [self.show_advanced_controls, self.enable_github_runner_toggle, self.enable_copyparty_toggle, self.prebuilt_toggle, self.delete_realdata_btn, self.error_log_btn,]
 
   @staticmethod
   def _on_prebuilt_toggled(state):
@@ -84,6 +90,28 @@ class DeveloperLayoutSP(DeveloperLayout):
     dialog = HtmlModalSP(text=text, callback=lambda result: self._on_error_log_closed(result, os.path.exists(self.error_log_path)))
     gui_app.push_widget(dialog)
 
+  # 新增：删除行车数据确认回调
+  def _on_delete_realdata_confirm(self, result):
+    if result == DialogResult.CONFIRM and os.path.exists(REALDATA_PATH):
+      for filename in os.listdir(REALDATA_PATH):
+        file_path = os.path.join(REALDATA_PATH, filename)
+        try:
+          if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path)
+          elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+        except Exception as e:
+          print(f"Failed to delete {file_path}: {e}")
+
+  def _on_delete_realdata_clicked(self):
+    dialog = ConfirmDialog(
+      tr("Are you sure you want to delete ALL driving data?"),
+      tr("Delete"),
+      tr("Cancel"),
+      callback=self._on_delete_realdata_confirm
+    )
+    gui_app.push_widget(dialog)
+
   def _update_state(self):
     disable_updates = ui_state.params.get_bool("DisableUpdates")
     show_advanced = ui_state.params.get_bool("ShowAdvancedControls")
@@ -104,3 +132,4 @@ class DeveloperLayoutSP(DeveloperLayout):
     self.enable_copyparty_toggle.set_visible(show_advanced)
     self.enable_github_runner_toggle.set_visible(show_advanced and not self._is_release_branch)
     self.error_log_btn.set_visible(not self._is_release_branch)
+    self.delete_realdata_btn.set_visible(show_advanced)
