@@ -79,7 +79,6 @@ class DRIVER_MONITOR_SETTINGS:
     self._MAX_TERMINAL_DURATION = int(30 / self._DT_DMON)  # not allowed to engage after 30s of terminal alerts
 
 class DistractedType:
-
   NOT_DISTRACTED = 0
   DISTRACTED_POSE = 1 << 0
   DISTRACTED_BLINK = 1 << 1
@@ -113,7 +112,6 @@ class DriverBlink:
     self.left = 0.
     self.right = 0.
 
-
 # model output refers to center of undistorted+leveled image
 EFL = 598.0 # focal length in K
 cam = DEVICE_CAMERAS[("tici", "ar0231")] # corrected image has same size as raw
@@ -122,7 +120,6 @@ W, H = (cam.dcam.width, cam.dcam.height)  # corrected image has same size as raw
 def face_orientation_from_net(angles_desc, pos_desc, rpy_calib):
   # the output of these angles are in device frame
   # so from driver's perspective, pitch is up and yaw is right
-
   pitch_net, yaw_net, roll_net = angles_desc
 
   face_pixel_position = ((pos_desc[0]+0.5)*W, (pos_desc[1]+0.5)*H)
@@ -137,6 +134,17 @@ def face_orientation_from_net(angles_desc, pos_desc, rpy_calib):
   yaw -= rpy_calib[2]
   return roll_net, pitch, yaw
 
+# 新增：安全处理分心检测级别参数（类内部兜底）
+def _safe_distraction_level(level):
+  """确保分心检测级别为有效数字，兜底默认值1"""
+  if level is None:
+    return 1
+  try:
+    level_int = int(level)
+    # 限制级别范围在0-2之间
+    return max(0, min(level_int, 2))
+  except (ValueError, TypeError):
+    return 1
 
 class DriverMonitoring:
   def __init__(self, rhd_saved=False, settings=None, always_on=False ,distraction_detection_level=None):
@@ -151,7 +159,8 @@ class DriverMonitoring:
     self.phone_prob = 0.
 
     self.always_on = always_on
-    self.distraction_detection_level = distraction_detection_level
+    # 修复2：初始化时就做安全转换，兜底默认值1
+    self.distraction_detection_level = _safe_distraction_level(distraction_detection_level)
     self.distracted_types = []
     self.driver_distracted = False
     self.driver_distraction_filter = FirstOrderFilter(0., self.settings._DISTRACTED_FILTER_TS, self.settings._DT_DMON)
@@ -372,7 +381,6 @@ class DriverMonitoring:
 
     if certainly_distracted or maybe_distracted:
       # should always be counting if distracted unless at standstill (lowspeed for always-on) and reaching orange
-      # also will not be reaching 0 if DM is active when not engaged
       if not (standstill_orange_exemption or always_on_red_exemption or (always_on_lowspeed_exemption and _reaching_audible)):
         self.awareness = max(self.awareness - self.step_change, -0.1)
 
@@ -396,7 +404,6 @@ class DriverMonitoring:
     if self.dcam_uncertain_cnt > self.settings._DCAM_UNCERTAIN_ALERT_COUNT and not self.dcam_uncertain_alerted:
       set_offroad_alert("Offroad_DriverMonitoringUncertain", True)
       self.dcam_uncertain_alerted = True
-
 
   def get_state_packet(self, valid=True):
     # build driverMonitoringState packet
@@ -464,6 +471,7 @@ class DriverMonitoring:
     )
 
   def set_distract_level_params(self):
+    # 修复1：修正重复的==1判断，改为==2
     if self.distraction_detection_level == 0:
       self.settings._DISTRACTED_TIME = 8.0
       self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL = 5.0
@@ -472,7 +480,7 @@ class DriverMonitoring:
       self.settings._DISTRACTED_TIME = 11.0
       self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL = 8.
       self.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 6.
-    elif self.distraction_detection_level == 1:
+    elif self.distraction_detection_level == 2:  # 关键修复：从1改为2
       self.settings._DISTRACTED_TIME = 20.0
       self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL = 10.0
       self.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 7.0
