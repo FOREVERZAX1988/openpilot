@@ -166,7 +166,8 @@ class DeviceLayoutSP(DeviceLayout):
         self._params.put_bool_nonblocking("DoReboot", True)
 
         # 3. 刷新UI，更新按钮文本
-        self._scroller.set_items(self._initialize_items())
+        self._scroller._items = self._initialize_items()
+        self._scroller.initialize_items()
 
         # 4. 提示用户
         target_server = "KONIK" if not current_use_konik else "COMMA"
