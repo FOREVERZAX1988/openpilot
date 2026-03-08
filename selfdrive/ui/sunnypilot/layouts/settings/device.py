@@ -152,7 +152,7 @@ class DeviceLayoutSP(DeviceLayout):
   def _toggle_server(self):
     """
     整合版服务器切换逻辑：
-    1. 复用原父类的RestartManager参数重启服务（避免systemctl权限/服务名问题）
+    1. 切换服务器参数并触发服务重启
     2. 动态更新按钮文本
     3. 完善用户提示
     """
@@ -163,7 +163,7 @@ class DeviceLayoutSP(DeviceLayout):
         self._params.put_bool("UseKonikServer", not current_use_konik)
 
         # 2. 触发服务重启（使用openpilot原生方式，避免直接调用systemctl）
-        self._params.put_bool_nonblocking("RestartManager", True)
+        self._params.put_bool_nonblocking("DoReboot", True)
 
         # 3. 刷新UI，更新按钮文本
         self._scroller.set_items(self._initialize_items())
