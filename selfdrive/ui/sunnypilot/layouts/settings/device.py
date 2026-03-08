@@ -150,12 +150,6 @@ class DeviceLayoutSP(DeviceLayout):
     return items
 
   def _toggle_server(self):
-    """
-    整合版服务器切换逻辑：
-    1. 切换服务器参数并触发服务重启
-    2. 动态更新按钮文本
-    3. 完善用户提示
-    """
     def handle_confirm(result: DialogResult):
       if result == DialogResult.CONFIRM:
         # 1. 切换服务器参数
@@ -164,16 +158,6 @@ class DeviceLayoutSP(DeviceLayout):
 
         # 2. 触发服务重启（使用openpilot原生方式，避免直接调用systemctl）
         self._params.put_bool_nonblocking("DoReboot", True)
-
-        # 3. 刷新UI，更新按钮文本
-        self._scroller._items = self._initialize_items()
-        self._scroller.initialize_items()
-
-        # 4. 提示用户
-        target_server = "KONIK" if not current_use_konik else "COMMA"
-        gui_app.push_widget(alert_dialog(
-          tr(f"Server switched to {target_server} successfully!\nServices are restarting...")
-        ))
 
     # 显示确认对话框
     current_use_konik = self._params.get_bool("UseKonikServer", False)
