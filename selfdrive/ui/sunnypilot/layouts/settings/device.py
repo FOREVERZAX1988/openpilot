@@ -17,6 +17,7 @@ from openpilot.system.ui.widgets.button import ButtonStyle
 from openpilot.system.ui.widgets.confirm_dialog import alert_dialog, ConfirmDialog
 from openpilot.system.ui.widgets.list_view import text_item
 from openpilot.system.ui.widgets.scroller_tici import LineSeparator
+#  添加服务器切换按钮修改1：导入需要的模块， 与device.py保持一致
 from openpilot.common.params import Params
 from openpilot.common.api.comma_connect import get_api_host
 
@@ -116,13 +117,15 @@ class DeviceLayoutSP(DeviceLayout):
       LineSeparator(),
       text_item(lambda: tr("Serial"), self._params.get("HardwareSerial") or (lambda: tr("N/A"))),
       LineSeparator(),
+      # 服务器切换 - 显示当前API服务器
       text_item(lambda: tr("Current API Server"), lambda: get_api_host()),
       LineSeparator(),
+      # 服务器切换 - 核心按钮（整合原父类逻辑）
       button_item_sp(
         lambda: tr("Server"),
         lambda: tr("KONIK") if self._params.get_bool("UseKonikServer", False) else tr("COMMA"),
         lambda: tr("Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"),
-        callback=self._toggle_server,
+        callback=self._toggle_server,  # 整合后的切换逻辑
         enabled=ui_state.is_offroad()
       ),
       LineSeparator(),
@@ -146,17 +149,13 @@ class DeviceLayoutSP(DeviceLayout):
 
     return items
 
+ # 服务器切换 - 核心逻辑：弹出确认框，确认后切换服务器并重启设备
   def _toggle_server(self):
     def handle_confirm(result: DialogResult):
       if result == DialogResult.CONFIRM:
         current_use_konik = self._params.get_bool("UseKonikServer", False)
         self._params.put_bool("UseKonikServer", not current_use_konik)
-        self._params.put_bool_nonblocking("RestartManager", True)
-        self._scroller.set_items(self._initialize_items())
-        target_server = "KONIK" if not current_use_konik else "COMMA"
-        gui_app.push_widget(alert_dialog(
-          tr(f"Server switched to {target_server} successfully!\nServices are restarting...")
-        ))
+        self._params.put_bool_nonblocking("DoReboot", True)
     current_use_konik = self._params.get_bool("UseKonikServer", False)
     target_server = tr("KONIK") if not current_use_konik else tr("COMMA")
     dialog = ConfirmDialog(
@@ -165,7 +164,6 @@ class DeviceLayoutSP(DeviceLayout):
       callback=handle_confirm
     )
     gui_app.push_widget(dialog)
-
 
   def _offroad_transition(self):
     self._power_buttons.action_item.right_button.set_visible(ui_state.is_offroad())
