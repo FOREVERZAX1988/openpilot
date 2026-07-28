@@ -138,7 +138,7 @@ jobs:
     runs-on: [self-hosted, tici]
     env:
       SOURCE_BRANCH: ${{ needs.prepare_strategy.outputs.source_branch }}
-      TMPDIR: /data/tmp
+      TMPDIR: /data/github/tmp
       XDG_CACHE_HOME: /data/github/cache
     outputs:
       new_branch: ${{ needs.prepare_strategy.outputs.new_branch }}
@@ -152,7 +152,7 @@ jobs:
     steps:
       - name: 准备 runner 磁盘空间
         run: |
-          mkdir -p /data/tmp /data/github/cache /data/github/scons_cache /data/github/ci "${{ env.BUILD_DIR }}"
+          mkdir -p /data/github/tmp /data/github/cache /data/github/scons_cache /data/github/ci "${{ env.BUILD_DIR }}"
           if [ -f "${{ github.workspace }}/release/ci/git_resilient_clone.sh" ]; then
             cp "${{ github.workspace }}/release/ci/git_resilient_clone.sh" /data/github/ci/
             chmod +x /data/github/ci/git_resilient_clone.sh
@@ -168,15 +168,14 @@ jobs:
           GITHUB_CLONE_FALLBACK_URLS: ${{ vars.GITHUB_CLONE_FALLBACK_URLS }}
         run: |
           set -euxo pipefail
-          export TMPDIR=/data/tmp
+          export TMPDIR=/data/github/tmp
           export GIT_LFS_SKIP_SMUDGE=1
           export GITHUB_MIRROR_PREFIXES="${GITHUB_MIRROR_PREFIXES:-https://ghfast.top/,https://ghp.ci/}"
           WS="${{ github.workspace }}"
           REPO="https://github.com/${{ github.repository }}.git"
           BRANCH="${{ needs.prepare_strategy.outputs.checkout_branch }}"
           IS_PREBUILD="${{ needs.prepare_strategy.outputs.is_prebuild }}"
-          # actions/checkout leaves workflow files in workspace; clone into a clean dir.
-          BOOTSTRAP_DIR="$(mktemp -d /data/tmp/op-bootstrap.XXXXXX)"
+          BOOTSTRAP_DIR="$(mktemp -d "${TMPDIR}/op-bootstrap.XXXXXX")"
           if [ -x /data/github/ci/git_resilient_clone.sh ]; then
             /data/github/ci/git_resilient_clone.sh "$REPO" "$BRANCH" "$BOOTSTRAP_DIR/repo"
           else

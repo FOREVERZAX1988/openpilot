@@ -121,9 +121,9 @@ configure_runner() {
     cd "$RUNNER_DIR"
     sudo -u ${RUNNER_USER} ./config.sh --url "$REPO_URL" --token "$GITHUB_TOKEN" --name $(hostname) --labels "tici" --work "$BUILDS_DIR" --unattended
     # Keep git-lfs and other temp files off the small /tmp tmpfs on comma devices.
-    grep -qxF 'TMPDIR=/data/tmp' "$RUNNER_DIR/.env" 2>/dev/null || echo 'TMPDIR=/data/tmp' | sudo tee -a "$RUNNER_DIR/.env" >/dev/null
-    mkdir -p /data/tmp "$CACHE_DIR" /data/github/ci
-    chown ${RUNNER_USER}:comma /data/tmp "$CACHE_DIR" /data/github/ci 2>/dev/null || true
+    grep -qxF 'TMPDIR=/data/github/tmp' "$RUNNER_DIR/.env" 2>/dev/null || echo 'TMPDIR=/data/github/tmp' | sudo tee -a "$RUNNER_DIR/.env" >/dev/null
+    mkdir -p /data/github/tmp "$CACHE_DIR" /data/github/ci
+    chown ${RUNNER_USER}:comma /data/github/tmp "$CACHE_DIR" /data/github/ci 2>/dev/null || true
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -f "${SCRIPT_DIR}/git_resilient_clone.sh" ]; then
         cp "${SCRIPT_DIR}/git_resilient_clone.sh" /data/github/ci/
