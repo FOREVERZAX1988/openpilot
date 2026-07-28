@@ -1,7 +1,24 @@
 #!/usr/bin/env bash
 
-# Define the service name
-SERVICE_NAME="actions.runner.sunnypilot.$(uname -n)"
+get_github_base_dir() {
+  if mountpoint -q /data/media; then
+    echo "/data/media/0/github"
+  else
+    echo "/data/github"
+  fi
+}
+
+resolve_service_name() {
+  local runner_dir
+  runner_dir="$(get_github_base_dir)/runner"
+  if [[ -f "${runner_dir}/.service" ]]; then
+    tr -d '[:space:]' < "${runner_dir}/.service"
+    return 0
+  fi
+  echo "actions.runner.sunnypilot.$(uname -n)"
+}
+
+SERVICE_NAME="$(resolve_service_name)"
 
 # Function to control the service
 control_service() {

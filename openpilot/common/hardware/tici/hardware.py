@@ -16,7 +16,15 @@ from openpilot.common.esim.lpa import TiciLPA
 from openpilot.common.hardware.tici.pins import GPIO
 from openpilot.common.hardware.tici.amplifier import Amplifier
 
+LITE = os.getenv("LITE") is not None
+
+DBUS_PROPS = 'org.freedesktop.DBus.Properties'
+
+MM = 'org.freedesktop.ModemManager1'
+MM_MODEM = MM + ".Modem"
+
 MODEM_STATE_PATH = "/dev/shm/modem"
+TIMEOUT = 0.1
 
 NetworkType = log.DeviceState.NetworkType
 NetworkStrength = log.DeviceState.NetworkStrength
@@ -60,8 +68,17 @@ def get_default_route_iface():
 
 class Tici(HardwareBase):
   @cached_property
+  def bus(self):
+    import dbus
+    return dbus.SystemBus()
+
+  @property
+  def mm(self):
+    return self.bus.get_object(MM, '/org/freedesktop/ModemManager1')
+
+  @cached_property
   def amplifier(self):
-    if self.get_device_type() == "mici":
+    if self.get_device_type() == "mici" or LITE:
       return None
     return Amplifier()
 
@@ -99,7 +116,7 @@ class Tici(HardwareBase):
       return int(f.read())
 
   def set_ir_power(self, percent: int):
-    if self.get_device_type() == "tizi":
+    if self.get_device_type() in ("tici", "tizi"):
       return
 
     value = int((percent / 100) * 300)
@@ -133,6 +150,11 @@ class Tici(HardwareBase):
         return NetworkType.cell2G
     return NetworkType.none
 
+  def get_modem(self):
+    objects = self.mm.GetManagedObjects(dbus_interface="org.freedesktop.DBus.ObjectManager", timeout=TIMEOUT)
+    modem_path = list(objects.keys())[0]
+    return self.bus.get_object(MM, modem_path)
+
   def get_sim_info(self):
     ms = self.get_modem_state()
     sim_id = ms.get('iccid', '')
@@ -147,11 +169,20 @@ class Tici(HardwareBase):
   def get_sim_lpa(self) -> LPABase:
     return TiciLPA()
 
-  def get_imei(self):
-    return self.get_modem_state().get('imei', '')
+  def get_imei(self, slot=0) -> str:
+    if slot != 0:
+      return ""
+    # Prefer ModemManager (works on C3 even when modem.py is disabled for LITE)
+    try:
+      imei = str(self.get_modem().Get(MM_MODEM, 'EquipmentIdentifier', dbus_interface=DBUS_PROPS, timeout=TIMEOUT))
+      if imei:
+        return imei
+    except Exception:
+      pass
+    return str(self.get_modem_state().get('imei', ''))
 
   def get_network_info(self):
-    if self.get_device_type() == "mici":
+    if self.get_device_type() == "mici" or LITE:
       return None
 
     ms = self.get_modem_state()
@@ -232,6 +263,8 @@ class Tici(HardwareBase):
     return super().get_network_metered(network_type)
 
   def get_modem_temperatures(self):
+    if LITE:
+      return []
     return self.get_modem_state().get('temperatures', [])
 
   def get_current_power_draw(self):
@@ -294,7 +327,7 @@ class Tici(HardwareBase):
     if self.amplifier is not None:
       self.amplifier.set_global_shutdown(amp_disabled=powersave_enabled)
       if not powersave_enabled:
-        self.amplifier.initialize_configuration()
+        self.amplifier.initialize_configuration(self.get_device_type())
 
     # *** CPU config ***
 
@@ -332,7 +365,7 @@ class Tici(HardwareBase):
 
   def initialize_hardware(self):
     if self.amplifier is not None:
-      self.amplifier.initialize_configuration()
+      self.amplifier.initialize_configuration(self.get_device_type())
 
     # Allow hardwared to write engagement status to kmsg
     subprocess.run("sudo chmod a+w /dev/kmsg", shell=True)
@@ -374,6 +407,10 @@ class Tici(HardwareBase):
 
     # pandad core
     affine_irq(3, "spi_geni")         # SPI
+    # rick - for c3
+    if "tici" in self.get_device_type():
+      affine_irq(3, "xhci-hcd:usb3")  # aux panda USB (or potentially anything else on USB)
+      affine_irq(3, "xhci-hcd:usb1")  # internal panda USB (also modem)
     try:
       pid = subprocess.check_output(["pgrep", "-f", "spi0"], encoding='utf8').strip()
       subprocess.call(["sudo", "chrt", "-f", "-p", "1", pid])
@@ -384,6 +421,9 @@ class Tici(HardwareBase):
   def get_modem_data_usage(self):
     ms = self.get_modem_state()
     return ms.get('tx_bytes', -1), ms.get('rx_bytes', -1)
+
+  def has_internal_panda(self):
+    return True
 
   def reset_internal_panda(self):
     gpio_init(GPIO.STM_RST_N, True)

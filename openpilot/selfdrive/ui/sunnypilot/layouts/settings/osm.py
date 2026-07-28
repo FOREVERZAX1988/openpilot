@@ -42,11 +42,11 @@ class OSMLayout(Widget):
     self._update_map_size()
     self._progress.set_visible(False)
     self._state_btn.set_visible(False)
-    self._mapd_version.action_item.set_text(ui_state.params.get("MapdVersion") or "Loading...")
+    self._mapd_version.action_item.set_text(ui_state.params.get("MapdVersion") or tr("Loading..."))
     self._scroller = Scroller(self.items, line_separator=True, spacing=0)
 
   def _initialize_items(self):
-    self._mapd_version = text_item(tr("Mapd Version"), lambda: ui_state.params.get("MapdVersion") or "Loading...")
+    self._mapd_version = text_item(tr("Mapd Version"), lambda: ui_state.params.get("MapdVersion") or tr("Loading..."))
     self._delete_maps_btn = ListItemSP(tr("Downloaded Maps"), action_item=NoElideButtonAction(tr("DELETE"), enabled=True), callback=self._delete_maps)
     self._progress = progress_item(tr("Downloading Map"))
     self._update_btn = ListItemSP(tr("Database Update"), action_item=NoElideButtonAction(tr("CHECK"), enabled=True), callback=self._update_db)
@@ -70,7 +70,9 @@ class OSMLayout(Widget):
             directories_to_scan.append(entry.path)
       except OSError:
         pass
-    self._delete_maps_btn.action_item.set_value(f"{total_size / 1024 ** 2:.2f} MB" if total_size < 1024 ** 3 else f"{total_size / 1024 ** 3:.2f} GB")
+    self._delete_maps_btn.action_item.set_value(
+      f"{total_size / 1024 ** 2:.2f} {tr('MB')}" if total_size < 1024 ** 3 else f"{total_size / 1024 ** 3:.2f} {tr('GB')}"
+    )
 
   def _update_map_size(self):
     threading.Thread(target=self.calculate_size, daemon=True).start()
@@ -88,7 +90,7 @@ class OSMLayout(Widget):
 
   def _on_confirm_delete_maps(self):
     self._delete_maps_btn.action_item.set_enabled(False)
-    self._delete_maps_btn.action_item.set_text("DELETING...")
+    self._delete_maps_btn.action_item.set_text(tr("DELETING..."))
     threading.Thread(target=self._do_delete_maps).start()
 
   def _delete_maps(self):
@@ -148,7 +150,7 @@ class OSMLayout(Widget):
     key = "OsmLocation" if region_type == "Country" else "OsmState"
     current = ui_state.params.get(f"{key}Name") or ""
 
-    dialog = TreeOptionDialog(tr(f"Select {region_type}"), [TreeFolder(folder="", nodes=locations)], current_ref=current, search_prompt="Perform a search")
+    dialog = TreeOptionDialog(tr(f"Select {region_type}"), [TreeFolder(folder="", nodes=locations)], current_ref=current, search_prompt=tr("Perform a search"))
     dialog.on_exit = lambda res: self._handle_region_selection(region_type, locations, key, res, dialog.selection_ref)
     gui_app.push_widget(dialog)
 
@@ -179,17 +181,17 @@ class OSMLayout(Widget):
         progress_perc = 0.0
 
       if failed:
-        text = "0% - Downloading Maps"
+        text = tr("0% - Downloading Maps")
         btn_text = tr("Error: Invalid download. Retry.")
         self._current_percent = 0.0
       elif total > 0 and downloading:
         self._current_percent = progress_perc
         perc_int = int(progress_perc)
-        text = f"{perc_int}% - Downloading Maps"
-        btn_text = f"{done}/{total} ({perc_int}%)"
+        text = tr(f"{perc_int}% - Downloading Maps")
+        btn_text = tr(f"{done}/{total} ({perc_int}%)")
       else:
         self._current_percent = 0.0
-        text = "0% - Downloading Maps"
+        text = tr("0% - Downloading Maps")
         btn_text = tr("Downloading Maps...")
 
       self._progress.action_item.update(self._current_percent, text, show_progress=total > 0 and downloading and not failed)

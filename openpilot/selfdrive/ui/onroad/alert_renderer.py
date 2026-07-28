@@ -111,8 +111,10 @@ class AlertRenderer(Widget):
     if recv_frame < ui_state.started_frame:
       return None
 
-    # Return current alert
-    return Alert(text1=ss.alertText1, text2=ss.alertText2, size=ss.alertSize.raw, status=ss.alertStatus.raw)
+    # Return current alert (translate at display time for any remaining English strings)
+    return Alert(text1=tr(ss.alertText1) if ss.alertText1 else "",
+                 text2=tr(ss.alertText2) if ss.alertText2 else "",
+                 size=ss.alertSize.raw, status=ss.alertStatus.raw)
 
   def _render(self, rect: rl.Rectangle):
     alert = self.get_alert(ui_state.sm)

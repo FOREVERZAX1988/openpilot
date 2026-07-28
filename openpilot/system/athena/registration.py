@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import time
 import json
 import jwt
@@ -16,6 +17,7 @@ from openpilot.common.swaglog import cloudlog
 
 
 UNREGISTERED_DONGLE_ID = "UnregisteredDevice"
+LITE = os.getenv("LITE") is not None
 
 def is_registered_device() -> bool:
   dongle = Params().get("DongleId")
@@ -51,15 +53,26 @@ def register(show_spinner=False) -> str | None:
       spinner = Spinner()
       spinner.update("registering device")
 
+    if LITE:
+      params.put("DongleId", UNREGISTERED_DONGLE_ID)
+      return UNREGISTERED_DONGLE_ID
+
     # Block until we get the imei
     serial = HARDWARE.get_serial()
     start_time = time.monotonic()
     imei: str | None = None
+    skip_imei_count = 0
     while imei is None:
       try:
         imei = HARDWARE.get_imei()
       except Exception:
         cloudlog.exception("Error getting imei, trying again...")
+        spinner.update(f"registering device - serial: {serial}, Error getting IMEI, trying {skip_imei_count}/30")
+        # rick - no imei = can't register = skip everything
+        if skip_imei_count > 30:
+          params.put("DongleId", UNREGISTERED_DONGLE_ID)
+          return UNREGISTERED_DONGLE_ID
+        skip_imei_count += 1
         time.sleep(1)
 
       if time.monotonic() - start_time > 60 and show_spinner:
@@ -71,7 +84,6 @@ def register(show_spinner=False) -> str | None:
       try:
         register_token = jwt.encode({'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)},
                                     cast(str, private_key), algorithm=jwt_algo)
-        cloudlog.info("getting pilotauth")
         cloudlog.info("getting pilotauth")
         resp = api_get("v2/pilotauth/", method='POST', timeout=15,
                        imei=imei, imei2="", serial=serial, public_key=public_key, register_token=register_token)
@@ -100,7 +112,7 @@ def register(show_spinner=False) -> str | None:
 
   if dongle_id:
     params.put("DongleId", dongle_id, block=True)
-    set_offroad_alert("Offroad_UnregisteredHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
+    set_offroad_alert("Offroad_UnregisteredHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC and not os.getenv("LITE"))
   return dongle_id
 
 
