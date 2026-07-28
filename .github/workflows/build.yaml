@@ -153,10 +153,38 @@ jobs:
       - name: 准备 runner 磁盘空间
         run: |
           mkdir -p /data/github/tmp /data/github/cache /data/github/scons_cache /data/github/ci "${{ env.BUILD_DIR }}"
-          if [ -f "${{ github.workspace }}/release/ci/git_resilient_clone.sh" ]; then
-            cp "${{ github.workspace }}/release/ci/git_resilient_clone.sh" /data/github/ci/
-            chmod +x /data/github/ci/git_resilient_clone.sh
-          fi
+          CI_SCRIPT="/data/github/ci/git_resilient_clone.sh"
+          deploy_ci_script() {
+            if [ -f "${{ github.workspace }}/release/ci/git_resilient_clone.sh" ]; then
+              cp "${{ github.workspace }}/release/ci/git_resilient_clone.sh" "$CI_SCRIPT"
+              chmod +x "$CI_SCRIPT"
+              echo "Deployed $CI_SCRIPT from workspace"
+              return 0
+            fi
+            if [ -f /data/openpilot/release/ci/git_resilient_clone.sh ]; then
+              cp /data/openpilot/release/ci/git_resilient_clone.sh "$CI_SCRIPT"
+              chmod +x "$CI_SCRIPT"
+              echo "Deployed $CI_SCRIPT from /data/openpilot"
+              return 0
+            fi
+            if [ -x "$CI_SCRIPT" ]; then
+              echo "Reusing existing $CI_SCRIPT"
+              return 0
+            fi
+            RAW="${{ env.PUBLIC_REPO_URL }}/raw/${{ github.sha }}/release/ci/git_resilient_clone.sh"
+            for prefix in "https://ghfast.top/" "https://ghp.ci/" ""; do
+              url="${prefix}${RAW}"
+              echo "Fetching $CI_SCRIPT from $url"
+              if curl -fsSL --connect-timeout 60 --retry 2 "$url" -o "$CI_SCRIPT"; then
+                chmod +x "$CI_SCRIPT"
+                echo "Deployed $CI_SCRIPT from $url"
+                return 0
+              fi
+            done
+            echo "::warning::Could not deploy git_resilient_clone.sh"
+            return 1
+          }
+          deploy_ci_script || true
           rm -rf /tmp/test-checkout 2>/dev/null || true
           rm -rf "${{ github.workspace }}"
           mkdir -p "${{ github.workspace }}"
@@ -176,46 +204,11 @@ jobs:
           BRANCH="${{ needs.prepare_strategy.outputs.checkout_branch }}"
           IS_PREBUILD="${{ needs.prepare_strategy.outputs.is_prebuild }}"
           BOOTSTRAP_DIR="$(mktemp -d "${TMPDIR}/op-bootstrap.XXXXXX")"
-          if [ -x /data/github/ci/git_resilient_clone.sh ]; then
-            /data/github/ci/git_resilient_clone.sh "$REPO" "$BRANCH" "$BOOTSTRAP_DIR/repo"
-          else
-            echo "::warning::git_resilient_clone.sh not found; using inline resilient clone"
-            git config --global http.version HTTP/1.1
-            git config --global http.postBuffer 524288000
-            git config --global http.lowSpeedLimit 0
-            git config --global http.lowSpeedTime 999999
-            git config --global core.compression 0
-            CLONE_URLS=()
-            if [ -n "${GITHUB_MIRROR_PREFIXES:-}" ]; then
-              IFS=',' read -ra prefixes <<< "$GITHUB_MIRROR_PREFIXES"
-              for prefix in "${prefixes[@]}"; do
-                prefix="${prefix// /}"
-                [ -n "$prefix" ] && CLONE_URLS+=("${prefix}${REPO}")
-              done
-            fi
-            CLONE_URLS+=("$REPO")
-            if [ -n "${GITHUB_CLONE_FALLBACK_URLS:-}" ]; then
-              IFS=',' read -ra fallbacks <<< "$GITHUB_CLONE_FALLBACK_URLS"
-              for fallback in "${fallbacks[@]}"; do
-                fallback="${fallback// /}"
-                [ -n "$fallback" ] && CLONE_URLS+=("$fallback")
-              done
-            fi
-            cloned=false
-            for url in "${CLONE_URLS[@]}"; do
-              for attempt in 1 2 3; do
-                rm -rf "$BOOTSTRAP_DIR/repo"
-                echo "Clone attempt ${attempt}/3 from ${url}"
-                if git clone --branch "$BRANCH" --single-branch --depth 1 "$url" "$BOOTSTRAP_DIR/repo"; then
-                  cloned=true
-                  break 2
-                fi
-                sleep $((attempt * 15))
-              done
-              echo "::warning::Clone failed from ${url}"
-            done
-            [ "$cloned" = true ] || { echo "::error::All clone sources failed"; exit 1; }
+          if [ ! -x /data/github/ci/git_resilient_clone.sh ]; then
+            echo "::error::git_resilient_clone.sh missing at /data/github/ci/; prepare step should have deployed it"
+            exit 1
           fi
+          /data/github/ci/git_resilient_clone.sh "$REPO" "$BRANCH" "$BOOTSTRAP_DIR/repo"
           rm -rf "$WS"
           mv "$BOOTSTRAP_DIR/repo" "$WS"
           rm -rf "$BOOTSTRAP_DIR"
