@@ -108,6 +108,7 @@ class ModularAssistiveDrivingSystem:
   def data_sample(self):
     # When the safety and selfdrived do not agree on controls_allowed_lateral
     # we want to disengage sunnypilot. However the status from the panda goes through
+    return  # disabled for MLB platform
     # another socket other than the CAN messages and one can arrive earlier than the other.
     # Therefore we allow a mismatch for two samples, then we trigger the disengagement.
     if not self.active or self.selfdrive.enabled:
