@@ -17,7 +17,7 @@ from openpilot.common.markdown import parse_markdown
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.selfdrived.alertmanager import set_offroad_alert
 from openpilot.common.hardware import AGNOS, HARDWARE
-from openpilot.common.version import get_build_metadata, SP_BRANCH_MIGRATIONS
+from openpilot.common.version import get_build_metadata
 
 LOCK_FILE = os.getenv("UPDATER_LOCK_FILE", "/tmp/safe_staging_overlay.lock")
 STAGING_ROOT = os.getenv("UPDATER_STAGING_ROOT", "/data/safe_staging")
@@ -231,7 +231,12 @@ class Updater:
     b: str | None = self.params.get("UpdaterTargetBranch")
     if b is None:
       b = self.get_branch(BASEDIR)
-    b = SP_BRANCH_MIGRATIONS.get((HARDWARE.get_device_type(), b), b)
+    b = {
+      ("tizi", "release3"): "release-tizi",
+      ("tizi", "release3-staging"): "release-tizi-staging",
+      ("mici", "release3"): "release-mici",
+      ("mici", "release3-staging"): "release-mici-staging",
+    }.get((HARDWARE.get_device_type(), b), b)
     return b
 
   @property
@@ -390,7 +395,11 @@ class Updater:
 
     # TODO: show agnos download progress
     if AGNOS:
-      handle_agnos_update()
+      try:
+        handle_agnos_update()
+      except Exception:
+        # casync may be unavailable in overlay after git clean; skip AGNOS if import/build missing
+        cloudlog.exception("agnos update skipped")
 
     # Create the finalized, ready-to-swap update
     self.params.put("UpdaterState", "finalizing update...", block=True)

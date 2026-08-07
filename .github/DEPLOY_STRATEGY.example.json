@@ -1,0 +1,32 @@
+{
+  "configs": [
+    {
+      "branch": "master-c3",
+      "environment": "c3-dev",
+      "target_branch": "sp-c3",
+      "cancel_publish_in_progress": true,
+      "stable_branch": false
+    },
+    {
+      "branch": "dp",
+      "environment": "c3-dev",
+      "target_branch": "dp-c3",
+      "cancel_publish_in_progress": true,
+      "stable_branch": false
+    },
+    {
+      "branch": "ai",
+      "environment": "c3-dev",
+      "target_branch": "ai-c3",
+      "cancel_publish_in_progress": true,
+      "stable_branch": false
+    },
+    {
+      "branch": "master-bew",
+      "environment": "c3-dev",
+      "target_branch": "sp-new",
+      "cancel_publish_in_progress": true,
+      "stable_branch": false
+    }
+  ]
+}

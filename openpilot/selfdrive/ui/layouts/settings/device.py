@@ -86,6 +86,7 @@ class DeviceLayout(Widget):
       if result == DialogResult.CONFIRM and self._select_language_dialog:
         selected_language = multilang.languages[self._select_language_dialog.selection]
         multilang.change_language(selected_language)
+        gui_app.on_language_changed(selected_language)
         self._update_calib_description()
       self._select_language_dialog = None
 
@@ -156,7 +157,7 @@ class DeviceLayout(Widget):
         cloudlog.exception("invalid LiveTorqueParameters")
 
     desc += "<br><br>"
-    desc += tr("sunnypilot is continuously calibrating, resetting is rarely required. " +
+    desc += tr("sunnypilot is continuously calibrating, resetting is rarely required. "
                "Resetting calibration will restart sunnypilot if the car is powered on.")
 
     self._reset_calib_btn.set_description(desc)
