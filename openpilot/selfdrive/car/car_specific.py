@@ -142,7 +142,10 @@ class CarSpecificEvents:
       events.add(EventName.steerDisengage)
     if CS.brakePressed and CS.standstill:
       events.add(EventName.preEnableStandstill)
-    if CS.gasPressed:
+    # VW(MLB/MQB/PQ) + OP纵向：踩油门不触发 overrideLongitudinal 事件——longActive 保持，
+    # acc_control_value 在 long_active 分支内处理 gas（4 if gas else 3），对齐原厂 st=4 override。
+    # 否则 controlsd longActive=False 会发 st=2（待机），ECU 看到「激活→待机跳变+油门」锁死 ACC。
+    if CS.gasPressed and not (self.CP.brand == 'volkswagen' and self.CP.openpilotLongitudinalControl):
       events.add(EventName.gasPressedOverride)
     if CS.vehicleSensorsInvalid:
       events.add(EventName.vehicleSensorsInvalid)
