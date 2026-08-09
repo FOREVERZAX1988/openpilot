@@ -23,5 +23,5 @@
   url = https://github.com/mouxangithub/neural-network-data.git
 [submodule "ai"]
 	path = ai
-	url = https://github.com/mouxangithub/ai.git
+	url = https://github.com/FOREVERZAX1988/ai.git
 	branch = main
