@@ -42,6 +42,10 @@ class CruiseHelper:
       button = button_event.type.raw
       if button in self.button_frame_counts:
         self.button_frame_counts[button] = int(button_event.pressed)
+        # 按钮松开时复位切换标志：允许下一次长按再次切换实验/普通模式
+        # （否则 experimental_mode_switched 置 True 后永远挡住后续切换，只能切一次）
+        if not button_event.pressed:
+          self.experimental_mode_switched = False
 
   def update_experimental_mode(self, events, experimental_mode) -> None:
     if self.button_frame_counts[ButtonType.altButton2] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:

@@ -137,6 +137,8 @@ class SelfdriveD(CruiseHelper):
     self.logged_comm_issue = None
     self.not_running_prev = None
     self.experimental_mode = False
+    # 车距档位自跟踪（与 carstate.stock_zeitluecke 同源：值1=拉近-1/值2=拉远+1，默认3格）
+    self._zeitluecke = 3
     self.personality = get_sanitize_int_param(
       "LongitudinalPersonality",
       min(log.LongitudinalPersonality.schema.enumerants.values()),
@@ -481,15 +483,20 @@ class SelfdriveD(CruiseHelper):
 
     # Longitudinal personality is bound to stock ACC distance bars (zeitluecke, VW/MLB):
     # 4 bars (farthest) -> relaxed(2), 3/2 -> standard(1), 1 (closest) -> aggressive(0).
-    # Overrides UI personality; distance button no longer cycles personality.
+    # carState 是 capnp 消息无 stock_zeitluecke 字段，故从 buttonEvents 自跟踪推导：
+    # 值1(Dist-1/拉近)=gapAdjustCruise → -1格；值2(Dist+1/拉远)=altButton2 → +1格
+    # （与 carstate.stock_zeitluecke 同源同逻辑，启动默认 3 格）。
     if self.CP.openpilotLongitudinalControl:
-      zl = getattr(CS, 'stock_zeitluecke', None)
-      if zl is not None:
-        new_personality = {4: 2, 3: 1, 2: 1, 1: 0}.get(zl)
-        if new_personality is not None and new_personality != self.personality:
-          self.personality = new_personality
-          self.params.put('LongitudinalPersonality', self.personality)
-          self.events.add(EventName.personalityChanged)
+      for be in CS.buttonEvents:
+        if be.pressed and be.type == ButtonType.gapAdjustCruise:
+          self._zeitluecke = max(1, self._zeitluecke - 1)
+        elif be.pressed and be.type == ButtonType.altButton2:
+          self._zeitluecke = min(4, self._zeitluecke + 1)
+      new_personality = {4: 2, 3: 1, 2: 1, 1: 0}.get(self._zeitluecke)
+      if new_personality is not None and new_personality != self.personality:
+        self.personality = new_personality
+        self.params.put('LongitudinalPersonality', self.personality)
+        self.events.add(EventName.personalityChanged)
 
     self.icbm.run(CS, self.sm['carControl'], self.sm['longitudinalPlanSP'], self.is_metric)
 
