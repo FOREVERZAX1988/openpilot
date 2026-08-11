@@ -21,7 +21,7 @@ class CruiseHelper:
     self.CP = CP
     self.params = Params()
 
-    self.button_frame_counts = {ButtonType.gapAdjustCruiseDown: 0}
+    self.button_frame_counts = {ButtonType.altButton2: 0}
     self._experimental_mode = False
     self.experimental_mode_switched = False
 
@@ -44,7 +44,7 @@ class CruiseHelper:
         self.button_frame_counts[button] = int(button_event.pressed)
 
   def update_experimental_mode(self, events, experimental_mode) -> None:
-    if self.button_frame_counts[ButtonType.gapAdjustCruiseDown] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:
+    if self.button_frame_counts[ButtonType.altButton2] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:
       self._experimental_mode = not experimental_mode
       self.params.put_bool("ExperimentalMode", self._experimental_mode)
       events.add(EventNameSP.experimentalModeSwitched)
