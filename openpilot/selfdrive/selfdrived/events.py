@@ -293,8 +293,12 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("车道保持辅助系统（LKAS）设置无效"),
   },
 
+  # Macan(MLB) 适配：非 pcm 车 OP enabled 但原厂巡航已退出（TSK_04=0）时恢复 USER_DISABLE——
+  # OP 立即跟随原厂退出。否则 panda 经 TSK_04 无条件 pcm_cruise_check 撤 controls_allowed 后，
+  # selfdrived mismatch_counter 200 帧触发 controlsMismatch（00000041 seg5/7/10/12/15 共5次实锤）。
+  # 阈值见 selfdrived.py cruise_mismatch_counter（6s→1s，须 < panda 的 2s）。
   EventName.cruiseMismatch: {
-    #ET.PERMANENT: ImmediateDisableAlert("openpilot failed to cancel cruise"),
+    ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
   },
 
   # openpilot doesn't recognize the car. This switches openpilot into a

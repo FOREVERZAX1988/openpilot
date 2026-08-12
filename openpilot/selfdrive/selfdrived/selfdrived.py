@@ -440,7 +440,10 @@ class SelfdriveD(CruiseHelper):
       # 非 pcm 且 OP enabled 但车辆未激活（TSK_04=0）才算真异常（如 seg4 停车误激活场景）。
       cruise_mismatch = not self.CP.pcmCruise and self.enabled and not CS.cruiseState.enabled
       self.cruise_mismatch_counter = self.cruise_mismatch_counter + 1 if cruise_mismatch else 0
-      if self.cruise_mismatch_counter > int(6. / DT_CTRL):
+      # 2026-08-12 00000041 实锤：6s 阈值 > panda pcm_cruise_check 撤控后 mismatch_counter 2s
+      # 触发 controlsMismatch——OP 从不跟随原厂退出（events.py cruiseMismatch 曾为空实现）。
+      # 缩到 1s（<2s）：原厂巡航退出后 OP 立即跟随退出，mismatch_counter 只数 <100 帧不触发。
+      if self.cruise_mismatch_counter > int(1. / DT_CTRL):
         self.events.add(EventName.cruiseMismatch)
 
     # Send a "steering required alert" if saturation count has reached the limit
