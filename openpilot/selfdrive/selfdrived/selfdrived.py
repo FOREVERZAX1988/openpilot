@@ -433,8 +433,12 @@ class SelfdriveD(CruiseHelper):
       self.events.add(EventName.sensorDataInvalid)
 
     if not REPLAY:
-      # Check for mismatch between openpilot and car's PCM
-      cruise_mismatch = CS.cruiseState.enabled and (not self.enabled or not self.CP.pcmCruise)
+      # Check for mismatch between openpilot and car's PCM.
+      # Macan 适配：原条件 `CS.cruiseState.enabled and (not enabled or not pcmCruise)` 是 pcm 语义，
+      # 非 pcm 车（Macan）`not pcmCruise` 恒真 → 车辆 TSK_04 回声=1 时永远满足 → 激活 6 秒后持续
+      # 误报 cruiseMismatch（0000003e seg3/5/6 各 54/83/68 次实锤）。恢复标准语义：
+      # 非 pcm 且 OP enabled 但车辆未激活（TSK_04=0）才算真异常（如 seg4 停车误激活场景）。
+      cruise_mismatch = not self.CP.pcmCruise and self.enabled and not CS.cruiseState.enabled
       self.cruise_mismatch_counter = self.cruise_mismatch_counter + 1 if cruise_mismatch else 0
       if self.cruise_mismatch_counter > int(6. / DT_CTRL):
         self.events.add(EventName.cruiseMismatch)

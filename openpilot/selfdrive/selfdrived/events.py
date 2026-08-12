@@ -555,12 +555,12 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("方向盘被转动"),
   },
 
+  # Macan(MLB) 适配：停车踩刹车+按SET 原为 PRE_ENABLE → 进入 preEnabled 预激活态
+  # （carControl.enabled=True）与 panda 拒控（TSK_04=0）冲突 → mismatch_counter 2秒后
+  # controlsMismatch 报警（0000003e seg4 @268s 实锤）。且 Macan 激活门槛 30km/h，
+  # preEnabled 窗口过长无意义。改为 NO_ENTRY：停车按 SET 直接挡在 disabled，不激活不报警。
   EventName.preEnableStandstill: {
-    ET.PRE_ENABLE: Alert(
-      "释放制动以启用",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1, creation_delay=1.),
+    ET.NO_ENTRY: NoEntryAlert("停车时无法启用"),
   },
 
   EventName.gasPressedOverride: {
