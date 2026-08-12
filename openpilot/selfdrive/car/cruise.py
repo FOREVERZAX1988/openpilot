@@ -36,7 +36,7 @@ class VCruiseHelper(VCruiseHelperSP):
     self.v_cruise_kph = V_CRUISE_UNSET
     self.v_cruise_cluster_kph = V_CRUISE_UNSET
     self.v_cruise_kph_last = 0
-    self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
+    self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0, ButtonType.setCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
 
   @property
@@ -98,6 +98,11 @@ class VCruiseHelper(VCruiseHelperSP):
 
     if button_type is None:
       return
+
+    # Macan: SET 与 + 同一物理键（bit16+17 同置位），carstate 只保留 setCruise 事件。
+    # 激活状态下 setCruise 按 accelCruise(+1) 语义调巡航速度（未激活时 setCruise=接合，不走此分支）
+    if button_type == ButtonType.setCruise:
+      button_type = ButtonType.accelCruise
 
     # Don't adjust speed when pressing resume to exit standstill
     cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
