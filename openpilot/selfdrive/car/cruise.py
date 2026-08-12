@@ -102,6 +102,10 @@ class VCruiseHelper(VCruiseHelperSP):
     # Macan: SET 与 + 同一物理键（bit16+17 同置位），carstate 只保留 setCruise 事件。
     # 激活状态下 setCruise 按 accelCruise(+1) 语义调巡航速度（未激活时 setCruise=接合，不走此分支）
     if button_type == ButtonType.setCruise:
+      # 事件在 update_button_timers 中按 type.raw=setCruise 键存储 change state，
+      # 转换后必须同步到 accelCruise 键，否则下方 button_change_states[accelCruise]["enabled"]
+      # 读到初始 False 会直接 return，speed+ 永远无法调巡航速度（route 00000040 实锤）。
+      self.button_change_states[ButtonType.accelCruise] = self.button_change_states[ButtonType.setCruise]
       button_type = ButtonType.accelCruise
 
     # Don't adjust speed when pressing resume to exit standstill
