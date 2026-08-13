@@ -102,6 +102,13 @@ class VCruiseHelper(VCruiseHelperSP):
     # Macan: SET 与 + 同一物理键（bit16+17 同置位），carstate 只保留 setCruise 事件。
     # 激活状态下 setCruise 按 accelCruise(+1) 语义调巡航速度（未激活时 setCruise=接合，不走此分支）
     if button_type == ButtonType.setCruise:
+      # 00000045 实锤：超驰（gas 踩油门车速高于巡航）时按 SET，原厂把当前车速设为巡航速度。
+      # 旧代码 setCruise→accelCruise(+1) 转换先于 133 行 gas 锚定执行，锚定永不触发。
+      # 锚定必须在转换之前处理（enabled=激活中，未激活时 setCruise=接合不走此分支）。
+      if CS.gasPressed and self.button_change_states[button_type]["enabled"]:
+        self.v_cruise_kph = np.clip(round(max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH), 1), self.v_cruise_min, V_CRUISE_MAX)
+        self.v_cruise_cluster_kph = self.v_cruise_kph
+        return
       # 事件在 update_button_timers 中按 type.raw=setCruise 键存储 change state，
       # 转换后必须同步到 accelCruise 键，否则下方 button_change_states[accelCruise]["enabled"]
       # 读到初始 False 会直接 return，speed+ 永远无法调巡航速度（route 00000040 实锤）。

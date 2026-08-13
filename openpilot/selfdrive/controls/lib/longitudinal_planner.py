@@ -152,7 +152,11 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
         _lead = sm['radarState'].leadOne
         lead_ready = _lead.present and _lead.vLead > 0.3
       e2e_should_stop_eff = output_should_stop_e2e and not lead_ready
-      self.output_should_stop = e2e_should_stop_eff or output_should_stop_mpc
+      # 00000045 实锤：前车已在动（vLead>0.3）时，mpc_shouldStop 仍用 mpc 的 v_solution[0]
+      # （停车态≈0）+ a_target<0.1 判断，起步初期 mpc 渐进导致 mpc_shouldStop 持续 True
+      # → LCS 卡 stopping → 绿灯前车起步后 OP 不起步（seg4 274.5s 前车 v=0.81 仍 sh=1，
+      # 直到 275s v=1.42 才释放，停车33秒）。前车真实在动时信任 lead，直接放行起步。
+      self.output_should_stop = False if lead_ready else (e2e_should_stop_eff or output_should_stop_mpc)
       if output_a_target < output_a_target_mpc:
         self.mpc.source = LongitudinalPlanSource.e2e
     else:

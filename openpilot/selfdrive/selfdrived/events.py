@@ -874,7 +874,10 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.personalityChanged: {
-    ET.WARNING: personality_changed_alert,
+    # 00000045 实锤：WARNING 类型在未激活时不在 current_alert_types → 停车调车距不显示提示
+    # （personalityChanged 事件存在但 alert 被状态机过滤，00000045 seg1 15条事件 0 显示）。
+    # 改 PERMANENT：未激活/激活都显示；事件仅变化帧存在 + duration=1.5s → 显示到期自动消失。
+    ET.PERMANENT: personality_changed_alert,
   },
 
   EventName.userBookmark: {

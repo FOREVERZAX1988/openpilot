@@ -140,7 +140,11 @@ class CarSpecificEvents:
       events.add(EventName.steerOverride)
     if CS.steeringDisengage and not CS_prev.steeringDisengage:
       events.add(EventName.steerDisengage)
-    if CS.brakePressed and CS.standstill:
+    if CS.brakePressed and CS.standstill and any(
+        be.pressed and be.type in (ButtonType.accelCruise, ButtonType.resumeCruise, ButtonType.decelCruise, ButtonType.setCruise)
+        for be in CS.buttonEvents):
+      # 00000045 实锤：只在按巡航键（SET/RES/+/-）时触发提示——D档刹车未按SET不再每帧add，
+      # 否则 NO_ENTRY alert 持续显示不消失（用户反馈"切D档没按SET也提示且不消失"）。
       events.add(EventName.preEnableStandstill)
     # VW(MLB/MQB/PQ) + OP纵向：踩油门不触发 overrideLongitudinal 事件——longActive 保持，
     # acc_control_value 在 long_active 分支内处理 gas（4 if gas else 3），对齐原厂 st=4 override。
