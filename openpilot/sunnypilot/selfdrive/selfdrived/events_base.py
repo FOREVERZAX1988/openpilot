@@ -49,7 +49,8 @@ class Alert:
                visual_alert: car.CarControl.HUDControl.VisualAlert,
                audible_alert: log.SelfdriveState.AudibleAlert,
                duration: float,
-               creation_delay: float = 0.):
+               creation_delay: float = 0.,
+               persistent: bool = False):
 
     self.alert_text_1 = alert_text_1
     self.alert_text_2 = alert_text_2
@@ -62,6 +63,11 @@ class Alert:
     self.duration = int(duration / DT_CTRL)
 
     self.creation_delay = creation_delay
+    # persistent: 豁免 AlertManager 的 clear_event_types 清除（2026-08-13 修复）——
+    # NO_ENTRY/WARNING 提示在事件消失或类型不在 current_alert_types 时会被立即清除
+    # （end_frame=-1）导致"一闪而过"。persistent=True 的 alert 显示满 duration 才消失，
+    # 用于 P/D 档按 SET 提示与驾驶风格提示（需 8s/1.5s 可读时间）。
+    self.persistent = persistent
 
     self.alert_type = ""
     self.event_type: str | None = None
@@ -187,12 +193,14 @@ class NoEntryAlert(Alert):
   def __init__(self, alert_text_2: str,
                alert_text_1: str = "sunnypilot 不可用",
                visual_alert: car.CarControl.HUDControl.VisualAlert=VisualAlert.none,
-               priority: Priority = Priority.LOW):
+               priority: Priority = Priority.LOW,
+               duration: float = 3.,
+               persistent: bool = False):
     if HARDWARE.get_device_type() == 'mici':
       alert_text_1, alert_text_2 = alert_text_2, alert_text_1
     super().__init__(alert_text_1, alert_text_2, AlertStatus.normal,
                      AlertSize.mid, priority, visual_alert,
-                     AudibleAlert.refuse, 3.)
+                     AudibleAlert.refuse, duration, persistent=persistent)
 
 
 class SoftDisableAlert(Alert):

@@ -217,7 +217,12 @@ def personality_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
     personality_cn = "标准"
   elif personality == "Relaxed":
     personality_cn = "从容"
-  return NormalPermanentAlert(f"驾驶风格: {personality_cn}", duration=1.5)
+  alert = NormalPermanentAlert(f"驾驶风格: {personality_cn}", duration=1.5)
+  # persistent=True：驾驶风格提示是 WARNING 类型，未激活时 current_alert_types 不含
+  # WARNING → update_alerts 会把 WARNING 全部清除（end_frame=-1）→ 提示一闪而过。
+  # 豁免清除后显示满 1.5s（2026-08-13 修复）。
+  alert.persistent = True
+  return alert
 
 
 def invalid_lkas_setting_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -564,7 +569,10 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # controlsMismatch 报警（0000003e seg4 @268s 实锤）。且 Macan 激活门槛 30km/h，
   # preEnabled 窗口过长无意义。改为 NO_ENTRY：停车按 SET 直接挡在 disabled，不激活不报警。
   EventName.preEnableStandstill: {
-    ET.NO_ENTRY: NoEntryAlert("停车时无法启用"),
+    # 停车+刹车按SET（D档）提示：预激活不可行（6495d33d5 实锤：preEnabled 与 panda 拒控
+    # TSK_04=0 冲突→mismatch 2s），改为 NO_ENTRY 挡在 disabled + 8s 可读提示。
+    # persistent=True：防 AlertManager 按 clear_event_types 立即清除（一闪而过）。
+    ET.NO_ENTRY: NoEntryAlert("松开制动方可激活", "纵向暂不可用", duration=8.0, persistent=True),
   },
 
   EventName.gasPressedOverride: {
@@ -646,7 +654,8 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventName.wrongGear: {
     ET.SOFT_DISABLE: user_soft_disable_alert("挡位不在D挡"),
-    ET.NO_ENTRY: NoEntryAlert("挡位不在D挡"),
+    # P档按SET提示 8s 可读（2026-08-13：原 3s 且可能被 MADS paused 替换 → 一闪而过）
+    ET.NO_ENTRY: NoEntryAlert("挡位不在D挡", duration=8.0, persistent=True),
   },
 
   # This alert is thrown when the calibration angles are outside of the acceptable range.
