@@ -143,7 +143,16 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
     if self.is_e2e(sm):
       output_a_target = min(output_a_target_e2e, output_a_target_mpc)
-      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
+      # 00000044 实锤（2026-08-13）：experimentalMode 下 e2e 模型 shouldStop 在前车起步阶段
+      # 视觉误判抖动（前车 v 0.3→0.84 时 True/False 交替），导致 LCS 卡 stopping → 绿灯不自动起步。
+      # 前车已在动（radarState vLead>0.3 且 present）时忽略 e2e shouldStop——让 LCS 释放起步，
+      # 起步后由 mpc/雷达跟随接管。仍保留 mpc_shouldStop 兜底（前方仍有障碍时不会放行）。
+      lead_ready = False
+      if sm.valid['radarState']:
+        _lead = sm['radarState'].leadOne
+        lead_ready = _lead.present and _lead.vLead > 0.3
+      e2e_should_stop_eff = output_should_stop_e2e and not lead_ready
+      self.output_should_stop = e2e_should_stop_eff or output_should_stop_mpc
       if output_a_target < output_a_target_mpc:
         self.mpc.source = LongitudinalPlanSource.e2e
     else:
