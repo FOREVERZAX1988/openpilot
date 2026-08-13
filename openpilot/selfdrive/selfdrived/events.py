@@ -210,14 +210,16 @@ def longitudinal_maneuver_alert(CP: car.CarParams, CS: car.CarState, sm: messagi
 
 def personality_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   personality = str(personality).title()
-  personality_cn = ""
+  # 英文 msgid + .po 翻译（C3 走 onroad tr()），英文界面显示英文原文
   if personality == "Aggressive":
-    personality_cn = "激进"
+    text = "Driving style: Aggressive"
   elif personality == "Standard":
-    personality_cn = "标准"
+    text = "Driving style: Standard"
   elif personality == "Relaxed":
-    personality_cn = "从容"
-  alert = NormalPermanentAlert(f"驾驶风格: {personality_cn}", duration=1.5)
+    text = "Driving style: Relaxed"
+  else:
+    text = "Driving style: Standard"
+  alert = NormalPermanentAlert(text, duration=1.5)
   # persistent=True：驾驶风格提示是 WARNING 类型，未激活时 current_alert_types 不含
   # WARNING → update_alerts 会把 WARNING 全部清除（end_frame=-1）→ 提示一闪而过。
   # 豁免清除后显示满 1.5s（2026-08-13 修复）。

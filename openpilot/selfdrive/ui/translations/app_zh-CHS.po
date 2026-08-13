@@ -3890,3 +3890,39 @@ msgstr "换到D挡起步以启用"
 #: selfdrived
 msgid "Gear not in Drive"
 msgstr "挡位不在D挡"
+
+#: selfdrived
+msgid "Driving style: Aggressive"
+msgstr "驾驶风格: 激进"
+
+#: selfdrived
+msgid "Driving style: Standard"
+msgstr "驾驶风格: 标准"
+
+#: selfdrived
+msgid "Driving style: Relaxed"
+msgstr "驾驶风格: 从容"
+
+#: sunnypilot
+msgid "Enable Adaptive Cruise to engage"
+msgstr "启用自适应巡航以接合"
+
+#: sunnypilot
+msgid "Enable main switch to engage"
+msgstr "启用主开关以接合"
+
+#: sunnypilot
+msgid "sunnypilot unavailable"
+msgstr "sunnypilot 不可用"
+
+#: sunnypilot
+msgid "Take control immediately"
+msgstr "立即接管控制"
+
+#: sunnypilot
+msgid "sunnypilot will disengage"
+msgstr "sunnypilot 将解除控制"
+
+#: sunnypilot
+msgid "Always keep hands on the wheel and eyes on the road"
+msgstr "请始终将手放在方向盘上，眼睛注视道路"
