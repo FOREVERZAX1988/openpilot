@@ -216,7 +216,7 @@ def personality_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
   elif personality == "Standard":
     personality_cn = "标准"
   elif personality == "Relaxed":
-    personality_cn = "舒适"
+    personality_cn = "从容"
   return NormalPermanentAlert(f"驾驶风格: {personality_cn}", duration=1.5)
 
 
