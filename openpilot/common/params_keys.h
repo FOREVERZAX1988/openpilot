@@ -62,6 +62,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsLdwEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"IsLiveStreaming", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsMetric", {PERSISTENT | BACKUP, BOOL}},
+    {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"IsOffroad", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsRhdDetected", {PERSISTENT, BOOL}},
     {"IsReleaseBranch", {CLEAR_ON_MANAGER_START, BOOL}},
