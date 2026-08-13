@@ -572,7 +572,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     # 停车+刹车按SET（D档）提示：预激活不可行（6495d33d5 实锤：preEnabled 与 panda 拒控
     # TSK_04=0 冲突→mismatch 2s），改为 NO_ENTRY 挡在 disabled + 8s 可读提示。
     # persistent=True：防 AlertManager 按 clear_event_types 立即清除（一闪而过）。
-    ET.NO_ENTRY: NoEntryAlert("松开制动方可激活", "纵向暂不可用", duration=8.0, persistent=True),
+    ET.NO_ENTRY: NoEntryAlert("Release brake to activate", "Longitudinal unavailable", duration=5.0, persistent=True),
   },
 
   EventName.gasPressedOverride: {
@@ -653,9 +653,9 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.wrongGear: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("挡位不在D挡"),
+    ET.SOFT_DISABLE: user_soft_disable_alert("Gear not in Drive"),
     # P档按SET提示 8s 可读（2026-08-13：原 3s 且可能被 MADS paused 替换 → 一闪而过）
-    ET.NO_ENTRY: NoEntryAlert("挡位不在D挡", duration=8.0, persistent=True),
+    ET.NO_ENTRY: NoEntryAlert("Shift to D to start", duration=5.0, persistent=True),
   },
 
   # This alert is thrown when the calibration angles are outside of the acceptable range.

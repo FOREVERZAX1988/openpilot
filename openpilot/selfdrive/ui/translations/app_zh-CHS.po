@@ -3874,3 +3874,19 @@ msgstr "获取 IP 中..."
 #: auto_translated
 msgid "connect.comma.ai"
 msgstr "connect.comma.ai"
+
+#: selfdrived
+msgid "Release brake to activate"
+msgstr "松开制动方可激活"
+
+#: selfdrived
+msgid "Longitudinal unavailable"
+msgstr "纵向暂不可用"
+
+#: selfdrived
+msgid "Shift to D to start"
+msgstr "换到D挡起步以启用"
+
+#: selfdrived
+msgid "Gear not in Drive"
+msgstr "挡位不在D挡"
