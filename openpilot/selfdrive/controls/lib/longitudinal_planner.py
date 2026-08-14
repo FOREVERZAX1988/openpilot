@@ -170,7 +170,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     #   下限 0.6：保证命令够大、车立即动起来（消除起步等待）
     #   上限 0.7：峰值温和不推背（替代 ramp 到 1.39）
     # 安全：aTarget<=0（需刹车/停）时不 boost；前方障碍由 shouldStop/LCS 接管不受影响。
-    if v_ego < 2.0 and output_a_target > 0:
+    if v_ego < 2.0 and output_a_target > 0 and not self.output_should_stop:
       output_a_target = float(np.clip(output_a_target, 0.6, 0.7))
 
     for idx in range(2):
