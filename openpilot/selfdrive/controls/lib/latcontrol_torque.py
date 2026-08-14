@@ -52,11 +52,12 @@ ASSIST_GAIN = [0.688, 0.883, 1.211]
 ASSIST_REF_KPH = 100.0
 
 
-def _assist_comp(v_ego_ms):
+def _assist_comp(v_ego_ms, scale=1.0):
   ref = np.interp(ASSIST_REF_KPH, ASSIST_SPEEDS_KPH, ASSIST_GAIN)
   g = np.interp(v_ego_ms * 3.6, ASSIST_SPEEDS_KPH, ASSIST_GAIN)
   # clamp 提升：防低速近零增益时命令爆炸（IQ.Pilot 同款 0.7/1.6）
-  return float(np.clip(ref / g, 0.7, 1.6))
+  # scale：路试微调用（DpEpsAssistCompScale，1.0=MQB 全量；0.5=半量）
+  return float(np.clip(ref / g, 0.7, 1.6) * scale)
 
 class LatControlTorque(LatControl):
   def __init__(self, CP, CP_SP, CI, dt):
@@ -79,6 +80,11 @@ class LatControlTorque(LatControl):
     self._eps_comp_enabled = True
     if os.path.exists("/data/params/d/DpEpsAssistComp"):
       self._eps_comp_enabled = Params().get_bool("DpEpsAssistComp", block=False)
+    # 补偿幅度缩放（默认 1.0=全量；return_default=True 文件不存在返回默认"1"）
+    try:
+      self._eps_comp_scale = float(Params().get("DpEpsAssistCompScale", block=False, return_default=True))
+    except Exception:
+      self._eps_comp_scale = 1.0
 
   def update_live_torque_params(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
@@ -139,7 +145,7 @@ class LatControlTorque(LatControl):
 
       # EPS 助力曲线补偿（2026-08-14）：低速命令被固件打折（0.688x），反转补偿找回被吞力矩
       if self._eps_comp_enabled:
-        output_torque = float(np.clip(output_torque * _assist_comp(CS.vEgo), -self.steer_max, self.steer_max))
+        output_torque = float(np.clip(output_torque * _assist_comp(CS.vEgo, self._eps_comp_scale), -self.steer_max, self.steer_max))
 
       pid_log.active = True
       pid_log.p = float(self.pid.p)
