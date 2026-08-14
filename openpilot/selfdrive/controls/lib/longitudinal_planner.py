@@ -163,6 +163,16 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       output_a_target = output_a_target_mpc
       self.output_should_stop = output_should_stop_mpc
 
+    # 起步加速 boost（2026-08-14 用户需求：起步 6s→3.5s 且不推背）
+    # 00000045 seg4 实锤（274.5-281.8s）：shouldStop 释放后 accel 命令仅 +0.07~+0.3，
+    # 不足克服静止阻力 → 车 7 秒不动；动起来后 aTarget ramp 到 1.39 → 推背感。
+    # 起步段（vEgo<7.2km/h 且正向请求）给 [0.6, 0.7] 窗：
+    #   下限 0.6：保证命令够大、车立即动起来（消除起步等待）
+    #   上限 0.7：峰值温和不推背（替代 ramp 到 1.39）
+    # 安全：aTarget<=0（需刹车/停）时不 boost；前方障碍由 shouldStop/LCS 接管不受影响。
+    if v_ego < 2.0 and output_a_target > 0:
+      output_a_target = float(np.clip(output_a_target, 0.6, 0.7))
+
     for idx in range(2):
       accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
     self.output_a_target = np.clip(output_a_target, accel_clip[0], accel_clip[1])
