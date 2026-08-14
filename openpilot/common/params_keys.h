@@ -63,6 +63,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsLiveStreaming", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsMetric", {PERSISTENT | BACKUP, BOOL}},
     {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
     {"IsOffroad", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsRhdDetected", {PERSISTENT, BOOL}},
     {"IsReleaseBranch", {CLEAR_ON_MANAGER_START, BOOL}},

@@ -1,4 +1,5 @@
 import math
+import os
 import numpy as np
 from collections import deque
 
@@ -8,6 +9,7 @@ from openpilot.common.constants import ACCELERATION_DUE_TO_GRAVITY
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.selfdrive.controls.lib.latcontrol import LatControl
 from openpilot.common.pid import PIDController
+from openpilot.common.params import Params
 
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext import LatControlTorqueExt
 
@@ -34,6 +36,28 @@ JERK_GAIN = 0.3
 LAT_ACCEL_REQUEST_BUFFER_SECONDS = 1.0
 VERSION = 1
 
+# --- EPS 助力曲线补偿（2026-08-14 移植 IQ.Pilot LatControlTorquePQ 原理） ---
+# 大众/保时捷 ZF EPS 固件不按 1:1 执行 LM_Offset（力矩命令）到齿条：
+#   rack_force = LM_Offset * hca_table[speed] >> 7
+# hca_table（IQ.Pilot 从固件二进制 0x5e664 Ghidra 解码，PQ35_ZF_EPS_3501）：
+#   0 km/h -> 0.688,  50 km/h -> 0.883,  120 km/h -> 1.211（线性插值）
+# 即低速命令被吞 ~31%、高速放大 ~21%——1.76 倍摆动，标准扭矩控制器看不见。
+# 这里反转已知曲线，让 LM_Offset->rack_force 增益随速度平坦（归一化到
+# ASSIST_REF_KPH=100，高速标定点不变）。⚠️ 曲线值来自 MQB 固件逆向，Macan(MLB)
+# 的 ZF EPS 曲线需实测标定（先用 MQB 值作初始版本，路试 A/B 后再调）。
+# 开关：Params DpEpsAssistComp（默认 1）。命令在 ±steer_max(3Nm) 内缩放，不超
+# EPS 固件上限、不触发 fault。
+ASSIST_SPEEDS_KPH = [0.0, 50.0, 120.0]
+ASSIST_GAIN = [0.688, 0.883, 1.211]
+ASSIST_REF_KPH = 100.0
+
+
+def _assist_comp(v_ego_ms):
+  ref = np.interp(ASSIST_REF_KPH, ASSIST_SPEEDS_KPH, ASSIST_GAIN)
+  g = np.interp(v_ego_ms * 3.6, ASSIST_SPEEDS_KPH, ASSIST_GAIN)
+  # clamp 提升：防低速近零增益时命令爆炸（IQ.Pilot 同款 0.7/1.6）
+  return float(np.clip(ref / g, 0.7, 1.6))
+
 class LatControlTorque(LatControl):
   def __init__(self, CP, CP_SP, CI, dt):
     super().__init__(CP, CP_SP, CI, dt)
@@ -49,6 +73,12 @@ class LatControlTorque(LatControl):
     self.jerk_filter = FirstOrderFilter(0.0, 1 / (2 * np.pi * LP_FILTER_CUTOFF_HZ), self.dt)
 
     self.extension = LatControlTorqueExt(self, CP, CP_SP, CI)
+    # DpEpsAssistComp：EPS 助力曲线补偿开关，默认开。
+    # 注意：pyx get_bool 第二参是 block（非 default），且 get() 对 BOOL key 返回 bool，
+    # 无法区分"文件不存在"与"文件=0"——故用文件存在性判断实现"默认开"。
+    self._eps_comp_enabled = True
+    if os.path.exists("/data/params/d/DpEpsAssistComp"):
+      self._eps_comp_enabled = Params().get_bool("DpEpsAssistComp", block=False)
 
   def update_live_torque_params(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
@@ -106,6 +136,10 @@ class LatControlTorque(LatControl):
       pid_log, output_torque = self.extension.update(CS, VM, self.pid, params, ff, pid_log, setpoint, measurement, calibrated_pose, roll_compensation,
                                                      future_desired_lateral_accel, measurement, lateral_accel_deadzone, gravity_adjusted_future_lateral_accel,
                                                      desired_curvature, measured_curvature, steer_limited_by_safety, output_torque)
+
+      # EPS 助力曲线补偿（2026-08-14）：低速命令被固件打折（0.688x），反转补偿找回被吞力矩
+      if self._eps_comp_enabled:
+        output_torque = float(np.clip(output_torque * _assist_comp(CS.vEgo), -self.steer_max, self.steer_max))
 
       pid_log.active = True
       pid_log.p = float(self.pid.p)
