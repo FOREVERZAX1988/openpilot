@@ -95,12 +95,14 @@ FONT_SCALE = 1.242 if BIG_UI else 1.16
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
 EXTRA_FONT_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
+# 注意：openpilot assets 里的 NotoSansCJK*.otf 是子集字体（仅含 po 出现字形，~460 字形），
+# 合并新翻译后新字缺字形会渲染为 "?"。AGNOS 系统字体为完整版（~2万 CJK 字形），优先使用。
 NOTO_FONTS = {
   "ja": "NotoSansCJKjp-Regular.otf",
   "ko": "NotoSansCJKkr-Regular.otf",
   "th": "NotoSansThai-Regular.ttf",
-  "zh-CHS": "NotoSansCJKsc-Regular.otf",
-  "zh-CHT": "NotoSansCJKtc-Regular.otf",
+  "zh-CHS": "/usr/share/fonts/NotoSansSC-Regular.otf",
+  "zh-CHT": "/usr/share/fonts/NotoSansTC-Regular.otf",
 }
 
 
@@ -702,9 +704,16 @@ class GuiApplication(GuiApplicationExt):
       chars.update(TRANSLATIONS_DIR.joinpath(f"app_{language}.po").read_text(encoding="utf-8"))
       codepoints = sorted(map(ord, chars))
       codepoint_buffer = rl.ffi.new("int[]", codepoints)
-      with as_file(FONT_DIR) as fspath:
-        font = rl.load_font_ex((fspath / NOTO_FONTS[language]).as_posix(), 48,
-                               rl.ffi.cast("int *", codepoint_buffer), len(codepoints))
+      font_name = NOTO_FONTS[language]
+      if os.path.isabs(font_name) and os.path.exists(font_name):
+        # 系统完整字体（AGNOS 自带 NotoSansSC/TC，~2万 CJK 字形，解决子集字体缺字乱码）
+        font_path = font_name
+      else:
+        # 回退 assets 子集字体
+        with as_file(FONT_DIR) as fspath:
+          font_path = (fspath / Path(font_name).name).as_posix()
+      font = rl.load_font_ex(font_path, 48,
+                             rl.ffi.cast("int *", codepoint_buffer), len(codepoints))
       rl.gen_texture_mipmaps(font.texture)
       rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
       self._fallback_fonts[language] = font
