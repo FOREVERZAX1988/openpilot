@@ -4214,3 +4214,525 @@ msgstr "禁用\nsunnylink"
 #: onboarding.py
 msgid "enable\nsunnylink"
 msgstr "启用\nsunnylink"
+
+
+# === merged from SP_MACAN_LONG (op助手 2026-08-15) ===
+msgid "AEB: Risk of Collision"
+msgstr "AEB：碰撞风险"
+
+msgid "Abnormal tire stiffness"
+msgstr "轮胎刚度异常"
+
+msgid "Active"
+msgstr "激活"
+
+msgid "Adaptive Cruise Disabled"
+msgstr "自适应巡航已禁用"
+
+msgid "Auto adjusting to last speed limit"
+msgstr "自动调整至上次限速"
+
+msgid "Auto adjusting to speed limit"
+msgstr "正在自动调整至限速"
+
+msgid "Automatic Lane Centering is OFF"
+msgstr "自动车道居中已关闭"
+
+msgid "BRAKE!"
+msgstr "刹车!"
+
+msgid "Be ready to take over at any time"
+msgstr "随时准备接管车辆控制"
+
+msgid "Bookmark Saved"
+msgstr "书签已保存"
+
+msgid "Brake Hold Active"
+msgstr "自动驻车已激活"
+
+msgid "CAN Bus Disconnected"
+msgstr "CAN总线断开连接"
+
+msgid "CAN Bus Disconnected: Check Connections"
+msgstr "CAN总线断开连接：请检查连接状态"
+
+msgid "CAN Bus Disconnected: Likely Faulty Cable"
+msgstr "CAN总线断开：可能是线缆故障"
+
+msgid "Calibrating"
+msgstr "校准中"
+
+msgid "Calibration Incomplete"
+msgstr "校准未完成"
+
+msgid "Calibration Invalid"
+msgstr "校准无效"
+
+msgid "Calibration Invalid: Remount Device & Recalibrate"
+msgstr "校准无效：请重新安装设备并重新校准"
+
+msgid "Calibration in Progress"
+msgstr "校准进行中"
+
+msgid "Camera Frame Rate Low"
+msgstr "摄像头帧率过低"
+
+msgid "Camera Frame Rate Low: Reboot Your Device"
+msgstr "摄像头帧率过低：请重启设备"
+
+msgid "Camera Malfunction"
+msgstr "摄像头故障"
+
+msgid "Camera Malfunction: Reboot Your Device"
+msgstr "摄像头故障：请重启设备"
+
+msgid "Cancel Pressed"
+msgstr "取消"
+
+msgid "Car Detected in Blindspot"
+msgstr "盲区检测到车辆"
+
+msgid "Car Unrecognized"
+msgstr "未识别车辆"
+
+msgid "Car in Blindspot"
+msgstr "盲区有车辆"
+
+msgid "Changing Lanes"
+msgstr "正在变道"
+
+msgid "Check Hardware"
+msgstr "请检查硬件"
+
+msgid "Comma"
+msgstr "Comma"
+
+msgid "Communication Issue Between Processes"
+msgstr "进程间通信问题"
+
+msgid "Confirm Lane Change"
+msgstr "确认变道"
+
+msgid "Controls Mismatch"
+msgstr "控制项不匹配"
+
+msgid "Controls Mismatch: Lateral"
+msgstr "控制模式不匹配：横向"
+
+msgid "Cruise Fault: Restart the Car"
+msgstr "巡航系统故障：请重启车辆"
+
+msgid "Cruise Fault: Restart the car to engage"
+msgstr "巡航系统故障：请重启车辆以启用巡航功能"
+
+msgid "Cruise Is Off"
+msgstr "巡航已关闭"
+
+msgid "DISENGAGE IMMEDIATELY"
+msgstr "立即解除控制"
+
+msgid "Dashcam Mode"
+msgstr "行车记录仪模式"
+
+msgid "Dashcam mode"
+msgstr "行车记录仪模式"
+
+msgid "Dashcam mode for unsupported car"
+msgstr "不支持车型的行车记录仪模式"
+
+msgid "Default Model"
+msgstr "默认模型"
+
+msgid "Device Fell Off Mount"
+msgstr "设备从支架脱落"
+
+msgid "Device Remount Detected: Recalibrating"
+msgstr "检测到设备重新安装：正在重新校准"
+
+msgid "Device must be registered with the comma.ai backend to pair"
+msgstr "设备需先在comma.ai后台完成注册方可进行配对"
+
+msgid "Disable your car's stock LKAS to engage"
+msgstr "请关闭车辆原厂的车道保持辅助系统（LKAS）以启用该功能"
+
+msgid "Distraction Level Too High"
+msgstr "分心等级过高"
+
+msgid "Door Open"
+msgstr "车门打开"
+
+msgid "Drive to Calibrate"
+msgstr "行驶以校准"
+
+msgid "Driver Distracted"
+msgstr "驾驶员分心"
+
+msgid "Driver Unresponsive"
+msgstr "驾驶员未响应"
+
+msgid "Driving Model Lagging"
+msgstr "驾驶模型滞后"
+
+msgid "Electronic Stability Control Active"
+msgstr "电子稳定控制系统已激活"
+
+msgid "Electronic Stability Control Disabled"
+msgstr "电子稳定控制系统已禁用"
+
+msgid "Emergency Braking: Risk of Collision"
+msgstr "紧急制动：碰撞风险"
+
+msgid "Enable your car's LKAS to engage"
+msgstr "请启用车辆的车道保持辅助系统（LKAS）以启用该功能"
+
+msgid "Ensure road ahead is clear"
+msgstr "请确保前方道路无障碍物"
+
+msgid "Excessive Actuation"
+msgstr "过度动作"
+
+msgid "Experimental Mode Switched"
+msgstr "实验模式已切换"
+
+msgid "Fan Malfunction"
+msgstr "风扇故障"
+
+msgid "Gear not D"
+msgstr "挡位未在D挡"
+
+msgid "Harness Relay Malfunction"
+msgstr "线束继电器故障"
+
+msgid "High CPU Usage"
+msgstr "CPU占用过高"
+
+msgid "Invalid LKAS setting"
+msgstr "车道保持辅助系统（LKAS）设置无效"
+
+msgid "Joystick Mode"
+msgstr "摇杆模式"
+
+msgid "Konik"
+msgstr "Konik"
+
+msgid "LKAS Fault: Restart the Car"
+msgstr "车道保持辅助系统（LKAS）故障：请重启车辆"
+
+msgid "LKAS Fault: Restart the car to engage"
+msgstr "车道保持辅助系统（LKAS）故障：请重启车辆以启用该功能"
+
+msgid "Lane Departure Detected"
+msgstr "检测到车道偏离"
+
+msgid "Likely Hardware Issue"
+msgstr "疑似硬件问题"
+
+msgid "Low Battery"
+msgstr "低电量"
+
+msgid "Low Communication Rate Between Processes"
+msgstr "进程间通信速率低"
+
+msgid "Low Memory"
+msgstr "内存不足"
+
+msgid "Low Memory: Reboot Your Device"
+msgstr "内存不足：请重启设备"
+
+msgid "Manual Speed Control Required"
+msgstr "需手动控制车速"
+
+msgid "Manual Steering Required"
+msgstr "需手动控制转向"
+
+msgid "Model uncertain at this speed"
+msgstr "当前车速下驾驶模型决策不确定"
+
+msgid "No SSH keys found"
+msgstr "未找到 SSH 密钥"
+
+msgid "Out of Storage"
+msgstr "存储空间不足"
+
+msgid "Parking Brake Engaged"
+msgstr "驻车制动已拉起"
+
+msgid "Pay Attention"
+msgstr "保持注意力"
+
+msgid "Pedal Pressed"
+msgstr "踏板已踩下"
+
+msgid "Please connect to Wi-Fi to update"
+msgstr "请连接Wi-Fi以获取更新"
+
+msgid "Posenet Speed Invalid"
+msgstr "Posenet速度无效"
+
+msgid "Possible Hardware Issue"
+msgstr "疑似硬件问题"
+
+msgid "Press + to confirm speed limit"
+msgstr "按 + 键确认限速"
+
+msgid "Press - to confirm speed limit"
+msgstr "按 - 键确认限速"
+
+msgid "Press Resume"
+msgstr "请按恢复键"
+
+msgid "Press Resume to Exit Brake Hold"
+msgstr "按下恢复键以退出自动驻车"
+
+msgid "Press Resume to Exit Standstill"
+msgstr "按下恢复键以退出静止状态"
+
+msgid "Press Set to Engage"
+msgstr "请按恢复键退出静止状态"
+
+msgid "Process Not Running"
+msgstr "进程未运行"
+
+msgid "Radar Error: Restart the Car"
+msgstr "雷达故障：请重启车辆"
+
+msgid "Radar Temporarily Unavailable"
+msgstr "雷达暂时不可用"
+
+msgid "Reboot your Device"
+msgstr "重启你的设备"
+
+msgid "Recalibrating"
+msgstr "重新校准中"
+
+msgid "Recording Audio Feedback"
+msgstr "录制音频反馈"
+
+msgid "Release Brake to Engage"
+msgstr "松开制动踏板以启用"
+
+msgid "Remount Detected: Recalibrating"
+msgstr "检测到重新安装：正在重新校准"
+
+msgid "Resume Driving Manually"
+msgstr "手动恢复驾驶"
+
+msgid "Reverse"
+msgstr "倒车"
+
+msgid "Reverse Gear"
+msgstr "倒车挡"
+
+msgid "Risk of Collision"
+msgstr "碰撞风险"
+
+msgid "Seatbelt Unlatched"
+msgstr "安全带未扣紧"
+
+msgid "Security Key Not Available"
+msgstr "安全密钥不可用"
+
+msgid "Selfdrive Process Lagging: Reboot Your Device"
+msgstr "辅助驾驶进程滞后：请重启设备"
+
+msgid "Sensor Data Invalid"
+msgstr "传感器数据无效"
+
+msgid "Set speed changed"
+msgstr "设定车速已变更"
+
+msgid "Slow down to engage"
+msgstr "减速以启用"
+
+msgid "Smart/Adaptive Cruise Control: OFF"
+msgstr "智能/自适应巡航：已关闭"
+
+msgid "Speed Too High"
+msgstr "速度过快"
+
+msgid "Speed too low"
+msgstr "速度过慢"
+
+msgid "Steer Left"
+msgstr "向左转向"
+
+msgid "Steer Left to Start Lane Change Once Safe"
+msgstr "确保安全后,向左转向以启动变道"
+
+msgid "Steer Right"
+msgstr "向右转向"
+
+msgid "Steer Right to Start Lane Change Once Safe"
+msgstr "确保安全后,向右转向以启动变道"
+
+msgid "Steer ratio mismatch"
+msgstr "转向传动比不匹配"
+
+msgid "Steering Assist Temporarily Unavailable"
+msgstr "转向辅助暂时不可用"
+
+msgid "Steering Pressed"
+msgstr "方向盘已按下"
+
+msgid "Steering Temporarily Unavailable"
+msgstr "转向暂时不可用"
+
+msgid "Steering misalignment detected"
+msgstr "检测到转向系统偏移"
+
+msgid "Stock AEB: Risk of Collision"
+msgstr "原厂AEB：碰撞风险"
+
+msgid "Stock LKAS: Lane Departure Detected"
+msgstr "原厂车道保持辅助系统：检测到车道偏离"
+
+msgid "Switch to Traffic-Aware Cruise Control to engage"
+msgstr "切换至交通感知巡航控制以启用"
+
+msgid "System Initializing"
+msgstr "系统初始化中"
+
+msgid "System Lagging"
+msgstr "系统滞后"
+
+msgid "System Overheated"
+msgstr "系统过热"
+
+msgid "TAKE CONTROL"
+msgstr "请接管控制"
+
+msgid "Take Control"
+msgstr "接管控制"
+
+msgid "Toggle stock LKAS on or off to engage"
+msgstr "切换原厂LKAS开启或关闭以启用"
+
+msgid "Touch Steering Wheel"
+msgstr "触摸方向盘"
+
+msgid "Touch Steering Wheel: No Face Detected"
+msgstr "触摸方向盘：未检测到面部"
+
+msgid "Turn Exceeds Steering Limit"
+msgstr "转向超出极限"
+
+msgid "Turning Left"
+msgstr "左转中"
+
+msgid "Turning Right"
+msgstr "右转中"
+
+msgid "USB Error: Reboot Your Device"
+msgstr "USB 错误：请重启设备"
+
+msgid "Unknown Vehicle Variant"
+msgstr "未知车型配置"
+
+msgid "Vehicle Sensors Calibrating"
+msgstr "车辆传感器校准中"
+
+msgid "Vehicle Sensors Invalid"
+msgstr "车辆传感器无效"
+
+msgid "Vehicle Steering Time Limit"
+msgstr "车辆转向时限"
+
+msgid "WARNING: This branch is not tested"
+msgstr "警告：此分支未经过测试"
+
+msgid "current model"
+msgstr "当前模型"
+
+msgid "default model"
+msgstr "默认模型"
+
+msgid "from cache"
+msgstr "来自缓存"
+
+msgid "locationd Permanent Error"
+msgstr "locationd永久错误"
+
+msgid "locationd Temporary Error"
+msgstr "locationd暂时错误"
+
+msgid "openpilot Canceled"
+msgstr "openpilot已取消"
+
+msgid "openpilot Unavailable"
+msgstr "openpilot不可用"
+
+msgid "paramsd Permanent Error"
+msgstr "paramsd永久错误"
+
+msgid "paramsd Temporary Error"
+msgstr "paramsd暂时错误"
+
+msgid "recommend disabling this feature if you experience these."
+msgstr "若遇到此类问题,建议禁用此功能."
+
+msgid "sunnylink Dongle ID not found. Please reboot & try again."
+msgstr "未找到SunnyLink Dongle ID.请重启设备后重试."
+
+msgid "take control"
+msgstr "接管控制"
+
+msgid "turn exceeds limit"
+msgstr "转弯超出限制"
+
+msgid "Automatically adjusting to the last speed limit"
+msgstr "正在自动适配上次设定的限速"
+
+msgid "Automatically adjusting to the posted speed limit"
+msgstr "正在自动适配道路标示的限速"
+
+msgid "CAN Error"
+msgstr "CAN 错误"
+
+msgid "CAN Error: Check Connections"
+msgstr "CAN总线断开连接：可能存在线缆故障"
+
+msgid "Decline, uninstall openpilot"
+msgstr "拒绝并卸载 openpilot"
+
+msgid "Enable openpilot"
+msgstr "启用 openpilot"
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "Speed Limit Assist: Activation Required"
+msgstr "限速辅助：需激活"
+
+msgid "Welcome to openpilot"
+msgstr "欢迎使用 openpilot"
+
+msgid "You must accept the Terms and Conditions in order to use openpilot."
+msgstr "您必须接受条款与条件才能使用 openpilot."
+
+msgid "You must accept the Terms and Conditions in order to use sunnypilot."
+msgstr "必须接受条款与条件,才能使用阳光领航."
+
+msgid "openpilot Longitudinal Control (Alpha)"
+msgstr "openpilot 纵向控制（Alpha）"
+
+msgid "openpilot longitudinal control may come in a future update."
+msgstr "openpilot 纵向控制可能会在未来更新中提供."
+
+msgid "Українська"
+msgstr "Українська"
+
+msgid "العربية"
+msgstr "العربية"
+
+msgid "ไทย"
+msgstr "ไทย"
+
+msgid "中文（简体）"
+msgstr "中文（简体）"
+
+msgid "中文（繁体）"
+msgstr "中文（繁体）"
+
+msgid "한국어"
+msgstr "한국어"
+
