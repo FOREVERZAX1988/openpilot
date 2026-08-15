@@ -1,6 +1,6 @@
 [submodule "panda"]
   path = panda
-  url = https://github.com/mouxangithub/panda.git
+  url = https://github.com/FOREVERZAX1988/panda.git
 	branch = master-c3
 [submodule "opendbc"]
   path = opendbc_repo
