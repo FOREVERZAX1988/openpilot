@@ -9,6 +9,7 @@ from openpilot.cereal import log, custom
 from opendbc.car import structs
 
 from opendbc.car.chrysler.values import RAM_DT
+from opendbc.sunnypilot.car.volkswagen.values_ext import VolkswagenFlagsSP
 from openpilot.selfdrive.selfdrived.events import Events
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 
@@ -23,6 +24,7 @@ class CarSpecificEventsSP:
     self.CP_SP = CP_SP
 
     self.low_speed_alert = False
+    self.prev_standstill = False  # Macan 起步跟停：检测停车保持态解除瞬间
 
   def update(self, CS: structs.CarState, events: Events):
     events_sp = EventsSP()
@@ -47,5 +49,13 @@ class CarSpecificEventsSP:
         if CS.cruiseState.standstill and not CS.brakePressed and self.CP_SP.enableGasInterceptor:
           if events.has(EventName.resumeRequired):
             events.remove(EventName.resumeRequired)
+
+    elif self.CP.brand == 'volkswagen':
+      # Macan 起步跟停：开关开启时，原厂停车保持态解除（standstill 1→0）瞬间
+      # 触发 macanAutoResume 事件 → 播放 engage 音效（OP 代发 RESUME 成功后车起步）
+      if self.CP_SP.flags & VolkswagenFlagsSP.STOP_AND_GO:
+        if self.prev_standstill and not CS.cruiseState.standstill:
+          events_sp.add(EventNameSP.macanAutoResume)
+      self.prev_standstill = CS.cruiseState.standstill
 
     return events_sp

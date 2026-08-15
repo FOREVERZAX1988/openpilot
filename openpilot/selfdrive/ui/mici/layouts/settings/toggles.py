@@ -55,6 +55,7 @@ class TogglesLayoutMici(NavScroller):
     record_front = BigParamControl("record & upload driver camera", "RecordFront", toggle_callback=restart_needed_callback)
     record_mic = BigParamControl("record & upload mic audio", "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl("enable sunnypilot", "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
+    macan_start_stop = BigParamControl("Macan 起步跟停", "MacanStartStop")
 
     self._scroller.add_widgets([
       self._personality_toggle,
@@ -66,8 +67,10 @@ class TogglesLayoutMici(NavScroller):
       record_front,
       record_mic,
       enable_openpilot,
+      macan_start_stop,
     ])
 
+    self._macan_start_stop = macan_start_stop
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
@@ -78,6 +81,7 @@ class TogglesLayoutMici(NavScroller):
       ("IsLdwEnabled", ldw_toggle),
       ("AlwaysOnDM", always_on_dm_toggle),
       ("RecordFront", record_front),
+      ("MacanStartStop", macan_start_stop),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
@@ -119,6 +123,12 @@ class TogglesLayoutMici(NavScroller):
         self._experimental_btn.set_checked(False)
         self._personality_toggle.set_visible(False)
         ui_state.params.remove("ExperimentalMode")
+
+    # Macan 起步跟停：仅 Macan(MLB) 显示
+    if ui_state.CP is not None and ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1":
+      self._macan_start_stop.set_visible(True)
+    else:
+      self._macan_start_stop.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:

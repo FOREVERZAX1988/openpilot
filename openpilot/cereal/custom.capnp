@@ -352,6 +352,7 @@ struct OnroadEventSP @0xda96579883444c35 {
     speedLimitPending @22;
     e2eChime @23;
     laneChangeRoadEdge @24;
+    macanAutoResume @25;  # Macan 起步跟停：OP 代发 RESUME 解除原厂停车保持（带 engage 音效）
   }
 }
 
