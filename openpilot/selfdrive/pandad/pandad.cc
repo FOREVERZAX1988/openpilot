@@ -158,8 +158,10 @@ void fill_panda_state(cereal::PandaState::Builder &ps, cereal::PandaState::Panda
   ps.setSbu1Voltage(health.sbu1_voltage_mV / 1000.0f);
   ps.setSbu2Voltage(health.sbu2_voltage_mV / 1000.0f);
   ps.setSoundOutputLevel(health.sound_output_level_pkt);
-  ps.setControlsAllowedLateral(health.controls_allowed_sp_pkt & 1);
-  ps.setControlsAllowedLongitudinal((health.controls_allowed_sp_pkt >> 1) & 1);
+  // macan-long-0815-fix: panda 子模块为 7d703710a（保留 macan/F4 适配），health.h 无 controls_allowed_sp_pkt
+  // 兼容映射：旧 panda 的 controls_allowed_pkt 是单一布尔（允许=横纵均允许）
+  ps.setControlsAllowedLateral(health.controls_allowed_pkt);
+  ps.setControlsAllowedLongitudinal(health.controls_allowed_pkt);
 }
 
 void fill_panda_can_state(cereal::PandaState::PandaCanState::Builder &cs, const can_health_t &can_health) {
