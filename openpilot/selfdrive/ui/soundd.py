@@ -30,6 +30,8 @@ DB_SCALE = 30 # AMBIENT_DB + DB_SCALE is where MAX_VOLUME is applied
 VOLUME_BASE = 20
 if HARDWARE.get_device_type() == "tizi":
   AMBIENT_DB = 30
+# rick - for c3
+if HARDWARE.get_device_type() in ("tizi", "tici"):
   VOLUME_BASE = 10
 
 AudibleAlert = log.SelfdriveState.AudibleAlert
@@ -59,6 +61,12 @@ sound_list: dict[int, tuple[str, int | None, float]] = {
 
   **sound_list_sp,
 }
+if HARDWARE.get_device_type() in ("tici", "tizi"):
+  sound_list.update({
+    AudibleAlert.engage: ("engage_tizi.wav", 1, MAX_VOLUME),
+    AudibleAlert.disengage: ("disengage_tizi.wav", 1, MAX_VOLUME),
+  })
+
 
 def check_selfdrive_timeout_alert(sm):
   ss_missing = time.monotonic() - sm.recv_time['selfdriveState']

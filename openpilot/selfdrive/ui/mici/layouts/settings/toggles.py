@@ -47,7 +47,12 @@ class TogglesLayoutMici(NavScroller):
     is_metric_toggle = BigParamControl("use metric units", "IsMetric")
     ldw_toggle = BigParamControl("lane departure warnings", "IsLdwEnabled")
     always_on_dm_toggle = BigParamControl("always-on driver monitor", "AlwaysOnDM")
-    record_front = BigParamControl("record & upload cabin camera", "RecordFront", toggle_callback=restart_needed_callback)
+    distraction_level_toggle = BigMultiParamToggle(
+      "distraction detection level",
+      "DistractionDetectionLevel",
+      ["strict", "moderate", "lenient"],
+    )
+    record_front = BigParamControl("record & upload driver camera", "RecordFront", toggle_callback=restart_needed_callback)
     record_mic = BigParamControl("record & upload mic audio", "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl("enable sunnypilot", "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
 
@@ -57,10 +62,14 @@ class TogglesLayoutMici(NavScroller):
       is_metric_toggle,
       ldw_toggle,
       always_on_dm_toggle,
+      distraction_level_toggle,
       record_front,
       record_mic,
       enable_openpilot,
     ])
+
+    self._always_on_dm_toggle = always_on_dm_toggle
+    self._distraction_level_toggle = distraction_level_toggle
 
     # Toggle lists
     self._refresh_toggles = (
@@ -114,6 +123,11 @@ class TogglesLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+
+    dm_on = ui_state.params.get_bool("AlwaysOnDM")
+    self._distraction_level_toggle.set_visible(dm_on)
+    if dm_on:
+      self._distraction_level_toggle._load_value()
 
   def _on_experimental_mode(self, state: bool):
     if state and not ui_state.params.get_bool("ExperimentalModeConfirmed"):
