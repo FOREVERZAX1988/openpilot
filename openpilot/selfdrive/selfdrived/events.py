@@ -706,7 +706,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("电子稳定控制系统已禁用"),
   },
 
-  EventName.lowBattery: {
+  EventName.lowBatteryDEPRECATED: {
     ET.SOFT_DISABLE: soft_disable_alert("电池电量低"),
     ET.NO_ENTRY: NoEntryAlert("电池电量低"),
   },
@@ -766,7 +766,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   # When the localizer detects an acceleration of more than 40 m/s^2 (~4G) we
   # alert the driver the device might have fallen from the windshield.
-  EventName.deviceFalling: {
+  EventName.deviceFallingDEPRECATED: {
     ET.SOFT_DISABLE: soft_disable_alert("设备从支架掉落"),
     ET.NO_ENTRY: NoEntryAlert("设备从支架掉落"),
   },
@@ -795,7 +795,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   # Sometimes the USB stack on the device can get into a bad state
   # causing the connection to the panda to be lost
-  EventName.usbError: {
+  EventName.usbErrorDEPRECATED: {
     ET.SOFT_DISABLE: soft_disable_alert("USB错误：请重启设备"),
     ET.PERMANENT: NormalPermanentAlert("USB错误：请重启设备"),
     ET.NO_ENTRY: NoEntryAlert("USB错误：请重启设备"),

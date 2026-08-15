@@ -157,12 +157,13 @@ class NativeProcess(ManagerProcess):
 
 
 class PythonProcess(ManagerProcess):
-  def __init__(self, name, module, should_run, enabled=True, sigkill=False):
+  def __init__(self, name, module, should_run, enabled=True, sigkill=False, restart_if_crash=False):
     self.name = name
     self.module = module
     self.should_run = should_run
     self.enabled = enabled
     self.sigkill = sigkill
+    self.restart_if_crash = restart_if_crash
     self.launcher = launcher
 
   def start(self) -> None:
