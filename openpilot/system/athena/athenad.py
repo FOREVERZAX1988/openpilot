@@ -50,7 +50,10 @@ from openpilot.common.hardware.hw import Paths
 from openpilot.system.athena.rpc import dispatcher, handle, is_call, is_response, loads
 
 
-ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
+# 服务器切换（2026-08-13 移植）：动态返回 athena 服务器地址
+def get_athena_host():
+    from openpilot.common.params import Params
+    return "wss://athena.konik.ai" if Params().get_bool("UseKonikServer") else "wss://athena.comma.ai"
 HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
 LOCAL_PORT_WHITELIST = {22, }  # SSH
 
@@ -740,7 +743,8 @@ def startLocalProxy(global_end_event: threading.Event, remote_ws_uri: str, local
   cloudlog.debug("athena.startLocalProxy.starting")
   dongle_id = Params().get("DongleId")
   identity_token = Api(dongle_id).get_token()
-  ws = create_connection(remote_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
+  dynamic_ws_uri = get_athena_host() + "/ws/v2/" + dongle_id
+  ws = create_connection(dynamic_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
 
   return start_local_proxy_shim(global_end_event, local_port, ws)
 
@@ -782,8 +786,11 @@ def start_local_proxy_shim(global_end_event: threading.Event, local_port: int, w
 
 @dispatcher.add_method
 def getPublicKey() -> str | None:
-  _, _, public_key = get_key_pair()
-  return public_key
+  if not os.path.isfile(Paths.persist_root() + '/comma/id_rsa.pub'):
+    return None
+
+  with open(Paths.persist_root() + '/comma/id_rsa.pub') as f:
+    return f.read()
 
 
 @dispatcher.add_method
@@ -1149,7 +1156,7 @@ def main(exit_event: threading.Event | None = None):
   dongle_id = params.get("DongleId")
   UploadQueueCache.initialize(upload_queue)
 
-  ws_uri = ATHENA_HOST + "/ws/v2/" + dongle_id
+  ws_uri = get_athena_host() + "/ws/v2/" + dongle_id
   api = Api(dongle_id)
 
   conn_start = None

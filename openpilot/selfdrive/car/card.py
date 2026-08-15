@@ -71,7 +71,7 @@ class Car:
 
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
-    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents'] + ['carControlSP', 'longitudinalPlanSP'])
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'radarState'] + ['carControlSP', 'longitudinalPlanSP'])
     self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks'] + ['carParamsSP', 'carStateSP'])
 
     self.can_rcv_cum_timeout_counter = 0
@@ -294,6 +294,10 @@ class Car:
     initialized = (not any(e.name == EventName.selfdriveInitializing for e in self.sm['onroadEvents']) and
                    self.sm.seen['onroadEvents'])
     if not self.CP.passive and initialized:
+      # 车距显示路线A：注入 OP 融合前车距离（radard 发布的 radarState.leadOne），
+      # 供 carcontroller 在原厂雷达无目标时补位仪表 ACC 车距图标。纯显示层，不参与 ACC_05 控制。
+      rs = self.sm['radarState']
+      self.CI.CS.op_lead_dRel = float(rs.leadOne.dRel) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
       self.controls_update(CS, self.sm['carControl'], self.sm['carControlSP'])
 
     self.initialized_prev = initialized

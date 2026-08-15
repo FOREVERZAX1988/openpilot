@@ -208,14 +208,21 @@ def longitudinal_maneuver_alert(CP: car.CarParams, CS: car.CarState, sm: messagi
 
 def personality_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   personality = str(personality).title()
-  personality_cn = ""
+  # 英文 msgid + .po 翻译（C3 走 onroad tr()），英文界面显示英文原文
   if personality == "Aggressive":
-    personality_cn = "激进"
+    text = "Driving style: Aggressive"
   elif personality == "Standard":
-    personality_cn = "标准"
+    text = "Driving style: Standard"
   elif personality == "Relaxed":
-    personality_cn = "舒适"
-  return NormalPermanentAlert(f"驾驶风格: {personality_cn}", duration=1.5)
+    text = "Driving style: Relaxed"
+  else:
+    text = "Driving style: Standard"
+  alert = NormalPermanentAlert(text, duration=1.5)
+  # persistent=True：驾驶风格提示是 WARNING 类型，未激活时 current_alert_types 不含
+  # WARNING → update_alerts 会把 WARNING 全部清除（end_frame=-1）→ 提示一闪而过。
+  # 豁免清除后显示满 1.5s（2026-08-13 修复）。
+  alert.persistent = True
+  return alert
 
 
 def invalid_lkas_setting_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -300,8 +307,12 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("车道保持辅助系统（LKAS）设置无效"),
   },
 
+  # Macan(MLB) 适配：非 pcm 车 OP enabled 但原厂巡航已退出（TSK_04=0）时恢复 USER_DISABLE——
+  # OP 立即跟随原厂退出。否则 panda 经 TSK_04 无条件 pcm_cruise_check 撤 controls_allowed 后，
+  # selfdrived mismatch_counter 200 帧触发 controlsMismatch（00000041 seg5/7/10/12/15 共5次实锤）。
+  # 阈值见 selfdrived.py cruise_mismatch_counter（6s→1s，须 < panda 的 2s）。
   EventName.cruiseMismatch: {
-    #ET.PERMANENT: ImmediateDisableAlert("openpilot failed to cancel cruise"),
+    ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
   },
 
   # openpilot doesn't recognize the car. This switches openpilot into a
@@ -562,12 +573,15 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("方向盘被转动"),
   },
 
+  # Macan(MLB) 适配：停车踩刹车+按SET 原为 PRE_ENABLE → 进入 preEnabled 预激活态
+  # （carControl.enabled=True）与 panda 拒控（TSK_04=0）冲突 → mismatch_counter 2秒后
+  # controlsMismatch 报警（0000003e seg4 @268s 实锤）。且 Macan 激活门槛 30km/h，
+  # preEnabled 窗口过长无意义。改为 NO_ENTRY：停车按 SET 直接挡在 disabled，不激活不报警。
   EventName.preEnableStandstill: {
-    ET.PRE_ENABLE: Alert(
-      "释放制动以启用",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1, creation_delay=1.),
+    # 停车+刹车按SET（D档）提示：预激活不可行（6495d33d5 实锤：preEnabled 与 panda 拒控
+    # TSK_04=0 冲突→mismatch 2s），改为 NO_ENTRY 挡在 disabled + 8s 可读提示。
+    # persistent=True：防 AlertManager 按 clear_event_types 立即清除（一闪而过）。
+    ET.NO_ENTRY: NoEntryAlert("松开制动方可激活", "纵向暂不可用", duration=5.0, persistent=True),
   },
 
   EventName.gasPressedOverride: {
@@ -649,8 +663,9 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.wrongGear: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("挡位不在D挡"),
-    ET.NO_ENTRY: NoEntryAlert("挡位不在D挡"),
+    ET.SOFT_DISABLE: user_soft_disable_alert("Gear not in Drive"),
+    # P档按SET提示 8s 可读（2026-08-13：原 3s 且可能被 MADS paused 替换 → 一闪而过）
+    ET.NO_ENTRY: NoEntryAlert("挡位不在D挡", "sunnypilot 不可用", duration=5.0, persistent=True),
   },
 
   # This alert is thrown when the calibration angles are outside of the acceptable range.
@@ -867,7 +882,10 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.personalityChanged: {
-    ET.WARNING: personality_changed_alert,
+    # 00000045 实锤：WARNING 类型在未激活时不在 current_alert_types → 停车调车距不显示提示
+    # （personalityChanged 事件存在但 alert 被状态机过滤，00000045 seg1 15条事件 0 显示）。
+    # 改 PERMANENT：未激活/激活都显示；事件仅变化帧存在 + duration=1.5s → 显示到期自动消失。
+    ET.PERMANENT: personality_changed_alert,
   },
 
   EventName.userBookmark: {

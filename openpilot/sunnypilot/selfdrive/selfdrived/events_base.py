@@ -49,7 +49,8 @@ class Alert:
                visual_alert: car.CarControl.HUDControl.VisualAlert,
                audible_alert: log.SelfdriveState.AudibleAlert,
                duration: float,
-               creation_delay: float = 0.):
+               creation_delay: float = 0.,
+               persistent: bool = False):
 
     self.alert_text_1 = alert_text_1
     self.alert_text_2 = alert_text_2
@@ -62,6 +63,11 @@ class Alert:
     self.duration = int(duration / DT_CTRL)
 
     self.creation_delay = creation_delay
+    # persistent: 豁免 AlertManager 的 clear_event_types 清除（2026-08-13 修复）——
+    # NO_ENTRY/WARNING 提示在事件消失或类型不在 current_alert_types 时会被立即清除
+    # （end_frame=-1）导致"一闪而过"。persistent=True 的 alert 显示满 duration 才消失，
+    # 用于 P/D 档按 SET 提示与驾驶风格提示（需 8s/1.5s 可读时间）。
+    self.persistent = persistent
 
     self.alert_type = ""
     self.event_type: str | None = None
@@ -89,9 +95,9 @@ AlertCallbackType = Callable[[car.CarParams, car.CarState, messaging.SubMaster, 
 
 
 def wrong_car_mode_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  text = "启用自适应巡航以接合"
+  text = "Enable Adaptive Cruise to engage"
   if CP.brand == "honda":
-    text = "启用主开关以接合"
+    text = "Enable main switch to engage"
   return NoEntryAlert(text)
 
 
@@ -185,19 +191,21 @@ EmptyAlert = Alert("" , "", AlertStatus.normal, AlertSize.none, Priority.LOWEST,
 
 class NoEntryAlert(Alert):
   def __init__(self, alert_text_2: str,
-               alert_text_1: str = "sunnypilot 不可用",
+               alert_text_1: str = "sunnypilot unavailable",
                visual_alert: car.CarControl.HUDControl.VisualAlert=VisualAlert.none,
-               priority: Priority = Priority.LOW):
+               priority: Priority = Priority.LOW,
+               duration: float = 3.,
+               persistent: bool = False):
     if HARDWARE.get_device_type() == 'mici':
       alert_text_1, alert_text_2 = alert_text_2, alert_text_1
     super().__init__(alert_text_1, alert_text_2, AlertStatus.normal,
                      AlertSize.mid, priority, visual_alert,
-                     AudibleAlert.refuse, 3.)
+                     AudibleAlert.refuse, duration, persistent=persistent)
 
 
 class SoftDisableAlert(Alert):
   def __init__(self, alert_text_2: str):
-    super().__init__("立即接管控制", alert_text_2,
+    super().__init__("Take control immediately", alert_text_2,
                      AlertStatus.userPrompt, AlertSize.full,
                      Priority.MID, VisualAlert.steerRequired,
                      AudibleAlert.warningSoft, 2.),
@@ -207,7 +215,7 @@ class SoftDisableAlert(Alert):
 class UserSoftDisableAlert(SoftDisableAlert):
   def __init__(self, alert_text_2: str):
     super().__init__(alert_text_2),
-    self.alert_text_1 = "sunnypilot 将解除控制"
+    self.alert_text_1 = "sunnypilot will disengage"
 
 
 class ImmediateDisableAlert(Alert):
@@ -234,10 +242,10 @@ class NormalPermanentAlert(Alert):
 
 
 class StartupAlert(Alert):
-  def __init__(self, alert_text_1: str, alert_text_2: str = "请始终将手放在方向盘上，眼睛注视道路", alert_status=AlertStatus.normal):
+  def __init__(self, alert_text_1: str, alert_text_2: str = "Always keep hands on the wheel and eyes on the road", alert_status=AlertStatus.normal):
     alert_size = AlertSize.mid
     if HARDWARE.get_device_type() == 'mici':
-      if alert_text_2 == "请始终将手放在方向盘上，眼睛注视道路":
+      if alert_text_2 == "Always keep hands on the wheel and eyes on the road":
         alert_text_2 = ""
       alert_size = AlertSize.small
     super().__init__(alert_text_1, alert_text_2,

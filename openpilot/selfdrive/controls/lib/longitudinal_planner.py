@@ -141,13 +141,39 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
     if self.is_e2e(sm):
       output_a_target = min(output_a_target_e2e, output_a_target_mpc)
-      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
+      # 00000044 实锤（2026-08-13）：experimentalMode 下 e2e 模型 shouldStop 在前车起步阶段
+      # 视觉误判抖动（前车 v 0.3→0.84 时 True/False 交替），导致 LCS 卡 stopping → 绿灯不自动起步。
+      # 前车已在动（radarState vLead>0.3 且 present）时忽略 e2e shouldStop——让 LCS 释放起步，
+      # 起步后由 mpc/雷达跟随接管。仍保留 mpc_shouldStop 兜底（前方仍有障碍时不会放行）。
+      lead_ready = False
+      if sm.valid['radarState']:
+        _lead = sm['radarState'].leadOne
+        lead_ready = _lead.present and _lead.vLead > 0.3
+      e2e_should_stop_eff = output_should_stop_e2e and not lead_ready
+      # 00000045 实锤：前车已在动（vLead>0.3）时，mpc_shouldStop 仍用 mpc 的 v_solution[0]
+      # （停车态≈0）+ a_target<0.1 判断，起步初期 mpc 渐进导致 mpc_shouldStop 持续 True
+      # → LCS 卡 stopping → 绿灯前车起步后 OP 不起步（seg4 274.5s 前车 v=0.81 仍 sh=1，
+      # 直到 275s v=1.42 才释放，停车33秒）。前车真实在动时信任 lead，直接放行起步。
+      self.output_should_stop = False if lead_ready else (e2e_should_stop_eff or output_should_stop_mpc)
       if output_a_target < output_a_target_mpc:
         self.mpc.source = LongitudinalPlanSource.e2e
     else:
       output_a_target = output_a_target_mpc
       self.output_should_stop = output_should_stop_mpc
 
+    # 00000044 实锤（2026-08-13）：experimentalMode 下 e2e 模型 shouldStop 在前车起步阶段
+    # 视觉误判抖动（前车 v 0.3→0.84 时 True/False 交替），导致 LCS 卡 stopping → 绿灯不自动起步。
+    # 前车已在动（radarState vLead>0.3 且 present）时忽略 e2e shouldStop——让 LCS 释放起步，
+    # 起步后由 mpc/雷达跟随接管。仍保留 mpc_shouldStop 兜底（前方仍有障碍时不会放行）。
+    lead_ready = False
+    if sm.valid['radarState']:
+      _lead = sm['radarState'].leadOne
+      lead_ready = _lead.present and _lead.vLead > 0.3
+    e2e_should_stop_eff = output_should_stop_e2e and not lead_ready
+    # 00000045 实锤：前车已在动（vLead>0.3）时，mpc_shouldStop 仍用 mpc 的 v_solution[0]
+    # （停车态≈0）+ a_target<0.1 判断，起步初期 mpc 渐进导致 mpc_shouldStop 持续 True
+    # → LCS 卡 stopping → 绿灯前车起步后 OP 不起步（seg4 274.5s 前车 v=0.81 仍 sh=1，
+    # 直到 275s v=1.42 才释放，停车33秒）。前车真实在动时信任 lead，直接放行起步。
     self.a_cruise = get_cruise_accel(sm['selfdriveState'].experimentalMode, v_cruise, v_ego,
                                      self.a_cruise, steer_angle_without_offset, self.CP, self.dt,
                                      accel_coast, self.allow_throttle)
@@ -156,10 +182,21 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     candidates = [(output_a_target_mpc, self.mpc.source, output_should_stop_mpc),
                   (self.a_cruise, LongitudinalPlanSource.cruise, cruise_should_stop)]
     if sm['selfdriveState'].experimentalMode:
-      candidates.append((output_a_target_e2e, LongitudinalPlanSource.e2e, output_should_stop_e2e))
+      candidates.append((output_a_target_e2e, LongitudinalPlanSource.e2e, e2e_should_stop_eff))
 
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
-    self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
+    self.output_should_stop = False if lead_ready else any(should_stop for _, _, should_stop in candidates)
+    self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
+
+    # 起步加速 boost（2026-08-14 用户需求：起步 6s→3.5s 且不推背）
+    # 00000045 seg4 实锤（274.5-281.8s）：shouldStop 释放后 accel 命令仅 +0.07~+0.3，
+    # 不足克服静止阻力 → 车 7 秒不动；动起来后 aTarget ramp 到 1.39 → 推背感。
+    # 起步段（vEgo<7.2km/h 且正向请求）给 [0.6, 0.7] 窗：
+    #   下限 0.6：保证命令够大、车立即动起来（消除起步等待）
+    #   上限 0.7：峰值温和不推背（替代 ramp 到 1.39）
+    # 安全：aTarget<=0（需刹车/停）时不 boost；前方障碍由 shouldStop/LCS 接管不受影响。
+    if v_ego < 2.0 and output_a_target > 0 and not self.output_should_stop:
+      output_a_target = float(np.clip(output_a_target, 0.6, 0.7))
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
 
     self.a_desired = float(self.output_a_target)

@@ -3139,3 +3139,102 @@ msgstr "橫向"
 msgid "This alert will be cleared when new maps are downloaded."
 msgstr "下載新地圖後此警報將清除。"
 
+#: selfdrived
+msgid "Release brake to activate"
+msgstr "松开制动方可激活"
+
+#: selfdrived
+msgid "Longitudinal unavailable"
+msgstr "纵向暂不可用"
+
+#: selfdrived
+msgid "Shift to D to start"
+msgstr "换到D挡起步以启用"
+
+#: selfdrived
+msgid "Gear not in Drive"
+msgstr "挡位不在D挡"
+
+#: selfdrived
+msgid "Driving style: Aggressive"
+msgstr "驾驶风格: 激进"
+
+#: selfdrived
+msgid "Driving style: Standard"
+msgstr "驾驶风格: 标准"
+
+#: selfdrived
+msgid "Driving style: Relaxed"
+msgstr "驾驶风格: 从容"
+
+#: sunnypilot
+msgid "Enable Adaptive Cruise to engage"
+msgstr "启用自适应巡航以接合"
+
+#: sunnypilot
+msgid "Enable main switch to engage"
+msgstr "启用主开关以接合"
+
+#: sunnypilot
+msgid "sunnypilot unavailable"
+msgstr "sunnypilot 不可用"
+
+#: sunnypilot
+msgid "Take control immediately"
+msgstr "立即接管控制"
+
+#: sunnypilot
+msgid "sunnypilot will disengage"
+msgstr "sunnypilot 将解除控制"
+
+#: sunnypilot
+msgid "Always keep hands on the wheel and eyes on the road"
+msgstr "请始终将手放在方向盘上，眼睛注视道路"
+
+#: device.py
+msgid "Current API Server"
+msgstr "当前 API 服务器"
+
+#: device.py
+msgid "Server"
+msgstr "服务器"
+
+#: device.py
+msgid "Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"
+msgstr "在 Konik 与 Comma 服务器之间切换（确认切换将导致服务重启）"
+
+#: device.py
+msgid "Switch server to {}?"
+msgstr "切换到 {} 服务器？"
+
+#: device.py
+msgid "COMMA"
+msgstr "COMMA"
+
+#: device.py
+msgid "KONIK"
+msgstr "KONIK"
+
+#: device.py
+msgid "Device will automatically shutdown after set time once the engine is turned off.\n(30h is the default)"
+msgstr "引擎熄火后，设备将在设定时间后自动关机。\n(默认 30 小时)"
+
+#: circular_alerts.py
+msgid "GREEN\nLIGHT"
+msgstr "绿灯"
+
+#: circular_alerts.py
+msgid "LEAD VEHICLE\nDEPARTING"
+msgstr "前车\n起步"
+
+#: osm.py
+msgid "This will delete ALL downloaded maps\n\nAre you sure you want to delete all maps?"
+msgstr "这将删除所有已下载地图\n\n确定要删除所有地图吗？"
+
+#: onboarding.py
+msgid "disable\nsunnylink"
+msgstr "禁用\nsunnylink"
+
+#: onboarding.py
+msgid "enable\nsunnylink"
+msgstr "启用\nsunnylink"

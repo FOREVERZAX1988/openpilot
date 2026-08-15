@@ -3349,3 +3349,868 @@ msgstr "🔥 Firehose 模式 🔥"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 SunnyLink 🚀"
 
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
+msgstr "设备温度过高。系统正在降温，完成后才能启动。当前内部组件温度：%1"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Immediately connect to the internet to check for updates. If you do not connect to the internet, sunnypilot won't engage in %1"
+msgstr "请立即连接互联网以检查更新。若不连接互联网，sunnypilot 将在 %1 后无法激活"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Connect to internet to check for updates. sunnypilot won't automatically start until it connects to internet to check for updates."
+msgstr "请连接互联网以检查更新。sunnypilot 在连接互联网检查更新之前不会自动启动。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid ""
+"Unable to download updates\n"
+"%1"
+msgstr ""
+"无法下载更新\n"
+"%1"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Taking camera snapshots. System won't start until finished."
+msgstr "正在拍摄摄像头快照。完成前系统将不会启动。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "An update to your device's operating system is downloading in the background. You will be prompted to update when it's ready to install."
+msgstr "设备操作系统更新正在后台下载。准备就绪后将提示您安装。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Failed to register with comma.ai backend. It will not connect or upload to comma.ai servers, and receives no support from comma.ai. If this is a device purchased at comma.ai/shop, open a ticket at https://comma.ai/support."
+msgstr "无法向 comma.ai 后端注册。设备不会连接或上传到 comma.ai 服务器，也不享有 comma.ai 支持。若从 comma.ai/shop 购买，请在 https://comma.ai/support 提交工单。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "sunnypilot was unable to identify your car. Your car is either unsupported or its ECUs are not recognized. Please submit a pull request to add the firmware versions to the proper vehicle. Need help? Join discord.comma.ai."
+msgstr "sunnypilot 无法识别您的车辆。您的车辆可能不受支持，或 ECU 未被识别。请提交拉取请求添加固件版本。需要帮助？加入 discord.comma.ai。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "sunnypilot detected a change in the device's mounting position. Ensure the device is fully seated in the mount and the mount is firmly secured to the windshield."
+msgstr "sunnypilot 检测到设备安装位置发生变化。请确保设备完全安装在支架中，且支架牢固固定在挡风玻璃上。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid ""
+"OpenStreetMap database is out of date. New maps must be downloaded if you wish to continue using OpenStreetMap data for Enhanced Speed Control and road name display.\n"
+"\n"
+"%1"
+msgstr ""
+"OpenStreetMap 数据库已过期。若需继续使用开放街图数据进行增强速度控制和道路名称显示，必须下载新地图。\n"
+"\n"
+"%1"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
+msgstr "驾驶员监控能见度不佳。请确保设备能清楚看到驾驶员。可在设备设置中检查。极端光照和/或非传统安装位置也可能触发此警报。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Excessive %1 actuation detected on your last drive. Please contact support at https://comma.ai/support and share your device's Dongle ID for troubleshooting."
+msgstr "检测到上次驾驶中 %1 过度操控。请联系 https://comma.ai/support 支持并提供设备 Dongle ID 以进行故障排除。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "<b>Unsupported branch detected</b> - The current version of <b><u>%1</u></b> branch is no longer supported on the comma three. Please go to <b>[Device > Software]</b> and install a supported branch with <b><u>-tici</u></b> in the branch name for the comma three."
+msgstr "<b>检测到不受支持的分支</b> - 当前 <b><u>%1</u></b> 分支版本已不再支持 comma three。请前往 <b>[设备 > 软件]</b> 安装分支名称包含 <b><u>-tici</u></b> 的受支持分支。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "longitudinal"
+msgstr "纵向"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "lateral"
+msgstr "横向"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "This alert will be cleared when new maps are downloaded."
+msgstr "下载新地图后此警报将清除。"
+
+#: auto_translated
+msgid "ACTIVE"
+msgstr "活跃"
+
+#: auto_translated
+msgid "Device must be registered with the comma.ai backend to pair."
+msgstr "设备必须在 comma.ai 后端注册才能配对。"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Enable driver monitoring even when sunnypilot is not engaged."
+msgstr "即使 sunnypilot 未启用也开启驾驶员监控。"
+
+#: auto_translated
+msgid "INACTIVE: connect to an unmetered network"
+msgstr "未激活：连接到非计费网络"
+
+#: auto_translated
+msgid "Please connect to Wi-Fi to complete initial pairing."
+msgstr "请连接 Wi-Fi 以完成初始配对。"
+
+#: auto_translated
+msgid "Please connect to Wi-Fi to update."
+msgstr "请连接 Wi-Fi 以更新。"
+
+#: auto_translated
+msgid "no alerts"
+msgstr "无警报"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "toggles"
+msgstr "开关"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "network"
+msgstr "网络"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "device"
+msgstr "设备"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "developer"
+msgstr "开发者"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "firehose"
+msgstr "Firehose"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "driving personality"
+msgstr "驾驶风格"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "enable accel controller"
+msgstr "启用加减速控制"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "acceleration profile"
+msgstr "加速风格"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "eco"
+msgstr "节能"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "normal"
+msgstr "标准"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "sport"
+msgstr "运动"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "experimental mode"
+msgstr "实验模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "use metric units"
+msgstr "使用公制单位"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "lane departure warnings"
+msgstr "车道偏离警告"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "always-on driver monitor"
+msgstr "始终开启驾驶员监控"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "record & upload driver camera"
+msgstr "录制并上传驾驶员摄像头"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "record & upload mic audio"
+msgstr "录制并上传麦克风音频"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "enable sunnypilot"
+msgstr "启用 sunnypilot"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "enable tethering"
+msgstr "启用网络共享"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "tethering password"
+msgstr "网络共享密码"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "network usage"
+msgstr "网络用量"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "enable roaming"
+msgstr "启用漫游"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "apn settings"
+msgstr "APN 设置"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "cellular metered"
+msgstr "移动数据按流量计费"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "SSH keys"
+msgstr "SSH 密钥"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "joystick debug mode"
+msgstr "摇杆调试模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "longitudinal maneuver mode"
+msgstr "纵向操控模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "lateral maneuver mode"
+msgstr "横向操控模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "alpha longitudinal"
+msgstr "Alpha 纵向控制"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "ui debug mode"
+msgstr "UI 调试模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "regulatory info"
+msgstr "监管信息"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"driver\n"
+"camera preview"
+msgstr ""
+"驾驶员\n"
+"摄像头预览"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"review\n"
+"training guide"
+msgstr ""
+"复习\n"
+"培训指南"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"terms &\n"
+"conditions"
+msgstr ""
+"条款与\n"
+"条件"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid ""
+"driver monitoring\n"
+"check"
+msgstr ""
+"驾驶员监控\n"
+"检测"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "looking for driver"
+msgstr "寻找驾驶员"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "driver camera data"
+msgstr "驾驶员摄像头数据"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "what is sunnypilot?"
+msgstr "什么是 sunnypilot？"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid ""
+"terms of\n"
+"service"
+msgstr "服务条款"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "swipe for QR code"
+msgstr "滑动查看二维码"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
+msgid "This may be due to weak internet connection or sunnylink registration issue."
+msgstr "这可能是由于网络连接较弱或 sunnylink 注册问题导致的。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
+msgid "sunnylink Dongle ID not found."
+msgstr "未找到 sunnylink Dongle ID。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
+msgid "Enable sunnylink uploader to allow sunnypilot to upload your driving data to sunnypilot servers."
+msgstr "启用 sunnylink 上传器，让 sunnypilot 将您的驾驶数据上传至 sunnypilot 服务器。"
+
+#: auto_translated
+msgid "subscribed"
+msgstr "已订阅"
+
+#: auto_translated
+msgid "upgrade to prime"
+msgstr "升级到 Prime"
+
+#: auto_translated
+msgid "update sunnypilot"
+msgstr "更新 sunnypilot"
+
+#: auto_translated
+msgid "wi-fi"
+msgstr "Wi-Fi"
+
+#: auto_translated
+msgid "not connected"
+msgstr "未连接"
+
+#: auto_translated
+msgid "Navigation"
+msgstr "导航"
+
+#: auto_translated
+msgid "starting"
+msgstr "启动中"
+
+#: auto_translated
+msgid "connecting..."
+msgstr "连接中..."
+
+#: auto_translated
+msgid "obtaining IP..."
+msgstr "获取 IP 中..."
+
+#: auto_translated
+msgid "connect.comma.ai"
+msgstr "connect.comma.ai"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "MADS Screen Activation"
+msgstr "MADS 屏幕激活"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "3-Finger"
+msgstr "三指"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "4-Finger"
+msgstr "四指"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "5-Finger"
+msgstr "五指"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "Use a multi-finger press on the infotainment screen to toggle MADS."
+msgstr "在车机屏幕多指按压可切换 MADS。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "This allows the use of full MADS functionality when enabled."
+msgstr "开启后可使用完整 MADS 功能。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "Selecting a higher finger count may reduce accidental activations."
+msgstr "提高手指数量，可减少误触发。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "Note: Setting this to Off will reset your MADS settings to default."
+msgstr "注意：设为关闭会重置 MADS 为默认设置。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
+msgid "Enable \"Always Offroad\" in Device panel, or turn vehicle off to change."
+msgstr "请在设备面板启用“始终非行车”，或熄火后再更改。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Adjust Camera Offset"
+msgstr "调整摄像头偏移"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Virtually shift camera's perspective to move model's center to Left(+ values) or Right (- values)"
+msgstr "虚拟调整摄像头视角，正值向左、负值向右移动模型中心。"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "Frequently Asked Questions"
+msgstr "常见问题"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "Does it matter how or where I drive?"
+msgstr "怎么开、在哪开重要吗？"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "Nope, just drive as you normally would."
+msgstr "不重要，正常开就行。"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "Do all of my segments get pulled in Firehose Mode?"
+msgstr "Firehose 模式会上传全部片段吗？"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "No, we selectively pull a subset of your segments."
+msgstr "不会，只会抽取部分片段。"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "What's a good USB-C adapter?"
+msgstr "USB-C 充电器怎么选？"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "Any fast phone or laptop charger should be fine."
+msgstr "手机或笔记本快充头都可以。"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "Does it matter which software I run?"
+msgstr "用什么软件重要吗？"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "Yes, only upstream openpilot (and particular forks) are able to be used for training."
+msgstr "重要，只有上游 openpilot（及指定分支）可用于训练。"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
+msgid "{} segment of your driving is in the training dataset so far."
+msgid_plural "{} segments of your driving is in the training dataset so far."
+msgstr[0] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
+msgstr[1] "目前已有 {} 个您的驾驶片段被纳入训练数据集。"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
+msgid "MPH"
+msgstr "MPH"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "aggressive"
+msgstr "激进"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "standard"
+msgstr "标准"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "relaxed"
+msgstr "从容"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "distraction detection level"
+msgstr "分心检测灵敏度"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "strict"
+msgstr "严格"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "moderate"
+msgstr "适中"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "lenient"
+msgstr "宽松"
+
+#: selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "🚀 sunnylink 🚀"
+msgstr "🚀 SunnyLink 🚀"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
+msgstr "设备温度过高。系统正在降温，完成后才能启动。当前内部组件温度：%1"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Immediately connect to the internet to check for updates. If you do not connect to the internet, sunnypilot won't engage in %1"
+msgstr "请立即连接互联网以检查更新。若不连接互联网，sunnypilot 将在 %1 后无法激活"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Connect to internet to check for updates. sunnypilot won't automatically start until it connects to internet to check for updates."
+msgstr "请连接互联网以检查更新。sunnypilot 在连接互联网检查更新之前不会自动启动。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid ""
+"Unable to download updates\n"
+"%1"
+msgstr ""
+"无法下载更新\n"
+"%1"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Taking camera snapshots. System won't start until finished."
+msgstr "正在拍摄摄像头快照。完成前系统将不会启动。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "An update to your device's operating system is downloading in the background. You will be prompted to update when it's ready to install."
+msgstr "设备操作系统更新正在后台下载。准备就绪后将提示您安装。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Failed to register with comma.ai backend. It will not connect or upload to comma.ai servers, and receives no support from comma.ai. If this is a device purchased at comma.ai/shop, open a ticket at https://comma.ai/support."
+msgstr "无法向 comma.ai 后端注册。设备不会连接或上传到 comma.ai 服务器，也不享有 comma.ai 支持。若从 comma.ai/shop 购买，请在 https://comma.ai/support 提交工单。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "sunnypilot was unable to identify your car. Your car is either unsupported or its ECUs are not recognized. Please submit a pull request to add the firmware versions to the proper vehicle. Need help? Join discord.comma.ai."
+msgstr "sunnypilot 无法识别您的车辆。您的车辆可能不受支持，或 ECU 未被识别。请提交拉取请求添加固件版本。需要帮助？加入 discord.comma.ai。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "sunnypilot detected a change in the device's mounting position. Ensure the device is fully seated in the mount and the mount is firmly secured to the windshield."
+msgstr "sunnypilot 检测到设备安装位置发生变化。请确保设备完全安装在支架中，且支架牢固固定在挡风玻璃上。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid ""
+"OpenStreetMap database is out of date. New maps must be downloaded if you wish to continue using OpenStreetMap data for Enhanced Speed Control and road name display.\n"
+"\n"
+"%1"
+msgstr ""
+"OpenStreetMap 数据库已过期。若需继续使用开放街图数据进行增强速度控制和道路名称显示，必须下载新地图。\n"
+"\n"
+"%1"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
+msgstr "驾驶员监控能见度不佳。请确保设备能清楚看到驾驶员。可在设备设置中检查。极端光照和/或非传统安装位置也可能触发此警报。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "Excessive %1 actuation detected on your last drive. Please contact support at https://comma.ai/support and share your device's Dongle ID for troubleshooting."
+msgstr "检测到上次驾驶中 %1 过度操控。请联系 https://comma.ai/support 支持并提供设备 Dongle ID 以进行故障排除。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "<b>Unsupported branch detected</b> - The current version of <b><u>%1</u></b> branch is no longer supported on the comma three. Please go to <b>[Device > Software]</b> and install a supported branch with <b><u>-tici</u></b> in the branch name for the comma three."
+msgstr "<b>检测到不受支持的分支</b> - 当前 <b><u>%1</u></b> 分支版本已不再支持 comma three。请前往 <b>[设备 > 软件]</b> 安装分支名称包含 <b><u>-tici</u></b> 的受支持分支。"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "longitudinal"
+msgstr "纵向"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "lateral"
+msgstr "横向"
+
+#: selfdrive\ui\widgets\offroad_alerts.py
+msgid "This alert will be cleared when new maps are downloaded."
+msgstr "下载新地图后此警报将清除。"
+
+#: auto_translated
+msgid "ACTIVE"
+msgstr "活跃"
+
+#: auto_translated
+msgid "Device must be registered with the comma.ai backend to pair."
+msgstr "设备必须在 comma.ai 后端注册才能配对。"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Enable driver monitoring even when sunnypilot is not engaged."
+msgstr "即使 sunnypilot 未启用也开启驾驶员监控。"
+
+#: auto_translated
+msgid "INACTIVE: connect to an unmetered network"
+msgstr "未激活：连接到非计费网络"
+
+#: auto_translated
+msgid "Please connect to Wi-Fi to complete initial pairing."
+msgstr "请连接 Wi-Fi 以完成初始配对。"
+
+#: auto_translated
+msgid "Please connect to Wi-Fi to update."
+msgstr "请连接 Wi-Fi 以更新。"
+
+#: auto_translated
+msgid "no alerts"
+msgstr "无警报"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "toggles"
+msgstr "开关"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "network"
+msgstr "网络"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "device"
+msgstr "设备"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "developer"
+msgstr "开发者"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/settings.py
+msgid "firehose"
+msgstr "Firehose"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "driving personality"
+msgstr "驾驶风格"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "experimental mode"
+msgstr "实验模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "use metric units"
+msgstr "使用公制单位"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "lane departure warnings"
+msgstr "车道偏离警告"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "always-on driver monitor"
+msgstr "始终开启驾驶员监控"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "record & upload driver camera"
+msgstr "录制并上传驾驶员摄像头"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "record & upload mic audio"
+msgstr "录制并上传麦克风音频"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "enable sunnypilot"
+msgstr "启用 sunnypilot"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "enable tethering"
+msgstr "启用网络共享"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "tethering password"
+msgstr "网络共享密码"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "network usage"
+msgstr "网络用量"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "enable roaming"
+msgstr "启用漫游"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "apn settings"
+msgstr "APN 设置"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/network_layout.py
+msgid "cellular metered"
+msgstr "移动数据按流量计费"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "SSH keys"
+msgstr "SSH 密钥"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "joystick debug mode"
+msgstr "摇杆调试模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "longitudinal maneuver mode"
+msgstr "纵向操控模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "lateral maneuver mode"
+msgstr "横向操控模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "alpha longitudinal"
+msgstr "Alpha 纵向控制"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "ui debug mode"
+msgstr "UI 调试模式"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "regulatory info"
+msgstr "监管信息"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"driver\n"
+"camera preview"
+msgstr ""
+"驾驶员\n"
+"摄像头预览"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"review\n"
+"training guide"
+msgstr ""
+"复习\n"
+"培训指南"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"terms &\n"
+"conditions"
+msgstr ""
+"条款与\n"
+"条件"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid ""
+"driver monitoring\n"
+"check"
+msgstr ""
+"驾驶员监控\n"
+"检测"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "looking for driver"
+msgstr "寻找驾驶员"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "driver camera data"
+msgstr "驾驶员摄像头数据"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "what is sunnypilot?"
+msgstr "什么是 sunnypilot？"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid ""
+"terms of\n"
+"service"
+msgstr "服务条款"
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "swipe for QR code"
+msgstr "滑动查看二维码"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
+msgid "This may be due to weak internet connection or sunnylink registration issue."
+msgstr "这可能是由于网络连接较弱或 sunnylink 注册问题导致的。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
+msgid "sunnylink Dongle ID not found."
+msgstr "未找到 sunnylink Dongle ID。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
+msgid "Enable sunnylink uploader to allow sunnypilot to upload your driving data to sunnypilot servers."
+msgstr "启用 sunnylink 上传器，让 sunnypilot 将您的驾驶数据上传至 sunnypilot 服务器。"
+
+#: auto_translated
+msgid "subscribed"
+msgstr "已订阅"
+
+#: auto_translated
+msgid "upgrade to prime"
+msgstr "升级到 Prime"
+
+#: auto_translated
+msgid "update sunnypilot"
+msgstr "更新 sunnypilot"
+
+#: auto_translated
+msgid "wi-fi"
+msgstr "Wi-Fi"
+
+#: auto_translated
+msgid "not connected"
+msgstr "未连接"
+
+#: auto_translated
+msgid "Navigation"
+msgstr "导航"
+
+#: auto_translated
+msgid "starting"
+msgstr "启动中"
+
+#: auto_translated
+msgid "connecting..."
+msgstr "连接中..."
+
+#: auto_translated
+msgid "obtaining IP..."
+msgstr "获取 IP 中..."
+
+#: auto_translated
+msgid "connect.comma.ai"
+msgstr "connect.comma.ai"
+
+#: selfdrived
+msgid "Release brake to activate"
+msgstr "松开制动方可激活"
+
+#: selfdrived
+msgid "Longitudinal unavailable"
+msgstr "纵向暂不可用"
+
+#: selfdrived
+msgid "Shift to D to start"
+msgstr "换到D挡起步以启用"
+
+#: selfdrived
+msgid "Gear not in Drive"
+msgstr "挡位不在D挡"
+
+#: selfdrived
+msgid "Driving style: Aggressive"
+msgstr "驾驶风格: 激进"
+
+#: selfdrived
+msgid "Driving style: Standard"
+msgstr "驾驶风格: 标准"
+
+#: selfdrived
+msgid "Driving style: Relaxed"
+msgstr "驾驶风格: 从容"
+
+#: sunnypilot
+msgid "Enable Adaptive Cruise to engage"
+msgstr "启用自适应巡航以接合"
+
+#: sunnypilot
+msgid "Enable main switch to engage"
+msgstr "启用主开关以接合"
+
+#: sunnypilot
+msgid "sunnypilot unavailable"
+msgstr "sunnypilot 不可用"
+
+#: sunnypilot
+msgid "Take control immediately"
+msgstr "立即接管控制"
+
+#: sunnypilot
+msgid "sunnypilot will disengage"
+msgstr "sunnypilot 将解除控制"
+
+#: sunnypilot
+msgid "Always keep hands on the wheel and eyes on the road"
+msgstr "请始终将手放在方向盘上，眼睛注视道路"
+
+#: device.py
+msgid "Current API Server"
+msgstr "当前 API 服务器"
+
+#: device.py
+msgid "Server"
+msgstr "服务器"
+
+#: device.py
+msgid "Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"
+msgstr "在 Konik 与 Comma 服务器之间切换（确认切换将导致服务重启）"
+
+#: device.py
+msgid "Switch server to {}?"
+msgstr "切换到 {} 服务器？"
+
+#: device.py
+msgid "COMMA"
+msgstr "COMMA"
+
+#: device.py
+msgid "KONIK"
+msgstr "KONIK"
+
+#: device.py
+msgid "Device will automatically shutdown after set time once the engine is turned off.\n(30h is the default)"
+msgstr "引擎熄火后，设备将在设定时间后自动关机。\n(默认 30 小时)"
+
+#: circular_alerts.py
+msgid "GREEN\nLIGHT"
+msgstr "绿灯"
+
+#: circular_alerts.py
+msgid "LEAD VEHICLE\nDEPARTING"
+msgstr "前车\n起步"
+
+#: osm.py
+msgid "This will delete ALL downloaded maps\n\nAre you sure you want to delete all maps?"
+msgstr "这将删除所有已下载地图\n\n确定要删除所有地图吗？"
+
+#: onboarding.py
+msgid "disable\nsunnylink"
+msgstr "禁用\nsunnylink"
+
+#: onboarding.py
+msgid "enable\nsunnylink"
+msgstr "启用\nsunnylink"
