@@ -4862,3 +4862,225 @@ msgstr "小时"
 
 msgid "Macan Stop and Go: when enabled, the vision model decides when to start, and openpilot sends the RESUME signal to release the stock parking hold (with a chime). When disabled, gently press the gas or SET/RESUME to resume (stock behavior)."
 msgstr "Macan 起步跟停：启用后，由视觉模型决定何时起步，openpilot 发送 RESUME 信号解除原厂停车保持（伴随提示音）。禁用时，轻踩油门或按 SET/RESUME 起步（原厂行为）。"
+
+msgid "Drive above {get_display_speed(CP.minEnableSpeed, metric)} to engage"
+msgstr "请将时速提高至 {get_display_speed(CP.minEnableSpeed, metric)} 来启用"
+
+msgid "Steering unavailable below {get_display_speed(CP.minSteerSpeed, metric)}"
+msgstr "转向在 {get_display_speed(CP.minSteerSpeed, metric)} 以下不可用"
+
+msgid "{first_word} in progress: {sm['extrinsicsCalibration'].calPerc:.0f}%"
+msgstr "{first_word}进行中：{sm['extrinsicsCalibration'].calPerc:.0f}%"
+
+msgid "Drive above {get_display_speed(MIN_SPEED_FILTER, metric)} to calibrate"
+msgstr "请将时速提高至 {get_display_speed(MIN_SPEED_FILTER, metric)} 进行校准"
+
+msgid "{mins_left} min remaining"
+msgstr "剩余 {mins_left} 分钟"
+
+msgid "{round(duration)} s remaining. Press again to save early."
+msgstr "剩余 {round(duration)} 秒。再次按下可提前保存。"
+
+msgid "Used {full_perc}%"
+msgstr "已用 {full_perc}%"
+
+msgid "Speed Error: {err:.1f} m/s"
+msgstr "速度误差: {err:.1f} 米/秒"
+
+msgid "Please remount device (Pitch: {pitch:.1f}°, Yaw: {yaw:.1f}°)"
+msgstr "请重新安装设备 (俯仰角: {pitch:.1f}度, 偏航角: {yaw:.1f}度)"
+
+msgid "Angle offset too high (Offset: {angle_offset_deg:.1f}°)"
+msgstr "角度偏移过大 (偏移量: {angle_offset_deg:.1f}度)"
+
+msgid "Steering rack geometry may be off (Ratio: {steer_ratio:.1f})"
+msgstr "转向齿条几何可能不正确 (传动比: {steer_ratio:.1f})"
+
+msgid "Check tires, pressure or alignment (Factor: {stiffness_factor:.1f})"
+msgstr "请检查轮胎、胎压或定位 (系数: {stiffness_factor:.1f})"
+
+msgid "{temp:.0f} C"
+msgstr "{temp:.0f} 摄氏度"
+
+msgid "Used {sm['deviceState'].memoryUsagePercent}%"
+msgstr "已用 {sm['deviceState'].memoryUsagePercent}%"
+
+msgid "Used {x}%"
+msgstr "已用 {x}%"
+
+msgid "Dropped {sm['modelV2'].frameDropPerc:.1f}% of frames"
+msgstr "已丢帧 {sm['modelV2'].frameDropPerc:.1f}%"
+
+msgid "Gas: {round(gb * 100.)}%, Steer: {round(steer * 100.)}%"
+msgstr "油门: {round(gb * 100.)}%, 转向: {round(steer * 100.)}%"
+
+msgid "Adjusting to Speed Limit {speed} {"km/h" if metric else "mph"}"
+msgstr "正在调整至限速 {speed} {"公里/时" if metric else "英里/时"}"
+
+msgid "Speed Limit Assist: adjust set speed to {pcm_long_required_max_set_speed_conv} {"km/h" if metric else "mph"} to engage"
+msgstr "限速辅助：请将设定速度调至 {pcm_long_required_max_set_speed_conv} {"公里/时" if metric else "英里/时"} 以启用"
+
+msgid "Steering Not Aligned"
+msgstr "转向系统未对准"
+
+msgid "Steering Ratio Mismatch"
+msgstr "转向传动比不匹配"
+
+msgid "Tire Stiffness Abnormal"
+msgstr "轮胎刚度异常"
+
+msgid "Out of Memory"
+msgstr "内存不足"
+
+msgid "CPU Usage Too High"
+msgstr "CPU使用率过高"
+
+msgid "Switch stock LKAS state to enable"
+msgstr "请切换原厂LKAS状态以启用"
+
+msgid "Switch to Traffic Aware Cruise Control to enable"
+msgstr "请切换到交通感知巡航控制以启用"
+
+msgid "Enable stock LKAS to enable"
+msgstr "请启用您的车辆LKAS以启用"
+
+msgid "Disable stock LKAS to enable"
+msgstr "请禁用您的车辆原厂LKAS以启用"
+
+msgid "Invalid LKAS Setting"
+msgstr "无效的LKAS设置"
+
+msgid "Be ready to take over at all times"
+msgstr "请随时准备接管您的车辆控制权"
+
+msgid "Dashcam Mode Not Supported for this Vehicle"
+msgstr "不支持车辆的行车记录仪模式"
+
+msgid "Security Key Unavailable"
+msgstr "安全密钥不可用"
+
+msgid "Confirm Safe to Turn Left"
+msgstr "请确认安全后进行左转变道"
+
+msgid "Confirm Safe to Turn Right"
+msgstr "请确认安全后进行右转变道"
+
+msgid "Blind Spot Vehicle Detected"
+msgstr "盲点检测到车辆"
+
+msgid "Steering Exceeds Limits"
+msgstr "转向超出限制"
+
+msgid "Camera Frame Rate Low: Reboot Device"
+msgstr "摄像头帧率低：请重启设备"
+
+msgid "Cancel Button Pressed"
+msgstr "取消按钮被按下"
+
+msgid "Steering Wheel Moved"
+msgstr "方向盘被转动"
+
+msgid "Press SET to Engage"
+msgstr "请按设定键以启用"
+
+msgid "Excessive Operation"
+msgstr "过度操作"
+
+msgid "Calibration Invalid: Remount Device and Recalibrate"
+msgstr "校准无效：重新安装设备并重新校准"
+
+msgid "Battery Low"
+msgstr "电池电量低"
+
+msgid "Selfdrive Process Lagging: Reboot Device"
+msgstr "自驾车进程滞后：请重启设备"
+
+msgid "Radar Error: Reboot Vehicle"
+msgstr "雷达错误：请重启车辆"
+
+msgid "Device Fell from Mount"
+msgstr "设备从支架掉落"
+
+msgid "Cruise Fault: Reboot Vehicle"
+msgstr "巡航故障：请重启车辆"
+
+msgid "Cruise Fault: Reboot Vehicle to Engage"
+msgstr "巡航故障：重启车辆以启用"
+
+msgid "Control Mismatch"
+msgstr "控制不匹配"
+
+msgid "USB Error: Reboot Device"
+msgstr "USB错误：请重启设备"
+
+msgid "CAN Bus Error: Check Connections"
+msgstr "CAN总线错误：请检查连接"
+
+msgid "CAN Bus Disconnected: Possible Cable Fault"
+msgstr "CAN总线断开连接：可能电缆故障"
+
+msgid "LKAS Fault: Reboot Vehicle"
+msgstr "LKAS故障：请重启车辆"
+
+msgid "LKAS Fault: Reboot Vehicle to Engage"
+msgstr "LKAS故障：重启车辆以启用"
+
+msgid "Cruise Disabled"
+msgstr "巡航已关闭"
+
+msgid "sunnypilot Cancelled"
+msgstr "sunnypilot已取消"
+
+msgid "Speed Too Low"
+msgstr "速度过低"
+
+msgid "Model Unstable at this Speed"
+msgstr "在此速度下模型不稳定"
+
+msgid "Slow Down to Engage"
+msgstr "减速以进行接合"
+
+msgid "Turn Left"
+msgstr "左转"
+
+msgid "Turn Right"
+msgstr "右转"
+
+msgid "AEB: collision possible"
+msgstr "AEB：可能发生碰撞"
+
+msgid "Big Model Failed "
+msgstr "大模型加载失败"
+
+msgid "Big Model Loading"
+msgstr "大模型加载中"
+
+msgid "Camera Frame Rate Low：Reboot Device"
+msgstr "摄像头帧率低：请重启设备"
+
+msgid "Car Not Ready"
+msgstr "车辆未就绪"
+
+msgid "Dashcam Mode Only"
+msgstr "仅行车记录仪模式"
+
+msgid "Park Brake Engaged"
+msgstr "停车制动已启用"
+
+msgid "Pay Attention to Engage"
+msgstr "请注意路况后再启用"
+
+msgid "Seatbelt Not Latched"
+msgstr "安全带未系"
+
+msgid "Stock AEB: collision possible"
+msgstr "原厂AEB：可能发生碰撞"
+
+msgid "Stock LKAS: lane departure detection"
+msgstr "标准LKAS：车道偏离检测"
+
+msgid "WARNING: This branch is untested"
+msgstr "警告：此分支未经测试"
+
+msgid "Lateral Control Mismatch"
+msgstr "控制不匹配：横向"
