@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from collections.abc import Callable
 from openpilot.cereal import log
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, FONT_SCALE
+from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, FONT_SCALE, FALLBACK_FONT_SCALE
+from openpilot.system.ui.lib.multilang import tr, tr_noop, multilang
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
@@ -227,7 +228,8 @@ class Sidebar(Widget, SidebarSP):
 
     # Draw label and value
     labels = [tr(metric.label), tr(metric.value)]
-    text_y = metric_rect.y + (metric_rect.height / 2 - len(labels) * FONT_SIZE * FONT_SCALE)
+    _fs = FONT_SCALE * (FALLBACK_FONT_SCALE if multilang.requires_font_fallback() else 1.0)
+    text_y = metric_rect.y + (metric_rect.height / 2 - len(labels) * FONT_SIZE * _fs)
     for text in labels:
       text_size = measure_text_cached(self._font_bold, text, FONT_SIZE)
       text_y += text_size.y
