@@ -94,7 +94,7 @@ DEFAULT_TEXT_COLOR = rl.Color(255, 255, 255, int(255 * 0.9))
 FONT_SCALE = 1.242 if BIG_UI else 1.16
 # Fallback（CJK）字体显示放大系数：中文/日文/韩文等走 Noto fallback 时额外放大，
 # 解决中文字体偏小问题（fallback_font 的 48/60 只是字模分辨率，不影响显示大小）
-FALLBACK_FONT_SCALE = 1.5
+FALLBACK_FONT_SCALE = 1.3
 
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
