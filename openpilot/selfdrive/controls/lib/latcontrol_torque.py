@@ -84,7 +84,7 @@ class LatControlTorque(LatControl):
     try:
       self._eps_comp_scale = float(Params().get("DpEpsAssistCompScale", block=False, return_default=True))
     except Exception:
-      self._eps_comp_scale = 1.0
+      self._eps_comp_scale = 1.1
 
   def update_torque_parameters(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor

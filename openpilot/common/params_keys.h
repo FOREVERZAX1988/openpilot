@@ -64,7 +64,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsMetric", {PERSISTENT | BACKUP, BOOL}},
     {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
-    {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
+    {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1.1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
     {"IsOffroad", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsRhdDetected", {PERSISTENT, BOOL}},
     {"IsReleaseBranch", {CLEAR_ON_MANAGER_START, BOOL}},
