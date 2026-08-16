@@ -1972,7 +1972,7 @@ msgstr "已停止"
 
 #: selfdrive\ui\sunnypilot\layouts\sidebar.py
 msgid "SUNNYLINK"
-msgstr "阳光联"
+msgstr "sunnylink"
 
 #: selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "SW"
