@@ -4,6 +4,17 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 source "$DIR/launch_env.sh"
 
+is_headless_boot() {
+  case "${OPENPILOT_HEADLESS,,}" in 1|true|yes) return 0 ;; esac
+  if [ -d /sys/class/backlight/panel0-backlight ]; then
+    if ! grep -q fts_ts /proc/interrupts 2>/dev/null && \
+       [ ! -e /dev/input/by-path/platform-894000.i2c-event ]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
 function agnos_init {
   # TODO: move this to agnos
   sudo rm -f /data/etc/NetworkManager/system-connections/*.nmmeta
@@ -20,11 +31,182 @@ function agnos_init {
   # Check if AGNOS update is required
   if [ $(< /VERSION) != "$AGNOS_VERSION" ]; then
     AGNOS_PY="$DIR/openpilot/common/hardware/comma/agnos.py"
-    MANIFEST="$DIR/openpilot/system/hardware/comma/agnos.json"
+    MANIFEST="$DIR/openpilot/common/hardware/comma/agnos.json"
+    if [ ! -f "$MANIFEST" ]; then
+      MANIFEST="$DIR/openpilot/system/hardware/comma/agnos.json"
+    fi
+    if [ ! -f "$MANIFEST" ]; then
+      MANIFEST="$DIR/common/hardware/comma/agnos.json"
+    fi
     if $AGNOS_PY --verify $MANIFEST; then
       sudo reboot
     fi
+    if is_headless_boot; then
+      echo "[agnos] headless: OS update required ($(cat /VERSION) -> $AGNOS_VERSION). Use WebUI Software → AGNOS, or SSH: $AGNOS_PY --swap $MANIFEST" | tee -a /tmp/agnos_pending.log
+      return 0
+    fi
     $DIR/openpilot/common/hardware/comma/updater $AGNOS_PY $MANIFEST
+  fi
+}
+
+# Determine the panda MCU type (F4=DOS, H7=TRES) and set the TICI_* env vars.
+# The MCU type is a permanent hardware fact, so it is detected once and cached in
+# /persist (survives fork switch / reset / reflash); every later boot reads the
+# cache and skips the panda query entirely.
+comma_device_slug() {
+  tr -d '\0' < /sys/firmware/devicetree/base/model 2>/dev/null | awk '{print $NF}'
+}
+
+is_comma_big_hw() {
+  case "$(comma_device_slug)" in
+    tici|tizi) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+set_tici_hw() {
+  is_comma_big_hw || return 0
+  export TICI_HW=1
+
+  local cache="/persist/sp_dev_panda_mcu_type"
+  local legacy_cache="/persist/dp_dev_panda_mcu_type"
+  local attempts=15 confirm=3         # give up after N reads; trust after M in a row
+  local mcu="" count=0 last="" cur cached
+
+  # --- fast path: sp cache, then openpilot/dragonpilot legacy cache ---
+  cached=$(cat "$cache" 2>/dev/null)
+  case "$cached" in
+    F4|H7) mcu="$cached"; echo "panda MCU $mcu [cached]" ;;
+  esac
+
+  if [ -z "$mcu" ]; then
+    cached=$(cat "$legacy_cache" 2>/dev/null)
+    case "$cached" in
+      F4|H7) mcu="$cached"; echo "panda MCU $mcu [legacy cache]" ;;
+    esac
+  fi
+
+  # --- slow path: detect, requiring M consecutive identical reads to reject a
+  #     transient misread while the panda enumerates, then persist for next boot ---
+  if [ -z "$mcu" ]; then
+    echo "Querying panda MCU type..."
+    for attempt in $(seq 1 "$attempts"); do
+      # wait long while the panda is still coming up, short between confirmations
+      if [ -n "$last" ]; then sleep 1; else sleep 3; fi
+
+      # Only the internal panda exists here: the aux USB-C port isn't switched to
+      # host mode until after this runs (see set_aux_panda), so a plain connect is
+      # unambiguous - there is exactly one panda to read.
+      case "$(python -c "from panda import Panda; p = Panda(cli=False); print(p.get_mcu_type()); p.close()" 2>/dev/null)" in
+        *McuType.F4*) cur="F4" ;;
+        *McuType.H7*) cur="H7" ;;
+        *)            cur="" ;;
+      esac
+
+      if [ -n "$cur" ] && [ "$cur" = "$last" ]; then
+        count=$((count + 1))
+      else
+        count=1
+        last="$cur"
+      fi
+
+      if [ -n "$cur" ] && [ "$count" -ge "$confirm" ]; then
+        mcu="$cur"
+        break
+      fi
+      echo "panda MCU read='${cur:-UNKNOWN}' (confirmed $count/$confirm, attempt $attempt/$attempts)"
+    done
+
+    if [ -z "$mcu" ]; then
+      echo "TICI (UNKNOWN) detected after $attempts attempts, stop processing."
+      exit 1
+    fi
+
+    # Persist it so future boots skip detection. /persist is comma's protected,
+    # read-only partition, so flip it rw just for this one write (happens once per
+    # device) and back to ro. The fast-path cat above reads fine on a ro mount, so
+    # only the write needs this. Any failure here is non-fatal: re-detect next boot.
+    if sudo mount -o remount,rw /persist 2>/dev/null; then
+      echo "$mcu" | sudo tee "$cache" "$legacy_cache" >/dev/null 2>&1
+      sudo mount -o remount,ro /persist 2>/dev/null
+    fi
+  fi
+
+  # --- apply: DOS (F4) also mounts the NVMe; TRES (H7) does not ---
+  if [ "$mcu" = "F4" ]; then
+    echo "TICI (DOS) detected"
+    mount_nvme
+    export TICI_DOS=1
+    set_aux_panda              # pandad supports a 2nd (aux) USB panda on C3 DOS
+  else
+    echo "TICI (TRES) detected"
+    export TICI_TRES=1
+  fi
+}
+
+# The aux USB-C port (a600000.ssusb) boots in OTG idle ("none"); a 2nd panda
+# plugged there only enumerates once the port is switched to USB host mode. Only
+# pandad supports a 2nd USB panda on C3 DOS (F4 internal); runs for F4 only, and only
+# after set_tici_hw has fingerprinted the internal panda alone. Keep host mode
+# only if a 2nd panda actually shows up; otherwise revert to "none" so the port
+# stays usable as a USB device (PC connect) on units with no aux panda. Aux
+# presence is dynamic (plug/unplug), so it is probed every boot, not cached.
+set_aux_panda() {
+  local mode="/sys/devices/platform/soc/a600000.ssusb/mode"
+  [ -e "$mode" ] || return 0
+
+  echo "Checking for aux panda (switching USB-C port to host mode)..."
+  echo host | sudo tee "$mode" >/dev/null 2>&1
+  for _ in $(seq 1 6); do          # ~3s budget; aux enumerated in ~1-2s in testing
+    sleep 0.5
+    if [ "$(lsusb 2>/dev/null | grep -c 'comma.ai panda')" -ge 2 ]; then
+      echo "aux panda detected (USB host mode kept)"
+      return 0
+    fi
+  done
+
+  echo "no aux panda found; reverting USB-C port to device mode"
+  echo none | sudo tee "$mode" >/dev/null 2>&1
+}
+
+mount_nvme() {
+  for i in $(seq 1 10); do
+    [ -b /dev/nvme0n1p1 ] && break
+    sleep 1
+  done
+
+  # Returns 0 (success) so the boot process continues without errors
+  if [ ! -b /dev/nvme0n1p1 ]; then
+    return 0
+  fi
+
+  # We assume /data/media/0/realdata exists per defaults
+  if ! mountpoint -q /data/media/0/realdata; then
+    mount /dev/nvme0n1p1 /data/media/0/realdata
+  fi
+
+  if mountpoint -q /data/media/0/realdata; then
+    OWNER="$(stat -c '%U' /data/media/0/realdata)"
+    GROUP="$(stat -c '%G' /data/media/0/realdata)"
+    PERM="$(stat -c '%a' /data/media/0/realdata)"
+
+    if [ "$OWNER" != "comma" ] || [ "$GROUP" != "comma" ]; then
+      chown comma:comma /data/media/0/realdata
+    fi
+
+    if [ "$PERM" != "755" ]; then
+      chmod 755 /data/media/0/realdata
+    fi
+  fi
+}
+
+set_lite_hw() {
+  [ "$(comma_device_slug)" = "tici" ] || return 0
+  output=$(i2cget -y 0 0x10 0x00 2>/dev/null)
+
+  if [ -z "$output" ]; then
+    echo "Lite HW"
+    export LITE=1
   fi
 }
 
@@ -80,17 +262,77 @@ function launch {
 
   # hardware specific init
   if [ -f /AGNOS ]; then
+    set_tici_hw
+    set_lite_hw
     agnos_init
   fi
 
   # write tmux scrollback to a file
   tmux capture-pane -pq -S-1000 > /tmp/launch_log
 
+  sudo mkdir -p /cache/tsk
+  sudo chown comma:comma /cache/tsk
+
+  start_webui() {
+    local root="$DIR"
+    if [ ! -f "$root/webui/webuid.py" ]; then
+      return 0
+    fi
+    local web_py=python3.12
+    command -v "$web_py" >/dev/null 2>&1 || web_py=python3
+    local venv_site="/usr/local/venv/lib/python3.12/site-packages"
+    local py_path="$root"
+    [ -d "$venv_site" ] && py_path="$root:$venv_site"
+    if pgrep -f "[p]ython.* -m webui\.webuid" >/dev/null 2>&1; then
+      return 0
+    fi
+    echo "[webui] starting :5080 TLS ($(date))" >> /tmp/webui.log
+    # Headless (no builtin panel): native ui is skipped; WebUI is the primary UI.
+    # Override detection: OPENPILOT_HEADLESS=1 force headless, =0 force display mode.
+    # Auto-detect requires panel backlight sysfs AND fts_ts touch IRQ (disassembled units may lack touch).
+    # Headless first boot: USB tether (RNDIS) -> https://10.255.128.121:5080/ (accept TLS cert once).
+    (cd "$root" && PYTHONPATH="$py_path" WEBUI_TLS=1 "$web_py" -m webui.webuid >> /tmp/webui.log 2>&1 &)
+  }
+
+  start_op_assistant() {
+    local root="$DIR"
+    if [ ! -f "$root/ai/aid.py" ]; then
+      return 0
+    fi
+    local aid_py=python3.12
+    command -v "$aid_py" >/dev/null 2>&1 || aid_py=python3
+    local venv_site="/usr/local/venv/lib/python3.12/site-packages"
+    local py_path="$root"
+    [ -d "$venv_site" ] && py_path="$root:$venv_site"
+    if pgrep -f "[p]ython.* -m ai\.aid" >/dev/null 2>&1; then
+      return 0
+    fi
+    echo "[aid] starting :5090 ($(date))" >> /tmp/aid.log
+    (cd "$root" && PYTHONPATH="$py_path" "$aid_py" -m ai.aid >> /tmp/aid.log 2>&1 &)
+  }
+
   # start manager
   cd openpilot/system/manager
   if [ ! -f $DIR/prebuilt ]; then
     ./build.py
   fi
+
+  start_webui
+  (
+    while true; do
+      sleep 45
+      start_webui
+    done
+  ) &
+
+  start_op_assistant
+  (
+    while true; do
+      sleep 45
+      start_op_assistant
+    done
+  ) &
+
   ./manager.py
 
   # if broken, keep on screen error

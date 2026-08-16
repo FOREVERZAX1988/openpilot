@@ -144,13 +144,13 @@ class DynamicPubMaster(messaging.PubMaster):
 
 
 class LivestreamBitrateController(AsyncTaskRunner):
-  bitrates = [500_000, 1_500_000, int(os.environ.get("STREAM_BITRATE", 5_000_000))]
+  bitrates = [500_000, 1_500_000, int(os.environ.get("STREAM_BITRATE", 3_000_000))]
   label_to_bitrate = { "high": bitrates[2], "med": bitrates[1], "low": bitrates[0]}
   sample_interval = 0.2
   high_level = 0.1 # drop immediately
-  med_level = 0.05 # drop after # of samples
+  med_level = 0.03 # drop after # of samples
   low_level = 0 # raise after # of samples
-  down_samples = 5
+  down_samples = 3
   param_name = "LivestreamEncoderBitrate"
 
   def __init__(self, get_stats: Callable[[], dict[str, Any]], params: Params, enabled: bool = True):
@@ -158,11 +158,11 @@ class LivestreamBitrateController(AsyncTaskRunner):
     self.get_stats = get_stats
     self.params = params
 
-    self.level = 2
+    self.level = 1
     self._publish(self.bitrates[self.level])
     self.prev_stats: tuple[Any, ...] | None = None
     self.counter = 0
-    self.up_samples = 5 # 1s
+    self.up_samples = 25
     self._auto = True
     self._enabled = enabled
 
@@ -174,6 +174,14 @@ class LivestreamBitrateController(AsyncTaskRunner):
       await asyncio.sleep(self.sample_interval)
       if not self._enabled:
         continue
+
+      if self.params.get_bool("LivestreamEncoderLagging"):
+        if self.level > 0:
+          self.level = 0
+          self.counter = 0
+          self._publish(self.bitrates[0])
+        continue
+
       if not self._auto:
         continue
 
@@ -211,11 +219,22 @@ class LivestreamBitrateController(AsyncTaskRunner):
     self.params.put(self.param_name, bitrate)
 
   def set_quality(self, quality):
-    if quality in self.label_to_bitrate:
-      self._publish(self.label_to_bitrate[quality])
+    if quality == "low":
+      self.level = 0
+      self._publish(self.bitrates[0])
+      self._auto = False
+    elif quality == "med":
+      self.level = 1
+      self._publish(self.bitrates[1])
+      self._auto = False
+    elif quality == "high":
+      self.level = 2
+      self._publish(self.bitrates[2])
       self._auto = False
     elif quality == "auto":
       self._auto = True
+      self.level = 1
+      self._publish(self.bitrates[self.level])
 
 
 class StreamSession:
@@ -236,6 +255,7 @@ class StreamSession:
       self.video_tracks.append(track)
       builder.add_video_stream(camera, track)
     self.stream = builder.stream()
+    self.params.put("LivestreamActiveCamera", body.init_camera)
 
     self.is_body = "testJoystick" in body.bridge_services_in
 
@@ -280,9 +300,10 @@ class StreamSession:
 
         match msg_type:
           case "livestreamCameraSwitch":
-            # only needed for 1 track stream
+            cam = payload["data"]["camera"]
             if len(self.video_tracks) == 1:
-              self.video_tracks[0].switch_camera(payload["data"]["camera"])
+              self.video_tracks[0].switch_camera(cam)
+            self.params.put("LivestreamActiveCamera", cam)
           case "livestreamSettings":
             if self.bitrate_controller is not None:
               self.bitrate_controller.set_quality(payload["data"]["quality"])

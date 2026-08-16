@@ -1,4 +1,5 @@
 #include <cassert>
+#include <atomic>
 #ifdef __COMMA_HARDWARE__
 #include <exception>
 #include <stdexcept>
@@ -59,6 +60,39 @@ void encoder_set_bitrate(std::unique_ptr<Encoder> &e) {
   e->set_bitrate(bitrate);
 }
 
+static bool livestream_camera_active(VisionStreamType stream_type) {
+  static Params params;
+  std::string active = params.get("LivestreamActiveCamera");
+  if (active.empty()) return true;
+  if (active == "road" && stream_type == VISION_STREAM_ROAD) return true;
+  if (active == "wideRoad" && stream_type == VISION_STREAM_WIDE_ROAD) return true;
+  if (active == "driver" && stream_type == VISION_STREAM_DRIVER) return true;
+  return false;
+}
+
+static std::atomic<int> live_laggers{0};
+
+static void encoder_set_live_lagging(bool is_live, bool lagging, bool active_cam) {
+  if (!is_live || !active_cam) return;
+  static Params params;
+  if (lagging) {
+    if (live_laggers.fetch_add(1, std::memory_order_relaxed) == 0) {
+      params.putBool("LivestreamEncoderLagging", true);
+    }
+  } else {
+    if (live_laggers.fetch_sub(1, std::memory_order_relaxed) == 1) {
+      params.putBool("LivestreamEncoderLagging", false);
+    }
+  }
+}
+
+static bool cam_info_has_live_encoder(const LogCameraInfo &cam_info) {
+  for (const auto &info : cam_info.encoder_infos) {
+    if (info.is_live) return true;
+  }
+  return false;
+}
+
 void encoder_request_keyframe(std::unique_ptr<Encoder> &e) {
   static Params params;
   if (!params.getBool("LivestreamRequestKeyframe")) return;
@@ -99,6 +133,7 @@ void encoder_thread(EncoderdState *s, const LogCameraInfo &cam_info) {
     }
 
     bool lagging = false;
+    const bool has_live = cam_info_has_live_encoder(cam_info);
     while (!do_exit) {
       VisionIpcBufExtra extra;
       VisionBuf* buf = vipc_client.recv(&extra);
@@ -109,10 +144,14 @@ void encoder_thread(EncoderdState *s, const LogCameraInfo &cam_info) {
         if (!lagging) {
           LOGE("encoder %s lag  buffer id: %" PRIu64 " extra id: %d", cam_info.thread_name, buf->get_frame_id(), extra.frame_id);
           lagging = true;
+          encoder_set_live_lagging(has_live, true, livestream_camera_active(cam_info.stream_type));
         }
         continue;
       }
-      lagging = false;
+      if (lagging) {
+        lagging = false;
+        encoder_set_live_lagging(has_live, false, livestream_camera_active(cam_info.stream_type));
+      }
 
       if (!sync_encoders(s, cam_info.stream_type, extra.frame_id)) {
         continue;
@@ -131,6 +170,9 @@ void encoder_thread(EncoderdState *s, const LogCameraInfo &cam_info) {
 
       // encode a frame
       for (int i = 0; i < encoders.size(); ++i) {
+        if (cam_info.encoder_infos[i].is_live && !livestream_camera_active(cam_info.stream_type)) {
+          continue;
+        }
         if (cam_info.encoder_infos[i].is_live) {
           encoder_set_bitrate(encoders[i]);
           encoder_request_keyframe(encoders[i]);

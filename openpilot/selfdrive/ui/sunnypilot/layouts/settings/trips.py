@@ -4,18 +4,14 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-import requests
 import threading
 import time
 import pyray as rl
 
-from openpilot.common.api import api_get
 from openpilot.common.constants import CV
 from openpilot.common.params import Params
-from openpilot.common.swaglog import cloudlog
-from openpilot.selfdrive.ui.lib.api_helpers import get_token
+from openpilot.selfdrive.ui.sunnypilot.lib.drive_stats import refresh_local_drive_stats
 from openpilot.selfdrive.ui.ui_state import ui_state, device
-from openpilot.system.athena.registration import UNREGISTERED_DONGLE_ID
 from openpilot.system.ui.lib.application import gui_app, FontWeight, FONT_SCALE
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -23,13 +19,12 @@ from openpilot.system.ui.widgets import Widget
 
 
 class TripsLayout(Widget):
-  PARAM_KEY = "ApiCache_DriveStats"
+  PARAM_KEY = "LocalDriveStats"
   UPDATE_INTERVAL = 30  # seconds
 
   def __init__(self):
     super().__init__()
     self._params = Params()
-    self._session = requests.Session()
     self._stats = self._get_stats()
 
     self._icon_distance = gui_app.texture("icons/road.png", 100, 100, keep_aspect_ratio=True)
@@ -39,6 +34,11 @@ class TripsLayout(Widget):
     self._running = True
     self._update_thread = threading.Thread(target=self._update_loop, daemon=True)
     self._update_thread.start()
+
+  def show_event(self):
+    super().show_event()
+    if not self._stats.get("all"):
+      threading.Thread(target=self._refresh_drive_stats, daemon=True).start()
 
   def __del__(self):
     self._running = False
@@ -52,30 +52,15 @@ class TripsLayout(Widget):
     stats = self._params.get(self.PARAM_KEY)
     if not stats:
       return {}
-    try:
-      return stats
-    except Exception:
-      cloudlog.exception(f"Failed to decode drive stats: {stats}")
-      return {}
+    return stats
 
-  def _fetch_drive_stats(self):
-    try:
-      dongle_id = self._params.get("DongleId")
-      if not dongle_id or dongle_id == UNREGISTERED_DONGLE_ID:
-        return
-      identity_token = get_token(dongle_id)
-      response = api_get(f"v1.1/devices/{dongle_id}/stats", access_token=identity_token, session=self._session)
-      if response.status_code == 200:
-        data = response.json()
-        self._stats = data
-        self._params.put(self.PARAM_KEY, data)
-    except Exception as e:
-      cloudlog.error(f"Failed to fetch drive stats: {e}")
+  def _refresh_drive_stats(self):
+    self._stats = refresh_local_drive_stats(self._params, self.PARAM_KEY)
 
   def _update_loop(self):
     while self._running:
       if not ui_state.started and device._awake:
-        self._fetch_drive_stats()
+        self._refresh_drive_stats()
       time.sleep(self.UPDATE_INTERVAL)
 
   def _render_stat_group(self, x, y, width, height, title, data, is_metric):

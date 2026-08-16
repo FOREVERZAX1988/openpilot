@@ -24,7 +24,7 @@ from openpilot.common.realtime import Ratekeeper
 
 from openpilot.system.ui.sunnypilot.lib.application import GuiApplicationExt
 
-_DEFAULT_FPS = int(os.getenv("FPS", {'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
+_DEFAULT_FPS = int(os.getenv("FPS", {'tici': 20, 'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
 FPS_LOG_INTERVAL = 5  # Seconds between logging FPS drops
 FPS_DROP_THRESHOLD = 0.9  # FPS drop threshold for triggering a warning
 FPS_CRITICAL_THRESHOLD = 0.5  # Critical threshold for triggering strict actions
@@ -740,6 +740,17 @@ class GuiApplication(GuiApplicationExt):
     if multilang.requires_font_fallback():
       self.fallback_font()
     rl.gui_set_font(self._fonts[FontWeight.NORMAL])
+
+  def on_language_changed(self, lang_code: str):
+    old_fonts = list(self._fonts.values())
+    self._fonts = {}
+    self._fallback_fonts = {}
+    self._load_fonts()
+    for font in old_fonts:
+      rl.unload_font(font)
+    from openpilot.system.ui.lib import text_measure, wrap_text
+    text_measure._cache.clear()
+    wrap_text._cache.clear()
 
   def _set_styles(self):
     rl.gui_set_style(rl.GuiControl.DEFAULT, rl.GuiControlProperty.BORDER_WIDTH, 0)
