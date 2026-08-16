@@ -3307,7 +3307,7 @@ msgstr[1] "{} 小时前"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "{} m"
-msgstr "{}米"
+msgstr "{} 分钟"
 
 #: selfdrive\ui\layouts\settings\software.py
 msgid "{} minute ago"
@@ -3317,7 +3317,7 @@ msgstr[1] "{} 分钟前"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "{} s"
-msgstr "{} s"
+msgstr "{} 秒"
 
 #: selfdrive\ui\mici\layouts\settings\firehose.py
 msgid "{} segment of your driving is in the training dataset so far."
@@ -4853,3 +4853,12 @@ msgstr "西班牙语"
 
 msgid "Português"
 msgstr "葡萄牙语"
+
+msgid "min"
+msgstr "分钟"
+
+msgid "hours"
+msgstr "小时"
+
+msgid "Macan Stop and Go: when enabled, the vision model decides when to start, and openpilot sends the RESUME signal to release the stock parking hold (with a chime). When disabled, gently press the gas or SET/RESUME to resume (stock behavior)."
+msgstr "Macan 起步跟停：启用后，由视觉模型决定何时起步，openpilot 发送 RESUME 信号解除原厂停车保持（伴随提示音）。禁用时，轻踩油门或按 SET/RESUME 起步（原厂行为）。"

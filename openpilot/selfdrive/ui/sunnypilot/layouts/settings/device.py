@@ -209,7 +209,7 @@ class DeviceLayoutSP(DeviceLayout):
 
   @staticmethod
   def _update_max_time_offroad_label(value: int) -> str:
-    label = tr("Always On") if value == 0 else f"{value}" + tr("m") if value < 60 else f"{value // 60}" + tr("h")
+    label = tr("Always On") if value == 0 else f"{value}" + tr("min") if value < 60 else f"{value // 60}" + tr("hours")
     label += tr(" (Default)") if value == 1800 else ""
     return label
 
