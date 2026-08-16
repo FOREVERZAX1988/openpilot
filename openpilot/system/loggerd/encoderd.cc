@@ -64,9 +64,9 @@ static bool livestream_camera_active(VisionStreamType stream_type) {
   static Params params;
   std::string active = params.get("LivestreamActiveCamera");
   if (active.empty()) return true;
-  if (active == "road" && stream_type == VISION_STREAM_ROAD) return true;
+  if (active == "road" && stream_type == VISION_STREAM_NARROW_ROAD) return true;
   if (active == "wideRoad" && stream_type == VISION_STREAM_WIDE_ROAD) return true;
-  if (active == "driver" && stream_type == VISION_STREAM_DRIVER) return true;
+  if (active == "driver" && stream_type == VISION_STREAM_CABIN) return true;
   return false;
 }
 

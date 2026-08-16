@@ -63,8 +63,8 @@ sound_list: dict[int, tuple[str, int | None, float]] = {
 }
 if HARDWARE.get_device_type() in ("tici", "tizi"):
   sound_list.update({
-    AudibleAlert.engage: ("engage_tizi.wav", 1, MAX_VOLUME),
-    AudibleAlert.disengage: ("disengage_tizi.wav", 1, MAX_VOLUME),
+    AudibleAlert.engage: ("engage.wav", 1, MAX_VOLUME),
+    AudibleAlert.disengage: ("disengage.wav", 1, MAX_VOLUME),
   })
 
 

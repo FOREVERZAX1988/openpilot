@@ -253,7 +253,7 @@ class FrictionCoefficientElement:
 
     ltp = sm['lateralTorqueParameters']
     value = f"{ltp.frictionCoefficientFiltered:.3f}"
-    color = rl.Color(0, 255, 0, 255) if ltp.liveValid else rl.WHITE
+    color = rl.Color(0, 255, 0, 255) if ltp.valid else rl.WHITE
     return UiElement(value, tr("FRIC."), self.unit, color)
 
 
@@ -267,7 +267,7 @@ class LatAccelFactorElement:
 
     ltp = sm['lateralTorqueParameters']
     value = f"{ltp.latAccelFactorFiltered:.3f}"
-    color = rl.Color(0, 255, 0, 255) if ltp.liveValid else rl.WHITE
+    color = rl.Color(0, 255, 0, 255) if ltp.valid else rl.WHITE
     return UiElement(value, tr("L.A.F."), self.unit, color)
 
 
