@@ -16,6 +16,26 @@ _COMMA_HW_DIR = os.path.dirname(os.path.abspath(__file__))
 AGNOS_MANIFEST_FILE = os.path.join("openpilot", "common", "hardware", "comma", "agnos.json")
 
 
+def is_tizi_device() -> bool:
+  try:
+    with open("/sys/firmware/devicetree/base/model") as f:
+      return f.read().strip('\x00').split('comma ')[-1] == 'tizi'
+  except OSError:
+    return False
+
+
+def is_mici_device() -> bool:
+  try:
+    with open("/sys/firmware/devicetree/base/model") as f:
+      return f.read().strip('\x00').split('comma ')[-1] == 'mici'
+  except OSError:
+    return False
+
+
+def agnos_tici_manifest_path() -> str:
+  return os.path.join(_COMMA_HW_DIR, "agnos_tici.json")
+
+
 def default_agnos_manifest_path(repo_root: str) -> str:
   """Resolve agnos.json for monorepo (sp) or flat openpilot installs."""
   for rel in (
@@ -276,24 +296,7 @@ def verify_agnos_update(manifest_path: str, target_slot_number: int) -> bool:
 # This approach differs from common solutions and required extensive trial and error.
 # If you reuse or adapt this function, please provide proper credit.
 def restore_partitions(partitions):
-  with open("/sys/firmware/devicetree/base/model") as f:
-    if f.read().strip('\x00').split('comma ')[-1] == 'tizi':
-      return partitions
-
-  partition_name_to_use = {'abl', 'boot'}
-  agnos_tici_path = os.path.join(_COMMA_HW_DIR, "agnos_tici.json")
-
-  with open(agnos_tici_path, 'r') as f:
-    tici_partitions = json.load(f)
-
-  partitions_to_keep = {p['name']: p for p in tici_partitions if p.get('name') in partition_name_to_use}
-  return [partitions_to_keep.get(p.get('name'), p) for p in partitions]
-
-# Implementation by Rick
-# This approach differs from common solutions and required extensive trial and error.
-# If you reuse or adapt this function, please provide proper credit.
-def restore_partitions(partitions):
-  if is_tizi_device():
+  if is_tizi_device() or is_mici_device():
     return partitions
 
   partition_name_to_use = {'abl', 'boot'}
