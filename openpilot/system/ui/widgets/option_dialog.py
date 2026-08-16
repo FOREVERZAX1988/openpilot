@@ -27,7 +27,7 @@ class MultiOptionDialog(Widget):
     self._callback = callback
 
     # Create scroller with option buttons
-    self.option_buttons = [Button(option, click_callback=lambda opt=option: self._on_option_clicked(opt),
+    self.option_buttons = [Button(tr(option), click_callback=lambda opt=option: self._on_option_clicked(opt),
                                   font_weight=option_font_weight,
                                   text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT, button_style=ButtonStyle.NORMAL,
                                   text_padding=50, elide_right=True) for option in options]
