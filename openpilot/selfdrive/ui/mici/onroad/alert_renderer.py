@@ -70,22 +70,22 @@ class Alert:
 
 # Pre-defined alert instances
 ALERT_STARTUP_PENDING = Alert(
-  text1="sunnypilot Unavailable",
-  text2="Waiting to start",
+  text1=tr("sunnypilot Unavailable"),
+  text2=tr("Waiting to start"),
   size=AlertSize.mid,
   status=AlertStatus.normal,
 )
 
 ALERT_CRITICAL_TIMEOUT = Alert(
-  text1="TAKE CONTROL IMMEDIATELY",
-  text2="System Unresponsive",
+  text1=tr("TAKE CONTROL IMMEDIATELY"),
+  text2=tr("System Unresponsive"),
   size=AlertSize.full,
   status=AlertStatus.critical,
 )
 
 ALERT_CRITICAL_REBOOT = Alert(
-  text1="System Unresponsive",
-  text2="Reboot Device",
+  text1=tr("System Unresponsive"),
+  text2=tr("Reboot Device"),
   size=AlertSize.full,
   status=AlertStatus.critical,
 )

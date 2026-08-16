@@ -7,6 +7,7 @@ from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.label import UnifiedLabel
 from openpilot.system.ui.widgets.scroller import DO_ZOOM
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.common.filter_simple import BounceFilter
 
 if TYPE_CHECKING:
@@ -112,8 +113,8 @@ class BigButton(Widget):
   def __init__(self, text: str, value: str = "", icon: Union[rl.Texture, None] = None, scroll: bool = False):
     super().__init__()
     self.set_rect(rl.Rectangle(0, 0, 402, 180))
-    self.text = text
-    self.value = value
+    self.text = tr(text)
+    self.value = tr(value)
     self._txt_icon = icon
     self._scroll = scroll
 
@@ -168,13 +169,13 @@ class BigButton(Widget):
       self._label.set_alignment_vertical(rl.GuiTextAlignmentVertical.TEXT_ALIGN_BOTTOM)
 
   def set_text(self, text: str):
-    self.text = text
-    self._label.set_text(text)
+    self.text = tr(text)
+    self._label.set_text(tr(text))
     self._update_label_layout()
 
   def set_value(self, value: str):
-    self.value = value
-    self._sub_label.set_text(value)
+    self.value = tr(value)
+    self._sub_label.set_text(tr(value))
     self._update_label_layout()
 
   def get_value(self) -> str:
@@ -307,7 +308,7 @@ class BigMultiToggle(BigToggle):
                select_callback: Callable | None = None):
     super().__init__(text, "", toggle_callback=toggle_callback)
     assert len(options) > 0
-    self._options = options
+    self._options = [tr(o) for o in options]
     self._select_callback = select_callback
 
     self.set_value(self._options[0])

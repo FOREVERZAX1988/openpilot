@@ -4748,3 +4748,87 @@ msgstr "起步跟停（Macan）"
 
 msgid "Macan Stop and Go"
 msgstr "Macan 起步跟停"
+
+msgid "enable\nexperimental mode"
+msgstr "启用\n实验模式"
+
+msgid "enabling\nexperimental mode"
+msgstr "正在启用\n实验模式"
+
+msgid "openpilot defaults to driving in chill mode."
+msgstr "openpilot 默认在舒适模式下驾驶。"
+
+msgid "Experimental mode enables alpha-level features that aren't ready for chill mode."
+msgstr "实验模式启用尚未达到舒适模式标准的 Alpha 功能。"
+
+msgid "End-to-End Longitudinal Control"
+msgstr "端到端纵向控制"
+
+msgid "Let the driving model control the gas and brakes."
+msgstr "让驾驶模型控制油门和刹车。"
+
+msgid "The set speed will only act as an upper bound."
+msgstr "设定速度仅作为上限。"
+
+msgid "New Driving Visualization"
+msgstr "全新驾驶可视化"
+
+msgid "The path will change colors to communicate acceleration intent."
+msgstr "路径会改变颜色以传达加速意图。"
+
+msgid "Red for braking, green for acceleration, and gray for coasting."
+msgstr "红色代表刹车，绿色代表加速，灰色代表滑行。"
+
+msgid "enabling alpha longitudinal"
+msgstr "正在启用 Alpha 纵向控制"
+
+msgid "WARNING: alpha longitudinal control may disable Automatic Emergency Braking (AEB)"
+msgstr "警告：Alpha 纵向控制可能禁用自动紧急制动 (AEB)"
+
+msgid "On this car, openpilot defaults to the stock system's built-in ACC."
+msgstr "在此车辆上，openpilot 默认使用原厂内置 ACC。"
+
+msgid "Enabling this will switch to openpilot longitudinal control."
+msgstr "启用此项将切换到 openpilot 纵向控制。"
+
+msgid "Using Experimental mode is recommended with openpilot longitudinal control alpha."
+msgstr "启用 openpilot 纵向控制 Alpha 时，建议同时启用实验模式。"
+
+msgid "Changing this setting will restart openpilot if the car is powered on."
+msgstr "若车辆通电，更改此设置将重启 openpilot。"
+
+msgid "Not set"
+msgstr "未设置"
+
+msgid "Please connect to Wi-Fi to fetch your key."
+msgstr "请连接 Wi-Fi 以获取您的密钥。"
+
+msgid "driver monitoring\ncheck"
+msgstr "驾驶员监控\n检查"
+
+msgid "make sure comma\nfour can see your face"
+msgstr "确保设备能看到您的脸"
+
+msgid "Next, we'll check if comma four can detect the driver properly."
+msgstr "接下来，我们将检查设备能否正确检测到驾驶员。"
+
+msgid "sunnypilot uses the cabin camera to check if the driver is distracted."
+msgstr "sunnypilot 使用车内摄像头检查驾驶员是否分心。"
+
+msgid "If it does not have a clear view of the driver, unplug and remount before continuing."
+msgstr "如果无法清晰看到驾驶员，请先拔下并重新安装再继续。"
+
+msgid "Remount if your face is blocked, or driver monitoring has difficulty tracking your face."
+msgstr "如果您的脸部被遮挡，或驾驶员监控难以追踪，请重新安装。"
+
+msgid "do you want to share video data for training?"
+msgstr "您是否愿意共享视频数据用于训练？"
+
+msgid "Sharing your data with comma helps improve openpilot and sunnypilot for everyone."
+msgstr "与 comma 共享数据有助于改进 openpilot 和 sunnypilot，惠及所有人。"
+
+msgid "terms of\nservice"
+msgstr "服务\n条款"
+
+msgid "You must accept the Terms of Service to use sunnypilot."
+msgstr "您必须接受服务条款才能使用 sunnypilot。"
