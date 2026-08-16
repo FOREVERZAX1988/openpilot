@@ -1,4 +1,4 @@
 [lfs]
-  url     = https://gitlab.com/mouxangithub/op-lfs.git/info/lfs
-  pushurl = https://gitlab.com/mouxangithub/op-lfs.git/info/lfs
+  url     = https://mxgit.iepose.cn/mouxan/op.git/info/lfs
+  pushurl = https://mxgit.iepose.cn/mouxan/op.git/info/lfs
   locksverify = false
