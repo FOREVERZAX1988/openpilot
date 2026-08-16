@@ -6,6 +6,7 @@ import random
 import string
 from dataclasses import dataclass
 from openpilot.cereal import messaging, log
+from openpilot.system.ui.lib.multilang import tr
 from opendbc.car.structs import car
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.common.filter_simple import BounceFilter, FirstOrderFilter
@@ -148,7 +149,7 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
       return None
 
     # Return current alert
-    ret = Alert(text1=ss.alertText1, text2=ss.alertText2, size=ss.alertSize.raw, status=ss.alertStatus.raw,
+    ret = Alert(text1=tr(ss.alertText1) if ss.alertText1 else "", text2=tr(ss.alertText2) if ss.alertText2 else "", size=ss.alertSize.raw, status=ss.alertStatus.raw,
                 visual_alert=ss.alertHudVisual, alert_type=ss.alertType)
     self._prev_alert = ret
     return ret

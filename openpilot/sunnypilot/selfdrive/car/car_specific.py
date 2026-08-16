@@ -24,7 +24,7 @@ class CarSpecificEventsSP:
     self.CP_SP = CP_SP
 
     self.low_speed_alert = False
-    self.prev_standstill = False  # Macan 起步跟停：检测停车保持态解除瞬间
+    self.prev_standstill = False  # Macan Stop and Go: detect parking hold release edge
 
   def update(self, CS: structs.CarState, events: Events):
     events_sp = EventsSP()

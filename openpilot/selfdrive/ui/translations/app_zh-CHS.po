@@ -4736,3 +4736,15 @@ msgstr "中文（繁体）"
 msgid "한국어"
 msgstr "한국어"
 
+
+msgid "Reverse\nGear"
+msgstr "倒车挡"
+
+msgid "Lane Change Unavailable: Road Edge"
+msgstr "道路边缘变道不可用"
+
+msgid "Stop and Go (Macan)"
+msgstr "起步跟停（Macan）"
+
+msgid "Macan Stop and Go"
+msgstr "Macan 起步跟停"

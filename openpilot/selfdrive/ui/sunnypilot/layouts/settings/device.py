@@ -149,7 +149,7 @@ class DeviceLayoutSP(DeviceLayout):
     def handle_confirm(result: DialogResult):
       if result == DialogResult.CONFIRM:
         current_use_konik = self._params.get_bool("UseKonikServer", False)
-        self._params.put_bool("UseKonikServer", not current_use_konik, block=True)  # block: 确保重启前落盘
+        self._params.put_bool("UseKonikServer", not current_use_konik, block=True)  # block: ensure flush to disk before reboot
         self._params.put_bool_nonblocking("DoReboot", True)
     current_use_konik = self._params.get_bool("UseKonikServer", False)
     target_server = tr("KONIK") if not current_use_konik else tr("COMMA")

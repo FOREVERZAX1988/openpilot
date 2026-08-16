@@ -724,7 +724,7 @@ class GuiApplication(GuiApplicationExt):
         # 回退 assets 子集字体
         with as_file(FONT_DIR) as fspath:
           font_path = (fspath / Path(font_name).name).as_posix()
-      font = rl.load_font_ex(font_path, 48,
+      font = rl.load_font_ex(font_path, 60,
                              rl.ffi.cast("int *", codepoint_buffer), len(codepoints))
       rl.gen_texture_mipmaps(font.texture)
       rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)

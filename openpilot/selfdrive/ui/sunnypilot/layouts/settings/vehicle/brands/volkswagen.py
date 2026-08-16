@@ -15,9 +15,10 @@ from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
 
 DESCRIPTIONS = {
   'start_stop': tr_noop(
-    'Macan 起步跟停：开启后，跟车/红灯停车由视觉模型判定起步时机，'
-    'OP 自动代发 RESUME 信号解除原厂停车保持态并起步（带提示音）。'
-    '关闭时，停车后需轻踩油门/SET/RESUME 恢复起步（原厂行为）。'
+    'Macan Stop and Go: when enabled, the vision model decides when to start, '
+    'and openpilot sends the RESUME signal to release the stock parking hold '
+    '(with a chime). When disabled, gently press the gas or SET/RESUME to '
+    'resume (stock behavior).'
   )
 }
 
@@ -27,7 +28,7 @@ class VolkswagenSettings(BrandSettings):
     super().__init__()
 
     self.start_stop = toggle_item_sp(
-      lambda: tr("起步跟停（Stop and Go）"),
+      lambda: tr("Stop and Go (Macan)"),
       description=lambda: tr(DESCRIPTIONS["start_stop"]),
       initial_state=ui_state.params.get_bool("MacanStartStop"),
       callback=self._on_enable_start_stop,
