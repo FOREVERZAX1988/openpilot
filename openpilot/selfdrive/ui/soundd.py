@@ -46,8 +46,8 @@ sound_list_sp: dict[int, tuple[str, int | None, float]] = {
 
 sound_list: dict[int, tuple[str, int | None, float]] = {
   # AudibleAlert, file name, play count (none for infinite)
-  AudibleAlert.engage: ("engage.wav", 1, MAX_VOLUME),
-  AudibleAlert.disengage: ("disengage.wav", 1, MAX_VOLUME),
+  AudibleAlert.engage: ("engage_tizi.wav", 1, MAX_VOLUME),
+  AudibleAlert.disengage: ("disengage_tizi.wav", 1, MAX_VOLUME),
   AudibleAlert.refuse: ("refuse.wav", 1, MAX_VOLUME),
 
   AudibleAlert.prompt: ("warning.wav", 1, MAX_VOLUME),
@@ -63,8 +63,8 @@ sound_list: dict[int, tuple[str, int | None, float]] = {
 }
 if HARDWARE.get_device_type() in ("tici", "tizi"):
   sound_list.update({
-    AudibleAlert.engage: ("engage.wav", 1, MAX_VOLUME),
-    AudibleAlert.disengage: ("disengage.wav", 1, MAX_VOLUME),
+    AudibleAlert.engage: ("engage_tizi.wav", 1, MAX_VOLUME),
+    AudibleAlert.disengage: ("disengage_tizi.wav", 1, MAX_VOLUME),
   })
 
 
