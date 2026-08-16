@@ -4832,3 +4832,24 @@ msgstr "服务\n条款"
 
 msgid "You must accept the Terms of Service to use sunnypilot."
 msgstr "您必须接受服务条款才能使用 sunnypilot。"
+
+msgid "日本語"
+msgstr "日语"
+
+msgid "中文（繁體）"
+msgstr "中文（繁体）"
+
+msgid "Türkçe"
+msgstr "土耳其语"
+
+msgid "Deutsch"
+msgstr "德语"
+
+msgid "Français"
+msgstr "法语"
+
+msgid "Español"
+msgstr "西班牙语"
+
+msgid "Português"
+msgstr "葡萄牙语"

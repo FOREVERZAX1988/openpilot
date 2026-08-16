@@ -94,7 +94,7 @@ DEFAULT_TEXT_COLOR = rl.Color(255, 255, 255, int(255 * 0.9))
 FONT_SCALE = 1.242 if BIG_UI else 1.16
 # Fallback（CJK）字体显示放大系数：中文/日文/韩文等走 Noto fallback 时额外放大，
 # 解决中文字体偏小问题（fallback_font 的 48/60 只是字模分辨率，不影响显示大小）
-FALLBACK_FONT_SCALE = 1.12
+FALLBACK_FONT_SCALE = 1.5
 
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
@@ -717,6 +717,12 @@ class GuiApplication(GuiApplicationExt):
               chars.update(c for c in _py.read_text(encoding='utf-8') if '\u4e00' <= c <= '\u9fff')
             except Exception:
               pass
+      # 语言菜单：languages.json 的语言名（日本語/中文（繁體）等）不在 .py 扫描范围，
+      # 但会显示在 MultiOptionDialog 里——补进字符集避免字形缺失（"語"/"體"等）
+      try:
+        chars.update(TRANSLATIONS_DIR.joinpath('languages.json').read_text(encoding='utf-8'))
+      except Exception:
+        pass
       codepoints = sorted(map(ord, chars))
       codepoint_buffer = rl.ffi.new("int[]", codepoints)
       font_name = NOTO_FONTS[language]
@@ -727,7 +733,7 @@ class GuiApplication(GuiApplicationExt):
         # 回退 assets 子集字体
         with as_file(FONT_DIR) as fspath:
           font_path = (fspath / Path(font_name).name).as_posix()
-      font = rl.load_font_ex(font_path, 60,
+      font = rl.load_font_ex(font_path, 80,
                              rl.ffi.cast("int *", codepoint_buffer), len(codepoints))
       rl.gen_texture_mipmaps(font.texture)
       rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
