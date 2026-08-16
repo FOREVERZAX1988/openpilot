@@ -158,10 +158,13 @@ void fill_panda_state(cereal::PandaState::Builder &ps, cereal::PandaState::Panda
   ps.setSbu1Voltage(health.sbu1_voltage_mV / 1000.0f);
   ps.setSbu2Voltage(health.sbu2_voltage_mV / 1000.0f);
   ps.setSoundOutputLevel(health.sound_output_level_pkt);
-  // macan-long-0815-fix: panda 子模块为 7d703710a（保留 macan/F4 适配），health.h 无 controls_allowed_sp_pkt
-  // 兼容映射：旧 panda 的 controls_allowed_pkt 是单一布尔（允许=横纵均允许）
-  ps.setControlsAllowedLateral(health.controls_allowed_pkt);
-  ps.setControlsAllowedLongitudinal(health.controls_allowed_pkt);
+  // macan-long-0815-fix: panda 子模块为 7d703710a，health.h 有独立的
+  // controls_allowed_lateral_pkt / controls_allowed_longitudinal_pkt（固件 main_comms.h 已正确组装：
+  // lateral = controls_allowed || controls_allowed_lateral，longitudinal = controls_allowed）。
+  // 旧版误用单一 controls_allowed_pkt 冒充横纵——MADS 单独横向激活时 panda 已放行横向但
+  // pandad 上报 False → mads.py lateral_mismatch_counter 200帧 → controlsMismatchLateral 报警。
+  ps.setControlsAllowedLateral(health.controls_allowed_lateral_pkt);
+  ps.setControlsAllowedLongitudinal(health.controls_allowed_longitudinal_pkt);
 }
 
 void fill_panda_can_state(cereal::PandaState::PandaCanState::Builder &cs, const can_health_t &can_health) {
