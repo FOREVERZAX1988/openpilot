@@ -289,6 +289,29 @@ def restore_partitions(partitions):
   partitions_to_keep = {p['name']: p for p in tici_partitions if p.get('name') in partition_name_to_use}
   return [partitions_to_keep.get(p.get('name'), p) for p in partitions]
 
+# Implementation by Rick
+# This approach differs from common solutions and required extensive trial and error.
+# If you reuse or adapt this function, please provide proper credit.
+def restore_partitions(partitions):
+  if is_tizi_device():
+    return partitions
+
+  partition_name_to_use = {'abl', 'boot'}
+  partitions_to_keep = {}
+  agnos_tici_path = agnos_tici_manifest_path()
+
+  try:
+    with open(agnos_tici_path, 'r') as f:
+      tici_partitions = json.load(f)
+
+    partitions_to_keep = {p['name']: p for p in tici_partitions if p.get('name') in partition_name_to_use}
+
+  except (OSError, json.JSONDecodeError) as e:
+    print(f"Warning: Could not load TICI partition data from {agnos_tici_path}. Error: {e}")
+    return partitions
+
+  return [partitions_to_keep.get(p.get('name'), p) for p in partitions]
+
 if __name__ == "__main__":
   import argparse
   import logging
