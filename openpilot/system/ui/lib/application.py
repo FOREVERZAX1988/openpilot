@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import NamedTuple
 from importlib.resources import as_file, files
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.basedir import BASEDIR
 from openpilot.common.hardware import HARDWARE, PC
 from openpilot.system.ui.lib.multilang import FONT_FALLBACK_LANGUAGES, TRANSLATIONS_DIR, multilang
 from openpilot.common.realtime import Ratekeeper
@@ -702,6 +703,17 @@ class GuiApplication(GuiApplicationExt):
     if language not in self._fallback_fonts:
       chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
       chars.update(TRANSLATIONS_DIR.joinpath(f"app_{language}.po").read_text(encoding="utf-8"))
+      # 补充 UI 硬编码中文（tr_noop 标记的静态字符串、品牌菜单描述等不在 po 里的字符，
+      # 如"起步跟停"描述中的"代"字）——扫描 UI 源码目录，把所有 CJK 字符纳入字形集，
+      # 避免硬编码中文显示为 ?（00000047 后新增 UI 文本同样覆盖）
+      for _ui_dir in [Path(BASEDIR) / 'openpilot/system/ui', Path(BASEDIR) / 'openpilot/selfdrive/ui',
+                     Path(BASEDIR) / 'openpilot/sunnypilot']:
+        if _ui_dir.exists():
+          for _py in _ui_dir.rglob('*.py'):
+            try:
+              chars.update(c for c in _py.read_text(encoding='utf-8') if '\u4e00' <= c <= '\u9fff')
+            except Exception:
+              pass
       codepoints = sorted(map(ord, chars))
       codepoint_buffer = rl.ffi.new("int[]", codepoints)
       font_name = NOTO_FONTS[language]

@@ -3347,7 +3347,7 @@ msgstr "🔥 Firehose 模式 🔥"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "🚀 sunnylink 🚀"
-msgstr "🚀 SunnyLink 🚀"
+msgstr "★ SunnyLink ★"
 
 #: selfdrive\ui\widgets\offroad_alerts.py
 msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
@@ -3801,7 +3801,7 @@ msgstr "宽松"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "🚀 sunnylink 🚀"
-msgstr "🚀 SunnyLink 🚀"
+msgstr "★ SunnyLink ★"
 
 #: selfdrive\ui\widgets\offroad_alerts.py
 msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
