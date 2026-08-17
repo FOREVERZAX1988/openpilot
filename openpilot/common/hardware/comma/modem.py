@@ -16,6 +16,8 @@ from ipaddress import IPv4Address, AddressValueError
 
 from enum import Enum
 
+from openpilot.common.hardware.comma.hardware import is_tici_dos
+
 
 logging.basicConfig(
   level=logging.INFO,
@@ -501,7 +503,6 @@ class Modem:
     # SIM hot swap: skip on the comma3 (TICI_DOS) - matches openpilot v0.10.0, which
     # only sent these on tizi (C3X). Enabling SIM-detect on the C3 can cause
     # spurious SIM-removed events and drop the connection.
-    from openpilot.common.hardware.comma.hardware import is_tici_dos  # noqa: E402
     if not is_tici_dos():
       cmds += [
         'AT+QSIMDET=1,0',
