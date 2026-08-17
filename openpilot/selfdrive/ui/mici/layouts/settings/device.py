@@ -7,7 +7,7 @@ from openpilot.common.api.comma_connect import get_api_host
 from openpilot.common.params import Params
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.system.ui.widgets.scroller import NavRawScrollPanel, NavScroller
-from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton, GreyBigButton
+from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton, BigMultiToggle, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationDialog
 from openpilot.selfdrive.ui.mici.widgets.pairing_dialog import PairingDialog
 from openpilot.selfdrive.ui.mici.onroad.cabin_camera_dialog import CabinCameraDialog
@@ -187,19 +187,27 @@ class DeviceLayoutMici(NavScroller):
                                                           power_off_callback, exit_on_confirm=False, red=True)
     self._power_off_btn.set_visible(lambda: not ui_state.ignition)
 
-    # 语言按钮：单击直接切换 英语↔中文（mici 的 MultiOptionDialog 子菜单点击失效，
-    # 2026-08-17 改为直接切换，按钮值实时显示当前语言）
-    self._language_btn = BigButton(tr("language"), multilang.codes.get(multilang.language, multilang.language),
-                                   gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
-    self._language_btn.set_click_callback(self._toggle_language)
+    # 语言按钮：样式与 driving personality 一致（BigMultiToggle：右上角选项灯+左下角当前值）。
+    # 切换后重启 UI 让新语言完整生效——mici 的 on_language_changed 会卸载字体导致文字消失（2026-08-17 记录）。
+    self._language_btn = BigMultiToggle(
+      tr("language"),
+      [multilang.codes.get(c, c) for c in ("en", "zh-CHS")],
+      select_callback=self._on_language_selected,
+    )
+    lang_display = multilang.codes.get(multilang.language, multilang.language)
+    if lang_display not in self._language_btn._options:  # 当前语言不在中英选项时默认英文，防 index 崩溃
+      lang_display = self._language_btn._options[0]
+    self._language_btn.set_value(lang_display)
 
     # Konik/Comma 服务器显示与切换（与 tizi 的 DeviceLayoutSP 归类一致，2026-08-17）
     self._api_server_btn = GreyBigButton(tr("Current API Server"), get_api_host(),
                                          gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
-    self._server_btn = BigButton(tr("Server"),
-                                 tr("KONIK") if ui_state.params.get_bool("UseKonikServer", False) else tr("COMMA"),
-                                 gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
-    self._server_btn.set_click_callback(self._toggle_server)
+    self._server_btn = BigMultiToggle(
+      tr("Server"),
+      [tr("COMMA"), tr("KONIK")],
+      select_callback=self._on_server_selected,
+    )
+    self._server_btn.set_value(tr("KONIK") if ui_state.params.get_bool("UseKonikServer", False) else tr("COMMA"))
 
     regulatory_btn = BigButton(tr("regulatory info"), "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     regulatory_btn.set_click_callback(self._on_regulatory)
@@ -230,16 +238,14 @@ class DeviceLayoutMici(NavScroller):
       self._power_off_btn,
     ])
 
-  def _toggle_server(self):
-    """切换 Konik/Comma 服务器：滑动确认后切 UseKonikServer 并重启（与 tizi 逻辑一致）。"""
-    def confirm_callback():
-      current_use_konik = ui_state.params.get_bool("UseKonikServer", False)
-      ui_state.params.put_bool("UseKonikServer", not current_use_konik, block=True)
-      ui_state.params.put_bool("DoReboot", True, block=True)
-
-    gui_app.push_widget(BigConfirmationDialog(f"slide to\n{tr('switch server').lower()}",
-                                              gui_app.texture("icons_mici/settings/device/info.png", 64, 64),
-                                              confirm_callback, exit_on_confirm=False))
+  def _on_server_selected(self, value: str):
+    """BigMultiToggle 选择回调：COMMA ↔ KONIK 直接切换（样式同驾驶风格）。
+    写 UseKonikServer 并重启栈让 API host 生效（替代原滑动确认+整机重启 DoReboot）。"""
+    use_konik = value == tr("KONIK")
+    if use_konik == ui_state.params.get_bool("UseKonikServer", False):
+      return
+    ui_state.params.put_bool("UseKonikServer", use_konik, block=True)
+    ui_state.params.put_bool("OnroadCycleRequested", True, block=True)
 
   def _update_state(self):
     super()._update_state()
@@ -248,13 +254,19 @@ class DeviceLayoutMici(NavScroller):
     self._server_btn.set_value(server)
     self._api_server_btn.set_value(get_api_host())
 
-  def _toggle_language(self):
-    """单击直接切换 英语 ↔ 中文（简体）。不做子菜单——MultiOptionDialog 在 mici
-    上子菜单点击失效（看不到选项内容），且实际只用中英两种语言。"""
-    new_code = "zh-CHS" if multilang.language == "en" else "en"
+  def _on_language_selected(self, display_name: str):
+    """BigMultiToggle 选择回调：显示名 → 语言代码，切换并重启 UI。
+    不再调 gui_app.on_language_changed（会卸载字体导致文字消失），改用
+    OnroadCycleRequested 重启 UI 让新语言完整生效。"""
+    new_code = "en"
+    for code, name in multilang.codes.items():
+      if tr(name) == display_name:
+        new_code = code
+        break
+    if new_code == multilang.language:
+      return
     multilang.change_language(new_code)
-    self._language_btn.set_value(multilang.codes.get(new_code, new_code))
-    gui_app.on_language_changed(new_code)
+    ui_state.params.put_bool("OnroadCycleRequested", True, block=True)
 
   def _on_regulatory(self):
     if not self._fcc_dialog:
