@@ -5111,3 +5111,356 @@ msgstr "Macan 起步跟停"
 
 msgid "language"
 msgstr "语言"
+
+
+msgid "toggles"
+msgstr "开关"
+
+msgid "network"
+msgstr "网络"
+
+msgid "device"
+msgstr "设备"
+
+msgid "software"
+msgstr "软件"
+
+msgid "developer"
+msgstr "开发者"
+
+msgid "firehose"
+msgstr "数据流"
+
+msgid "driving personality"
+msgstr "驾驶风格"
+
+msgid "experimental mode"
+msgstr "实验模式"
+
+msgid "use metric units"
+msgstr "使用公制单位"
+
+msgid "lane departure warnings"
+msgstr "车道偏离警告"
+
+msgid "always-on driver monitor"
+msgstr "常开驾驶员监控"
+
+msgid "distraction detection level"
+msgstr "分心检测级别"
+
+msgid "record & upload driver camera"
+msgstr "录制并上传驾驶员摄像头"
+
+msgid "record & upload mic audio"
+msgstr "录制并上传麦克风音频"
+
+msgid "enable sunnypilot"
+msgstr "启用 sunnypilot"
+
+msgid "enable\nexperimental mode"
+msgstr "启用\n实验模式"
+
+msgid "enabling\nexperimental mode"
+msgstr "正在启用\n实验模式"
+
+msgid "openpilot defaults to driving in chill mode."
+msgstr "openpilot 默认以 chill 模式驾驶。"
+
+msgid "Experimental mode enables alpha-level features that aren't ready for chill mode."
+msgstr "实验模式启用尚未达到 chill 标准的功能。"
+
+msgid "End-to-End Longitudinal Control"
+msgstr "端到端纵向控制"
+
+msgid "Let the driving model control the gas and brakes."
+msgstr "让驾驶模型控制油门和刹车。"
+
+msgid "openpilot will drive as it thinks a human would, including stopping for red lights and stop signs."
+msgstr "openpilot 将像人类一样驾驶，包括在红灯和停车标志前停车。"
+
+msgid "The set speed will only act as an upper bound."
+msgstr "设定速度仅作为上限。"
+
+msgid "This is an alpha quality feature; mistakes should be expected."
+msgstr "这是 alpha 质量功能；请做好出错准备。"
+
+msgid "New Driving Visualization"
+msgstr "新的驾驶可视化"
+
+msgid "The path will change colors to communicate acceleration intent."
+msgstr "路径颜色会变化以传达加速意图。"
+
+msgid "Red for braking, green for acceleration, and gray for coasting."
+msgstr "红色表示制动，绿色表示加速，灰色表示滑行。"
+
+msgid "aggressive"
+msgstr "激进"
+
+msgid "standard"
+msgstr "标准"
+
+msgid "relaxed"
+msgstr "舒适"
+
+msgid "strict"
+msgstr "严格"
+
+msgid "moderate"
+msgstr "适中"
+
+msgid "lenient"
+msgstr "宽松"
+
+msgid "enable alpha\nlongitudinal"
+msgstr "启用 Alpha\n纵向控制"
+
+msgid "enabling alpha longitudinal"
+msgstr "正在启用 Alpha 纵向控制"
+
+msgid "scroll to continue"
+msgstr "向下滑动继续"
+
+msgid "WARNING: alpha longitudinal control may disable Automatic Emergency Braking (AEB)"
+msgstr "警告：Alpha 纵向控制可能禁用自动紧急制动（AEB）"
+
+msgid "On this car, openpilot defaults to the stock system's built-in ACC."
+msgstr "在此车辆上，openpilot 默认使用原厂内置 ACC。"
+
+msgid "Enabling this will switch to openpilot longitudinal control."
+msgstr "启用此选项将切换到 openpilot 纵向控制。"
+
+msgid "Using Experimental mode is recommended with openpilot longitudinal control alpha."
+msgstr "建议在 openpilot 纵向控制 alpha 下使用实验模式。"
+
+msgid "Changing this setting will restart openpilot if the car is powered on."
+msgstr "更改此设置将在车辆通电时重启 openpilot。"
+
+msgid "enter GitHub username..."
+msgstr "输入 GitHub 用户名..."
+
+msgid "SSH keys"
+msgstr "SSH 密钥"
+
+msgid "Not set"
+msgstr "未设置"
+
+msgid "joystick debug mode"
+msgstr "手柄调试模式"
+
+msgid "longitudinal maneuver mode"
+msgstr "纵向测试模式"
+
+msgid "lateral maneuver mode"
+msgstr "横向测试模式"
+
+msgid "alpha longitudinal"
+msgstr "Alpha 纵向控制"
+
+msgid "ui debug mode"
+msgstr "UI 调试模式"
+
+msgid "Loading..."
+msgstr "加载中..."
+
+msgid "Please connect to Wi-Fi to fetch your key."
+msgstr "请连接 Wi-Fi 以获取您的密钥。"
+
+msgid "device ID"
+msgstr "设备 ID"
+
+msgid "serial"
+msgstr "序列号"
+
+msgid "pair"
+msgstr "配对"
+
+msgid "paired"
+msgstr "已配对"
+
+msgid "subscribed"
+msgstr "已订阅"
+
+msgid "upgrade to prime"
+msgstr "升级到 Prime"
+
+msgid "regulatory info"
+msgstr "法规信息"
+
+msgid "driver\ncamera preview"
+msgstr "驾驶员\n摄像头预览"
+
+msgid "review\ntraining guide"
+msgstr "查看\n培训指南"
+
+msgid "terms &\nconditions"
+msgstr "条款与\n条件"
+
+msgid "reset calibration"
+msgstr "重置标定"
+
+msgid "reboot"
+msgstr "重启"
+
+msgid "power off"
+msgstr "关机"
+
+msgid "Please connect to Wi-Fi to complete initial pairing."
+msgstr "请连接 Wi-Fi 以完成初始配对。"
+
+msgid "Device must be registered with the comma.ai backend to pair."
+msgstr "设备必须先注册到 comma.ai 后端才能配对。"
+
+msgid "slide to\n{}"
+msgstr "滑动以\n{}"
+
+msgid "Disengage to {}"
+msgstr "退出以 {}"
+
+msgid "camera starting"
+msgstr "摄像头启动中"
+
+msgid "next"
+msgstr "下一步"
+
+msgid "back"
+msgstr "返回"
+
+msgid "driver monitoring\ncheck"
+msgstr "驾驶员监控\n检查"
+
+msgid "Next, we'll check if comma four can detect the driver properly."
+msgstr "接下来，我们将检查 comma four 能否正确识别驾驶员。"
+
+msgid "sunnypilot uses the cabin camera to check if the driver is distracted."
+msgstr "sunnypilot 使用座舱摄像头检查驾驶员是否分心。"
+
+msgid "If it does not have a clear view of the driver, unplug and remount before continuing."
+msgstr "如果无法清晰看到驾驶员，请重新插拔安装后再继续。"
+
+msgid "looking for driver"
+msgstr "正在寻找驾驶员"
+
+msgid "make sure comma\nfour can see your face"
+msgstr "确保 comma\nfour 能看到您的脸"
+
+msgid "Remount if your face is blocked, or driver monitoring has difficulty tracking your face."
+msgstr "如果您的脸被遮挡或驾驶员监控难以跟踪，请重新安装。"
+
+msgid "allow data uploading"
+msgstr "允许数据上传"
+
+msgid "no, don't upload"
+msgstr "不，不进行上传"
+
+msgid "driver camera data"
+msgstr "驾驶员摄像头数据"
+
+msgid "do you want to share video data for training?"
+msgstr "您是否愿意分享视频数据用于训练？"
+
+
+msgid "Sharing your data with comma helps improve openpilot and sunnypilot for everyone."
+msgstr "与 comma 分享数据有助于改进 openpilot 和 sunnypilot。"
+
+msgid "what is sunnypilot?"
+msgstr "什么是 sunnypilot？"
+
+msgid "1. sunnypilot is a driver assistance system."
+msgstr "1. sunnypilot 是驾驶辅助系统。"
+
+msgid "2. You must pay attention at all times."
+msgstr "2. 您必须始终保持注意力。"
+
+msgid "3. You must be ready to take over at any time."
+msgstr "3. 您必须随时准备接管。"
+
+msgid "4. You are fully responsible for driving the car."
+msgstr "4. 您对驾驶车辆承担全部责任。"
+
+msgid "accept\nterms"
+msgstr "接受\n条款"
+
+msgid "decline &\nuninstall"
+msgstr "拒绝并\n卸载"
+
+msgid "terms of\nservice"
+msgstr "服务\n条款"
+
+msgid "You must accept the Terms of Service to use sunnypilot."
+msgstr "您必须接受服务条款才能使用 sunnypilot。"
+
+msgid "swipe for QR code"
+msgstr "滑动查看二维码"
+
+msgid "or go to https://sunnypilot.ai/terms"
+msgstr "或访问 https://sunnypilot.ai/terms"
+
+msgid "enable tethering"
+msgstr "启用网络共享"
+
+msgid "enter password..."
+msgstr "输入密码..."
+
+msgid "tethering password"
+msgstr "网络共享密码"
+
+msgid "network usage"
+msgstr "网络用量"
+
+msgid "enable roaming"
+msgstr "启用漫游"
+
+msgid "apn settings"
+msgstr "APN 设置"
+
+msgid "edit"
+msgstr "编辑"
+
+msgid "cellular metered"
+msgstr "蜂窝网络计费"
+
+msgid "enter APN..."
+msgstr "输入 APN..."
+
+msgid "default"
+msgstr "默认"
+
+msgid "metered"
+msgstr "计费"
+
+msgid "unmetered"
+msgstr "不计费"
+
+msgid "slide to forget"
+msgstr "滑动以忘记"
+
+msgid "searching for networks"
+msgstr "正在搜索网络"
+
+msgid "forgetting..."
+msgstr "正在忘记..."
+
+msgid "starting..."
+msgstr "正在启动..."
+
+msgid "connecting..."
+msgstr "正在连接..."
+
+msgid "tethering"
+msgstr "网络共享中"
+
+msgid "connected"
+msgstr "已连接"
+
+msgid "not in range"
+msgstr "不在范围"
+
+msgid "unsupported"
+msgstr "不支持"
+
+msgid "wrong password"
+msgstr "密码错误"
+
+msgid "connect"
+msgstr "连接"
