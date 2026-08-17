@@ -4376,3 +4376,18 @@ msgstr "电子稳定控制系统已禁用"
 
 msgid "Radar Unavailable"
 msgstr "雷达暂时不可用"
+
+msgid "EPS Assist Compensation"
+msgstr "EPS 助力补偿"
+
+msgid "EPS Compensation Scale"
+msgstr "EPS 补偿幅度"
+
+msgid "Customize EPS Compensation"
+msgstr "自定义 EPS 助力补偿"
+
+msgid "Compensate for the EPS speed-dependent assist curve (the EPS absorbs part of the steering command at low speed). Disable to compare with stock steering feel."
+msgstr "补偿 EPS 随速度变化的助力曲线（低速时 EPS 会吸收部分转向指令）。关闭可对比原厂转向手感。"
+
+msgid "Compensation amount: 1.00 = full MQB curve (low speed x1.6), 0.50 = half. WARNING: 0.00 zeroes steering output — use the toggle above to disable instead."
+msgstr "补偿幅度：1.00 = MQB 曲线全量（低速 x1.6），0.50 = 半量。警告：0.00 会使转向输出归零——关闭请用上方开关。"
