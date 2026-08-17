@@ -14,7 +14,13 @@ from openpilot.common.esim.base import LPABase
 from openpilot.common.hardware.base import HardwareBase, ThermalConfig, ThermalZone
 from openpilot.common.hardware.comma.pins import GPIO
 from openpilot.common.hardware.comma.amplifier import Amplifier
-from openpilot.common.hardware.comma.modem import query_imei_at_port
+
+LITE = os.getenv("LITE") is not None
+
+DBUS_PROPS = 'org.freedesktop.DBus.Properties'
+
+MM = 'org.freedesktop.ModemManager1'
+MM_MODEM = MM + ".Modem"
 
 LITE = os.getenv("LITE") is not None
 
@@ -287,6 +293,7 @@ class HardwareComma(HardwareBase):
     if imei:
       return imei
     # Fallback: read IMEI directly via AT+CGSN (works without SIM / ModemManager)
+    from openpilot.common.hardware.comma.modem import query_imei_at_port
     return query_imei_at_port()
 
   def get_network_info(self):

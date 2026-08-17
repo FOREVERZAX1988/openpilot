@@ -255,7 +255,8 @@ class StreamSession:
       self.video_tracks.append(track)
       builder.add_video_stream(camera, track)
     self.stream = builder.stream()
-    self.params.put("LivestreamActiveCamera", body.init_camera)
+    active_cam = body.cameras[0] if body.cameras else "road"
+    self.params.put("LivestreamActiveCamera", active_cam)
 
     self.is_body = "testJoystick" in body.bridge_services_in
 

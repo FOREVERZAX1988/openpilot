@@ -60,9 +60,9 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
   else:
     if IS_MICI:
       if set_speed_conv < speed_limit_final_last_conv:
-        alert_1_str = "Press + to confirm speed limit"
+        alert_1_str = "按 + 确认限速"
       elif set_speed_conv > speed_limit_final_last_conv:
-        alert_1_str = "Press - to confirm speed limit"
+        alert_1_str = "按 - 确认限速"
     else:
       alert_size = AlertSize.none
 
@@ -104,16 +104,16 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.manualSteeringRequired: {
     ET.USER_DISABLE: Alert(
-      "Automatic Lane Centering is OFF",
-      "Manual Steering Required",
+      "自动车道居中已关闭",
+      "需要手动转向",
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.disengage, 1.),
   },
 
   EventNameSP.manualLongitudinalRequired: {
     ET.WARNING: Alert(
-      "Smart/Adaptive Cruise Control: OFF",
-      "Manual Speed Control Required",
+      "智能/自适应巡航：已关闭",
+      "需要手动控制车速",
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
   },
@@ -128,7 +128,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.silentBrakeHold: {
     ET.WARNING: EngagementAlert(AudibleAlert.none),
-    ET.NO_ENTRY: NoEntryAlert("Brake Hold Active"),
+    ET.NO_ENTRY: NoEntryAlert("制动保持已激活"),
   },
 
   EventNameSP.silentWrongGear: {
@@ -159,7 +159,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("Door Open"),
+    ET.NO_ENTRY: NoEntryAlert("车门开启"),
   },
 
   EventNameSP.silentSeatbeltNotLatched: {
@@ -186,7 +186,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventNameSP.experimentalModeSwitched: {
-    ET.WARNING: NormalPermanentAlert("Experimental Mode Switched", duration=1.5)
+    ET.WARNING: NormalPermanentAlert("实验模式已切换", duration=1.5)
   },
 
   EventNameSP.wrongCarModeAlertOnly: {
@@ -194,12 +194,12 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventNameSP.pedalPressedAlertOnly: {
-    ET.WARNING: NoEntryAlert("Pedal Pressed")
+    ET.WARNING: NoEntryAlert("踏板被按下")
   },
 
   EventNameSP.laneTurnLeft: {
     ET.WARNING: Alert(
-      "Turning Left",
+      "正在左转",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
@@ -207,7 +207,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.laneTurnRight: {
     ET.WARNING: Alert(
-      "Turning Right",
+      "正在右转",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
@@ -215,7 +215,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.speedLimitActive: {
     ET.WARNING: Alert(
-      "Auto adjusting to speed limit",
+      "正在自动调整至限速",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.),

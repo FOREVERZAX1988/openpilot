@@ -1,5 +1,7 @@
 venv/
 .venv/
+.pydeps/
+.pydeps/
 .ci_cache
 .env
 .clang-format

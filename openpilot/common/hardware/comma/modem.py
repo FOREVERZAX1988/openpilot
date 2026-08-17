@@ -501,7 +501,7 @@ class Modem:
     # SIM hot swap: skip on the comma3 (TICI_DOS) - matches openpilot v0.10.0, which
     # only sent these on tizi (C3X). Enabling SIM-detect on the C3 can cause
     # spurious SIM-removed events and drop the connection.
-    from openpilot.common.hardware.comma.hardware import is_tici_dos
+    from openpilot.common.hardware.comma.hardware import is_tici_dos  # noqa: E402
     if not is_tici_dos():
       cmds += [
         'AT+QSIMDET=1,0',
@@ -519,7 +519,6 @@ class Modem:
 
   def _qmi_mode(self) -> bool:
     # dragonpilot: comma3 (TICI_DOS) EG25 can't do *99# PPP -> use QMI on wwan0
-    from openpilot.common.hardware.comma.hardware import is_tici_dos
     return is_tici_dos() and QMISession.available()
 
   def _do_initializing(self):

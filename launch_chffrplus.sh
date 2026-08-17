@@ -281,8 +281,23 @@ function launch {
     local web_py=python3.12
     command -v "$web_py" >/dev/null 2>&1 || web_py=python3
     local venv_site="/usr/local/venv/lib/python3.12/site-packages"
+    local pydeps="$root/.pydeps"
     local py_path="$root"
-    [ -d "$venv_site" ] && py_path="$root:$venv_site"
+    [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
+    [ -d "$pydeps" ] && py_path="$py_path:$pydeps"
+    # AGNOS rootfs is read-only; install aiohttp into $pydeps on first boot.
+    if ! "$web_py" -c "import aiohttp" 2>/dev/null; then
+      if [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null; then
+        if ! "$web_py" -c "import pip" 2>/dev/null; then
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null && \
+            "$web_py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/webui.log 2>&1 || true
+        fi
+        PYTHONPATH="$py_path" "$web_py" -m pip install --target="$pydeps" aiohttp >> /tmp/webui.log 2>&1 || true
+        py_path="$root"
+        [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
+        py_path="$py_path:$pydeps"
+      fi
+    fi
     if pgrep -f "[p]ython.* -m webui\.webuid" >/dev/null 2>&1; then
       return 0
     fi
@@ -302,8 +317,23 @@ function launch {
     local aid_py=python3.12
     command -v "$aid_py" >/dev/null 2>&1 || aid_py=python3
     local venv_site="/usr/local/venv/lib/python3.12/site-packages"
+    local pydeps="$root/.pydeps"
     local py_path="$root"
-    [ -d "$venv_site" ] && py_path="$root:$venv_site"
+    [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
+    [ -d "$pydeps" ] && py_path="$py_path:$pydeps"
+    # Share aiohttp bootstrap with WebUI (.pydeps on read-only AGNOS rootfs).
+    if ! PYTHONPATH="$py_path" "$aid_py" -c "import aiohttp" 2>/dev/null; then
+      if [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null; then
+        if ! "$aid_py" -c "import pip" 2>/dev/null; then
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null && \
+            "$aid_py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/aid.log 2>&1 || true
+        fi
+        PYTHONPATH="$py_path" "$aid_py" -m pip install --target="$pydeps" aiohttp >> /tmp/aid.log 2>&1 || true
+        py_path="$root"
+        [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
+        py_path="$py_path:$pydeps"
+      fi
+    fi
     if pgrep -f "[p]ython.* -m ai\.aid" >/dev/null 2>&1; then
       return 0
     fi

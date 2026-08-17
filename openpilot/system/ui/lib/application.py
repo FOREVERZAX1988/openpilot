@@ -110,6 +110,24 @@ NOTO_FONTS = {
 }
 
 
+def _translation_codepoints(language: str) -> list[int]:
+  chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
+  po_path = TRANSLATIONS_DIR.joinpath(f"app_{language}.po")
+  if po_path.is_file():
+    try:
+      from openpilot.selfdrive.ui.translations.potools import parse_po
+
+      _, entries = parse_po(po_path)
+      for entry in entries:
+        if entry.msgstr:
+          chars.update(entry.msgstr)
+        for plural in entry.msgstr_plural.values():
+          chars.update(plural)
+    except Exception:
+      chars.update(po_path.read_text(encoding="utf-8"))
+  return sorted(map(ord, chars))
+
+
 class FontWeight(StrEnum):
   NORMAL = "Inter-Regular.ttf" if BIG_UI else "Inter-Medium.ttf"
   MEDIUM = "Inter-Medium.ttf"

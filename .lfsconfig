@@ -1,4 +1,6 @@
 [lfs]
-  url     = https://mxgit.iepose.cn/mouxan/op.git/info/lfs
-  pushurl = https://mxgit.iepose.cn/mouxan/op.git/info/lfs
+  # 拉取：沿用 sunnypilot 公共 LFS（模型/音效等大文件）
+  url = https://gitlab.com/sunnypilot/public/sunnypilot-new-lfs.git/info/lfs
+  # 推送：本 fork 不向 LFS 上传；git push 时请设 GIT_LFS_SKIP_PUSH=1
+  pushurl = https://gitlab.com/sunnypilot/public/sunnypilot-new-lfs.git/info/lfs
   locksverify = false
