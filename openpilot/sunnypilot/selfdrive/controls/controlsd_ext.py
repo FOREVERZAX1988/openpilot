@@ -104,6 +104,18 @@ class ControlsExt(ModelStateBase):
     CC_SP.intelligentCruiseButtonManagement.sendButton = icbm_src.sendButton
     CC_SP.intelligentCruiseButtonManagement.vTarget = icbm_src.vTarget
 
+    # Macan SnG: 传递 planner 原始加速度请求。LoC 在停车保持态（原厂
+    # cruise_standstill=True）卡在 stopping 状态，actuators.accel 恒 ≤0
+    # （0000004d 实测 5 次长停 aTarget 0.21-0.45 但 accel=0，SnG 判定
+    # 永远看不到正信号 → 不代发 RESUME → 不起步）。carcontroller 的
+    # SnG 判定需看真实起步意图（aTarget）而非被 LoC 压过的输出。
+    try:
+      _a_target_param = CC_SP.params.append()
+      _a_target_param.key = "aTarget"
+      _a_target_param.value = str(sm['longitudinalPlan'].aTarget).encode()
+    except Exception:
+      pass
+
     return CC_SP
 
   @staticmethod
