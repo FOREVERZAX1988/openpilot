@@ -967,50 +967,10 @@ msgid "Follow the prompts to complete the pairing process"
 msgstr "依照提示完成配對過程"
 
 #: system\ui\mici_reset.py
-msgid ""
-"For a deeper reset, go to\n"
-"https://flash.comma.ai"
-msgstr ""
-"如需更深入的重置，請訪問\n"
-"https://flash.comma.ai"
-
-#: selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "For applicable vehicles, always display the true vehicle current speed from wheel speed sensors."
 msgstr "對於適用的車輛，始終顯示來自輪速感知器的真實車輛當前速度。"
 
 #: selfdrive\ui\layouts\settings\firehose.py
-msgid ""
-"For maximum effectiveness, bring your device inside and connect to a good USB-C adapter and Wi-Fi weekly.\n"
-"\n"
-"Firehose Mode can also work while you're driving if connected to a hotspot or unlimited SIM card.\n"
-"\n"
-"\n"
-"Frequently Asked Questions\n"
-"\n"
-"Does it matter how or where I drive? Nope, just drive as you normally would.\n"
-"\n"
-"Do all of my segments get pulled in Firehose Mode? No, we selectively pull a subset of your segments.\n"
-"\n"
-"What's a good USB-C adapter? Any fast phone or laptop charger should be fine.\n"
-"\n"
-"Does it matter which software I run? Yes, only upstream openpilot (and particular forks) are able to be used for training."
-msgstr ""
-"为获得最佳效果，请每周将设备带回室内，并連線优质 USB-C 充電器与 Wi-Fi。\n"
-"\n"
-"若連線热点或不限流量 SIM 卡，駕駛时也可使用洪流模式。\n"
-"\n"
-"\n"
-"常见问题\n"
-"\n"
-"駕駛方式或地点重要吗？不重要，正常駕駛即可。\n"
-"\n"
-"洪流模式会拉取我的全部片段吗？不会，我们只会选择性拉取部分片段。\n"
-"\n"
-"什么样的 USB-C 充電器合适？任何快充手机或笔记本充電器均可。\n"
-"\n"
-"使用什么軟體重要吗？是的，仅上游 openpilot（及特定分支）可用于訓練。"
-
-#: selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "For secure backup, restore, and remote configuration"
 msgstr "用於安全備份、復原和遠端配置"
 
@@ -1035,14 +995,6 @@ msgid "GOOD"
 msgstr "良好"
 
 #: selfdrive\ui\sunnypilot\onroad\circular_alerts.py
-msgid ""
-"GREEN\n"
-"LIGHT"
-msgstr ""
-"綠色\n"
-"光"
-
-#: system\ui\tici_setup.py
 msgid "Getting Started"
 msgstr "入門"
 
@@ -1143,14 +1095,6 @@ msgid "L.S."
 msgstr "LS"
 
 #: selfdrive\ui\sunnypilot\onroad\circular_alerts.py
-msgid ""
-"LEAD VEHICLE\n"
-"DEPARTING"
-msgstr ""
-"領頭車輛\n"
-"出發"
-
-#: selfdrive\ui\sunnypilot\onroad\speed_limit.py
 msgid "LIMIT"
 msgstr "限制"
 
@@ -1732,14 +1676,6 @@ msgid "Reset failed. Reboot to try again."
 msgstr "重置失敗。重新啟動再試一次。"
 
 #: system\ui\tici_reset.py
-msgid ""
-"Resetting device...\n"
-"This may take up to a minute."
-msgstr ""
-"正在重置設備...\n"
-"這可能需要長達一分鐘的時間。"
-
-#: system\ui\mici_reset.py
 msgid "Resetting erases all user content & data."
 msgstr "重置會刪除所有使用者內容和資料。"
 
@@ -2146,16 +2082,6 @@ msgid "This setting will take effect once the device enters offroad state."
 msgstr "此設定將在裝置進入離路狀態後生效。"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\osm.py
-msgid ""
-"This will delete ALL downloaded maps\n"
-"\n"
-"Are you sure you want to delete all maps?"
-msgstr ""
-"這將刪除所有下載的地圖\n"
-"\n"
-"您確定要刪除所有地圖嗎？"
-
-#: selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "This will delete ALL downloaded models from the cache except the currently active model. Are you sure?"
 msgstr "這將從快取中刪除除當前活動模型之外的所有下載模型。你確定嗎？"
 
@@ -2451,14 +2377,6 @@ msgid "cancel download"
 msgstr "取消下載"
 
 #: system\ui\mici_setup.py
-msgid ""
-"caution: installing\n"
-"3rd party software"
-msgstr ""
-"注意：安裝\n"
-"第三方軟體"
-
-#: selfdrive\ui\layouts\settings\software.py
 msgid "checking..."
 msgstr "檢查中..."
 
@@ -2471,22 +2389,6 @@ msgid "comma prime"
 msgstr "comma prime"
 
 #: system\ui\mici_setup.py
-msgid ""
-"connect to\n"
-"continue"
-msgstr ""
-"連接到\n"
-"繼續"
-
-#: system\ui\mici_setup.py
-msgid ""
-"connect to\n"
-"internet"
-msgstr ""
-"連接到\n"
-"網際網路"
-
-#: selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "copyparty Service"
 msgstr "複製方服務"
 
@@ -2507,14 +2409,6 @@ msgid "device id"
 msgstr "設備ID"
 
 #: selfdrive\ui\sunnypilot\mici\layouts\onboarding.py
-msgid ""
-"disable\n"
-"sunnylink"
-msgstr ""
-"停用\n"
-"sunnylink"
-
-#: selfdrive\ui\sunnypilot\mici\layouts\settings.py
 msgid "disengage to enable always offroad"
 msgstr "鬆開以啟用始終離路"
 
@@ -2523,15 +2417,6 @@ msgid "down"
 msgstr "下"
 
 #: system\ui\mici_updater.py
-msgid ""
-"download\n"
-"& install"
-msgstr ""
-"下載\n"
-"並安裝"
-
-#: selfdrive\ui\sunnypilot\mici\layouts\models.py
-#: system\ui\mici_setup.py
 msgid "download failed"
 msgstr "下載失敗"
 
@@ -2550,14 +2435,6 @@ msgid "downloading..."
 msgstr "下載中..."
 
 #: selfdrive\ui\sunnypilot\mici\layouts\onboarding.py
-msgid ""
-"enable\n"
-"sunnylink"
-msgstr ""
-"啟用\n"
-"sunnylink"
-
-#: selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
 msgid "enable sunnylink"
 msgstr "啟用 sunnylink"
 
@@ -2597,14 +2474,6 @@ msgstr "英尺"
 #: selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "h"
 msgstr "小時"
-
-#: system\ui\mici_setup.py
-msgid ""
-"how to restore to a\n"
-"factory state later"
-msgstr ""
-"如何恢復到\n"
-"稍後工廠狀態"
 
 #: system\ui\mici_setup.py
 msgid "install openpilot"
@@ -2720,50 +2589,18 @@ msgstr "就緒"
 
 #: system\ui\mici_reset.py
 #: system\ui\mici_setup.py
-msgid ""
-"reboot\n"
-"device"
-msgstr ""
-"重新啟動\n"
-"裝置"
-
-#: system\ui\mici_reset.py
 msgid "reboot to try again"
 msgstr "重新啟動再試一次"
-
-#: system\ui\mici_reset.py
-msgid ""
-"reset &\n"
-"erase"
-msgstr ""
-"重置&\n"
-"擦除"
 
 #: system\ui\mici_reset.py
 msgid "reset failed"
 msgstr "重置失敗"
 
 #: system\ui\mici_reset.py
-msgid ""
-"reset triggered by\n"
-"tapping the screen"
-msgstr ""
-"重設觸發\n"
-"點擊螢幕"
-
-#: system\ui\mici_reset.py
 msgid "resetting device"
 msgstr "復位裝置"
 
 #: system\ui\mici_reset.py
-msgid ""
-"resetting erases\n"
-"all user content & data"
-msgstr ""
-"重置擦除\n"
-"所有用戶內容和數據"
-
-#: selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
 msgid "restore"
 msgstr "恢復"
 
@@ -2810,22 +2647,6 @@ msgid "slide to force offroad"
 msgstr "滑動強制離路"
 
 #: system\ui\mici_setup.py
-msgid ""
-"slide to install\n"
-"custom software"
-msgstr ""
-"滑動安裝\n"
-"客製化軟體"
-
-#: system\ui\mici_setup.py
-msgid ""
-"slide to install\n"
-"openpilot"
-msgstr ""
-"滑動安裝\n"
-"openpilot"
-
-#: selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
 msgid "slide to restart"
 msgstr "滑動重新啟動"
 
@@ -2893,16 +2714,6 @@ msgid "sunnypilot is continuously calibrating, resetting is rarely required. Res
 msgstr "sunnypilot 会持续校准，通常无需重置。若車輛通电，重置校准将重启 sunnypilot。"
 
 #: selfdrive\ui\layouts\settings\firehose.py
-msgid ""
-"sunnypilot learns to drive by watching humans, like you, drive.\n"
-"\n"
-"Firehose Mode allows you to maximize your training data uploads to improve openpilot's driving models. More data means bigger models, which means better Experimental Mode."
-msgstr ""
-"sunnypilot 通过观察像您这样的真人駕駛来学习駕駛。\n"
-"\n"
-"洪流模式可最大化訓練数据上传，以改进 openpilot 駕駛模型。数据越多，模型越大，實驗模式效果越好。"
-
-#: selfdrive\ui\layouts\settings\toggles.py
 msgid "sunnypilot longitudinal control may come in a future update."
 msgstr "sunnypilot 縱向控制可能會在未來的更新中出現。"
 
@@ -2919,14 +2730,6 @@ msgid "sunnypilot will not take over control of gas and brakes. Factory Toyota l
 msgstr "sunnypilot 不會接管油門和煞車的控制。工廠將採用豐田縱向控制。"
 
 #: system\ui\mici_setup.py
-msgid ""
-"swipe down to go\n"
-"back and try again"
-msgstr ""
-"向下滑動即可前往\n"
-"返回並重試"
-
-#: system\ui\mici_setup.py
 msgid "swipe down to go back"
 msgstr "向下滑動返回"
 
@@ -2935,30 +2738,6 @@ msgid "thanks"
 msgstr "謝謝"
 
 #: system\ui\mici_updater.py
-msgid ""
-"the download size\n"
-"is approximately 1 GB"
-msgstr ""
-"下載大小\n"
-"大約 1 GB"
-
-#: system\ui\mici_reset.py
-msgid ""
-"this may take up to\n"
-"a minute"
-msgstr ""
-"這可能需要長達\n"
-"一分鐘"
-
-#: system\ui\mici_reset.py
-msgid ""
-"this may take up to\n"
-"a minute..."
-msgstr ""
-"這可能需要長達\n"
-"一分鐘..."
-
-#: selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
 msgid "try again later."
 msgstr "稍後再試。"
 
@@ -2995,22 +2774,6 @@ msgid "update required"
 msgstr "需要更新"
 
 #: system\ui\mici_reset.py
-msgid ""
-"user data partition\n"
-"could not be mounted"
-msgstr ""
-"使用者資料分區\n"
-"無法安裝"
-
-#: system\ui\mici_setup.py
-msgid ""
-"waiting for\n"
-"internet..."
-msgstr ""
-"等待\n"
-"互聯網..."
-
-#: selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "{} %"
 msgstr "{} %"
 
@@ -3238,3 +3001,180 @@ msgstr "禁用\nsunnylink"
 #: onboarding.py
 msgid "enable\nsunnylink"
 msgstr "启用\nsunnylink"
+
+msgid "Drive above {get_display_speed(CP.minEnableSpeed, metric)} to engage"
+msgstr "请将时速提高至 {get_display_speed(CP.minEnableSpeed, metric)} 来启用"
+
+msgid "Speed Error: {err:.1f} m/s"
+msgstr "速度误差: {err:.1f} 米/秒"
+
+msgid "Posenet Speed Invalid"
+msgstr "Posenet速度无效"
+
+msgid "Process Not Running"
+msgstr "进程未运行"
+
+msgid "Communication Issue Between Processes"
+msgstr "进程间通信问题"
+
+msgid "Camera Malfunction"
+msgstr "摄像头故障"
+
+msgid "Camera Malfunction: Reboot Your Device"
+msgstr "摄像头故障：请重启设备"
+
+msgid "paramsd Temporary Error"
+msgstr "paramsd 临时错误"
+
+msgid "Gas: {round(gb * 100.)}%, Steer: {round(steer * 100.)}%"
+msgstr "油门: {round(gb * 100.)}%, 转向: {round(steer * 100.)}%"
+
+msgid "Joystick Mode"
+msgstr "操纵杆模式"
+
+msgid "Ensure the path ahead is clear"
+msgstr "确保前方道路畅通"
+
+msgid "System Initializing"
+msgstr "系统初始化中"
+
+msgid "Pay Attention"
+msgstr "请注意"
+
+msgid "Driver Distracted"
+msgstr "驾驶员分心"
+
+msgid "Take Control"
+msgstr "立即解除控制"
+
+msgid "Touch Steering Wheel: No Face Detected"
+msgstr "触摸方向盘：未检测到面部"
+
+msgid "Touch Steering Wheel"
+msgstr "触摸方向盘"
+
+msgid "Driver Unresponsive"
+msgstr "驾驶员无响应"
+
+msgid "Press Resume to Exit Stop"
+msgstr "按恢复键以解除停止状态"
+
+msgid "Press Resume to Exit Brake Hold"
+msgstr "按恢复键以解除制动保持"
+
+msgid "Changing Lanes"
+msgstr "正在变道"
+
+msgid "locationd Temporary Error"
+msgstr "locationd临时错误"
+
+msgid "locationd Permanent Error"
+msgstr "locationd永久错误"
+
+msgid "paramsd Permanent Error"
+msgstr "paramsd永久错误"
+
+msgid "Pedal Pressed"
+msgstr "踏板被按下"
+
+msgid "Adaptive Cruise Disabled"
+msgstr "自适应巡航已禁用"
+
+msgid "Vehicle Steering Time Limit"
+msgstr "车辆转向时间限制"
+
+msgid "Out of Storage"
+msgstr "存储空间不足"
+
+msgid "Sensor Data Invalid"
+msgstr "传感器数据无效"
+
+msgid "System Overheated"
+msgstr "系统过热"
+
+msgid "Calibration Incomplete"
+msgstr "校准未完成"
+
+msgid "Calibration in Progress"
+msgstr "校准进行中"
+
+msgid "Door Open"
+msgstr "车门开启"
+
+msgid "ESC Disabled"
+msgstr "电子稳定控制系统已禁用"
+
+msgid "Battery Low"
+msgstr "电池电量低"
+
+msgid "Low Communication Rate Between Processes"
+msgstr "进程间通信速率低"
+
+msgid "Radar Unavailable"
+msgstr "雷达暂时不可用"
+
+msgid "Driving Model Lagging"
+msgstr "驾驶模型滞后"
+
+msgid "Low Memory: Reboot Your Device"
+msgstr "内存不足：请重启设备"
+
+msgid "Electronic Stability Control Active"
+msgstr "电子稳定控制系统激活中"
+
+msgid "CAN Bus Disconnected"
+msgstr "CAN总线断开连接"
+
+msgid "CAN Bus Disconnected: Check Connections"
+msgstr "CAN总线断开连接：请检查连接"
+
+msgid "Vehicle Sensors Invalid"
+msgstr "车辆传感器无效"
+
+msgid "Vehicle Sensors Calibrating"
+msgstr "车辆传感器校准中"
+
+msgid "Drive to Calibrate"
+msgstr "行驶以校准"
+
+msgid "Bookmark Saved"
+msgstr "书签已保存"
+
+msgid "Calibrating"
+msgstr "校准中"
+
+msgid "Reverse Gear"
+msgstr "倒档"
+
+msgid "Press + to confirm speed limit"
+msgstr "按 + 确认限速"
+
+msgid "Press - to confirm speed limit"
+msgstr "按 - 确认限速"
+
+msgid "Automatic Lane Centering is OFF"
+msgstr "自动车道居中已关闭"
+
+msgid "Manual Steering Required"
+msgstr "需要手动转向"
+
+msgid "Smart/Adaptive Cruise Control: OFF"
+msgstr "智能/自适应巡航：已关闭"
+
+msgid "Manual Speed Control Required"
+msgstr "需要手动控制车速"
+
+msgid "Brake Hold Active"
+msgstr "制动保持已激活"
+
+msgid "Experimental Mode Switched"
+msgstr "实验模式已切换"
+
+msgid "Turning Left"
+msgstr "正在左转"
+
+msgid "Turning Right"
+msgstr "正在右转"
+
+msgid "Auto adjusting to speed limit"
+msgstr "正在自动调整至限速"
