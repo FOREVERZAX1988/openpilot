@@ -8,8 +8,6 @@ from openpilot.common.time_helpers import system_time_valid
 from openpilot.system.ui.widgets.scroller import NavRawScrollPanel, NavScroller
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationDialog
-from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
-from openpilot.system.ui.widgets import DialogResult
 from openpilot.selfdrive.ui.mici.widgets.pairing_dialog import PairingDialog
 from openpilot.selfdrive.ui.mici.onroad.cabin_camera_dialog import CabinCameraDialog
 from openpilot.selfdrive.ui.mici.layouts.onboarding import TrainingGuide, TermsPage
@@ -188,10 +186,11 @@ class DeviceLayoutMici(NavScroller):
                                                           power_off_callback, exit_on_confirm=False, red=True)
     self._power_off_btn.set_visible(lambda: not ui_state.ignition)
 
-    self._select_language_dialog: MultiOptionDialog | None = None
-
-    language_btn = BigButton("language", multilang.languages[multilang.codes[multilang.language]], gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
-    language_btn.set_click_callback(self._show_language_dialog)
+    # 语言按钮：单击直接切换 英语↔中文（mici 的 MultiOptionDialog 子菜单点击失效，
+    # 2026-08-17 改为直接切换，按钮值实时显示当前语言）
+    self._language_btn = BigButton("language", multilang.codes.get(multilang.language, multilang.language),
+                                   gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
+    self._language_btn.set_click_callback(self._toggle_language)
 
     regulatory_btn = BigButton("regulatory info", "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     regulatory_btn.set_click_callback(self._on_regulatory)
@@ -213,24 +212,20 @@ class DeviceLayoutMici(NavScroller):
       review_training_guide_btn,
       cabin_cam_btn,
       terms_btn,
-      language_btn,
+      self._language_btn,
       regulatory_btn,
       reset_calibration_btn,
       reboot_btn,
       self._power_off_btn,
     ])
 
-  def _show_language_dialog(self):
-    def handle_language_selection(result: DialogResult):
-      if result == DialogResult.CONFIRM and self._select_language_dialog:
-        selected_language = multilang.languages[self._select_language_dialog.selection]
-        multilang.change_language(selected_language)
-        gui_app.on_language_changed(selected_language)
-      self._select_language_dialog = None
-
-    self._select_language_dialog = MultiOptionDialog(tr("Select a language"), multilang.languages, multilang.codes[multilang.language],
-                                                     option_font_weight=FontWeight.UNIFONT, callback=handle_language_selection)
-    gui_app.push_widget(self._select_language_dialog)
+  def _toggle_language(self):
+    """单击直接切换 英语 ↔ 中文（简体）。不做子菜单——MultiOptionDialog 在 mici
+    上子菜单点击失效（看不到选项内容），且实际只用中英两种语言。"""
+    new_code = "zh-CHS" if multilang.language == "en" else "en"
+    multilang.change_language(new_code)
+    self._language_btn.set_value(multilang.codes.get(new_code, new_code))
+    gui_app.on_language_changed(new_code)
 
   def _on_regulatory(self):
     if not self._fcc_dialog:
