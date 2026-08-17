@@ -5084,3 +5084,30 @@ msgstr "警告：此分支未经测试"
 
 msgid "Lateral Control Mismatch"
 msgstr "控制不匹配：横向"
+
+msgid "Current API Server"
+msgstr "当前 API 服务器"
+
+msgid "Server"
+msgstr "服务器"
+
+msgid "KONIK"
+msgstr "KONIK"
+
+msgid "COMMA"
+msgstr "COMMA"
+
+msgid "switch server"
+msgstr "切换服务器"
+
+msgid "Switch server to {}?"
+msgstr "切换到 {} 服务器？"
+
+msgid "Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"
+msgstr "在 Konik 和 Comma 服务器之间切换（确认切换后服务将重启）"
+
+msgid "Macan Stop and Go"
+msgstr "Macan 起步跟停"
+
+msgid "language"
+msgstr "语言"

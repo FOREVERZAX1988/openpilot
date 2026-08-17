@@ -3,10 +3,11 @@ import pyray as rl
 from collections.abc import Callable
 
 from openpilot.common.basedir import BASEDIR
+from openpilot.common.api.comma_connect import get_api_host
 from openpilot.common.params import Params
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.system.ui.widgets.scroller import NavRawScrollPanel, NavScroller
-from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton
+from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationDialog
 from openpilot.selfdrive.ui.mici.widgets.pairing_dialog import PairingDialog
 from openpilot.selfdrive.ui.mici.onroad.cabin_camera_dialog import CabinCameraDialog
@@ -188,9 +189,17 @@ class DeviceLayoutMici(NavScroller):
 
     # 语言按钮：单击直接切换 英语↔中文（mici 的 MultiOptionDialog 子菜单点击失效，
     # 2026-08-17 改为直接切换，按钮值实时显示当前语言）
-    self._language_btn = BigButton("language", multilang.codes.get(multilang.language, multilang.language),
+    self._language_btn = BigButton(tr("language"), multilang.codes.get(multilang.language, multilang.language),
                                    gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     self._language_btn.set_click_callback(self._toggle_language)
+
+    # Konik/Comma 服务器显示与切换（与 tizi 的 DeviceLayoutSP 归类一致，2026-08-17）
+    self._api_server_btn = GreyBigButton(tr("Current API Server"), get_api_host(),
+                                         gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
+    self._server_btn = BigButton(tr("Server"),
+                                 tr("KONIK") if ui_state.params.get_bool("UseKonikServer", False) else tr("COMMA"),
+                                 gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
+    self._server_btn.set_click_callback(self._toggle_server)
 
     regulatory_btn = BigButton("regulatory info", "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     regulatory_btn.set_click_callback(self._on_regulatory)
@@ -213,11 +222,31 @@ class DeviceLayoutMici(NavScroller):
       cabin_cam_btn,
       terms_btn,
       self._language_btn,
+      self._api_server_btn,
+      self._server_btn,
       regulatory_btn,
       reset_calibration_btn,
       reboot_btn,
       self._power_off_btn,
     ])
+
+  def _toggle_server(self):
+    """切换 Konik/Comma 服务器：滑动确认后切 UseKonikServer 并重启（与 tizi 逻辑一致）。"""
+    def confirm_callback():
+      current_use_konik = ui_state.params.get_bool("UseKonikServer", False)
+      ui_state.params.put_bool("UseKonikServer", not current_use_konik, block=True)
+      ui_state.params.put_bool("DoReboot", True, block=True)
+
+    gui_app.push_widget(BigConfirmationDialog(f"slide to\n{tr('switch server').lower()}",
+                                              gui_app.texture("icons_mici/settings/device/info.png", 64, 64),
+                                              confirm_callback, exit_on_confirm=False))
+
+  def _update_state(self):
+    super()._update_state()
+    # 服务器按钮值跟随 param 刷新（外部修改后同步显示）
+    server = tr("KONIK") if ui_state.params.get_bool("UseKonikServer", False) else tr("COMMA")
+    self._server_btn.set_value(server)
+    self._api_server_btn.set_value(get_api_host())
 
   def _toggle_language(self):
     """单击直接切换 英语 ↔ 中文（简体）。不做子菜单——MultiOptionDialog 在 mici

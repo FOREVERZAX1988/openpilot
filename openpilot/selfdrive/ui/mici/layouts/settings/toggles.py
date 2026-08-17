@@ -8,6 +8,7 @@ from openpilot.selfdrive.ui.mici.widgets.dialog import BigConfirmationCircleButt
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.multilang import tr
 
 PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
@@ -55,7 +56,7 @@ class TogglesLayoutMici(NavScroller):
     record_front = BigParamControl("record & upload driver camera", "RecordFront", toggle_callback=restart_needed_callback)
     record_mic = BigParamControl("record & upload mic audio", "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl("enable sunnypilot", "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
-    macan_start_stop = BigParamControl("Macan Stop and Go", "MacanStartStop")
+    macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
 
     self._scroller.add_widgets([
       self._personality_toggle,
