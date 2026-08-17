@@ -1047,9 +1047,10 @@ bool SpectraCamera::openSensor() {
   };
 
   // Figure out which sensor we have
-  if (!init_sensor_lambda(new AR0231) &&
+  // C3 cabin camera is OS04C10; probe it first (AR0231 init can break bringup on other sensors)
+  if (!init_sensor_lambda(new OS04C10) &&
       !init_sensor_lambda(new OX03C10) &&
-      !init_sensor_lambda(new OS04C10)) {
+      !init_sensor_lambda(new AR0231)) {
     LOGE("** sensor %d FAILED bringup, disabling", cc.camera_num);
     enabled = false;
     return false;

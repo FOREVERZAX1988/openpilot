@@ -1,7 +1,6 @@
 """Small QR encoder for the UI's byte-mode, error-correction-level-L codes."""
 
 import numpy as np
-import pyray as rl
 
 
 # Indexes are QR versions. These are the only two Reed-Solomon parameters needed
@@ -194,9 +193,10 @@ class _Qr:
       right -= 2
 
 
-def make_texture(data: str, inverted: bool = False) -> rl.Texture:
+def make_texture(data: str, inverted: bool = False):
   """Render a URL as the RGBA QR texture used by the UI. The texture upload
   copies the pixels, so the intermediate image/array don't need to outlive it."""
+  import pyray as rl
   raw = data.encode()
   for version in range(1, 21):
     count_bits = 8 if version <= 9 else 16

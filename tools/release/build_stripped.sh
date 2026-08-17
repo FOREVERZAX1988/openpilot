@@ -39,14 +39,16 @@ git lfs pull
 # do the files copy
 echo "[-] copying files T=$SECONDS"
 cd $SOURCE_DIR
-./tools/release/release_files.py | while IFS= read -r f; do
-  cp -pR --parents "$f" "$TARGET_DIR/"
-done
+./tools/release/release_files.py | xargs -0 cp -pR --parents -t "$TARGET_DIR" --
 
 # in the directory
 cd $TARGET_DIR
 rm -rf .git/modules/
 rm -f panda/board/obj/panda.bin.signed
+rm -f panda/board/obj/panda_h7.bin.signed
+
+# Release branch must not contain LFS pointers; strip LFS tracking and commit files as regular content.
+sed -i '/filter=lfs/d' .gitattributes
 
 # Release branch must not contain LFS pointers; strip LFS tracking and commit files as regular content.
 sed -i '/filter=lfs/d' .gitattributes
@@ -63,9 +65,10 @@ echo -n "$GIT_HASH" > git_src_commit
 echo -n "$GIT_COMMIT_DATE" > git_src_commit_date
 
 echo "[-] committing version $VERSION T=$SECONDS"
-git add -f .
+# writing larger objects is faster than compressing them on-device
+git -c core.compression=0 add -f .
 git status
-git commit -a -m "sunnypilot v$VERSION release
+git -c core.compression=0 commit -a -m "sunnypilot v$VERSION release
 
 date: $DATETIME
 master commit: $GIT_HASH
@@ -89,7 +92,8 @@ fi
 
 if [ ! -z "$BRANCH" ]; then
   echo "[-] Pushing to $BRANCH T=$SECONDS"
-  git push -f origin tmp:$BRANCH
+  # uploading the larger pack is faster than spending CPU to optimize it
+  git -c pack.window=0 -c pack.depth=0 -c pack.compression=0 push -f origin tmp:$BRANCH
 fi
 
 echo "[-] done T=$SECONDS, ready at $TARGET_DIR"
