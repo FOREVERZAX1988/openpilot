@@ -243,6 +243,12 @@ msgstr "Blinker 自動變換車道"
 #: selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Auto Lane Change: Delay with Blind Spot"
 msgstr "自動變換車道：有盲點的延誤"
+msgid "Block Lane Change: Road Edge Detection"
+msgstr "變道阻止：道路邊緣偵測"
+
+msgid "Blocks the lane change if the model sees a road edge on your signaled side."
+msgstr "當模型在打燈一側偵測到道路邊緣時，阻止變道。"
+
 
 #: selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "B.D."
