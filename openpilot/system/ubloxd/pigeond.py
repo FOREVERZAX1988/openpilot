@@ -264,7 +264,7 @@ def deinitialize_and_exit(pigeon: TTYPigeon | None):
 
   # turn off power and exit cleanly
   set_power(False)
-  sys.exit(0)
+  sys.exit(1.0)
 
 def init(pigeon: TTYPigeon) -> None:
   # register exit handler

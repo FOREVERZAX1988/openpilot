@@ -24,7 +24,7 @@ from openpilot.common.realtime import Ratekeeper
 
 from openpilot.system.ui.sunnypilot.lib.application import GuiApplicationExt
 
-_DEFAULT_FPS = int(os.getenv("FPS", {'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
+_DEFAULT_FPS = int(os.getenv("FPS", {'tici': 20, 'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
 FPS_LOG_INTERVAL = 5  # Seconds between logging FPS drops
 FPS_DROP_THRESHOLD = 0.9  # FPS drop threshold for triggering a warning
 FPS_CRITICAL_THRESHOLD = 0.5  # Critical threshold for triggering strict actions
@@ -102,6 +102,24 @@ NOTO_FONTS = {
   "zh-CHS": "NotoSansCJKsc-Regular.otf",
   "zh-CHT": "NotoSansCJKtc-Regular.otf",
 }
+
+
+def _translation_codepoints(language: str) -> list[int]:
+  chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
+  po_path = TRANSLATIONS_DIR.joinpath(f"app_{language}.po")
+  if po_path.is_file():
+    try:
+      from openpilot.selfdrive.ui.translations.potools import parse_po
+
+      _, entries = parse_po(po_path)
+      for entry in entries:
+        if entry.msgstr:
+          chars.update(entry.msgstr)
+        for plural in entry.msgstr_plural.values():
+          chars.update(plural)
+    except Exception:
+      chars.update(po_path.read_text(encoding="utf-8"))
+  return sorted(map(ord, chars))
 
 
 class FontWeight(StrEnum):
@@ -698,9 +716,7 @@ class GuiApplication(GuiApplicationExt):
   def fallback_font(self) -> rl.Font:
     language = multilang.language
     if language not in self._fallback_fonts:
-      chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
-      chars.update(TRANSLATIONS_DIR.joinpath(f"app_{language}.po").read_text(encoding="utf-8"))
-      codepoints = sorted(map(ord, chars))
+      codepoints = _translation_codepoints(language)
       codepoint_buffer = rl.ffi.new("int[]", codepoints)
       with as_file(FONT_DIR) as fspath:
         font = rl.load_font_ex((fspath / NOTO_FONTS[language]).as_posix(), 48,
@@ -740,6 +756,17 @@ class GuiApplication(GuiApplicationExt):
     if multilang.requires_font_fallback():
       self.fallback_font()
     rl.gui_set_font(self._fonts[FontWeight.NORMAL])
+
+  def on_language_changed(self, lang_code: str):
+    old_fonts = list(self._fonts.values())
+    self._fonts = {}
+    self._fallback_fonts = {}
+    self._load_fonts()
+    for font in old_fonts:
+      rl.unload_font(font)
+    from openpilot.system.ui.lib import text_measure, wrap_text
+    text_measure._cache.clear()
+    wrap_text._cache.clear()
 
   def _set_styles(self):
     rl.gui_set_style(rl.GuiControl.DEFAULT, rl.GuiControlProperty.BORDER_WIDTH, 0)

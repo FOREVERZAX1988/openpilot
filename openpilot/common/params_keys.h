@@ -9,6 +9,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AccessToken", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
     {"AdbEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"AlwaysOnDM", {PERSISTENT | BACKUP, BOOL}},
+    {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
     {"ApiCache_Device", {PERSISTENT, STRING}},
     {"ApiCache_FirehoseStats", {PERSISTENT, JSON}},
     {"AssistNowToken", {PERSISTENT, STRING}},
@@ -82,6 +83,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LiveParametersV2", {PERSISTENT, BYTES}},
     {"LivestreamEncoderBitrate", {CLEAR_ON_MANAGER_START | DONT_LOG, INT}},
     {"LivestreamRequestKeyframe", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
+    {"LivestreamActiveCamera", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
+    {"LivestreamEncoderLagging", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
     {"LiveTorqueParameters", {PERSISTENT | DONT_LOG, BYTES}},
     {"LocationFilterInitialState", {PERSISTENT, BYTES}},
     {"LateralManeuverMode", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
@@ -136,6 +139,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     // --- sunnypilot params --- //
     {"ApiCache_DriveStats", {PERSISTENT, JSON}},
+    {"LocalDriveStats", {PERSISTENT, JSON}},
     {"AutoLaneChangeBsmDelay", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"AutoLaneChangeTimer", {PERSISTENT | BACKUP, INT, "0"}},
     {"BlinkerLateralReengageDelay", {PERSISTENT | BACKUP, INT, "0"}},  // seconds
@@ -285,4 +289,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TorqueParamsOverrideEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TorqueParamsOverrideFriction", {PERSISTENT | BACKUP, FLOAT, "0.1"}},
     {"TorqueParamsOverrideLatAccelFactor", {PERSISTENT | BACKUP, FLOAT, "2.5"}},
+
+    // sunnypilot C3 dev (beepd)
+    {"SpDevBeep", {PERSISTENT, BOOL, "0"}},
+
+    // Web UI
+    {"WebuiHeadlessMode", {PERSISTENT | BACKUP, STRING, "auto"}},
 };
