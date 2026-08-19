@@ -138,7 +138,7 @@ class TogglesLayoutMici(NavScroller):
       self._macan_start_stop.set_visible(False)
 
     # Macan Slope Comp / Steering Params: only shown for Macan (MLB)
-    if self._params.get("MacanSlopeComp") is not None:
+    if ui_state.params.get("MacanSlopeComp") is not None:
       macan_slope_comp.set_visible(True)
       macan_slope_comp_unlimited.set_visible(True)
       macan_steer_params.set_visible(True)
