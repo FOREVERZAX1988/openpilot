@@ -106,7 +106,7 @@ class MadsSettingsLayout(Widget):
     base_desc = tr("Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in sunnypilot.")
     result = base_desc + "<br><br>"
     for opt in MADS_STEERING_MODE_OPTIONS:
-      desc = "<b>" + opt[1] + "</b>" if button_index == MADS_STEERING_MODE_OPTIONS.index(opt) else opt[1]
+      desc = "<b>" + tr(opt[1]) + "</b>" if button_index == MADS_STEERING_MODE_OPTIONS.index(opt) else tr(opt[1])
       result += desc + "<br>"
     self._steering_mode.set_description(result)
     self._steering_mode.show_description(True)

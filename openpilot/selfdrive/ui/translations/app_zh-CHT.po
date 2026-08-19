@@ -3184,3 +3184,33 @@ msgstr "正在右转"
 
 msgid "Auto adjusting to speed limit"
 msgstr "正在自动调整至限速"
+
+msgid "Slope Compensation (Macan)"
+msgstr "坡度補償（Macan）"
+
+msgid "Slope Comp Unlimited (Macan)"
+msgstr "坡度補償放開限制（Macan）"
+
+msgid "Steering Params (Macan)"
+msgstr "轉向係數（Macan）"
+
+msgid "Macan Slope Compensation"
+msgstr "Macan 坡度補償"
+
+msgid "Macan Slope Comp Unlimited"
+msgstr "Macan 坡度補償放開限制"
+
+msgid "Macan Steering Params"
+msgstr "Macan 轉向係數"
+
+msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill, and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
+msgstr "Macan 坡度補償：啟用後，IMU 坡度信號會將 g*sin(坡度) 疊加到加速度請求上——上坡增加力矩，下坡輕點煞車（防止慣性前衝）。預設關閉=原廠行為。切換後請求重新啟動 onroad 週期。"
+
+msgid "Macan Slope Comp Unlimited (sub-option): when Slope Compensation is ON, this removes the stock torque cap (option 2: min(max(stock_mom, 200))), giving small slopes room to act. When OFF, the stock cap applies (option 1: min(stock_mom))."
+msgstr "Macan 坡度補償放開限制（子選項）：當坡度補償開啟時，本選項移除原廠力矩上限（選項2：min(max(stock_mom,200))），給小坡度留出作用空間。關閉時套用原廠上限（選項1：min(stock_mom)）。"
+
+msgid "Macan Steering Params (experimental): when enabled, uses calibrated steerRatio 18.0 / friction 0.52 instead of stock values. Calibration shows 22% cross-route spread and latAccelFactor data is insufficient, so this is EXPERIMENTAL - keep off until field data confirms."
+msgstr "Macan 轉向係數（實驗性）：啟用後使用標定值 steerRatio 18.0 / friction 0.52 取代原廠值。標定顯示跨路線差異 22%，且 latAccelFactor 資料不足，因此這是實驗功能——請保持關閉，直到路測資料確認。"
+
+msgid "Select the version of Torque Control Tune to use."
+msgstr "選擇要使用的扭力控制調校版本。"
