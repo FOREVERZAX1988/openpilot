@@ -72,9 +72,15 @@ class TogglesLayoutMici(NavScroller):
       record_mic,
       enable_openpilot,
       macan_start_stop,
+      macan_slope_comp,
+      macan_slope_comp_unlimited,
+      macan_steer_params,
     ])
 
     self._macan_start_stop = macan_start_stop
+    self._macan_slope_comp = macan_slope_comp
+    self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
+    self._macan_steer_params = macan_steer_params
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
@@ -94,6 +100,9 @@ class TogglesLayoutMici(NavScroller):
     )
 
     enable_openpilot.set_enabled(lambda: not ui_state.engaged)
+    macan_slope_comp.set_enabled(lambda: not ui_state.engaged)
+    macan_slope_comp_unlimited.set_enabled(lambda: not ui_state.engaged)
+    macan_steer_params.set_enabled(lambda: not ui_state.engaged)
     record_front.set_enabled(False if ui_state.params.get_bool("RecordFrontLock") else (lambda: not ui_state.engaged))
     record_mic.set_enabled(lambda: not ui_state.engaged)
 
@@ -131,21 +140,17 @@ class TogglesLayoutMici(NavScroller):
         self._personality_toggle.set_visible(False)
         ui_state.params.remove("ExperimentalMode")
 
-    # Macan Stop and Go: only shown for Macan (MLB)
+    # Macan Stop and Go / Slope Comp / Steering Params: only shown for Macan (MLB)
     if ui_state.CP is not None and ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1":
       self._macan_start_stop.set_visible(True)
+      self._macan_slope_comp.set_visible(True)
+      self._macan_slope_comp_unlimited.set_visible(True)
+      self._macan_steer_params.set_visible(True)
     else:
       self._macan_start_stop.set_visible(False)
-
-    # Macan Slope Comp / Steering Params: only shown for Macan (MLB)
-    if ui_state.params.get("MacanSlopeComp") is not None:
-      macan_slope_comp.set_visible(True)
-      macan_slope_comp_unlimited.set_visible(True)
-      macan_steer_params.set_visible(True)
-    else:
-      macan_slope_comp.set_visible(False)
-      macan_slope_comp_unlimited.set_visible(False)
-      macan_steer_params.set_visible(False)
+      self._macan_slope_comp.set_visible(False)
+      self._macan_slope_comp_unlimited.set_visible(False)
+      self._macan_steer_params.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
