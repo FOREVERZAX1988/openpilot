@@ -105,6 +105,9 @@ class VolkswagenSettings(BrandSettings):
 
   def _on_enable_slope_comp(self, state: bool):
     ui_state.params.put_bool("MacanSlopeComp", state)
+    if not state:
+      ui_state.params.put_bool("MacanSlopeCompUnlimited", False)
+      self.slope_comp_unlimited.action_item.set_state(False)
     ui_state.params.put_bool("OnroadCycleRequested", True)
 
   def _on_enable_slope_comp_unlimited(self, state: bool):
@@ -119,8 +122,13 @@ class VolkswagenSettings(BrandSettings):
     if ui_state.CP is not None:
       # 仅 Macan(MLB) 支持；其他 VW 平台隐藏开关
       is_macan = ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1"
+      slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self.start_stop.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.start_stop.action_item.set_visible(is_macan)
-      for item in (self.slope_comp, self.slope_comp_unlimited, self.steer_params):
-        item.action_item.set_enabled(is_macan and not ui_state.engaged)
-        item.action_item.set_visible(is_macan)
+      self.slope_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.slope_comp.action_item.set_visible(is_macan)
+      # 子选项（放开限制）：仅坡度补偿开启时显示（联动）
+      self.slope_comp_unlimited.action_item.set_enabled(is_macan and not ui_state.engaged and slope_comp_on)
+      self.slope_comp_unlimited.action_item.set_visible(is_macan and slope_comp_on)
+      self.steer_params.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.steer_params.action_item.set_visible(is_macan)

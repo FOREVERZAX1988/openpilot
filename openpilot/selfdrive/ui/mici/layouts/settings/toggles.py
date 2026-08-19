@@ -142,9 +142,10 @@ class TogglesLayoutMici(NavScroller):
 
     # Macan Stop and Go / Slope Comp / Steering Params: only shown for Macan (MLB)
     if ui_state.CP is not None and ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1":
+      slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self._macan_start_stop.set_visible(True)
       self._macan_slope_comp.set_visible(True)
-      self._macan_slope_comp_unlimited.set_visible(True)
+      self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
       self._macan_steer_params.set_visible(True)
     else:
       self._macan_start_stop.set_visible(False)
