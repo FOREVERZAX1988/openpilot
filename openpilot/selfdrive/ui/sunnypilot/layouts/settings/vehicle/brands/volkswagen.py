@@ -124,11 +124,11 @@ class VolkswagenSettings(BrandSettings):
       is_macan = ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1"
       slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self.start_stop.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.start_stop.action_item.set_visible(is_macan)
+      self.start_stop.set_visible(is_macan)
       self.slope_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.slope_comp.action_item.set_visible(is_macan)
-      # 子选项（放开限制）：仅坡度补偿开启时显示（联动）
+      self.slope_comp.set_visible(is_macan)
+      # 子选项（放开限制）：仅坡度补偿开启时显示（联动，整行隐藏）
       self.slope_comp_unlimited.action_item.set_enabled(is_macan and not ui_state.engaged and slope_comp_on)
-      self.slope_comp_unlimited.action_item.set_visible(is_macan and slope_comp_on)
+      self.slope_comp_unlimited.set_visible(is_macan and slope_comp_on)
       self.steer_params.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.steer_params.action_item.set_visible(is_macan)
+      self.steer_params.set_visible(is_macan)
