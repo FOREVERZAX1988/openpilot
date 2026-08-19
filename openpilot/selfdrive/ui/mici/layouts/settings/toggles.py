@@ -58,7 +58,10 @@ class TogglesLayoutMici(NavScroller):
     record_front = BigParamControl(tr("record & upload driver camera"), "RecordFront", toggle_callback=restart_needed_callback)
     record_mic = BigParamControl(tr("record & upload mic audio"), "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
-    macan_start_stop = BigParamControl("Macan 起步跟停", "MacanStartStop")
+    macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
+    macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
+    macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
+    macan_steer_params = BigParamControl(tr("Macan Steering Params"), "MacanSteerParams")
 
     self._scroller.add_widgets([
       self._personality_toggle,
@@ -88,6 +91,9 @@ class TogglesLayoutMici(NavScroller):
       ("AlwaysOnDM", always_on_dm_toggle),
       ("RecordFront", record_front),
       ("MacanStartStop", macan_start_stop),
+      ("MacanSlopeComp", macan_slope_comp),
+      ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
+      ("MacanSteerParams", macan_steer_params),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
@@ -139,6 +145,16 @@ class TogglesLayoutMici(NavScroller):
       self._macan_start_stop.set_visible(True)
     else:
       self._macan_start_stop.set_visible(False)
+
+    # Macan Slope Comp / Steering Params: only shown for Macan (MLB)
+    if self._params.get("MacanSlopeComp") is not None:
+      macan_slope_comp.set_visible(True)
+      macan_slope_comp_unlimited.set_visible(True)
+      macan_steer_params.set_visible(True)
+    else:
+      macan_slope_comp.set_visible(False)
+      macan_slope_comp_unlimited.set_visible(False)
+      macan_steer_params.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
