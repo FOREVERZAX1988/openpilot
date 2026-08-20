@@ -50,6 +50,24 @@ def _get_macan_accel_limit():
     _macan_accel_limit_t = now
   return _macan_accel_limit
 
+# Macan 弯道系数开关（MacanCornerLimit，BOOL；开=启用，强度下限硬编码 0.3）
+# 数据依据（0000004f）：62%加速事件发生在 |angle|>8°；回放验证 0.36-0.85 压限
+# 强度参数化待后续（FLOAT 开关需 params 库重编译，暂用常量）
+_MACAN_CORNER_MIN = 0.3
+_macan_corner_on = False
+_macan_corner_on_t = 0.0
+def _get_macan_corner_on():
+  global _macan_corner_on, _macan_corner_on_t
+  now = time.monotonic()
+  if now - _macan_corner_on_t > 1.0:  # 每1秒刷新（不阻塞）
+    try:
+      # BOOL 参数：get() 返回 python bool，必须用 get_bool()（== "1" 会永远 False）
+      _macan_corner_on = Params().get_bool("MacanCornerLimit")
+    except Exception:
+      _macan_corner_on = False
+    _macan_corner_on_t = now
+  return _macan_corner_on
+
 def _macan_accel_limited(max_accel: float, CP) -> float:
   """对 Macan 应用自定义加速度上限（其他车不受影响）"""
   try:
@@ -87,11 +105,11 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
   max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
   max_accel = _macan_accel_limited(max_accel, CP)
   # Macan 弯道系数：方向盘角 >5° 线性压低纵向上限（解决"头没转正就加速"——4f 实测62%加速在弯道）
-  # 临时硬编码系数 0.3（MacanAccelLimit>0 时启用；路试 OK 后参数化 MacanCornerLimit，需重编译 params 库）
+  # 独立开关：MacanCornerLimit（BOOL）——UI 启停下方按钮；基于当前上限（限幅后）缩放，直道 factor=1 不变
   try:
-    if "MACAN" in (getattr(CP, "carFingerprint", "") or "").upper() and _get_macan_accel_limit() > 0:
-      factor = float(np.clip(1.0 - (abs(angle_steers) - 5.0) / 25.0, 0.3, 1.0))
-      max_accel = min(max_accel, _get_macan_accel_limit() * factor)
+    if "MACAN" in (getattr(CP, "carFingerprint", "") or "").upper() and _get_macan_corner_on():
+      factor = float(np.clip(1.0 - (abs(angle_steers) - 5.0) / 25.0, _MACAN_CORNER_MIN, 1.0))
+      max_accel = min(max_accel, max_accel * factor)
   except Exception:
     pass
 

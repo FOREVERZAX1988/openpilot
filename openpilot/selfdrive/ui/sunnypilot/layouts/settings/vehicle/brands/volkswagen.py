@@ -32,6 +32,13 @@ DESCRIPTIONS = {
     'giving small slopes room to act. When OFF, the stock cap applies '
     '(option 1: min(stock_mom)).'
   ),
+  'corner_limit': tr_noop(
+    'Macan Corner Accel Limit: when enabled, the steering angle (>5 deg) '
+    'linearly reduces the longitudinal acceleration cap (down to 0.3x at '
+    '30+ deg) - prevents "accelerating before the wheel is straight". '
+    'Field data: 62% of accel events happen with |angle|>8 deg. Takes '
+    'effect immediately, no restart needed.'
+  ),
   'steer_params': tr_noop(
     'Macan Steering Params (experimental): when enabled, uses calibrated '
     'steerRatio 18.0 / friction 0.52 instead of stock values. Calibration '
@@ -50,6 +57,14 @@ class VolkswagenSettings(BrandSettings):
       description=lambda: tr(DESCRIPTIONS["start_stop"]),
       initial_state=ui_state.params.get_bool("MacanStartStop"),
       callback=self._on_enable_start_stop,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.corner_limit = toggle_item_sp(
+      lambda: tr("Corner Accel Limit (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["corner_limit"]),
+      initial_state=ui_state.params.get_bool("MacanCornerLimit"),
+      callback=self._on_enable_corner_limit,
       enabled=lambda: not ui_state.engaged,
     )
 
@@ -79,6 +94,7 @@ class VolkswagenSettings(BrandSettings):
 
     self.items = [
       self.start_stop,
+      self.corner_limit,
       self.slope_comp,
       self.slope_comp_unlimited,
       self.steer_params,
@@ -103,6 +119,10 @@ class VolkswagenSettings(BrandSettings):
       ui_state.params.put_bool("MacanStartStop", False)
       ui_state.params.put_bool("OnroadCycleRequested", True)
 
+  def _on_enable_corner_limit(self, state: bool):
+    # planner 每 1s 刷新参数，即时生效，无需 onroad cycle 重启
+    ui_state.params.put_bool("MacanCornerLimit", state)
+
   def _on_enable_slope_comp(self, state: bool):
     ui_state.params.put_bool("MacanSlopeComp", state)
     if not state:
@@ -125,6 +145,8 @@ class VolkswagenSettings(BrandSettings):
       slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self.start_stop.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.start_stop.set_visible(is_macan)
+      self.corner_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.corner_limit.set_visible(is_macan)
       self.slope_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.slope_comp.set_visible(is_macan)
       # 子选项（放开限制）：仅坡度补偿开启时显示（联动，整行隐藏）

@@ -57,6 +57,7 @@ class TogglesLayoutMici(NavScroller):
     record_mic = BigParamControl(tr("record & upload mic audio"), "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
     macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
+    macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
     macan_steer_params = BigParamControl(tr("Macan Steering Params"), "MacanSteerParams")
@@ -72,12 +73,14 @@ class TogglesLayoutMici(NavScroller):
       record_mic,
       enable_openpilot,
       macan_start_stop,
+      macan_corner_limit,
       macan_slope_comp,
       macan_slope_comp_unlimited,
       macan_steer_params,
     ])
 
     self._macan_start_stop = macan_start_stop
+    self._macan_corner_limit = macan_corner_limit
     self._macan_slope_comp = macan_slope_comp
     self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
     self._macan_steer_params = macan_steer_params
@@ -92,6 +95,7 @@ class TogglesLayoutMici(NavScroller):
       ("AlwaysOnDM", always_on_dm_toggle),
       ("RecordFront", record_front),
       ("MacanStartStop", macan_start_stop),
+      ("MacanCornerLimit", macan_corner_limit),
       ("MacanSlopeComp", macan_slope_comp),
       ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
       ("MacanSteerParams", macan_steer_params),

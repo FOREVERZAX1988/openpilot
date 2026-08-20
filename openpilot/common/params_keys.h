@@ -243,7 +243,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanSteerParams", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 转向系数（实验值，待路试修正）
     {"MacanAccelLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},        // Macan 加速度上限（m/s²，0=原厂曲线；4f实锤 aTarget>1.0 占20%激活时间）
     {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
-    {"MacanCornerLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},       // Macan 弯道纵向限制系数（0=关；>0 时方向盘角>5°线性压低纵向上限，|angle|≥30°上限=限幅×系数；4f实测62%加速发生在弯道）
+    {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关（BOOL；开=方向盘角>5°线性压低纵向上限，|angle|≥30°压到0.3×当前上限；4f实测62%加速发生在弯道）
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
