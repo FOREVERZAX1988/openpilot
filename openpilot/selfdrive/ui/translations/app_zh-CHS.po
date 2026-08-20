@@ -279,6 +279,7 @@ msgstr "转向灯自动变道"
 #: selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Auto Lane Change: Delay with Blind Spot"
 msgstr "自动变道：盲区延迟"
+
 msgid "Block Lane Change: Road Edge Detection"
 msgstr "变道阻止：道路边缘检测"
 
@@ -4416,6 +4417,15 @@ msgstr "坡度补偿放开限制（Macan）"
 
 msgid "Steering Params (Macan)"
 msgstr "转向系数（Macan）"
+
+msgid "Dynamic Steering Ratio (Macan)"
+msgstr "动态转向比（Macan）"
+
+msgid "Dynamic Steering Ratio (Macan): speed-dependent steering ratio - 15.0 below 140 km/h, 18.7 above 145 km/h (linear transition 140-145), fitted from 29,284 samples across the full 4f route (RMSE 1.75 deg), plus torque friction 0.52. When disabled, uses stock fixed 16.2. Replaces the old experimental 18.0 (discarded: 22% gyro spread, 15% oversteer in city corners)."
+msgstr "Macan 动态转向比：速度相关转向比——低于140km/h用15.0，高于145km/h用18.7（140-145线性过渡），基于4f全段29284样本拟合（RMSE 1.75°），附带扭矩摩擦补偿0.52。关闭时使用原厂固定16.2。取代旧实验值18.0（已弃用：gyro极差22%，城市弯转向不足15%）。"
+
+msgid "Macan Dynamic Steering Ratio"
+msgstr "Macan 动态转向比"
 
 msgid "Macan Slope Compensation"
 msgstr "Macan 坡度补偿"

@@ -60,7 +60,7 @@ class TogglesLayoutMici(NavScroller):
     macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
-    macan_steer_params = BigParamControl(tr("Macan Steering Params"), "MacanSteerParams")
+    macan_steer_params = BigParamControl(tr("Macan Dynamic Steering Ratio"), "MacanSteerParams")
 
     self._scroller.add_widgets([
       self._personality_toggle,
