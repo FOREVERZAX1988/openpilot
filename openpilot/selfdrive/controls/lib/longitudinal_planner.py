@@ -63,6 +63,7 @@ def _macan_accel_limited(max_accel: float, CP) -> float:
     return min(max_accel, lim)
   return max_accel
 
+
 # Macan aTarget 死区（MacanAccelDeadzone，m/s²；0=关闭）
 # 机制实锤（0000004f 段7 帧97000-97700）：MPC 在 0 附近微抖动（+0.04→-0.06 来回过零），
 # aTarget 过零时 mom 在巡航维持(~95)与滑行(0)之间跳变 = "喘气/一冲一冲"体感
@@ -85,6 +86,14 @@ def get_coast_accel(pitch):
 def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, accel_coast, allow_throttle):
   max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
   max_accel = _macan_accel_limited(max_accel, CP)
+  # Macan 弯道系数：方向盘角 >5° 线性压低纵向上限（解决"头没转正就加速"——4f 实测62%加速在弯道）
+  # 临时硬编码系数 0.3（MacanAccelLimit>0 时启用；路试 OK 后参数化 MacanCornerLimit，需重编译 params 库）
+  try:
+    if "MACAN" in (getattr(CP, "carFingerprint", "") or "").upper() and _get_macan_accel_limit() > 0:
+      factor = float(np.clip(1.0 - (abs(angle_steers) - 5.0) / 25.0, 0.3, 1.0))
+      max_accel = min(max_accel, _get_macan_accel_limit() * factor)
+  except Exception:
+    pass
 
   if not e2e:
     a_total_max = np.interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V)
