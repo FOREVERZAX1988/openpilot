@@ -3185,6 +3185,16 @@ msgstr "正在右转"
 msgid "Auto adjusting to speed limit"
 msgstr "正在自动调整至限速"
 
+msgid "Corner Accel Limit (Macan)"
+msgstr "彎道加速限制（Macan）"
+
+msgid "Macan Corner Accel Limit: when enabled, the steering angle (>5 deg) linearly reduces the longitudinal acceleration cap (down to 0.3x at 30+ deg) - prevents \"accelerating before the wheel is straight\". Field data: 62% of accel events happen with |angle|>8 deg. Takes effect immediately, no restart needed."
+msgstr "Macan 彎道加速限制：啟用後，方向盤轉角大於5°時線性壓低縱向加速度上限（30°以上壓至0.3倍），防止「車頭未回正就加速」。實測數據：62%的加速事件發生在|轉角|>8°時。即時生效，無需重啟。"
+
+msgid "Macan Corner Accel Limit"
+msgstr "Macan 彎道加速限制"
+
+
 msgid "Slope Compensation (Macan)"
 msgstr "坡度補償（Macan）"
 

@@ -3908,6 +3908,16 @@ msgstr "倒车挡"
 msgid "Lane Change Unavailable: Road Edge"
 msgstr "道路边缘变道不可用"
 
+msgid "Corner Accel Limit (Macan)"
+msgstr "弯道加速限制（Macan）"
+
+msgid "Macan Corner Accel Limit: when enabled, the steering angle (>5 deg) linearly reduces the longitudinal acceleration cap (down to 0.3x at 30+ deg) - prevents \"accelerating before the wheel is straight\". Field data: 62% of accel events happen with |angle|>8 deg. Takes effect immediately, no restart needed."
+msgstr "Macan 弯道加速限制：启用后，方向盘转角大于5°时线性压低纵向加速度上限（30°以上压至0.3倍），防止“车头未回正就加速”。实测数据：62%的加速事件发生在|转角|>8°时。即时生效，无需重启。"
+
+msgid "Macan Corner Accel Limit"
+msgstr "Macan 弯道加速限制"
+
+
 msgid "Stop and Go (Macan)"
 msgstr "起步跟停（Macan）"
 
