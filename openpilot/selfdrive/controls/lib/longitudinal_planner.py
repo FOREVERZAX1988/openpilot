@@ -63,6 +63,22 @@ def _macan_accel_limited(max_accel: float, CP) -> float:
     return min(max_accel, lim)
   return max_accel
 
+# Macan aTarget 死区（MacanAccelDeadzone，m/s²；0=关闭）
+# 机制实锤（0000004f 段7 帧97000-97700）：MPC 在 0 附近微抖动（+0.04→-0.06 来回过零），
+# aTarget 过零时 mom 在巡航维持(~95)与滑行(0)之间跳变 = "喘气/一冲一冲"体感
+_macan_deadzone = 0.0
+_macan_deadzone_t = 0.0
+def _get_macan_deadzone():
+  global _macan_deadzone, _macan_deadzone_t
+  now = time.monotonic()
+  if now - _macan_deadzone_t > 1.0:  # 每1秒刷新
+    try:
+      _macan_deadzone = float(Params().get("MacanAccelDeadzone") or 0.0)
+    except Exception:
+      _macan_deadzone = 0.0
+    _macan_deadzone_t = now
+  return _macan_deadzone
+
 def get_coast_accel(pitch):
   return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
@@ -186,6 +202,11 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
     self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
+    # Macan aTarget 死区：|aTarget|<dz 归零（滤 MPC 0附近抖动，防 mom 开合喘气；其他车不受影响）
+    if "MACAN" in (self.CP.carFingerprint or "").upper():
+      dz = _get_macan_deadzone()
+      if dz > 0 and abs(self.output_a_target) < dz:
+        self.output_a_target = 0.0
 
     self.a_desired = float(self.output_a_target)
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.output_a_target + a_prev) / 2.0
