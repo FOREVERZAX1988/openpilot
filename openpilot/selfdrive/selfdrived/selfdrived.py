@@ -150,6 +150,12 @@ class SelfdriveD(CruiseHelper):
       max(log.LongitudinalPersonality.schema.enumerants.values()),
       self.params
     )
+    # 车距档与 personality 对齐：原厂启动重置3格不带记忆，但 OP personality 带记忆
+    # （Params LongitudinalPersonality）——若两者不一致（如记忆为4格从容而 _zeitluecke=3），
+    # 首次按距离键会跳档（从容直接跳标准）。从 personality 反推车距档
+    # （4格→从容/3格→标准/1格→激进），保持首次按键渐进。
+    self._zeitluecke = {2: 4, 1: 3, 0: 1}.get(self.personality, 3)
+
     self.recalibrating_seen = False
     self.dm_lockout_set = False
     self.dm_uncertain_alerted = False
