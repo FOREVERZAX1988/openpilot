@@ -40,10 +40,11 @@ DESCRIPTIONS = {
     'effect immediately, no restart needed.'
   ),
   'steer_params': tr_noop(
-    'Macan Steering Params (experimental): when enabled, uses calibrated '
-    'steerRatio 18.0 / friction 0.52 instead of stock values. Calibration '
-    'shows 22% cross-route spread and latAccelFactor data is insufficient, '
-    'so this is EXPERIMENTAL - keep off until field data confirms.'
+    'Dynamic Steering Ratio (Macan): speed-dependent steering ratio - 15.0 below 140 km/h, '
+'18.7 above 145 km/h (linear transition 140-145), fitted from 29,284 samples across '
+'the full 4f route (RMSE 1.75 deg), plus torque friction 0.52. When disabled, uses '
+'stock fixed 16.2. Replaces the old experimental 18.0 (discarded: 22% gyro spread, '
+'15% oversteer in city corners).'
   )
 }
 
@@ -85,7 +86,7 @@ class VolkswagenSettings(BrandSettings):
     )
 
     self.steer_params = toggle_item_sp(
-      lambda: tr("Steering Params (Macan)"),
+      lambda: tr("Dynamic Steering Ratio (Macan)"),
       description=lambda: tr(DESCRIPTIONS["steer_params"]),
       initial_state=ui_state.params.get_bool("MacanSteerParams"),
       callback=self._on_enable_steer_params,
