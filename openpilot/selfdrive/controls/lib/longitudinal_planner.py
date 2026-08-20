@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+import time
 import numpy as np
 
 import openpilot.cereal.messaging as messaging
@@ -14,6 +15,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDX
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan, should_stop
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.params import Params
 
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 
@@ -32,11 +34,41 @@ _A_TOTAL_MAX_BP = [20., 40.]
 def get_max_accel(v_ego):
   return np.interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
+# Macan 加速度限制（MacanAccelLimit 参数，m/s²；0=关闭用原厂曲线）
+# 数据依据（0000004f）：激活时间 20.2% 在 aTarget>1.0、14.7% 在 >1.2（低速曲线允许1.6）
+# ——起步/跟车加速顶到 1.4-1.6 即"忽然加速"体感来源；限到 1.0-1.2 舒适
+_macan_accel_limit = 0.0
+_macan_accel_limit_t = 0.0
+def _get_macan_accel_limit():
+  global _macan_accel_limit, _macan_accel_limit_t
+  now = time.monotonic()
+  if now - _macan_accel_limit_t > 1.0:  # 每1秒刷新（不阻塞）
+    try:
+      _macan_accel_limit = float(Params().get("MacanAccelLimit") or 0.0)  # FLOAT 参数 get() 返回 float
+    except Exception:
+      _macan_accel_limit = 0.0
+    _macan_accel_limit_t = now
+  return _macan_accel_limit
+
+def _macan_accel_limited(max_accel: float, CP) -> float:
+  """对 Macan 应用自定义加速度上限（其他车不受影响）"""
+  try:
+    fp = CP.carFingerprint.upper()
+  except Exception:
+    return max_accel
+  if "MACAN" not in fp:
+    return max_accel
+  lim = _get_macan_accel_limit()
+  if lim > 0:
+    return min(max_accel, lim)
+  return max_accel
+
 def get_coast_accel(pitch):
   return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
 def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, accel_coast, allow_throttle):
   max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
+  max_accel = _macan_accel_limited(max_accel, CP)
 
   if not e2e:
     a_total_max = np.interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V)
