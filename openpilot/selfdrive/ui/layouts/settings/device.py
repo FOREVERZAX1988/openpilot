@@ -1,5 +1,6 @@
 import os
 import math
+import subprocess
 
 from openpilot.cereal import messaging, log
 from openpilot.common.basedir import BASEDIR
@@ -85,14 +86,28 @@ class DeviceLayout(Widget):
     def handle_language_selection(result: DialogResult):
       if result == DialogResult.CONFIRM and self._select_language_dialog:
         selected_language = multilang.languages[self._select_language_dialog.selection]
-        multilang.change_language(selected_language)
-        gui_app.on_language_changed(selected_language)
-        self._update_calib_description()
+        # 先确认再切换：确定=切换语言+重启UI，取消=保持原语言（避免切换后空白无法恢复）
+        gui_app.push_widget(ConfirmDialog(
+          tr("Language changed. Restart the UI to apply."),
+          confirm_text=tr("OK"),
+          cancel_text=tr("Cancel"),
+          callback=lambda r: self._apply_language_selection(selected_language, r),
+        ))
       self._select_language_dialog = None
 
     self._select_language_dialog = MultiOptionDialog(tr("Select a language"), multilang.languages, multilang.codes[multilang.language],
                                                      option_font_weight=FontWeight.UNIFONT, callback=handle_language_selection)
     gui_app.push_widget(self._select_language_dialog)
+
+  def _apply_language_selection(self, selected_language: str, result: DialogResult):
+    # 取消=不切换（保持原语言）；确定=切换语言并重启 UI（防字体热重载空白）
+    if result != DialogResult.CONFIRM:
+      return
+    multilang.change_language(selected_language)
+    gui_app.on_language_changed(selected_language)
+    self._update_calib_description()
+    # ui 进程 restart_if_crash=True，pkill 后 manager 自动拉起
+    subprocess.run(["pkill", "-f", "openpilot.selfdrive.ui.ui"], check=False)
 
   def _reset_calibration_prompt(self):
     if ui_state.engaged:

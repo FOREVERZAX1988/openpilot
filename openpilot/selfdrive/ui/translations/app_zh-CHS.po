@@ -398,6 +398,9 @@ msgstr "蜂窝计量"
 
 #: selfdrive\ui\layouts\settings\device.py
 #: selfdrive\ui\sunnypilot\layouts\settings\device.py
+msgid "Language changed. Restart the UI to apply."
+msgstr "更改语言需要重启UI。"
+
 msgid "Change Language"
 msgstr "更改语言"
 
