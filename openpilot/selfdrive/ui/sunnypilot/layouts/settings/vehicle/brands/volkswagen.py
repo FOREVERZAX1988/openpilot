@@ -16,7 +16,7 @@ from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, opt
 DESCRIPTIONS = {
   'jerk_limit': tr_noop(
     'Macan Accel Jerk Limit: limits how fast the acceleration request can '
-    'change (m/s³). Lower = smoother (gentler transitions, less surge); '
+    'change (m/s^3). Lower = smoother (gentler transitions, less surge); '
     'higher = more responsive. 0 = off (no limit). Decel (braking) is '
     'allowed 2.2x faster for safety. Takes effect within 1s.'
   ),
@@ -75,13 +75,13 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
     self.jerk_limit = option_item_sp(
-      lambda: tr("Accel Jerk Limit Value (m/s³)"),
+      lambda: tr("Accel Jerk Limit Value (m/s^3)"),
       "MacanJerkLimit",
       min_value=0, max_value=300,
       description=lambda: tr(DESCRIPTIONS["jerk_limit"]),
       value_change_step=10,
       use_float_scaling=True,
-      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.1f} m/s³",
+      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.1f} m/s^3",
       enabled=lambda: not ui_state.engaged,
     )
     self.jerk_limit.set_visible(ui_state.params.get_bool("MacanJerkLimitEnable"))  # 初始状态按开关参数

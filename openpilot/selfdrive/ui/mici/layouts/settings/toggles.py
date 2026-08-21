@@ -14,7 +14,7 @@ PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
 
 class MacanJerkControl(BigMultiToggle):
-  """Macan 加速度变化率限制（m/s³）：点击循环切换预设值，0=关闭（存储选项值本身）"""
+  """Macan 加速度变化率限制（m/s^3）：点击循环切换预设值，0=关闭（存储选项值本身）"""
   OPTIONS = ["0", "1.2", "1.5", "1.8", "2.0", "2.5"]
 
   def __init__(self, text: str, param: str):
@@ -78,7 +78,7 @@ class TogglesLayoutMici(NavScroller):
     enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
     macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
     macan_jerk_enable = BigParamControl(tr("Macan Accel Jerk Limit"), "MacanJerkLimitEnable")
-    macan_jerk_limit = MacanJerkControl(tr("Accel Jerk Limit Value (m/s³)"), "MacanJerkLimit")
+    macan_jerk_limit = MacanJerkControl(tr("Accel Jerk Limit Value (m/s^3)"), "MacanJerkLimit")
     macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
