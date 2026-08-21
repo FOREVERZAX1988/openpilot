@@ -67,8 +67,15 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
-    self.jerk_limit = option_item_sp(
+    self.jerk_limit_enable = toggle_item_sp(
       lambda: tr("Accel Jerk Limit (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["jerk_limit"]),
+      initial_state=ui_state.params.get_bool("MacanJerkLimitEnable"),
+      callback=self._on_enable_jerk_limit,
+      enabled=lambda: not ui_state.engaged,
+    )
+    self.jerk_limit = option_item_sp(
+      lambda: tr("Accel Jerk Limit Value (m/s³)"),
       "MacanJerkLimit",
       min_value=0, max_value=300,
       description=lambda: tr(DESCRIPTIONS["jerk_limit"]),
@@ -77,6 +84,7 @@ class VolkswagenSettings(BrandSettings):
       label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.1f} m/s³",
       enabled=lambda: not ui_state.engaged,
     )
+    self.jerk_limit.set_visible(lambda: ui_state.params.get_bool("MacanJerkLimitEnable"))
 
     self.corner_limit = toggle_item_sp(
       lambda: tr("Corner Accel Limit (Macan)"),
@@ -112,12 +120,18 @@ class VolkswagenSettings(BrandSettings):
 
     self.items = [
       self.start_stop,
+      self.jerk_limit_enable,
       self.jerk_limit,
       self.corner_limit,
       self.slope_comp,
       self.slope_comp_unlimited,
       self.steer_params,
     ]
+
+  def _on_enable_jerk_limit(self, state: bool):
+    ui_state.params.put_bool("MacanJerkLimitEnable", state)
+    if not state:
+      ui_state.params.put("MacanJerkLimit", "0")  # 关闭时清值（双保险）
 
   def _on_enable_start_stop(self, state: bool):
     if state:
