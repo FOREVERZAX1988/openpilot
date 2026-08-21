@@ -3,7 +3,7 @@ from collections.abc import Callable
 from openpilot.cereal import log
 
 from openpilot.system.ui.widgets.scroller import NavScroller
-from openpilot.selfdrive.ui.mici.widgets.button import BigParamControl, BigMultiParamToggle, BigToggle, GreyBigButton
+from openpilot.selfdrive.ui.mici.widgets.button import BigParamControl, BigMultiParamToggle, BigMultiToggle, BigToggle, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigConfirmationCircleButton
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
@@ -11,6 +11,26 @@ from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr
 
 PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
+
+
+class MacanJerkControl(BigMultiToggle):
+  """Macan 加速度变化率限制（m/s³）：点击循环切换预设值，0=关闭（存储选项值本身）"""
+  OPTIONS = ["0", "1.2", "1.5", "1.8", "2.0", "2.5"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = ui_state.params
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, self.value)
 
 
 class ExperimentalModeConfirmPage(NavScroller):
@@ -57,6 +77,7 @@ class TogglesLayoutMici(NavScroller):
     record_mic = BigParamControl(tr("record & upload mic audio"), "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
     macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
+    macan_jerk_limit = MacanJerkControl(tr("Macan Accel Jerk Limit"), "MacanJerkLimit")
     macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
@@ -73,6 +94,7 @@ class TogglesLayoutMici(NavScroller):
       record_mic,
       enable_openpilot,
       macan_start_stop,
+      macan_jerk_limit,
       macan_corner_limit,
       macan_slope_comp,
       macan_slope_comp_unlimited,
@@ -80,6 +102,7 @@ class TogglesLayoutMici(NavScroller):
     ])
 
     self._macan_start_stop = macan_start_stop
+    self._macan_jerk_limit = macan_jerk_limit
     self._macan_corner_limit = macan_corner_limit
     self._macan_slope_comp = macan_slope_comp
     self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
@@ -148,11 +171,13 @@ class TogglesLayoutMici(NavScroller):
     if ui_state.CP is not None and ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1":
       slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self._macan_start_stop.set_visible(True)
+      self._macan_jerk_limit.set_visible(True)
       self._macan_slope_comp.set_visible(True)
       self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
       self._macan_steer_params.set_visible(True)
     else:
       self._macan_start_stop.set_visible(False)
+      self._macan_jerk_limit.set_visible(False)
       self._macan_slope_comp.set_visible(False)
       self._macan_slope_comp_unlimited.set_visible(False)
       self._macan_steer_params.set_visible(False)

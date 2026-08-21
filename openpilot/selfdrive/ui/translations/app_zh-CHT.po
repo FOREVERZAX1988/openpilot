@@ -4,6 +4,9 @@ msgstr ""
 "Language: zh-CHT\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
+msgid "Macan Accel Jerk Limit"
+msgstr "加速度變化率限制"
+
 #: selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid " (Default)"
 msgstr "(預設)"
