@@ -22,7 +22,7 @@ def _get_macan_jerk_limit():
   now = time.monotonic()
   if now - _macan_jerk_limit_t > 1.0:  # 每1秒刷新（不阻塞）
     try:
-      _macan_jerk_limit = float(Params().get("MacanJerkLimit") or 0.0)
+      _macan_jerk_limit = float(Params().get("MacanJerkLimit") or 0.0) if Params().get_bool("MacanJerkLimitEnable") else 0.0  # 总开关关闭时强制不生效
     except Exception:
       _macan_jerk_limit = 0.0
     _macan_jerk_limit_t = now

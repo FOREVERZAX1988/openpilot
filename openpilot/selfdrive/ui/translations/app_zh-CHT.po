@@ -3242,5 +3242,9 @@ msgid "Select the version of Torque Control Tune to use."
 msgstr "選擇要使用的扭力控制調校版本。"
 
 msgid "Accel Jerk Limit (Macan)"
+msgid "Accel Jerk Limit Value (m/s³)"
+msgstr "加速度變化率限值（m/s³）"
+
+
 msgstr "加速度變化率限制 (Macan)"
 

@@ -3926,6 +3926,10 @@ msgid "Stop and Go (Macan)"
 msgstr "起步跟停（Macan）"
 
 msgid "Accel Jerk Limit (Macan)"
+msgid "Accel Jerk Limit Value (m/s³)"
+msgstr "加速度变化率限值（m/s³）"
+
+
 msgstr "加速度变化率限制 (Macan)"
 
 msgid "Macan Accel Jerk Limit"

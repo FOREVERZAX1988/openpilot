@@ -77,7 +77,8 @@ class TogglesLayoutMici(NavScroller):
     record_mic = BigParamControl(tr("record & upload mic audio"), "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
     macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
-    macan_jerk_limit = MacanJerkControl(tr("Macan Accel Jerk Limit"), "MacanJerkLimit")
+    macan_jerk_enable = BigParamControl(tr("Macan Accel Jerk Limit"), "MacanJerkLimitEnable")
+    macan_jerk_limit = MacanJerkControl(tr("Accel Jerk Limit Value (m/s³)"), "MacanJerkLimit")
     macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
@@ -94,6 +95,7 @@ class TogglesLayoutMici(NavScroller):
       record_mic,
       enable_openpilot,
       macan_start_stop,
+      macan_jerk_enable,
       macan_jerk_limit,
       macan_corner_limit,
       macan_slope_comp,
@@ -102,6 +104,7 @@ class TogglesLayoutMici(NavScroller):
     ])
 
     self._macan_start_stop = macan_start_stop
+    self._macan_jerk_enable = macan_jerk_enable
     self._macan_jerk_limit = macan_jerk_limit
     self._macan_corner_limit = macan_corner_limit
     self._macan_slope_comp = macan_slope_comp
@@ -118,6 +121,7 @@ class TogglesLayoutMici(NavScroller):
       ("AlwaysOnDM", always_on_dm_toggle),
       ("RecordFront", record_front),
       ("MacanStartStop", macan_start_stop),
+      ("MacanJerkLimitEnable", macan_jerk_enable),
       ("MacanCornerLimit", macan_corner_limit),
       ("MacanSlopeComp", macan_slope_comp),
       ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
@@ -171,12 +175,14 @@ class TogglesLayoutMici(NavScroller):
     if ui_state.CP is not None and ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1":
       slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self._macan_start_stop.set_visible(True)
-      self._macan_jerk_limit.set_visible(True)
+      self._macan_jerk_enable.set_visible(True)
+      self._macan_jerk_limit.set_visible(ui_state.params.get_bool("MacanJerkLimitEnable"))
       self._macan_slope_comp.set_visible(True)
       self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
       self._macan_steer_params.set_visible(True)
     else:
       self._macan_start_stop.set_visible(False)
+      self._macan_jerk_enable.set_visible(False)
       self._macan_jerk_limit.set_visible(False)
       self._macan_slope_comp.set_visible(False)
       self._macan_slope_comp_unlimited.set_visible(False)
