@@ -3265,3 +3265,9 @@ msgstr "Macan加速度死區：aTarget在±該值內歸零以濾除MPC抖動（m
 
 msgid "Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter."
 msgstr "Macan雷達融合：用原廠ACC雷達（bus2距離+前車速度）修正視覺前車，減輕跟車抖動。"
+
+msgid "Macan Accel Deadzone Enable"
+msgstr "Macan加速度死區開關"
+
+msgid "Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored)."
+msgstr "Macan加速度死區總開關：關=死區完全不生效（數值保留但被忽略）。"

@@ -92,7 +92,11 @@ def _get_macan_deadzone():
   now = time.monotonic()
   if now - _macan_deadzone_t > 1.0:  # 每1秒刷新
     try:
-      _macan_deadzone = float(Params().get("MacanAccelDeadzone") or 0.0)
+      # 总开关：MacanAccelDeadzoneEnable=false 时强制 0（数值保留但不生效，杜绝"关了还生效"）
+      if Params().get_bool("MacanAccelDeadzoneEnable"):
+        _macan_deadzone = float(Params().get("MacanAccelDeadzone") or 0.0)
+      else:
+        _macan_deadzone = 0.0
     except Exception:
       _macan_deadzone = 0.0
     _macan_deadzone_t = now

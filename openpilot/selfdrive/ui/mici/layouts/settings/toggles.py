@@ -123,6 +123,7 @@ class TogglesLayoutMici(NavScroller):
     macan_steer_params = BigParamControl(tr("Macan Dynamic Steering Ratio"), "MacanSteerParams")
     macan_accel_limit = MacanAccelLimitControl(tr("Macan Accel Limit (m/s^2)"), "MacanAccelLimit")
     macan_accel_deadzone = MacanAccelDeadzoneControl(tr("Macan Accel Deadzone (m/s^2)"), "MacanAccelDeadzone")
+    macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
     macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
 
     self._scroller.add_widgets([
@@ -143,6 +144,7 @@ class TogglesLayoutMici(NavScroller):
       macan_slope_comp_unlimited,
       macan_steer_params,
       macan_accel_limit,
+      macan_deadzone_enable,
       macan_accel_deadzone,
       macan_radar_fusion,
     ])
@@ -156,6 +158,7 @@ class TogglesLayoutMici(NavScroller):
     self._macan_steer_params = macan_steer_params
     self._macan_accel_limit = macan_accel_limit
     self._macan_accel_deadzone = macan_accel_deadzone
+    self._macan_deadzone_enable = macan_deadzone_enable
     self._macan_radar_fusion = macan_radar_fusion
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
@@ -175,6 +178,7 @@ class TogglesLayoutMici(NavScroller):
       ("MacanSteerParams", macan_steer_params),
       ("MacanAccelLimit", macan_accel_limit),
       ("MacanAccelDeadzone", macan_accel_deadzone),
+      ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
       ("MacanRadarFusion", macan_radar_fusion),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
@@ -231,7 +235,8 @@ class TogglesLayoutMici(NavScroller):
       self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
       self._macan_steer_params.set_visible(True)
       self._macan_accel_limit.set_visible(True)
-      self._macan_accel_deadzone.set_visible(True)
+      self._macan_deadzone_enable.set_visible(True)
+      self._macan_accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))
       self._macan_radar_fusion.set_visible(True)
     else:
       self._macan_start_stop.set_visible(False)
@@ -241,6 +246,7 @@ class TogglesLayoutMici(NavScroller):
       self._macan_slope_comp_unlimited.set_visible(False)
       self._macan_steer_params.set_visible(False)
       self._macan_accel_limit.set_visible(False)
+      self._macan_deadzone_enable.set_visible(False)
       self._macan_accel_deadzone.set_visible(False)
       self._macan_radar_fusion.set_visible(False)
 

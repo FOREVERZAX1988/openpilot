@@ -157,6 +157,12 @@ sections:
       label: '2.0'
     enablement:
     - $ref: '#/macros/offroad'
+  - key: MacanAccelDeadzoneEnable
+    widget: toggle
+    title: Macan Accel Deadzone Enable
+    description: 'Master switch. Off = deadzone fully disabled (value kept but ignored).'
+    enablement:
+    - $ref: '#/macros/offroad'
   - key: MacanAccelDeadzone
     widget: multiple_button
     title: Macan Accel Deadzone (m/s^2)
@@ -174,6 +180,7 @@ sections:
       label: '0.2'
     enablement:
     - $ref: '#/macros/offroad'
+    - {type: param, key: MacanAccelDeadzoneEnable, equals: true}
   - key: MacanCornerLimit
     widget: toggle
     title: Macan Corner Limit
