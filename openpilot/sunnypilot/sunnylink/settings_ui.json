@@ -2364,6 +2364,195 @@
           ]
         }
       ]
+    },
+    "volkswagen": {
+      "title": "Volkswagen / Porsche Settings",
+      "description": "",
+      "items": [
+        {
+          "key": "MacanStartStop",
+          "widget": "toggle",
+          "title": "Macan Stop and Go",
+          "description": "Vision model decides when to start; openpilot sends RESUME to release the stock parking hold.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanJerkLimitEnable",
+          "widget": "toggle",
+          "title": "Macan Accel Jerk Limit",
+          "description": "Master switch for the acceleration change-rate (jerk) limit. When off, the limit value is ignored.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanJerkLimit",
+          "widget": "multiple_button",
+          "title": "Accel Jerk Limit Value (m/s^3)",
+          "description": "Limits how fast the acceleration request can change. Lower = smoother (less surge); higher = more responsive. 0 = off. Decel is allowed 2.2x faster for safety.",
+          "options": [
+            {
+              "value": 0,
+              "label": "Off"
+            },
+            {
+              "value": 1.2,
+              "label": "1.2"
+            },
+            {
+              "value": 1.5,
+              "label": "1.5"
+            },
+            {
+              "value": 1.8,
+              "label": "1.8"
+            },
+            {
+              "value": 2.0,
+              "label": "2.0"
+            },
+            {
+              "value": 2.5,
+              "label": "2.5"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "offroad_only"
+            },
+            {
+              "type": "param",
+              "key": "MacanJerkLimitEnable",
+              "equals": true
+            }
+          ]
+        },
+        {
+          "key": "MacanAccelLimit",
+          "widget": "multiple_button",
+          "title": "Macan Accel Limit (m/s^2)",
+          "description": "Clamps the acceleration request magnitude. 0 = factory curve.",
+          "options": [
+            {
+              "value": 0,
+              "label": "Off"
+            },
+            {
+              "value": 0.8,
+              "label": "0.8"
+            },
+            {
+              "value": 1.0,
+              "label": "1.0"
+            },
+            {
+              "value": 1.2,
+              "label": "1.2"
+            },
+            {
+              "value": 1.5,
+              "label": "1.5"
+            },
+            {
+              "value": 2.0,
+              "label": "2.0"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanAccelDeadzone",
+          "widget": "multiple_button",
+          "title": "Macan Accel Deadzone (m/s^2)",
+          "description": "Zeroes aTarget inside +/- deadzone to filter MPC jitter. 0 = off.",
+          "options": [
+            {
+              "value": 0,
+              "label": "Off"
+            },
+            {
+              "value": 0.05,
+              "label": "0.05"
+            },
+            {
+              "value": 0.1,
+              "label": "0.1"
+            },
+            {
+              "value": 0.15,
+              "label": "0.15"
+            },
+            {
+              "value": 0.2,
+              "label": "0.2"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanCornerLimit",
+          "widget": "toggle",
+          "title": "Macan Corner Limit",
+          "description": "Lowers the longitudinal limit in corners (wheel angle > 5 deg).",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanSlopeComp",
+          "widget": "toggle",
+          "title": "Macan Slope Compensation",
+          "description": "Applies decel on descents / extra pull on ascents.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanSlopeCompUnlimited",
+          "widget": "toggle",
+          "title": "Slope Comp Unlimited (Macan)",
+          "description": "Release the factory torque limit for slope compensation.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            },
+            {
+              "type": "param",
+              "key": "MacanSlopeComp",
+              "equals": true
+            }
+          ]
+        },
+        {
+          "key": "MacanSteerParams",
+          "widget": "toggle",
+          "title": "Dynamic Ratio Tuning (Macan)",
+          "description": "Experimental dynamic ratio coefficients for Macan (MLB).",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        }
+      ]
     }
   }
 }
