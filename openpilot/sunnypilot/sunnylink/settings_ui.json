@@ -2725,6 +2725,17 @@
           ]
         },
         {
+          "key": "MacanAccelDeadzoneEnable",
+          "widget": "toggle",
+          "title": "Macan Accel Deadzone Enable",
+          "description": "Master switch. Off = deadzone fully disabled (value kept but ignored).",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
           "key": "MacanAccelDeadzone",
           "widget": "multiple_button",
           "title": "Macan Accel Deadzone (m/s^2)",
@@ -2754,6 +2765,11 @@
           "enablement": [
             {
               "type": "offroad_only"
+            },
+            {
+              "type": "param",
+              "key": "MacanAccelDeadzoneEnable",
+              "equals": true
             }
           ]
         },

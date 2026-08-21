@@ -51,6 +51,9 @@ DESCRIPTIONS = {
   'accel_deadzone': tr_noop(
     'Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off.'
   ),
+  'accel_deadzone_enable': tr_noop(
+    'Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored).'
+  ),
   'radar_fusion': tr_noop(
     'Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter.'
   ),
@@ -138,6 +141,15 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.accel_deadzone_enable = toggle_item_sp(
+      lambda: tr("Macan Accel Deadzone Enable"),
+      description=lambda: tr(DESCRIPTIONS["accel_deadzone_enable"]),
+      initial_state=ui_state.params.get_bool("MacanAccelDeadzoneEnable"),
+      callback=self._on_enable_accel_deadzone,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.accel_deadzone_enable.action_item.set_visible(False)  # 占位防错
     self.accel_deadzone = option_item_sp(
       lambda: tr("Macan Accel Deadzone (m/s^2)"),
       "MacanAccelDeadzone",
@@ -148,6 +160,7 @@ class VolkswagenSettings(BrandSettings):
       label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.2f} m/s^2",
       enabled=lambda: not ui_state.engaged,
     )
+    self.accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))  # 初始状态按开关参数
 
     self.radar_fusion = toggle_item_sp(
       lambda: tr("Radar Fusion (Macan)"),
@@ -166,6 +179,7 @@ class VolkswagenSettings(BrandSettings):
       self.slope_comp_unlimited,
       self.steer_params,
       self.accel_limit,
+      self.accel_deadzone_enable,
       self.accel_deadzone,
       self.radar_fusion,
     ]
@@ -175,6 +189,10 @@ class VolkswagenSettings(BrandSettings):
     self.jerk_limit.set_visible(state)  # 立即显示/隐藏数值项（显式布尔，不触发 UI 重载）
     # 注：不 put 清值——longcontrol 代码层已有 Enable 兜底（关→强制不生效），
     # 且 put FLOAT 参数会触发 UI 重载（2026-08-21 实测）
+
+  def _on_enable_accel_deadzone(self, state: bool):
+    ui_state.params.put_bool("MacanAccelDeadzoneEnable", state)
+    self.accel_deadzone.set_visible(state)  # 立即显示/隐藏数值项
 
   def _on_enable_radar_fusion(self, state: bool):
     ui_state.params.put_bool("MacanRadarFusion", state)
@@ -240,7 +258,10 @@ class VolkswagenSettings(BrandSettings):
       self.steer_params.set_visible(is_macan)
       self.accel_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.accel_limit.set_visible(is_macan)
-      self.accel_deadzone.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.accel_deadzone.set_visible(is_macan)
+      self.accel_deadzone_enable.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.accel_deadzone_enable.set_visible(is_macan)
+      deadzone_on = ui_state.params.get_bool("MacanAccelDeadzoneEnable")
+      self.accel_deadzone.action_item.set_enabled(is_macan and not ui_state.engaged and deadzone_on)
+      self.accel_deadzone.set_visible(is_macan and deadzone_on)
       self.radar_fusion.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.radar_fusion.set_visible(is_macan)
