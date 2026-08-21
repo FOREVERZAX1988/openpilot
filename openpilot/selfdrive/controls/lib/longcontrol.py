@@ -1,11 +1,32 @@
+import time
 import numpy as np
 from opendbc.car.structs import car
+from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N
 from openpilot.common.pid import PIDController
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
+
+# Macan 减猛：accel 变化率限幅（MacanJerkLimit 参数，m/s³；0=关闭，默认关）
+# 依据（0051 vs 原厂 02/04/05）：OP aEgo 波动幅度 0.48 vs 原厂 0.31-0.35——
+# 链路 aTarget→longcontrol(feedforward 直通，无变化率限制)→accel→力矩→aEgo，
+# MPC relaxed 已全档平滑（a_change=200）但距离误差主导时 aTarget 仍 ±1.2 快速翻转。
+# 正向 jerk 限幅削过冲；负向（减速）放宽 2.2 倍，安全优先。
+_macan_jerk_limit = 0.0
+_macan_jerk_limit_t = 0.0
+_MACAN_JERK_NEG_FACTOR = 2.2
+def _get_macan_jerk_limit():
+  global _macan_jerk_limit, _macan_jerk_limit_t
+  now = time.monotonic()
+  if now - _macan_jerk_limit_t > 1.0:  # 每1秒刷新（不阻塞）
+    try:
+      _macan_jerk_limit = float(Params().get("MacanJerkLimit") or 0.0)
+    except Exception:
+      _macan_jerk_limit = 0.0
+    _macan_jerk_limit_t = now
+  return _macan_jerk_limit
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
@@ -76,5 +97,13 @@ class LongControl:
       output_accel = self.pid.update(error, speed=CS.vEgo,
                                      feedforward=a_target)
 
+    # Macan 减猛（MacanJerkLimit>0 时）：accel 变化率限幅——削 aTarget 过冲透传，
+    # 正 jerk 限 lim，负 jerk（减速）限 2.2×lim（安全优先）。0=关闭（默认）。
+    jerk_lim = _get_macan_jerk_limit()
+    if jerk_lim > 0.0:
+      _delta = output_accel - self.last_output_accel
+      _max_d = jerk_lim * DT_CTRL
+      _max_dn = jerk_lim * _MACAN_JERK_NEG_FACTOR * DT_CTRL
+      output_accel = self.last_output_accel + float(np.clip(_delta, -_max_dn, _max_d))
     self.last_output_accel = np.clip(output_accel, accel_limits[0], accel_limits[1])
     return self.last_output_accel
