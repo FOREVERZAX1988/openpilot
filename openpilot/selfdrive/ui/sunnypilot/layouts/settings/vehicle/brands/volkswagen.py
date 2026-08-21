@@ -10,10 +10,16 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.widgets import DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
-from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
+from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, option_item_sp
 
 
 DESCRIPTIONS = {
+  'jerk_limit': tr_noop(
+    'Macan Accel Jerk Limit: limits how fast the acceleration request can '
+    'change (m/s³). Lower = smoother (gentler transitions, less surge); '
+    'higher = more responsive. 0 = off (no limit). Decel (braking) is '
+    'allowed 2.2x faster for safety. Takes effect within 1s.'
+  ),
   'start_stop': tr_noop(
     'Macan Stop and Go: when enabled, the vision model decides when to start, '
     'and openpilot sends the RESUME signal to release the stock parking hold '
@@ -61,6 +67,17 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.jerk_limit = option_item_sp(
+      lambda: tr("Accel Jerk Limit (Macan)"),
+      "MacanJerkLimit",
+      min_value=0, max_value=300,
+      description=lambda: tr(DESCRIPTIONS["jerk_limit"]),
+      value_change_step=10,
+      use_float_scaling=True,
+      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.1f} m/s³",
+      enabled=lambda: not ui_state.engaged,
+    )
+
     self.corner_limit = toggle_item_sp(
       lambda: tr("Corner Accel Limit (Macan)"),
       description=lambda: tr(DESCRIPTIONS["corner_limit"]),
@@ -95,6 +112,7 @@ class VolkswagenSettings(BrandSettings):
 
     self.items = [
       self.start_stop,
+      self.jerk_limit,
       self.corner_limit,
       self.slope_comp,
       self.slope_comp_unlimited,
@@ -146,6 +164,8 @@ class VolkswagenSettings(BrandSettings):
       slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self.start_stop.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.start_stop.set_visible(is_macan)
+      self.jerk_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.jerk_limit.set_visible(is_macan)
       self.corner_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.corner_limit.set_visible(is_macan)
       self.slope_comp.action_item.set_enabled(is_macan and not ui_state.engaged)

@@ -3237,3 +3237,7 @@ msgstr "Macan 轉向係數（實驗性）：啟用後使用標定值 steerRatio 
 
 msgid "Select the version of Torque Control Tune to use."
 msgstr "選擇要使用的扭力控制調校版本。"
+
+msgid "Accel Jerk Limit (Macan)"
+msgstr "加速度變化率限制 (Macan)"
+
