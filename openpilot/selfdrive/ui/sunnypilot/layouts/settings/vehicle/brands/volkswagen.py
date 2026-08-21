@@ -149,7 +149,6 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
-    self.accel_deadzone_enable.action_item.set_visible(False)  # 占位防错
     self.accel_deadzone = option_item_sp(
       lambda: tr("Macan Accel Deadzone (m/s^2)"),
       "MacanAccelDeadzone",

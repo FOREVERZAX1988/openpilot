@@ -4484,3 +4484,6 @@ msgstr "Macan加速度死区开关"
 
 msgid "Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored)."
 msgstr "Macan加速度死区总开关：关=死区完全不生效（数值保留但被忽略）。"
+
+msgid "Macan Accel Jerk Limit: limits how fast the acceleration request can change (m/s^3). Lower = smoother (gentler transitions, less surge); higher = more responsive. 0 = off (no limit). Decel (braking) is allowed 2.2x faster for safety. Takes effect within 1s."
+msgstr "Macan加速度变化率限制：限制加速度请求的变化速率（m/s^3）。越小=越平顺（过渡更柔和，不冲）；越大=响应更快。0=关闭（不限）。刹车（减速）为安全允许2.2倍更快。1秒内生效。"
