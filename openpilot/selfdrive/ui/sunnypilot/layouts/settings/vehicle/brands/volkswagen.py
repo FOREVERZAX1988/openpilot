@@ -84,7 +84,7 @@ class VolkswagenSettings(BrandSettings):
       label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.1f} m/s³",
       enabled=lambda: not ui_state.engaged,
     )
-    self.jerk_limit.set_visible(lambda: ui_state.params.get_bool("MacanJerkLimitEnable"))
+    self.jerk_limit.set_visible(ui_state.params.get_bool("MacanJerkLimitEnable"))  # 初始状态按开关参数
 
     self.corner_limit = toggle_item_sp(
       lambda: tr("Corner Accel Limit (Macan)"),
@@ -130,8 +130,9 @@ class VolkswagenSettings(BrandSettings):
 
   def _on_enable_jerk_limit(self, state: bool):
     ui_state.params.put_bool("MacanJerkLimitEnable", state)
-    if not state:
-      ui_state.params.put("MacanJerkLimit", "0")  # 关闭时清值（双保险）
+    self.jerk_limit.set_visible(state)  # 立即显示/隐藏数值项（显式布尔，不触发 UI 重载）
+    # 注：不 put 清值——longcontrol 代码层已有 Enable 兜底（关→强制不生效），
+    # 且 put FLOAT 参数会触发 UI 重载（2026-08-21 实测）
 
   def _on_enable_start_stop(self, state: bool):
     if state:
@@ -178,8 +179,11 @@ class VolkswagenSettings(BrandSettings):
       slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
       self.start_stop.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.start_stop.set_visible(is_macan)
-      self.jerk_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.jerk_limit.set_visible(is_macan)
+      self.jerk_limit_enable.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.jerk_limit_enable.set_visible(is_macan)
+      jerk_limit_on = ui_state.params.get_bool("MacanJerkLimitEnable")
+      self.jerk_limit.action_item.set_enabled(is_macan and not ui_state.engaged and jerk_limit_on)
+      self.jerk_limit.set_visible(is_macan and jerk_limit_on)
       self.corner_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.corner_limit.set_visible(is_macan)
       self.slope_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
