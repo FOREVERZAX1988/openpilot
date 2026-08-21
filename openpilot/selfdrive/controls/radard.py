@@ -207,6 +207,13 @@ class RadarD:
 
     self.radar_state: capnp._DynamicStructBuilder | None = None
     self.radar_state_valid = False
+    # Macan 原厂雷达融合（bus2 ACC_02.Abstandsindex + ACC_04 前车速度 -> 修正视觉 lead）
+    # 标定表：00000004 原厂模式 8411 样本（2026-08-13），本会话全量验证偏差<=4%
+    self._macan_abstands_t = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 6.0]
+    self._macan_abstands_idx = [100, 106, 122, 168, 234, 271, 363, 380, 389, 401, 420]
+    self._macan_radar = {'idx': 0, 'obj': 0, 'spd': 0.0}
+    self._macan_fusion_on = False
+    self._macan_fusion_t = 0.0
 
     self.ready = False
 
@@ -262,6 +269,66 @@ class RadarD:
       self.radar_state.leadTwo = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[1], model_v_ego, self.lead_prob_filters[1].x,
                                           self.CP, self.CP_SP, low_speed_override=False)
 
+      # Macan 原厂雷达融合（A1 速度加权 + A2 距离校验，开关 MacanRadarFusion）
+      self._macan_fuse_leads(sm)
+
+  def _macan_fusion_enabled(self) -> bool:
+    import time
+    now = time.monotonic()
+    if now - self._macan_fusion_t > 1.0:
+      try:
+        self._macan_fusion_on = self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and Params().get_bool("MacanRadarFusion")
+      except Exception:
+        self._macan_fusion_on = False
+      self._macan_fusion_t = now
+    return self._macan_fusion_on
+
+  def _macan_idx_to_drel(self, idx: float, v_ego: float) -> float:
+    """Abstandsindex -> 时距 t -> 距离（逆映射，低速用等效 t*5）"""
+    t = float(np.interp(idx, self._macan_abstands_idx, self._macan_abstands_t))
+    return t * (v_ego if v_ego > 5.0 else 5.0)
+
+  def _macan_drel_to_idx(self, drel: float, v_ego: float) -> float:
+    """距离 -> 时距 t -> Abstandsindex（正映射，与 op_lead_to_index 同标定表）"""
+    t = drel / v_ego if v_ego > 5.0 else drel / 5.0
+    return float(np.interp(t, self._macan_abstands_t, self._macan_abstands_idx))
+
+  def _macan_fuse_leads(self, sm: messaging.SubMaster) -> None:
+    """A1: 原厂前车速度加权修正 vLead；A2: 原厂距离校验视觉 dRel（偏差>30% 以原厂为准）"""
+    if not self._macan_fusion_enabled():
+      return
+    r = self._macan_radar
+    r['idx'] = r['obj'] = 0
+    r['spd'] = 0.0
+    for msg in sm['can']:
+      if msg.src != 2:
+        continue
+      d = msg.dat
+      if msg.address == 780 and len(d) >= 7:
+        r['idx'] = (d[3] | (d[4] << 8)) & 0x3FF
+        r['obj'] = (d[5] >> 6) & 0x3
+      elif msg.address == 804 and len(d) >= 7:
+        v = ((d[5] | (d[6] << 8)) & 0x3FF) * 0.32  # km/h
+        r['spd'] = v if v < 320 else 0.0
+    if r['idx'] <= 0 or r['idx'] >= 1021:
+      return  # 原厂无有效目标（0=无，1021=饱和/无效）
+
+    for lead_name in ('leadOne', 'leadTwo'):
+      lead = getattr(self.radar_state, lead_name)
+      if not lead.present:
+        continue
+      # A2 距离校验：视觉 dRel 换算成 Abstandsindex，与原厂偏差>30% 以原厂为准
+      try:
+        vis_idx = self._macan_drel_to_idx(lead.dRel, self.v_ego)
+        if vis_idx > 0 and abs(vis_idx - r['idx']) / r['idx'] > 0.3:
+          lead.dRel = self._macan_idx_to_drel(r['idx'], self.v_ego)
+      except Exception:
+        pass
+      # A1 速度加权：0.7*原厂绝对速度 + 0.3*视觉 vLead（原厂雷达测速稳 6 倍）
+      if r['spd'] > 0:
+        lead.vLead = 0.7 * (r['spd'] / 3.6) + 0.3 * lead.vLead
+        lead.vRel = lead.vLead - self.v_ego
+
   def publish(self, pm: messaging.PubMaster):
     assert self.radar_state is not None
 
@@ -285,7 +352,7 @@ def main() -> None:
   cloudlog.info("radard got CarParamsSP")
 
   # *** setup messaging
-  sm = messaging.SubMaster(['modelV2', 'carState', 'radarTracks'], poll='modelV2')
+  sm = messaging.SubMaster(['modelV2', 'carState', 'radarTracks', 'can'], poll='modelV2')
   pm = messaging.PubMaster(['radarState'])
 
   RD = RadarD(CP, CP_SP, CP.radarDelay)

@@ -245,7 +245,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanJerkLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},
     {"MacanJerkLimitEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 加速度变化率限制总开关（0=关，功能不生效）        // Macan 加速度变化率限幅（m/s³，0=关闭；削 aTarget 过冲→减猛，0051 vs 原厂 0.48 vs 0.35）
     {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
-    {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关（BOOL；开=方向盘角>5°线性压低纵向上限，|angle|≥30°压到0.3×当前上限；4f实测62%加速发生在弯道）
+    {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
+    {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 雷达融合（bus2 原厂 Abstandsindex+前车速度 修正视觉lead；radard 消费）
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
