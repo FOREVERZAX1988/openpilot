@@ -199,3 +199,9 @@ sections:
     description: 'Experimental dynamic ratio coefficients for Macan (MLB).'
     enablement:
     - $ref: '#/macros/offroad'
+  - key: MacanRadarFusion
+    widget: toggle
+    title: Radar Fusion (Macan)
+    description: 'Uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead. Reduces follow jitter.'
+    enablement:
+    - $ref: '#/macros/offroad'

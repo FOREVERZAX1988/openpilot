@@ -3926,11 +3926,11 @@ msgid "Stop and Go (Macan)"
 msgstr "起步跟停（Macan）"
 
 msgid "Accel Jerk Limit (Macan)"
+msgstr "加速度变化率限制 (Macan)"
 msgid "Accel Jerk Limit Value (m/s^3)"
 msgstr "加速度变化率限值（m/s³）"
 
 
-msgstr "加速度变化率限制 (Macan)"
 
 msgid "Macan Accel Jerk Limit"
 msgstr "加速度变化率限制"
@@ -4460,3 +4460,21 @@ msgstr "Macan 转向系数（实验性）：启用后使用标定值 steerRatio 
 
 msgid "Select the version of Torque Control Tune to use."
 msgstr "选择要使用的扭矩控制调校版本。"
+
+msgid "Macan Accel Limit (m/s^2)"
+msgstr "Macan加速度上限（m/s^2）"
+
+msgid "Macan Accel Deadzone (m/s^2)"
+msgstr "Macan加速度死区（m/s^2）"
+
+msgid "Radar Fusion (Macan)"
+msgstr "Macan雷达融合"
+
+msgid "Macan Accel Limit: clamps the acceleration request magnitude (m/s^2). 0 = factory curve."
+msgstr "Macan加速度上限：限制加速度请求幅度（m/s^2）。0=原厂曲线。"
+
+msgid "Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off."
+msgstr "Macan加速度死区：aTarget在±该值内归零以滤除MPC抖动（m/s^2）。0=关闭。"
+
+msgid "Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter."
+msgstr "Macan雷达融合：用原厂ACC雷达（bus2距离+前车速度）修正视觉前车，减轻跟车抖动。"

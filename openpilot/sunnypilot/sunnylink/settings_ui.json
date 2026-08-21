@@ -2551,6 +2551,17 @@
               "type": "offroad_only"
             }
           ]
+        },
+        {
+          "key": "MacanRadarFusion",
+          "widget": "toggle",
+          "title": "Radar Fusion (Macan)",
+          "description": "Uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead. Reduces follow jitter.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
         }
       ]
     }

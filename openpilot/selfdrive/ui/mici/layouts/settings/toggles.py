@@ -33,6 +33,44 @@ class MacanJerkControl(BigMultiToggle):
     self._params.put(self._param, self.value)
 
 
+class MacanAccelLimitControl(BigMultiToggle):
+  OPTIONS = ["0", "0.8", "1.0", "1.2", "1.5", "2.0"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = ui_state.params
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, self.value)
+
+
+class MacanAccelDeadzoneControl(BigMultiToggle):
+  OPTIONS = ["0", "0.05", "0.1", "0.15", "0.2"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = ui_state.params
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, self.value)
+
+
 class ExperimentalModeConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
     super().__init__()
@@ -83,6 +121,9 @@ class TogglesLayoutMici(NavScroller):
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
     macan_steer_params = BigParamControl(tr("Macan Dynamic Steering Ratio"), "MacanSteerParams")
+    macan_accel_limit = MacanAccelLimitControl(tr("Macan Accel Limit (m/s^2)"), "MacanAccelLimit")
+    macan_accel_deadzone = MacanAccelDeadzoneControl(tr("Macan Accel Deadzone (m/s^2)"), "MacanAccelDeadzone")
+    macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
 
     self._scroller.add_widgets([
       self._personality_toggle,
@@ -101,6 +142,9 @@ class TogglesLayoutMici(NavScroller):
       macan_slope_comp,
       macan_slope_comp_unlimited,
       macan_steer_params,
+      macan_accel_limit,
+      macan_accel_deadzone,
+      macan_radar_fusion,
     ])
 
     self._macan_start_stop = macan_start_stop
@@ -110,6 +154,9 @@ class TogglesLayoutMici(NavScroller):
     self._macan_slope_comp = macan_slope_comp
     self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
     self._macan_steer_params = macan_steer_params
+    self._macan_accel_limit = macan_accel_limit
+    self._macan_accel_deadzone = macan_accel_deadzone
+    self._macan_radar_fusion = macan_radar_fusion
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
@@ -126,6 +173,9 @@ class TogglesLayoutMici(NavScroller):
       ("MacanSlopeComp", macan_slope_comp),
       ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
       ("MacanSteerParams", macan_steer_params),
+      ("MacanAccelLimit", macan_accel_limit),
+      ("MacanAccelDeadzone", macan_accel_deadzone),
+      ("MacanRadarFusion", macan_radar_fusion),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
@@ -180,6 +230,9 @@ class TogglesLayoutMici(NavScroller):
       self._macan_slope_comp.set_visible(True)
       self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
       self._macan_steer_params.set_visible(True)
+      self._macan_accel_limit.set_visible(True)
+      self._macan_accel_deadzone.set_visible(True)
+      self._macan_radar_fusion.set_visible(True)
     else:
       self._macan_start_stop.set_visible(False)
       self._macan_jerk_enable.set_visible(False)
@@ -187,6 +240,9 @@ class TogglesLayoutMici(NavScroller):
       self._macan_slope_comp.set_visible(False)
       self._macan_slope_comp_unlimited.set_visible(False)
       self._macan_steer_params.set_visible(False)
+      self._macan_accel_limit.set_visible(False)
+      self._macan_accel_deadzone.set_visible(False)
+      self._macan_radar_fusion.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
