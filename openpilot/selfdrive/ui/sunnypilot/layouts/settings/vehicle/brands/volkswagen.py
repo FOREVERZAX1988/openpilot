@@ -45,6 +45,15 @@ DESCRIPTIONS = {
     'Field data: 62% of accel events happen with |angle|>8 deg. Takes '
     'effect immediately, no restart needed.'
   ),
+  'accel_limit': tr_noop(
+    'Macan Accel Limit: clamps the acceleration request magnitude (m/s^2). 0 = factory curve.'
+  ),
+  'accel_deadzone': tr_noop(
+    'Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off.'
+  ),
+  'radar_fusion': tr_noop(
+    'Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter.'
+  ),
   'steer_params': tr_noop(
     'Dynamic Steering Ratio (Macan): speed-dependent steering ratio - 15.0 below 140 km/h, '
 '18.7 above 145 km/h (linear transition 140-145), fitted from 29,284 samples across '
@@ -118,6 +127,36 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.accel_limit = option_item_sp(
+      lambda: tr("Macan Accel Limit (m/s^2)"),
+      "MacanAccelLimit",
+      min_value=0, max_value=200,
+      description=lambda: tr(DESCRIPTIONS["accel_limit"]),
+      value_change_step=10,
+      use_float_scaling=True,
+      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.1f} m/s^2",
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.accel_deadzone = option_item_sp(
+      lambda: tr("Macan Accel Deadzone (m/s^2)"),
+      "MacanAccelDeadzone",
+      min_value=0, max_value=20,
+      description=lambda: tr(DESCRIPTIONS["accel_deadzone"]),
+      value_change_step=5,
+      use_float_scaling=True,
+      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.2f} m/s^2",
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.radar_fusion = toggle_item_sp(
+      lambda: tr("Radar Fusion (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["radar_fusion"]),
+      initial_state=ui_state.params.get_bool("MacanRadarFusion"),
+      callback=self._on_enable_radar_fusion,
+      enabled=lambda: not ui_state.engaged,
+    )
+
     self.items = [
       self.start_stop,
       self.jerk_limit_enable,
@@ -126,6 +165,9 @@ class VolkswagenSettings(BrandSettings):
       self.slope_comp,
       self.slope_comp_unlimited,
       self.steer_params,
+      self.accel_limit,
+      self.accel_deadzone,
+      self.radar_fusion,
     ]
 
   def _on_enable_jerk_limit(self, state: bool):
@@ -133,6 +175,9 @@ class VolkswagenSettings(BrandSettings):
     self.jerk_limit.set_visible(state)  # 立即显示/隐藏数值项（显式布尔，不触发 UI 重载）
     # 注：不 put 清值——longcontrol 代码层已有 Enable 兜底（关→强制不生效），
     # 且 put FLOAT 参数会触发 UI 重载（2026-08-21 实测）
+
+  def _on_enable_radar_fusion(self, state: bool):
+    ui_state.params.put_bool("MacanRadarFusion", state)
 
   def _on_enable_start_stop(self, state: bool):
     if state:
@@ -193,3 +238,9 @@ class VolkswagenSettings(BrandSettings):
       self.slope_comp_unlimited.set_visible(is_macan and slope_comp_on)
       self.steer_params.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.steer_params.set_visible(is_macan)
+      self.accel_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.accel_limit.set_visible(is_macan)
+      self.accel_deadzone.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.accel_deadzone.set_visible(is_macan)
+      self.radar_fusion.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.radar_fusion.set_visible(is_macan)
