@@ -16,7 +16,7 @@ PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
 class MacanJerkControl(BigMultiToggle):
   """Macan 加速度变化率限制（m/s^3）：点击循环切换预设值，0=关闭（存储选项值本身）"""
-  OPTIONS = ["0", "1.2", "1.5", "1.8", "2.0", "2.5"]
+  OPTIONS = ["0", "1.5", "2.5"]  # 三档：0=关 / 1.5标准 / 2.5激进（2026-08-22 用户要求三格）
 
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)
@@ -26,12 +26,14 @@ class MacanJerkControl(BigMultiToggle):
 
   def _load(self):
     cur = self._params.get(self._param)
-    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 0
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
     self.set_value(self.OPTIONS[idx])
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
 
 
 class MacanAccelLimitControl(BigMultiToggle):
@@ -46,12 +48,14 @@ class MacanAccelLimitControl(BigMultiToggle):
 
   def _load(self):
     cur = self._params.get(self._param)
-    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 0
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
     self.set_value(self.OPTIONS[idx])
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
 
 
 class MacanStartStopDistControl(BigMultiToggle):
@@ -66,12 +70,14 @@ class MacanStartStopDistControl(BigMultiToggle):
 
   def _load(self):
     cur = self._params.get(self._param)
-    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 1
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 1
     self.set_value(self.OPTIONS[idx])
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
+    self._params.put(self._param, int(self.value), block=True)  # INT 参数需 int（str 会 TypeError 崩 UI）
 
 
 class MacanAccelDeadzoneControl(BigMultiToggle):
@@ -85,12 +91,14 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
 
   def _load(self):
     cur = self._params.get(self._param)
-    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 0
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
     self.set_value(self.OPTIONS[idx])
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
 
 
 class ExperimentalModeConfirmPage(NavScroller):
