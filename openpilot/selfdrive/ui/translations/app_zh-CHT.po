@@ -1335,7 +1335,7 @@ msgstr "輕推"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Nudgeless"
-msgstr "無助"
+msgstr "無需輕推"
 
 #: selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "N·dm"

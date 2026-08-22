@@ -1438,11 +1438,11 @@ msgstr "注意：设为关闭会重置 MADS 为默认设置。"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Nudge"
-msgstr "微调"
+msgstr "轻推"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Nudgeless"
-msgstr "无微调"
+msgstr "无需轻推"
 
 #: selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "N·dm"
