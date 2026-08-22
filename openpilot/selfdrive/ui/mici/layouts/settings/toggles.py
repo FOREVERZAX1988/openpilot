@@ -7,6 +7,7 @@ from openpilot.selfdrive.ui.mici.widgets.button import BigParamControl, BigMulti
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigConfirmationCircleButton
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
+from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr
 
@@ -20,7 +21,7 @@ class MacanJerkControl(BigMultiToggle):
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)
     self._param = param
-    self._params = ui_state.params
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
     self._load()
 
   def _load(self):
@@ -30,7 +31,7 @@ class MacanJerkControl(BigMultiToggle):
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value)
+    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
 
 
 class MacanAccelLimitControl(BigMultiToggle):
@@ -40,7 +41,7 @@ class MacanAccelLimitControl(BigMultiToggle):
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)
     self._param = param
-    self._params = ui_state.params
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
     self._load()
 
   def _load(self):
@@ -50,7 +51,7 @@ class MacanAccelLimitControl(BigMultiToggle):
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value)
+    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
 
 
 class MacanStartStopDistControl(BigMultiToggle):
@@ -60,7 +61,7 @@ class MacanStartStopDistControl(BigMultiToggle):
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)
     self._param = param
-    self._params = ui_state.params
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
     self._load()
 
   def _load(self):
@@ -70,7 +71,7 @@ class MacanStartStopDistControl(BigMultiToggle):
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value)
+    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
 
 
 class MacanAccelDeadzoneControl(BigMultiToggle):
@@ -79,7 +80,7 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)
     self._param = param
-    self._params = ui_state.params
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
     self._load()
 
   def _load(self):
@@ -89,7 +90,7 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, self.value)
+    self._params.put(self._param, self.value, block=True)  # 同步落盘，防 UI 刷新丢失（驾驶风格同模式）
 
 
 class ExperimentalModeConfirmPage(NavScroller):
