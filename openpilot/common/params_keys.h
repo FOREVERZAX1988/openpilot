@@ -238,6 +238,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ToyotaEnforceStockLongitudinal", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ToyotaStopAndGoHack", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"MacanStartStop", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 起步跟停（视觉决定起步，OP 代发 RESUME）
+    {"MacanStartStopDistance", {PERSISTENT | BACKUP, BOOL, "1"}},  // Macan 起步安全距离（SnG子开关：开=需雷达/视觉确认前车；关=V1纯意图起步，拥堵防加塞）
     {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）
     {"MacanSlopeCompUnlimited", {PERSISTENT | BACKUP, BOOL, "0"}}, // 坡度补偿-放开原厂力矩限制（选项2）
     {"MacanSteerParams", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 转向系数（实验值，待路试修正）

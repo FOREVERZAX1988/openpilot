@@ -3275,3 +3275,10 @@ msgstr "Macan加速度死區總開關：關=死區完全不生效（數值保留
 
 msgid "Macan Accel Jerk Limit: limits how fast the acceleration request can change (m/s^3). Lower = smoother (gentler transitions, less surge); higher = more responsive. 0 = off (no limit). Decel (braking) is allowed 2.2x faster for safety. Takes effect within 1s."
 msgstr "Macan加速度變化率限制：限制加速度請求的變化速率（m/s^3）。越小=越平順（過渡更柔和，不衝）；越大=響應更快。0=關閉（不限）。煞車（減速）為安全允許2.2倍更快。1秒內生效。"
+
+#: selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Startup Safe Distance (Macan)"
+msgstr "起步安全距離（Macan）"
+
+msgid "Startup Safe Distance (Macan): when ON, auto-resume from a stop requires the stock radar distance (>0) or vision lead (>5m) - prevents phantom starts. When OFF, resumes on vision intent alone (V1 behavior) - use in heavy traffic to keep tight gaps and prevent cut-ins. Only effective when Stop and Go (Macan) is enabled."
+msgstr "Macan 起步安全距離：開啟時，自動起步需原廠雷達距離(>0)或視覺前車(>5m)確認（更安全，防誤起步）；關閉時僅憑視覺起步意圖即起步（V1行為）——適合擁堵路段保持緊湊跟車、防加塞。僅在開啟「起步跟停（Macan）」時生效。"
