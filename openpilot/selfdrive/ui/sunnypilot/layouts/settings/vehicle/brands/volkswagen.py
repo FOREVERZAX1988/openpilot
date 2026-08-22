@@ -86,11 +86,14 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
-    self.start_stop_distance = toggle_item_sp(
+    self.start_stop_distance = option_item_sp(
       lambda: tr("Startup Safe Distance (Macan)"),
+      "MacanStartStopDistance",
+      min_value=0, max_value=8,
       description=lambda: tr(DESCRIPTIONS["start_stop_distance"]),
-      initial_state=ui_state.params.get_bool("MacanStartStopDistance"),
-      callback=self._on_enable_start_stop_distance,
+      value_change_step=1,
+      value_map={0: 0, 1: 3, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8, 7: 9, 8: 10},  # 显示档→存储米（0=Off, 3~10米每1米）
+      label_callback=lambda v: tr("Off") if v == 0 else f"{v + 2} m",
       enabled=lambda: not ui_state.engaged,
     )
     self.start_stop_distance.set_visible(ui_state.params.get_bool("MacanStartStop"))  # 仅 SnG 开启时可见
@@ -199,10 +202,6 @@ class VolkswagenSettings(BrandSettings):
       self.accel_deadzone,
       self.radar_fusion,
     ]
-
-  def _on_enable_start_stop_distance(self, state: bool):
-    # stop_and_go 每 100 帧刷新参数，即时生效，无需 onroad cycle 重启
-    ui_state.params.put_bool("MacanStartStopDistance", state)
 
   def _on_enable_jerk_limit(self, state: bool):
     ui_state.params.put_bool("MacanJerkLimitEnable", state)
