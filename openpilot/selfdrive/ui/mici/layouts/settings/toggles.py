@@ -34,7 +34,8 @@ class MacanJerkControl(BigMultiToggle):
 
 
 class MacanAccelLimitControl(BigMultiToggle):
-  OPTIONS = ["0", "0.8", "1.0", "1.2", "1.5", "2.0"]
+  # 2026-08-22 用户反馈：档位太多点击会重启 UI 不跳数值 → 改三档
+  OPTIONS = ["1.0", "1.2", "1.6"]
 
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)
@@ -45,6 +46,26 @@ class MacanAccelLimitControl(BigMultiToggle):
   def _load(self):
     cur = self._params.get(self._param)
     idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, self.value)
+
+
+class MacanStartStopDistControl(BigMultiToggle):
+  """Macan 起步安全距离（米）：3/5/10 三档（tizi 为 0/3-10 每1米，mici 简化三档）"""
+  OPTIONS = ["3", "5", "10"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = ui_state.params
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    idx = self.OPTIONS.index(cur) if cur in self.OPTIONS else 1
     self.set_value(self.OPTIONS[idx])
 
   def _handle_mouse_release(self, mouse_pos):
@@ -115,7 +136,7 @@ class TogglesLayoutMici(NavScroller):
     record_mic = BigParamControl(tr("record & upload mic audio"), "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
     macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
-    macan_start_stop_distance = BigParamControl(tr("Startup Safe Distance (Macan)"), "MacanStartStopDistance")
+    macan_start_stop_distance = MacanStartStopDistControl(tr("Startup Safe Distance (Macan)"), "MacanStartStopDistance")
     macan_jerk_enable = BigParamControl(tr("Macan Accel Jerk Limit"), "MacanJerkLimitEnable")
     macan_jerk_limit = MacanJerkControl(tr("Accel Jerk Limit Value (m/s^3)"), "MacanJerkLimit")
     macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")

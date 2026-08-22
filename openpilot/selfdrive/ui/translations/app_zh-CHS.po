@@ -4494,4 +4494,4 @@ msgid "Startup Safe Distance (Macan)"
 msgstr "起步安全距离（Macan）"
 
 msgid "Startup Safe Distance (Macan): when ON, auto-resume from a stop requires the stock radar distance (>0) or vision lead (>5m) - prevents phantom starts. When OFF, resumes on vision intent alone (V1 behavior) - use in heavy traffic to keep tight gaps and prevent cut-ins. Only effective when Stop and Go (Macan) is enabled."
-msgstr "Macan 起步安全距离：开启时，自动起步需原厂雷达距离(>0)或视觉前车(>5m)确认（更安全，防误起步）；关闭时仅凭视觉起步意图即起步（V1行为）——适合拥堵路段保持紧凑跟车、防加塞。仅在开启“起步跟停（Macan）”时生效。"
+msgstr "Macan 起步安全距离：自动起步的前车距离阈值（米）可调。0=关闭：仅凭视觉起步意图即起步（V1行为）——适合拥堵路段保持紧凑跟车、防加塞；3~10米：需原厂雷达距离(ab)或视觉前车超过该阈值才起步——防误起步。仅在开启“起步跟停（Macan）”时生效。"
