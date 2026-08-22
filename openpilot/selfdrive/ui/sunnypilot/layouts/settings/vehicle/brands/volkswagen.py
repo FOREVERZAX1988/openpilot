@@ -93,7 +93,7 @@ class VolkswagenSettings(BrandSettings):
       description=lambda: tr(DESCRIPTIONS["start_stop_distance"]),
       value_change_step=1,
       value_map={0: 0, 1: 3, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8, 7: 9, 8: 10},  # 显示档→存储米（0=Off, 3~10米每1米）
-      label_callback=lambda v: tr("Off") if v == 0 else f"{v + 2} m",
+      label_callback=lambda v: tr("Off") if v == 0 else f"{v} m",  # v 是存储值(3-10)，直接显示米
       enabled=lambda: not ui_state.engaged,
     )
     self.start_stop_distance.set_visible(ui_state.params.get_bool("MacanStartStop"))  # 仅 SnG 开启时可见
