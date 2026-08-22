@@ -20,6 +20,13 @@ DESCRIPTIONS = {
     'higher = more responsive. 0 = off (no limit). Decel (braking) is '
     'allowed 2.2x faster for safety. Takes effect within 1s.'
   ),
+  'start_stop_distance': tr_noop(
+    'Startup Safe Distance (Macan): when ON, auto-resume from a stop requires '
+    'the stock radar distance (>0) or vision lead (>5m) - prevents phantom '
+    'starts. When OFF, resumes on vision intent alone (V1 behavior) - use in '
+    'heavy traffic to keep tight gaps and prevent cut-ins. Only effective '
+    'when Stop and Go (Macan) is enabled.'
+  ),
   'start_stop': tr_noop(
     'Macan Stop and Go: when enabled, the vision model decides when to start, '
     'and openpilot sends the RESUME signal to release the stock parking hold '
@@ -78,6 +85,15 @@ class VolkswagenSettings(BrandSettings):
       callback=self._on_enable_start_stop,
       enabled=lambda: not ui_state.engaged,
     )
+
+    self.start_stop_distance = toggle_item_sp(
+      lambda: tr("Startup Safe Distance (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["start_stop_distance"]),
+      initial_state=ui_state.params.get_bool("MacanStartStopDistance"),
+      callback=self._on_enable_start_stop_distance,
+      enabled=lambda: not ui_state.engaged,
+    )
+    self.start_stop_distance.set_visible(ui_state.params.get_bool("MacanStartStop"))  # 仅 SnG 开启时可见
 
     self.jerk_limit_enable = toggle_item_sp(
       lambda: tr("Accel Jerk Limit (Macan)"),
@@ -171,6 +187,7 @@ class VolkswagenSettings(BrandSettings):
 
     self.items = [
       self.start_stop,
+      self.start_stop_distance,
       self.jerk_limit_enable,
       self.jerk_limit,
       self.corner_limit,
@@ -182,6 +199,10 @@ class VolkswagenSettings(BrandSettings):
       self.accel_deadzone,
       self.radar_fusion,
     ]
+
+  def _on_enable_start_stop_distance(self, state: bool):
+    # stop_and_go 每 100 帧刷新参数，即时生效，无需 onroad cycle 重启
+    ui_state.params.put_bool("MacanStartStopDistance", state)
 
   def _on_enable_jerk_limit(self, state: bool):
     ui_state.params.put_bool("MacanJerkLimitEnable", state)
@@ -202,6 +223,7 @@ class VolkswagenSettings(BrandSettings):
         if result == DialogResult.CONFIRM:
           ui_state.params.put_bool("MacanStartStop", True)
           ui_state.params.put_bool("OnroadCycleRequested", True)
+          self.start_stop_distance.set_visible(True)  # SnG 开 → 显示距离子开关
         else:
           self.start_stop.action_item.set_state(False)
 
@@ -214,6 +236,7 @@ class VolkswagenSettings(BrandSettings):
     else:
       ui_state.params.put_bool("MacanStartStop", False)
       ui_state.params.put_bool("OnroadCycleRequested", True)
+      self.start_stop_distance.set_visible(False)  # SnG 关 → 隐藏距离子开关
 
   def _on_enable_corner_limit(self, state: bool):
     # planner 每 1s 刷新参数，即时生效，无需 onroad cycle 重启
@@ -239,8 +262,11 @@ class VolkswagenSettings(BrandSettings):
       # 仅 Macan(MLB) 支持；其他 VW 平台隐藏开关
       is_macan = ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1"
       slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
+      start_stop_on = ui_state.params.get_bool("MacanStartStop")
       self.start_stop.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.start_stop.set_visible(is_macan)
+      self.start_stop_distance.action_item.set_enabled(is_macan and not ui_state.engaged and start_stop_on)
+      self.start_stop_distance.set_visible(is_macan and start_stop_on)
       self.jerk_limit_enable.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.jerk_limit_enable.set_visible(is_macan)
       jerk_limit_on = ui_state.params.get_bool("MacanJerkLimitEnable")
