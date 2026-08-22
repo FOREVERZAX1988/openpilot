@@ -106,7 +106,12 @@ class VCruiseHelper(VCruiseHelperSP):
       # 旧代码 setCruise→accelCruise(+1) 转换先于 133 行 gas 锚定执行，锚定永不触发。
       # 锚定必须在转换之前处理（enabled=激活中，未激活时 setCruise=接合不走此分支）。
       if CS.gasPressed and self.button_change_states[button_type]["enabled"]:
-        self.v_cruise_kph = np.clip(round(max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH), 1), self.v_cruise_min, V_CRUISE_MAX)
+        # 2026-08-22 修复（00000052 seg11 实测：vEgo=42/cru=45 按SET没反应）：
+        # 旧公式 max(v_cruise_kph, vEgo) 只增不减，介入车速<旧巡航时 vCruise 不变。
+        # 改为以当前车速为锚、下限 30(公制)/20(英制)——>30 置当前车速、<30 置 30，
+        # 与原厂语义一致（避免用 V_CRUISE_MIN=8 触发原厂 ACC st=6，用户确认）。
+        anchor_min = 30.0 if is_metric else 20.0
+        self.v_cruise_kph = np.clip(round(max(CS.vEgo * CV.MS_TO_KPH, anchor_min), 1), anchor_min, V_CRUISE_MAX)
         self.v_cruise_cluster_kph = self.v_cruise_kph
         return
       # 事件在 update_button_timers 中按 type.raw=setCruise 键存储 change state，
