@@ -35,7 +35,8 @@ DESCRIPTIONS = {
   ),
   'slope_comp': tr_noop(
     'Macan Slope Compensation: when enabled, the IMU slope signal adds '
-    'g*sin(slope) to the acceleration request - more torque uphill, and a '
+    'g*sin(slope) to the acceleration request - more torque uphill with a '
+    'positive Verz request (declared acceleration, ~4.2*sin(slope)), and a '
     'brake tap downhill (prevents forward lurch). Default off = stock '
     'behavior. Onroad cycle restart is requested after toggling.'
   ),
