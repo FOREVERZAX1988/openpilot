@@ -3285,3 +3285,6 @@ msgstr "Macan 起步安全距離：自動起步的前車距離閾值（米）可
 
 msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
 msgstr "Macan 坡度補償：開啟後 IMU 坡度信號向加速度請求加入 g*sin(坡度)——上坡增加力矩並發出正向 Verz 請求（加速聲明，約 4.2×sin(坡度)），下坡輕點煞車（防止前衝）。預設關閉=原廠行為。切換後需重啟行程週期。"
+
+msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), a brief positive Verz ramp (+1.285 over 180ms) when overriding a deceleration with the gas pedal, and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
+msgstr "Macan 坡度補償：開啟後 IMU 坡度信號向加速度請求加入 g*sin(坡度)——上坡增加力矩並發出正向 Verz 請求（加速聲明，約 4.2×sin(坡度)）；減速中踩油門超馳時短暫發出正向 Verz 斜坡（+1.285/180ms，加速聲明儀式）；下坡輕點煞車（防止前衝）。預設關閉=原廠行為。切換後需重啟行程週期。"
