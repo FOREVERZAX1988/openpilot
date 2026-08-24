@@ -4495,3 +4495,6 @@ msgstr "起步安全距离（Macan）"
 
 msgid "Startup Safe Distance (Macan): when ON, auto-resume from a stop requires the stock radar distance (>0) or vision lead (>5m) - prevents phantom starts. When OFF, resumes on vision intent alone (V1 behavior) - use in heavy traffic to keep tight gaps and prevent cut-ins. Only effective when Stop and Go (Macan) is enabled."
 msgstr "Macan 起步安全距离：自动起步的前车距离阈值（米）可调。0=关闭：仅凭视觉起步意图即起步（V1行为）——适合拥堵路段保持紧凑跟车、防加塞；3~10米：需原厂雷达距离(ab)或视觉前车超过该阈值才起步——防误起步。仅在开启“起步跟停（Macan）”时生效。"
+
+msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
+msgstr "Macan 坡度补偿：开启后 IMU 坡度信号向加速度请求加入 g*sin(坡度)——上坡增加力矩并发出正向 Verz 请求（加速声明，约 4.2×sin(坡度)），下坡轻点刹车（防止前冲）。默认关闭=原厂行为。切换后需重启行程周期。"
