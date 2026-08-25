@@ -150,11 +150,23 @@ class SelfdriveD(CruiseHelper):
       max(log.LongitudinalPersonality.schema.enumerants.values()),
       self.params
     )
-    # 车距档与 personality 对齐：原厂启动重置3格不带记忆，但 OP personality 带记忆
-    # （Params LongitudinalPersonality）——若两者不一致（如记忆为4格从容而 _zeitluecke=3），
-    # 首次按距离键会跳档（从容直接跳标准）。从 personality 反推车距档
-    # （4格→从容/3格→标准/1格→激进），保持首次按键渐进。
-    self._zeitluecke = {2: 4, 1: 3, 0: 1}.get(self.personality, 3)
+    # 车距档与 personality 双向同步（MacanStartupGapSync 决定方向）：
+    # 开（OP主导）：记忆风格 → 车距档（4格→从容/3格→标准/1格→激进），保持首次
+    #   按键渐进，并代发 DIST 脉冲让原厂 ACC 内部档位对齐（StopAndGo/StartupGapSync）。
+    # 关（车辆主导）：跟随原厂点火默认 3 格 → OP 风格重置为标准并写回 param——
+    #   否则 params_thread 每 100ms 把旧记忆拉回，车辆主导被覆盖。
+    _gap_sync = False
+    try:
+      _gap_sync = self.params.get_bool("MacanStartupGapSync")
+    except Exception:
+      pass
+    if _gap_sync:
+      self._zeitluecke = {2: 4, 1: 3, 0: 1}.get(self.personality, 3)
+    else:
+      self._zeitluecke = 3
+      if self.personality != 1:
+        self.personality = 1
+        self.params.put("LongitudinalPersonality", 1)
 
     self.recalibrating_seen = False
     self.dm_lockout_set = False

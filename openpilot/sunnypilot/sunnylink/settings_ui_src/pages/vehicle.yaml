@@ -108,8 +108,8 @@ sections:
   items:
   - key: MacanStartupGapSync
     widget: toggle
-    title: Macan Startup Distance Sync
-    description: 'After ignition, while parked & ACC standby, send DIST +/- pulses so the stock ACC ECU follows your remembered driving style (4=comfortable). Default off; only effective on Macan.'
+    title: Macan Distance Sync Direction
+    description: 'ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only.'
   - key: MacanStartStop
     widget: toggle
     title: Macan Stop and Go
