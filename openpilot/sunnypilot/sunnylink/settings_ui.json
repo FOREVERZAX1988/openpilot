@@ -2370,6 +2370,47 @@
       "description": "",
       "items": [
         {
+          "key": "MacanSteerBiasComp",
+          "widget": "toggle",
+          "title": "Macan Steering Bias Compensation",
+          "description": "ON: learn the EPS torque sensor zero-offset during straight driving and subtract it, so light hand contact no longer counts as driver override (fixes \"steering stops halfway\"). OFF: stock behavior. Macan only.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanSteerAllowance",
+          "widget": "multiple_button",
+          "title": "Macan Intervention Sensitivity (cNm)",
+          "description": "Driver override threshold. 60 = stock (most sensitive, 0.6 Nm). 100 = least sensitive (matches MQB). Only effective when Bias Compensation is ON.",
+          "options": [
+            {
+              "value": 60,
+              "label": "60 (stock)"
+            },
+            {
+              "value": 80,
+              "label": "80"
+            },
+            {
+              "value": 100,
+              "label": "100 (relaxed)"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "offroad_only"
+            },
+            {
+              "type": "param",
+              "key": "MacanSteerBiasComp",
+              "equals": true
+            }
+          ]
+        },
+        {
           "key": "MacanStartupGapSync",
           "widget": "toggle",
           "title": "Macan Distance Sync Direction",

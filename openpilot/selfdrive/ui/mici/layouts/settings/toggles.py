@@ -101,6 +101,26 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
     self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
 
 
+class MacanSteerAllowanceControl(BigMultiToggle):
+  """Macan 干预灵敏度（cNm）：60原厂/80/100宽松三档。仅零偏补偿开关开启时生效。"""
+  OPTIONS = ["60", "80", "100"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = Params()
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, int(self.value), block=True)  # INT 参数需 int
+
+
 class ExperimentalModeConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
     super().__init__()
@@ -157,6 +177,8 @@ class TogglesLayoutMici(NavScroller):
     macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
     macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
     macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
+    macan_steer_bias = BigParamControl(tr("Macan Steering Bias Compensation"), "MacanSteerBiasComp")
+    macan_steer_allowance = MacanSteerAllowanceControl(tr("Macan Intervention Sensitivity (cNm)"), "MacanSteerAllowance")
 
     self._scroller.add_widgets([
       self._personality_toggle,
@@ -181,6 +203,8 @@ class TogglesLayoutMici(NavScroller):
       macan_accel_deadzone,
       macan_radar_fusion,
       macan_startup_gap_sync,
+      macan_steer_bias,
+      macan_steer_allowance,
     ])
 
     self._macan_start_stop = macan_start_stop
@@ -196,6 +220,8 @@ class TogglesLayoutMici(NavScroller):
     self._macan_deadzone_enable = macan_deadzone_enable
     self._macan_radar_fusion = macan_radar_fusion
     self._macan_startup_gap_sync = macan_startup_gap_sync
+    self._macan_steer_bias = macan_steer_bias
+    self._macan_steer_allowance = macan_steer_allowance
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
@@ -218,11 +244,14 @@ class TogglesLayoutMici(NavScroller):
       ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
       ("MacanRadarFusion", macan_radar_fusion),
       ("MacanStartupGapSync", macan_startup_gap_sync),
+      ("MacanSteerBiasComp", macan_steer_bias),
+      ("MacanSteerAllowance", macan_steer_allowance),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
 
     enable_openpilot.set_enabled(lambda: not ui_state.engaged)
+    macan_steer_allowance.set_visible(lambda: ui_state.params.get_bool("MacanSteerBiasComp"))
     macan_start_stop_distance.set_enabled(lambda: not ui_state.engaged)
     macan_slope_comp.set_enabled(lambda: not ui_state.engaged)
     macan_slope_comp_unlimited.set_enabled(lambda: not ui_state.engaged)

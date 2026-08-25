@@ -249,7 +249,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanAccelDeadzoneEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan aTarget死区总开关（0=关，数值保留但不生效）
     {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
     {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+    {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MacanSteerBiasComp", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 方向盘零偏补偿（直行EMA学习EPS力矩零偏，虚握不再误判干预）
+    {"MacanSteerAllowance", {PERSISTENT | BACKUP, INT, "60"}},       // Macan 干预灵敏度（cNm：60原厂/80/100宽松；配合零偏补偿开关，仅Macan生效）       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
     // Macan 雷达融合（bus2 原厂 Abstandsindex+前车速度 修正视觉lead；radard 消费）
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
