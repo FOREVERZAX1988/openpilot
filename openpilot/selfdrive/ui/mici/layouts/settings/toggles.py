@@ -156,6 +156,7 @@ class TogglesLayoutMici(NavScroller):
     macan_accel_deadzone = MacanAccelDeadzoneControl(tr("Macan Accel Deadzone (m/s^2)"), "MacanAccelDeadzone")
     macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
     macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
+    macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
 
     self._scroller.add_widgets([
       self._personality_toggle,
@@ -179,6 +180,7 @@ class TogglesLayoutMici(NavScroller):
       macan_deadzone_enable,
       macan_accel_deadzone,
       macan_radar_fusion,
+      macan_startup_gap_sync,
     ])
 
     self._macan_start_stop = macan_start_stop
@@ -193,6 +195,7 @@ class TogglesLayoutMici(NavScroller):
     self._macan_accel_deadzone = macan_accel_deadzone
     self._macan_deadzone_enable = macan_deadzone_enable
     self._macan_radar_fusion = macan_radar_fusion
+    self._macan_startup_gap_sync = macan_startup_gap_sync
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
@@ -214,6 +217,7 @@ class TogglesLayoutMici(NavScroller):
       ("MacanAccelDeadzone", macan_accel_deadzone),
       ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
       ("MacanRadarFusion", macan_radar_fusion),
+      ("MacanStartupGapSync", macan_startup_gap_sync),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )

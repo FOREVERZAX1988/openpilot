@@ -4501,3 +4501,11 @@ msgstr "Macan 坡度补偿：开启后 IMU 坡度信号向加速度请求加入 
 
 msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), a brief positive Verz ramp (+1.285 over 180ms) when overriding a deceleration with the gas pedal, and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
 msgstr "Macan 坡度补偿：开启后 IMU 坡度信号向加速度请求加入 g*sin(坡度)——上坡增加力矩并发出正向 Verz 请求（加速声明，约 4.2×sin(坡度)）；减速中踩油门超驰时短暂发出正向 Verz 斜坡（+1.285/180ms，加速声明仪式）；下坡轻点刹车（防止前冲）。默认关闭=原厂行为。切换后需重启行程周期。"
+
+#: selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Distance Sync Direction"
+msgstr "Macan 距离同步方向"
+
+#: selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
+msgstr "开：OP主导——点火后发送距离键脉冲，让原厂ACC跟随你记忆的驾驶风格（如4格=从容）。关：车辆主导——OP重置为车辆默认（3格=标准）。仅Macan生效。"
