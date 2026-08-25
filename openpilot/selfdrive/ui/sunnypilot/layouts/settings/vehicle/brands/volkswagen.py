@@ -78,11 +78,12 @@ DESCRIPTIONS = {
     'Steering Bias Compensation (Macan): ON - learn the EPS torque sensor zero-offset during '
     'straight driving and subtract it, so light hand contact no longer counts as driver '
     'override (fixes "steering stops halfway"). Also enables the intervention sensitivity '
-    'selector (60/80/100 cNm). OFF - stock behavior. Takes effect on next onroad cycle.'
+    'selector (0/60/80). OFF - stock behavior. Takes effect on next onroad cycle.'
   ),
   'steer_allowance': tr_noop(
-    'Intervention Sensitivity (Macan): driver override threshold. 60 = stock (most sensitive, '
-    '0.6 Nm). 100 = least sensitive (matches MQB). Only effective when Bias Compensation is ON.'
+    'Intervention Sensitivity (Macan): driver override threshold. 0 = bias compensation only '
+    '(stock sensitivity, 0.6 Nm). 60 = explicit 0.6 Nm. 80 = 0.8 Nm (matches PQ, closest to MQB). '
+    'Only effective when Bias Compensation is ON.'
   )
 }
 
@@ -219,11 +220,11 @@ class VolkswagenSettings(BrandSettings):
     self.steer_allowance = option_item_sp(
       lambda: tr("Macan Intervention Sensitivity (cNm)"),
       "MacanSteerAllowance",
-      min_value=60, max_value=100,
+      min_value=0, max_value=2,  # 档位索引（OptionControlSP 的 min/max 是档位不是存储值！）
       description=lambda: tr(DESCRIPTIONS["steer_allowance"]),
-      value_change_step=20,
-      value_map={0: 60, 1: 80, 2: 100},  # 显示档→存储值（60/80/100 cNm）
-      label_callback=lambda v: f"{v} cNm",
+      value_change_step=1,
+      value_map={0: 0, 1: 60, 2: 80},  # 档→存储值：0=仅零偏补偿（不动ALLOWANCE）/60/80 cNm
+      label_callback=lambda v: "Off" if v == 0 else f"{v} cNm",
       enabled=lambda: not ui_state.engaged,
     )
     self.steer_allowance.set_visible(ui_state.params.get_bool("MacanSteerBiasComp"))  # 初始状态按开关参数
