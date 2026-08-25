@@ -115,14 +115,14 @@ sections:
   - key: MacanSteerAllowance
     widget: multiple_button
     title: Macan Intervention Sensitivity (cNm)
-    description: 'Driver override threshold. 60 = stock (most sensitive, 0.6 Nm). 100 = least sensitive (matches MQB). Only effective when Bias Compensation is ON.'
+    description: 'Driver override threshold. 0 = bias compensation only (stock, 0.6 Nm). 60 = explicit 0.6 Nm. 80 = 0.8 Nm (matches PQ). Only effective when Bias Compensation is ON.'
     options:
+    - value: 0
+      label: 'Off (bias only)'
     - value: 60
       label: '60 (stock)'
     - value: 80
       label: '80'
-    - value: 100
-      label: '100 (relaxed)'
     enablement:
     - $ref: '#/macros/offroad'
     - {type: param, key: MacanSteerBiasComp, equals: true}

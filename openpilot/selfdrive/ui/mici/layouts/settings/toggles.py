@@ -102,8 +102,8 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
 
 
 class MacanSteerAllowanceControl(BigMultiToggle):
-  """Macan 干预灵敏度（cNm）：60原厂/80/100宽松三档。仅零偏补偿开关开启时生效。"""
-  OPTIONS = ["60", "80", "100"]
+  """Macan 干预灵敏度（cNm）：0=仅零偏补偿(不动ALLOWANCE)/60/80 三档。仅零偏补偿开关开启时生效。"""
+  OPTIONS = ["0", "60", "80"]
 
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)
