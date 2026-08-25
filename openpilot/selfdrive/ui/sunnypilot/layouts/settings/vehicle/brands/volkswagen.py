@@ -73,6 +73,16 @@ DESCRIPTIONS = {
 'the full 4f route (RMSE 1.75 deg), plus torque friction 0.52. When disabled, uses '
 'stock fixed 16.2. Replaces the old experimental 18.0 (discarded: 22% gyro spread, '
 '15% oversteer in city corners).'
+  ),
+  'steer_bias_comp': tr_noop(
+    'Steering Bias Compensation (Macan): ON - learn the EPS torque sensor zero-offset during '
+    'straight driving and subtract it, so light hand contact no longer counts as driver '
+    'override (fixes "steering stops halfway"). Also enables the intervention sensitivity '
+    'selector (60/80/100 cNm). OFF - stock behavior. Takes effect on next onroad cycle.'
+  ),
+  'steer_allowance': tr_noop(
+    'Intervention Sensitivity (Macan): driver override threshold. 60 = stock (most sensitive, '
+    '0.6 Nm). 100 = least sensitive (matches MQB). Only effective when Bias Compensation is ON.'
   )
 }
 
@@ -191,6 +201,33 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.gap_sync = toggle_item_sp(
+      lambda: tr("Macan Distance Sync Direction"),
+      description=lambda: tr("ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."),
+      initial_state=ui_state.params.get_bool("MacanStartupGapSync"),
+      callback=self._on_enable_gap_sync,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.steer_bias_comp = toggle_item_sp(
+      lambda: tr("Macan Steering Bias Compensation"),
+      description=lambda: tr(DESCRIPTIONS["steer_bias_comp"]),
+      initial_state=ui_state.params.get_bool("MacanSteerBiasComp"),
+      callback=self._on_enable_steer_bias,
+      enabled=lambda: not ui_state.engaged,
+    )
+    self.steer_allowance = option_item_sp(
+      lambda: tr("Macan Intervention Sensitivity (cNm)"),
+      "MacanSteerAllowance",
+      min_value=60, max_value=100,
+      description=lambda: tr(DESCRIPTIONS["steer_allowance"]),
+      value_change_step=20,
+      value_map={0: 60, 1: 80, 2: 100},  # 显示档→存储值（60/80/100 cNm）
+      label_callback=lambda v: f"{v} cNm",
+      enabled=lambda: not ui_state.engaged,
+    )
+    self.steer_allowance.set_visible(ui_state.params.get_bool("MacanSteerBiasComp"))  # 初始状态按开关参数
+
     self.items = [
       self.start_stop,
       self.start_stop_distance,
@@ -204,6 +241,9 @@ class VolkswagenSettings(BrandSettings):
       self.accel_deadzone_enable,
       self.accel_deadzone,
       self.radar_fusion,
+      self.gap_sync,
+      self.steer_bias_comp,
+      self.steer_allowance,
     ]
 
   def _on_enable_jerk_limit(self, state: bool):
@@ -218,6 +258,15 @@ class VolkswagenSettings(BrandSettings):
 
   def _on_enable_radar_fusion(self, state: bool):
     ui_state.params.put_bool("MacanRadarFusion", state)
+
+  def _on_enable_gap_sync(self, state: bool):
+    ui_state.params.put_bool("MacanStartupGapSync", state)
+    ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
+
+  def _on_enable_steer_bias(self, state: bool):
+    ui_state.params.put_bool("MacanSteerBiasComp", state)
+    self.steer_allowance.set_visible(state)  # 灵敏度子项联动显示
+    ui_state.params.put_bool("OnroadCycleRequested", True)  # ALLOWANCE/零偏学习在 carstate 初始化时读取
 
   def _on_enable_start_stop(self, state: bool):
     if state:
@@ -292,3 +341,10 @@ class VolkswagenSettings(BrandSettings):
       self.accel_deadzone.set_visible(is_macan and deadzone_on)
       self.radar_fusion.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.radar_fusion.set_visible(is_macan)
+      self.gap_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.gap_sync.set_visible(is_macan)
+      self.steer_bias_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.steer_bias_comp.set_visible(is_macan)
+      bias_on = ui_state.params.get_bool("MacanSteerBiasComp")
+      self.steer_allowance.action_item.set_enabled(is_macan and not ui_state.engaged and bias_on)
+      self.steer_allowance.set_visible(is_macan and bias_on)
