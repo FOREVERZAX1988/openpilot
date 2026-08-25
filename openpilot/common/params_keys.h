@@ -248,7 +248,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
     {"MacanAccelDeadzoneEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan aTarget死区总开关（0=关，数值保留但不生效）
     {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
-    {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 雷达融合（bus2 原厂 Abstandsindex+前车速度 修正视觉lead；radard 消费）
+    {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+    // Macan 雷达融合（bus2 原厂 Abstandsindex+前车速度 修正视觉lead；radard 消费）
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},

@@ -106,6 +106,10 @@ sections:
   title: Volkswagen / Porsche Settings
   description: ''
   items:
+  - key: MacanStartupGapSync
+    widget: toggle
+    title: Macan Startup Distance Sync
+    description: 'After ignition, while parked & ACC standby, send DIST +/- pulses so the stock ACC ECU follows your remembered driving style (4=comfortable). Default off; only effective on Macan.'
   - key: MacanStartStop
     widget: toggle
     title: Macan Stop and Go
