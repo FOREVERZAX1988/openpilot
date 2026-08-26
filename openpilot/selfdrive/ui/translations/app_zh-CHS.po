@@ -4509,23 +4509,3 @@ msgstr "Macan 距离同步方向"
 #: selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
 msgstr "开：OP主导——点火后发送距离键脉冲，让原厂ACC跟随你记忆的驾驶风格（如4格=从容）。关：车辆主导——OP重置为车辆默认（3格=标准）。仅Macan生效。"
-
-#: selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "Macan Steering Bias Compensation"
-msgstr "Macan 方向盘零偏补偿"
-
-#: selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "Macan Intervention Sensitivity (cNm)"
-msgstr "Macan 干预灵敏度 (cNm)"
-
-#: selfdrive\ui\mici\layouts\settings\toggles.py
-
-#: selfdrive\ui\mici\layouts\settings\toggles.py
-
-#: selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
-msgid "Steering Bias Compensation (Macan): ON - learn the EPS torque sensor zero-offset during straight driving and subtract it, so light hand contact no longer counts as driver override (fixes "steering stops halfway"). Also enables the intervention sensitivity selector (0/60/80). OFF - stock behavior. Takes effect on next onroad cycle."
-msgstr "方向盘零偏补偿（Macan）：开——直行时学习EPS力矩传感器零偏并扣除，轻搭手不再被判定为驾驶员干预（修复"方向盘打到一半不打了"）。同时启用干预灵敏度选择（0/60/80）。关——原厂行为。下次行车周期生效。"
-
-#: selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
-msgid "Intervention Sensitivity (Macan): driver override threshold. 0 = bias compensation only (stock sensitivity, 0.6 Nm). 60 = explicit 0.6 Nm. 80 = 0.8 Nm (matches PQ, closest to MQB). Only effective when Bias Compensation is ON."
-msgstr "干预灵敏度（Macan）：驾驶员干预阈值。0=仅零偏补偿（保持原厂灵敏度0.6Nm）；60=显式0.6Nm；80=0.8Nm（对齐PQ，接近MQB）。仅在零偏补偿开启时生效。"
