@@ -23,6 +23,28 @@ A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 J_CRUISE_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MIN = -1.2
+# Macan 巡航滑行带（2026-08-26 根因修复：005f/0060 喘息振荡）
+# 原链路：target_accel=clip(v_cruise-v_ego, -1.2, max)——P=1 无限幅带，0.7s 执行滞后+惯性
+# → vEgo 过冲 → 反向全力(±1.2) → 极限环(±1.3m/s, ~10s 周期)=“忽快忽慢、无滑行感”
+# 带内(±0.4m/s)输出 0 = 滑行，车自然收敛；带外 deadband 控制（边界连续无跳变）
+_MACAN_CRUISE_COAST_BAND = 0.4  # m/s ≈ ±1.4km/h
+_macan_cruise_coast = 0.0
+_macan_cruise_coast_t = 0.0
+def _get_macan_cruise_coast():
+  """Macan 巡航滑行带（MacanCruiseCoastEnable/Band 参数）：总开关关或 band<=0 → 0（回退原行为）"""
+  global _macan_cruise_coast, _macan_cruise_coast_t
+  now = time.monotonic()
+  if now - _macan_cruise_coast_t > 1.0:  # 每1秒刷新（不阻塞）
+    try:
+      if Params().get_bool("MacanCruiseCoastEnable"):
+        # return_default=True：参数未写入时用默认 0.4（避免 None→0 导致"开了开关但带宽=0 不生效"）
+        _macan_cruise_coast = float(Params().get("MacanCruiseCoastBand", return_default=True) or 0.0)
+      else:
+        _macan_cruise_coast = 0.0
+    except Exception:
+      _macan_cruise_coast = 0.0
+    _macan_cruise_coast_t = now
+  return _macan_cruise_coast or 0.0
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
@@ -127,7 +149,25 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
       coast_limit = np.interp(v_ego, [MIN_ALLOW_THROTTLE_SPEED, MIN_ALLOW_THROTTLE_SPEED*2], [max_accel, clipped_accel_coast])
       max_accel = min(max_accel, coast_limit)
 
-  target_accel = np.clip(v_cruise - v_ego, A_CRUISE_MIN, max_accel)
+  dv = v_cruise - v_ego
+  try:
+    _macan_coast = "MACAN" in (getattr(CP, "carFingerprint", "") or "").upper()
+  except Exception:
+    _macan_coast = False
+  if _macan_coast:
+    # Macan 巡航滑行带：带内滑行(0)，带外 deadband 控制（连续，无死区跳变）
+    band = _get_macan_cruise_coast()
+    if band > 0.0:
+      if dv > band:
+        target_accel = np.clip(dv - band, A_CRUISE_MIN, max_accel)
+      elif dv < -band:
+        target_accel = np.clip(dv + band, A_CRUISE_MIN, max_accel)
+      else:
+        target_accel = 0.0
+    else:  # band<=0：回退原行为
+      target_accel = np.clip(dv, A_CRUISE_MIN, max_accel)
+  else:
+    target_accel = np.clip(dv, A_CRUISE_MIN, max_accel)
   if not e2e:
     j_cruise = np.interp(v_ego, A_CRUISE_MAX_BP, J_CRUISE_VALS)
     target_accel = float(np.clip(target_accel, a_cruise_prev - j_cruise * dt, a_cruise_prev + j_cruise * dt))

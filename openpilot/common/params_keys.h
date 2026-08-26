@@ -248,6 +248,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
     {"MacanAccelDeadzoneEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan aTarget死区总开关（0=关，数值保留但不生效）
     {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
+    {"MacanCruiseCoastEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 巡航滑行带总开关（0=关；005f/0060 喘息振荡根因修复，默认关）
+    {"MacanCruiseCoastBand", {PERSISTENT | BACKUP, FLOAT, "0.4"}}, // Macan 巡航滑行带宽度（m/s，±带内滑行输出0；0.4≈1.4km/h）
     {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
     // Macan 雷达融合（bus2 原厂 Abstandsindex+前车速度 修正视觉lead；radard 消费）

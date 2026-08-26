@@ -101,6 +101,27 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
     self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
 
 
+class MacanCruiseCoastControl(BigMultiToggle):
+  """Macan 巡航滑行带宽度（m/s）：0=Off / 0.3 / 0.4 / 0.5 / 0.6（005f/0060 喘息振荡修复）"""
+  OPTIONS = ["0", "0.3", "0.4", "0.5", "0.6"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 1
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
+
+
 class ExperimentalModeConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
     super().__init__()
@@ -157,6 +178,8 @@ class TogglesLayoutMici(NavScroller):
     macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
     macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
     macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
+    macan_coast_enable = BigParamControl(tr("Macan Cruise Coast Enable"), "MacanCruiseCoastEnable")
+    macan_coast_band = MacanCruiseCoastControl(tr("Macan Cruise Coast Band (m/s)"), "MacanCruiseCoastBand")
 
     self._scroller.add_widgets([
       self._personality_toggle,
@@ -181,6 +204,8 @@ class TogglesLayoutMici(NavScroller):
       macan_accel_deadzone,
       macan_radar_fusion,
       macan_startup_gap_sync,
+      macan_coast_enable,
+      macan_coast_band,
     ])
 
     self._macan_start_stop = macan_start_stop
@@ -196,6 +221,8 @@ class TogglesLayoutMici(NavScroller):
     self._macan_deadzone_enable = macan_deadzone_enable
     self._macan_radar_fusion = macan_radar_fusion
     self._macan_startup_gap_sync = macan_startup_gap_sync
+    self._macan_coast_enable = macan_coast_enable
+    self._macan_coast_band = macan_coast_band
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
@@ -218,6 +245,8 @@ class TogglesLayoutMici(NavScroller):
       ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
       ("MacanRadarFusion", macan_radar_fusion),
       ("MacanStartupGapSync", macan_startup_gap_sync),
+      ("MacanCruiseCoastEnable", macan_coast_enable),
+      ("MacanCruiseCoastBand", macan_coast_band),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
@@ -279,6 +308,8 @@ class TogglesLayoutMici(NavScroller):
       self._macan_deadzone_enable.set_visible(True)
       self._macan_accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))
       self._macan_radar_fusion.set_visible(True)
+      self._macan_coast_enable.set_visible(True)
+      self._macan_coast_band.set_visible(ui_state.params.get_bool("MacanCruiseCoastEnable"))
     else:
       self._macan_start_stop.set_visible(False)
       self._macan_jerk_enable.set_visible(False)
@@ -290,6 +321,8 @@ class TogglesLayoutMici(NavScroller):
       self._macan_deadzone_enable.set_visible(False)
       self._macan_accel_deadzone.set_visible(False)
       self._macan_radar_fusion.set_visible(False)
+      self._macan_coast_enable.set_visible(False)
+      self._macan_coast_band.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:

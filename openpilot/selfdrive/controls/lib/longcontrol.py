@@ -17,6 +17,7 @@ CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 _macan_jerk_limit = 0.0
 _macan_jerk_limit_t = 0.0
 _MACAN_JERK_NEG_FACTOR = 2.2
+_MACAN_JERK_SNG_EXEMPT_SPEED = 3.0  # m/s≈10.8km/h；SnG 起步豁免阈值（0060 vs 005f 实证）
 def _get_macan_jerk_limit():
   global _macan_jerk_limit, _macan_jerk_limit_t
   now = time.monotonic()
@@ -100,7 +101,12 @@ class LongControl:
     # Macan 减猛（MacanJerkLimit>0 时）：accel 变化率限幅——削 aTarget 过冲透传，
     # 正 jerk 限 lim，负 jerk（减速）限 2.2×lim（安全优先）。0=关闭（默认）。
     jerk_lim = _get_macan_jerk_limit()
-    if jerk_lim > 0.0:
+    # SnG 起步豁免（2026-08-26 实证，0060 vs 005f）：pid 状态且 vEgo<3m/s 的起步阶段
+    # 不限幅——否则 jerk=0.2 时 accel 从 -0.55 爬到正值需 ~5s，车 3s 没动，
+    # MPC shouldStop 判定起步失败撤回（0060 345-365s 起步失败）；豁免后 accel
+    # 即时转正、车 ~1s 内起步（005f seg4/seg10 正常起步行为）。行驶中减猛不受影响。
+    _sng_exempt = (self.long_control_state == LongCtrlState.pid and CS.vEgo < _MACAN_JERK_SNG_EXEMPT_SPEED)
+    if jerk_lim > 0.0 and not _sng_exempt:
       _delta = output_accel - self.last_output_accel
       _max_d = jerk_lim * DT_CTRL
       _max_dn = jerk_lim * _MACAN_JERK_NEG_FACTOR * DT_CTRL

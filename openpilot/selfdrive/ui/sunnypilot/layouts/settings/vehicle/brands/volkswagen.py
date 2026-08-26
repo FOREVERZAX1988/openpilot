@@ -64,6 +64,19 @@ DESCRIPTIONS = {
   'accel_deadzone_enable': tr_noop(
     'Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored).'
   ),
+  'cruise_coast_enable': tr_noop(
+    'Macan Cruise Coast Enable: when ON, within +/-band of the set speed the '
+    'acceleration request is 0 (coast/glide), so the car naturally settles '
+    'instead of oscillating accelerate-brake (fixes surge/rocking: the accel '
+    'request was non-zero 81%% of the time in field data, vEgo swung +/-8 km/h '
+    'around the set speed). Outside the band, deadband control applies '
+    '(smoother corrections). Takes effect immediately.'
+  ),
+  'cruise_coast_band': tr_noop(
+    'Macan Cruise Coast Band (m/s): coasting zone width around the set speed. '
+    '0.4 (~1.4 km/h) recommended. Larger = more gliding but slower speed '
+    'recovery after hills. 0 = off.'
+  ),
   'radar_fusion': tr_noop(
     'Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter.'
   ),
@@ -184,6 +197,26 @@ class VolkswagenSettings(BrandSettings):
     )
     self.accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))  # 初始状态按开关参数
 
+    self.cruise_coast_enable = toggle_item_sp(
+      lambda: tr("Macan Cruise Coast Enable"),
+      description=lambda: tr(DESCRIPTIONS["cruise_coast_enable"]),
+      initial_state=ui_state.params.get_bool("MacanCruiseCoastEnable"),
+      callback=self._on_enable_cruise_coast,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.cruise_coast_band = option_item_sp(
+      lambda: tr("Macan Cruise Coast Band (m/s)"),
+      "MacanCruiseCoastBand",
+      min_value=0, max_value=60,
+      description=lambda: tr(DESCRIPTIONS["cruise_coast_band"]),
+      value_change_step=5,
+      use_float_scaling=True,
+      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.2f} m/s",
+      enabled=lambda: not ui_state.engaged,
+    )
+    self.cruise_coast_band.set_visible(ui_state.params.get_bool("MacanCruiseCoastEnable"))  # 初始状态按开关参数
+
     self.radar_fusion = toggle_item_sp(
       lambda: tr("Radar Fusion (Macan)"),
       description=lambda: tr(DESCRIPTIONS["radar_fusion"]),
@@ -213,6 +246,8 @@ class VolkswagenSettings(BrandSettings):
       self.accel_limit,
       self.accel_deadzone_enable,
       self.accel_deadzone,
+      self.cruise_coast_enable,
+      self.cruise_coast_band,
       self.radar_fusion,
       self.gap_sync,
     ]
@@ -226,6 +261,10 @@ class VolkswagenSettings(BrandSettings):
   def _on_enable_accel_deadzone(self, state: bool):
     ui_state.params.put_bool("MacanAccelDeadzoneEnable", state)
     self.accel_deadzone.set_visible(state)  # 立即显示/隐藏数值项
+
+  def _on_enable_cruise_coast(self, state: bool):
+    ui_state.params.put_bool("MacanCruiseCoastEnable", state)
+    self.cruise_coast_band.set_visible(state)  # 立即显示/隐藏数值项
 
   def _on_enable_radar_fusion(self, state: bool):
     ui_state.params.put_bool("MacanRadarFusion", state)
