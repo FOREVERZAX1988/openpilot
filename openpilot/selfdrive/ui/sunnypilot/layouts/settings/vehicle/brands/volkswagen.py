@@ -68,7 +68,7 @@ DESCRIPTIONS = {
     'Macan Cruise Coast Enable: when ON, within +/-band of the set speed the '
     'acceleration request is 0 (coast/glide), so the car naturally settles '
     'instead of oscillating accelerate-brake (fixes surge/rocking: the accel '
-    'request was non-zero 81%% of the time in field data, vEgo swung +/-8 km/h '
+    'request was non-zero 81% of the time in field data, vEgo swung +/-8 km/h '
     'around the set speed). Outside the band, deadband control applies '
     '(smoother corrections). Takes effect immediately.'
   ),
