@@ -74,17 +74,7 @@ DESCRIPTIONS = {
 'stock fixed 16.2. Replaces the old experimental 18.0 (discarded: 22% gyro spread, '
 '15% oversteer in city corners).'
   ),
-  'steer_bias_comp': tr_noop(
-    'Steering Bias Compensation (Macan): ON - learn the EPS torque sensor zero-offset during '
-    'straight driving and subtract it, so light hand contact no longer counts as driver '
-    'override (fixes "steering stops halfway"). Also enables the intervention sensitivity '
-    'selector (0/60/80). OFF - stock behavior. Takes effect on next onroad cycle.'
-  ),
-  'steer_allowance': tr_noop(
-    'Intervention Sensitivity (Macan): driver override threshold. 0 = bias compensation only '
-    '(stock sensitivity, 0.6 Nm). 60 = explicit 0.6 Nm. 80 = 0.8 Nm (matches PQ, closest to MQB). '
-    'Only effective when Bias Compensation is ON.'
-  )
+
 }
 
 
@@ -210,24 +200,6 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
-    self.steer_bias_comp = toggle_item_sp(
-      lambda: tr("Macan Steering Bias Compensation"),
-      description=lambda: tr(DESCRIPTIONS["steer_bias_comp"]),
-      initial_state=ui_state.params.get_bool("MacanSteerBiasComp"),
-      callback=self._on_enable_steer_bias,
-      enabled=lambda: not ui_state.engaged,
-    )
-    self.steer_allowance = option_item_sp(
-      lambda: tr("Macan Intervention Sensitivity (cNm)"),
-      "MacanSteerAllowance",
-      min_value=0, max_value=2,  # 档位索引（OptionControlSP 的 min/max 是档位不是存储值！）
-      description=lambda: tr(DESCRIPTIONS["steer_allowance"]),
-      value_change_step=1,
-      value_map={0: 0, 1: 60, 2: 80},  # 档→存储值：0=仅零偏补偿（不动ALLOWANCE）/60/80 cNm
-      label_callback=lambda v: "Off" if v == 0 else f"{v} cNm",
-      enabled=lambda: not ui_state.engaged,
-    )
-    self.steer_allowance.set_visible(ui_state.params.get_bool("MacanSteerBiasComp"))  # 初始状态按开关参数
 
     self.items = [
       self.start_stop,
@@ -243,8 +215,6 @@ class VolkswagenSettings(BrandSettings):
       self.accel_deadzone,
       self.radar_fusion,
       self.gap_sync,
-      self.steer_bias_comp,
-      self.steer_allowance,
     ]
 
   def _on_enable_jerk_limit(self, state: bool):
@@ -264,10 +234,6 @@ class VolkswagenSettings(BrandSettings):
     ui_state.params.put_bool("MacanStartupGapSync", state)
     ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
 
-  def _on_enable_steer_bias(self, state: bool):
-    ui_state.params.put_bool("MacanSteerBiasComp", state)
-    self.steer_allowance.set_visible(state)  # 灵敏度子项联动显示
-    ui_state.params.put_bool("OnroadCycleRequested", True)  # ALLOWANCE/零偏学习在 carstate 初始化时读取
 
   def _on_enable_start_stop(self, state: bool):
     if state:
@@ -344,8 +310,4 @@ class VolkswagenSettings(BrandSettings):
       self.radar_fusion.set_visible(is_macan)
       self.gap_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.gap_sync.set_visible(is_macan)
-      self.steer_bias_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.steer_bias_comp.set_visible(is_macan)
-      bias_on = ui_state.params.get_bool("MacanSteerBiasComp")
-      self.steer_allowance.action_item.set_enabled(is_macan and not ui_state.engaged and bias_on)
-      self.steer_allowance.set_visible(is_macan and bias_on)
+
