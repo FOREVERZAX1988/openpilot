@@ -12,7 +12,6 @@ from openpilot.system.ui.widgets import DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, option_item_sp
 
-
 DESCRIPTIONS = {
   'jerk_limit': tr_noop(
     'Macan Accel Jerk Limit: limits how fast the acceleration request can '
@@ -80,16 +79,8 @@ DESCRIPTIONS = {
   'radar_fusion': tr_noop(
     'Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter.'
   ),
-  'steer_params': tr_noop(
-    'Dynamic Steering Ratio (Macan): speed-dependent steering ratio - 15.0 below 140 km/h, '
-'18.7 above 145 km/h (linear transition 140-145), fitted from 29,284 samples across '
-'the full 4f route (RMSE 1.75 deg), plus torque friction 0.52. When disabled, uses '
-'stock fixed 16.2. Replaces the old experimental 18.0 (discarded: 22% gyro spread, '
-'15% oversteer in city corners).'
-  ),
 
 }
-
 
 class VolkswagenSettings(BrandSettings):
   def __init__(self):
@@ -155,14 +146,6 @@ class VolkswagenSettings(BrandSettings):
       description=lambda: tr(DESCRIPTIONS["slope_comp_unlimited"]),
       initial_state=ui_state.params.get_bool("MacanSlopeCompUnlimited"),
       callback=self._on_enable_slope_comp_unlimited,
-      enabled=lambda: not ui_state.engaged,
-    )
-
-    self.steer_params = toggle_item_sp(
-      lambda: tr("Dynamic Steering Ratio (Macan)"),
-      description=lambda: tr(DESCRIPTIONS["steer_params"]),
-      initial_state=ui_state.params.get_bool("MacanSteerParams"),
-      callback=self._on_enable_steer_params,
       enabled=lambda: not ui_state.engaged,
     )
 
@@ -233,7 +216,6 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
-
     self.items = [
       self.start_stop,
       self.start_stop_distance,
@@ -242,7 +224,6 @@ class VolkswagenSettings(BrandSettings):
       self.corner_limit,
       self.slope_comp,
       self.slope_comp_unlimited,
-      self.steer_params,
       self.accel_limit,
       self.accel_deadzone_enable,
       self.accel_deadzone,
@@ -272,7 +253,6 @@ class VolkswagenSettings(BrandSettings):
   def _on_enable_gap_sync(self, state: bool):
     ui_state.params.put_bool("MacanStartupGapSync", state)
     ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
-
 
   def _on_enable_start_stop(self, state: bool):
     if state:
@@ -310,10 +290,6 @@ class VolkswagenSettings(BrandSettings):
     ui_state.params.put_bool("MacanSlopeCompUnlimited", state)
     ui_state.params.put_bool("OnroadCycleRequested", True)
 
-  def _on_enable_steer_params(self, state: bool):
-    ui_state.params.put_bool("MacanSteerParams", state)
-    ui_state.params.put_bool("OnroadCycleRequested", True)
-
   def update_settings(self):
     if ui_state.CP is not None:
       # 仅 Macan(MLB) 支持；其他 VW 平台隐藏开关
@@ -349,4 +325,3 @@ class VolkswagenSettings(BrandSettings):
       self.radar_fusion.set_visible(is_macan)
       self.gap_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.gap_sync.set_visible(is_macan)
-
