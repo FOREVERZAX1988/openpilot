@@ -312,8 +312,6 @@ class VolkswagenSettings(BrandSettings):
       # 子选项（放开限制）：仅坡度补偿开启时显示（联动，整行隐藏）
       self.slope_comp_unlimited.action_item.set_enabled(is_macan and not ui_state.engaged and slope_comp_on)
       self.slope_comp_unlimited.set_visible(is_macan and slope_comp_on)
-      self.steer_params.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.steer_params.set_visible(is_macan)
       self.accel_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.accel_limit.set_visible(is_macan)
       self.accel_deadzone_enable.action_item.set_enabled(is_macan and not ui_state.engaged)
