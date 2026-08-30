@@ -241,7 +241,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "5"}},  // Macan 起步安全距离（米；0=Off/V1纯意图起步，3~10=需雷达ab或视觉>阈值，拥堵防加塞）
     {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）
     {"MacanSlopeCompUnlimited", {PERSISTENT | BACKUP, BOOL, "0"}}, // 坡度补偿-放开原厂力矩限制（选项2）
-    {"MacanSteerParams", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 转向系数（实验值，待路试修正）
     {"MacanAccelLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},        // Macan 加速度上限（m/s²，0=原厂曲线；4f实锤 aTarget>1.0 占20%激活时间）
     {"MacanJerkLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},
     {"MacanJerkLimitEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 加速度变化率限制总开关（0=关，功能不生效）        // Macan 加速度变化率限幅（m/s³，0=关闭；削 aTarget 过冲→减猛，0051 vs 原厂 0.48 vs 0.35）

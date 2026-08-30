@@ -204,12 +204,6 @@ sections:
     enablement:
     - $ref: '#/macros/offroad'
     - {type: param, key: MacanSlopeComp, equals: true}
-  - key: MacanSteerParams
-    widget: toggle
-    title: Dynamic Ratio Tuning (Macan)
-    description: 'Experimental dynamic ratio coefficients for Macan (MLB).'
-    enablement:
-    - $ref: '#/macros/offroad'
   - key: MacanRadarFusion
     widget: toggle
     title: Radar Fusion (Macan)

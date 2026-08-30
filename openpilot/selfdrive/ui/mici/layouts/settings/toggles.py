@@ -172,7 +172,6 @@ class TogglesLayoutMici(NavScroller):
     macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
-    macan_steer_params = BigParamControl(tr("Macan Dynamic Steering Ratio"), "MacanSteerParams")
     macan_accel_limit = MacanAccelLimitControl(tr("Macan Accel Limit (m/s^2)"), "MacanAccelLimit")
     macan_accel_deadzone = MacanAccelDeadzoneControl(tr("Macan Accel Deadzone (m/s^2)"), "MacanAccelDeadzone")
     macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
@@ -239,7 +238,6 @@ class TogglesLayoutMici(NavScroller):
       ("MacanCornerLimit", macan_corner_limit),
       ("MacanSlopeComp", macan_slope_comp),
       ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
-      ("MacanSteerParams", macan_steer_params),
       ("MacanAccelLimit", macan_accel_limit),
       ("MacanAccelDeadzone", macan_accel_deadzone),
       ("MacanAccelDeadzoneEnable", macan_deadzone_enable),

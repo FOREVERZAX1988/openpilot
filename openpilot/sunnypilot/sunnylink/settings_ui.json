@@ -2564,17 +2564,6 @@
           ]
         },
         {
-          "key": "MacanSteerParams",
-          "widget": "toggle",
-          "title": "Dynamic Ratio Tuning (Macan)",
-          "description": "Experimental dynamic ratio coefficients for Macan (MLB).",
-          "enablement": [
-            {
-              "type": "offroad_only"
-            }
-          ]
-        },
-        {
           "key": "MacanRadarFusion",
           "widget": "toggle",
           "title": "Radar Fusion (Macan)",
