@@ -197,7 +197,6 @@ class TogglesLayoutMici(NavScroller):
       macan_corner_limit,
       macan_slope_comp,
       macan_slope_comp_unlimited,
-      macan_steer_params,
       macan_accel_limit,
       macan_deadzone_enable,
       macan_accel_deadzone,
@@ -214,7 +213,6 @@ class TogglesLayoutMici(NavScroller):
     self._macan_corner_limit = macan_corner_limit
     self._macan_slope_comp = macan_slope_comp
     self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
-    self._macan_steer_params = macan_steer_params
     self._macan_accel_limit = macan_accel_limit
     self._macan_accel_deadzone = macan_accel_deadzone
     self._macan_deadzone_enable = macan_deadzone_enable
@@ -253,7 +251,6 @@ class TogglesLayoutMici(NavScroller):
     macan_start_stop_distance.set_enabled(lambda: not ui_state.engaged)
     macan_slope_comp.set_enabled(lambda: not ui_state.engaged)
     macan_slope_comp_unlimited.set_enabled(lambda: not ui_state.engaged)
-    macan_steer_params.set_enabled(lambda: not ui_state.engaged)
     record_front.set_enabled(False if ui_state.params.get_bool("RecordFrontLock") else (lambda: not ui_state.engaged))
     record_mic.set_enabled(lambda: not ui_state.engaged)
 
@@ -301,7 +298,6 @@ class TogglesLayoutMici(NavScroller):
       self._macan_jerk_limit.set_visible(ui_state.params.get_bool("MacanJerkLimitEnable"))
       self._macan_slope_comp.set_visible(True)
       self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
-      self._macan_steer_params.set_visible(True)
       self._macan_accel_limit.set_visible(True)
       self._macan_deadzone_enable.set_visible(True)
       self._macan_accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))
@@ -314,7 +310,6 @@ class TogglesLayoutMici(NavScroller):
       self._macan_jerk_limit.set_visible(False)
       self._macan_slope_comp.set_visible(False)
       self._macan_slope_comp_unlimited.set_visible(False)
-      self._macan_steer_params.set_visible(False)
       self._macan_accel_limit.set_visible(False)
       self._macan_deadzone_enable.set_visible(False)
       self._macan_accel_deadzone.set_visible(False)
