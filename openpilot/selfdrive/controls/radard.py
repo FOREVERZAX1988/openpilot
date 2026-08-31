@@ -317,11 +317,19 @@ class RadarD:
       lead = getattr(self.radar_state, lead_name)
       if not lead.present:
         continue
-      # A2 距离校验：视觉 dRel 换算成 Abstandsindex，与原厂偏差>30% 以原厂为准
+      # A2 距离校验（分级，2026-09-01 标定：65/63/62/0004/0002 五route 882配对视觉
+      # lead 系统性偏远~1m/近距1.6m，斜率≈1 无比例误差；0049/4e/4f 错配场景偏差>30%）：
+      #   ratio>0.3 → 原厂替换（错配/异常兜底，4e/4f 实证有效）
+      #   ratio<=0.3 → 70/30 混合（0.7*原厂+0.3*视觉，收敛视觉小偏差，消除30%临界跳变浮动）
       try:
         vis_idx = self._macan_drel_to_idx(lead.dRel, self.v_ego)
-        if vis_idx > 0 and abs(vis_idx - r['idx']) / r['idx'] > 0.3:
-          lead.dRel = self._macan_idx_to_drel(r['idx'], self.v_ego)
+        if vis_idx > 0:
+          ratio = abs(vis_idx - r['idx']) / r['idx']
+          stock_drel = self._macan_idx_to_drel(r['idx'], self.v_ego)
+          if ratio > 0.3:
+            lead.dRel = stock_drel
+          elif stock_drel > 0:
+            lead.dRel = 0.7 * stock_drel + 0.3 * lead.dRel
       except Exception:
         pass
       # A1 速度加权：0.7*原厂绝对速度 + 0.3*视觉 vLead（原厂雷达测速稳 6 倍）
