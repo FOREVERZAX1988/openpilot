@@ -330,7 +330,20 @@ class RadarD:
           if stock_drel > 0:
             # 连续权重消跳变：ratio 0→0.3 时原厂权重从 0.7 平滑升到 1.0，消除 30% 硬切换阶跃
             w = min(0.7 + (ratio / 0.3) * 0.3, 1.0)
-            lead.dRel = w * stock_drel + (1.0 - w) * lead.dRel
+            # 距离分段系数（2026-09-04 视觉噪声标定，1637样本 routes20/22/23/24）：
+            # 近距5-15m视觉cv=0.255噪声最大→视觉权重×0.5；15-40m cv=0.13最稳→×1.17；
+            # 40-60m cv=0.11→×1.0；>60m cv=0.158噪声回升→×0.83。仅调视觉占比，不改原厂主导。
+            d = lead.dRel
+            if d < 15.0:
+              dist_factor = 0.5
+            elif d < 40.0:
+              dist_factor = 1.17
+            elif d < 60.0:
+              dist_factor = 1.0
+            else:
+              dist_factor = 0.83
+            w_vis = min((1.0 - w) * dist_factor, 0.5)  # 视觉权重上限0.5，原厂始终主导
+            lead.dRel = (1.0 - w_vis) * stock_drel + w_vis * lead.dRel
       except Exception:
         pass
       # A1 速度加权：0.7*原厂绝对速度 + 0.3*视觉 vLead（原厂雷达测速稳 6 倍）
