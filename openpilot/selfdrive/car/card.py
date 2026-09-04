@@ -298,6 +298,7 @@ class Car:
       # 供 carcontroller 在原厂雷达无目标时补位仪表 ACC 车距图标。纯显示层，不参与 ACC_05 控制。
       rs = self.sm['radarState']
       self.CI.CS.op_lead_dRel = float(rs.leadOne.dRel) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
+      self.CI.CS.op_lead_vLead = float(rs.leadOne.vLead) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
       self.controls_update(CS, self.sm['carControl'], self.sm['carControlSP'])
 
     self.initialized_prev = initialized
