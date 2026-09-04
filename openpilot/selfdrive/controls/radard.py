@@ -327,10 +327,10 @@ class RadarD:
         if vis_idx > 0:
           ratio = abs(vis_idx - r['idx']) / r['idx']
           stock_drel = self._macan_idx_to_drel(r['idx'], self.v_ego)
-          if ratio > 0.3:
-            lead.dRel = stock_drel
-          elif stock_drel > 0:
-            lead.dRel = 0.7 * stock_drel + 0.3 * lead.dRel
+          if stock_drel > 0:
+            # 连续权重消跳变：ratio 0→0.3 时原厂权重从 0.7 平滑升到 1.0，消除 30% 硬切换阶跃
+            w = min(0.7 + (ratio / 0.3) * 0.3, 1.0)
+            lead.dRel = w * stock_drel + (1.0 - w) * lead.dRel
       except Exception:
         pass
       # A1 速度加权：0.7*原厂绝对速度 + 0.3*视觉 vLead（原厂雷达测速稳 6 倍）
