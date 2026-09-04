@@ -346,9 +346,19 @@ class RadarD:
             lead.dRel = (1.0 - w_vis) * stock_drel + w_vis * lead.dRel
       except Exception:
         pass
-      # A1 速度加权：0.7*原厂绝对速度 + 0.3*视觉 vLead（原厂雷达测速稳 6 倍）
+      # A1 速度加权：距离分段权重（与A2对称，基于视觉噪声标定）
       if r['spd'] > 0:
-        lead.vLead = 0.7 * (r['spd'] / 3.6) + 0.3 * lead.vLead
+        # 距离分段系数：近距视觉噪声大降权，中距稳定提权
+        if lead.dRel < 15:
+          dist_factor = 0.5   # 近距视觉噪声大（cv=0.255），降权
+        elif lead.dRel < 40:
+          dist_factor = 1.17  # 中距视觉最稳（cv=0.13），提权
+        elif lead.dRel < 60:
+          dist_factor = 1.0   # 不变
+        else:
+          dist_factor = 0.83  # 远距噪声回升（cv=0.158），略降
+        w_vis = min(0.3 * dist_factor, 0.5)  # 视觉权重上限0.5，原厂始终主导
+        lead.vLead = (1.0 - w_vis) * (r['spd'] / 3.6) + w_vis * lead.vLead
         lead.vRel = lead.vLead - self.v_ego
 
   def publish(self, pm: messaging.PubMaster):
