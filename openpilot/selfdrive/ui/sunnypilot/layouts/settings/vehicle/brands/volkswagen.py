@@ -79,6 +79,12 @@ DESCRIPTIONS = {
   'radar_fusion': tr_noop(
     'Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter.'
   ),
+  'verz_bridge': tr_noop(
+    'Macan Verz Bridge: when ON, the bridge applies a percentage-based ramp to smooth the requested deceleration '
+    '(step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills the breath/pulse. When OFF, the verz '
+    'request passes through un-smoothed (one-frame, no ramp). Deep braking (<= -1.5) and OEM brake requests still '
+    'pass through either way for safety.'
+  ),
 
 }
 
@@ -208,6 +214,14 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.verz_bridge = toggle_item_sp(
+      lambda: tr("Macan Verz Bridge"),
+      description=lambda: tr(DESCRIPTIONS["verz_bridge"]),
+      initial_state=ui_state.params.get_bool("MacanVerzBridge"),
+      callback=self._on_enable_verz_bridge,
+      enabled=lambda: not ui_state.engaged,
+    )
+
     self.gap_sync = toggle_item_sp(
       lambda: tr("Macan Distance Sync Direction"),
       description=lambda: tr("ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."),
@@ -230,6 +244,7 @@ class VolkswagenSettings(BrandSettings):
       self.cruise_coast_enable,
       self.cruise_coast_band,
       self.radar_fusion,
+      self.verz_bridge,
       self.gap_sync,
     ]
 
@@ -249,6 +264,9 @@ class VolkswagenSettings(BrandSettings):
 
   def _on_enable_radar_fusion(self, state: bool):
     ui_state.params.put_bool("MacanRadarFusion", state)
+
+  def _on_enable_verz_bridge(self, state: bool):
+    ui_state.params.put_bool("MacanVerzBridge", state)
 
   def _on_enable_gap_sync(self, state: bool):
     ui_state.params.put_bool("MacanStartupGapSync", state)
@@ -321,5 +339,7 @@ class VolkswagenSettings(BrandSettings):
       self.accel_deadzone.set_visible(is_macan and deadzone_on)
       self.radar_fusion.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.radar_fusion.set_visible(is_macan)
+      self.verz_bridge.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.verz_bridge.set_visible(is_macan)
       self.gap_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.gap_sync.set_visible(is_macan)
