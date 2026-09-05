@@ -171,6 +171,7 @@ class TogglesLayoutMici(NavScroller):
     macan_jerk_limit = MacanJerkControl(tr("Accel Jerk Limit Value (m/s^3)"), "MacanJerkLimit")
     macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
+    macan_verz_bridge = BigParamControl(tr("Macan Verz Bridge"), "MacanVerzBridge")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
     macan_accel_limit = MacanAccelLimitControl(tr("Macan Accel Limit (m/s^2)"), "MacanAccelLimit")
     macan_accel_deadzone = MacanAccelDeadzoneControl(tr("Macan Accel Deadzone (m/s^2)"), "MacanAccelDeadzone")
@@ -196,6 +197,7 @@ class TogglesLayoutMici(NavScroller):
       macan_jerk_limit,
       macan_corner_limit,
       macan_slope_comp,
+      macan_verz_bridge,
       macan_slope_comp_unlimited,
       macan_accel_limit,
       macan_deadzone_enable,
@@ -212,6 +214,7 @@ class TogglesLayoutMici(NavScroller):
     self._macan_jerk_limit = macan_jerk_limit
     self._macan_corner_limit = macan_corner_limit
     self._macan_slope_comp = macan_slope_comp
+    self._macan_verz_bridge = macan_verz_bridge
     self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
     self._macan_accel_limit = macan_accel_limit
     self._macan_accel_deadzone = macan_accel_deadzone
@@ -235,6 +238,7 @@ class TogglesLayoutMici(NavScroller):
       ("MacanJerkLimitEnable", macan_jerk_enable),
       ("MacanCornerLimit", macan_corner_limit),
       ("MacanSlopeComp", macan_slope_comp),
+      ("MacanVerzBridge", macan_verz_bridge),
       ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
       ("MacanAccelLimit", macan_accel_limit),
       ("MacanAccelDeadzone", macan_accel_deadzone),
@@ -297,6 +301,7 @@ class TogglesLayoutMici(NavScroller):
       self._macan_jerk_enable.set_visible(True)
       self._macan_jerk_limit.set_visible(ui_state.params.get_bool("MacanJerkLimitEnable"))
       self._macan_slope_comp.set_visible(True)
+      self._macan_verz_bridge.set_visible(True)
       self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
       self._macan_accel_limit.set_visible(True)
       self._macan_deadzone_enable.set_visible(True)
@@ -309,6 +314,7 @@ class TogglesLayoutMici(NavScroller):
       self._macan_jerk_enable.set_visible(False)
       self._macan_jerk_limit.set_visible(False)
       self._macan_slope_comp.set_visible(False)
+      self._macan_verz_bridge.set_visible(False)
       self._macan_slope_comp_unlimited.set_visible(False)
       self._macan_accel_limit.set_visible(False)
       self._macan_deadzone_enable.set_visible(False)

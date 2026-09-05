@@ -2573,6 +2573,17 @@
               "type": "offroad_only"
             }
           ]
+        },
+        {
+          "key": "MacanVerzBridge",
+          "widget": "toggle",
+          "title": "Macan Verz Bridge",
+          "description": "When ON, the bridge smooths the requested deceleration with a percentage-based ramp (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills breath/pulse. When OFF, verz passes through un-smoothed. Deep braking (<= -1.5) and OEM brake requests always pass through for safety.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
         }
       ]
     }
