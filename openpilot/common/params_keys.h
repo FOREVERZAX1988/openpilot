@@ -252,6 +252,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"MacanVerzBridge", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan verz桥主闸（开=1.25%百分比渐进缓冲缓急刹/治喘息；关=verz直通一帧到位。深刹<=-1.5与原厂刹车请求无论开关直通保安全）
     {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+    {"MacanVcruiseSync", {PERSISTENT | BACKUP, BOOL, "0"}},           // Macan 巡航速度同步方向（0=关/OP向原厂妥协，读原厂Wunsch当OP巡航；1=开/OP主动同步，模拟bus2按键把OP巡航置入原厂ACC）
     // Macan 雷达融合（bus2 原厂 Abstandsindex+前车速度 修正视觉lead；radard 消费）
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},

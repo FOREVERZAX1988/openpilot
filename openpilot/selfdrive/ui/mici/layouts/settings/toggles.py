@@ -178,6 +178,7 @@ class TogglesLayoutMici(NavScroller):
     macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
     macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
     macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
+    macan_vcruise_sync = BigParamControl(tr("ACC Cruise Auto Sync (Macan)"), "MacanVcruiseSync")
     macan_coast_enable = BigParamControl(tr("Macan Cruise Coast Enable"), "MacanCruiseCoastEnable")
     macan_coast_band = MacanCruiseCoastControl(tr("Macan Cruise Coast Band (m/s)"), "MacanCruiseCoastBand")
 
@@ -204,6 +205,7 @@ class TogglesLayoutMici(NavScroller):
       macan_accel_deadzone,
       macan_radar_fusion,
       macan_startup_gap_sync,
+      macan_vcruise_sync,
       macan_coast_enable,
       macan_coast_band,
     ])
@@ -221,6 +223,7 @@ class TogglesLayoutMici(NavScroller):
     self._macan_deadzone_enable = macan_deadzone_enable
     self._macan_radar_fusion = macan_radar_fusion
     self._macan_startup_gap_sync = macan_startup_gap_sync
+    self._macan_vcruise_sync = macan_vcruise_sync
     self._macan_coast_enable = macan_coast_enable
     self._macan_coast_band = macan_coast_band
     self._always_on_dm_toggle = always_on_dm_toggle
@@ -245,6 +248,7 @@ class TogglesLayoutMici(NavScroller):
       ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
       ("MacanRadarFusion", macan_radar_fusion),
       ("MacanStartupGapSync", macan_startup_gap_sync),
+      ("MacanVcruiseSync", macan_vcruise_sync),
       ("MacanCruiseCoastEnable", macan_coast_enable),
       ("MacanCruiseCoastBand", macan_coast_band),
       ("RecordAudio", record_mic),

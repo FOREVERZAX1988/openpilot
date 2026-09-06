@@ -230,6 +230,14 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.vcruise_sync = toggle_item_sp(
+      lambda: tr("ACC Cruise Auto Sync (Macan)"),
+      description=lambda: tr("ON: openpilot queries the stock ACC cruise speed; when they differ by more than 1 km/h it sends LS_01 +-/- button pulses so the stock ACC set speed follows openpilot (20/50/80 ms window escalation with deadlock protection). OFF: openpilot synchronizes by following the stock ACC set speed (reads ACC_02.Wunschgeschw_02 as its cruise speed). Effective on Macan only."),
+      initial_state=ui_state.params.get_bool("MacanVcruiseSync"),
+      callback=self._on_enable_vcruise_sync,
+      enabled=lambda: not ui_state.engaged,
+    )
+
     self.items = [
       self.start_stop,
       self.start_stop_distance,
@@ -246,6 +254,7 @@ class VolkswagenSettings(BrandSettings):
       self.radar_fusion,
       self.verz_bridge,
       self.gap_sync,
+      self.vcruise_sync,
     ]
 
   def _on_enable_jerk_limit(self, state: bool):
@@ -271,6 +280,9 @@ class VolkswagenSettings(BrandSettings):
   def _on_enable_gap_sync(self, state: bool):
     ui_state.params.put_bool("MacanStartupGapSync", state)
     ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
+
+  def _on_enable_vcruise_sync(self, state: bool):
+    ui_state.params.put_bool("MacanVcruiseSync", state)  # 每帧已有读缓存，1s 内生效，无需重启
 
   def _on_enable_start_stop(self, state: bool):
     if state:
@@ -343,3 +355,5 @@ class VolkswagenSettings(BrandSettings):
       self.verz_bridge.set_visible(is_macan)
       self.gap_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.gap_sync.set_visible(is_macan)
+      self.vcruise_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.vcruise_sync.set_visible(is_macan)

@@ -35,6 +35,7 @@ class VCruiseHelper(VCruiseHelperSP):
     self.CP = CP
     self.v_cruise_kph = V_CRUISE_UNSET
     self.v_cruise_cluster_kph = V_CRUISE_UNSET
+    self._macan_vcruise_sync = self.params.get_bool("MacanVcruiseSync")
     self.v_cruise_kph_last = 0
     self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0, ButtonType.setCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
@@ -44,18 +45,34 @@ class VCruiseHelper(VCruiseHelperSP):
     return self.v_cruise_kph != V_CRUISE_UNSET
 
   def update_v_cruise(self, CS, enabled, is_metric):
+    # 每帧刷新（Params.get_bool 内部带缓存，用户切开关 1s 内生效，无需重启）
+    self._macan_vcruise_sync = self.params.get_bool("MacanVcruiseSync")
     self.v_cruise_kph_last = self.v_cruise_kph
 
     self.get_minimum_set_speed(is_metric)
 
     _enabled = self.update_enabled_state(CS, enabled)
 
+    # Macan 巡航速度同步方向（MacanVcruiseSync，2026-09-07）：
+    # 关(0)=OP向原厂妥协：OP 巡航速度直接读原厂 ACC_02.Wunschgeschw_02（carstate 已
+    #   存入 CS.cruiseState.speed），不再自维护——保证 OP 与原厂执行层速度设定一致。
+    macan_follow_stock = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1"
+                          and not self.CP_SP.pcmCruiseSpeed
+                          and not self._macan_vcruise_sync)
     if CS.cruiseState.available:
-      if not self.CP.pcmCruise or (not self.CP_SP.pcmCruiseSpeed and _enabled):
-        # if stock cruise is completely disabled, then we can use our own set speed logic
-        self._update_v_cruise_non_pcm(CS, _enabled, is_metric)
-        self.update_speed_limit_assist_v_cruise_non_pcm()
-        self.v_cruise_cluster_kph = self.v_cruise_kph
+      if macan_follow_stock or not self.CP.pcmCruise or (not self.CP_SP.pcmCruiseSpeed and _enabled):
+        if macan_follow_stock:
+          # 关：跟随原厂（读 carstate 已算好的原厂 Wunsch）
+          self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+          self.v_cruise_cluster_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+          if CS.cruiseState.speed == 0:
+            self.v_cruise_kph = V_CRUISE_UNSET
+            self.v_cruise_cluster_kph = V_CRUISE_UNSET
+        else:
+          # if stock cruise is completely disabled, then we can use our own set speed logic
+          self._update_v_cruise_non_pcm(CS, _enabled, is_metric)
+          self.update_speed_limit_assist_v_cruise_non_pcm()
+          self.v_cruise_cluster_kph = self.v_cruise_kph
       else:
         self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH

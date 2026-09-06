@@ -3911,3 +3911,9 @@ msgstr "✓ 已訂閱"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
 
+
+msgid "ACC Cruise Auto Sync (Macan)"
+msgstr "ACC 巡航自動同步（Macan）"
+
+msgid "ON: openpilot queries the stock ACC cruise speed; when they differ by more than 1 km/h it sends LS_01 +-/- button pulses so the stock ACC set speed follows openpilot (20/50/80 ms window escalation with deadlock protection). OFF: openpilot synchronizes by following the stock ACC set speed (reads ACC_02.Wunschgeschw_02 as its cruise speed). Effective on Macan only."
+msgstr "開：openpilot 主動同步——與車廠ACC巡航速度差>1km/h時代發LS_01±按鍵脈衝，讓車廠ACC設定跟隨openpilot（20/50/80ms視窗升級+死鎖保護）。關：openpilot 向車廠妥協——讀取車廠ACC_02.Wunschgeschw_02作為自身巡航速度。僅Macan生效。"
