@@ -278,7 +278,11 @@ class RadarD:
     now = time.monotonic()
     if now - self._macan_fusion_t > 1.0:
       try:
-        self._macan_fusion_on = self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and Params().get_bool("MacanRadarFusion")
+        # 门控补强(2026-09-07)：MacanRadarFusion 也仅在 OP 纵向开启时生效——
+        # A1/A2 修正的是 OP 纵向用到的 lead，纯原厂 ACC(关闭OP纵向)时不应改动 lead。
+        self._macan_fusion_on = self.CP.carFingerprint == "PORSCHE_MACAN_MK1" \
+            and self.CP.openpilotLongitudinalControl \
+            and Params().get_bool("MacanRadarFusion")
       except Exception:
         self._macan_fusion_on = False
       self._macan_fusion_t = now
