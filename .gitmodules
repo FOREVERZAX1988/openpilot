@@ -24,7 +24,7 @@
 [submodule "ai"]
   path = ai
   url = https://github.com/FOREVERZAX1988/ai.git
-  branch = macan-long-0820
+	branch = macan-long-0907
 [submodule "webui"]
   path = webui
   url = https://github.com/mouxangithub/webui.git
