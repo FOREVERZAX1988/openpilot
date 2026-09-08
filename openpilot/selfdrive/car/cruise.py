@@ -123,12 +123,14 @@ class VCruiseHelper(VCruiseHelperSP):
       # 旧代码 setCruise→accelCruise(+1) 转换先于 133 行 gas 锚定执行，锚定永不触发。
       # 锚定必须在转换之前处理（enabled=激活中，未激活时 setCruise=接合不走此分支）。
       if CS.gasPressed and self.button_change_states[button_type]["enabled"]:
-        # 2026-09-07 改为从原厂 stock_wunschgeschw 取值（CS.cruiseState.speed），避免与原厂
-        # ACC 巡航速度产生速度差 → vcruise_sync 按键死循环 → st6/7。stock 无设定(speed<=0)
+        # 2026-09-07 改为从原厂 stock_wunschgeschw 取值，避免与原厂 ACC 巡航速度产生
+        # 速度差 → vcruise_sync 按键死循环 → st6/7。此处的 CS 是 capnp CarState（无
+        # stock_wunschgeschw 属性），其 cruiseState.speed = stock_wunschgeschw × KPH_TO_MS
+        # 即 m/s；×MS_TO_KPH 幂等往返 ≡ stock_wunschgeschw（km/h）。stock 无设定(speed<=0)
         # 时回退到"以当前车速为锚、下限 30(公制)/20(英制)"（2026-08-22 修复的行为）。
-        stock_wunsch = float(getattr(CS, 'stock_wunschgeschw', 0.0))
-        if self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and stock_wunsch > 0:
-          self.v_cruise_kph = stock_wunsch
+        _stock_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+        if self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and _stock_kph > 0:
+          self.v_cruise_kph = round(_stock_kph, 1)
           self.v_cruise_cluster_kph = self.v_cruise_kph
           return
         anchor_min = 30.0 if is_metric else 20.0
