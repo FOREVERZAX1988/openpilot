@@ -123,10 +123,14 @@ class VCruiseHelper(VCruiseHelperSP):
       # 旧代码 setCruise→accelCruise(+1) 转换先于 133 行 gas 锚定执行，锚定永不触发。
       # 锚定必须在转换之前处理（enabled=激活中，未激活时 setCruise=接合不走此分支）。
       if CS.gasPressed and self.button_change_states[button_type]["enabled"]:
-        # 2026-08-22 修复（00000052 seg11 实测：vEgo=42/cru=45 按SET没反应）：
-        # 旧公式 max(v_cruise_kph, vEgo) 只增不减，介入车速<旧巡航时 vCruise 不变。
-        # 改为以当前车速为锚、下限 30(公制)/20(英制)——>30 置当前车速、<30 置 30，
-        # 与原厂语义一致（避免用 V_CRUISE_MIN=8 触发原厂 ACC st=6，用户确认）。
+        # 2026-09-07 改为从原厂 stock_wunschgeschw 取值（CS.cruiseState.speed），避免与原厂
+        # ACC 巡航速度产生速度差 → vcruise_sync 按键死循环 → st6/7。stock 无设定(speed<=0)
+        # 时回退到"以当前车速为锚、下限 30(公制)/20(英制)"（2026-08-22 修复的行为）。
+        stock_wunsch = float(getattr(CS, 'stock_wunschgeschw', 0.0))
+        if self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and stock_wunsch > 0:
+          self.v_cruise_kph = stock_wunsch
+          self.v_cruise_cluster_kph = self.v_cruise_kph
+          return
         anchor_min = 30.0 if is_metric else 20.0
         self.v_cruise_kph = np.clip(round(max(CS.vEgo * CV.MS_TO_KPH, anchor_min), 1), anchor_min, V_CRUISE_MAX)
         self.v_cruise_cluster_kph = self.v_cruise_kph
@@ -179,6 +183,14 @@ class VCruiseHelper(VCruiseHelperSP):
   def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool) -> None:
     # initializing is handled by the PCM
     if self.CP.pcmCruise:
+      return
+
+    # Macan 2026-09-07: 未激活（acc05 st=2）按 SET 接合时，巡航速度从原厂 stock_wunschgeschw
+    # （CS.cruiseState.speed = ACC_02 Wunschgeschw 的 m/s）取值，而非当前车速——避免与原厂
+    # ACC 内部巡航速度产生速度差，进而触发 vcruise_sync 按键调节死循环（st6/7）。stock 无设定(speed<=0)时回退原逻辑。
+    if self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and CS.cruiseState.speed > 0:
+      self.v_cruise_kph = round(CS.cruiseState.speed * CV.MS_TO_KPH, 1)
+      self.v_cruise_cluster_kph = self.v_cruise_kph
       return
 
     initial_experimental_mode = experimental_mode and not dynamic_experimental_control
