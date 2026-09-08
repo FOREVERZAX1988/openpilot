@@ -128,8 +128,14 @@ class VCruiseHelper(VCruiseHelperSP):
         # stock_wunschgeschw 属性），其 cruiseState.speed = stock_wunschgeschw × KPH_TO_MS
         # 即 m/s；×MS_TO_KPH 幂等往返 ≡ stock_wunschgeschw（km/h）。stock 无设定(speed<=0)
         # 时回退到"以当前车速为锚、下限 30(公制)/20(英制)"（2026-08-22 修复的行为）。
+        # 2026-09-08 定稿：排除原厂无默认速度哨兵(ACC_02 Wunschgeschw=327.36 kph→
+        # speed≈90.93 m/s)+上限 120 kph。无设定(<=0 或 >=327km/h 哨兵)回退锚定当前车速；
+        # >120 不置入(原厂速度我们限制不住，但置入也只会让 OP 自维护 120 上限——加速
+        # 控制权在 OP，仅 120 以下才同步，避免 OP vCruise 被推到原厂 140 越上限)。
         _stock_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-        if self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and _stock_kph > 0:
+        _macan_ok = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1"
+                     and 0 < _stock_kph <= 120)
+        if _macan_ok:
           self.v_cruise_kph = round(_stock_kph, 1)
           self.v_cruise_cluster_kph = self.v_cruise_kph
           return
@@ -190,8 +196,12 @@ class VCruiseHelper(VCruiseHelperSP):
     # Macan 2026-09-07: 未激活（acc05 st=2）按 SET 接合时，巡航速度从原厂 stock_wunschgeschw
     # （CS.cruiseState.speed = ACC_02 Wunschgeschw 的 m/s）取值，而非当前车速——避免与原厂
     # ACC 内部巡航速度产生速度差，进而触发 vcruise_sync 按键调节死循环（st6/7）。stock 无设定(speed<=0)时回退原逻辑。
-    if self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and CS.cruiseState.speed > 0:
-      self.v_cruise_kph = round(CS.cruiseState.speed * CV.MS_TO_KPH, 1)
+    # 2026-09-08 定稿：排除原厂无默认速度哨兵(327.36 kph→speed≈90.93 m/s)+上限 120 kph。
+    _stock_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+    _macan_ok = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1"
+                 and 0 < _stock_kph <= 120)
+    if _macan_ok:
+      self.v_cruise_kph = round(_stock_kph, 1)
       self.v_cruise_cluster_kph = self.v_cruise_kph
       return
 
