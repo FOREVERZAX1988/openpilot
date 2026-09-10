@@ -37,6 +37,18 @@ RADAR_TO_CAMERA = 1.52  # RADAR is ~ 1.5m ahead from center of mesh frame
 MACAN_B1_T_A = 0.008969
 MACAN_B1_T_B = 0.332
 
+# ---- A2 判据物理化（2026-09-10）：相对偏差定义在【距离域】，不再用 idx 域 ----
+# 旧: ratio = |vis_idx - stock_idx| / stock_idx
+#          = |Δt| / (t - B)          <- idx 是 t 的仿射量，展开后多出一个放大因子
+#   放大因子 t/(t-B)（B1 的 B=0.332）随距离变小 => 阈值随距离偷偷变严：
+#     t=1.5 s -> 名义 30% 实为 23.4%；t=2 s -> 25.0%；t=3 s -> 26.7%；t=4 s -> 27.5%
+#   而且原阈值是 2026-09-01 在【旧 0902 表】(等效 B≈0.163) 上标的，换 B1 后同一物理偏差
+#   给出的 ratio 再大 ~10% => 有效阈值被静默收紧，已不是当初的操作点。
+# 新: rel = |d_vis - d_stock| / d_stock = |Δt| / t   （同一 v 下与距离比等价）
+#   -> 换任何表都不会再移动操作点；工具 ai/tools/verify_planB_code_0910.py 早就是物理口径
+#      （ratio = |d_vis - d_stock|/d_stock > 0.30），本次把代码对齐到它。
+MACAN_A2_REL_TH = 0.30
+
 
 class KalmanParams:
   def __init__(self, dt: float):
@@ -342,32 +354,33 @@ class RadarD:
       lead = getattr(self.radar_state, lead_name)
       if not lead.present:
         continue
-      # A2 距离校验（分级，2026-09-01 标定：65/63/62/0004/0002 五route 882配对视觉
-      # lead 系统性偏远~1m/近距1.6m，斜率≈1 无比例误差；0049/4e/4f 错配场景偏差>30%）：
-      #   ratio>0.3 → 原厂替换（错配/异常兜底，4e/4f 实证有效）
-      #   ratio<=0.3 → 70/30 混合（0.7*原厂+0.3*视觉，收敛视觉小偏差，消除30%临界跳变浮动）
+      # A2 距离校验（分级 + 判据物理化 2026-09-10）：
+      #   rel>0.3  → 原厂替换（错配/异常兜底，4e/4f 实证有效）
+      #   rel<=0.3 → 70/30 混合（0.7*原厂+0.3*视觉，收敛视觉小偏差，消除临界跳变浮动）
+      # 旧实现用 idx 域比值（=|Δt|/(t-B)：阈值随距离变严，且是旧 0902 表下标的的），现改为
+      # 距离域相对偏差 rel = |d_vis - d_stock| / d_stock（=|Δt|/t，与 v 无关、与表无关）。
+      # 注意：dist_factor 的三个距离边界(15/40/60m)仍是 2026-09-04 在旧尺度 dRel 上按视觉
+      # cv 定的，换 B1 后选到的人群已变 —— 按分段残差重标属下一步（见 PLANB 文档 §7）。
       try:
-        vis_idx = self._macan_drel_to_idx(lead.dRel, self.v_ego)
-        if vis_idx > 0:
-          ratio = abs(vis_idx - r['idx']) / r['idx']
-          stock_drel = self._macan_idx_to_drel(r['idx'], self.v_ego)
-          if stock_drel > 0:
-            # 连续权重消跳变：ratio 0→0.3 时原厂权重从 0.7 平滑升到 1.0，消除 30% 硬切换阶跃
-            w = min(0.7 + (ratio / 0.3) * 0.3, 1.0)
-            # 距离分段系数（2026-09-04 视觉噪声标定，1637样本 routes20/22/23/24）：
-            # 近距5-15m视觉cv=0.255噪声最大→视觉权重×0.5；15-40m cv=0.13最稳→×1.17；
-            # 40-60m cv=0.11→×1.0；>60m cv=0.158噪声回升→×0.83。仅调视觉占比，不改原厂主导。
-            d = lead.dRel
-            if d < 15.0:
-              dist_factor = 0.5
-            elif d < 40.0:
-              dist_factor = 1.17
-            elif d < 60.0:
-              dist_factor = 1.0
-            else:
-              dist_factor = 0.83
-            w_vis = min((1.0 - w) * dist_factor, 0.5)  # 视觉权重上限0.5，原厂始终主导
-            lead.dRel = (1.0 - w_vis) * stock_drel + w_vis * lead.dRel
+        stock_drel = self._macan_idx_to_drel(r['idx'], self.v_ego)
+        if lead.dRel > 0.0 and stock_drel > 0.0:
+          rel = abs(lead.dRel - stock_drel) / max(stock_drel, 1.0)
+          # 连续权重消跳变：rel 0→0.3 时原厂权重从 0.7 平滑升到 1.0，消除硬切换阶跃
+          w = min(0.7 + (rel / MACAN_A2_REL_TH) * 0.3, 1.0)
+          # 距离分段系数（2026-09-04 视觉噪声标定，1637样本 routes20/22/23/24）：
+          # 近距5-15m视觉cv=0.255噪声最大→视觉权重×0.5；15-40m cv=0.13最稳→×1.17；
+          # 40-60m cv=0.11→×1.0；>60m cv=0.158噪声回升→×0.83。仅调视觉占比，不改原厂主导。
+          d = lead.dRel
+          if d < 15.0:
+            dist_factor = 0.5
+          elif d < 40.0:
+            dist_factor = 1.17
+          elif d < 60.0:
+            dist_factor = 1.0
+          else:
+            dist_factor = 0.83
+          w_vis = min((1.0 - w) * dist_factor, 0.5)  # 视觉权重上限0.5，原厂始终主导
+          lead.dRel = (1.0 - w_vis) * stock_drel + w_vis * lead.dRel
       except Exception:
         pass
       # A1 速度加权：距离分段权重（与A2对称，基于视觉噪声标定）
