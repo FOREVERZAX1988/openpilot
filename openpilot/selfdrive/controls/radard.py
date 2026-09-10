@@ -29,6 +29,14 @@ V_EGO_STATIONARY = 4.   # no stationary object flag below this speed
 
 RADAR_TO_CAMERA = 1.52  # RADAR is ~ 1.5m ahead from center of mesh frame
 
+# Macan Abstandsindex <-> 时距标定（0910 方案B / B1 单表）：t(idx) = A*idx + B
+# 干净"同目标"帧、6 route / 15,040 帧重拟合，RMS 0.61 s；视觉-雷达 中位差 -0.77 m、
+# 中位绝对差 1.90 m、82.0% 帧 <=5 m、A2 原厂替换率 6.3%（旧 0909 新线性 0.008718/+1.0178
+# 为 -7.10 m / 35.3%）。注意：opendbc radar_interface.py 的 A3 使用同一组系数，必须同源修改。
+# 详见 ai/docs/MLB_MACAN_PLANB_FIT_0910.md
+MACAN_B1_T_A = 0.008969
+MACAN_B1_T_B = 0.332
+
 
 class KalmanParams:
   def __init__(self, dt: float):
@@ -208,8 +216,8 @@ class RadarD:
     self.radar_state: capnp._DynamicStructBuilder | None = None
     self.radar_state_valid = False
     # Macan 原厂雷达融合（bus2 ACC_02.Abstandsindex + ACC_04 前车速度 -> 修正视觉 lead）
-    # 标定表：2026-09-02 全量重标定（6-route，拟合26367/留出5979样本，中位相对误差
-    # 低速8.23%/高速9.64%/全部8.86% vs 旧11点表15.12%）。低速区<234实测点，高速区保留原表。
+    # 标定口径：0910 方案B / B1 单表 t = 0.008969*idx + 0.332（模块常量 MACAN_B1_T_*），
+    # 与 opendbc radar_interface.py 的 A3 同源；旧 0902 插值查表与 0909 新线性公式均已废弃。
     self._macan_radar = {'idx': 0, 'obj': 0, 'spd': 0.0}
     self._macan_fusion_on = False
     self._macan_fusion_t = 0.0
@@ -287,26 +295,26 @@ class RadarD:
     return self._macan_fusion_on
 
   def _macan_t_from_idx(self, idx: float) -> float:
-    """Abstandsindex -> 时距 t（0909 VERIFIED 线性公式，与雷达接口 A3 同源）"""
-    if idx < 100:
-      return 0.8
-    if idx > 560:
-      return 6.0
-    return 0.008718 * idx + 1.0178
+    """Abstandsindex -> 时距 t（0910 方案B / B1 单表直线，与雷达接口 A3 同源）。
+
+    无人工分段：旧 idx<100 锚 0.8 s / idx>560 截顶 6.0 s 已删除（前者在 idx=100 处
+    会造成 0.8 -> 1.89 s 突跳，且与 A3 的直线不一致）。
+    """
+    return MACAN_B1_T_A * idx + MACAN_B1_T_B
 
   def _macan_idx_to_drel(self, idx: float, v_ego: float) -> float:
-    """Abstandsindex -> 时距 t -> 距离（逆映射，低速用等效 t*5，与新公式一致）"""
+    """Abstandsindex -> 时距 t -> 距离（B1 逆映射，低速用等效 t*max(v,5)，与 A3 一致）"""
     t = self._macan_t_from_idx(idx)
     return t * (v_ego if v_ego > 5.0 else 5.0)
 
   def _macan_drel_to_idx(self, drel: float, v_ego: float) -> float:
-    """距离 -> 时距 t -> Abstandsindex（正映射，线性公式反解，与 A3 同源）"""
+    """距离 -> 时距 t -> Abstandsindex（B1 直线反解，与 A3 同源）。
+
+    去掉 100/561 硬锚（旧代码 t<=0.8 -> 100、t>=6.0 -> 561 会在两端制造与 A3
+    不一致的阶梯），改为钳到信号有效域 1..1020（A3 里 0 与 >=1021 视为无目标）。
+    """
     t = drel / v_ego if v_ego > 5.0 else drel / 5.0
-    if t <= 0.8:
-      return 100.0
-    if t >= 6.0:
-      return 561.0
-    return (t - 1.0178) / 0.008718
+    return float(np.clip((t - MACAN_B1_T_B) / MACAN_B1_T_A, 1.0, 1020.0))
 
 
 
