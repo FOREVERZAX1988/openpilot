@@ -230,6 +230,14 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.fusion_mode = toggle_item_sp(
+      lambda: tr("Fusion Control Mode (Macan)"),
+      description=lambda: tr("ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking (current mode). OFF: pure OP longitudinal - the radar is deactivated and OP generates ACC02/04/05 itself (planned, not yet available)."),
+      initial_state=ui_state.params.get_bool("MacanFusionMode"),
+      callback=self._on_enable_fusion_mode,
+      enabled=lambda: not ui_state.engaged,
+    )
+
     self.items = [
       self.start_stop,
       self.start_stop_distance,
@@ -246,6 +254,7 @@ class VolkswagenSettings(BrandSettings):
       self.radar_fusion,
       self.verz_bridge,
       self.gap_sync,
+      self.fusion_mode,
     ]
 
   def _on_enable_jerk_limit(self, state: bool):
@@ -271,6 +280,13 @@ class VolkswagenSettings(BrandSettings):
   def _on_enable_gap_sync(self, state: bool):
     ui_state.params.put_bool("MacanStartupGapSync", state)
     ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
+
+  def _on_enable_fusion_mode(self, state: bool):
+    # 融合控制模式：当前纯 OP 纵向尚未开发，开关恒定为开（锁定，只显示不能设）。
+    # 即使代码被触发，也强制保持 True，避免用户误关导致无雷达纯 OP 失效。
+    ui_state.params.put_bool("MacanFusionMode", True)
+    if not state:
+      self.fusion_mode.action_item.set_state(True)
 
 
   def _on_enable_start_stop(self, state: bool):
@@ -344,3 +360,11 @@ class VolkswagenSettings(BrandSettings):
       self.verz_bridge.set_visible(is_macan)
       self.gap_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.gap_sync.set_visible(is_macan)
+      # 融合控制模式（Fusion Control)：仅 Macan 且 OP 纵向控制开启时可见。
+      # op 纵向控制开启判定：ui_state.has_longitudinal_control（聚合 alpha + openpilot long）。
+      op_long_on = ui_state.has_longitudinal_control
+      fusion_visible = is_macan and op_long_on
+      # 当前纯 OP 纵向未开发：开关恒定为开，只显示不能设置（disabled），防止误关。
+      self.fusion_mode.action_item.set_enabled(False)  # 锁定：不能点击切换
+      self.fusion_mode.action_item.set_state(True)     # 恒显示"开"
+      self.fusion_mode.set_visible(fusion_visible)

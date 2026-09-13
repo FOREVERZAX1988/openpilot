@@ -61,6 +61,11 @@ class VCruiseHelper(VCruiseHelperSP):
     self.v_cruise_kph_last = 0
     self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
+    # Macan(MLB) 融合控制模式：OP 巡航速度直接取自原厂 ACC 巡航速度（ACC_02.Wunschgeschw），
+    # 使 OP 与原厂 ACC 巡航速度完全同步，消除"OP 内部 vCruise 与原厂分裂"（长按+5 vs 原厂+10 等）。
+    # 该模式下 OP 不再自行管理步进设定（UI 中自定义 ACC 增量被禁用）。默认开（纯 OP 纵向未开发）。
+    self.macan_fusion = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and
+                         self.params.get_bool("MacanFusionMode"))
 
   @property
   def v_cruise_initialized(self):
@@ -102,7 +107,20 @@ class VCruiseHelper(VCruiseHelperSP):
       if self.software_pcm_cruise_speed:
         software_pcm_enabled = software_pcm_enabled and self.software_pcm_cruise_initialized
 
-      if not self.CP.pcmCruise or software_pcm_enabled:
+      if self.macan_fusion:
+        # Macan(MLB) 融合控制模式：OP 巡航速度直接读原厂 ACC 巡航速度（ACC_02.Wunschgeschw）。
+        # 即使 pcmCruise=False（OP 纵向接管），也强制走"跟随原厂设定"路径，保证 OP 与原厂
+        # ACC 巡航速度恒定一致，避免自定义步进导致的分裂。OP 按键只影响原厂（经 OP 转发到
+        # bus2），原厂重新算出的 Wunschgeschw 再回灌给 OP —— 形成闭环同步。
+        self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+        self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        if CS.cruiseState.speed == 0:
+          self.v_cruise_kph = V_CRUISE_UNSET
+          self.v_cruise_cluster_kph = V_CRUISE_UNSET
+        elif CS.cruiseState.speed == -1:
+          self.v_cruise_kph = -1
+          self.v_cruise_cluster_kph = -1
+      elif not self.CP.pcmCruise or software_pcm_enabled:
         # if stock cruise is completely disabled, then we can use our own set speed logic
         self._update_v_cruise_non_pcm(CS, _enabled, is_metric)
         v_cruise_kph_before_sla = self.v_cruise_kph
