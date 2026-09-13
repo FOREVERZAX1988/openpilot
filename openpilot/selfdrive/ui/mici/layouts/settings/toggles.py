@@ -180,6 +180,7 @@ class TogglesLayoutMici(NavScroller):
     macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
     macan_coast_enable = BigParamControl(tr("Macan Cruise Coast Enable"), "MacanCruiseCoastEnable")
     macan_coast_band = MacanCruiseCoastControl(tr("Macan Cruise Coast Band (m/s)"), "MacanCruiseCoastBand")
+    macan_fusion_mode = BigParamControl(tr("Fusion Control Mode (Macan)"), "MacanFusionMode")
 
     self._scroller.add_widgets([
       self._personality_toggle,
@@ -206,6 +207,7 @@ class TogglesLayoutMici(NavScroller):
       macan_startup_gap_sync,
       macan_coast_enable,
       macan_coast_band,
+      macan_fusion_mode,
     ])
 
     self._macan_start_stop = macan_start_stop
@@ -223,6 +225,7 @@ class TogglesLayoutMici(NavScroller):
     self._macan_startup_gap_sync = macan_startup_gap_sync
     self._macan_coast_enable = macan_coast_enable
     self._macan_coast_band = macan_coast_band
+    self._macan_fusion_mode = macan_fusion_mode
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
@@ -247,6 +250,7 @@ class TogglesLayoutMici(NavScroller):
       ("MacanStartupGapSync", macan_startup_gap_sync),
       ("MacanCruiseCoastEnable", macan_coast_enable),
       ("MacanCruiseCoastBand", macan_coast_band),
+      ("MacanFusionMode", macan_fusion_mode),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
@@ -309,6 +313,12 @@ class TogglesLayoutMici(NavScroller):
       self._macan_radar_fusion.set_visible(True)
       self._macan_coast_enable.set_visible(True)
       self._macan_coast_band.set_visible(ui_state.params.get_bool("MacanCruiseCoastEnable"))
+      # 融合控制模式：仅 Macan 且 OP 纵向控制开启时可见；纯 OP 未开发，开关恒定为开且锁定（不能点击）。
+      op_long_on = ui_state.has_longitudinal_control
+      self._macan_fusion_mode.set_visible(op_long_on)
+      self._macan_fusion_mode.set_enabled(False)  # 锁定：不能切换到关
+      ui_state.params.put_bool("MacanFusionMode", True)  # 恒定为开
+      self._macan_fusion_mode.set_checked(True)
     else:
       self._macan_start_stop.set_visible(False)
       self._macan_jerk_enable.set_visible(False)
@@ -322,6 +332,7 @@ class TogglesLayoutMici(NavScroller):
       self._macan_radar_fusion.set_visible(False)
       self._macan_coast_enable.set_visible(False)
       self._macan_coast_band.set_visible(False)
+      self._macan_fusion_mode.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:

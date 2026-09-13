@@ -143,7 +143,18 @@ class CruiseLayout(Widget):
           self.icbm_toggle.show_description(True)
 
       if has_long or has_icbm:
-        self.custom_acc_toggle.action_item.set_enabled(((has_long and not ui_state.CP.pcmCruise) or has_icbm) and ui_state.is_offroad())
+        # Macan(MLB) 融合控制模式开：自定义 ACC 增量自动灰色关闭（OP 巡航速度直接跟随原厂，
+        # 步进由原厂 ACC 决定，自定义短按/长按增量与 OP 同步逻辑冲突）。
+        macan_fusion_on = (ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1" and
+                           ui_state.params.get_bool("MacanFusionMode"))
+        custom_acc_enabled = ((has_long and not ui_state.CP.pcmCruise) or has_icbm) and ui_state.is_offroad() \
+                             and not macan_fusion_on
+        self.custom_acc_toggle.action_item.set_enabled(custom_acc_enabled)
+        if macan_fusion_on:
+          self.custom_acc_toggle.action_item.set_state(False)  # 自动关闭自定义增量
+          _on = self.custom_acc_toggle.action_item.get_state()
+          self.custom_acc_short_increment.set_visible(_on)
+          self.custom_acc_long_increment.set_visible(_on)
         self.dec_toggle.action_item.set_enabled(has_long)
         self.scc_v_toggle.action_item.set_enabled(True)
         self.scc_m_toggle.action_item.set_enabled(True)

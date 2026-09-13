@@ -4889,3 +4889,9 @@ msgstr "Macan 转向系数（实验性）：启用后使用标定值 steerRatio 
 
 msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
 msgstr "Macan 坡度补偿：开启后 IMU 坡度信号向加速度请求加入 g*sin(坡度)——上坡增加力矩并发出正向 Verz 请求（加速声明，约 4.2×sin(坡度)），下坡轻点刹车（防止前冲）。默认关闭=原厂行为。切换后需重启行程周期。"
+
+msgid "Fusion Control Mode (Macan)"
+msgstr "融合控制模式 (Macan)"
+
+msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking (current mode). OFF: pure OP longitudinal - the radar is deactivated and OP generates ACC02/04/05 itself (planned, not yet available)."
+msgstr "开=融合控制：OP 纵向接管同时原厂 ACC 雷达保持激活并约束制动（当前模式）。关=纯 OP 纵向：雷达停用，由 OP 自行生成 ACC02/04/05（规划中，暂不可用）。"

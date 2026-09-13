@@ -3946,3 +3946,11 @@ msgstr "✓ SUBSCRIBED"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
 
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Fusion Control Mode (Macan)"
+msgstr "Fusion Control Mode (Macan)"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking (current mode). OFF: pure OP longitudinal - the radar is deactivated and OP generates ACC02/04/05 itself (planned, not yet available)."
+msgstr "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking (current mode). OFF: pure OP longitudinal - the radar is deactivated and OP generates ACC02/04/05 itself (planned, not yet available)."

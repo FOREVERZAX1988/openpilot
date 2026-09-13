@@ -3910,3 +3910,9 @@ msgstr "✓ 已訂閱"
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
+
+msgid "Fusion Control Mode (Macan)"
+msgstr "融合控制模式（Macan）"
+
+msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking (current mode). OFF: pure OP longitudinal - the radar is deactivated and OP generates ACC02/04/05 itself (planned, not yet available)."
+msgstr "開=融合控制：OP 縱向接管同時原廠 ACC 雷達保持激活並約束制動（當前模式）。關=純 OP 縱向：雷達停用，由 OP 自行生成 ACC02/04/05（規劃中，暫不可用）。"
