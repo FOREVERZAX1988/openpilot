@@ -35,7 +35,6 @@ class VCruiseHelper(VCruiseHelperSP):
     self.CP = CP
     self.v_cruise_kph = V_CRUISE_UNSET
     self.v_cruise_cluster_kph = V_CRUISE_UNSET
-    self._macan_vcruise_sync = self.params.get_bool("MacanVcruiseSync")
     self.v_cruise_kph_last = 0
     self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0, ButtonType.setCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
@@ -45,34 +44,18 @@ class VCruiseHelper(VCruiseHelperSP):
     return self.v_cruise_kph != V_CRUISE_UNSET
 
   def update_v_cruise(self, CS, enabled, is_metric):
-    # 每帧刷新（Params.get_bool 内部带缓存，用户切开关 1s 内生效，无需重启）
-    self._macan_vcruise_sync = self.params.get_bool("MacanVcruiseSync")
     self.v_cruise_kph_last = self.v_cruise_kph
 
     self.get_minimum_set_speed(is_metric)
 
     _enabled = self.update_enabled_state(CS, enabled)
 
-    # Macan 巡航速度同步方向（MacanVcruiseSync，2026-09-07）：
-    # 关(0)=OP向原厂妥协：OP 巡航速度直接读原厂 ACC_02.Wunschgeschw_02（carstate 已
-    #   存入 CS.cruiseState.speed），不再自维护——保证 OP 与原厂执行层速度设定一致。
-    macan_follow_stock = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1"
-                          and not self.CP_SP.pcmCruiseSpeed
-                          and not self._macan_vcruise_sync)
     if CS.cruiseState.available:
-      if macan_follow_stock or not self.CP.pcmCruise or (not self.CP_SP.pcmCruiseSpeed and _enabled):
-        if macan_follow_stock:
-          # 关：跟随原厂（读 carstate 已算好的原厂 Wunsch）
-          self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-          self.v_cruise_cluster_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-          if CS.cruiseState.speed == 0:
-            self.v_cruise_kph = V_CRUISE_UNSET
-            self.v_cruise_cluster_kph = V_CRUISE_UNSET
-        else:
-          # if stock cruise is completely disabled, then we can use our own set speed logic
-          self._update_v_cruise_non_pcm(CS, _enabled, is_metric)
-          self.update_speed_limit_assist_v_cruise_non_pcm()
-          self.v_cruise_cluster_kph = self.v_cruise_kph
+      if not self.CP.pcmCruise or (not self.CP_SP.pcmCruiseSpeed and _enabled):
+        # if stock cruise is completely disabled, then we can use our own set speed logic
+        self._update_v_cruise_non_pcm(CS, _enabled, is_metric)
+        self.update_speed_limit_assist_v_cruise_non_pcm()
+        self.v_cruise_cluster_kph = self.v_cruise_kph
       else:
         self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
@@ -123,22 +106,10 @@ class VCruiseHelper(VCruiseHelperSP):
       # 旧代码 setCruise→accelCruise(+1) 转换先于 133 行 gas 锚定执行，锚定永不触发。
       # 锚定必须在转换之前处理（enabled=激活中，未激活时 setCruise=接合不走此分支）。
       if CS.gasPressed and self.button_change_states[button_type]["enabled"]:
-        # 2026-09-07 改为从原厂 stock_wunschgeschw 取值，避免与原厂 ACC 巡航速度产生
-        # 速度差 → vcruise_sync 按键死循环 → st6/7。此处的 CS 是 capnp CarState（无
-        # stock_wunschgeschw 属性），其 cruiseState.speed = stock_wunschgeschw × KPH_TO_MS
-        # 即 m/s；×MS_TO_KPH 幂等往返 ≡ stock_wunschgeschw（km/h）。stock 无设定(speed<=0)
-        # 时回退到"以当前车速为锚、下限 30(公制)/20(英制)"（2026-08-22 修复的行为）。
-        # 2026-09-08 定稿：排除原厂无默认速度哨兵(ACC_02 Wunschgeschw=327.36 kph→
-        # speed≈90.93 m/s)+上限 120 kph。无设定(<=0 或 >=327km/h 哨兵)回退锚定当前车速；
-        # >120 不置入(原厂速度我们限制不住，但置入也只会让 OP 自维护 120 上限——加速
-        # 控制权在 OP，仅 120 以下才同步，避免 OP vCruise 被推到原厂 140 越上限)。
-        _stock_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-        _macan_ok = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1"
-                     and 0 < _stock_kph <= 120)
-        if _macan_ok:
-          self.v_cruise_kph = round(_stock_kph, 1)
-          self.v_cruise_cluster_kph = self.v_cruise_kph
-          return
+        # 2026-08-22 修复（00000052 seg11 实测：vEgo=42/cru=45 按SET没反应）：
+        # 旧公式 max(v_cruise_kph, vEgo) 只增不减，介入车速<旧巡航时 vCruise 不变。
+        # 改为以当前车速为锚、下限 30(公制)/20(英制)——>30 置当前车速、<30 置 30，
+        # 与原厂语义一致（避免用 V_CRUISE_MIN=8 触发原厂 ACC st=6，用户确认）。
         anchor_min = 30.0 if is_metric else 20.0
         self.v_cruise_kph = np.clip(round(max(CS.vEgo * CV.MS_TO_KPH, anchor_min), 1), anchor_min, V_CRUISE_MAX)
         self.v_cruise_cluster_kph = self.v_cruise_kph
@@ -191,18 +162,6 @@ class VCruiseHelper(VCruiseHelperSP):
   def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool) -> None:
     # initializing is handled by the PCM
     if self.CP.pcmCruise:
-      return
-
-    # Macan 2026-09-07: 未激活（acc05 st=2）按 SET 接合时，巡航速度从原厂 stock_wunschgeschw
-    # （CS.cruiseState.speed = ACC_02 Wunschgeschw 的 m/s）取值，而非当前车速——避免与原厂
-    # ACC 内部巡航速度产生速度差，进而触发 vcruise_sync 按键调节死循环（st6/7）。stock 无设定(speed<=0)时回退原逻辑。
-    # 2026-09-08 定稿：排除原厂无默认速度哨兵(327.36 kph→speed≈90.93 m/s)+上限 120 kph。
-    _stock_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-    _macan_ok = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1"
-                 and 0 < _stock_kph <= 120)
-    if _macan_ok:
-      self.v_cruise_kph = round(_stock_kph, 1)
-      self.v_cruise_cluster_kph = self.v_cruise_kph
       return
 
     initial_experimental_mode = experimental_mode and not dynamic_experimental_control
