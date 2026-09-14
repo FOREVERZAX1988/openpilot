@@ -313,12 +313,10 @@ class TogglesLayoutMici(NavScroller):
       self._macan_radar_fusion.set_visible(True)
       self._macan_coast_enable.set_visible(True)
       self._macan_coast_band.set_visible(ui_state.params.get_bool("MacanCruiseCoastEnable"))
-      # 融合控制模式：仅 Macan 且 OP 纵向控制开启时可见；纯 OP 未开发，开关恒定为开且锁定（不能点击）。
+      # 融合控制模式：仅 Macan 且 OP 纵向控制开启时可见（2026-09-15 解锁，纯 OP 已实现）。
       op_long_on = ui_state.has_longitudinal_control
       self._macan_fusion_mode.set_visible(op_long_on)
-      self._macan_fusion_mode.set_enabled(False)  # 锁定：不能切换到关
-      ui_state.params.put_bool("MacanFusionMode", True)  # 恒定为开
-      self._macan_fusion_mode.set_checked(True)
+      self._macan_fusion_mode.set_enabled(op_long_on)
     else:
       self._macan_start_stop.set_visible(False)
       self._macan_jerk_enable.set_visible(False)
