@@ -232,7 +232,7 @@ class VolkswagenSettings(BrandSettings):
 
     self.fusion_mode = toggle_item_sp(
       lambda: tr("Fusion Control Mode (Macan)"),
-      description=lambda: tr("ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking (current mode). OFF: pure OP longitudinal - the radar is deactivated and OP generates ACC02/04/05 itself (planned, not yet available)."),
+      description=lambda: tr("ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking. OFF: pure OP longitudinal - the stock ACC radar is deactivated (LS_01 bus2 stays standby) and OP self-generates ACC02/04/05 entirely."),
       initial_state=ui_state.params.get_bool("MacanFusionMode"),
       callback=self._on_enable_fusion_mode,
       enabled=lambda: not ui_state.engaged,
@@ -282,11 +282,10 @@ class VolkswagenSettings(BrandSettings):
     ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
 
   def _on_enable_fusion_mode(self, state: bool):
-    # 融合控制模式：当前纯 OP 纵向尚未开发，开关恒定为开（锁定，只显示不能设）。
-    # 即使代码被触发，也强制保持 True，避免用户误关导致无雷达纯 OP 失效。
-    ui_state.params.put_bool("MacanFusionMode", True)
-    if not state:
-      self.fusion_mode.action_item.set_state(True)
+    # 融合控制模式（2026-09-15 解锁）：纯 OP 纵向已实现，开关可自由切换。
+    #  ON=融合(原厂ACC雷达+OP纵向)；OFF=纯OP(雷达待命停用, OP自算ACC02/04/05)。
+    ui_state.params.put_bool("MacanFusionMode", bool(state))
+    ui_state.params.put_bool("OnroadCycleRequested", True)  # 模式切换需重启生效
 
 
   def _on_enable_start_stop(self, state: bool):
