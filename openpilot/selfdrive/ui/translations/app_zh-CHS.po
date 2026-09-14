@@ -4893,5 +4893,5 @@ msgstr "Macan 坡度补偿：开启后 IMU 坡度信号向加速度请求加入 
 msgid "Fusion Control Mode (Macan)"
 msgstr "融合控制模式 (Macan)"
 
-msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking (current mode). OFF: pure OP longitudinal - the radar is deactivated and OP generates ACC02/04/05 itself (planned, not yet available)."
-msgstr "开=融合控制：OP 纵向接管同时原厂 ACC 雷达保持激活并约束制动（当前模式）。关=纯 OP 纵向：雷达停用，由 OP 自行生成 ACC02/04/05（规划中，暂不可用）。"
+msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking. OFF: pure OP longitudinal - the stock ACC radar is deactivated (LS_01 bus2 stays standby) and OP self-generates ACC02/04/05 entirely."
+msgstr "开=融合控制：OP 纵向接管同时原厂 ACC 雷达保持激活并约束制动。关=纯 OP 纵向：原厂 ACC 雷达停用（LS_01 bus2 保持待命），由 OP 完全自行生成 ACC02/04/05。"
