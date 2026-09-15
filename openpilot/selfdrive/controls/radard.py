@@ -298,13 +298,14 @@ class RadarD:
       try:
         # 门控补强(2026-09-07)：MacanRadarFusion 也仅在 OP 纵向开启时生效——
         # A1/A2 修正的是 OP 纵向用到的 lead，纯原厂 ACC(关闭OP纵向)时不应改动 lead。
-        # 2026-09-15：再加 MacanFusionMode=1 门控——纯OP模式(融合关,MacanFusionMode=0)
-        # 时原厂雷达已被停用(LS_01 bus2 待命不激活)，bus2 无有效雷达目标，雷达视觉融合
-        # 应退化为纯视觉(MacanRadarFusion 开关仅对融合模式有效)。
+        # 2026-09-15：移除 MacanFusionMode=1 门控 —— 原厂雷达在 st=0/2（关闭/待命）
+        # 下仍挥续发送 ACC_Abstandsindex / ACC_Gesetzte_Zeitluecke / ACC_Geschw_Zielfahrzeug
+        # 等基础信息信号（routes 0002/0004/0049 实测实铉）。因此 MacanRadarFusion
+        # 对融合模式和纯OP模式都有效：开=雷达参与辅助视觉(也驱动仪表盘)/
+        # 关=仅视觉判定。
         self._macan_fusion_on = self.CP.carFingerprint == "PORSCHE_MACAN_MK1" \
             and self.CP.openpilotLongitudinalControl \
-            and Params().get_bool("MacanRadarFusion") \
-            and Params().get_bool("MacanFusionMode")
+            and Params().get_bool("MacanRadarFusion")
       except Exception:
         self._macan_fusion_on = False
       self._macan_fusion_t = now
