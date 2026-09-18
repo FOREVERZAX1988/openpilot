@@ -10,6 +10,7 @@ from openpilot.cereal import messaging, log, custom
 from opendbc.car.structs import car
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.display import OnroadBrightness
+from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_active_source
 from openpilot.sunnypilot.sunnylink.sunnylink_state import SunnylinkState
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.sunnypilot.widgets.screen_saver import ScreenSaverSP
@@ -34,7 +35,8 @@ class UIStateSP:
     self.is_sp_release: bool = self.params.get_bool("IsReleaseSpBranch")
     self.sm_services_ext = [
       "modelManagerSP", "selfdriveStateSP", "longitudinalPlanSP", "backupManagerSP",
-      "gpsLocation", "lateralTorqueParameters", "carStateSP", "liveMapDataSP", "carParamsSP", "lateralDelay"
+      "gpsLocation", "lateralTorqueParameters", "carStateSP", "liveMapDataSP", "carParamsSP", "lateralDelay",
+      "imuCalibrationSP", "carrotManSP",
     ]
 
     self.sunnylink_state = SunnylinkState()
@@ -43,6 +45,7 @@ class UIStateSP:
     self.screensaver_enabled: bool = False
 
     self.active_bundle = None
+    self.model_runner_tinygrad: bool = False
     self.blindspot: bool = False
     self.chevron_metrics = None
     self.custom_interactive_timeout: int = 0
@@ -61,6 +64,8 @@ class UIStateSP:
     self.enforce_torque_control: bool = False
     self.custom_torque_params: bool = False
     self.torque_override_enabled: bool = False
+    self.amap_map_data_enabled: bool = False
+    self.carrot_amap_blind_spot_enabled: bool = False
     self._sp_initialized: bool = False
 
   def update(self) -> None:
@@ -150,11 +155,18 @@ class UIStateSP:
       self.has_icbm = self.CP_SP.intelligentCruiseButtonManagementAvailable and self.params.get_bool("IntelligentCruiseButtonManagement")
 
     self._enforce_constraints()
-    self.active_bundle = self.params.get("ModelManager_ActiveBundle")
+    source = get_active_source(chestnut=self.chestnut_present, chestnut_active=self.chestnut_active,
+                               chestnut_loading=self.chestnut_loading, offroad=self.is_offroad())
+    self.active_bundle = self.params.get(ACTIVE_BUNDLE_KEYS[source])
+    self.model_runner_tinygrad = self.active_bundle is not None and self.active_bundle.get("runner") == "tinygrad"
+    # stock only counts the default big model's compiled pkl. a downloaded big bundle runs on the
+    # chestnut just the same, so ChestnutState has to see it as available too.
+    self.chestnut_compiled = self.chestnut_compiled or self.model_runner_tinygrad
     self.blindspot = self.params.get_bool("BlindSpot")
     self.chevron_metrics = self.params.get("ChevronInfo")
     self.custom_interactive_timeout = self.params.get("InteractivityTimeout", return_default=True)
     self.developer_ui = self.params.get("DevUIInfo")
+    self.hide_firehose_prompt = self.params.get_bool("HideFirehosePrompt")
     self.hide_v_ego_ui = self.params.get_bool("HideVEgoUI")
     self.onroad_brightness = int(float(self.params.get("OnroadScreenOffBrightness", return_default=True)))
     self.onroad_brightness_timer_param = self.params.get("OnroadScreenOffTimer", return_default=True)
@@ -175,6 +187,8 @@ class UIStateSP:
     self.boot_offroad_mode = self.params.get("DeviceBootMode", return_default=True)
     self.always_offroad = self.params.get_bool("OffroadMode")
     self.screensaver_enabled = self.params.get_bool("ScreenSaverEnabled")
+    self.amap_map_data_enabled = self.params.get_bool("AmapMapDataEnabled") or self.params.get_bool("AmapEnabled")
+    self.carrot_amap_blind_spot_enabled = self.params.get_bool("CarrotAmapBlindSpotEnabled") or self.params.get_bool("AmapEnabled")
 
     if not self._sp_initialized:
       self._sp_initialized = True
@@ -266,6 +280,10 @@ class DeviceSP:
   def set_onroad_brightness(_ui_state, awake: bool, cur_brightness: float) -> float:
     if not awake or not _ui_state.started:
       return cur_brightness
+
+    # Keep screen at 100% when onroad brightness is set to maximum (22 -> 100%)
+    if _ui_state.onroad_brightness == 22:
+      return 100.0
 
     if _ui_state.onroad_brightness_timer != 0:
       if _ui_state.onroad_brightness == OnroadBrightness.AUTO_DARK:

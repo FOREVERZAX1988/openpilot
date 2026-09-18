@@ -13,7 +13,7 @@ ONROAD_BRIGHTNESS_MIGRATION_VERSION: str = "1.0"
 ONROAD_BRIGHTNESS_TIMER_MIGRATION_VERSION: str = "1.0"
 
 # index → seconds mapping for OnroadScreenOffTimer (SSoT)
-ONROAD_BRIGHTNESS_TIMER_VALUES = {0: 3, 1: 5, 2: 7, 3: 10, 4: 15, 5: 30, **{i: (i - 5) * 60 for i in range(6, 16)}}
+ONROAD_BRIGHTNESS_TIMER_VALUES = {0: 0, 1: 3, 2: 5, 3: 10, 4: 15, 5: 30, 6: 60, 7: 180, 8: 300, 9: 600}
 VALID_TIMER_VALUES = set(ONROAD_BRIGHTNESS_TIMER_VALUES.values())
 
 
@@ -84,6 +84,25 @@ def _migrate_tesla_mads_screen_button(_params):
     cloudlog.exception(f"Error migrating TeslaMadsScreenButton: {e}")
 
 
+def _migrate_model_bundle_slots(_params):
+  # Pre-split, a chestnut user's big-model selection lived in the single
+  # ActiveBundle. Seed both slots; validation drops whichever does not match
+  # its own manifest.
+  try:
+    if _params.get("ModelManager_ActiveBundleChestnut") is not None:
+      return
+    if (chestnut_bundle := _params.get("ModelManager_ActiveBundleUSBGPU")) is not None:
+      _params.put("ModelManager_ActiveBundleChestnut", chestnut_bundle, block=True)
+      cloudlog.info("params_migration: seeded ModelManager_ActiveBundleChestnut from ModelManager_ActiveBundleUSBGPU")
+      return
+    if (bundle := _params.get("ModelManager_ActiveBundle")) is None:
+      return
+    _params.put("ModelManager_ActiveBundleChestnut", bundle, block=True)
+    cloudlog.info("params_migration: seeded ModelManager_ActiveBundleChestnut from ModelManager_ActiveBundle")
+  except Exception as e:
+    cloudlog.exception(f"Error migrating model bundle slots: {e}")
+
+
 def run_migration(_params):
   # migrate OnroadScreenOffBrightness
   if _params.get("OnroadScreenOffBrightnessMigrated") != ONROAD_BRIGHTNESS_MIGRATION_VERSION:
@@ -120,3 +139,6 @@ def run_migration(_params):
 
   # seed TeslaMadsScreenButton for existing Tesla installs
   _migrate_tesla_mads_screen_button(_params)
+
+  # seed the chestnut model slot from the pre-split single slot
+  _migrate_model_bundle_slots(_params)

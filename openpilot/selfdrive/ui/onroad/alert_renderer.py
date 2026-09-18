@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from openpilot.cereal import messaging, log
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.common.hardware import COMMA_HARDWARE
-from openpilot.system.ui.lib.application import gui_app, FontWeight
+from openpilot.system.ui.lib.application import gui_app, FontWeight, TextAlignment, TextAlignmentVertical
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
@@ -76,10 +76,10 @@ class AlertRenderer(Widget):
     self.font_bold: rl.Font = gui_app.font(FontWeight.BOLD)
 
     # font size is set dynamically
-    self._full_text1_label = Label("", font_size=0, font_weight=FontWeight.BOLD, text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER,
-                                   text_alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP)
-    self._full_text2_label = Label("", font_size=ALERT_FONT_BIG, text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER,
-                                   text_alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP)
+    self._full_text1_label = Label("", font_size=0, font_weight=FontWeight.BOLD, text_alignment=TextAlignment.CENTER,
+                                   text_alignment_vertical=TextAlignmentVertical.TOP)
+    self._full_text2_label = Label("", font_size=ALERT_FONT_BIG, text_alignment=TextAlignment.CENTER,
+                                   text_alignment_vertical=TextAlignmentVertical.TOP)
 
   def get_alert(self, sm: messaging.SubMaster) -> Alert | None:
     """Generate the current alert based on selfdrive state."""
@@ -155,26 +155,27 @@ class AlertRenderer(Widget):
 
   def _draw_text(self, rect: rl.Rectangle, alert: Alert) -> None:
     if alert.size == AlertSize.small:
-      self._draw_centered(alert.text1, rect, self.font_bold, ALERT_FONT_MEDIUM)
+      self._draw_centered(tr(alert.text1), rect, self.font_bold, ALERT_FONT_MEDIUM)
 
     elif alert.size == AlertSize.mid:
-      self._draw_centered(alert.text1, rect, self.font_bold, ALERT_FONT_BIG, center_y=False)
+      self._draw_centered(tr(alert.text1), rect, self.font_bold, ALERT_FONT_BIG, center_y=False)
       rect.y += ALERT_FONT_BIG + ALERT_LINE_SPACING
-      self._draw_centered(alert.text2, rect, self.font_regular, ALERT_FONT_SMALL, center_y=False)
+      self._draw_centered(tr(alert.text2), rect, self.font_regular, ALERT_FONT_SMALL, center_y=False)
 
     else:
-      is_long = len(alert.text1) > 15
+      text1 = tr(alert.text1)
+      is_long = len(text1) > 15
       font_size1 = 132 if is_long else 177
 
-      top_offset = 200 if is_long or '\n' in alert.text1 else 270
+      top_offset = 200 if is_long or '\n' in text1 else 270
       title_rect = rl.Rectangle(rect.x, rect.y + top_offset, rect.width, 600)
       self._full_text1_label.set_font_size(font_size1)
-      self._full_text1_label.set_text(alert.text1)
+      self._full_text1_label.set_text(text1)
       self._full_text1_label.render(title_rect)
 
       bottom_offset = 361 if is_long else 420
       subtitle_rect = rl.Rectangle(rect.x, rect.y + rect.height - bottom_offset, rect.width, 300)
-      self._full_text2_label.set_text(alert.text2)
+      self._full_text2_label.set_text(tr(alert.text2))
       self._full_text2_label.render(subtitle_rect)
 
   def _draw_centered(self, text, rect, font, font_size, center_y=True, color=rl.WHITE) -> None:

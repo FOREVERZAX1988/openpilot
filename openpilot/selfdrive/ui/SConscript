@@ -1,7 +1,33 @@
 import importlib.util
+import json
 from pathlib import Path
 
 Import('env', 'arch', 'common')
+
+# build the fonts
+generator = File("#openpilot/selfdrive/assets/fonts/process.py")
+languages_file = File("#openpilot/selfdrive/ui/translations/languages.json")
+source_files = Glob("#openpilot/selfdrive/assets/fonts/*.ttf") + Glob("#openpilot/selfdrive/assets/fonts/*.otf")
+source_files = [f for f in source_files if "NotoColor" not in f.name]
+
+with open(languages_file.abspath, encoding="utf-8") as f:
+  lang_codes = list(json.load(f).values())
+
+output_files = []
+for f in source_files:
+  base = Path(f.path).with_suffix('')
+  if base.name.startswith("OpFont"):
+    output_files.extend([f"#{base}-Labels.fnt", f"#{base}-Labels.png"])
+    for code in lang_codes:
+      output_files.extend([f"#{base}-{code}.fnt", f"#{base}-{code}.png"])
+  else:
+    output_files.extend([f"#{base}.fnt", f"#{base}.png"])
+
+env.Command(
+  target=output_files,
+  source=[generator, source_files, languages_file],
+  action=f"python3 {generator}",
+)
 
 if GetOption('extras') and arch == "comma_arm64":
   # build installers

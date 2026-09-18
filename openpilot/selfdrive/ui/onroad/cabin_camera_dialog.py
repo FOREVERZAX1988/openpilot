@@ -1,10 +1,11 @@
 import numpy as np
 import pyray as rl
+import time
 from openpilot.cereal.visionipc import VisionStreamType
 from openpilot.selfdrive.ui.onroad.cameraview import CameraView
 from openpilot.selfdrive.ui.onroad.driver_state import DriverStateRenderer
 from openpilot.selfdrive.ui.ui_state import ui_state, device
-from openpilot.system.ui.lib.application import gui_app, FontWeight
+from openpilot.system.ui.lib.application import gui_app, FontWeight, TextAlignment
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets.label import gui_label
 
@@ -13,6 +14,7 @@ class CabinCameraDialog(CameraView):
   def __init__(self):
     super().__init__("camerad", VisionStreamType.VISION_STREAM_CABIN)
     self.driver_state_renderer = DriverStateRenderer()
+    self._opened_at = time.monotonic()
     # TODO: this can grow unbounded, should be given some thought
     device.add_interactive_timeout_callback(gui_app.pop_widget)
     ui_state.params.put_bool("IsDriverViewEnabled", True, block=True)
@@ -33,12 +35,15 @@ class CabinCameraDialog(CameraView):
     super()._render(rect)
 
     if not self.frame:
+      msg = tr("camera starting")
+      if time.monotonic() - self._opened_at > 15.0:
+        msg = tr("Driver camera unavailable")
       gui_label(
         rect,
-        tr("camera starting"),
+        msg,
         font_size=100,
         font_weight=FontWeight.BOLD,
-        alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER,
+        alignment=TextAlignment.CENTER,
       )
       return -1
 

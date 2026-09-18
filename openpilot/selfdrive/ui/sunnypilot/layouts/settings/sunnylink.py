@@ -9,7 +9,7 @@ from openpilot.cereal import custom
 from openpilot.selfdrive.ui.sunnypilot.layouts.onboarding import SunnylinkConsentPage
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.sunnylink.api import UNREGISTERED_SUNNYLINK_DONGLE_ID
-from openpilot.system.ui.lib.application import gui_app, FontWeight
+from openpilot.system.ui.lib.application import gui_app, FontWeight, TextAlignment, TextAlignmentVertical
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
@@ -30,10 +30,10 @@ class SunnylinkHeader(Widget):
     self._title = UnifiedLabel(
       text=tr("🚀 sunnylink 🚀"),
       font_size=90,
-      font_weight=FontWeight.AUDIOWIDE,
+      font_weight=FontWeight.BOLD,
       text_color=rl.WHITE,
-      alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER,
-      alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP,
+      alignment=TextAlignment.CENTER,
+      alignment_vertical=TextAlignmentVertical.TOP,
       wrap_text=False,
       elide=False
     )
@@ -43,8 +43,8 @@ class SunnylinkHeader(Widget):
       font_size=40,
       font_weight=FontWeight.NORMAL,
       text_color=rl.Color(0, 255, 0, 255),  # Green
-      alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER,
-      alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP,
+      alignment=TextAlignment.CENTER,
+      alignment_vertical=TextAlignmentVertical.TOP,
       wrap_text=True,
       elide=False
     )
@@ -55,8 +55,8 @@ class SunnylinkHeader(Widget):
       font_size=35,
       font_weight=FontWeight.NORMAL,
       text_color=rl.Color(255, 165, 0, 255),  # Orange
-      alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER,
-      alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP,
+      alignment=TextAlignment.CENTER,
+      alignment_vertical=TextAlignmentVertical.TOP,
       wrap_text=True,
       elide=False
     )
@@ -109,8 +109,8 @@ class SunnylinkDescriptionItem(Widget):
       font_size=40,
       font_weight=FontWeight.NORMAL,
       text_color=rl.WHITE,
-      alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
-      alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP,
+      alignment=TextAlignment.LEFT,
+      alignment_vertical=TextAlignmentVertical.TOP,
       wrap_text=True,
       elide=False,
     )
@@ -259,7 +259,7 @@ class SunnylinkLayout(Widget):
 
       if backup_status == custom.BackupManagerSP.Status.inProgress:
         self._backup_in_progress = True
-        text = tr(f"Backing up {backup_progress}%")
+        text = tr("Backing up {progress}%").format(progress=backup_progress)
         self._backup_btn.set_text(text)
 
       elif backup_status == custom.BackupManagerSP.Status.failed:
@@ -280,7 +280,7 @@ class SunnylinkLayout(Widget):
 
       if restore_status == custom.BackupManagerSP.Status.inProgress:
         self._restore_in_progress = True
-        text = tr(f"Restoring {restore_progress}%")
+        text = tr("Restoring {progress}%").format(progress=restore_progress)
         self._restore_btn.set_text(text)
 
       elif restore_status == custom.BackupManagerSP.Status.failed:

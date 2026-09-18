@@ -29,7 +29,7 @@ class ModelState:
   output: np.ndarray
 
   def __init__(self, cam_w: int, cam_h: int):
-    self.DEV = get_tg_input_devices(PROCESS_NAME, usbgpu=False)['DEV']
+    self.DEV = get_tg_input_devices(PROCESS_NAME, chestnut=False)['DEV']
     with open(METADATA_PATH, 'rb') as f:
       model_metadata = pickle.load(f)
       self.input_shapes = model_metadata['input_shapes']
@@ -112,10 +112,16 @@ def main():
 
   cloudlog.warning("connecting to cabin stream")
   vipc_client = VisionIpcClient("camerad", VisionStreamType.VISION_STREAM_CABIN, True)
-  while not vipc_client.connect(False):
+  wait_start = time.monotonic()
+  last_log = 0.0
+  while not vipc_client.connect(False) or not vipc_client.num_buffers or vipc_client.width is None or vipc_client.height is None:
+    now = time.monotonic()
+    if now - last_log >= 5.0:
+      elapsed = now - wait_start
+      cloudlog.warning(f"waiting for cabin stream buffers... ({elapsed:.1f}s)")
+      last_log = now
     time.sleep(0.1)
-  assert vipc_client.is_connected()
-  cloudlog.warning(f"connected with buffer size: {vipc_client.buffer_len}")
+  cloudlog.warning(f"connected with buffer size: {vipc_client.buffer_len} ({vipc_client.width} x {vipc_client.height})")
 
   model = ModelState(vipc_client.width, vipc_client.height)
   cloudlog.warning("models loaded, dmonitoringmodeld starting")

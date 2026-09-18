@@ -8,7 +8,7 @@ from collections.abc import Callable, Sequence
 
 import pyray as rl
 from openpilot.common.params import Params
-from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight
+from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight, TextAlignment, TextAlignmentVertical
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.widgets.toggle import ToggleSP
 from openpilot.system.ui.widgets import Widget
@@ -16,7 +16,7 @@ from openpilot.system.ui.widgets.button import Button, ButtonStyle
 from openpilot.system.ui.widgets.label import gui_label
 from openpilot.system.ui.widgets.list_view import ListItem, ToggleAction, ItemAction, MultipleButtonAction, ButtonAction, \
                                                   _resolve_value, BUTTON_WIDTH, BUTTON_HEIGHT, TEXT_PADDING, DualButtonAction
-from openpilot.system.ui.widgets.scroller_tici import LineSeparator, LINE_COLOR, LINE_PADDING
+from openpilot.system.ui.widgets.scroller_tici import LineSeparator, LINE_COLOR, LINE_PADDING, Scroller
 from openpilot.system.ui.sunnypilot.lib.styles import style
 from openpilot.system.ui.sunnypilot.widgets.option_control import OptionControlSP, LABEL_WIDTH
 
@@ -46,7 +46,12 @@ class ButtonSP(Button):
     super()._update_state()
     if self.enabled:
       if self.is_pressed:
-        self._background_color = style.BUTTON_OFF_PRESSED
+        if self._button_style == ButtonStyle.PRIMARY:
+          self._background_color = style.ON_HOVER_BG_COLOR
+        else:
+          self._background_color = style.BUTTON_OFF_PRESSED
+      elif self._button_style == ButtonStyle.PRIMARY:
+        self._background_color = style.BUTTON_PRIMARY_COLOR
       else:
         self._background_color = style.BUTTON_ENABLED_OFF
     else:
@@ -90,8 +95,8 @@ class ButtonActionSP(ButtonAction):
     if value_text:
       value_rect = rl.Rectangle(rect.x, rect.y, rect.width - BUTTON_WIDTH - TEXT_PADDING, rect.height)
       gui_label(value_rect, value_text, font_size=style.ITEM_TEXT_FONT_SIZE, color=self._value_color,
-                font_weight=FontWeight.NORMAL, alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
-                alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_MIDDLE)
+                font_weight=FontWeight.NORMAL, alignment=TextAlignment.LEFT,
+                alignment_vertical=TextAlignmentVertical.MIDDLE)
 
     pressed = self._pressed
     self._pressed = False
@@ -319,7 +324,7 @@ class ListItemSP(ListItem):
         )
         if value_rect.width > 0:
           gui_label(value_rect, value_text, font_size=style.ITEM_TEXT_FONT_SIZE, color=self._right_value_color, font_weight=FontWeight.NORMAL,
-                    alignment=rl.GuiTextAlignment.TEXT_ALIGN_RIGHT, alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_MIDDLE)
+                    alignment=TextAlignment.RIGHT, alignment_vertical=TextAlignmentVertical.MIDDLE)
 
       # Render toggle and handle callback
       if self.action_item.render(left_rect) and self.action_item.enabled:
