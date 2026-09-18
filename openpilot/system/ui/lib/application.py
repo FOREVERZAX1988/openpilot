@@ -971,3 +971,26 @@ class GuiApplication(GuiApplicationExt):
 
 
 gui_app = GuiApplication()
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat shim: upstream master-c3 refactored the text-alignment
+# enums into rl.GuiTextAlignment / rl.GuiTextAlignmentVertical (with
+# TEXT_ALIGN_* member names). Local UI widgets (sunnypilot/system/ui) were
+# written against the older TextAlignment / TextAlignmentVertical enums.
+# Values are identical, so re-export them here so the merge does not break
+# the UI on startup (ImportError: cannot import name 'TextAlignment').
+# ---------------------------------------------------------------------------
+from enum import IntEnum
+
+
+class TextAlignment(IntEnum):
+  LEFT = 0
+  CENTER = 1
+  RIGHT = 2
+
+
+class TextAlignmentVertical(IntEnum):
+  TOP = 0
+  MIDDLE = 1
+  BOTTOM = 2
