@@ -41,7 +41,6 @@ class Scroller(Widget):
     item.set_touch_valid_callback(self.scroll_panel.is_touch_valid)
 
   def _render(self, _):
-    # TODO: don't draw items that are not in the viewport
     visible_items = [item for item in self._items if item.is_visible]
 
     # Add line separator between items
@@ -58,6 +57,14 @@ class Scroller(Widget):
     rl.begin_scissor_mode(int(self._rect.x), int(self._rect.y),
                           int(self._rect.width), int(self._rect.height))
 
+    # Items are clipped to the scroller rect by the scissor above, so anything entirely
+    # outside the viewport is invisible and (being clipped) not touchable either. Laying
+    # out every item in a long list just to throw the drawing away dominated the frame
+    # time for the largest settings panels (Carrot Tuning has 55 rows): skip the
+    # per-item render for off-viewport rows, keeping the layout math identical.
+    viewport_top = self._rect.y
+    viewport_bottom = self._rect.y + self._rect.height
+
     cur_height = 0
     for idx, item in enumerate(visible_items):
       if not item.is_visible:
@@ -71,9 +78,13 @@ class Scroller(Widget):
       # Consider scroll
       y += scroll
 
-      # Update item state
+      # Update item state/geometry for every row so heights and scroll extent stay correct
       item.set_position(x, y)
       item.set_parent_rect(self._rect)
+
+      if y + item.rect.height < viewport_top or y > viewport_bottom:
+        continue
+
       item.render()
 
     rl.end_scissor_mode()
