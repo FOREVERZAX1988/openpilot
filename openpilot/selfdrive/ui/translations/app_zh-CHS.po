@@ -215,7 +215,7 @@ msgid "Adjust the software delay when Live Learning Steer Delay is toggled off. 
 msgstr "当实时学习转向延迟关闭时调整软件延迟。默认软件延迟值为 0.2。"
 
 msgid "Adjusting to Speed Limit {speed} {\"km/h\" if metric else \"mph\"}"
-msgstr "正在调整至限速 {speed} {\"公里/时\" if metric else \"英里/时\"}"
+msgstr "正在调整至限速 {speed} {\"km/h\" if metric else \"mph\"}"
 
 #: openpilot/system/ui/widgets/network.py
 msgid "Advanced"
@@ -4206,7 +4206,7 @@ msgid "Speed Limit Assist: Activation Required"
 msgstr "限速辅助：需激活"
 
 msgid "Speed Limit Assist: adjust set speed to {pcm_long_required_max_set_speed_conv} {\"km/h\" if metric else \"mph\"} to engage"
-msgstr "限速辅助：请将设定速度调至 {pcm_long_required_max_set_speed_conv} {\"公里/时\" if metric else \"英里/时\"} 以启用"
+msgstr "限速辅助：请将设定速度调至 {pcm_long_required_max_set_speed_conv} {\"km/h\" if metric else \"mph\"} 以启用"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Speed Limit Offset"

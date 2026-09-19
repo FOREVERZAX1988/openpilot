@@ -45,6 +45,10 @@ class OptionControlSP(ItemAction):
           break
     else:
       value = self.params.get(self.param_key)
+      if value is None:
+        # unset/unregistered key: show the minimum instead of raising TypeError and
+        # killing the whole settings layout during construction.
+        value = min_value
       self.current_value = int(float(value) * 100.0) if self.use_float_scaling else int(value)
 
     # Initialize font and button styles

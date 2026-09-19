@@ -289,6 +289,17 @@ class UnifiedParams:
 
   def __init__(self, nav_json_file: str | None = None) -> None:
     if self._initialized:
+      # Production callers rely on the singleton cache (``UnifiedParams()``). An explicit
+      # ``nav_json_file`` is a caller asking for that specific file (tests / tooling), so
+      # honour it instead of silently returning data for the previously loaded file.
+      if nav_json_file is None:
+        return
+      requested = os.path.realpath(nav_json_file)
+      if requested == self._nav_json_file:
+        return
+      self._nav_json_file = requested
+      self._nav_data = dict(_DEFAULT_NAV_PARAMS)
+      self._load_nav_params()
       return
     self._system_params = Params()
     if nav_json_file is None:
@@ -334,11 +345,18 @@ class UnifiedParams:
   def _read_from_system(self, key: str) -> Any | None:
     """Try to read ``key`` from the global Params store.
 
-    Returns the value on success, ``None`` on any failure (including
-    ``UnknownKeyName`` for keys that have not been registered yet).
+    Registered keys are read with ``return_default=True``: without it an *unset* key
+    (no file yet in the params dir) returns ``None`` instead of its schema default, and
+    callers such as MultipleButtonActionSP/OptionControlSP do ``int(value)`` on it and
+    raise TypeError. Because the settings layout builds every panel up front, one such
+    key took the whole UI down on a fresh params store (reproduced by the offscreen UI
+    replay). Keys that are *not* registered raise ``UnknownKeyName`` as before and fall
+    back to nav_params.json / the caller default.
     """
     try:
-      return self._system_params.get(key)
+      return self._system_params.get(key, return_default=True)
+    except TypeError:
+      return self._system_params.get(key)  # older Params binding without the kwarg
     except (KeyError, AttributeError, UnknownKeyName):
       return None
 

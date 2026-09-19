@@ -42,7 +42,7 @@ msgstr "---"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/osm.py
 msgid "0% - Downloading Maps"
-msgstr "%0 - Haritaları İndirme"
+msgstr "0% - Haritaları İndirme"
 
 #: openpilot/selfdrive/ui/widgets/prime.py
 msgid "1 year of drive storage"

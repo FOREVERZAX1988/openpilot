@@ -137,7 +137,10 @@ class MultipleButtonActionSP(MultipleButtonAction):
     self.param_key = param
     self.params = unified_params
     if self.param_key:
-      self.selected_button = int(self.params.get(self.param_key))
+      # A param that is not registered (or a Params binding returning None) must not blow up
+      # layout construction - fall back to the caller-provided selected_index.
+      value = self.params.get(self.param_key)
+      self.selected_button = int(value) if value is not None else selected_index
     self._anim_x: float | None = None
     self.enabled_buttons: set[int] | None = None
 

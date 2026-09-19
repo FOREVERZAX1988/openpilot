@@ -7,12 +7,16 @@ import pyray as rl
 from openpilot.common.params import Params
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.application import font_fallback, gui_app
+from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
   Scroller, toggle_item_sp, option_item_sp, button_item_sp
 )
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.network import NavButton
 from openpilot.system.ui.sunnypilot.lib.styles import style
+
+
+TAB_FONT_SIZE = 24  # tab label px (scaled by FONT_SCALE inside measure/draw)
 
 
 class TabType(IntEnum):
@@ -95,10 +99,16 @@ class CarrotTuningLayout(Widget):
       bg = style.ON_BG_COLOR if is_active else style.OFF_BG_COLOR
       rl.draw_rectangle_rounded(tab_rect, 0.15, 8, bg)
       text_color = rl.WHITE if is_active else style.ITEM_TEXT_COLOR
-      rl.draw_text_ex(font_fallback(gui_app.font(), label), label,
-                      rl.Vector2(x + tab_w / 2 - rl.measure_text_ex(font_fallback(gui_app.font(), label),
-                                                                    label, 24, 0).x / 2,
-                                 rect.y + rect.height / 2 - 12), 24, 0, text_color)
+      # NOTE: rl.measure_text_ex() ignores the global FONT_SCALE / FALLBACK_FONT_SCALE that
+      # draw_text_ex applies (see application._patch_text_functions), so CJK tab labels were
+      # measured at the unscaled size and ended up off-center / clipped. measure_text_cached()
+      # uses the exact same font + scale as the draw call, keeping the tabs centered.
+      tab_font = font_fallback(gui_app.font(), label)
+      text_size = measure_text_cached(tab_font, label, TAB_FONT_SIZE)
+      rl.draw_text_ex(tab_font, label,
+                      rl.Vector2(x + (tab_w - text_size.x) / 2,
+                                 rect.y + (rect.height - text_size.y) / 2),
+                      TAB_FONT_SIZE, 0, text_color)
       if (rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT) and
           rl.check_collision_point_rec(rl.get_mouse_position(), tab_rect)):
         self._current_tab = i
