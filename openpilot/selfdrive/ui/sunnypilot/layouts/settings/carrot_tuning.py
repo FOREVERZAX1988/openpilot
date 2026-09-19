@@ -6,7 +6,7 @@ import pyray as rl
 
 from openpilot.common.params import Params
 from openpilot.system.ui.lib.multilang import tr
-from openpilot.system.ui.lib.application import font_fallback, gui_app
+from openpilot.system.ui.lib.application import font_fallback, gui_app, MousePos
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
   Scroller, toggle_item_sp, option_item_sp, button_item_sp
@@ -87,6 +87,8 @@ class CarrotTuningLayout(Widget):
       TabType.DEV: self._dev_scroller,
     }
     self._current_tab = TabType.START
+    # Refreshed every frame by _render_tabs(); the press handler resolves against it
+    self._tab_strip_rect: rl.Rectangle | None = None
 
   def _render(self, rect):
     rl.draw_rectangle(int(rect.x), int(rect.y), int(rect.width), int(rect.height), style.BASE_BG_COLOR)
@@ -106,6 +108,9 @@ class CarrotTuningLayout(Widget):
     self._back_button.render()
 
   def _render_tabs(self, rect):
+    # Geometry only: touching is handled by _handle_mouse_press(), driven by
+    # gui_app.mouse_events (see the comment there for why the strip cannot poll raylib).
+    self._tab_strip_rect = rect
     tab_w = rect.width / self.TAB_COUNT
     for i, label in enumerate(self.TAB_LABELS):
       x = rect.x + i * tab_w
@@ -124,9 +129,35 @@ class CarrotTuningLayout(Widget):
                       rl.Vector2(x + (tab_w - text_size.x) / 2,
                                  rect.y + (rect.height - text_size.y) / 2),
                       font_size, 0, text_color)
-      if (rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT) and
-          rl.check_collision_point_rec(rl.get_mouse_position(), tab_rect)):
-        self._current_tab = i
+
+  def _handle_mouse_press(self, mouse_pos: MousePos, /) -> None:
+    """Select the tab the finger went down on.
+
+    On press rather than release (the strip reacts on touch-down, like the toggle rows),
+    and fed by gui_app.mouse_events instead of a call to raylib's just-pressed flag inside
+    the render loop: raylib clears that edge on the next poll_input_events(),
+    the touch sampler thread polls at 140 Hz (application.MOUSE_THREAD_RATE) while this
+    loop only gets a frame every ~17 ms, so most taps were gone before a frame looked at
+    them and the strip felt dead to the touch. Using the press position also stops a finger
+    that drifts after touch-down from selecting the neighbouring tab.
+    """
+    index = self.tab_index_at(mouse_pos, self._tab_strip_rect)
+    if index is not None:
+      self._select_tab(index)
+
+  @classmethod
+  def tab_index_at(cls, pos, strip_rect):
+    """Index of the tab under `pos`, or None when the point is outside the strip.
+
+    Pure geometry (no window/GPU needed) so the hit test can be unit tested.
+    """
+    if strip_rect is None or strip_rect.width <= 0 or not rl.check_collision_point_rec(pos, strip_rect):
+      return None
+    index = int((pos.x - strip_rect.x) / (strip_rect.width / cls.TAB_COUNT))
+    return min(max(index, 0), cls.TAB_COUNT - 1)
+
+  def _select_tab(self, index: int) -> None:
+    self._current_tab = TabType(index)
 
   @staticmethod
   def _fit_tab_label(font, label: str, tab_w: float) -> tuple[int, rl.Vector2]:
