@@ -162,6 +162,7 @@ class DeviceLayoutMici(NavScroller):
     super().__init__()
 
     self._fcc_dialog: MiciFccModal | None = None
+    self._preview_callback: Callable | None = None
 
     def power_off_callback():
       ui_state.params.put_bool("DoShutdown", True, block=True)
@@ -217,6 +218,11 @@ class DeviceLayoutMici(NavScroller):
     cabin_cam_btn.set_click_callback(lambda: gui_app.push_widget(CabinCameraDialog()))
     cabin_cam_btn.set_enabled(lambda: ui_state.is_offroad())
 
+    # 行车预览（设置页入口）：点一下把 IsOnroadPreview 置位并让主布局滚到 onroad 视图
+    self._onroad_preview_btn = BigButton(tr("Onroad Preview"), "", gui_app.texture("icons_mici/settings/device/cameras.png", 64, 64))
+    self._onroad_preview_btn.set_click_callback(self._enter_onroad_preview)
+    self._onroad_preview_btn.set_enabled(lambda: ui_state.is_offroad() or ui_state.params.get_bool("IsOnroadPreview"))
+
     review_training_guide_btn = BigButton(tr("review\ntraining guide"), "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     review_training_guide_btn.set_click_callback(lambda: gui_app.push_widget(ReviewTrainingGuide(completed_callback=lambda: gui_app.pop_widgets_to(self))))
     review_training_guide_btn.set_enabled(lambda: ui_state.is_offroad())
@@ -229,6 +235,7 @@ class DeviceLayoutMici(NavScroller):
       PairBigButton(),
       review_training_guide_btn,
       cabin_cam_btn,
+      self._onroad_preview_btn,
       terms_btn,
       self._language_btn,
       self._api_server_btn,
@@ -274,3 +281,13 @@ class DeviceLayoutMici(NavScroller):
     if not self._fcc_dialog:
       self._fcc_dialog = MiciFccModal(os.path.join(BASEDIR, "openpilot/selfdrive/assets/offroad/mici_fcc.html"))
     gui_app.push_widget(self._fcc_dialog)
+
+  def set_preview_callback(self, callback: Callable | None) -> None:
+    """由 SettingsLayout 注入：进入行车预览时把主布局滚到 onroad 视图。"""
+    self._preview_callback = callback
+
+  def _enter_onroad_preview(self) -> None:
+    is_preview = ui_state.params.get_bool("IsOnroadPreview")
+    ui_state.params.put_bool("IsOnroadPreview", not is_preview)
+    if not is_preview and self._preview_callback is not None:
+      self._preview_callback()
