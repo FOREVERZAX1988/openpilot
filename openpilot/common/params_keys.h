@@ -9,14 +9,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AccessToken", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
     {"AdbEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"AlwaysOnDM", {PERSISTENT | BACKUP, BOOL}},
-    {"ChestnutLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
-    {"ChestnutActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
-    {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"AmapMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"AmapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"AmapApiKey", {PERSISTENT | DONT_LOG, STRING}},
-    {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
     {"ApiCache_Device", {PERSISTENT, STRING}},
     {"ApiCache_FirehoseStats", {PERSISTENT, JSON}},
     {"AssistNowToken", {PERSISTENT, STRING}},
@@ -56,19 +48,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"GitCommitDate", {PERSISTENT, STRING}},
     {"GitDiff", {PERSISTENT, STRING}},
     {"GithubSshKeys", {PERSISTENT | BACKUP, STRING}},
-    {"ImuCalibrationStatus", {PERSISTENT, STRING}},
-    {"ImuCalibrationRequested", {CLEAR_ON_MANAGER_START, BOOL}},
-    {"ImuCalibrationMatrix", {PERSISTENT, BYTES}},
-    {"ImuCalibrationEnabled", {PERSISTENT, BOOL}},
     {"GithubUsername", {PERSISTENT | BACKUP, STRING}},
     {"GitRemote", {PERSISTENT, STRING}},
-    {"ToyotaTSS2Long", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"ToyotaEnhancedBsm", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"ToyotaDriveMode", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"ToyotaAutoHold", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"SoundLanguageSetting", {PERSISTENT | BACKUP, STRING, "auto"}},
-    {"ModelManager_DownloadRef", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, STRING}},
-    {"IsOnroadPreview", {CLEAR_ON_MANAGER_START, BOOL}},
     {"GsmApn", {PERSISTENT | BACKUP, STRING}},
     {"GsmMetered", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"GsmRoaming", {PERSISTENT | BACKUP, BOOL}},
@@ -78,11 +59,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsDriverViewEnabled", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsEngaged", {PERSISTENT, BOOL}},
     {"IsLdwEnabled", {PERSISTENT | BACKUP, BOOL}},
-    {"IsLiveStreaming", {CLEAR_ON_MANAGER_START, BOOL}},
+    {"IsLiveStreaming", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, BOOL}},
     {"IsMetric", {PERSISTENT | BACKUP, BOOL}},
-    {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
-    {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1.1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
     {"IsOffroad", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsRhdDetected", {PERSISTENT, BOOL}},
     {"IsReleaseBranch", {CLEAR_ON_MANAGER_START, BOOL}},
@@ -104,8 +82,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LiveParametersV2", {PERSISTENT, BYTES}},
     {"LivestreamEncoderBitrate", {CLEAR_ON_MANAGER_START | DONT_LOG, INT}},
     {"LivestreamRequestKeyframe", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
-    {"LivestreamActiveCamera", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
-    {"LivestreamEncoderLagging", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
     {"LiveTorqueParameters", {PERSISTENT | DONT_LOG, BYTES}},
     {"LocationFilterInitialState", {PERSISTENT, BYTES}},
     {"LateralManeuverMode", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
@@ -116,6 +92,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ObdMultiplexingEnabled", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"Offroad_CarUnrecognized", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, JSON}},
     {"Offroad_ChestnutBranch", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_ChestnutNotDetected", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, JSON}},
+    {"Offroad_ChestnutOverheated", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_ChestnutPcieUnavailable", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_ChestnutUncompiled", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, JSON}},
+    {"Offroad_ChestnutUpdateFailed", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, JSON}},
+    {"Offroad_ChestnutUsbSlow", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, JSON}},
     {"Offroad_ConnectivityNeeded", {CLEAR_ON_MANAGER_START, JSON}},
     {"Offroad_ConnectivityNeededPrompt", {CLEAR_ON_MANAGER_START, JSON}},
     {"Offroad_ExcessiveActuation", {PERSISTENT, JSON}},
@@ -154,13 +136,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"UpdaterLastFetchTime", {PERSISTENT, TIME}},
     {"UptimeOffroad", {PERSISTENT, FLOAT, "0.0"}},
     {"UptimeOnroad", {PERSISTENT, FLOAT, "0.0"}},
-    {"UsbGpuActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
-    {"UsbGpuLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"ChestnutActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"ChestnutLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"ChestnutModelError", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"Version", {PERSISTENT, STRING}},
 
     // --- sunnypilot params --- //
     {"ApiCache_DriveStats", {PERSISTENT, JSON}},
-    {"LocalDriveStats", {PERSISTENT, JSON}},
     {"AutoLaneChangeBsmDelay", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"AutoLaneChangeTimer", {PERSISTENT | BACKUP, INT, "0"}},
     {"BlinkerLateralReengageDelay", {PERSISTENT | BACKUP, INT, "0"}},  // seconds
@@ -185,7 +167,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"GithubRunnerSufficientVoltage", {CLEAR_ON_MANAGER_START , BOOL}},
     {"HasAcceptedTermsSP", {PERSISTENT, STRING, "0"}},
     {"HideVEgoUI", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"HideFirehosePrompt", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"IntelligentCruiseButtonManagement", {PERSISTENT | BACKUP , BOOL}},
     {"InteractivityTimeout", {PERSISTENT | BACKUP, INT, "0"}},
     {"IsDevelopmentBranch", {CLEAR_ON_MANAGER_START, BOOL}},
@@ -213,6 +194,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"StandstillTimer", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrueVEgoUI", {PERSISTENT | BACKUP, BOOL, "0"}},
 
+    // toyota specific params
+    {"ToyotaAutoHold", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ToyotaEnhancedBsm", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ToyotaTSS2Long", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ToyotaDriveMode", {PERSISTENT | BACKUP, BOOL, "0"}},
+
     // MADS params
     {"Mads", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"MadsMainCruiseAllowed", {PERSISTENT | BACKUP, BOOL, "1"}},
@@ -221,14 +208,16 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     // Model Manager params
     {"ModelManager_ActiveBundle", {PERSISTENT, JSON}},
-    {"ModelManager_ActiveJson", {CLEAR_ON_MANAGER_START, STRING}},
+    {"ModelManager_ActiveBundleUSBGPU", {PERSISTENT, JSON}}, //TODO-SP: kept for migration, remove on next sync?
+    {"ModelManager_ActiveBundleChestnut", {PERSISTENT, JSON}},
+    {"ModelManager_ActiveJson", {CLEAR_ON_MANAGER_START, JSON}},
     {"ModelManager_ClearCache", {CLEAR_ON_MANAGER_START, BOOL}},
-    {"ModelManager_DownloadIndex", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, INT}},
+    {"ModelManager_DownloadRef", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, STRING}},
     {"ModelManager_Favs", {PERSISTENT | BACKUP, STRING}},
     {"ModelManager_LastSyncTime", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
-    {"ModelManager_LastSyncTime_USBGPU", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
+    {"ModelManager_LastSyncTime_Chestnut", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
     {"ModelManager_ModelsCache", {PERSISTENT | BACKUP, JSON}},
-    {"ModelManager_ModelsCache_USBGPU", {PERSISTENT | BACKUP, JSON}},
+    {"ModelManager_ModelsCache_Chestnut", {PERSISTENT | BACKUP, JSON}},
 
     // Neural Network Lateral Control
     {"NeuralNetworkLateralControl", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -256,26 +245,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TeslaMadsScreenButton", {PERSISTENT | BACKUP, INT, "0"}},
     {"ToyotaEnforceStockLongitudinal", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ToyotaStopAndGoHack", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"MacanStartStop", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 起步跟停（视觉决定起步，OP 代发 RESUME）
-    {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "5"}},  // Macan 起步安全距离（米；0=Off/V1纯意图起步，3~10=需雷达ab或视觉>阈值，拥堵防加塞）
-    {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）
-    {"MacanSlopeCompUnlimited", {PERSISTENT | BACKUP, BOOL, "0"}}, // 坡度补偿-放开原厂力矩限制（选项2）
-    {"MacanAccelLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},        // Macan 加速度上限（m/s²，0=原厂曲线；4f实锤 aTarget>1.0 占20%激活时间）
-    {"MacanJerkLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},
-    {"MacanJerkLimitEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 加速度变化率限制总开关（0=关，功能不生效）        // Macan 加速度变化率限幅（m/s³，0=关闭；削 aTarget 过冲→减猛，0051 vs 原厂 0.48 vs 0.35）
-    {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
-    {"MacanAccelDeadzoneEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan aTarget死区总开关（0=关，数值保留但不生效）
-    {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
-    {"MacanCruiseCoastEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 巡航滑行带总开关（0=关；005f/0060 喘息振荡根因修复，默认关）
-    {"MacanCruiseCoastBand", {PERSISTENT | BACKUP, FLOAT, "0.4"}}, // Macan 巡航滑行带宽度（m/s，±带内滑行输出0；0.4≈1.4km/h）
-    {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"MacanVerzBridge", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan verz桥主闸（开=1.25%百分比渐进缓冲缓急刹/治喘息；关=verz直通一帧到位。深刹<=-1.5与原厂刹车请求无论开关直通保安全）
-    {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
-    {"MacanFusionMode", {PERSISTENT | BACKUP, BOOL, "1"}},            // Macan 融合控制模式（1=原厂ACC与OP纵向融合控制(当前,恒开)；0=纯OP纵向(后续开发,暂不可设)）       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
-    // Macan 雷达融合（bus2 原厂 Abstandsindex+前车速度 修正视觉lead；radard 消费）
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
+
+    // Accel Controller profiles (Eco / Normal / Sport)
+    {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"AccelPersonality", {PERSISTENT | BACKUP, INT, "1"}},
 
     // sunnypilot model params
     {"CameraOffset", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
@@ -288,6 +264,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     // mapd
     {"MapAdvisorySpeedLimit", {CLEAR_ON_ONROAD_TRANSITION, FLOAT}},
+    {"Mapd_ClearCache", {CLEAR_ON_MANAGER_START, BOOL}},
     {"MapdVersion", {PERSISTENT, STRING}},
     {"MapSpeedLimit", {CLEAR_ON_ONROAD_TRANSITION, FLOAT, "0.0"}},
     {"NextMapSpeedLimit", {CLEAR_ON_ONROAD_TRANSITION, JSON}},
@@ -329,9 +306,353 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TorqueParamsOverrideFriction", {PERSISTENT | BACKUP, FLOAT, "0.1"}},
     {"TorqueParamsOverrideLatAccelFactor", {PERSISTENT | BACKUP, FLOAT, "2.5"}},
 
-    // sunnypilot C3 dev (beepd)
+    {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
+    {"DisableDM", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"LivestreamActiveCamera", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
+    {"LivestreamEncoderLagging", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
+    {"LocalDriveStats", {PERSISTENT, JSON}},
+    {"TripsDataSource", {PERSISTENT | BACKUP, STRING, "local"}},
     {"SpDevBeep", {PERSISTENT, BOOL, "0"}},
-
-    // Web UI
     {"WebuiHeadlessMode", {PERSISTENT | BACKUP, STRING, "auto"}},
+    {"IsOnroadPreview", {CLEAR_ON_MANAGER_START, BOOL}},
+    {"IsOnroad", {PERSISTENT, BOOL, "0"}},  // onroad state mirror written for carrot phone-app broadcast
+    {"CarName", {PERSISTENT, STRING}},  // user-set car name, sent via carrot FTP export
+
+    {"ImuCalibrationEnabled", {PERSISTENT, BOOL}},
+    {"ImuCalibrationMatrix", {PERSISTENT, BYTES}},
+    {"ImuCalibrationRequested", {CLEAR_ON_MANAGER_START, BOOL}},
+    {"ImuCalibrationStatus", {PERSISTENT, STRING}},
+    {"HideFirehosePrompt", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // Longitudinal MPC tuning
+    {"LongitudinalMpcTuningComfortBrake", {PERSISTENT | BACKUP, FLOAT, "2.5"}},
+    {"LongitudinalMpcTuningStopDistance", {PERSISTENT | BACKUP, FLOAT, "6.0"}},
+    {"LongitudinalMpcTuningTFollowRelaxed", {PERSISTENT | BACKUP, FLOAT, "1.75"}},
+    {"LongitudinalMpcTuningTFollowStandard", {PERSISTENT | BACKUP, FLOAT, "1.45"}},
+    {"LongitudinalMpcTuningTFollowAggressive", {PERSISTENT | BACKUP, FLOAT, "1.25"}},
+    {"LongitudinalMpcTuningXEgoObstacleCost", {PERSISTENT | BACKUP, FLOAT, "3.0"}},
+    {"LongitudinalMpcTuningJEgoCost", {PERSISTENT | BACKUP, FLOAT, "5.0"}},
+    {"LongitudinalMpcTuningAChangeCost", {PERSISTENT | BACKUP, FLOAT, "200.0"}},
+    {"LongitudinalMpcTuningDangerZoneCost", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
+    {"LongitudinalMpcTuningLeadDangerFactor", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
+
+    // Amap / Carrot (phone projection & navigation)
+    // AmapEnabled is deprecated: it historically controlled both Amap Web map
+    // data and the 7706 blind-spot parser. It is kept here only for one-time
+    // migration to AmapMapDataEnabled / CarrotAmapBlindSpotEnabled.
+    {"AmapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"AmapApiKey", {PERSISTENT | DONT_LOG, STRING}},
+    // Use Amap (Gaode) online Web API for speed limits / road names.
+    {"AmapMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // Parse 7706 UDP blind-spot / LiDAR / extBlinker fields (AmapNaviServ).
+    {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // 7714 WebSocket v2 navi link killswitch. Default off so the new
+    // carrotNavi process never starts unless explicitly enabled. Requires
+    // CarrotEnabled as the master switch (see process_config.py).
+    {"CarrotNaviV2Enabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // Opt-in system time sync from the phone's 7706/7714 epochTime/timezone.
+    // Default OFF: modifying the system clock on a running car is dangerous and
+    // sunnypilot already keeps time via NTP. Only when explicitly enabled does
+    // carrot_serv nudge the clock/timezone, and only within a limited drift.
+    {"CarrotNtpTimeSync", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotManUdpPort", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CarrotPanelSide", {PERSISTENT | BACKUP, INT, "0"}},  // carrot nav HUD panel side: 0=left, 1=right
+    {"CarrotPanelOpacity", {PERSISTENT | BACKUP, INT, "100"}},  // carrot nav HUD panel opacity percent 0-100
+    {"LiDARUdpPort", {PERSISTENT | BACKUP, INT, "4211"}},  // LiDAR/camera direct-UDP listen port; dormant until start_navi_comm() is wired (C3 decision)
+    {"MyDrivingMode", {PERSISTENT | BACKUP, INT, "1"}},  // 0=eco,1=normal,2=sport,3=safe
+    // TFollowGap/CruiseMaxVals use the CarrotPilot int*100 representation so
+    // that carrot_functions.py can keep dividing by 100.0 (matching cp).
+    {"TFollowGap1", {PERSISTENT | BACKUP, INT, "110"}},
+    {"TFollowGap2", {PERSISTENT | BACKUP, INT, "120"}},
+    {"TFollowGap3", {PERSISTENT | BACKUP, INT, "140"}},
+    {"TFollowGap4", {PERSISTENT | BACKUP, INT, "160"}},
+    {"CruiseMaxVals0", {PERSISTENT | BACKUP, INT, "160"}},
+    {"CruiseMaxVals1", {PERSISTENT | BACKUP, INT, "160"}},
+    {"CruiseMaxVals2", {PERSISTENT | BACKUP, INT, "120"}},
+    {"CruiseMaxVals3", {PERSISTENT | BACKUP, INT, "100"}},
+    {"CruiseMaxVals4", {PERSISTENT | BACKUP, INT, "80"}},
+    {"CruiseMaxVals5", {PERSISTENT | BACKUP, INT, "70"}},
+    {"CruiseMaxVals6", {PERSISTENT | BACKUP, INT, "60"}},
+    {"TrafficLight", {CLEAR_ON_MANAGER_START, JSON, "{}"}},  // fused/carrot navi traffic-light state
+    {"CarrotNaviCrossroad", {CLEAR_ON_MANAGER_START, JSON, "{}"}},  // visible complex-crossroad hint from 7714 v2
+    {"CarrotNaviImage", {CLEAR_ON_MANAGER_START, JSON, "{}"}},  // 7714 v2 complex-crossroad base64 image for HUD overlay
+    {"CarrotNaviDebug", {CLEAR_ON_MANAGER_START, JSON, "{}"}},  // carrot navi debug state for UI viewer
+    {"CarrotNaviWebBootstrapRequest", {CLEAR_ON_MANAGER_START, STRING, ""}},  // web bootstrap request payload from webui
+    {"CarrotNaviAppStatus", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 app foreground/focus/map/capture status
+    {"CarrotNaviCameraState", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 camera mode/level/tilt/bearing
+    {"CarrotNaviCompositionState", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 UI composition active panels
+    {"TrafficLightDetectMode", {PERSISTENT | BACKUP, INT, "1"}},  // 0=off,1=red stop,2=red stop + green go
+    {"CarrotCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"CarrotNavCruiseSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"CarrotHudInfoEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"CarrotWebEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // Unified control killswitches (carrot > Amap > OSM arbitration). Default off/safe.
+    {"CarrotLongitudinalSourceEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // enable CarrotPlanner as a LongitudinalPlanSP source
+    {"CarrotTrafficLightFusionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // fuse carrot / Amap / vision traffic lights
+    {"TrafficLightNavCautionOnly", {PERSISTENT | BACKUP, BOOL, "1"}},       // fused red light only warns; set 0 to allow stop assist
+    {"DesireArbiterEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},             // lateral lane-change/fork desire from nav
+    {"ATCMaxSpeedKph", {PERSISTENT | BACKUP, FLOAT, "35.0"}},               // auto-turn-control speed floor cap
+    {"CarrotSourceTimeoutMs", {PERSISTENT | BACKUP, INT, "2000"}},          // carrot packet timeout [ms]
+    {"AmapCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // use Amap Web polyline for curve speed
+    {"AmapTrafficLightHintEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},      // use Amap Web traffic-light hints
+    {"CarrotSectionSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},        // section/avg-SDI speed enforcement
+    {"CarrotRoadWidthTurnEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},       // use nTBTNextRoadWidth for fork turn logic
+    {"CarrotTimeSyncEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // sync device clock to carrot epochTime
+    // Carrot speed/turn/navi tuning surface. Defaults mirror cp/fp behavior where applicable;
+    // keys are registered so UnifiedParams writes land in the cross-process Params store.
+    {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},
+    {"AutoCurveSpeedFactor", {PERSISTENT | BACKUP, INT, "100"}},
+    {"AutoTurnControl", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoTurnControlSpeedTurn", {PERSISTENT | BACKUP, INT, "20"}},
+    {"AutoTurnControlTurnEnd", {PERSISTENT | BACKUP, INT, "6"}},
+    {"AutoTurnMapChange", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"AutoNaviSpeedCtrlEnd", {PERSISTENT | BACKUP, INT, "6"}},
+    {"VehicleNaviCanControl", {PERSISTENT | BACKUP, INT, "0"}},
+    {"VehicleNaviSchoolZoneControl", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"VehicleSpeedCameraControlMode", {PERSISTENT | BACKUP, INT, "1"}},
+    {"VehicleSpeedCameraDistanceTime", {PERSISTENT | BACKUP, INT, "60"}},
+    {"AutoRoadSpeedLimitOffset", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"AutoNaviSpeedBumpTime", {PERSISTENT | BACKUP, INT, "1"}},
+    {"AutoNaviSpeedBumpSpeed", {PERSISTENT | BACKUP, INT, "35"}},
+    {"AutoNaviSpeedBumpEndDistance", {PERSISTENT | BACKUP, INT, "200"}},
+    {"LatSuspendAngleDeg", {PERSISTENT | BACKUP, INT, "300"}},
+    {"ClusterNaviMapTheme", {PERSISTENT | BACKUP, INT, "1"}},
+    {"ClusterNaviMapType", {PERSISTENT | BACKUP, INT, "0"}},
+    {"ClusterNaviMapFps", {PERSISTENT | BACKUP, INT, "1"}},
+    {"CarrotNaviHudMapProfile", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoNaviCountDownMode", {PERSISTENT | BACKUP, INT, "2"}},
+    {"TurnSpeedControlMode", {PERSISTENT | BACKUP, INT, "1"}},
+    {"MapTurnSpeedFactor", {PERSISTENT | BACKUP, INT, "100"}},
+    // Carrot tuning surface (mirrors _DEFAULT_NAV_PARAMS in sunnypilot/carrot/config.py).
+    // Registered so UnifiedParams writes land in the cross-process Params store;
+    // nav_params.json remains a read fallback for values tuned before registration.
+    {"AutoTurnDistOffset", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoForkDistOffset", {PERSISTENT | BACKUP, INT, "30"}},
+    {"AutoDoForkBlinkerDist", {PERSISTENT | BACKUP, INT, "15"}},
+    {"AutoDoForkNavDist", {PERSISTENT | BACKUP, INT, "15"}},
+    {"AutoForkDistOffsetH", {PERSISTENT | BACKUP, INT, "1000"}},
+    {"AutoDoForkDecalDistH", {PERSISTENT | BACKUP, INT, "50"}},
+    {"AutoDoForkDecalDist", {PERSISTENT | BACKUP, INT, "20"}},
+    {"AutoDoForkBlinkerDistH", {PERSISTENT | BACKUP, INT, "30"}},
+    {"AutoDoForkNavDistH", {PERSISTENT | BACKUP, INT, "50"}},
+    {"AutoUpRoadLimit", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoUpRoadLimit40KMH", {PERSISTENT | BACKUP, INT, "15"}},
+    {"AutoUpHighwayRoadLimit", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoUpHighwayRoadLimit40KMH", {PERSISTENT | BACKUP, INT, "15"}},
+    {"RoadType", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"AutoForkDecalRateH", {PERSISTENT | BACKUP, INT, "80"}},
+    {"AutoForkSpeedMinH", {PERSISTENT | BACKUP, INT, "60"}},
+    {"AutoKeepForkSpeedH", {PERSISTENT | BACKUP, INT, "5"}},
+    {"AutoForkDecalRate", {PERSISTENT | BACKUP, INT, "80"}},
+    {"AutoForkSpeedMin", {PERSISTENT | BACKUP, INT, "45"}},
+    {"AutoKeepForkSpeed", {PERSISTENT | BACKUP, INT, "5"}},
+    {"ShowDebugLog", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"AutoCurveSpeedFactorH", {PERSISTENT | BACKUP, INT, "100"}},
+    {"AutoCurveSpeedAggressivenessH", {PERSISTENT | BACKUP, INT, "100"}},
+    {"SameSpiCamFilter", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"StockBlinkerCtrl", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ExtBlinkerCtrlTest", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"BlinkerMode", {PERSISTENT | BACKUP, INT, "1"}},
+    {"LaneStabTime", {PERSISTENT | BACKUP, INT, "50"}},
+    {"DynamicBlindRange", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DynamicBlindDistance", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DisableBlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"BsdDelayTime", {PERSISTENT | BACKUP, INT, "20"}},
+    {"SideBsdDelayTime", {PERSISTENT | BACKUP, INT, "20"}},
+    {"SideRelDistTime", {PERSISTENT | BACKUP, INT, "10"}},
+    {"SidevRelDistTime", {PERSISTENT | BACKUP, INT, "10"}},
+    {"SideRadarMinDist", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoTurnInNotRoadEdge", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ContinuousLaneChange", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ContinuousLaneChangeCnt", {PERSISTENT | BACKUP, INT, "4"}},
+    {"ContinuousLaneChangeInterval", {PERSISTENT | BACKUP, INT, "2"}},
+    {"AutoTurnLeft", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"AutoEnTurnNewLaneTimeH", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoEnTurnNewLaneTime", {PERSISTENT | BACKUP, INT, "0"}},
+    {"NewLaneWidthDiff", {PERSISTENT | BACKUP, INT, "8"}},
+    {"StopDistanceCarrot", {PERSISTENT | BACKUP, INT, "600"}},
+    {"AutoNaviSpeedCtrlMode", {PERSISTENT | BACKUP, INT, "2"}},
+    {"AutoNaviSpeedDecelRate", {PERSISTENT | BACKUP, INT, "200"}},
+    {"AutoNaviSpeedSafetyFactor", {PERSISTENT | BACKUP, INT, "105"}},
+    {"SoundVolumeAdjust", {PERSISTENT | BACKUP, INT, "0"}},
+    {"SoundVolumeAdjustEngage", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CarrotException", {PERSISTENT | BACKUP, STRING, ""}},
+    {"JLeadFactor3", {PERSISTENT | BACKUP, FLOAT, "0"}},
+    {"CruiseEcoControl", {PERSISTENT | BACKUP, INT, "2"}},
+    {"MyDrivingModeAuto", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DynamicTFollow", {PERSISTENT | BACKUP, FLOAT, "0"}},
+    {"DynamicTFollowLC", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
+    // Carrot longitudinal / t_follow tuning surface (webui exposure, mirrors config.py).
+    {"LeadAccelResponse", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LongActuatorDelay", {PERSISTENT | BACKUP, INT, "20"}},
+    {"LongTuningKf", {PERSISTENT | BACKUP, INT, "100"}},
+    {"LongTuningKiV", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LongTuningKpV", {PERSISTENT | BACKUP, INT, "100"}},
+    {"StoppingAccel", {PERSISTENT | BACKUP, INT, "-50"}},
+    {"TFollowDecelBoost", {PERSISTENT | BACKUP, INT, "0"}},
+    // Carrot cruise / acceleration tuning surface.
+    {"AutoCruiseControl", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CarrotCruiseAtcDecel", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"CarrotCruiseDecel", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"CruiseButtonLongDelay", {PERSISTENT | BACKUP, INT, "40"}},
+    {"CruiseButtonMode", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CruiseOnDist", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CruiseSpeed1", {PERSISTENT | BACKUP, INT, "10"}},
+    {"CruiseSpeed2", {PERSISTENT | BACKUP, INT, "10"}},
+    {"CruiseSpeed3", {PERSISTENT | BACKUP, INT, "10"}},
+    {"CruiseSpeed4", {PERSISTENT | BACKUP, INT, "10"}},
+    {"CruiseSpeed5", {PERSISTENT | BACKUP, INT, "10"}},
+    {"CruiseSpeedUnit", {PERSISTENT | BACKUP, INT, "10"}},
+    {"CruiseSpeedUnitBasic", {PERSISTENT | BACKUP, INT, "10"}},
+    // Carrot speed limits / road speed tuning surface.
+    {"AutoRoadSpeedAdjust", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoSpeedUptoRoadSpeedLimit", {PERSISTENT | BACKUP, INT, "0"}},
+    {"SpeedFromPCM", {PERSISTENT | BACKUP, INT, "0"}},
+    // Carrot traffic stop / lights tuning surface.
+    {"HapticFeedbackWhenSpeedCamera", {PERSISTENT | BACKUP, INT, "0"}},
+    {"TrafficStopDistanceAdjust", {PERSISTENT | BACKUP, INT, "-150"}},
+    // Carrot lane change / blinker / lane-line tuning surface.
+    {"LaneChangeBsd", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LaneChangeDelay", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LaneChangeNeedTorque", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LaneLineCheck", {PERSISTENT | BACKUP, INT, "0"}},
+    {"OnnxBsdIntervalMs", {PERSISTENT | BACKUP, INT, "250"}},
+    {"OnnxBsdSmoothingMs", {PERSISTENT | BACKUP, INT, "200"}},
+    {"OnnxBsdThreshold", {PERSISTENT | BACKUP, INT, "45"}},
+    {"UseLaneLineCurveSpeed", {PERSISTENT | BACKUP, INT, "0"}},
+    {"UseLaneLineSpeed", {PERSISTENT | BACKUP, INT, "0"}},
+    // Carrot steering / lateral tuning surface.
+    {"AlwaysLateral", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CustomSR", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaDown", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaDownLC", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaUp", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaUpLC", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerMax", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LatMpcAccelCost", {PERSISTENT | BACKUP, INT, "100"}},
+    {"LatMpcJerkCost", {PERSISTENT | BACKUP, INT, "1"}},
+    {"LatMpcMotionCost", {PERSISTENT | BACKUP, INT, "7"}},
+    {"LatMpcPathCost", {PERSISTENT | BACKUP, INT, "200"}},
+    {"LatMpcSteeringRateCost", {PERSISTENT | BACKUP, INT, "7"}},
+    {"LateralTorqueCustom", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"LateralTorqueFriction", {PERSISTENT | BACKUP, INT, "100"}},
+    {"LateralTorqueKd", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LateralTorqueKf", {PERSISTENT | BACKUP, INT, "100"}},
+    {"LateralTorqueKiV", {PERSISTENT | BACKUP, INT, "10"}},
+    {"LateralTorqueKpV", {PERSISTENT | BACKUP, INT, "100"}},
+    {"PathOffset", {PERSISTENT | BACKUP, INT, "0"}},
+    {"SteerActuatorDelay", {PERSISTENT | BACKUP, INT, "30"}},
+    {"SteerRatioRate", {PERSISTENT | BACKUP, INT, "100"}},
+    // Carrot vehicle / CAN / buttons tuning surface.
+    {"AutoGasCancelSpeed", {PERSISTENT | BACKUP, INT, "30"}},
+    {"AutoGasSyncSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"AutoGasTokSpeed", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CancelButtonMode", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"LfaButtonMode", {PERSISTENT | BACKUP, INT, "0"}},
+    {"PaddleMode", {PERSISTENT | BACKUP, INT, "1"}},
+    // Carrot misc driving tuning surface.
+    {"ApplyModelSpeed", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoEngage", {PERSISTENT | BACKUP, INT, "0"}},
+    {"SoftHoldOnCancel", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"VEgoStopping", {PERSISTENT | BACKUP, INT, "50"}},
+    // Carrot tuning surface: parameters present in config.py but previously
+    // unregistered in params_keys.h. Registering them lets UnifiedParams write
+    // directly to the cross-process Params store instead of nav_params.json.
+    {"AChangeCostStarting", {PERSISTENT | BACKUP, INT, "10"}},
+    {"AdjustLaneOffset", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CameraYawTrimDeg", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CanfdDebug", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CanfdHDA2", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotTireTrajectory", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotYouTubeLive", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotYouTubeQuality", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CarrotYouTubeTimestamp", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHud", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudBrightness", {PERSISTENT | BACKUP, INT, "0"}},
+    {"ClusterHudCameraViewMode", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudCoreMode", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudDebug", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudEncoder", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudLiveFps", {PERSISTENT | BACKUP, INT, "1"}},
+    {"ClusterHudMirror", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudOrientation", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudPanelLayout", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudPriority", {PERSISTENT | BACKUP, INT, "10"}},
+    {"ClusterHudRadarDisplay", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudRadarInfo", {PERSISTENT | BACKUP, INT, "4"}},
+    {"ClusterHudRadarSourceColor", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudScreenMode", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ClusterHudTheme", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest1", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest2", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest3", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DisableMinSteerSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"EnableCornerRadar", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"EnableRadarTracks", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"EnableSpeedTF", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HDPuse", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HardwareC3xLite", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HotspotOnBoot", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HyundaiCameraSCC", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"IsLdwsCar", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"LatMpcInputOffset", {PERSISTENT | BACKUP, INT, "4"}},
+    {"LatSmoothSec", {PERSISTENT | BACKUP, INT, "13"}},
+    {"LateralTorqueAccelFactor", {PERSISTENT | BACKUP, INT, "2500"}},
+    {"MapboxStyle", {PERSISTENT | BACKUP, INT, "0"}},
+    {"MaxAngleFrames", {PERSISTENT | BACKUP, INT, "89"}},
+    {"MaxTimeOffroadMin", {PERSISTENT | BACKUP, INT, "60"}},
+    {"MuteDoor", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MuteSeatbelt", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"OnnxLaneIntervalMs", {PERSISTENT | BACKUP, INT, "400"}},
+    {"OnnxLaneThreshold", {PERSISTENT | BACKUP, INT, "25"}},
+    {"RecordRoadCam", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShareData", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowCameraWithCluster", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowCustomBrightness", {PERSISTENT | BACKUP, INT, "100"}},
+    {"ShowDateTime", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ShowDebugUI", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ShowDeviceState", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ShowLaneInfo", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ShowModelView", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowPathColor", {PERSISTENT | BACKUP, INT, "12"}},
+    {"ShowPathColorCruiseOff", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ShowPathColorLane", {PERSISTENT | BACKUP, INT, "3"}},
+    {"ShowPathEnd", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ShowPathMode", {PERSISTENT | BACKUP, INT, "9"}},
+    {"ShowPathModeLane", {PERSISTENT | BACKUP, INT, "11"}},
+    {"ShowPlotMode", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowRadarInfo", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowRouteInfo", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowTpms", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"SoftwareMenu", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"SoundLanguageSetting", {PERSISTENT | BACKUP, STRING, "auto"}},
+    {"UseWideCamera", {PERSISTENT | BACKUP, BOOL, "1"}},
+
+    // ---------------------------------------------------------------------
+    // macan-long fork additions (must survive every upstream merge).
+    // ---------------------------------------------------------------------
+    {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
+    {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1.1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
+    {"UsbGpuActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"UsbGpuLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"ModelManager_DownloadIndex", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, INT}},
+    {"ModelManager_LastSyncTime_USBGPU", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
+    {"ModelManager_ModelsCache_USBGPU", {PERSISTENT | BACKUP, JSON}},
+    {"MacanStartStop", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 起步跟停（视觉决定起步，OP 代发 RESUME）
+    {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "5"}},  // Macan 起步安全距离（米；0=Off/V1纯意图起步，3~10=需雷达ab或视觉>阈值，拥堵防加塞）
+    {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）
+    {"MacanSlopeCompUnlimited", {PERSISTENT | BACKUP, BOOL, "0"}}, // 坡度补偿-放开原厂力矩限制（选项2）
+    {"MacanAccelLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},        // Macan 加速度上限（m/s²，0=原厂曲线；4f实锤 aTarget>1.0 占20%激活时间）
+    {"MacanJerkLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},
+    {"MacanJerkLimitEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 加速度变化率限制总开关（0=关，功能不生效）        // Macan 加速度变化率限幅（m/s³，0=关闭；削 aTarget 过冲→减猛，0051 vs 原厂 0.48 vs 0.35）
+    {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
+    {"MacanAccelDeadzoneEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan aTarget死区总开关（0=关，数值保留但不生效）
+    {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
+    {"MacanCruiseCoastEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 巡航滑行带总开关（0=关；005f/0060 喘息振荡根因修复，默认关）
+    {"MacanCruiseCoastBand", {PERSISTENT | BACKUP, FLOAT, "0.4"}}, // Macan 巡航滑行带宽度（m/s，±带内滑行输出0；0.4≈1.4km/h）
+    {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MacanVerzBridge", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan verz桥主闸（开=1.25%百分比渐进缓冲缓急刹/治喘息；关=verz直通一帧到位。深刹<=-1.5与原厂刹车请求无论开关直通保安全）
+    {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+    {"MacanFusionMode", {PERSISTENT | BACKUP, BOOL, "1"}},            // Macan 融合控制模式（1=原厂ACC与OP纵向融合控制(当前,恒开)；0=纯OP纵向(后续开发,暂不可设)）       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
 };
