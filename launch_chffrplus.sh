@@ -285,14 +285,21 @@ function launch {
     local py_path="$root"
     [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
     [ -d "$pydeps" ] && py_path="$py_path:$pydeps"
+    # webui-bootstrap-v2
     # AGNOS rootfs is read-only; install aiohttp into $pydeps on first boot.
-    if ! "$web_py" -c "import aiohttp" 2>/dev/null; then
+    # The probe MUST see $pydeps (PYTHONPATH). Without it the check misses the .pydeps copy,
+    # fails on every boot, and pip then runs -- over the network -- right here, before
+    # ./manager.py, so the UI start waits on the network (slow/half-working hotspot = the
+    # comma logo stalls for minutes). Every network fallback below is time-bounded for that
+    # reason (default pip retries alone can burn 90 s of boot).
+    if ! PYTHONPATH="$py_path" "$web_py" -c "import aiohttp" 2>/dev/null; then
       if [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null; then
         if ! "$web_py" -c "import pip" 2>/dev/null; then
-          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null && \
+          curl -fsSL --max-time 20 https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null && \
             "$web_py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/webui.log 2>&1 || true
         fi
-        PYTHONPATH="$py_path" "$web_py" -m pip install --target="$pydeps" aiohttp >> /tmp/webui.log 2>&1 || true
+        PYTHONPATH="$py_path" "$web_py" -m pip install --target="$pydeps" --timeout 5 --retries 0 \
+          --disable-pip-version-check aiohttp >> /tmp/webui.log 2>&1 || true
         py_path="$root"
         [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
         py_path="$py_path:$pydeps"
@@ -321,14 +328,18 @@ function launch {
     local py_path="$root"
     [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
     [ -d "$pydeps" ] && py_path="$py_path:$pydeps"
+    # aid-bootstrap-v2
     # Share aiohttp bootstrap with WebUI (.pydeps on read-only AGNOS rootfs).
+    # Same rule as start_webui: the probe must see $pydeps, and the network fallback is
+    # time-bounded, because this runs before ./manager.py (a bad network here delays the UI).
     if ! PYTHONPATH="$py_path" "$aid_py" -c "import aiohttp" 2>/dev/null; then
       if [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null; then
         if ! "$aid_py" -c "import pip" 2>/dev/null; then
-          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null && \
+          curl -fsSL --max-time 20 https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py 2>/dev/null && \
             "$aid_py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/aid.log 2>&1 || true
         fi
-        PYTHONPATH="$py_path" "$aid_py" -m pip install --target="$pydeps" aiohttp >> /tmp/aid.log 2>&1 || true
+        PYTHONPATH="$py_path" "$aid_py" -m pip install --target="$pydeps" --timeout 5 --retries 0 \
+          --disable-pip-version-check aiohttp >> /tmp/aid.log 2>&1 || true
         py_path="$root"
         [ -d "$venv_site" ] && py_path="$py_path:$venv_site"
         py_path="$py_path:$pydeps"
