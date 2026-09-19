@@ -271,6 +271,24 @@ NAVI_IMAGE_PARAM = "CarrotNaviImage"
 NAVI_IMAGE_BASE64_MAX_CHARS = 6 * 1024 * 1024
 NAVI_DEBUG_PARAM = "CarrotNaviDebug"
 
+
+def beacon_targets(broadcast_ip: str, remote_ip: str, *,
+                   send_broadcast: bool, send_unicast: bool) -> list[str]:
+  """UDP discovery-beacon destinations for one loop tick.
+
+  The LAN broadcast keeps its own schedule and is *never* dropped just because
+  a peer is remembered -- otherwise a phone that has not talked to this device
+  yet (fresh install, changed DHCP lease, a second phone) can never discover
+  it.  A remembered peer additionally gets a unicast heartbeat.
+  """
+  targets: list[str] = []
+  if send_broadcast:
+    targets.append(broadcast_ip or "255.255.255.255")
+  if send_unicast and remote_ip and remote_ip not in targets:
+    targets.append(remote_ip)
+  return targets
+
+
 # Korean TMAP turn-type codes from the CarrotMan app -> (maneuverType, maneuverModifier, xTurnInfo).
 # xTurnInfo semantics used by the sunnypilot UI/planner:
 #   1=left turn, 2=right turn, 3=left lane change, 4=right lane change,
@@ -595,18 +613,7 @@ class CarrotManager:
         cloudlog.error(f"carrot_man: failed to start AmapNavi direct comm: {e}")
     self._web: Any = None  # Lazy import: only used when ``--web`` flag is set.
 
-  def _migrate_amap_enabled(self) -> None:
-    """One-time migration from the legacy AmapEnabled switch.
-
-    ``AmapEnabled`` used to control both Amap Web map data and the 7706
-    blind-spot parser. Split it into the two semantically-correct params.
-    """
-    if self.params.get_bool("AmapEnabled"):
-      if not self.params.get_bool("AmapMapDataEnabled"):
-        self.params.put_bool("AmapMapDataEnabled", True)
-      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-
+    # Runtime state (was accidentally living in _migrate_amap_enabled()).
     self._enabled = False
     self._port = 0
     self._start_web = False
@@ -666,6 +673,20 @@ class CarrotManager:
     self._navi_event_lock = threading.Lock()
     self._last_rgdata_timestamp_ms = 0
     self._rgdata_ts_lock = threading.Lock()
+    self._navi_debug_last: dict[str, Any] | None = None
+
+
+  def _migrate_amap_enabled(self) -> None:
+    """One-time migration from the legacy AmapEnabled switch.
+
+    ``AmapEnabled`` used to control both Amap Web map data and the 7706
+    blind-spot parser. Split it into the two semantically-correct params.
+    """
+    if self.params.get_bool("AmapEnabled"):
+      if not self.params.get_bool("AmapMapDataEnabled"):
+        self.params.put_bool("AmapMapDataEnabled", True)
+      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
+        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
 
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
@@ -1278,12 +1299,21 @@ class CarrotManager:
           self._carrot_serv.update_navi(remote_ip, self.sm, self.pm, vturn_speed, coords, distances, route_speed)
           self._write_navi_debug()
 
-          # Broadcast every 2 seconds or when remote addr is set
-          if frame % 20 == 0 or remote_addr:
+          # Discovery cadence.  The LAN broadcast keeps its own fixed 2 s
+          # schedule and must never be replaced by the unicast to a remembered
+          # peer: the old `get_broadcast_address() if not remote_addr else
+          # remote_ip` let the first packet from ANY client flip the beacon to
+          # unicast-only, so a phone that had not talked to us yet could never
+          # find this device (measured on tizi: a 240 s listen on
+          # 0.0.0.0:7705 saw 0 packets while carrot_man emitted 9.7 unicast
+          # pkt/s -- SIGSTOP'ing the daemon dropped the rate to 0.17 pkt/s,
+          # so the traffic was provably ours and unicast).
+          send_broadcast = frame % 20 == 0
+          send_unicast = bool(remote_ip)
+          if send_broadcast or send_unicast:
             try:
-              self._broadcast_ip = self.get_broadcast_address() if not remote_addr else remote_ip
-              if not self._broadcast_ip:
-                self._broadcast_ip = "255.255.255.255"
+              if send_broadcast:
+                self._broadcast_ip = self.get_broadcast_address() or "255.255.255.255"
 
               # Get local IP
               ip_address = self.get_local_ip()
@@ -1293,16 +1323,17 @@ class CarrotManager:
 
               # Build and send message
               msg = self.make_send_message()
-              if self._broadcast_ip:
-                data = msg.encode('utf-8')
+              data = msg.encode('utf-8')
+              for dest in beacon_targets(self._broadcast_ip, remote_ip,
+                                         send_broadcast=send_broadcast, send_unicast=send_unicast):
                 try:
-                  sock.sendto(data, (self._broadcast_ip, self._broadcast_port))
+                  sock.sendto(data, (dest, self._broadcast_port))
                 except OSError as e:
                   import errno
                   if e.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ENETDOWN):
-                    cloudlog.warning(f"carrot_man: broadcast network unreachable ({e.errno})")
+                    cloudlog.warning(f"carrot_man: broadcast network unreachable ({e.errno}) -> {dest}")
                   else:
-                    cloudlog.error(f"carrot_man: broadcast error: {e}")
+                    cloudlog.error(f"carrot_man: broadcast error: {e} -> {dest}")
             except Exception as e:
               cloudlog.error(f"carrot_man: broadcast error: {e}")
 
@@ -2442,7 +2473,13 @@ class CarrotManager:
         "desiredSpeed": serv.desired_speed,
         "desiredSource": serv.desired_source,
       }
-      self.params.put(NAVI_DEBUG_PARAM, debug)
+      # Params.put() writes a cross-process entry on every call; at the 10 Hz
+      # beacon cadence that is pure churn for a payload which, while parked,
+      # only changes once per second (``receivedAt`` has 1 s resolution).
+      # Skip identical payloads: still 10 Hz onroad, ~1 Hz while parked.
+      if debug != getattr(self, "_navi_debug_last", None):
+        self._navi_debug_last = debug
+        self.params.put(NAVI_DEBUG_PARAM, debug)
     except Exception as e:
       cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
 

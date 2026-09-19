@@ -276,7 +276,7 @@ _install_stub("opendbc.car", _opendbc_car_pkg)
 _install_stub("opendbc.car.common", _opendbc_car_common_pkg)
 _install_stub("opendbc.car.common.conversions", _opendbc_conversions_mod)
 
-from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING
+from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING, beacon_targets
 from openpilot.sunnypilot.carrot.web_interface import WebInterface
 
 
@@ -284,6 +284,49 @@ from openpilot.sunnypilot.carrot.web_interface import WebInterface
 # as that import is done so they cannot leak into any other test module (a fake
 # 'openpilot.common' module breaks 'import openpilot.common.test' elsewhere).
 _drop_stubs()
+
+
+class TestBeaconTargets(unittest.TestCase):
+  """The 7705 discovery beacon must never stop broadcasting.
+
+  Regression (tizi): the send branch was
+  `self.get_broadcast_address() if not remote_addr else remote_ip`, so the
+  first packet from ANY client replaced the periodic LAN broadcast with a
+  unicast to that one peer.  Measured on the device: wlan0 multicast-tx
+  counter stayed 0 while carrot_man emitted 9.7 unicast pkt/s -> a phone that
+  had not talked to us yet (fresh install / new DHCP lease / second phone)
+  could never discover the device.
+  """
+
+  def test_broadcast_tick_without_peer(self):
+    assert beacon_targets("192.168.10.255", "", send_broadcast=True, send_unicast=False) == ["192.168.10.255"]
+
+  def test_broadcast_tick_keeps_broadcast_with_peer(self):
+    assert beacon_targets("192.168.10.255", "192.168.10.201",
+                          send_broadcast=True, send_unicast=True) == ["192.168.10.255", "192.168.10.201"]
+
+  def test_peer_only_tick_is_unicast_heartbeat(self):
+    assert beacon_targets("192.168.10.255", "192.168.10.201",
+                          send_broadcast=False, send_unicast=True) == ["192.168.10.201"]
+
+  def test_idle_tick_sends_nothing(self):
+    assert beacon_targets("192.168.10.255", "", send_broadcast=False, send_unicast=False) == []
+
+  def test_missing_broadcast_ip_falls_back(self):
+    assert beacon_targets("", "", send_broadcast=True, send_unicast=False) == ["255.255.255.255"]
+
+  def test_no_duplicate_when_peer_is_the_broadcast(self):
+    assert beacon_targets("255.255.255.255", "255.255.255.255",
+                          send_broadcast=True, send_unicast=True) == ["255.255.255.255"]
+
+  def test_loop_uses_beacon_targets(self):
+    import inspect
+    import openpilot.sunnypilot.carrot.carrot_man as cm
+    src = inspect.getsource(cm.CarrotManager.broadcast_version_info)
+    assert "send_broadcast = frame % 20 == 0" in src
+    assert "beacon_targets(" in src
+    # the old broadcast-vs-unicast ternary must be gone
+    assert "if not remote_addr else remote_ip" not in src
 
 
 class TestCarrotManager(unittest.TestCase):

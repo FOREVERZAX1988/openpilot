@@ -209,7 +209,11 @@ procs += [
   # amapNaviSP removed: carrot_man now only produces carrotManSP /
   # navInstructionCarrotSP. AmapApiKey is still used by AmapMapData (Web API
   # fallback for speed limits / road names).
-  PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", carrot_enabled),
+  # restart_if_crash: PythonProcess.start() returns early while self.proc is
+  # not None, so without this flag a crashed carrot_man (UDP 7706 listener +
+  # 7705 discovery beacon) stays dead until a manager restart -- the phone app
+  # then simply cannot find the device.  (Regression we hit on tizi.)
+  PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", carrot_enabled, restart_if_crash=True),
   PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", carrot_navi_v2_enabled, restart_if_crash=True),
 
   # locationd
