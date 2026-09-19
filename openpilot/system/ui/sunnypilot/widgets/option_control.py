@@ -2,6 +2,7 @@ import pyray as rl
 from collections.abc import Callable
 from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.lib.styles import style
 from openpilot.system.ui.widgets.list_view import ItemAction
@@ -22,7 +23,8 @@ class OptionControlSP(ItemAction):
                on_value_changed: Callable[[int], None] | None = None,
                value_map: dict[int, int] | None = None,
                label_width: int = LABEL_WIDTH,
-               use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None):
+               use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None,
+               input_title: str | Callable[[], str] | None = None):
 
     super().__init__(enabled=enabled)
     self.params = unified_params
@@ -38,6 +40,7 @@ class OptionControlSP(ItemAction):
     self.use_float_scaling = use_float_scaling
     self.current_value = min_value
     self.label_callback = label_callback
+    self.input_title = input_title
     if self.value_map:
       for key in self.value_map:
         if self.value_map[key] == self.params.get(self.param_key):
@@ -57,6 +60,7 @@ class OptionControlSP(ItemAction):
     # Layout rectangles for components
     self.minus_btn_rect = rl.Rectangle(0, 0, 0, 0)
     self.plus_btn_rect = rl.Rectangle(0, 0, 0, 0)
+    self.label_rect = rl.Rectangle(0, 0, 0, 0)
 
   def get_value(self) -> int:
     """Get the current value of the control"""
@@ -98,6 +102,63 @@ class OptionControlSP(ItemAction):
       return f"{value / 100.0:.2f}"
 
     return str(value)
+
+  def _input_title_text(self) -> str:
+    title = self.input_title() if callable(self.input_title) else self.input_title
+    return title or tr("Enter value")
+
+  def _editable_text(self) -> str:
+    """Prefill for the keypad: the number the +/- buttons act on (mapped value kept as-is)."""
+    if self.value_map and self.current_value in self.value_map:
+      return str(self.value_map[self.current_value])
+    if self.use_float_scaling:
+      return f"{self.current_value / 100.0:g}"
+    return str(self.current_value)
+
+  def _open_input_dialog(self):
+    # Direct numeric entry (user request 2026-09-19): tapping the value box opens the
+    # on-screen keypad so a value that +/- stepping reaches only slowly (or an enum index)
+    # can be typed.  Imported lazily to avoid a circular import (input_dialog -> keyboard).
+    from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
+    if self.value_map:
+      sub_title = None
+    elif self.use_float_scaling:
+      sub_title = f"{self.min_value / 100.0:g} - {self.max_value / 100.0:g}"
+    else:
+      sub_title = f"{self.min_value} - {self.max_value}"
+    InputDialogSP(
+      self._input_title_text(),
+      sub_title=sub_title,
+      current_text=self._editable_text(),
+      callback=self._on_input_result,
+    ).show()
+
+  def _on_input_result(self, result, text: str):
+    from openpilot.system.ui.widgets import DialogResult
+    if result != DialogResult.CONFIRM:
+      return
+    text = (text or "").strip().replace(" ", "")
+    if not text:
+      return
+    try:
+      typed = float(text)
+    except ValueError:
+      return  # non-numeric entry: leave the value untouched (do not crash the layout)
+
+    if self.value_map:
+      # The box shows the mapped value; find the key that yields it and set that key.
+      for key, mapped in self.value_map.items():
+        try:
+          if abs(float(mapped) - typed) < 1e-6:
+            self.set_value(int(key))
+            return
+        except (TypeError, ValueError):
+          continue
+      return
+
+    value = int(round(typed * 100.0)) if self.use_float_scaling else int(round(typed))
+    value = max(self.min_value, min(self.max_value, value))
+    self.set_value(value)
 
   def _render(self, rect: rl.Rectangle):
     if self._rect.width == 0 or self._rect.height == 0 or not self.is_visible:
@@ -155,6 +216,10 @@ class OptionControlSP(ItemAction):
     text = self.get_displayed_value()
     text_color = style.ITEM_TEXT_COLOR if self.enabled else style.ITEM_DISABLED_TEXT_COLOR
 
+    # Make it obvious the value box is tappable: tap it to type a value directly.
+    if self.enabled:
+      rl.draw_rectangle_rounded(self.label_rect, 0.2, 12, style.OPTION_CONTROL_BTN_ENABLED)
+
     text_size = measure_text_cached(self._font, text, VALUE_FONT_SIZE)
     text_x = self.label_rect.x + (self.label_rect.width - text_size.x) / 2
     text_y = self.label_rect.y + (self.label_rect.height - text_size.y) / 2
@@ -170,3 +235,5 @@ class OptionControlSP(ItemAction):
       new_value = self.current_value + self.value_change_step
       new_value = min(self.max_value, new_value)
       self.set_value(new_value)
+    elif self.enabled and self.label_rect.width > 0 and rl.check_collision_point_rec(mouse_pos, self.label_rect):
+      self._open_input_dialog()

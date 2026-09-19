@@ -389,7 +389,8 @@ def option_item_sp(title: str | Callable[[], str], param: str,
                    use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None, inline: bool = False) -> ListItemSP:
   action = OptionControlSP(
     param, min_value, max_value, value_change_step,
-    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback
+    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback,
+    input_title=title,
   )
   return ListItemSP(title=title, description=description, action_item=action, icon=icon, inline=inline)
 
