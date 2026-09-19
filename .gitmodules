@@ -27,4 +27,5 @@
 	branch = macan-long-0919
 [submodule "webui"]
   path = webui
-  url = https://github.com/mouxangithub/webui.git
+  url = https://github.com/FOREVERZAX1988/webui.git
+  branch = macan-long-0919
