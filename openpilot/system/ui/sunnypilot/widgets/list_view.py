@@ -7,7 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 from collections.abc import Callable, Sequence
 
 import pyray as rl
-from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight, TextAlignment, TextAlignmentVertical
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.widgets.toggle import ToggleSP
@@ -135,9 +135,9 @@ class MultipleButtonActionSP(MultipleButtonAction):
                param: str | None = None):
     MultipleButtonAction.__init__(self, buttons, button_width, selected_index, callback)
     self.param_key = param
-    self.params = Params()
+    self.params = unified_params
     if self.param_key:
-      self.selected_button = int(self.params.get(self.param_key, return_default=True))
+      self.selected_button = int(self.params.get(self.param_key))
     self._anim_x: float | None = None
     self.enabled_buttons: set[int] | None = None
 

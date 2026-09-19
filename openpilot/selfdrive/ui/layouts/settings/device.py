@@ -18,6 +18,7 @@ from openpilot.system.ui.widgets.html_render import HtmlModal
 from openpilot.system.ui.widgets.list_view import text_item, button_item, dual_button_item
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
 from openpilot.system.ui.widgets.scroller_tici import Scroller
+from collections.abc import Callable
 
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp as button_item
@@ -39,11 +40,21 @@ class DeviceLayout(Widget):
     self._select_language_dialog: MultiOptionDialog | None = None
     self._fcc_dialog: HtmlModal | None = None
     self._training_guide: TrainingGuide | None = None
+    self._onroad_preview_callback: Callable | None = None
 
     items = self._initialize_items()
     self._scroller = Scroller(items, line_separator=True, spacing=0)
 
     ui_state.add_offroad_transition_callback(self._offroad_transition)
+
+  def set_preview_callback(self, callback: Callable | None) -> None:
+    self._onroad_preview_callback = callback
+
+  def _enter_onroad_preview(self) -> None:
+    is_preview = self._params.get_bool("IsOnroadPreview")
+    self._params.put_bool("IsOnroadPreview", not is_preview)
+    if not is_preview and self._onroad_preview_callback is not None:
+      self._onroad_preview_callback()
 
   def _initialize_items(self):
     self._pair_device_btn = button_item(lambda: tr("Pair Device"), lambda: tr("PAIR"), lambda: tr(DESCRIPTIONS['pair_device']),

@@ -3,6 +3,7 @@ import cffi
 import math
 import os
 import queue
+import re
 import time
 import signal
 import sys
@@ -142,11 +143,29 @@ class FontWeight(StrEnum):
   DISPLAY = "Inter-Bold.ttf"
 
 
-def font_fallback(font: rl.Font) -> rl.Font:
-  """Use a Noto fallback for languages not covered by Inter."""
-  if multilang.requires_font_fallback():
+def font_fallback(font: rl.Font, text: str | None = None) -> rl.Font:
+  """Use a Noto fallback for languages not covered by Inter.
+
+  Accepts an optional ``text`` argument. When provided, the fallback font is
+  only used if the text actually contains characters that require it (e.g.
+  CJK). This keeps English strings on the primary Latin font and only switches
+  to the Noto fallback for strings that need it, which is both correct and
+  cheaper than swapping the font unconditionally for every CJK-language label.
+  The 1-arg call form (text omitted) is preserved for existing callers.
+  """
+  if not multilang.requires_font_fallback():
+    return font
+  if text is None or _text_requires_font_fallback(text):
     return gui_app.fallback_font()
   return font
+
+
+_CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u0e00-\u0e7f]")
+
+
+def _text_requires_font_fallback(text: str) -> bool:
+  """True if ``text`` contains CJK/Thai/Korean characters needing Noto."""
+  return bool(_CJK_RE.search(text))
 
 
 class MousePos(NamedTuple):

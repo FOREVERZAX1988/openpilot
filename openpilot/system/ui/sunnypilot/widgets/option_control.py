@@ -1,6 +1,6 @@
 import pyray as rl
 from collections.abc import Callable
-from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.lib.styles import style
@@ -25,7 +25,7 @@ class OptionControlSP(ItemAction):
                use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None):
 
     super().__init__(enabled=enabled)
-    self.params = Params()
+    self.params = unified_params
     self.param_key = param
     self.min_value = min_value
     self.max_value = max_value
@@ -40,11 +40,11 @@ class OptionControlSP(ItemAction):
     self.label_callback = label_callback
     if self.value_map:
       for key in self.value_map:
-        if self.value_map[key] == self.params.get(self.param_key, return_default=True):
+        if self.value_map[key] == self.params.get(self.param_key):
           self.current_value = int(key)
           break
     else:
-      value = self.params.get(self.param_key, return_default=True)
+      value = self.params.get(self.param_key)
       self.current_value = int(float(value) * 100.0) if self.use_float_scaling else int(value)
 
     # Initialize font and button styles

@@ -6,6 +6,7 @@ import pyray as rl
 
 from openpilot.common.params import Params
 from openpilot.system.ui.lib.multilang import tr
+from openpilot.system.ui.lib.application import font_fallback, gui_app
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
   Scroller, toggle_item_sp, option_item_sp, button_item_sp
 )
@@ -94,8 +95,10 @@ class CarrotTuningLayout(Widget):
       bg = style.ON_BG_COLOR if is_active else style.OFF_BG_COLOR
       rl.draw_rectangle_rounded(tab_rect, 0.15, 8, bg)
       text_color = rl.WHITE if is_active else style.ITEM_TEXT_COLOR
-      rl.draw_text(label, int(x + tab_w / 2 - rl.measure_text(label, 24) / 2),
-                   int(rect.y + rect.height / 2 - 12), 24, text_color)
+      rl.draw_text_ex(font_fallback(gui_app.font(), label), label,
+                      rl.Vector2(x + tab_w / 2 - rl.measure_text_ex(font_fallback(gui_app.font(), label),
+                                                                    label, 24, 0).x / 2,
+                                 rect.y + rect.height / 2 - 12), 24, 0, text_color)
       if (rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT) and
           rl.check_collision_point_rec(rl.get_mouse_position(), tab_rect)):
         self._current_tab = i
