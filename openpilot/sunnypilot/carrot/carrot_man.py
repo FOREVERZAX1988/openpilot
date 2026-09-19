@@ -1391,7 +1391,13 @@ class CarrotManager:
 
   def tick(self) -> None:
     self._enabled = self.params.get_bool("CarrotEnabled")
-    self._port = self.params.get("CarrotManUdpPort", return_default=True) or 0
+    # Desired port from params.  self._port must stay the port we are *actually*
+    # bound to (only _ensure_socket/_close_socket set it): assigning the desired
+    # value here made _ensure_socket() believe the socket was already on the new
+    # port, so a port change never took effect until the process restarted --
+    # while the discovery broadcast already advertised the new port, i.e. the
+    # phone was pointed at a port nobody was listening on.
+    want_port = self.params.get("CarrotManUdpPort", return_default=True) or 0
     self._start_web = self.params.get_bool("CarrotWebEnabled")
 
     self.sm.update(0)
@@ -1407,14 +1413,14 @@ class CarrotManager:
     # configured, even if CarrotEnabled is temporarily off.  The phone app
     # probes 7706 during startup / before enabling the feature, and closing
     # the socket makes the connection look "dropped".
-    if self._port <= 0:
+    if want_port <= 0:
       self._close_socket()
       self._reset_state()
       self._stop_web()
       self._is_running = False
       return
 
-    if not self._ensure_socket(self._port):
+    if not self._ensure_socket(want_port):
       return
 
     # Broadcast / ZMQ threads keep running so the phone can find us; rich

@@ -358,7 +358,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // sunnypilot already keeps time via NTP. Only when explicitly enabled does
     // carrot_serv nudge the clock/timezone, and only within a limited drift.
     {"CarrotNtpTimeSync", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"CarrotManUdpPort", {PERSISTENT | BACKUP, INT, "0"}},
+    // 0 disables the listener entirely; default is the port the Carrot phone
+    // app probes (discovery broadcast is on 7705).
+    {"CarrotManUdpPort", {PERSISTENT | BACKUP, INT, "7706"}},
     {"CarrotPanelSide", {PERSISTENT | BACKUP, INT, "0"}},  // carrot nav HUD panel side: 0=left, 1=right
     {"CarrotPanelOpacity", {PERSISTENT | BACKUP, INT, "100"}},  // carrot nav HUD panel opacity percent 0-100
     {"LiDARUdpPort", {PERSISTENT | BACKUP, INT, "4211"}},  // LiDAR/camera direct-UDP listen port; dormant until start_navi_comm() is wired (C3 decision)
