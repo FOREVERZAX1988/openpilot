@@ -120,3 +120,6 @@ SKILL.md
 !.idea/customTargets.xml
 !.idea/tools/*
 !.run/*
+
+# agent tool outputs (may contain secrets such as github PAT)
+tool_results/
