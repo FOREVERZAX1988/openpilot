@@ -111,6 +111,18 @@ def uploader_ready(started: bool, params: Params, CP: car.CarParams) -> bool:
 
   return always_run(started, params, CP)
 
+def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # run even offroad: web panel (8088) / UDP / FTP must work while parked;
+  # carrot_man gates its own behaviour with the IsOnroad param
+  return params.get_bool("CarrotEnabled")
+
+def carrot_navi_v2_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # 7714 WebSocket v2 navi link. Gated by the master CarrotEnabled switch AND
+  # the dedicated killswitch CarrotNaviV2Enabled (default off). The WebSocket
+  # receiver depends on the phone app, so it auto-restarts on crash rather
+  # than taking down the 7706 carrot_man path.
+  return params.get_bool("CarrotEnabled") and params.get_bool("CarrotNaviV2Enabled")
+
 def or_(*fns):
   return lambda *args: operator.or_(*(fn(*args) for fn in fns))
 
@@ -192,6 +204,13 @@ procs += [
   # mapd
   NativeProcess("mapd", Paths.mapd_root(), ["bash", "-c", f"{MAPD_PATH} > /dev/null 2>&1"], mapd_ready),
   PythonProcess("mapd_manager", "openpilot.sunnypilot.mapd.mapd_manager", always_run),
+
+  # Amap / Carrot
+  # amapNaviSP removed: carrot_man now only produces carrotManSP /
+  # navInstructionCarrotSP. AmapApiKey is still used by AmapMapData (Web API
+  # fallback for speed limits / road names).
+  PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", carrot_enabled),
+  PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", carrot_navi_v2_enabled, restart_if_crash=True),
 
   # locationd
   NativeProcess("locationd_llk", "openpilot/sunnypilot/selfdrive/locationd", ["./locationd"], only_onroad),
