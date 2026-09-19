@@ -33,6 +33,7 @@ from typing import Any
 
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.time_helpers import system_time_valid
 from openpilot.sunnypilot.carrot.config import UnifiedParams
 
 
@@ -494,21 +495,38 @@ class CarrotServ:
   _TIME_SYNC_MAX_YEAR = 2035
 
   def _maybe_sync_system_time(self, epoch_time: int, timezone: str) -> None:
-    """Opt-in system clock/timezone sync from the phone's 7706/7714 epochTime.
+    """Last-resort system clock sync from the phone's 7706/7714 epochTime.
 
-    Guarded by the ``CarrotNtpTimeSync`` killswitch (default OFF) because
-    modifying the system clock on a running car is dangerous and sunnypilot
-    already keeps time via NTP. When enabled, the clock is only nudged when:
-      * the killswitch param is on, AND
+    Single-authority design:
+      * the *instant* is owned by system NTP (AGNOS) + ``timed.py`` (GPS);
+      * the *timezone* is owned solely by the AI GPS/IP auto-timezone loop
+        (``ai.infra.timezone.apply_os_timezone``).
+
+    The phone packet is therefore only a **fallback** for the instant, used when
+    the device clock is plainly invalid, and it never writes the timezone (two
+    writers racing on /data/etc/localtime is exactly what we want to avoid).
+
+    The clock is nudged only when ALL of the following hold:
+      * the killswitch param is ON (``CarrotNtpTimeSync``, or the legacy
+        duplicate ``CarrotTimeSyncEnabled`` treated as an alias), AND
+      * the system clock is currently invalid (no NTP/GPS fix yet), AND
       * running on-device (not PC), AND
-      * |drift| > 60s (limited drift threshold), AND
+      * |drift| > 60s, AND
       * the target year is within a sane 2015..2035 window.
     """
-    # Killswitch: must be explicitly enabled. Default-off for safety.
-    if not self._params.get_bool("CarrotNtpTimeSync", False):
+    # Killswitch: must be explicitly enabled. Default-off for safety. Read the
+    # legacy duplicate key too so the two registrations cannot silently diverge.
+    if not (self._params.get_bool("CarrotNtpTimeSync", False) or
+            self._params.get_bool("CarrotTimeSyncEnabled", False)):
       return
     if epoch_time <= 0:
       return
+    # NTP/GPS already owns the clock: never fight a healthy time source.
+    try:
+      if system_time_valid():
+        return
+    except Exception:
+      pass
     try:
       import openpilot.system.hardware as hardware
       PC = getattr(hardware, "PC", False)
@@ -529,18 +547,13 @@ class CarrotServ:
     offset = epoch_time - now_epoch
     if abs(offset) <= 60:
       return
+    # Set only the absolute instant, unambiguously in UTC (@epoch). The timezone
+    # is intentionally NOT touched here: the AI auto-timezone loop is the single
+    # authority for /data/etc/localtime + /etc/timezone.
     try:
-      localtime_path = "/data/etc/localtime"
-      zoneinfo_path = f"/usr/share/zoneinfo/{timezone}"
-      if os.path.exists(localtime_path) or os.path.islink(localtime_path):
-        subprocess.run(["sudo", "rm", "-f", localtime_path], check=True)
-      subprocess.run(["sudo", "ln", "-s", zoneinfo_path, localtime_path], check=True)
-      formatted = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch_time))
-      subprocess.run(["sudo", "date", "-s", formatted], check=True)
-      # Persist the phone-supplied timezone as the authoritative source so the
-      # device's own time-setting logic (timed.py) does not overwrite it.
-      self._params.put("TimezoneName", timezone)
-      self._params.put("TimezoneSource", "app")
+      subprocess.run(["sudo", "date", "-u", "-s", f"@{int(epoch_time)}"], check=True)
+      cloudlog.info(f"carrot_serv: fallback clock set to epoch {epoch_time} "
+                    f"(drift {offset}s, phone tz={timezone or 'n/a'})")
     except Exception as e:
       cloudlog.error(f"carrot_serv: failed to sync system time: {e}")
 

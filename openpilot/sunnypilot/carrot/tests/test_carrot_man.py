@@ -224,6 +224,15 @@ def _install_stub(name: str, module) -> None:
   sys.modules[name] = module
 
 
+def _make_time_helpers_stub():
+  """Leaf stub for openpilot.common.time_helpers (system_time_valid())."""
+  m = types.ModuleType("openpilot.common.time_helpers")
+  m.system_time_valid = MagicMock(return_value=True)
+  m.min_date = MagicMock()
+  m.MAX_DATE = None
+  return m
+
+
 def _drop_stubs() -> None:
   for _name, _original in _LEAKED_SYS_MODULES.items():
     if _original is None:
@@ -240,10 +249,12 @@ def tearDownModule() -> None:
 _common_pkg.params = MagicMock(Params=_FakeParams)
 _common_pkg.realtime = MagicMock(Ratekeeper=MagicMock, config_realtime_process=MagicMock(), DT_MDL=0.05)
 _common_pkg.swaglog = MagicMock(cloudlog=MagicMock())
+_common_pkg.time_helpers = _make_time_helpers_stub()
 _install_stub("openpilot.common", _common_pkg)
 _install_stub("openpilot.common.params", _common_pkg.params)
 _install_stub("openpilot.common.realtime", _common_pkg.realtime)
 _install_stub("openpilot.common.swaglog", _common_pkg.swaglog)
+_install_stub("openpilot.common.time_helpers", _common_pkg.time_helpers)
 
 _cereal_pkg = types.ModuleType("openpilot.cereal")
 _cereal_pkg.messaging = _FakeMessaging
@@ -1090,10 +1101,21 @@ class TestCarrotManager(unittest.TestCase):
     # Default-off: no system clock command may run.
     assert mock_run.call_count == 0
 
+  def test_time_sync_skipped_when_system_time_valid(self):
+    serv = self.mgr._carrot_serv
+    with patch.object(serv._params, "get_bool", return_value=True), \
+         patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
+      serv._maybe_sync_system_time(int(time.time()) + 600, "Asia/Seoul")
+    # NTP/GPS owns the clock: a healthy clock must never be touched.
+    assert mock_run.call_count == 0
+
   def test_time_sync_skipped_when_drift_small(self):
     serv = self.mgr._carrot_serv
     with patch.object(serv._params, "get_bool", return_value=True), \
          patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
       serv._maybe_sync_system_time(int(time.time()) + 30, "Asia/Seoul")
     # Within the 60s limited-drift window: no clock change.
@@ -1104,22 +1126,38 @@ class TestCarrotManager(unittest.TestCase):
     absurd = int(datetime(2090, 1, 1).timestamp())  # year outside 2015..2035
     with patch.object(serv._params, "get_bool", return_value=True), \
          patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
       serv._maybe_sync_system_time(absurd, "Asia/Seoul")
     # Guardrail against malformed phone timestamps.
     assert mock_run.call_count == 0
 
-  def test_time_sync_runs_when_enabled_and_drift_large(self):
+  def test_time_sync_runs_when_enabled_drift_large_and_clock_invalid(self):
     serv = self.mgr._carrot_serv
+    target = int(time.time()) + 120
     with patch.object(serv._params, "get_bool", return_value=True), \
          patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
          patch.object(serv._params, "put") as mock_put, \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
+      serv._maybe_sync_system_time(target, "Asia/Seoul")
+    assert mock_run.call_count == 1
+    cmd = mock_run.call_args.args[0]
+    # Single-authority: set the instant in UTC as an absolute epoch...
+    assert cmd == ["sudo", "date", "-u", "-s", f"@{target}"]
+    # ...and do NOT write the timezone params (AI loop owns the timezone).
+    assert mock_put.call_count == 0
+
+  def test_time_sync_legacy_alias_key_enables_sync(self):
+    serv = self.mgr._carrot_serv
+    with patch.object(serv._params, "get_bool",
+                      side_effect=lambda k, d=None: k == "CarrotTimeSyncEnabled"), \
+         patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
       serv._maybe_sync_system_time(int(time.time()) + 120, "Asia/Seoul")
-    assert mock_run.call_count >= 1
-    put_keys = [c.args[0] for c in mock_put.call_args_list]
-    assert "TimezoneName" in put_keys
-    assert "TimezoneSource" in put_keys
+    # The legacy duplicate registration acts as an alias, so it still works.
+    assert mock_run.call_count == 1
 
   # ---- radar data tests -------------------------------------------------- #
 
