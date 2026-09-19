@@ -1496,6 +1496,34 @@ msgstr "輸入 APN"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Enter Amap API Key"
 msgstr ""
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Test Amap API Key"
+msgstr "測試高德API密鑰"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "TEST"
+msgstr "測試"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "TESTING..."
+msgstr "測試中..."
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Ask the Amap road name and speed limit services with the stored key and report which ones work."
+msgstr "用已保存的密鑰請求高德的道路名稱與限速服務，並報告哪些服務可用。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Test could not run: {}"
+msgstr "測試無法執行：{}"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Amap API key is valid"
+msgstr "高德API密鑰有效"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Amap API key has a problem"
+msgstr "高德API密鑰存在問題"
+
 
 #: openpilot/system/ui/widgets/network.py
 msgid "Enter SSID"

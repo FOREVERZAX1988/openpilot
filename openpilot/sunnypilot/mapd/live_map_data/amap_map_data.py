@@ -75,6 +75,85 @@ def _http_get_json(url: str, timeout: float = 5.0) -> dict | None:
     cloudlog.warning(f"amap_map_data: HTTP request failed: {e}")
     return None
 
+# --- API key self-test -------------------------------------------------------
+# Keys created in the Amap console are bound to a *platform* ("Web service") and
+# can additionally be restricted to individual services, so a key may work for
+# one endpoint the live provider calls and fail for another.  The self-test
+# therefore probes every endpoint the provider depends on and reports each one.
+
+# Fixed GCJ-02 probe points (Tiananmen / nearby intersection in Beijing) so the
+# test never depends on a GPS fix or on the car being in China.
+AMAP_PROBE_ORIGIN = "116.397428,39.90923"
+AMAP_PROBE_DESTINATION = "116.403963,39.915119"
+
+# Subset of Amap infocodes worth naming in a user-facing message; the raw
+# ``info``/``infocode`` from the API is always reported as well.
+# https://lbs.amap.com/api/webservice/guide/tools/info
+AMAP_INFOCODE_HINTS = {
+  "10001": "key is invalid or was deleted",
+  "10002": "the service is not enabled for this key",
+  "10003": "the daily quota for this key is used up",
+  "10004": "requests are too frequent (rate limited)",
+  "10009": "key platform mismatch (needs a Web service key)",
+  "10012": "key deleted / account has no balance",
+  "10014": "QPS limit exceeded",
+  "10021": "IP whitelist restriction (add this device's IP or drop the whitelist)",
+  "20000": "request parameter error",
+  "20003": "too many coordinates in one request",
+}
+
+
+def _amap_failure_detail(result: dict) -> str:
+  info = str(result.get("info") or "unknown error")
+  infocode = str(result.get("infocode") or "")
+  detail = f"{info} ({infocode})" if infocode else info
+  hint = AMAP_INFOCODE_HINTS.get(infocode, "")
+  return f"{detail} - {hint}" if hint else detail
+
+
+def _probe_amap_endpoint(url: str, timeout: float) -> tuple[bool, str]:
+  """Return ``(ok, detail)`` for a single Amap endpoint probe."""
+  try:
+    result = _http_get_json(url, timeout=timeout)
+  except Exception as e:  # network stack errors that are not URLError subclasses
+    return False, f"request error: {e}"
+
+  if result is None:
+    return False, "no response (check network / DNS)"
+  if result.get("status") == "1":
+    return True, "OK"
+  return False, _amap_failure_detail(result)
+
+
+def check_api_key(api_key: str, timeout: float = 5.0) -> tuple[bool, str]:
+  """Probe the Amap Web APIs the live provider depends on.
+
+  Used by the settings "Test" button so a key can be validated right after it is
+  entered, without waiting for a drive.  Returns ``(ok, message)`` where
+  ``message`` is a newline separated, per-service report.
+  """
+  if not api_key or not api_key.strip():
+    return False, "no API key stored"
+
+  probes = (
+    ("road name (reverse geocoding)", AMAP_GEOCODE_URL,
+     {"location": AMAP_PROBE_ORIGIN, "extensions": "base", "radius": "100"}),
+    ("speed limit (driving route)", AMAP_DIRECTION_URL,
+     {"origin": AMAP_PROBE_ORIGIN, "destination": AMAP_PROBE_DESTINATION, "extensions": "base", "strategy": "2"}),
+  )
+
+  ok = True
+  lines: list[str] = []
+  for name, url, extra_params in probes:
+    params = {"key": api_key.strip(), **extra_params}
+    passed, detail = _probe_amap_endpoint(f"{url}?{urllib.parse.urlencode(params)}", timeout)
+    ok = ok and passed
+    lines.append(f"{'OK' if passed else 'FAIL'} - {name}: {detail}")
+
+  cloudlog.info(f"amap_map_data: key self-test {'passed' if ok else 'failed'}")
+  return ok, "\n".join(lines)
+
+
 
 class AmapMapData(BaseMapData):
   """Live map data provider backed by the Amap (Gaode) Web API.
