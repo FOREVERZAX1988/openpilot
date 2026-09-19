@@ -40,9 +40,10 @@ class VCruiseHelper(VCruiseHelperSP):
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
     # Macan(MLB) 融合控制模式：OP 巡航速度直接取自原厂 ACC 巡航速度（ACC_02.Wunschgeschw），
     # 使 OP 与原厂 ACC 巡航速度完全同步，消除"OP 内部 vCruise 与原厂分裂"（长按+5 vs 原厂+10 等）。
-    # 该模式下 OP 不再自行管理步进设定（UI 中自定义 ACC 增量被禁用）。默认开（纯 OP 纵向未开发）。
-    self.macan_fusion = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1" and
-                         self.params.get_bool("MacanFusionMode"))
+    # 该模式下 OP 不再自行管理步进设定（UI 中自定义 ACC 增量被禁用）。
+    # 2026-09-20 重新锁定为恒开：纯 OP 纵向未通过路试，不再读 MacanFusionMode（恒走融合控制）。
+    # 解禁方式：改回 `... and self.params.get_bool("MacanFusionMode")`。
+    self.macan_fusion = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1")
 
   @property
   def v_cruise_initialized(self):

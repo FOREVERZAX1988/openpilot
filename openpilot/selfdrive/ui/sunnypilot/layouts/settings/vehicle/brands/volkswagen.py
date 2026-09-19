@@ -282,10 +282,13 @@ class VolkswagenSettings(BrandSettings):
     ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
 
   def _on_enable_fusion_mode(self, state: bool):
-    # 融合控制模式（2026-09-15 解锁）：纯 OP 纵向已实现，开关可自由切换。
-    #  ON=融合(原厂ACC雷达+OP纵向)；OFF=纯OP(雷达待命停用, OP自算ACC02/04/05)。
-    ui_state.params.put_bool("MacanFusionMode", bool(state))
-    ui_state.params.put_bool("OnroadCycleRequested", True)  # 模式切换需重启生效
+    # 融合控制模式（2026-09-20 重新锁定）：纯 OP 纵向尚未路试通过，开关恒定开、锁定不可切。
+    # 即使被点/被代码触发，也强制保持 True——避免误关后掉进未验证的纯 OP 纵向。
+    #  ON=融合(原厂ACC雷达+OP纵向，唯一可用)；OFF=纯OP(代码保留, 暂不可设)。
+    ui_state.params.put_bool("MacanFusionMode", True)
+    ui_state.params.put_bool("OnroadCycleRequested", True)  # 若参数曾被改成 0，需重启生效
+    if not state:
+      self.fusion_mode.action_item.set_state(True)
 
 
   def _on_enable_start_stop(self, state: bool):
@@ -363,8 +366,11 @@ class VolkswagenSettings(BrandSettings):
       # op 纵向控制开启判定：ui_state.has_longitudinal_control（聚合 alpha + openpilot long）。
       op_long_on = ui_state.has_longitudinal_control
       fusion_visible = is_macan and op_long_on
-      # 融合控制模式（2026-09-15 解锁）：纯 OP 纵向已实现，开关可自由切换。
-      #  ON=融合(原厂ACC雷达+OP纵向)；OFF=纯OP(雷达待命停用, OP自算ACC02/04/05)。
-      self.fusion_mode.action_item.set_enabled(is_macan and op_long_on and not ui_state.engaged)
-      self.fusion_mode.action_item.set_state(ui_state.params.get_bool("MacanFusionMode"))
+      # 融合控制模式（2026-09-20 重新锁定）：纯 OP 纵向未通过路试，恢复"恒开+锁定"。
+      #  ON=融合(原厂ACC雷达+OP纵向，唯一可用)；OFF=纯OP(代码保留, 暂不可设)。
+      self.fusion_mode.action_item.set_enabled(False)  # 锁定：不能点击切换
+      self.fusion_mode.action_item.set_state(True)     # 恒显示"开"
+      # 参数自愈：历史遗留 MacanFusionMode=0(纯OP) 时强制回写 1，保证 UI / 巡航 / 车控三方一致。
+      if not ui_state.params.get_bool("MacanFusionMode"):
+        ui_state.params.put_bool("MacanFusionMode", True)
       self.fusion_mode.set_visible(fusion_visible)
