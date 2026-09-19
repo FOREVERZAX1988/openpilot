@@ -16,7 +16,13 @@ from openpilot.system.ui.widgets.network import NavButton
 from openpilot.system.ui.sunnypilot.lib.styles import style
 
 
-TAB_FONT_SIZE = 24  # tab label px (scaled by FONT_SCALE inside measure/draw)
+# Top tab bar of the Carrot Tuning page. Its labels are the only text on that strip
+# and were 24 px, i.e. less than half of the 50 px list items right below them, which
+# made them hard to read on the device -> 1.5x (user request, 2026-09-19).
+TAB_FONT_SIZE = 36
+TAB_FONT_MIN_SIZE = 24  # per-label shrink floor: never render a tab label smaller than
+                        # the pre-1.5x size, even if the language (EN/DE) is long
+TAB_TEXT_PADDING = 12   # px kept free on each side of a label inside its tab
 
 
 class TabType(IntEnum):
@@ -43,7 +49,7 @@ class CarrotTuningLayout(Widget):
   @property
   def TAB_LABELS(self) -> list[str]:
     return [tr(key) for key in self.TAB_KEYS]
-  TAB_HEIGHT = 80
+  TAB_HEIGHT = 96  # taller with the 1.5x labels, keeps ~25 px of padding around the text
   TAB_TOP_MARGIN = 12
 
   def __init__(self, back_btn_callback: Callable):
@@ -113,14 +119,32 @@ class CarrotTuningLayout(Widget):
       # measured at the unscaled size and ended up off-center / clipped. measure_text_cached()
       # uses the exact same font + scale as the draw call, keeping the tabs centered.
       tab_font = font_fallback(gui_app.font(), label)
-      text_size = measure_text_cached(tab_font, label, TAB_FONT_SIZE)
+      font_size, text_size = self._fit_tab_label(tab_font, label, tab_w)
       rl.draw_text_ex(tab_font, label,
                       rl.Vector2(x + (tab_w - text_size.x) / 2,
                                  rect.y + (rect.height - text_size.y) / 2),
-                      TAB_FONT_SIZE, 0, text_color)
+                      font_size, 0, text_color)
       if (rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT) and
           rl.check_collision_point_rec(rl.get_mouse_position(), tab_rect)):
         self._current_tab = i
+
+  @staticmethod
+  def _fit_tab_label(font, label: str, tab_w: float) -> tuple[int, rl.Vector2]:
+    """Largest tab-font size that still fits `label` inside its tab.
+
+    At 1.5x the two-character Chinese labels are comfortable, but latin ones
+    ("Navigation", "Developer") are 7-10 chars and would run over the edge of a
+    screen/9-wide tab, so only those are shrunk - and only as far as needed.
+    measure_text_cached() applies the same FONT_SCALE as the draw call, so the
+    returned width is directly comparable with the tab width.
+    """
+    max_width = max(tab_w - 2 * TAB_TEXT_PADDING, 1)
+    font_size = TAB_FONT_SIZE
+    text_size = measure_text_cached(font, label, font_size)
+    while font_size > TAB_FONT_MIN_SIZE and text_size.x > max_width:
+      font_size -= 1
+      text_size = measure_text_cached(font, label, font_size)
+    return font_size, text_size
 
   def show_event(self):
     for scroller in self._tab_scrollers.values():
