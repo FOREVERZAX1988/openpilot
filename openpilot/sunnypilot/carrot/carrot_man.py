@@ -6,6 +6,7 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import asyncio
+import faulthandler
 import hashlib
 import json
 import math
@@ -3016,6 +3017,50 @@ class CarrotManager:
       cloudlog.error(f"carrot_man: send_tmux error: {e}")
 
 
+# ---- crash forensics + liveness -------------------------------------------------------------
+# 2026-09-20 13:30: this process died with SIGBUS and left nothing to diagnose with: the device
+# runs with `core limit 0` and apport's base64 CoreDump was a 19 byte empty shell, while the
+# last log line was 17 minutes before the death. faulthandler dumps every thread's Python stack
+# on a fatal signal, and the watchdog turns "loop went quiet" into a log line -- so the next
+# crash leaves evidence instead of a silent gap.
+FAULT_LOG_PATH = "/data/log/carrot_man_faults.log"
+TICK_STALL_WARN_S = 120.0
+WATCHDOG_HEARTBEAT_S = 600.0
+
+_last_tick = [0.0]
+
+
+def _enable_crash_logging() -> None:
+  try:
+    os.makedirs(os.path.dirname(FAULT_LOG_PATH), exist_ok=True)
+    fault_file = open(FAULT_LOG_PATH, "a", buffering=1)
+    faulthandler.enable(file=fault_file, all_threads=True)
+    cloudlog.info(f"carrot_man: faulthandler enabled -> {FAULT_LOG_PATH}")
+  except Exception as e:
+    # never let diagnostics take the daemon down
+    cloudlog.error(f"carrot_man: faulthandler setup failed: {e}")
+
+
+def _watchdog_thread() -> None:
+  last_warn = 0.0
+  last_beat = time.monotonic()
+  while True:
+    time.sleep(30.0)
+    now = time.monotonic()
+    last = _last_tick[0]
+    if last and (now - last) > TICK_STALL_WARN_S and (now - last_warn) > TICK_STALL_WARN_S:
+      last_warn = now
+      cloudlog.warning(f"carrot_man: main loop stalled {now - last:.0f}s (pid {os.getpid()})")
+    if (now - last_beat) >= WATCHDOG_HEARTBEAT_S:
+      last_beat = now
+      age = (now - last) if last else -1.0
+      cloudlog.info(f"carrot_man: heartbeat pid={os.getpid()} loop_age={age:.1f}s")
+
+
+def _start_watchdog() -> None:
+  threading.Thread(target=_watchdog_thread, name="carrot_man_watchdog", daemon=True).start()
+
+
 def main_thread():
   # config_realtime_process([0, 1, 2, 3], 5)  # disabled: SCHED_FIFO can starve locationd; use background scheduling below
   set_core_affinity([0, 1, 2, 3])
@@ -3032,10 +3077,13 @@ def main_thread():
       # the main loop alive so threads (UDP listener, broadcast, ZMQ, navi
       # servers) stay bound and manager does not mark carrot_man as dead.
       cloudlog.exception(f"carrot_man: tick() error: {e}")
+    _last_tick[0] = time.monotonic()
     rk.keep_time()
 
 
 def main():
+  _enable_crash_logging()
+  _start_watchdog()
   main_thread()
 
 
