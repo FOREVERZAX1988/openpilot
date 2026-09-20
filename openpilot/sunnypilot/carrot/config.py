@@ -16,6 +16,7 @@ import os
 from typing import Any, Optional
 
 from openpilot.common.params import Params
+from openpilot.common.swaglog import cloudlog
 
 try:
   # UnknownKeyName lives in common.params (params_pyx was merged into it);
@@ -270,6 +271,20 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
 }
 
 
+def _is_key_error(exc: BaseException) -> bool:
+  """True when a params-store failure is about the key/type, not a real I/O problem.
+
+  Name-based on purpose: ``UnknownKeyName`` is imported dynamically above, and the test
+  shims used by this suite (test_carrot_man/test_carrot_controls) can leave a non-exception
+  object in its place. ``except (..., UnknownKeyName, ...)`` then raised
+  "catching classes that do not inherit from BaseException" instead of handling the write,
+  which took the whole settings/UI write path down.
+  """
+  if isinstance(exc, (TypeError, KeyError, AttributeError)):
+    return True
+  return type(exc).__name__ == "UnknownKeyName"
+
+
 class UnifiedParams:
   """Single accessor for carrot parameters.
 
@@ -331,6 +346,7 @@ class UnifiedParams:
     try:
       with open(self._nav_json_file, "w", encoding="utf-8") as fh:
         json.dump(self._nav_data, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")  # keep a trailing newline so device-side writes don't show up as whitespace diffs
     except OSError:
       pass
 
@@ -357,26 +373,56 @@ class UnifiedParams:
     try:
       return self._system_params.get(key, return_default=True)
     except TypeError:
-      return self._system_params.get(key)  # older Params binding without the kwarg
-    except (KeyError, AttributeError, UnknownKeyName):
-      return None
+      try:
+        return self._system_params.get(key)  # older Params binding without the kwarg
+      except Exception as e:
+        if _is_key_error(e):
+          return None
+        raise
+    except Exception as e:
+      if _is_key_error(e):
+        return None
+      raise
 
   def _write_to_system(self, key: str, value: Any) -> bool:
-    """Attempt to write ``value`` to the system Params. Returns success."""
-    try:
-      if self._is_bool(value):
-        self._system_params.put_bool(key, bool(value))
-      elif self._is_int(value):
-        self._system_params.put_int(key, int(value))
-      elif self._is_float(value):
-        self._system_params.put_float(key, float(value))
-      else:
-        self._system_params.put(key, str(value))
-      return True
-    except (KeyError, AttributeError, UnknownKeyName):
-      return False
-    except Exception:
-      return False
+    """Attempt to write ``value`` to the system Params. Returns success.
+
+    This binding only exposes ``put``/``put_bool`` -- there is no ``put_int``/``put_float``
+    -- and ``put`` type-checks the value against the registered key type. The old code
+    called ``put_int``/``put_float``, so every integer write raised AttributeError, was
+    swallowed by the blanket ``except`` and silently landed in ``nav_params.json`` instead:
+    the user's setting never reached the Params store and ``get()`` (which prefers the
+    store) kept returning the schema default. Tuning rows such as MacanStartStopDistance,
+    Brightness or CarrotManUdpPort therefore appeared to do nothing.
+
+    Because the registered type is not known here, try the plausible write paths for the
+    value in turn: a type mismatch (TypeError/UnknownKeyName) just moves on to the next.
+    """
+    attempts: list = []
+    if isinstance(value, bool) or self._is_bool(value):
+      # 0/1 is how callers spell bool params; put_bool works for int-registered keys too.
+      attempts.append(lambda: self._system_params.put_bool(key, bool(value)))
+      attempts.append(lambda: self._system_params.put(key, int(value)))    # key registered INT
+      attempts.append(lambda: self._system_params.put(key, str(value)))    # key registered STRING
+    elif self._is_float(value):
+      attempts.append(lambda: self._system_params.put(key, value))         # key registered FLOAT
+      attempts.append(lambda: self._system_params.put(key, int(value)))    # float row -> INT key
+    else:
+      attempts.append(lambda: self._system_params.put(key, value))         # key registered STRING
+      if self._is_int(value):
+        attempts.append(lambda: self._system_params.put(key, int(value)))
+        # bool-registered key written with an arbitrary int (e.g. 3): treat non-zero as True
+        attempts.append(lambda: self._system_params.put_bool(key, bool(value)))
+
+    for attempt in attempts:
+      try:
+        attempt()
+        return True
+      except Exception as e:
+        if _is_key_error(e):
+          continue  # wrong write path for this key's registered type
+        return False  # real failure (params store / disk): nothing left to try
+    return False
 
   # ---- public API ---------------------------------------------------------
 
@@ -415,9 +461,16 @@ class UnifiedParams:
     # Try to persist to the global store first; if the key is not
     # registered, fall back to the JSON cache so the user's choice is not
     # silently dropped.
-    if not self._write_to_system(key, value):
-      self._nav_data[key] = value
-      self._save_nav_params()
+    if self._write_to_system(key, value):
+      return
+    if self._read_from_system(key) is not None:
+      # The store knows this key, so a cached copy is dead weight: get() prefers the
+      # store value (or its schema default) and would ignore it -- it only dirties the
+      # repo-tracked nav_params.json. Make the drop visible instead of silent.
+      cloudlog.warning(f"UnifiedParams.put: failed to write {key} to the params store")
+      return
+    self._nav_data[key] = value
+    self._save_nav_params()
 
   def put_int(self, key: str, value: int) -> None:
     self.put(key, int(value))
