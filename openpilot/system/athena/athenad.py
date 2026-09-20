@@ -879,57 +879,70 @@ def add_log_to_queue(log_path, log_id, is_sunnylink=False):
   MAX_SIZE_KB = 32
   MAX_SIZE_BYTES = MAX_SIZE_KB * 1024
 
-  with open(log_path) as f:
-    data = f.read()
+  # The swaglog dir is scanned wholesale, so a stray non-text file can land here (a core
+  # dump, a compressed/rotated log, ...). Reading one used to raise UnicodeDecodeError (or
+  # MemoryError, for a multi-MB file) and abort the whole log_handler iteration, logging
+  # "athena.log_handler.exception" once per hour. Skip the file with a warning instead.
+  # A valid UTF-8 swaglog file takes the exact same path as before.
+  try:
+    with open(log_path) as f:
+      data = f.read()
+  except UnicodeDecodeError:
+    cloudlog.warning(f"Log file {log_path} is not UTF-8 text, skipping.")
+    return
+  except (MemoryError, OSError) as e:
+    cloudlog.warning(f"Log file {log_path} could not be read ({type(e).__name__}), skipping.")
+    return
 
-    # Check if the file is empty
-    if not data:
-      cloudlog.warning(f"Log file {log_path} is empty.")
-      return
 
-    # Initialize variables for encoding
-    payload = data
-    is_compressed = False
+  # Check if the file is empty
+  if not data:
+    cloudlog.warning(f"Log file {log_path} is empty.")
+    return
 
-    # Log the current size of the file
-    current_size = len(json.dumps(payload).encode("utf-8")) + len(log_id.encode("utf-8")) + 100  # Add 100 bytes to account for encoding overhead
-    cloudlog.debug(f"Current size of log file {log_path}: {current_size} bytes")
+  # Initialize variables for encoding
+  payload = data
+  is_compressed = False
 
-    if is_sunnylink and current_size > MAX_SIZE_BYTES:
-      # Compress and encode the data if it exceeds the maximum size
-      compressed_data = gzip.compress(data.encode())
-      payload = base64.b64encode(compressed_data).decode()
-      is_compressed = True
+  # Log the current size of the file
+  current_size = len(json.dumps(payload).encode("utf-8")) + len(log_id.encode("utf-8")) + 100  # Add 100 bytes to account for encoding overhead
+  cloudlog.debug(f"Current size of log file {log_path}: {current_size} bytes")
 
-      # Log the size after compression and encoding
-      compressed_size = len(compressed_data)
-      encoded_size = len(payload)
-      cloudlog.debug(f"Size of log file {log_path} " +
-                     f"after compression: {compressed_size} bytes, " +
-                     f"after encoding: {encoded_size} bytes")
+  if is_sunnylink and current_size > MAX_SIZE_BYTES:
+    # Compress and encode the data if it exceeds the maximum size
+    compressed_data = gzip.compress(data.encode())
+    payload = base64.b64encode(compressed_data).decode()
+    is_compressed = True
 
-    params: dict[str, str | bool] = {"logs": payload}
-    if is_sunnylink and is_compressed:
-      params["compressed"] = is_compressed
+    # Log the size after compression and encoding
+    compressed_size = len(compressed_data)
+    encoded_size = len(payload)
+    cloudlog.debug(f"Size of log file {log_path} " +
+                   f"after compression: {compressed_size} bytes, " +
+                   f"after encoding: {encoded_size} bytes")
 
-    jsonrpc: dict = {
-      "method": "forwardLogs",
-      "params": params,
-      "jsonrpc": "2.0",
-      "id": log_id
-    }
+  params: dict[str, str | bool] = {"logs": payload}
+  if is_sunnylink and is_compressed:
+    params["compressed"] = is_compressed
 
-    jsonrpc_str = json.dumps(jsonrpc)
-    size_in_bytes = len(jsonrpc_str.encode('utf-8'))
+  jsonrpc: dict = {
+    "method": "forwardLogs",
+    "params": params,
+    "jsonrpc": "2.0",
+    "id": log_id
+  }
 
-    if is_sunnylink and size_in_bytes <= MAX_SIZE_BYTES:
-      cloudlog.debug(f"Target is sunnylink and log file {log_path} is small enough to send in one request ({size_in_bytes} bytes).")
-      send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
-    elif is_sunnylink:
-      cloudlog.warning(f"Target is sunnylink and log file {log_path} is too large to send in one request.")
-    else:
-      cloudlog.debug(f"Target is not sunnylink, proceeding to send log file {log_path} in one request ({size_in_bytes} bytes).")
-      send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
+  jsonrpc_str = json.dumps(jsonrpc)
+  size_in_bytes = len(jsonrpc_str.encode('utf-8'))
+
+  if is_sunnylink and size_in_bytes <= MAX_SIZE_BYTES:
+    cloudlog.debug(f"Target is sunnylink and log file {log_path} is small enough to send in one request ({size_in_bytes} bytes).")
+    send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
+  elif is_sunnylink:
+    cloudlog.warning(f"Target is sunnylink and log file {log_path} is too large to send in one request.")
+  else:
+    cloudlog.debug(f"Target is not sunnylink, proceeding to send log file {log_path} in one request ({size_in_bytes} bytes).")
+    send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
 
 
 def log_handler(end_event: threading.Event, log_attr_name=LOG_ATTR_NAME) -> None:
