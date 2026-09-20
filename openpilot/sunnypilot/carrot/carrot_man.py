@@ -3030,7 +3030,30 @@ WATCHDOG_HEARTBEAT_S = 600.0
 _last_tick = [0.0]
 
 
+CORE_LIMIT_BYTES = 256 * 1024 * 1024
+
+
+def _raise_core_limit() -> None:
+  """apport dumps carried an EMPTY CoreDump (19 byte base64 shell) because the manager hands the
+  daemon `core limit 0`. The hard limit is `unlimited`, so the process is allowed to raise its own
+  soft limit -- do that, and the next fatal signal leaves a real core (apport-unpack + gdb) instead
+  of ProcMaps-only forensics."""
+  try:
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_CORE)
+    if soft == resource.RLIM_INFINITY:
+      return
+    want = CORE_LIMIT_BYTES if hard == resource.RLIM_INFINITY else min(CORE_LIMIT_BYTES, hard)
+    if want > soft:
+      resource.setrlimit(resource.RLIMIT_CORE, (want, hard))
+      cloudlog.info(f"carrot_man: core limit raised {soft} -> {want} bytes")
+  except Exception as e:
+    # never let diagnostics take the daemon down
+    cloudlog.error(f"carrot_man: core limit setup failed: {e}")
+
+
 def _enable_crash_logging() -> None:
+  _raise_core_limit()
   try:
     os.makedirs(os.path.dirname(FAULT_LOG_PATH), exist_ok=True)
     fault_file = open(FAULT_LOG_PATH, "a", buffering=1)

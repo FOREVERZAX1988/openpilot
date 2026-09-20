@@ -46,3 +46,40 @@
 ### 待决
 1. `encoderd` 的 `v4l_encoder.cc:126` 硬 assert（改成丢帧+重同步需 scons 重编，控车路径）→ 等确认
 2. `.git/modules/{ai,opendbc,webui}/config` 里那枚明文 PAT 建议轮换（本轮未动）
+
+
+## 2026-09-20（四续）崩溃追查续：三份 apport dump 的实际内容 + 让下一次崩溃留下真 core
+
+### ① 物证清点（`/data/media/0/realdata/crash/`，全部是 carrot_man）
+| 时间 | 信号 | 崩溃瞬间进程状态 | tgid | 附注 |
+|---|---|---|---|---|
+| 13:30:29 | **SIGBUS (7)** | `D (disk sleep)` | 107733 | 与 8 月/9 月既知那起同一个 |
+| 16:25:54 | **SIGBUS (7)** | `D (disk sleep)` | 583009 | 16:10 那份 DAY_LOG 写"carrot_man ✅"时它还活着 |
+| 17:54:40 | **SIGSEGV (11)** | `S (sleeping)` | 53285 | 新发现，且**不是** SIGBUS |
+
+- 三份 dump 都只有头部（ProblemType/ProcMaps/ProcStatus/Signal/Uname/UserGroups）+ 我手工 grep 到的
+  `Signal / SignalName`，`CoreDump: base64` 后面是 **29 字节空壳** → 无寄存器无栈，gdb 无用
+- 与 SEGV/BUS 交替出现 + 两次崩溃瞬间进程处于 **D（不可中断 I/O 等待）** 两点合起来，
+  最像"文件/内存页 I/O 失败"这一族，而不是某个 Python 逻辑分支（逻辑异常会 exit 1）
+- 相关映射（ProcMaps 里的 `/data` 项）：`msgq/ipc_pyx.so`、`common/libparams_c.so`；
+  两者 mtime 都是 **09-19 23:54**，今天三次崩溃前后没有重编 → "构建替换 .so 导致 mmap 期 SIGBUS" 这条**排除**
+- `/data` 文件系统现状（`dumpe2fs -h /dev/sda12`）：state clean、errors=Continue、Lifetime writes 7939 GB；
+  当前开机 dmesg 无 ext4/IO 报错（但前几次开机的内核日志已被 dmesg 轮转，取不到了）
+- 上一次关机的 ramoops（`/sys/fs/pstore/console-ramoops-0`）结尾是
+  `sysmon-qmi: …shutdown` → `reboot: Restarting system`，即**正常重启序列，无 panic**
+
+### ② 本次改动（只为取证，不改行为）
+- `openpilot/sunnypilot/carrot/carrot_man.py`：`_raise_core_limit()`
+  - 现状：`RLIMIT_CORE` soft=0 / hard=**unlimited**（manager 交下来是 0）→ apport 的 core 永远是空壳
+  - 改：进程自己把 soft 提到 `min(256 MB, hard)`；失败只记日志（`carrot_man: core limit setup failed`）
+  - 效果：下次 SIGBUS/SIGSEGV/abort → `/var/crash/*.crash` 里带**真 core**，可
+    `apport-unpack` 后用 `gdb`（设备自带 /usr/bin/gdb）看 C 层栈；配合已 armed 的 `faulthandler`
+    （Python 每线程栈 → `/data/log/carrot_man_faults.log`）两层证据齐了
+- 纯诊断、全部 try/except 包住，正常功能路径一行未动
+
+### ③ 现网状态（20:55 实测）
+| 项 | 实测 |
+|---|---|
+| 设备 | 20:17 重启（正常序列），offroad / 未点火 |
+| carrot_man | ✅ 运行中（pid 53343，RSS 46 MB，含 faulthandler+看护） |
+| 推送 | 4 个仓（openpilot / webui / opendbc / ai）远端均与本地同 hash，**无待推** |
