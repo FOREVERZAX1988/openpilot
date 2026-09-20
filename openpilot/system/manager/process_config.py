@@ -138,7 +138,10 @@ procs = [
   NativeProcess("loggerd", "openpilot/system/loggerd", ["./loggerd"], logging),
   NativeProcess("encoderd", "openpilot/system/loggerd", ["./encoderd"], only_onroad),
   NativeProcess("stream_encoderd", "openpilot/system/loggerd", ["./encoderd", "--stream"], or_(livestream, notcar)),
-  PythonProcess("logmessaged", "openpilot.system.logmessaged", always_run),
+  # restart_if_crash: same trap as carrot_man below -- ManagerProcess.start() returns early
+  # while self.proc is not None, so a crashed logmessaged (e.g. a non-UTF-8 byte on the
+  # swaglog IPC socket) stayed dead until reboot and every log message was silently dropped.
+  PythonProcess("logmessaged", "openpilot.system.logmessaged", always_run, restart_if_crash=True),
 
   NativeProcess("camerad", "openpilot/system/camerad", ["./camerad"], or_(driverview, livestream), enabled=not WEBCAM),
   PythonProcess("webcamerad", "openpilot.system.camerad.webcam.camerad", driverview, enabled=WEBCAM),
