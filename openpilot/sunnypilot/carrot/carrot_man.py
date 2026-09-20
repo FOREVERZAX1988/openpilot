@@ -3107,7 +3107,18 @@ def main_thread():
 def main():
   _enable_crash_logging()
   _start_watchdog()
-  main_thread()
+  try:
+    main_thread()
+  except KeyboardInterrupt:
+    # normal shutdown path (manager stops us with SIGINT); not an error
+    raise
+  except BaseException:
+    # An exit-code-1 death is otherwise invisible: manager records only the exit
+    # code and the traceback goes to our stderr, which is discarded. Log it so the
+    # next post-mortem has the reason. Fatal-signal crashes (SIGBUS/SIGSEGV) are
+    # covered separately by faulthandler -> FAULT_LOG_PATH.
+    cloudlog.exception("carrot_man: fatal error escaped main thread")
+    raise
 
 
 if __name__ == "__main__":
