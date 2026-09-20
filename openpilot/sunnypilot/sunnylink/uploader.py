@@ -23,9 +23,13 @@ NetworkType = log.DeviceState.NetworkType
 UPLOAD_ATTR_NAME = 'user.sunny.upload'
 UPLOAD_ATTR_VALUE = b'1'
 
-# Statuses that mean 'the server will never accept this file' (forbidden / gone).
+# Statuses that mean 'the server will never accept this file' (bad request / forbidden / gone).
 # Retrying them just burns a request every backoff window and re-logs an ERROR forever.
-PERMANENT_REJECT_CODES = (403, 404)
+# 400 is the per-path validator: sunnylink answers {"detail":"Invalid file extension: crash/..."}
+# for a crash dump whose name carries no extension. Such a file lives in immediate_folders
+# ('crash/', 'boot/'), so next_file_to_upload() hands it back on *every* pass and it starves
+# the whole queue behind it (one ERROR every backoff window, nothing else ever uploads).
+PERMANENT_REJECT_CODES = (400, 403, 404)
 
 MAX_UPLOAD_SIZES = {
   "qlog": 25*1e6,  # can't be too restrictive here since we use qlogs to find

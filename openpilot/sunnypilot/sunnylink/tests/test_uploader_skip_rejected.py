@@ -53,6 +53,24 @@ class TestUploaderSkipRejected(OpenpilotTestCase):
       result, _, _, _ = self._upload(tmpdir, FakeResponse(404, b"not found"))
     self.assertTrue(result)
 
+  def test_bad_request_is_handled_too(self):
+    # Live repro (tizi, 2026-09-20): the uploader sat on one crash dump for hours --
+    # 400 {"detail":"Invalid file extension: crash/2026-09-19--17-50-30_..._loggerd_encoder"}.
+    # That file sits in immediate_folders, so it was picked first on every pass and blocked
+    # every other upload. It must be tagged as handled, not retried.
+    body = b'{"type":"BadRequestException","status":400,"detail":"Invalid file extension: crash/2026-09-19--17-50-30_473338fe_openpilot_system_loggerd_encoder"}'
+    with tempfile.TemporaryDirectory() as tmpdir:
+      result, set_xattr, log, uploader = self._upload(
+        tmpdir, FakeResponse(400, body),
+        key="crash/2026-09-19--17-50-30_473338fe_openpilot_system_loggerd_encoder")
+
+    self.assertTrue(result, "400 must count as handled, otherwise the queue head never drains")
+    set_xattr.assert_called_once()
+    self.assertEqual(uploader.last_status_code, 400)
+    events = [call.args[0] for call in log.event.call_args_list]
+    self.assertIn("upload_skipped_rejected", events)
+    self.assertNotIn("upload_failed with content", events)
+
   def test_auth_failure_is_still_reported_and_retried(self):
     with tempfile.TemporaryDirectory() as tmpdir:
       result, set_xattr, log, uploader = self._upload(tmpdir, FakeResponse(401, b"bad token"))
