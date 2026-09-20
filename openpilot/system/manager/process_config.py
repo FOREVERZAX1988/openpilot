@@ -228,7 +228,10 @@ if os.path.exists("./github_runner.sh"):
                           ["./github_runner.sh", "start"], and_(only_offroad, use_github_runner), sigkill=False)]
 
 if os.path.exists("../../sunnypilot/sunnylink/uploader.py"):
-  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader", use_sunnylink_uploader_shim)]
+  # restart_if_crash=True: PythonProcess defaults to False -> if this process ever exits it never
+  # comes back until the manager itself is restarted (seen 2026-09-20: killed uploader stayed down).
+  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader",
+                          use_sunnylink_uploader_shim, restart_if_crash=True)]
 
 if os.path.exists("../../third_party/copyparty/copyparty-sfx.py"):
   sunnypilot_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
