@@ -23,6 +23,10 @@ NetworkType = log.DeviceState.NetworkType
 UPLOAD_ATTR_NAME = 'user.sunny.upload'
 UPLOAD_ATTR_VALUE = b'1'
 
+# Statuses that mean 'the server will never accept this file' (forbidden / gone).
+# Retrying them just burns a request every backoff window and re-logs an ERROR forever.
+PERMANENT_REJECT_CODES = (403, 404)
+
 MAX_UPLOAD_SIZES = {
   "qlog": 25*1e6,  # can't be too restrictive here since we use qlogs to find
   # bugs, including ones that can cause massive log sizes
@@ -209,7 +213,18 @@ class Uploader:
           cloudlog.event("upload_success", key=key, fn=fn, sz=sz, content_length=content_length,
                          network_type=network_type, metered=metered, speed=speed)
         success = True
-      elif stat is not None:  # 401, 403... Not sure why they were up to begin with
+      elif stat is not None and stat.status_code in PERMANENT_REJECT_CODES:
+        # The server refuses this file outright, so retrying never helps: sunnylink answers
+        # 403 {"detail":"Upload only allowed for sponsors temporarily."} for every upload from
+        # a non-sponsor account, which pinned this uploader on the same boot/*.zst for hours
+        # (one ERROR per backoff window, and the rest of the queue never drained). Tag it as
+        # handled so it is skipped, log it once as a distinct event, and move on.
+        self.last_filename = fn
+        success = True
+        detail = stat.content[:512].decode("utf-8", errors="replace") if hasattr(stat, "content") else ""
+        cloudlog.event("upload_skipped_rejected", stat=stat, key=key, fn=fn, sz=sz,
+                       network_type=network_type, metered=metered, error=detail)
+      elif stat is not None:  # 401: auth may recover once the account/token is fixed
         success = False
         cloudlog.event("upload_failed with content", stat=stat, exc=last_exc, key=key, fn=fn, sz=sz, network_type=network_type, metered=metered,
                        error=stat.content.decode("utf-8"))
@@ -278,8 +293,8 @@ def main(exit_event: threading.Event | None = None) -> None:
     elif success:
       backoff = 0.1
     else:
-      if uploader.last_status_code in (401, 403, 404):
-        backoff = 3600  # auth/permission/not-found: permanent-ish, don't hammer
+      if uploader.last_status_code == 401:
+        backoff = 3600  # auth: recoverable (re-login / new token), so don't hammer either
       else:
         backoff = min(backoff*2, 120)
       cloudlog.info("upload backoff %r (status %r)", backoff, uploader.last_status_code)
