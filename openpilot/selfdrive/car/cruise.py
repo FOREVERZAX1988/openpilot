@@ -430,8 +430,10 @@ class VCruiseCarrot(VCruiseHelper):
     self._update_carrot_man(sm)
     if sm.alive['longitudinalPlan']:
       lp = sm['longitudinalPlan']
-      self.xState = lp.xState
-      self.trafficState = lp.trafficState
+      # xState/trafficState are cp-specific; sunnypilot's LongitudinalPlan only
+      # has aTarget. Default to 0 so traffic-sign logic stays inactive.
+      self.xState = getattr(lp, 'xState', 0)
+      self.trafficState = getattr(lp, 'trafficState', 0)
       self.aTarget = lp.aTarget
     if sm.alive['radarState']:
       lead = sm['radarState'].leadOne
