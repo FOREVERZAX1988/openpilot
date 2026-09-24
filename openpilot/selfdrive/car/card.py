@@ -19,7 +19,7 @@ from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
 from opendbc.safety import ALTERNATIVE_EXPERIENCE
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
-from openpilot.selfdrive.car.cruise import VCruiseHelper
+from openpilot.selfdrive.car.cruise import VCruiseCarrot
 from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp
 
 from openpilot.sunnypilot.mads.helpers import set_alternative_experience, set_car_specific_params
@@ -183,7 +183,9 @@ class Car:
     self.params.put("CarParamsSPCache", cp_sp_bytes)
     self.params.put("CarParamsSPPersistent", cp_sp_bytes)
 
-    self.v_cruise_helper = VCruiseHelper(self.CP, self.CP_SP)
+    # VCruiseCarrot subclasses VCruiseHelper, so update_speed_limit_assist and the rest
+    # of the SLA surface below keep working; it adds cp's cruise-button state machine on top.
+    self.v_cruise_helper = VCruiseCarrot(self.CP, self.CP_SP)
 
     self.is_metric = self.params.get_bool("IsMetric")
     self.experimental_mode = self.params.get_bool("ExperimentalMode")
@@ -210,7 +212,9 @@ class Car:
     CS_SP = convert_to_capnp(CS_SP)
 
     # Update radar tracks from CAN
-    RD: structs.RadarDataT | None = self.RI.update(can_list)
+    # update_carrot runs the brand's update() and then smooths the tracks with ego
+    # motion (cp L1). For brands without the layer it is identical to update().
+    RD: structs.RadarDataT | None = self.RI.update_carrot(CS.vEgo, CS.aEgo, time.monotonic(), can_list)
 
     self.sm.update(0)
 
@@ -267,6 +271,12 @@ class Car:
     # TODO: mirror the carState.cruiseState struct?
     CS.vCruise = float(self.v_cruise_helper.v_cruise_kph)
     CS.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
+    # Published for the brand controllers: soft-hold state after a cancel, and whether the
+    # car should be auto-engaged (GM auto-cruise). getattr-guarded because the helper
+    # implementation may be VCruiseHelper alone, which does not define these.
+    CS.softHoldActive = int(getattr(self.v_cruise_helper, "_soft_hold_active", 0) or 0)
+    CS.activateCruise = int(getattr(self.v_cruise_helper, "_activate_cruise", 0) or 0)
+    self.CI.CS.softHoldActive = CS.softHoldActive
 
     return CS, CS_SP, RD
 

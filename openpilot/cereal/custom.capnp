@@ -763,6 +763,15 @@ struct CarrotManSP @0xcd96dafb67a082d0 {
   vTurnSpeedMs @70 :Float32 = 0;
   routeSpeed @71 :Float32 = 0;
   routeDist @72 :Float32 = 0;
+
+  # Readable form of `desiredSource` plus its colour class, so every consumer shows
+  # the same thing instead of re-deriving a mapping. `desiredSource` is the internal
+  # token ("atc", "hda_section", ...); `desiredSourceLabel` is the driver-facing
+  # reason ("turn", "section") and `desiredSourceColor` is the HUD colour mode
+  # (2 = normal deceleration, 3 = vehicle CAN navigation, 4 = external navigation).
+  # Mapping lives in openpilot/sunnypilot/carrot/deceleration_source.py.
+  desiredSourceLabel @73 :Text = "";
+  desiredSourceColor @74 :Int32 = 0;
 }
 
 struct ImuCalibrationSP @0xb057204d7deadf3f {

@@ -9,7 +9,7 @@ from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.carrot_tuning import CarrotTuningLayout
-from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, button_item_sp, simple_button_item_sp
+from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, button_item_sp, simple_button_item_sp, option_item_sp
 from openpilot.system.ui.widgets import DialogResult
 from openpilot.system.ui.widgets.list_view import text_item
 from openpilot.system.ui.widgets import Widget
@@ -39,6 +39,14 @@ class NavigationLayout(Widget):
       param="AmapMapDataEnabled",
     )
 
+    self._osm_map_data_enabled = toggle_item_sp(
+      title=tr("Enable OSM Map Data"),
+      description=tr("Use offline OSM map data for speed limits and road names. Turn off "
+                     "to ignore the offline map entirely - useful when navigation or Amap "
+                     "is the source you trust, since the offline data can be out of date."),
+      param="OsmMapDataEnabled",
+    )
+
     self._carrot_amap_blind_spot_enabled = toggle_item_sp(
       title=tr("Enable Amap Blind Spot Data"),
       description=tr("Parse blind-spot / LiDAR / extBlinker fields from the 7706 UDP stream."),
@@ -66,14 +74,13 @@ class NavigationLayout(Widget):
     self._amap_curve_speed = toggle_item_sp(
       title=tr("Amap Curve Speed"),
       description=tr("Slow for curves using the Amap route shape. Only ever lowers the "
-                     "target speed; needs Smart Cruise Control - Map to be on as well."),
+                     "target speed; arms its controller automatically with Carrot on."),
       param="AmapCurveSpeedEnabled",
     )
 
     self._amap_traffic_light_hint = toggle_item_sp(
       title=tr("Amap Traffic Light Hint"),
-      description=tr("Count traffic lights on the route ahead. Not yet shown anywhere; "
-                     "no effect for now."),
+      description=tr("Count traffic lights on the route ahead from the Amap route."),
       param="AmapTrafficLightHintEnabled",
     )
 
@@ -112,6 +119,13 @@ class NavigationLayout(Widget):
       param="CarrotNavCruiseSpeedEnabled",
     )
 
+    self._haptic_speed_camera = option_item_sp(
+      title=tr("Haptic Feedback (Speed Camera)"),
+      description=tr("Steering-wheel nudge when carrot decelerates for a speed camera."),
+      param="HapticFeedbackWhenSpeedCamera",
+      min_value=0, max_value=2, value_change_step=1,
+    )
+
     self._carrot_tuning_button = simple_button_item_sp(
       button_text=lambda: tr("Carrot Tuning"),
       button_width=800,
@@ -120,6 +134,7 @@ class NavigationLayout(Widget):
 
     items = [
       self._amap_map_data_enabled,
+      self._osm_map_data_enabled,
       self._carrot_amap_blind_spot_enabled,
       self._carrot_enabled,
       self._carrot_navi_v2_enabled,
@@ -130,6 +145,7 @@ class NavigationLayout(Widget):
       self._amap_traffic_light_hint,
       self._carrot_atc_blinker,
       self._carrot_nav_cruise_speed,
+      self._haptic_speed_camera,
       self._carrot_tuning_button,
     ]
     return items
@@ -150,6 +166,7 @@ class NavigationLayout(Widget):
     carrot_on = self._params.get_bool("CarrotEnabled")
     self._carrot_navi_v2_enabled.set_visible(carrot_on)
     self._carrot_nav_cruise_speed.set_visible(carrot_on)
+    self._haptic_speed_camera.set_visible(carrot_on)
 
     current_key = self._params.get("AmapApiKey") or ""
     masked = "" if not current_key else "*" * min(len(current_key), 12)
