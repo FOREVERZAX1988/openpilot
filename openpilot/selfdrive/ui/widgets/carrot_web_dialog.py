@@ -12,7 +12,10 @@ from openpilot.system.ui.widgets.label import gui_label
 class CarrotWebDialog(Widget):
   def __init__(self):
     super().__init__()
-    self._session = CarrotWebQrSession(ui_state.params_memory)
+    # UIState only exposes `params` (a Params() handle); there is no separate
+    # params_memory. NetworkAddress is a persistent param, so the regular store
+    # is the correct one for the QR address anyway.
+    self._session = CarrotWebQrSession(ui_state.params)
 
   def show_event(self):
     super().show_event()

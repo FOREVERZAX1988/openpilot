@@ -496,32 +496,22 @@ class VCruiseCarrot(VCruiseHelper):
           self.v_cruise_cluster_kph = self.v_cruise_kph
     else:
       self.v_cruise_kph = np.clip(v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max) #max(20, self.v_ego_kph_set) #V_CRUISE_UNSET
-      self.v_cruise_cluster_kph = self.v_cruise_kph #V_CRUISE_UNSET
+      self.v_cruise_cluster_kph = self.v_cruise_kph #V_CRUISE_UNSET  # noqa: E262
       #if self.cruise_state_available_last: # 최초 한번이라도 cruiseState.available이 True였다면
       #  self._lat_enabled = False
 
     self.cruise_state_available_last = CS.cruiseState.available
     self.enabled_last = CC.enabled
 
-  def initialize_v_cruise(self, CS, experimental_mode: bool) -> None:
+  def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool = False) -> None:
+    """No-op override; the inherited VCruiseHelper.initialize_v_cruise owns v_cruise.
+
+    The signature must stay identical to the base class because card.py calls the
+    helper polymorphically with (CS, experimental_mode, dynamic_experimental_control).
+    The previous two-argument override raised
+    `TypeError: takes 3 positional arguments but 4 were given` on every SET press.
+    """
     return
-    # initializing is handled by the PCM
-    if self.CP.pcmCruise and self.speed_from_pcm == 1:
-      return
-
-    initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode else CS.vEgoCluster * CV.MS_TO_KPH
-
-    v_ego_kph = int(round(np.clip(CS.vEgoCluster * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
-    print(CS.buttonEvents)
-    if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents): # and self.v_cruise_initialized:
-      self.v_cruise_kph = max(self._v_cruise_kph_at_brake, v_ego_kph) if self._v_cruise_kph_at_brake > 0 else self.v_cruise_kph_last
-      self._add_log(f"{self.v_cruise_kph},{self._v_cruise_kph_at_brake} Cruise resume")
-    else:
-      self.v_cruise_kph = v_ego_kph
-      self._add_log(f"{self.v_cruise_kph} Cruise Set")
-
-    self.v_cruise_kph = np.clip(self.v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max)
-    self.v_cruise_cluster_kph = self.v_cruise_kph
 
   def _prepare_buttons(self, CS, v_cruise_kph):
     button_kph = v_cruise_kph

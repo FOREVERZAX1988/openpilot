@@ -183,25 +183,45 @@ class NavigationLayout(Widget):
     return tr("Amap") if (amap_on and key) else tr("OSM")
 
   def _on_carrot_navi_debug(self):
-    raw = self._params.get("CarrotNaviDebug") or ""
-    if isinstance(raw, bytes):
+    # CarrotNaviDebug is registered as a JSON param (params_keys.h), so Params.get()
+    # already decodes it to a dict. carrot_man's _merge_navi_debug also tolerates a
+    # raw str/bytes for an unset or legacy value, so accept all three shapes here.
+    raw = self._params.get("CarrotNaviDebug")
+    if isinstance(raw, (bytes, bytearray)):
       raw = raw.decode("utf-8", errors="replace")
-    if not raw.strip():
-      message = tr("No navigation event received yet.")
-    else:
+
+    if isinstance(raw, dict):
+      debug = raw
+    elif isinstance(raw, str) and raw.strip():
       try:
-        debug = json.loads(raw)
+        parsed = json.loads(raw)
       except Exception:
         message = raw
-      else:
-        lines = [
-          f"Type: {debug.get('type', '')}",
-          f"Event Time: {debug.get('eventTimeMs', 0)} ms",
-          f"Received At: {debug.get('receivedAt', '')}",
-          "",
-          json.dumps(debug.get('summary', {}), ensure_ascii=False, indent=2, sort_keys=True),
-        ]
-        message = "\n".join(lines)
+        gui_app.push_widget(alert_dialog(message, tr("OK")))
+        return
+      debug = parsed if isinstance(parsed, dict) else {}
+    else:
+      debug = {}
+
+    if not debug:
+      message = tr("No navigation event received yet.")
+    else:
+      lines = [
+        f"Type: {debug.get('type', '')}",
+        f"Event Time: {debug.get('eventTimeMs', 0)} ms",
+        f"Received At: {debug.get('receivedAt', '')}",
+        "",
+      ]
+      summary = debug.get('summary')
+      if isinstance(summary, dict) and summary:
+        lines.append(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True, default=str))
+      # The 10 Hz snapshot writer fills these keys instead of `summary`; show them
+      # rather than render an empty body for a snapshot-only payload.
+      snapshot = {k: v for k, v in debug.items() if k not in ('summary', 'title', 'lines')}
+      if snapshot:
+        lines.append(json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True, default=str))
+      message = "\n".join(lines)
+
     gui_app.push_widget(alert_dialog(message, tr("OK")))
 
   def _render(self, rect):
