@@ -11,19 +11,20 @@ from opendbc.car.structs import car
 from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper
 from openpilot.common.swaglog import cloudlog, ForwardingHandler
-
 from opendbc.car import DT_CTRL, structs
 from opendbc.car.can_definitions import CanData, CanRecvCallable, CanSendCallable
 from opendbc.car.carlog import carlog
 from opendbc.car.fw_versions import ObdCallback
 from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
+from opendbc.safety import ALTERNATIVE_EXPERIENCE
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
-from openpilot.selfdrive.car.cruise import VCruiseHelper
+from openpilot.selfdrive.car.cruise import VCruiseCarrot
 from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp
 
 from openpilot.sunnypilot.mads.helpers import set_alternative_experience, set_car_specific_params
 from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfaces
+from openpilot.sunnypilot.carrot.carrot_navi_fusion import merge_carrot_navi_lanes
 
 REPLAY = "REPLAY" in os.environ
 
@@ -71,7 +72,7 @@ class Car:
 
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
-    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'radarState'] + ['carControlSP', 'longitudinalPlanSP'])
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'longitudinalPlan', 'radarState', 'drivingModelData'] + ['carControlSP', 'longitudinalPlanSP', 'carrotManSP', 'carrotNaviSP'])
     self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks'] + ['carParamsSP', 'carStateSP'])
 
     self.can_rcv_cum_timeout_counter = 0
@@ -124,6 +125,9 @@ class Car:
       self.RI = RI
 
     self.CP.alternativeExperience = 0
+    if self.params.get_bool("ToyotaAutoHold"):
+      self.CP.alternativeExperience |= ALTERNATIVE_EXPERIENCE.ALLOW_AEB
+
     # mads
     set_alternative_experience(self.CP, self.CP_SP, self.params)
     set_car_specific_params(self.CP, self.CP_SP, self.params)
@@ -179,10 +183,17 @@ class Car:
     self.params.put("CarParamsSPCache", cp_sp_bytes)
     self.params.put("CarParamsSPPersistent", cp_sp_bytes)
 
-    self.v_cruise_helper = VCruiseHelper(self.CP, self.CP_SP)
+    # VCruiseCarrot subclasses VCruiseHelper, so update_speed_limit_assist and the rest
+    # of the SLA surface below keep working; it adds cp's cruise-button state machine on top.
+    self.v_cruise_helper = VCruiseCarrot(self.CP, self.CP_SP)
 
     self.is_metric = self.params.get_bool("IsMetric")
     self.experimental_mode = self.params.get_bool("ExperimentalMode")
+    self.carrot_enabled = self.params.get_bool("CarrotEnabled")
+    self.carrot_navi_v2_enabled = self.params.get_bool("CarrotNaviV2Enabled")
+    self.carrot_nav_lane_guide_block = self.params.get_bool("CarrotNavLaneGuideBlockEnabled")
+    self._carrot_navi_cache = None
+    self._carrot_navi_cache_mono = 0.0
 
     # card is driven by can recv, expected at 100Hz
     self.rk = Ratekeeper(100, print_delay_threshold=None)
@@ -201,9 +212,46 @@ class Car:
     CS_SP = convert_to_capnp(CS_SP)
 
     # Update radar tracks from CAN
-    RD: structs.RadarDataT | None = self.RI.update(can_list)
+    # update_carrot runs the brand's update() and then smooths the tracks with ego
+    # motion (cp L1). For brands without the layer it is identical to update().
+    RD: structs.RadarDataT | None = self.RI.update_carrot(CS.vEgo, CS.aEgo, time.monotonic(), can_list)
 
     self.sm.update(0)
+
+    # Merge Carrot navigation lane hints into carState/carStateSP. Both the 7714
+    # v2 stream and the 7706 navLaneGuide array feed the SAME flags, so there is
+    # only one lane-blocking decision.
+    if self.sm.updated['carrotNaviSP'] and self.sm.valid['carrotNaviSP']:
+      self._carrot_navi_cache = self.sm['carrotNaviSP']
+      self._carrot_navi_cache_mono = time.monotonic()
+    carrot_navi = self._carrot_navi_cache
+    navi_fresh = carrot_navi is not None and time.monotonic() - self._carrot_navi_cache_mono <= 0.5
+    carrot_man = self.sm['carrotManSP'] if self.sm.valid.get('carrotManSP', False) else None
+    nav_guide = getattr(carrot_man, 'navLaneGuide', "") if carrot_man is not None else ""
+    nav_guide_cnt = int(getattr(carrot_man, 'navLaneGuideCnt', 0) or 0) if carrot_man is not None else 0
+    if self.carrot_enabled:
+      merge_carrot_navi_lanes(
+        CS_SP,
+        carrot_navi if (self.carrot_navi_v2_enabled and navi_fresh) else None,
+        nav_guide,
+        nav_guide_cnt,
+        self.carrot_nav_lane_guide_block,
+      )
+
+      # Amap direct LiDAR/camera blind-spot hint. carrot_man publishes it on
+      # carrotManSP and this is the ONLY place it becomes carState, which keeps
+      # carState single-writer. carrot_man used to assign
+      # sm['carState'].leftBlindspot itself, but SubMaster hands out a capnp
+      # _DynamicStructReader whose attributes cannot be set - so that raised inside
+      # tick() and silently stopped carrotManSP from being published at all.
+      #
+      # Only ever sets True: this is an additional blind-spot source OR-ed onto the
+      # car's own signal, never a way to clear it.
+      if carrot_man is not None:
+        if bool(getattr(carrot_man, 'amapLeftBlind', False)):
+          CS.leftBlindspot = True
+        if bool(getattr(carrot_man, 'amapRightBlind', False)):
+          CS.rightBlindspot = True
 
     can_rcv_valid = len(can_strs) > 0
 
@@ -215,7 +263,9 @@ class Car:
       self.can_log_mono_time = messaging.log_from_bytes(can_strs[0]).logMonoTime
 
     self.v_cruise_helper.update_speed_limit_assist(self.is_metric, self.sm['longitudinalPlanSP'])
-    self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric)
+    # CS_SP is passed explicitly: card.py is the PUBLISHER of carStateSP, it is not
+    # in this SubMaster, so `self.sm['carStateSP']` would raise KeyError.
+    self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric, self.sm, CS_SP)
     if self.sm['carControl'].enabled and not self.CC_prev.enabled:
       # Use CarState w/ buttons from the step selfdrived enables on
       self.v_cruise_helper.initialize_v_cruise(self.CS_prev, self.experimental_mode, self.dynamic_experimental_control)
@@ -223,6 +273,12 @@ class Car:
     # TODO: mirror the carState.cruiseState struct?
     CS.vCruise = float(self.v_cruise_helper.v_cruise_kph)
     CS.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
+    # Published for the brand controllers: soft-hold state after a cancel, and whether the
+    # car should be auto-engaged (GM auto-cruise). getattr-guarded because the helper
+    # implementation may be VCruiseHelper alone, which does not define these.
+    CS.softHoldActive = int(getattr(self.v_cruise_helper, "_soft_hold_active", 0) or 0)
+    CS.activateCruise = int(getattr(self.v_cruise_helper, "_activate_cruise", 0) or 0)
+    self.CI.CS.softHoldActive = CS.softHoldActive
 
     return CS, CS_SP, RD
 
@@ -294,11 +350,6 @@ class Car:
     initialized = (not any(e.name == EventName.selfdriveInitializing for e in self.sm['onroadEvents']) and
                    self.sm.seen['onroadEvents'])
     if not self.CP.passive and initialized:
-      # 车距显示路线A：注入 OP 融合前车距离（radard 发布的 radarState.leadOne），
-      # 供 carcontroller 在原厂雷达无目标时补位仪表 ACC 车距图标。纯显示层，不参与 ACC_05 控制。
-      rs = self.sm['radarState']
-      self.CI.CS.op_lead_dRel = float(rs.leadOne.dRel) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
-      self.CI.CS.op_lead_vLead = float(rs.leadOne.vLead) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
       self.controls_update(CS, self.sm['carControl'], self.sm['carControlSP'])
 
     self.initialized_prev = initialized
@@ -309,6 +360,7 @@ class Car:
     while not evt.is_set():
       self.is_metric = self.params.get_bool("IsMetric")
       self.experimental_mode = self.params.get_bool("ExperimentalMode") and self.CP.openpilotLongitudinalControl
+      self.carrot_enabled = self.params.get_bool("CarrotEnabled")
 
       # sunnypilot
       self.dynamic_experimental_control = self.params.get_bool("DynamicExperimentalControl")

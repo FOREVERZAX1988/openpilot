@@ -74,14 +74,32 @@ def test_vcruise_carrot_overrides_accept_the_card_call_site():
     )
 
 
-def test_update_v_cruise_accepts_the_optional_submaster():
-  """card.py passes self.sm as a 4th argument; it must stay optional.
+def test_update_v_cruise_accepts_the_optional_extra_args():
+  """card.py passes sm and CS_SP as the 4th/5th arguments; both must stay optional.
 
-    Making `sm` mandatory would break the base-class call shape used by tests and
-    by any brand that drives VCruiseHelper directly.
+    Making either mandatory would break the base-class call shape used by tests and
+    by any brand that drives VCruiseHelper directly:
+        update_v_cruise(CS, enabled, is_metric)
+
+    CS_SP is how _prepare_buttons reaches the VW stage-2 stalk latch. It cannot be
+    read from SubMaster: card.py is the *publisher* of carStateSP, so
+    sm['carStateSP'] raises KeyError (same trap as the earlier longitudinalPlan bug).
     """
   src = CRUISE_PATH.read_text(encoding='utf-8')
   override = _methods('VCruiseCarrot', src)['update_v_cruise']
   mandatory, total = _arg_bounds(override)
-  assert total == 4, f'expected 4 positional params (CS, enabled, is_metric, sm), got {total}'
-  assert mandatory <= 3, f'sm must be optional; mandatory={mandatory}'
+  assert total == 5, f'expected 5 positional params (CS, enabled, is_metric, sm, CS_SP), got {total}'
+  assert mandatory <= 3, f'sm and CS_SP must be optional; mandatory={mandatory}'
+
+
+def test_submaster_does_not_supply_carstate_sp():
+  """Guard against re-introducing sm['carStateSP'].
+
+    card.py owns carStateSP as a publisher, so it is absent from its SubMaster.
+    Reading it from `sm` raises KeyError on the first cruise tick, which is the
+    exact class of bug that already took card.py down twice.
+    """
+  card_src = (CRUISE_PATH.parent / 'card.py').read_text(encoding='utf-8')
+  cruise_src = CRUISE_PATH.read_text(encoding='utf-8')
+  assert "sm['carStateSP']" not in cruise_src, "carStateSP is not in card.py's SubMaster - read it from the passed CS_SP"
+  assert "'carStateSP'" in card_src, 'card.py no longer mentions carStateSP at all?'
