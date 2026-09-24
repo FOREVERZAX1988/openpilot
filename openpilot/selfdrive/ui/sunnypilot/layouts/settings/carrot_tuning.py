@@ -138,12 +138,18 @@ class CarrotGroupLayout(Widget):
 
 
 class CarrotTuningLayout(Widget):
-  """Carrot tuning root page: one navigation row per settings group."""
+  """Carrot tuning root page: one navigation row per settings group.
 
-  def __init__(self, back_btn_callback: Callable):
+  Used in two places: inside NavigationLayout (with a Back button) and as a
+  top-level settings panel (no Back button, because the sidebar close button is the
+  way out). ``back_btn_callback=None`` selects the panel form.
+  """
+
+  def __init__(self, back_btn_callback: Callable | None):
     super().__init__()
-    self._back_button = NavButton(tr("Back"))
-    self._back_button.set_click_callback(back_btn_callback)
+    self._back_button = NavButton(tr("Back")) if back_btn_callback is not None else None
+    if self._back_button is not None:
+      self._back_button.set_click_callback(back_btn_callback)
 
     self._current_group: CarrotGroupKey | None = None
     # Sub-pages are built on first open: the groups hold ~250 items in total and
@@ -186,10 +192,13 @@ class CarrotTuningLayout(Widget):
       self._group_layouts[self._current_group].render(rect)
       return
 
-    self._back_button.set_position(rect.x, rect.y + BACK_TOP_MARGIN)
-    self._back_button.render()
-
-    list_y = self._back_button.rect.height + LIST_TOP_GAP
+    # A top-level panel has no Back button: the sidebar close button is the way out.
+    if self._back_button is not None:
+      self._back_button.set_position(rect.x, rect.y + BACK_TOP_MARGIN)
+      self._back_button.render()
+      list_y = self._back_button.rect.height + LIST_TOP_GAP
+    else:
+      list_y = LIST_TOP_GAP
     self._scroller.render(rl.Rectangle(rect.x, rect.y + list_y, rect.width, rect.height - list_y))
 
   def show_event(self):

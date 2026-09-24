@@ -461,6 +461,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // afterwards - they are killswitches, not prerequisites.
     {"CarrotNavFeaturesSeeded", {PERSISTENT, BOOL, "0"}},
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
+    // Published by networkd; the Carrot web dialog reads it for the QR link.
+    {"NetworkAddress", {CLEAR_ON_MANAGER_START, STRING}},
     // Registered after the unregistered-reads audit: these BYD-platform and lateral
     // tuning reads were live code with no registration, so no UI or whitelist could
     // ever reach them. Defaults are 0 - the carcontroller's own per-platform
