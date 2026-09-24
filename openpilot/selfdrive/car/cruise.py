@@ -5,6 +5,7 @@ from opendbc.car import structs
 from opendbc.car.structs import car
 from openpilot.common.constants import CV
 from openpilot.common.params import Params
+from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.selfdrive.car.cruise_ext import VCruiseHelperSP
 # The gap-cycle helpers live with the distance-button handling; VCruiseCarrot reuses them
 # so both paths agree on how many levels a car has.
@@ -405,7 +406,7 @@ class VCruiseCarrot(VCruiseHelper):
       self.carrot_cmd = ""
       self.carrot_arg = ""
 
-  def update_v_cruise(self, CS, enabled, is_metric, sm=None):
+  def update_v_cruise(self, CS, enabled, is_metric, sm=None, CS_SP=None):
     self._add_log("")
     self.update_params(is_metric)
     self.frame += 1
@@ -427,6 +428,8 @@ class VCruiseCarrot(VCruiseHelper):
       return
 
     CC = sm['carControl']
+    # CS_SP carries the fork-only bits VCruiseCarrot needs (VW stage-2 stalk latch).
+    # It is passed in by card.py, which owns carStateSP; it is NOT in SubMaster.
     self._update_carrot_man(sm)
     if sm.alive['longitudinalPlan']:
       lp = sm['longitudinalPlan']
@@ -470,7 +473,7 @@ class VCruiseCarrot(VCruiseHelper):
     self._prepare_brake_gas(CS, CC)
     if CC.enabled:
       self._cruise_ready = False
-    v_cruise_kph = self._update_cruise_buttons(CS, CC, self.v_cruise_kph)
+    v_cruise_kph = self._update_cruise_buttons(CS, CC, self.v_cruise_kph, CS_SP)
 
     if self._activate_cruise > 0:
       #self.events.append(EventName.buttonEnable)
@@ -513,7 +516,7 @@ class VCruiseCarrot(VCruiseHelper):
     """
     return
 
-  def _prepare_buttons(self, CS, v_cruise_kph):
+  def _prepare_buttons(self, CS, v_cruise_kph, CS_SP=None):
     button_kph = v_cruise_kph
     button_type = 0
     buttonEvents = CS.buttonEvents
@@ -523,12 +526,18 @@ class VCruiseCarrot(VCruiseHelper):
     V_CRUISE_DELTA = 10
     is_metric = self.is_metric
 
+    # VW stage-2 stalk swipe latch. The bit lives on CarStateSP (fork-only), not on
+    # carState: opendbc's CarState has no such member, and reading CS.cruiseSpeedBigStep
+    # crashed card.py on the first button press. No publisher fills it yet, so this
+    # stays False and every press is treated as a short press.
+    big_step_available = bool(getattr(CS_SP, 'carrotCruiseSpeedBigStep', False))
+
     # long press tracking
     if self.button_cnt > 0:
       self.button_cnt += 1
       # VW 쓸어올리기(2단) 래치: GRA_Tip_Stufe_2는 2단으로 밀고 있는 동안만 1이고 뗄 때는 이미 0.
       # 뗄 때 샘플하면 항상 짧은누름으로 오인되므로, 누르고 있는 동안 한 번이라도 1이면 래치.
-      if self.button_prev in [ButtonType.accelCruise, ButtonType.decelCruise] and CS.cruiseSpeedBigStep:
+      if self.button_prev in [ButtonType.accelCruise, ButtonType.decelCruise] and big_step_available:
         self.button_big_step = True
 
     for b in buttonEvents:
@@ -549,7 +558,7 @@ class VCruiseCarrot(VCruiseHelper):
         self.button_cnt = 1
         self.button_prev = bt
         # VW 쓸어올리기(2단): 누르기 시작 시점의 GRA_Tip_Stufe_2 샘플 (이후 유지 중 래치로 보강)
-        self.button_big_step = bt in [ButtonType.accelCruise, ButtonType.decelCruise] and CS.cruiseSpeedBigStep
+        self.button_big_step = bt in [ButtonType.accelCruise, ButtonType.decelCruise] and big_step_available
         self.button_long_time = self._cruise_button_long_delay if bt in [ButtonType.accelCruise, ButtonType.decelCruise] else self._cruise_button_long_delay + 30
 
       elif not b.pressed and self.button_cnt > 0 and bt == self.button_prev:
@@ -602,7 +611,7 @@ class VCruiseCarrot(VCruiseHelper):
   def _carrot_command(self, v_cruise_kph, button_type, long_pressed):
     if self.carrot_cmd_index_last != self.carrot_cmd_index:
       self.carrot_cmd_index_last = self.carrot_cmd_index
-      print(f"Carrot command(cruise.py): {self.carrot_cmd} {self.carrot_arg}")
+      cloudlog.debug(f"Carrot command(cruise.py): {self.carrot_cmd} {self.carrot_arg}")
       if self.carrot_cmd == "CRUISE":
         if self.carrot_arg == "OFF":
           self._cruise_control(-2, -1, "Cruise off (carrot command)")
@@ -634,8 +643,8 @@ class VCruiseCarrot(VCruiseHelper):
     
     return v_cruise_kph, button_type, long_pressed
 
-  def _update_cruise_buttons(self, CS, CC, v_cruise_kph):
-    button_kph, button_type, long_pressed = self._prepare_buttons(CS, v_cruise_kph)
+  def _update_cruise_buttons(self, CS, CC, v_cruise_kph, CS_SP=None):
+    button_kph, button_type, long_pressed = self._prepare_buttons(CS, v_cruise_kph, CS_SP)
 
     v_cruise_kph, button_type, long_pressed = self._carrot_command(v_cruise_kph, button_type, long_pressed)
 
@@ -729,7 +738,6 @@ class VCruiseCarrot(VCruiseHelper):
             self._paddle_decel_active = False
           else:          
             self._paddle_decel_active = True
-        print("lfaButton")
       elif button_type == ButtonType.cancel:
         self._paddle_decel_active = False
         if self._cancel_button_mode in [1]:
