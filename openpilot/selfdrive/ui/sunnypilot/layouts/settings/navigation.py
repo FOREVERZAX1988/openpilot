@@ -105,13 +105,6 @@ class NavigationLayout(Widget):
       param="CarrotNaviV2Enabled",
     )
 
-    self._carrot_web_enabled = toggle_item_sp(
-      title=tr("Carrot Web Panel"),
-      description=tr("Serve the carrot tuning page (/nav_params) and four-corner radar "
-                      "visualisation (/radar) on port 8088."),
-      param="CarrotWebEnabled",
-    )
-
     # OFF by default: this lets a navigation packet synthesise a turn signal, and the
     # synthetic blinker reaches the vehicle's own turn-signal CAN message.
     self._carrot_atc_blinker = toggle_item_sp(
@@ -140,7 +133,6 @@ class NavigationLayout(Widget):
       self._carrot_amap_blind_spot_enabled,
       self._carrot_enabled,
       self._carrot_navi_v2_enabled,
-      self._carrot_web_enabled,
       self._amap_api_key,
       self._amap_curve_speed,
       self._amap_traffic_light_hint,
@@ -161,7 +153,6 @@ class NavigationLayout(Widget):
     self._carrot_amap_blind_spot_enabled.action_item.set_enabled(offroad)
     self._carrot_enabled.action_item.set_enabled(offroad)
     self._amap_api_key.action_item.set_enabled(offroad)
-    self._carrot_web_enabled.action_item.set_enabled(offroad)
     self._carrot_panel_opacity.action_item.set_enabled(offroad)
 
     # The v2 link and the nav-speed limit only mean anything with Carrot on,
