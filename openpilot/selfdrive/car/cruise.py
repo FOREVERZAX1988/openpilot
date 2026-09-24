@@ -404,7 +404,7 @@ class VCruiseCarrot(VCruiseHelper):
       self.carrot_cmd = ""
       self.carrot_arg = ""
 
-  def update_v_cruise(self, CS, sm, is_metric):
+  def update_v_cruise(self, CS, enabled, is_metric, sm=None):
     self._add_log("")
     self.update_params(is_metric)
     self.frame += 1
@@ -421,6 +421,9 @@ class VCruiseCarrot(VCruiseHelper):
       self.autoCruiseControl_cancel_timer = 20 * 100  # 20 sec
     else:
       self.autoCruiseControl_cancel_timer = max(0, self.autoCruiseControl_cancel_timer - 1)
+
+    if sm is None:
+      return
 
     CC = sm['carControl']
     self._update_carrot_man(sm)
