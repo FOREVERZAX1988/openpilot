@@ -5,7 +5,6 @@ from opendbc.car import structs
 from opendbc.car.structs import car
 from openpilot.common.constants import CV
 from openpilot.common.params import Params
-from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
 from openpilot.sunnypilot.selfdrive.car.cruise_ext import VCruiseHelperSP
 # The gap-cycle helpers live with the distance-button handling; VCruiseCarrot reuses them
 # so both paths agree on how many levels a car has.
@@ -391,8 +390,10 @@ class VCruiseCarrot(VCruiseHelper):
       self._cruise_speed_table = [cruiseSpeed1, cruiseSpeed2, cruiseSpeed3, cruiseSpeed4, cruiseSpeed5]
 
   def _update_carrot_man(self, sm):
-    carrot_man = get_carrot_man(sm)
-    if carrot_man is not None:
+    # sunnypilot publishes the phone-projection state on carrotManSP; the legacy
+    # cp 'carrotMan' service is not registered in cereal/services.py.
+    if sm.valid.get('carrotManSP', False):
+      carrot_man = sm['carrotManSP']
       self.nRoadLimitSpeed = carrot_man.nRoadLimitSpeed
       self.desiredSpeed = carrot_man.desiredSpeed
       self.carrot_cmd_index = carrot_man.carrotCmdIndex
