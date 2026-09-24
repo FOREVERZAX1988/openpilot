@@ -17,7 +17,7 @@ SOURCE_DIRS = [
   SELFDRIVE_DIR / "selfdrived",
   SELFDRIVE_DIR / "ui",
   ROOT_DIR / "system" / "ui",
-  ROOT_DIR / "sunnypilot",
+  ROOT_DIR / "dragonpilot",
 ]
 
 GLYPH_PADDING = 6
@@ -30,6 +30,19 @@ def _languages():
     return {}
   with LANGUAGES_FILE.open(encoding="utf-8") as f:
     return json.load(f)
+
+
+def _dragonpilot_chars(code: str) -> set[str]:
+  """Characters used by dragonpilot's own translations (dragonpilot_{code}.po).
+
+  dp settings translate via a separate catalog from openpilot's app_{code}.po,
+  so their glyphs must be baked too — otherwise translated dp settings render
+  as '?'."""
+  po_path = TRANSLATIONS_DIR / f"dragonpilot_{code}.po"
+  try:
+    return set(po_path.read_text(encoding="utf-8"))
+  except FileNotFoundError:
+    return set()
 
 
 def _source_chars() -> set[str]:
@@ -61,6 +74,7 @@ def _char_sets():
       chars = set(po_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
       continue
+    chars |= _dragonpilot_chars(code)
     if code in UNIFONT_LANGUAGES:
       # Bake .po chars + hardcoded source chars into the CJK-capable atlas
       lang_chars = set(base) | chars | source_chars

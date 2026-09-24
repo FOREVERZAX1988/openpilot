@@ -4,9 +4,9 @@ from openpilot.system.ui.widgets.scroller import NavScroller
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigToggle, BigParamControl, BigCircleParamControl, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigInputDialog, BigConfirmationCircleButton
 from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.widgets.ssh_key import SshKeyFetcher
 
 
@@ -14,18 +14,18 @@ class AlphaLongConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
     super().__init__()
 
-    accept = BigConfirmationCircleButton(tr("enable alpha\nlongitudinal"),
+    accept = BigConfirmationCircleButton("enable alpha\nlongitudinal",
                                          gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
                                          lambda: self.dismiss(on_confirm))
 
     self._scroller.add_widgets([
-      GreyBigButton(tr("enabling alpha longitudinal"), tr("scroll to continue"),
+      GreyBigButton("enabling alpha longitudinal", "scroll to continue",
                     gui_app.texture("icons_mici/setup/warning.png", 64, 64)),
-      GreyBigButton("", tr("WARNING: alpha longitudinal control may disable Automatic Emergency Braking (AEB)")),
-      GreyBigButton("", tr("On this car, openpilot defaults to the stock system's built-in ACC.")),
-      GreyBigButton("", tr("Enabling this will switch to openpilot longitudinal control.")),
-      GreyBigButton("", tr("Using Experimental mode is recommended with openpilot longitudinal control alpha.")),
-      GreyBigButton("", tr("Changing this setting will restart openpilot if the car is powered on.")),
+      GreyBigButton("", "WARNING: alpha longitudinal control may disable Automatic Emergency Braking (AEB)"),
+      GreyBigButton("", "On this car, openpilot defaults to the stock system's built-in ACC."),
+      GreyBigButton("", "Enabling this will switch to openpilot longitudinal control."),
+      GreyBigButton("", "Using Experimental mode is recommended with openpilot longitudinal control alpha."),
+      GreyBigButton("", "Changing this setting will restart openpilot if the car is powered on."),
       accept,
     ])
 
@@ -51,20 +51,20 @@ class DeveloperLayoutMici(NavScroller):
         self._ssh_fetcher.fetch(username, on_response)
       else:
         self._ssh_fetcher.clear()
-        self._ssh_keys_btn.set_value("Not set")
+        self._ssh_keys_btn.set_value(tr("Not set"))
 
     def ssh_keys_callback():
       github_username = ui_state.params.get("GithubUsername") or ""
       dlg = BigInputDialog(tr("enter GitHub username..."), github_username, minimum_length=0, confirm_callback=github_username_callback)
       if not system_time_valid():
-        dlg = BigDialog("", tr("Please connect to Wi-Fi to fetch your key."))
+        dlg = BigDialog("", "Please connect to Wi-Fi to fetch your key.")
         gui_app.push_widget(dlg)
         return
       gui_app.push_widget(dlg)
 
     txt_ssh = gui_app.texture("icons_mici/settings/developer/ssh.png", 56, 64)
     github_username = ui_state.params.get("GithubUsername") or ""
-    self._ssh_keys_btn = BigButton(tr("SSH keys"), "Not set" if not github_username else github_username, icon=txt_ssh)
+    self._ssh_keys_btn = BigButton(tr("SSH keys"), tr("Not set") if not github_username else github_username, icon=txt_ssh)
     self._ssh_keys_btn.set_click_callback(ssh_keys_callback)
 
     # adb, ssh, ssh keys, debug mode, joystick debug mode, longitudinal maneuver mode, ip address

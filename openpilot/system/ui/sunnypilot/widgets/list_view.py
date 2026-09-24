@@ -7,8 +7,8 @@ See the LICENSE.md file in the root directory for more details.
 from collections.abc import Callable, Sequence
 
 import pyray as rl
-from openpilot.sunnypilot.carrot.config import unified_params
-from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight, TextAlignment, TextAlignmentVertical
+from openpilot.common.params import Params
+from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight, TextAlignment, TextAlignmentVertical, font_fallback
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.widgets.toggle import ToggleSP
 from openpilot.system.ui.widgets import Widget
@@ -135,12 +135,9 @@ class MultipleButtonActionSP(MultipleButtonAction):
                param: str | None = None):
     MultipleButtonAction.__init__(self, buttons, button_width, selected_index, callback)
     self.param_key = param
-    self.params = unified_params
+    self.params = Params()
     if self.param_key:
-      # A param that is not registered (or a Params binding returning None) must not blow up
-      # layout construction - fall back to the caller-provided selected_index.
-      value = self.params.get(self.param_key)
-      self.selected_button = int(value) if value is not None else selected_index
+      self.selected_button = int(self.params.get(self.param_key, return_default=True))
     self._anim_x: float | None = None
     self.enabled_buttons: set[int] | None = None
 
@@ -389,8 +386,7 @@ def option_item_sp(title: str | Callable[[], str], param: str,
                    use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None, inline: bool = False) -> ListItemSP:
   action = OptionControlSP(
     param, min_value, max_value, value_change_step,
-    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback,
-    input_title=title,
+    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback
   )
   return ListItemSP(title=title, description=description, action_item=action, icon=icon, inline=inline)
 
@@ -418,3 +414,52 @@ class LineSeparatorSP(LineSeparator):
     rl.draw_line(int(self._rect.x) + LINE_PADDING, line_y,
                  int(self._rect.x + self._rect.width) - LINE_PADDING, line_y,
                  LINE_COLOR)
+
+
+class SectionHeadingSP(Widget):
+  """A titled divider used to group settings inside a list.
+
+  Non-interactive and non-focusable: it only labels the settings below it.
+  Deliberately reuses the existing description size (ITEM_DESC_FONT_SIZE) and
+  colour rather than introducing another font size, so a page stays within the
+  same type scale as the rest of the settings UI.
+  """
+
+  def __init__(self, label: str | Callable[[], str]):
+    super().__init__()
+    self._label = label
+    self._rect = rl.Rectangle(0, 0, 0, 0)
+
+  @property
+  def label(self) -> str:
+    return str(_resolve_value(self._label, ""))
+
+  @property
+  def _height(self) -> float:
+    return style.ITEM_DESC_FONT_SIZE + style.ITEM_PADDING * 2
+
+  def set_parent_rect(self, parent_rect: rl.Rectangle) -> None:
+    super().set_parent_rect(parent_rect)
+    self._rect.width = parent_rect.width
+    self._rect.height = self._height
+
+  def _render(self, _):
+    if not self.is_visible or self._parent_rect is None:
+      return
+    if (self._rect.y + self._rect.height) <= self._parent_rect.y or self._rect.y >= (self._parent_rect.y + self._parent_rect.height):
+      return
+
+    label = self.label
+    if not label:
+      return
+    # gui_app.font() is looked up per frame: it returns the CJK-capable OpFont for
+    # zh/ja/ko/th and rebuilds its cache on a language change.
+    font = gui_app.font(FontWeight.BOLD)
+    text_y = self._rect.y + style.ITEM_PADDING
+    rl.draw_text_ex(font_fallback(font, label), label,
+                    rl.Vector2(self._rect.x + style.ITEM_PADDING, text_y),
+                    style.ITEM_DESC_FONT_SIZE, 0, style.ITEM_DESC_TEXT_COLOR)
+
+
+def section_heading_sp(label: str | Callable[[], str]) -> SectionHeadingSP:
+  return SectionHeadingSP(label=label)

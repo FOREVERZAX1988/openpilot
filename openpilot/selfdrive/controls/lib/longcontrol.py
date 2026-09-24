@@ -29,6 +29,8 @@ def _get_macan_jerk_limit():
     _macan_jerk_limit_t = now
   return _macan_jerk_limit
 
+STOPPING_DECEL_RATE = 0.3  # m/s^2/s while trying to stop
+
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
 
@@ -78,9 +80,16 @@ class LongControl:
     self.pid.neg_limit = accel_limits[0]
     self.pid.pos_limit = accel_limits[1]
 
+    previous_state = self.long_control_state
     self.long_control_state = long_control_state_trans(self.CP_SP, active, self.long_control_state,
                                                        should_stop, CS.brakePressed,
                                                        CS.cruiseState.standstill)
+
+    if not self.should_exit_stopping(previous_state == LongCtrlState.stopping,
+                                     self.long_control_state == LongCtrlState.pid,
+                                     a_target):
+      self.long_control_state = LongCtrlState.stopping
+
     if self.long_control_state == LongCtrlState.off:
       self.reset()
       output_accel = 0.

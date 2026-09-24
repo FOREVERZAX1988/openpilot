@@ -1,5 +1,7 @@
 from openpilot.cereal import log, custom
 from openpilot.common.constants import CV
+from openpilot.common.params import Params
+from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
 from openpilot.sunnypilot.selfdrive.controls.lib.auto_lane_change import AutoLaneChangeController, AutoLaneChangeMode
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_turn_desire import LaneTurnController
@@ -33,6 +35,18 @@ class DesireHelper:
     self.carrot_atc_active = False
     self.carrot_cmd_index_last = 0
     self.carrot_virtual_blinker = 0  # 0=none, 1=left, 2=right
+    self._params = Params()
+
+    # Killswitch for the synthetic-blinker path, OFF by default.
+    #
+    # Not just a UI convenience: a carrot packet saying "turn left" used to make this
+    # class treat a blinker as pressed with no switch at all. That synthetic blinker
+    # reaches the vehicle - one_blinker -> LaneChangeState.preLaneChange ->
+    # modelV2.meta.laneChangeState -> controlsd CC.leftBlinker/rightBlinker -> the car's
+    # own turn-signal CAN message (opendbc hyundai carcontroller create_spas_messages).
+    # A navigation intent driving a vehicle actuation has to be opt-in.
+    self.carrot_atc_blinker_enabled = self._params.get_bool("CarrotAtcBlinkerEnabled")
+    self._carrot_atc_blinker_param_t = 0.0
 
     # Unified lateral arbiter (default OFF; preserves historical behavior when disabled).
     self.desire_arbiter = DesireArbiter()
@@ -52,8 +66,20 @@ class DesireHelper:
     one_blinker = carstate.leftBlinker != carstate.rightBlinker
     below_lane_change_speed = v_ego < LANE_CHANGE_SPEED_MIN
 
-    # CarrotPilot ATC: process carrotMan commands to inject virtual blinker
-    if carrot_man is not None:
+    # Refresh the ATC killswitch at most once a second (update() runs at 100 Hz).
+    self._carrot_atc_blinker_param_t += DT_MDL
+    if self._carrot_atc_blinker_param_t >= 1.0:
+      self._carrot_atc_blinker_param_t = 0.0
+      self.carrot_atc_blinker_enabled = self._params.get_bool("CarrotAtcBlinkerEnabled")
+
+    # CarrotPilot ATC: process carrotMan commands to inject a virtual blinker.
+    #
+    # Gated on CarrotAtcBlinkerEnabled (default OFF). With it off, carrot_atc_active and
+    # carrot_virtual_blinker stay cleared, so neither one_blinker (below) nor the
+    # DesireArbiter's carrot_turn_* inputs come from a synthetic blinker. carrot can
+    # still reach the desire through the arbiter as a plain data source - the sanctioned
+    # path - but it cannot fabricate a turn-signal press.
+    if carrot_man is not None and self.carrot_atc_blinker_enabled:
       atc_type = carrot_man.atcType
       if atc_type in ["turn left", "turn right", "atc left", "atc right", "fork left", "fork right"]:
         self.carrot_atc_active = True

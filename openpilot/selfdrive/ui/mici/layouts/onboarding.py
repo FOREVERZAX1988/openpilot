@@ -4,7 +4,7 @@ import pyray as rl
 from collections.abc import Callable
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.qrcode import make_texture
-from openpilot.system.ui.lib.application import FontWeight, gui_app
+from openpilot.system.ui.lib.application import FontWeight, gui_app, TextAlignment
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.button import SmallCircleIconButton
 from openpilot.system.ui.widgets.scroller import NavScroller, Scroller
@@ -34,8 +34,8 @@ class DriverCameraSetupDialog(BaseCabinCameraDialog):
     self._camera_view._render(rect)
 
     if not self._camera_view.frame:
-      gui_label(rect, tr(tr("camera starting")), font_size=64, font_weight=FontWeight.BOLD,
-                alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER)
+      gui_label(rect, tr("camera starting"), font_size=64, font_weight=FontWeight.BOLD,
+                alignment=TextAlignment.CENTER)
       rl.end_scissor_mode()
       return
 
@@ -60,11 +60,11 @@ class TrainingGuidePreDMTutorial(NavScroller):
     continue_button.set_click_callback(continue_callback)
 
     self._scroller.add_widgets([
-      GreyBigButton(tr("driver monitoring\ncheck"), tr("scroll to continue"),
+      GreyBigButton("driver monitoring\ncheck", "scroll to continue",
                     gui_app.texture("icons_mici/setup/green_dm.png", 64, 64)),
-      GreyBigButton("", tr("Next, we'll check if comma four can detect the driver properly.")),
-      GreyBigButton("", tr("sunnypilot uses the cabin camera to check if the driver is distracted.")),
-      GreyBigButton("", tr("If it does not have a clear view of the driver, unplug and remount before continuing.")),
+      GreyBigButton("", "Next, we'll check if comma four can detect the driver properly."),
+      GreyBigButton("", "sunnypilot uses the cabin camera to check if the driver is distracted."),
+      GreyBigButton("", "If it does not have a clear view of the driver, unplug and remount before continuing."),
       continue_button,
     ])
 
@@ -82,9 +82,9 @@ class DMBadFaceDetected(NavScroller):
     back_button.set_click_callback(self.dismiss)
 
     self._scroller.add_widgets([
-      GreyBigButton(tr("looking for driver"), tr("make sure comma\nfour can see your face"),
+      GreyBigButton("looking for driver", "make sure comma\nfour can see your face",
                     gui_app.texture("icons_mici/setup/orange_dm.png", 64, 64)),
-      GreyBigButton("", tr("Remount if your face is blocked, or driver monitoring has difficulty tracking your face.")),
+      GreyBigButton("", "Remount if your face is blocked, or driver monitoring has difficulty tracking your face."),
       back_button,
     ])
 
@@ -245,7 +245,7 @@ class TrainingGuideAttentionNotice(Scroller):
   def __init__(self, continue_callback: Callable[[], None]):
     super().__init__()
 
-    continue_button = BigPillButton("next")
+    continue_button = BigPillButton(tr("next"))
     continue_button.set_click_callback(continue_callback)
 
     self._scroller.add_widgets([
@@ -263,12 +263,17 @@ class TrainingGuide(NavWidget):
   def __init__(self, completed_callback: Callable[[], None]):
     super().__init__()
 
-    self._steps = [
-      TrainingGuideAttentionNotice(continue_callback=lambda: gui_app.push_widget(self._steps[1])),
-      TrainingGuidePreDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[2])),
-      TrainingGuideDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[3])),
-      TrainingGuideRecordFront(continue_callback=completed_callback),
-    ]
+    if ui_state.params.get_bool("DisableDM"):
+      self._steps = [
+        TrainingGuideAttentionNotice(continue_callback=completed_callback),
+      ]
+    else:
+      self._steps = [
+        TrainingGuideAttentionNotice(continue_callback=lambda: gui_app.push_widget(self._steps[1])),
+        TrainingGuidePreDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[2])),
+        TrainingGuideDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[3])),
+        TrainingGuideRecordFront(continue_callback=completed_callback),
+      ]
 
     self._child(self._steps[0])
     self._steps[0].set_enabled(lambda: self.enabled and not self.is_dismissing)  # for nav stack
@@ -302,7 +307,7 @@ class TermsPage(Scroller):
     self._decline_button = BigConfirmationCircleButton(tr("decline &\nuninstall"), gui_app.texture("icons_mici/setup/cancel.png", 64, 64), on_decline,
                                                        red=True, exit_on_confirm=False)
 
-    self._terms_header = GreyBigButton(tr("terms of\nservice"), "scroll to continue",
+    self._terms_header = GreyBigButton(tr("terms of\nservice"), tr("scroll to continue"),
                                        gui_app.texture("icons_mici/setup/green_info.png", 64, 64))
     self._must_accept_card = GreyBigButton("", tr("You must accept the Terms of Service to use sunnypilot."))
 
