@@ -4,12 +4,16 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+import json
+
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, button_item_sp, option_item_sp
 from openpilot.system.ui.widgets import DialogResult
+from openpilot.system.ui.widgets.confirm_dialog import alert_dialog
 from openpilot.system.ui.widgets.list_view import text_item
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller_tici import Scroller
@@ -75,6 +79,26 @@ class NavigationLayout(Widget):
       param="AmapTrafficLightHintEnabled",
     )
 
+    self._carrot_panel_opacity = option_item_sp(
+      title=tr("Carrot Nav Panel Opacity"),
+      description=tr("Opacity of the onroad Carrot navigation panel, in percent. Default 100."),
+      param="CarrotPanelOpacity",
+      min_value=10, max_value=100, value_change_step=5,
+    )
+
+    self._map_provider = text_item(
+      lambda: tr("Map Provider"),
+      self._map_provider_value,
+      description=tr("Current map data source used for speed limits and road names. Amap requires an API key to be set above."),
+    )
+
+    self._carrot_navi_debug = button_item_sp(
+      title=tr("Carrot Navi Debug"),
+      button_text=tr("VIEW"),
+      description=tr("View the last navigation event summary handled by CarrotManager."),
+      callback=self._on_carrot_navi_debug,
+    )
+
     self._carrot_navi_v2_enabled = toggle_item_sp(
       title=tr("Enable Carrot Navi v2 (7714)"),
       description=tr("Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images)."),
@@ -86,13 +110,6 @@ class NavigationLayout(Widget):
       description=tr("Serve the carrot tuning page (/nav_params) and four-corner radar "
                       "visualisation (/radar) on port 8088."),
       param="CarrotWebEnabled",
-    )
-
-    self._car_name = text_item(
-      lambda: tr("Car Model"),
-      lambda: self._params.get("CarName") or tr("N/A"),
-      description=tr("Identified car model, sent automatically with Carrot FTP uploads "
-                      "and shown in the companion app."),
     )
 
     # OFF by default: this lets a navigation packet synthesise a turn signal, and the
@@ -124,10 +141,12 @@ class NavigationLayout(Widget):
       self._carrot_enabled,
       self._carrot_navi_v2_enabled,
       self._carrot_web_enabled,
-      self._car_name,
       self._amap_api_key,
       self._amap_curve_speed,
       self._amap_traffic_light_hint,
+      self._carrot_panel_opacity,
+      self._map_provider,
+      self._carrot_navi_debug,
       self._carrot_atc_blinker,
       self._carrot_nav_cruise_speed,
       self._haptic_speed_camera,
@@ -143,6 +162,7 @@ class NavigationLayout(Widget):
     self._carrot_enabled.action_item.set_enabled(offroad)
     self._amap_api_key.action_item.set_enabled(offroad)
     self._carrot_web_enabled.action_item.set_enabled(offroad)
+    self._carrot_panel_opacity.action_item.set_enabled(offroad)
 
     # The v2 link and the nav-speed limit only mean anything with Carrot on,
     # matching the webui panel's visible_if conditions. Read the param rather than
@@ -165,6 +185,33 @@ class NavigationLayout(Widget):
       param="AmapApiKey",
     )
     dialog.show()
+
+  def _map_provider_value(self) -> str:
+    amap_on = self._params.get_bool("AmapMapDataEnabled")
+    key = (self._params.get("AmapApiKey") or "").strip()
+    return tr("Amap") if (amap_on and key) else tr("OSM")
+
+  def _on_carrot_navi_debug(self):
+    raw = self._params.get("CarrotNaviDebug") or ""
+    if isinstance(raw, bytes):
+      raw = raw.decode("utf-8", errors="replace")
+    if not raw.strip():
+      message = tr("No navigation event received yet.")
+    else:
+      try:
+        debug = json.loads(raw)
+      except Exception:
+        message = raw
+      else:
+        lines = [
+          f"Type: {debug.get('type', '')}",
+          f"Event Time: {debug.get('eventTimeMs', 0)} ms",
+          f"Received At: {debug.get('receivedAt', '')}",
+          "",
+          json.dumps(debug.get('summary', {}), ensure_ascii=False, indent=2, sort_keys=True),
+        ]
+        message = "\n".join(lines)
+    gui_app.push_widget(alert_dialog(message, tr("OK")))
 
   def _render(self, rect):
     self._scroller.render(rect)

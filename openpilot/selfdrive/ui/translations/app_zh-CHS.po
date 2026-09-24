@@ -5802,10 +5802,6 @@ msgid "Acceleration Limits (not applied yet)"
 msgstr "加速度限制（尚未生效）"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Car Model"
-msgstr "车型"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Carrot UDP Port"
 msgstr "Carrot UDP 端口"
 
@@ -5824,10 +5820,6 @@ msgstr "启用 Carrot 导航 v2（7714）"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Enter the UDP port (0-65535). 0 disables the listener."
 msgstr "输入 UDP 端口（0-65535）。0 表示关闭监听。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Identified car model, sent automatically with Carrot FTP uploads and shown in the companion app."
-msgstr "识别出的车型，会随 Carrot FTP 上传自动发送，并显示在手机 App 中。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Navigation Cruise Speed"
@@ -5924,3 +5916,35 @@ msgstr "80 km/h 及以上允许的横向加速度，单位为百分比。数值�
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "How early to react to curves on the highway. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
 msgstr "高速公路上对弯道的响应早晚。数值越小，对越缓的弯也会响应。仅在「智能巡航控制（视觉）」开启时生效。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Nav Panel Opacity"
+msgstr "Carrot 导航面板透明度"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
+msgstr "Carrot 导航面板的透明度，以百分比表示。默认 100。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Map Provider"
+msgstr "地图提供商"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Current map data source used for speed limits and road names. Amap requires an API key to be set above."
+msgstr "当前用于限速和道路名的地图数据源。高德地图需要先在上方设置 API 密钥。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Navi Debug"
+msgstr "Carrot 导航调试"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "View the last navigation event summary handled by CarrotManager."
+msgstr "查看 CarrotManager 处理的最后一次导航事件摘要。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Amap"
+msgstr "高德"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "No navigation event received yet."
+msgstr "尚未收到导航事件。"

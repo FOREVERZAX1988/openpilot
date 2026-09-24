@@ -115,15 +115,14 @@ def main() -> int:
   def exposes_live_params():
     expected = ['AmapMapDataEnabled', 'CarrotAmapBlindSpotEnabled', 'CarrotEnabled',
                 'CarrotNaviV2Enabled', 'CarrotWebEnabled', 'CarrotNavCruiseSpeedEnabled',
-                'AmapCurveSpeedEnabled', 'AmapTrafficLightHintEnabled']
+                'AmapCurveSpeedEnabled', 'AmapTrafficLightHintEnabled', 'CarrotPanelOpacity']
     missing = [p for p in expected if p not in exposed]
     assert not missing, f'missing nav params: {missing}'
   check('exposes every live navigation param', exposes_live_params)
 
   def no_dead_or_webui_only_params():
-    """CarrotPanel* position the webui HUD; the native UI has no such panel."""
-    banned = ['CarrotCurveSpeedEnabled', 'CarrotHudInfoEnabled',
-              'CarrotPanelSide', 'CarrotPanelOpacity']
+    """Params that are registered but have no native UI consumer."""
+    banned = ['CarrotCurveSpeedEnabled', 'CarrotHudInfoEnabled', 'CarrotPanelSide']
     found = [p for p in banned if p in exposed]
     assert not found, f'dead / webui-only params exposed natively: {found}'
   check('excludes dead and webui-HUD-only params', no_dead_or_webui_only_params)
@@ -139,10 +138,11 @@ def main() -> int:
     assert not extra, f'native exposes params the webui nav panel does not: {extra}'
   check('native params are a subset of the webui panel', native_is_subset_of_webui)
 
-  def has_car_model_row():
+  def has_new_readout_rows():
     labels = [str(getattr(it, 'title', '')) for it in items]
-    assert any('Car Model' in l for l in labels), f'no Car Model row among {labels}'
-  check('shows the Car Model row', has_car_model_row)
+    assert any('Map Provider' in l for l in labels), f'no Map Provider row among {labels}'
+    assert any('Carrot Navi Debug' in l for l in labels), f'no Carrot Navi Debug row among {labels}'
+  check('shows Map Provider and Carrot Navi Debug rows', has_new_readout_rows)
 
   def gated_rows_follow_carrot_enabled():
     store['CarrotEnabled'] = True
