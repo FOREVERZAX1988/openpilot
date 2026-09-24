@@ -995,7 +995,7 @@ class VCruiseCarrot(VCruiseHelper):
       self._paddle_decel_active = False
       self._gas_pressed_count = max(1, self._gas_pressed_count + 1)
       self._gas_pressed_count_last = self._gas_pressed_count
-      self._gas_pressed_value = max(CS.gas, self._gas_pressed_value) if self._gas_pressed_count > 1 else CS.gas
+      self._gas_pressed_value = 1.0
       self._gas_tok = False
       self._soft_hold_active = 0
       if cancel_soft_hold:
