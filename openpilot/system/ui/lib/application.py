@@ -93,6 +93,10 @@ DEFAULT_TEXT_COLOR = rl.Color(255, 255, 255, int(255 * 0.9))
 # The real scales for the fonts below range from 1.212 to 1.266
 FONT_SCALE = 1.242 if BIG_UI else 1.16
 
+# Extra scale applied to non-Latin (CJK/Thai/Korean/Japanese) fallback fonts.
+# Test ref: CJK_EXTRA_SCALE = 1.25 (test_carrot_tuning_tab_bar.py)
+FALLBACK_FONT_SCALE = 1.25
+
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
 EXTRA_FONT_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
@@ -544,6 +548,9 @@ class GuiApplication(GuiApplicationExt):
           orig_width = image.width
           orig_height = image.height
 
+          if orig_width == 0 or orig_height == 0:
+            # Guard against loading a corrupt/placeholder asset that yields 0-size image.
+            return rl.load_image_from_image(image)
           scale_width = width / orig_width
           scale_height = height / orig_height
 
