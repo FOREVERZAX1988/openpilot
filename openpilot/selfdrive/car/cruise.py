@@ -290,7 +290,7 @@ class VCruiseCarrot(VCruiseHelper):
     self._cruise_available = False
     self._hold_interlock_active = False
     self._steering_interlock_active = False
-    self._lat_enabled = self.params.get_int("AutoEngage") > 0
+    self._lat_enabled = self.params.get("AutoEngage") > 0
     self._v_cruise_kph_at_brake = 0
     self.cruise_state_available_last = False
 
@@ -327,7 +327,7 @@ class VCruiseCarrot(VCruiseHelper):
     self.AutoSpeedUptoRoadSpeedLimit = 0.0
     self.autoGasCancelSpeed = 30
 
-    self.useLaneLineSpeed = self.params.get_int("UseLaneLineSpeed")
+    self.useLaneLineSpeed = self.params.get("UseLaneLineSpeed")
     self.useLaneLineSpeedApply = self.useLaneLineSpeed
 
 
@@ -352,37 +352,37 @@ class VCruiseCarrot(VCruiseHelper):
   def update_params(self, is_metric):
     unit_factor = 1.0 if is_metric else CV.MPH_TO_KPH
     if self.frame % 10 == 0:
-      self.autoCruiseControl = self.params.get_int("AutoCruiseControl") * unit_factor
+      self.autoCruiseControl = self.params.get("AutoCruiseControl") * unit_factor
       self.soft_hold_on_cancel = self.params.get_bool("SoftHoldOnCancel")
-      self.autoGasTokSpeed = self.params.get_int("AutoGasTokSpeed") * unit_factor
-      self.autoGasCancelSpeed = self.params.get_int("AutoGasCancelSpeed") * unit_factor
-      self.autoGasSyncSpeed = self.params.get_int("AutoGasSyncSpeed")
-      self.applyModelSpeed = self.params.get_float("ApplyModelSpeed") * 0.01
-      self.autoSpeedUptoRoadSpeedLimit = self.params.get_float("AutoSpeedUptoRoadSpeedLimit") * 0.01
-      self.autoRoadSpeedAdjust = self.params.get_float("AutoRoadSpeedAdjust") * 0.01
+      self.autoGasTokSpeed = self.params.get("AutoGasTokSpeed") * unit_factor
+      self.autoGasCancelSpeed = self.params.get("AutoGasCancelSpeed") * unit_factor
+      self.autoGasSyncSpeed = self.params.get("AutoGasSyncSpeed")
+      self.applyModelSpeed = self.params.get("ApplyModelSpeed") * 0.01
+      self.autoSpeedUptoRoadSpeedLimit = self.params.get("AutoSpeedUptoRoadSpeedLimit") * 0.01
+      self.autoRoadSpeedAdjust = self.params.get("AutoRoadSpeedAdjust") * 0.01
 
-      useLaneLineSpeed = self.params.get_int("UseLaneLineSpeed") * unit_factor
+      useLaneLineSpeed = self.params.get("UseLaneLineSpeed") * unit_factor
       if self.useLaneLineSpeed != useLaneLineSpeed:
         self.useLaneLineSpeedApply = useLaneLineSpeed
       self.useLaneLineSpeed = useLaneLineSpeed
 
-      self.speed_from_pcm = self.params.get_int("SpeedFromPCM")
-      self._cruise_speed_unit = self.params.get_int("CruiseSpeedUnit")
-      self._cruise_button_long_delay = self.params.get_int("CruiseButtonLongDelay")
-      self._cruise_speed_unit_basic = self.params.get_int("CruiseSpeedUnitBasic")
-      self._paddle_mode = self.params.get_int("PaddleMode")
-      self._cruise_button_mode = self.params.get_int("CruiseButtonMode")
-      self._cancel_button_mode = self.params.get_int("CancelButtonMode")
-      self._lfa_button_mode = self.params.get_int("LfaButtonMode")
+      self.speed_from_pcm = self.params.get("SpeedFromPCM")
+      self._cruise_speed_unit = self.params.get("CruiseSpeedUnit")
+      self._cruise_button_long_delay = self.params.get("CruiseButtonLongDelay")
+      self._cruise_speed_unit_basic = self.params.get("CruiseSpeedUnitBasic")
+      self._paddle_mode = self.params.get("PaddleMode")
+      self._cruise_button_mode = self.params.get("CruiseButtonMode")
+      self._cancel_button_mode = self.params.get("CancelButtonMode")
+      self._lfa_button_mode = self.params.get("LfaButtonMode")
       self.disengage_on_accelerator = self.params.get_bool("DisengageOnAccelerator")
-      self.autoRoadSpeedLimitOffset = self.params.get_int("AutoRoadSpeedLimitOffset")
-      self.autoNaviSpeedSafetyFactor = self.params.get_float("AutoNaviSpeedSafetyFactor") * 0.01
-      self.cruiseOnDist = self.params.get_float("CruiseOnDist") * 0.01
-      cruiseSpeed1 = self.params.get_float("CruiseSpeed1") * unit_factor
-      cruiseSpeed2 = self.params.get_float("CruiseSpeed2") * unit_factor
-      cruiseSpeed3 = self.params.get_float("CruiseSpeed3") * unit_factor
-      cruiseSpeed4 = self.params.get_float("CruiseSpeed4") * unit_factor
-      cruiseSpeed5 = self.params.get_float("CruiseSpeed5") * unit_factor
+      self.autoRoadSpeedLimitOffset = self.params.get("AutoRoadSpeedLimitOffset")
+      self.autoNaviSpeedSafetyFactor = self.params.get("AutoNaviSpeedSafetyFactor") * 0.01
+      self.cruiseOnDist = self.params.get("CruiseOnDist") * 0.01
+      cruiseSpeed1 = self.params.get("CruiseSpeed1") * unit_factor
+      cruiseSpeed2 = self.params.get("CruiseSpeed2") * unit_factor
+      cruiseSpeed3 = self.params.get("CruiseSpeed3") * unit_factor
+      cruiseSpeed4 = self.params.get("CruiseSpeed4") * unit_factor
+      cruiseSpeed5 = self.params.get("CruiseSpeed5") * unit_factor
       if cruiseSpeed1 <= 0:
         if self.autoRoadSpeedLimitOffset < 0:
           cruiseSpeed1 = self.nRoadLimitSpeed * self.autoNaviSpeedSafetyFactor
@@ -710,15 +710,15 @@ class VCruiseCarrot(VCruiseHelper):
         self._cruise_speed_initialized = True
 
       elif button_type == ButtonType.gapAdjustCruise:
-        longitudinalPersonalityMax = supported_gap_levels(self.params.get_int("LongitudinalPersonalityMax"))
-        gap_levels = cruise_gap_levels(self.params.get_int("CruiseGapLevels"), longitudinalPersonalityMax)
+        longitudinalPersonalityMax = supported_gap_levels(self.params.get("LongitudinalPersonalityMax"))
+        gap_levels = cruise_gap_levels(self.params.get("CruiseGapLevels"), longitudinalPersonalityMax)
         if not self.CP.openpilotLongitudinalControl:
           gap_levels = longitudinalPersonalityMax
         if CS.pcmCruiseGap == 0 or gap_levels < longitudinalPersonalityMax:
-          personality = next_gap_personality(self.params.get_int('LongitudinalPersonality'), gap_levels)
+          personality = next_gap_personality(self.params.get('LongitudinalPersonality'), gap_levels)
         else:
           personality = int(np.clip(CS.pcmCruiseGap - 1, 0, longitudinalPersonalityMax - 1))
-        self.params.put_int_nonblocking('LongitudinalPersonality', personality)
+        self.params.put_nonblocking('LongitudinalPersonality', personality)
         #self.events.append(EventName.personalityChanged)
       elif button_type == ButtonType.lfaButton:
         if self._lfa_button_mode == 0:
@@ -748,7 +748,7 @@ class VCruiseCarrot(VCruiseHelper):
         v_cruise_kph = button_kph
         self._v_cruise_kph_at_brake = 0
       elif button_type == ButtonType.gapAdjustCruise:
-        self.params.put_int_nonblocking("MyDrivingMode", self.params.get_int("MyDrivingMode") % 4 + 1) # 1,2,3,4 (1:eco, 2:safe, 3:normal, 4:high speed)
+        self.params.put_nonblocking("MyDrivingMode", self.params.get("MyDrivingMode") % 4 + 1) # 1,2,3,4 (1:eco, 2:safe, 3:normal, 4:high speed)
       elif button_type == ButtonType.lfaButton:
         useLaneLineSpeed = max(1, self.useLaneLineSpeed)
         self.useLaneLineSpeedApply = useLaneLineSpeed if self.useLaneLineSpeedApply == 0 else 0
