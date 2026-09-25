@@ -16,6 +16,7 @@ import os
 from typing import Any, Optional
 
 from openpilot.common.params import Params
+from openpilot.common.swaglog import cloudlog
 
 try:
   # UnknownKeyName lives in common.params (params_pyx was merged into it);
@@ -50,9 +51,13 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "AutoKeepForkSpeed": 5,
   "ShowDebugLog": 0,
   "AutoCurveSpeedFactorH": 100,
+  "AutoCurveSpeedAggressiveness": 100,
   "AutoCurveSpeedAggressivenessH": 100,
   "SameSpiCamFilter": 1,
   "StockBlinkerCtrl": 0,
+  "ExtBlinkerCtrlTest": 0,
+  "BlinkerMode": 1,
+  "LaneStabTime": 50,
   "DynamicBlindRange": 0,
   "DynamicBlindDistance": 0,
   "DisableBlindSpot": 0,
@@ -63,11 +68,15 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "SideRadarMinDist": 0,
   "AutoTurnInNotRoadEdge": 1,
   "ContinuousLaneChange": 1,
+  "ContinuousLaneChangeCnt": 4,
+  "ContinuousLaneChangeInterval": 2,
+  "AutoTurnLeft": 1,
+  "AutoEnTurnNewLaneTimeH": 0,
+  "AutoEnTurnNewLaneTime": 0,
   "NewLaneWidthDiff": 8,
   # Speed / turn / navi tuning (aligned with cp/fp defaults).
   "AutoCurveSpeedLowerLimit": 30,
   "AutoCurveSpeedFactor": 100,
-  "AutoCurveSpeedAggressiveness": 100,
   "AutoTurnControl": 0,
   "AutoTurnControlSpeedTurn": 20,
   "AutoTurnControlTurnEnd": 6,
@@ -90,6 +99,7 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "TurnSpeedControlMode": 1,
   "MapTurnSpeedFactor": 100,
   # Sound / stop behavior
+  "StopDistanceCarrot": 600,
   "AutoNaviSpeedCtrlMode": 2,
   "AutoNaviSpeedDecelRate": 200,
   "AutoNaviSpeedSafetyFactor": 105,
@@ -98,14 +108,15 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "AutoUpHighwayRoadLimit": 0,
   "AutoUpHighwayRoadLimit40KMH": 15,
   "RoadType": -1,
-  "SoundVolumeAdjust": 100,
-  "SoundVolumeAdjustEngage": 100,
+  "SoundVolumeAdjust": 0,
+  "SoundVolumeAdjustEngage": 0,
   # Carrot exception message persists across manager start
   "CarrotException": "",
   # ---------------------------------------------------------------------------
   # Missing carrot tuning parameters imported from CarrotPilot (179 -> 225 keys).
   # Values mirror cp/selfdrive/carrot_settings.json defaults.
   # ---------------------------------------------------------------------------
+  "AChangeCostStarting": 10,
   "AdjustLaneOffset": 0,
   "AlwaysLateral": 0,
   "ApplyModelSpeed": 0,
@@ -114,6 +125,8 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "AutoGasCancelSpeed": 30,
   "AutoGasSyncSpeed": 0,
   "AutoGasTokSpeed": 0,
+  "AutoRoadSpeedAdjust": 0,
+  "AutoSpeedUptoRoadSpeedLimit": 0,
   "CameraYawTrimDeg": 0,
   "CancelButtonMode": 0,
   "CanfdDebug": 0,
@@ -167,7 +180,9 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "CustomSteerDeltaUp": 0,
   "CustomSteerDeltaUpLC": 0,
   "CustomSteerMax": 0,
+  "DisableDM": 0,
   "DisableMinSteerSpeed": 0,
+  "DynamicTFollow": 0,
   "DynamicTFollowLC": 100,
   "EnableCornerRadar": 0,
   "EnableRadarTracks": 0,
@@ -204,6 +219,7 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "LongTuningKpV": 100,
   "MapboxStyle": 0,
   "MaxAngleFrames": 89,
+  "MaxTimeOffroadMin": 60,
   "MuteDoor": 0,
   "MuteSeatbelt": 0,
   "MyDrivingMode": 3,
@@ -240,6 +256,7 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "SpeedFromPCM": 0,
   "SteerActuatorDelay": 30,
   "SteerRatioRate": 100,
+  "StoppingAccel": -50,
   "TFollowDecelBoost": 0,
   "TFollowGap1": 110,
   "TFollowGap2": 120,
@@ -251,17 +268,21 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "UseLaneLineSpeed": 0,
   "UseWideCamera": 1,
   "VEgoStopping": 50,
-  # --- cp tuning alignment (missing params from CarrotPilot 185-key set) ---
-  # Defaults mirror cp/selfdrive/carrot_settings.json so webui read/reset
-  # works even though sp does not yet consume every key in longitudinal control.
-  "CanfdStopRetry": 0,                       # CANFD stop-and-retry fallback (cp default 0)
-  "CruiseGapLevels": 4,                      # number of follow-gap levels (cp default 4)
-  "LeadAccelResponseTF1": -1,                # lead accel response, gap level 1 (cp default -1)
-  "LeadAccelResponseTF2": -1,                # lead accel response, gap level 2 (cp default -1)
-  "LeadAccelResponseTF3": -1,                # lead accel response, gap level 3 (cp default -1)
-  "LeadAccelResponseTF4": -1,                # lead accel response, gap level 4 (cp default -1)
-  "AutoNaviRearCameraHoldDistance": 100,     # navi rear-camera hold distance cm (cp default 100)
 }
+
+
+def _is_key_error(exc: BaseException) -> bool:
+  """True when a params-store failure is about the key/type, not a real I/O problem.
+
+  Name-based on purpose: ``UnknownKeyName`` is imported dynamically above, and the test
+  shims used by this suite (test_carrot_man/test_carrot_controls) can leave a non-exception
+  object in its place. ``except (..., UnknownKeyName, ...)`` then raised
+  "catching classes that do not inherit from BaseException" instead of handling the write,
+  which took the whole settings/UI write path down.
+  """
+  if isinstance(exc, (TypeError, KeyError, AttributeError)):
+    return True
+  return type(exc).__name__ == "UnknownKeyName"
 
 
 class UnifiedParams:
@@ -284,6 +305,17 @@ class UnifiedParams:
 
   def __init__(self, nav_json_file: str | None = None) -> None:
     if self._initialized:
+      # Production callers rely on the singleton cache (``UnifiedParams()``). An explicit
+      # ``nav_json_file`` is a caller asking for that specific file (tests / tooling), so
+      # honour it instead of silently returning data for the previously loaded file.
+      if nav_json_file is None:
+        return
+      requested = os.path.realpath(nav_json_file)
+      if requested == self._nav_json_file:
+        return
+      self._nav_json_file = requested
+      self._nav_data = dict(_DEFAULT_NAV_PARAMS)
+      self._load_nav_params()
       return
     self._system_params = Params()
     if nav_json_file is None:
@@ -314,6 +346,7 @@ class UnifiedParams:
     try:
       with open(self._nav_json_file, "w", encoding="utf-8") as fh:
         json.dump(self._nav_data, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")  # keep a trailing newline so device-side writes don't show up as whitespace diffs
     except OSError:
       pass
 
@@ -329,36 +362,67 @@ class UnifiedParams:
   def _read_from_system(self, key: str) -> Any | None:
     """Try to read ``key`` from the global Params store.
 
-    Returns the value on success, ``None`` on any failure (including
-    ``UnknownKeyName`` for keys that have not been registered yet).
+    Registered keys are read with ``return_default=True``: without it an *unset* key
+    (no file yet in the params dir) returns ``None`` instead of its schema default, and
+    callers such as MultipleButtonActionSP/OptionControlSP do ``int(value)`` on it and
+    raise TypeError. Because the settings layout builds every panel up front, one such
+    key took the whole UI down on a fresh params store (reproduced by the offscreen UI
+    replay). Keys that are *not* registered raise ``UnknownKeyName`` as before and fall
+    back to nav_params.json / the caller default.
     """
     try:
-      return self._system_params.get(key)
-    except (KeyError, AttributeError, UnknownKeyName):
-      return None
+      return self._system_params.get(key, return_default=True)
+    except TypeError:
+      try:
+        return self._system_params.get(key)  # older Params binding without the kwarg
+      except Exception as e:
+        if _is_key_error(e):
+          return None
+        raise
+    except Exception as e:
+      if _is_key_error(e):
+        return None
+      raise
 
   def _write_to_system(self, key: str, value: Any) -> bool:
     """Attempt to write ``value`` to the system Params. Returns success.
 
-    Params only exposes put / put_bool (there is no put_int or put_float); it casts
-    by the key's registered type. Calling put_int here raised AttributeError, which
-    the handler below swallowed, so every int and float write silently fell through
-    to the nav_params.json cache instead of reaching Params.
+    This binding only exposes ``put``/``put_bool`` -- there is no ``put_int``/``put_float``
+    -- and ``put`` type-checks the value against the registered key type. The old code
+    called ``put_int``/``put_float``, so every integer write raised AttributeError, was
+    swallowed by the blanket ``except`` and silently landed in ``nav_params.json`` instead:
+    the user's setting never reached the Params store and ``get()`` (which prefers the
+    store) kept returning the schema default. Tuning rows such as MacanStartStopDistance,
+    Brightness or CarrotManUdpPort therefore appeared to do nothing.
+
+    Because the registered type is not known here, try the plausible write paths for the
+    value in turn: a type mismatch (TypeError/UnknownKeyName) just moves on to the next.
     """
-    try:
-      if self._is_bool(value):
-        self._system_params.put_bool(key, bool(value))
-      elif self._is_int(value):
-        self._system_params.put(key, int(value))
-      elif self._is_float(value):
-        self._system_params.put(key, float(value))
-      else:
-        self._system_params.put(key, str(value))
-      return True
-    except (KeyError, AttributeError, UnknownKeyName):
-      return False
-    except Exception:
-      return False
+    attempts: list = []
+    if isinstance(value, bool) or self._is_bool(value):
+      # 0/1 is how callers spell bool params; put_bool works for int-registered keys too.
+      attempts.append(lambda: self._system_params.put_bool(key, bool(value)))
+      attempts.append(lambda: self._system_params.put(key, int(value)))    # key registered INT
+      attempts.append(lambda: self._system_params.put(key, str(value)))    # key registered STRING
+    elif self._is_float(value):
+      attempts.append(lambda: self._system_params.put(key, value))         # key registered FLOAT
+      attempts.append(lambda: self._system_params.put(key, int(value)))    # float row -> INT key
+    else:
+      attempts.append(lambda: self._system_params.put(key, value))         # key registered STRING
+      if self._is_int(value):
+        attempts.append(lambda: self._system_params.put(key, int(value)))
+        # bool-registered key written with an arbitrary int (e.g. 3): treat non-zero as True
+        attempts.append(lambda: self._system_params.put_bool(key, bool(value)))
+
+    for attempt in attempts:
+      try:
+        attempt()
+        return True
+      except Exception as e:
+        if _is_key_error(e):
+          continue  # wrong write path for this key's registered type
+        return False  # real failure (params store / disk): nothing left to try
+    return False
 
   # ---- public API ---------------------------------------------------------
 
@@ -397,9 +461,16 @@ class UnifiedParams:
     # Try to persist to the global store first; if the key is not
     # registered, fall back to the JSON cache so the user's choice is not
     # silently dropped.
-    if not self._write_to_system(key, value):
-      self._nav_data[key] = value
-      self._save_nav_params()
+    if self._write_to_system(key, value):
+      return
+    if self._read_from_system(key) is not None:
+      # The store knows this key, so a cached copy is dead weight: get() prefers the
+      # store value (or its schema default) and would ignore it -- it only dirties the
+      # repo-tracked nav_params.json. Make the drop visible instead of silent.
+      cloudlog.warning(f"UnifiedParams.put: failed to write {key} to the params store")
+      return
+    self._nav_data[key] = value
+    self._save_nav_params()
 
   def put_int(self, key: str, value: int) -> None:
     self.put(key, int(value))

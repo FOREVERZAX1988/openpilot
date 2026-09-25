@@ -154,16 +154,15 @@ class LongitudinalPlannerSP:
     if self._carrot_enabled:
       mpc_mode = self.dec.mode() if self.dec.active() else "acc"
       self.carrot_source.update(sm, v_cruise * CV.MS_TO_KPH, mpc_mode)
+      if self.carrot_source.active:
+        targets[LongitudinalPlanSource.carrot] = (self.carrot_source.v_target, self.carrot_source.a_target)
 
     self.source = min(targets, key=lambda k: targets[k][0])
     self.output_v_target, self.output_a_target = targets[self.source]
 
-    # When the carrot source is active and commanding a stop, flag it for MPC
-    # stop-line handling (consumed downstream / by the subclass). Carrot no
-    # longer competes for the speed *target* (SLA is the single executor of the
-    # road-speed-limit value); its longitudinal adapter now only supplies
-    # t-follow / lane-change / traffic-stop data to the MPC when active.
-    if self.carrot_source.active:
+    # When the carrot source wins and is commanding a stop, flag it for MPC
+    # stop-line handling (consumed downstream / by the subclass).
+    if self.source == LongitudinalPlanSource.carrot and self.carrot_source.active:
       self.carrot_source_active = True
       self.carrot_t_follow = float(self.carrot_source.t_follow)
       self.carrot_jerk_factor = float(self.carrot_source.jerk_factor)

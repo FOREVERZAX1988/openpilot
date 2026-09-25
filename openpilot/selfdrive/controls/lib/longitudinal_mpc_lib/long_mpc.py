@@ -71,15 +71,6 @@ COMFORT_BRAKE = _read_tuning_float(_TUNING_PARAMS, "LongitudinalMpcTuningComfort
 STOP_DISTANCE = _read_tuning_float(_TUNING_PARAMS, "LongitudinalMpcTuningStopDistance", 6.0)
 MIN_X_LEAD_FACTOR = 0.5
 
-# Fallbacks for the t-follow tuning params. LongitudinalMpc reads the live values
-# into self.t_follow_*; these are the built-in defaults, used to tell "the user
-# changed the follow time" apart from "the default is in effect".
-T_FOLLOW_DEFAULTS = {
-  log.LongitudinalPersonality.relaxed: 1.75,
-  log.LongitudinalPersonality.standard: 1.45,
-  log.LongitudinalPersonality.aggressive: 1.25,
-}
-
 def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.relaxed:
     return 1.0
@@ -244,6 +235,7 @@ class LongitudinalMpc:
     # values baked at import, so stock behavior is unchanged unless explicitly
     # overridden. NOTE: these do NOT change PARAM_DIM or rebuild the solver.
     self.comfort_brake = COMFORT_BRAKE
+    self.stop_distance = STOP_DISTANCE
     self.reset()
     self.source = LongitudinalPlanSource.cruise
 
@@ -267,19 +259,6 @@ class LongitudinalMpc:
       return self.t_follow_aggressive
     else:
       raise NotImplementedError("Longitudinal personality not supported")
-
-  def t_follow_user_scale(self, personality=log.LongitudinalPersonality.standard) -> float:
-    """How far the user moved the follow time from its default (1.0 = untouched).
-
-    The Carrot longitudinal source multiplies its own modulated follow time by
-    this, so the Longitudinal MPC Tuning entry stays authoritative even while the
-    Carrot source is active - without changing behaviour for anyone who has left
-    the tuning at its default.
-    """
-    default = T_FOLLOW_DEFAULTS.get(personality)
-    if not default:
-      return 1.0
-    return self.get_t_follow(personality) / default
 
   def reset(self):
     self.solver.reset()
@@ -374,7 +353,7 @@ class LongitudinalMpc:
     return lead_xv
 
   def update(self, radarstate, personality=log.LongitudinalPersonality.standard, *, t_follow=None, jerk_factor=None,
-              comfort_brake=None, stop_obstacle_distance=0.0, lane_change_credit=None):
+              comfort_brake=None, stop_distance=None, stop_obstacle_distance=0.0, lane_change_credit=None):
     # Tuning is read once in __init__, never here. Params.get() is a filesystem read that
     # measures 111 us/key on a tizi, and its tail latency is unbounded when loggerd or the
     # uploader are busy -- not something to put in the planning loop. plannerd only runs
@@ -383,12 +362,11 @@ class LongitudinalMpc:
     if jerk_factor is not None:
       jerk_factor = float(jerk_factor)
 
-    # Optional dynamic override from the CarrotPlanner longitudinal source. This only
-    # changes the runtime obstacle-distance math; it does NOT touch PARAM_DIM or
-    # rebuild the solver. There is deliberately no stop_distance override: the solver
-    # bakes STOP_DISTANCE in at codegen (see gen_long_ocp), so a runtime value could
-    # never take effect.
+    # Optional dynamic overrides from the CarrotPlanner longitudinal source
+    # (comfort_brake / stop_distance margin). These only change the runtime
+    # obstacle-distance math; they do NOT touch PARAM_DIM or rebuild the solver.
     self.comfort_brake = float(comfort_brake) if comfort_brake is not None else COMFORT_BRAKE
+    self.stop_distance = float(stop_distance) if stop_distance is not None else STOP_DISTANCE
 
     lead_xv_0 = self.process_lead(radarstate.leadOne)
     lead_xv_1 = self.process_lead(radarstate.leadTwo)

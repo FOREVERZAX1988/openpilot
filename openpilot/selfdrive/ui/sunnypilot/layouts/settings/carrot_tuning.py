@@ -1,207 +1,491 @@
-"""
-Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
-
-This file is part of sunnypilot and is licensed under the MIT License.
-See the LICENSE.md file in the root directory for more details.
-
-Carrot tuning settings.
-
-Uses the same two-level structure as the rest of the sunnypilot settings pages:
-the root is a scroller of navigation rows, and each row opens a sub-page that
-draws a ``NavButton`` back arrow above its own scroller (see ``steering.py``
-opening MADS / Lane Change / Torque, and
-``cruise_sub_layouts/speed_limit_settings.py``). Grouping inside a page is done
-with ``LineSeparatorSP`` rather than headings, matching ``steering.py`` and
-``models.py``.
-"""
+"""Carrot tuning layout with top tabs. Auto-generated from webui panel_catalog.py."""
 from collections.abc import Callable
-from dataclasses import dataclass
 from enum import IntEnum
 
 import pyray as rl
 
-from openpilot.selfdrive.ui.sunnypilot.layouts.settings import carrot_tuning_items as carrot_items
+from openpilot.common.params import Params
 from openpilot.system.ui.lib.multilang import tr
-from openpilot.system.ui.sunnypilot.widgets.list_view import ButtonActionSP, LineSeparatorSP, ListItemSP
+from openpilot.system.ui.lib.application import font_fallback, gui_app, MousePos
+from openpilot.system.ui.lib.text_measure import measure_text_cached
+from openpilot.system.ui.sunnypilot.widgets.list_view import (
+  Scroller, toggle_item_sp, option_item_sp, button_item_sp
+)
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.network import NavButton
-from openpilot.system.ui.widgets.scroller_tici import Scroller
+from openpilot.system.ui.sunnypilot.lib.styles import style
 
 
-class CarrotNavRow(ListItemSP):
-  """One group entry on the root page.
-
-  Behaves like a normal settings row except that a tap anywhere on it opens the
-  group. The stock row would toggle its description instead, but these
-  descriptions are always visible - they are the only hint of what each page
-  holds - so toggling would only hide the text the user needs.
-  """
-
-  def _handle_mouse_release(self, mouse_pos):
-    if not self.is_visible or self.callback is None:
-      return
-    if rl.check_collision_point_rec(mouse_pos, self._rect):
-      self.callback()
+# Top tab bar of the Carrot Tuning page. Its labels are the only text on that strip
+# and were 24 px, i.e. less than half of the 50 px list items right below them, which
+# made them hard to read on the device -> 1.5x (user request, 2026-09-19).
+TAB_FONT_SIZE = 36
+TAB_FONT_MIN_SIZE = 24  # per-label shrink floor: never render a tab label smaller than
+                        # the pre-1.5x size, even if the language (EN/DE) is long
+TAB_TEXT_PADDING = 12   # px kept free on each side of a label inside its tab
 
 
-class CarrotGroupKey(IntEnum):
+class TabType(IntEnum):
   START = 0
   CRUISE = 1
-  NAVIGATION = 2
+  NAVI = 2
   SPEED = 3
   TUNING = 4
   DISPLAY = 5
-  VEHICLE = 6
-  DEVELOPER = 7
-
-
-@dataclass(frozen=True)
-class CarrotGroup:
-  """One settings group. ``title``/``description`` are untranslated lookup keys."""
-
-  title: str
-  description: str
-  build_items: Callable[[], list]
-
-
-# Order here drives the order of the rows on the root page.
-CARROT_GROUPS: tuple[CarrotGroup, ...] = (
-  CarrotGroup(
-    title='Start / Engage',
-    description='How openpilot engages cruise and which steering wheel buttons control it.',
-    build_items=carrot_items.build_start_items,
-  ),
-  CarrotGroup(
-    title='Cruise & Following',
-    description='Following distance, longitudinal gains, acceleration limits and cruise behavior.',
-    build_items=carrot_items.build_cruise_items,
-  ),
-  CarrotGroup(
-    title='Navigation',
-    description='Navigation-based speed control, speed cameras, road limits and speed bumps.',
-    build_items=carrot_items.build_navi_items,
-  ),
-  CarrotGroup(
-    title='Turns & Curves',
-    description='Automatic turn, fork / merge and curve speed control.',
-    build_items=carrot_items.build_speed_items,
-  ),
-  CarrotGroup(
-    title='Lateral Tuning',
-    description='Steering geometry, MPC costs, torque tuning, lane change and blind spot.',
-    build_items=carrot_items.build_tuning_items,
-  ),
-  CarrotGroup(
-    title='Display & Sound',
-    description='Cluster HUD, on-screen overlays, sound, YouTube and map style.',
-    build_items=carrot_items.build_display_items,
-  ),
-  CarrotGroup(
-    title='Vehicle',
-    description='Vehicle-specific overrides and convenience options.',
-    build_items=carrot_items.build_vehicle_items,
-  ),
-  CarrotGroup(
-    title='Developer',
-    description='Debug and diagnostic toggles. Use with caution.',
-    build_items=carrot_items.build_dev_items,
-  ),
-)
-
-# Distance the back button sits from the top of the page, and the gap between it
-# and the list below. Matches speed_limit_settings.py.
-BACK_TOP_MARGIN = 20
-LIST_TOP_GAP = 40
-
-
-class CarrotGroupLayout(Widget):
-  """A single Carrot tuning group: back button above a scrolling list of settings."""
-
-  def __init__(self, back_btn_callback: Callable, build_items: Callable[[], list]):
-    super().__init__()
-    self._back_button = NavButton(tr("Back"))
-    self._back_button.set_click_callback(back_btn_callback)
-    self._scroller = Scroller(build_items(), line_separator=False, spacing=0)
-
-  def _render(self, rect):
-    self._back_button.set_position(rect.x, rect.y + BACK_TOP_MARGIN)
-    self._back_button.render()
-
-    list_y = self._back_button.rect.height + LIST_TOP_GAP
-    self._scroller.render(rl.Rectangle(rect.x, rect.y + list_y, rect.width, rect.height - list_y))
-
-  def show_event(self):
-    self._scroller.show_event()
-
-  def hide_event(self):
-    self._scroller.hide_event()
+  PATH = 6
+  VEHICLE = 7
+  DEV = 8
 
 
 class CarrotTuningLayout(Widget):
-  """Carrot tuning root page: one navigation row per settings group."""
+  """Carrot tuning settings with top tabs."""
+
+  # English msgids; resolved lazily in TAB_LABELS. Calling tr() in the class body ran at
+  # import time, so the tabs kept the language that happened to be active on import and
+  # never followed a later LanguageSetting change.
+  TAB_KEYS = ('Start', 'Cruise', 'Navigation', 'Speed', 'Tuning', 'Display', 'Path', 'Vehicle', 'Developer')
+  TAB_COUNT = len(TAB_KEYS)
+
+  @property
+  def TAB_LABELS(self) -> list[str]:
+    return [tr(key) for key in self.TAB_KEYS]
+  TAB_HEIGHT = 96  # taller with the 1.5x labels, keeps ~25 px of padding around the text
+  TAB_TOP_MARGIN = 12
 
   def __init__(self, back_btn_callback: Callable):
     super().__init__()
     self._back_button = NavButton(tr("Back"))
     self._back_button.set_click_callback(back_btn_callback)
 
-    self._current_group: CarrotGroupKey | None = None
-    # Sub-pages are built on first open: the groups hold ~250 items in total and
-    # there is no reason to allocate them all when the page is only passed through.
-    self._group_layouts: dict[CarrotGroupKey, CarrotGroupLayout] = {}
-    self._nav_rows: list = []
-    self._scroller = Scroller(self._build_nav_rows(), line_separator=False, spacing=0)
-
-  def _build_nav_rows(self) -> list:
-    rows: list = []
-    # strict=True doubles as the check that CARROT_GROUPS has one entry per key.
-    groups = list(zip(CarrotGroupKey, CARROT_GROUPS, strict=True))
-    for key, group in groups:
-      row = CarrotNavRow(
-        title=lambda t=group.title: tr(t),
-        description=lambda d=group.description: tr(d),
-        action_item=ButtonActionSP(text=lambda: tr("OPEN")),
-        callback=self._make_open_callback(key),
-      )
-      rows.append(row)
-      self._nav_rows.append(row)
-      if key is not groups[-1][0]:
-        rows.append(LineSeparatorSP(40))
-    return rows
-
-  def _make_open_callback(self, key: CarrotGroupKey):
-    def _open():
-      self._set_current_group(key)
-    return _open
-
-  def _set_current_group(self, key: CarrotGroupKey | None):
-    self._current_group = key
-    if key is not None:
-      if key not in self._group_layouts:
-        self._group_layouts[key] = CarrotGroupLayout(lambda: self._set_current_group(None), CARROT_GROUPS[key].build_items)
-      self._group_layouts[key].show_event()
+    self._start_items = self._build_start_items()
+    self._cruise_items = self._build_cruise_items()
+    self._navi_items = self._build_navi_items()
+    self._speed_items = self._build_speed_items()
+    self._tuning_items = self._build_tuning_items()
+    self._display_items = self._build_display_items()
+    self._path_items = self._build_path_items()
+    self._vehicle_items = self._build_vehicle_items()
+    self._dev_items = self._build_dev_items()
+    self._start_scroller = Scroller(self._start_items, spacing=0, line_separator=True)
+    self._cruise_scroller = Scroller(self._cruise_items, spacing=0, line_separator=True)
+    self._navi_scroller = Scroller(self._navi_items, spacing=0, line_separator=True)
+    self._speed_scroller = Scroller(self._speed_items, spacing=0, line_separator=True)
+    self._tuning_scroller = Scroller(self._tuning_items, spacing=0, line_separator=True)
+    self._display_scroller = Scroller(self._display_items, spacing=0, line_separator=True)
+    self._path_scroller = Scroller(self._path_items, spacing=0, line_separator=True)
+    self._vehicle_scroller = Scroller(self._vehicle_items, spacing=0, line_separator=True)
+    self._dev_scroller = Scroller(self._dev_items, spacing=0, line_separator=True)
+    self._tab_scrollers = {
+      TabType.START: self._start_scroller,
+      TabType.CRUISE: self._cruise_scroller,
+      TabType.NAVI: self._navi_scroller,
+      TabType.SPEED: self._speed_scroller,
+      TabType.TUNING: self._tuning_scroller,
+      TabType.DISPLAY: self._display_scroller,
+      TabType.PATH: self._path_scroller,
+      TabType.VEHICLE: self._vehicle_scroller,
+      TabType.DEV: self._dev_scroller,
+    }
+    self._current_tab = TabType.START
+    # Refreshed every frame by _render_tabs(); the press handler resolves against it
+    self._tab_strip_rect: rl.Rectangle | None = None
 
   def _render(self, rect):
-    if self._current_group is not None:
-      self._group_layouts[self._current_group].render(rect)
-      return
-
-    self._back_button.set_position(rect.x, rect.y + BACK_TOP_MARGIN)
+    rl.draw_rectangle(int(rect.x), int(rect.y), int(rect.width), int(rect.height), style.BASE_BG_COLOR)
+    tab_rect = rl.Rectangle(rect.x, rect.y + self.TAB_TOP_MARGIN, rect.width, self.TAB_HEIGHT)
+    self._render_tabs(tab_rect)
+    back_h = self._back_button.rect.height
+    content_rect = rl.Rectangle(
+      rect.x,
+      rect.y + self.TAB_TOP_MARGIN + self.TAB_HEIGHT,
+      rect.width,
+      rect.height - self.TAB_TOP_MARGIN - self.TAB_HEIGHT - back_h - 20,
+    )
+    self._tab_scrollers[self._current_tab].render(content_rect)
+    # NavButton stores a plain str, so refresh it here to follow language changes
+    self._back_button.text = tr("Back")
+    self._back_button.set_position(rect.x + 20, rect.y + rect.height - back_h - 20)
     self._back_button.render()
 
-    list_y = self._back_button.rect.height + LIST_TOP_GAP
-    self._scroller.render(rl.Rectangle(rect.x, rect.y + list_y, rect.width, rect.height - list_y))
+  def _render_tabs(self, rect):
+    # Geometry only: touching is handled by _handle_mouse_press(), driven by
+    # gui_app.mouse_events (see the comment there for why the strip cannot poll raylib).
+    self._tab_strip_rect = rect
+    tab_w = rect.width / self.TAB_COUNT
+    for i, label in enumerate(self.TAB_LABELS):
+      x = rect.x + i * tab_w
+      tab_rect = rl.Rectangle(x, rect.y, tab_w, rect.height)
+      is_active = self._current_tab == i
+      bg = style.ON_BG_COLOR if is_active else style.OFF_BG_COLOR
+      rl.draw_rectangle_rounded(tab_rect, 0.15, 8, bg)
+      text_color = rl.WHITE if is_active else style.ITEM_TEXT_COLOR
+      # NOTE: rl.measure_text_ex() ignores the global FONT_SCALE / FALLBACK_FONT_SCALE that
+      # draw_text_ex applies (see application._patch_text_functions), so CJK tab labels were
+      # measured at the unscaled size and ended up off-center / clipped. measure_text_cached()
+      # uses the exact same font + scale as the draw call, keeping the tabs centered.
+      tab_font = font_fallback(gui_app.font(), label)
+      font_size, text_size = self._fit_tab_label(tab_font, label, tab_w)
+      rl.draw_text_ex(tab_font, label,
+                      rl.Vector2(x + (tab_w - text_size.x) / 2,
+                                 rect.y + (rect.height - text_size.y) / 2),
+                      font_size, 0, text_color)
+
+  def _handle_mouse_press(self, mouse_pos: MousePos, /) -> None:
+    """Select the tab the finger went down on.
+
+    On press rather than release (the strip reacts on touch-down, like the toggle rows),
+    and fed by gui_app.mouse_events instead of a call to raylib's just-pressed flag inside
+    the render loop: raylib clears that edge on the next poll_input_events(),
+    the touch sampler thread polls at 140 Hz (application.MOUSE_THREAD_RATE) while this
+    loop only gets a frame every ~17 ms, so most taps were gone before a frame looked at
+    them and the strip felt dead to the touch. Using the press position also stops a finger
+    that drifts after touch-down from selecting the neighbouring tab.
+    """
+    index = self.tab_index_at(mouse_pos, self._tab_strip_rect)
+    if index is not None:
+      self._select_tab(index)
+
+  @classmethod
+  def tab_index_at(cls, pos, strip_rect):
+    """Index of the tab under `pos`, or None when the point is outside the strip.
+
+    Pure geometry (no window/GPU needed) so the hit test can be unit tested.
+    """
+    if strip_rect is None or strip_rect.width <= 0 or not rl.check_collision_point_rec(pos, strip_rect):
+      return None
+    index = int((pos.x - strip_rect.x) / (strip_rect.width / cls.TAB_COUNT))
+    return min(max(index, 0), cls.TAB_COUNT - 1)
+
+  def _select_tab(self, index: int) -> None:
+    self._current_tab = TabType(index)
+
+  @staticmethod
+  def _fit_tab_label(font, label: str, tab_w: float) -> tuple[int, rl.Vector2]:
+    """Largest tab-font size that still fits `label` inside its tab.
+
+    At 1.5x the two-character Chinese labels are comfortable, but latin ones
+    ("Navigation", "Developer") are 7-10 chars and would run over the edge of a
+    screen/9-wide tab, so only those are shrunk - and only as far as needed.
+    measure_text_cached() applies the same FONT_SCALE as the draw call, so the
+    returned width is directly comparable with the tab width.
+    """
+    max_width = max(tab_w - 2 * TAB_TEXT_PADDING, 1)
+    font_size = TAB_FONT_SIZE
+    text_size = measure_text_cached(font, label, font_size)
+    while font_size > TAB_FONT_MIN_SIZE and text_size.x > max_width:
+      font_size -= 1
+      text_size = measure_text_cached(font, label, font_size)
+    return font_size, text_size
 
   def show_event(self):
-    self._current_group = None
-    self._scroller.show_event()
-    # Group descriptions are the only hint of what each page holds, so show them
-    # up front instead of hiding them behind a tap like a settings row would.
-    for row in self._nav_rows:
-      row.show_description(True)
+    for scroller in self._tab_scrollers.values():
+      scroller.show_event()
 
-  def hide_event(self):
-    self._current_group = None
-    if self._group_layouts:
-      for layout in self._group_layouts.values():
-        layout.hide_event()
+  def fade_in(self):
+    for scroller in self._tab_scrollers.values():
+      scroller.fade_in()
+
+  def _build_start_items(self):
+    return [
+      # --- Auto Start / Cruise ---
+      option_item_sp(title=lambda: tr('Auto Engage'), param='AutoEngage', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Auto Cruise Speed'), param='AutoCruiseControl', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise On Distance'), param='CruiseOnDist', min_value=0, max_value=300, value_change_step=5),
+      option_item_sp(title=lambda: tr('Eco Cruise Control'), param='CruiseEcoControl', min_value=0, max_value=3, value_change_step=1),
+      # --- Button Behavior ---
+      option_item_sp(title=lambda: tr('Cruise Button Mode'), param='CruiseButtonMode', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cancel Button Mode'), param='CancelButtonMode', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Soft Hold on Cancel'), param='SoftHoldOnCancel', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Button Long Press Delay'), param='CruiseButtonLongDelay', min_value=0, max_value=200, value_change_step=5),
+      # --- Speed Presets ---
+      option_item_sp(title=lambda: tr('Cruise Preset Speed 1'), param='CruiseSpeed1', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Preset Speed 2'), param='CruiseSpeed2', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Preset Speed 3'), param='CruiseSpeed3', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Preset Speed 4'), param='CruiseSpeed4', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Preset Speed 5'), param='CruiseSpeed5', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Preset Speed Unit'), param='CruiseSpeedUnit', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Basic Cruise Preset Speed Unit'), param='CruiseSpeedUnitBasic', min_value=0, max_value=100, value_change_step=1),
+      # --- Steering Wheel Buttons ---
+      option_item_sp(title=lambda: tr('LFA Button Mode'), param='LfaButtonMode', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Paddle Mode'), param='PaddleMode', min_value=0, max_value=3, value_change_step=1),
+      # --- Auto Gas ---
+      option_item_sp(title=lambda: tr('Auto Gas Cancel Speed'), param='AutoGasCancelSpeed', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Auto Gas Sync Speed'), param='AutoGasSyncSpeed', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Auto Gas Takeover Speed'), param='AutoGasTokSpeed', min_value=0, max_value=200, value_change_step=5),
+    ]
+
+  def _build_cruise_items(self):
+    return [
+      # --- Following Distance ---
+      option_item_sp(title=lambda: tr('Follow Time Gap 1'), param='TFollowGap1', min_value=50, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+      option_item_sp(title=lambda: tr('Follow Time Gap 2'), param='TFollowGap2', min_value=50, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+      option_item_sp(title=lambda: tr('Follow Time Gap 3'), param='TFollowGap3', min_value=50, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+      option_item_sp(title=lambda: tr('Follow Time Gap 4'), param='TFollowGap4', min_value=50, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+      option_item_sp(title=lambda: tr('Dynamic Follow Time'), param='DynamicTFollow', min_value=0, max_value=200, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+      option_item_sp(title=lambda: tr('Dynamic Follow Time on Lane Change'), param='DynamicTFollowLC', min_value=0, max_value=200, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+      # --- Longitudinal Gains ---
+      option_item_sp(title=lambda: tr('Lead Acceleration Response'), param='LeadAccelResponse', min_value=-100, max_value=100, value_change_step=5),
+      option_item_sp(title=lambda: tr('Longitudinal Actuator Delay'), param='LongActuatorDelay', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Longitudinal Feedforward'), param='LongTuningKf', min_value=0, max_value=300, value_change_step=5),
+      option_item_sp(title=lambda: tr('Longitudinal Integral Velocity'), param='LongTuningKiV', min_value=0, max_value=300, value_change_step=5),
+      option_item_sp(title=lambda: tr('Longitudinal Proportional Velocity'), param='LongTuningKpV', min_value=0, max_value=300, value_change_step=5),
+      option_item_sp(title=lambda: tr('Stopping Acceleration'), param='StoppingAccel', min_value=-200, max_value=0, value_change_step=5),
+      option_item_sp(title=lambda: tr('Follow Deceleration Boost'), param='TFollowDecelBoost', min_value=0, max_value=200, value_change_step=5),
+      # --- Acceleration Limits ---
+      option_item_sp(title=lambda: tr('Cruise Max Acceleration 0'), param='CruiseMaxVals0', min_value=0, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f} m/s²'),
+      option_item_sp(title=lambda: tr('Cruise Max Acceleration 1'), param='CruiseMaxVals1', min_value=0, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f} m/s²'),
+      option_item_sp(title=lambda: tr('Cruise Max Acceleration 2'), param='CruiseMaxVals2', min_value=0, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f} m/s²'),
+      option_item_sp(title=lambda: tr('Cruise Max Acceleration 3'), param='CruiseMaxVals3', min_value=0, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f} m/s²'),
+      option_item_sp(title=lambda: tr('Cruise Max Acceleration 4'), param='CruiseMaxVals4', min_value=0, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f} m/s²'),
+      option_item_sp(title=lambda: tr('Cruise Max Acceleration 5'), param='CruiseMaxVals5', min_value=0, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f} m/s²'),
+      option_item_sp(title=lambda: tr('Cruise Max Acceleration 6'), param='CruiseMaxVals6', min_value=0, max_value=300, value_change_step=5,
+                     use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f} m/s²'),
+      # --- Cruise Behavior ---
+      option_item_sp(title=lambda: tr('Carrot Cruise Decel'), param='CarrotCruiseDecel', min_value=-100, max_value=0, value_change_step=1),
+      option_item_sp(title=lambda: tr('Carrot Cruise ATC Decel'), param='CarrotCruiseAtcDecel', min_value=-100, max_value=0, value_change_step=1),
+      option_item_sp(title=lambda: tr('Stop Speed Threshold'), param='VEgoStopping', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Model Speed Compensation'), param='ApplyModelSpeed', min_value=0, max_value=2, value_change_step=1),
+    ]
+
+  def _build_navi_items(self):
+    return [
+      # --- Navigation Speed Control ---
+      option_item_sp(title=lambda: tr('Navigation Speed Ctrl Mode'), param='AutoNaviSpeedCtrlMode', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Navigation Speed Decel Rate'), param='AutoNaviSpeedDecelRate', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Navigation Speed Safety Factor'), param='AutoNaviSpeedSafetyFactor', min_value=50, max_value=150, value_change_step=5),
+      option_item_sp(title=lambda: tr('Navigation Speed Ctrl End Distance'), param='AutoNaviSpeedCtrlEnd', min_value=0, max_value=30, value_change_step=1),
+      # --- Stop / Speed Camera ---
+      option_item_sp(title=lambda: tr('Stop Target Distance'), param='StopDistanceCarrot', min_value=0, max_value=2000, value_change_step=10),
+      toggle_item_sp(title=lambda: tr('Same Direction Speed Cam Filter'), param='SameSpiCamFilter'),
+      option_item_sp(title=lambda: tr('Speed Camera Haptic Alert'), param='HapticFeedbackWhenSpeedCamera', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Traffic Stop Distance Adjust'), param='TrafficStopDistanceAdjust', min_value=-500, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Traffic Light Detect Mode'), param='TrafficLightDetectMode', min_value=0, max_value=2, value_change_step=1),
+      # --- Road Speed Limits ---
+      option_item_sp(title=lambda: tr('Road Speed Auto Adjust'), param='AutoRoadSpeedAdjust', min_value=-50, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Road Speed Limit Offset'), param='AutoRoadSpeedLimitOffset', min_value=-20, max_value=20, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Auto Speed Up to Road Limit'), param='AutoSpeedUptoRoadSpeedLimit'),
+      option_item_sp(title=lambda: tr('Speed Source PCM'), param='SpeedFromPCM', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Road Type'), param='RoadType', min_value=0, max_value=2, value_change_step=1),
+      # --- Vehicle Navigation ---
+      toggle_item_sp(title=lambda: tr('Vehicle Navi CAN Control'), param='VehicleNaviCanControl'),
+      toggle_item_sp(title=lambda: tr('School Zone CAN Control'), param='VehicleNaviSchoolZoneControl'),
+      option_item_sp(title=lambda: tr('Speed Camera Control Mode'), param='VehicleSpeedCameraControlMode', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Speed Camera Alert Time'), param='VehicleSpeedCameraDistanceTime', min_value=0, max_value=30, value_change_step=1),
+      # --- Navigation Speed Bumps ---
+      option_item_sp(title=lambda: tr('Speed Bump End Distance'), param='AutoNaviSpeedBumpEndDistance', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Countdown Mode'), param='AutoNaviCountDownMode', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Speed Bump Target Speed'), param='AutoNaviSpeedBumpSpeed', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Speed Bump Hold Time'), param='AutoNaviSpeedBumpTime', min_value=0, max_value=20, value_change_step=1),
+    ]
+
+  def _build_speed_items(self):
+    return [
+      # --- Auto Turn Control ---
+      option_item_sp(title=lambda: tr('Auto Turn Control'), param='AutoTurnControl', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Auto Turn Speed Threshold'), param='AutoTurnControlSpeedTurn', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Auto Turn End Distance'), param='AutoTurnControlTurnEnd', min_value=0, max_value=500, value_change_step=10),
+      toggle_item_sp(title=lambda: tr('Auto Turn on Navi Lane Change'), param='AutoTurnMapChange'),
+      option_item_sp(title=lambda: tr('Auto Turn Distance Offset'), param='AutoTurnDistOffset', min_value=-200, max_value=200, value_change_step=10),
+      # --- Fork Control ---
+      option_item_sp(title=lambda: tr('Fork Merge Distance Offset'), param='AutoForkDistOffset', min_value=-200, max_value=200, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Merge Distance Offset (Highway)'), param='AutoForkDistOffsetH', min_value=-200, max_value=200, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Blinker Trigger Distance'), param='AutoDoForkBlinkerDist', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Blinker Trigger Distance (Highway)'), param='AutoDoForkBlinkerDistH', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Navi Trigger Distance'), param='AutoDoForkNavDist', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Navi Trigger Distance (Highway)'), param='AutoDoForkNavDistH', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Decel Trigger Distance'), param='AutoDoForkDecalDist', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Decel Trigger Distance (Highway)'), param='AutoDoForkDecalDistH', min_value=0, max_value=500, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Decel Rate'), param='AutoForkDecalRate', min_value=0, max_value=300, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Decel Rate (Highway)'), param='AutoForkDecalRateH', min_value=0, max_value=300, value_change_step=10),
+      option_item_sp(title=lambda: tr('Fork Minimum Speed'), param='AutoForkSpeedMin', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Fork Minimum Speed (Highway)'), param='AutoForkSpeedMinH', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Fork Keep Speed'), param='AutoKeepForkSpeed', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Fork Keep Speed (Highway)'), param='AutoKeepForkSpeedH', min_value=0, max_value=200, value_change_step=5),
+      toggle_item_sp(title=lambda: tr('Auto Turn Outside Road Edge'), param='AutoTurnInNotRoadEdge'),
+      # --- Curve Speed ---
+      option_item_sp(title=lambda: tr('Map Turn Speed Factor'), param='MapTurnSpeedFactor', min_value=50, max_value=150, value_change_step=5),
+      option_item_sp(title=lambda: tr('Turn Speed Control Mode'), param='TurnSpeedControlMode', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Curve Speed Factor'), param='AutoCurveSpeedFactor', min_value=50, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Curve Speed Factor (Highway)'), param='AutoCurveSpeedFactorH', min_value=50, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Highway Curve Aggressiveness'), param='AutoCurveSpeedAggressivenessH', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Curve Speed Lower Limit'), param='AutoCurveSpeedLowerLimit', min_value=0, max_value=100, value_change_step=5),
+      # --- Road Speed Limits Override ---
+      toggle_item_sp(title=lambda: tr('Auto Up Road Limit'), param='AutoUpRoadLimit'),
+      toggle_item_sp(title=lambda: tr('Auto Up 40 km/h Road Limit'), param='AutoUpRoadLimit40KMH'),
+      toggle_item_sp(title=lambda: tr('Auto Up Highway Limit'), param='AutoUpHighwayRoadLimit'),
+      toggle_item_sp(title=lambda: tr('Auto Up 40 km/h Highway Limit'), param='AutoUpHighwayRoadLimit40KMH'),
+    ]
+
+  def _build_tuning_items(self):
+    return [
+      # --- Lateral Control ---
+      toggle_item_sp(title=lambda: tr('Always Lateral'), param='AlwaysLateral'),
+      option_item_sp(title=lambda: tr('Custom Steer Ratio'), param='CustomSR', min_value=50, max_value=200, value_change_step=1),
+      option_item_sp(title=lambda: tr('Steer Delta Down'), param='CustomSteerDeltaDown', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Steer Delta Up'), param='CustomSteerDeltaUp', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Steer Delta Down (Lane Change)'), param='CustomSteerDeltaDownLC', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Steer Delta Up (Lane Change)'), param='CustomSteerDeltaUpLC', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Max Steer Angle'), param='CustomSteerMax', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Path Offset'), param='PathOffset', min_value=-100, max_value=100, value_change_step=5),
+      option_item_sp(title=lambda: tr('Steer Actuator Delay'), param='SteerActuatorDelay', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Steer Ratio Rate'), param='SteerRatioRate', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Lateral Acceleration Cost'), param='LatMpcAccelCost', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Jerk Cost'), param='LatMpcJerkCost', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Motion Cost'), param='LatMpcMotionCost', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Path Cost'), param='LatMpcPathCost', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Steering Rate Cost'), param='LatMpcSteeringRateCost', min_value=0, max_value=500, value_change_step=5),
+      # --- Steering Torque ---
+      toggle_item_sp(title=lambda: tr('Custom Lateral Torque'), param='LateralTorqueCustom'),
+      option_item_sp(title=lambda: tr('Lateral Torque Friction'), param='LateralTorqueFriction', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Torque Derivative'), param='LateralTorqueKd', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Torque Feedforward'), param='LateralTorqueKf', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Torque Integral Velocity'), param='LateralTorqueKiV', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Torque Proportional'), param='LateralTorqueKpV', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Torque Accel Factor'), param='LateralTorqueAccelFactor', min_value=0, max_value=300, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral MPC Input Offset'), param='LatMpcInputOffset', min_value=-100, max_value=100, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lateral Smooth Seconds'), param='LatSmoothSec', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Lane Offset Adjust'), param='AdjustLaneOffset', min_value=-100, max_value=100, value_change_step=5),
+      option_item_sp(title=lambda: tr('Camera Yaw Trim'), param='CameraYawTrimDeg', min_value=-10, max_value=10, value_change_step=1),
+      # --- Lane Change ---
+      toggle_item_sp(title=lambda: tr('Lane Change BSD'), param='LaneChangeBsd'),
+      option_item_sp(title=lambda: tr('Lane Change Delay'), param='LaneChangeDelay', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Lane Change Need Torque'), param='LaneChangeNeedTorque', min_value=0, max_value=10, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Continuous Lane Change'), param='ContinuousLaneChange'),
+      option_item_sp(title=lambda: tr('Continuous Lane Change Count'), param='ContinuousLaneChangeCnt', min_value=0, max_value=10, value_change_step=1),
+      option_item_sp(title=lambda: tr('Continuous Lane Change Interval'), param='ContinuousLaneChangeInterval', min_value=0, max_value=100, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lane Change Start Cost'), param='AChangeCostStarting', min_value=0, max_value=500, value_change_step=5),
+      option_item_sp(title=lambda: tr('Lane Stabilization Time'), param='LaneStabTime', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('New Lane Width Difference'), param='NewLaneWidthDiff', min_value=0, max_value=100, value_change_step=5),
+      option_item_sp(title=lambda: tr('Auto Enter New Lane Time'), param='AutoEnTurnNewLaneTime', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Auto Enter New Lane Time (Highway)'), param='AutoEnTurnNewLaneTimeH', min_value=0, max_value=50, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Auto Turn Left'), param='AutoTurnLeft'),
+      option_item_sp(title=lambda: tr('Stock Blinker Control'), param='StockBlinkerCtrl', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Extended Blinker Test'), param='ExtBlinkerCtrlTest', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Blinker Mode'), param='BlinkerMode', min_value=0, max_value=2, value_change_step=1),
+      # --- Blind Spot ---
+      toggle_item_sp(title=lambda: tr('Disable Blind Spot'), param='DisableBlindSpot'),
+      option_item_sp(title=lambda: tr('Dynamic Blind Spot Range'), param='DynamicBlindRange', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Dynamic Blind Spot Distance'), param='DynamicBlindDistance', min_value=0, max_value=200, value_change_step=5),
+      option_item_sp(title=lambda: tr('Blind Spot Delay Time'), param='BsdDelayTime', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Side Blind Spot Delay'), param='SideBsdDelayTime', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Side Relative Distance Time'), param='SideRelDistTime', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Side vRel Distance Time'), param='SidevRelDistTime', min_value=0, max_value=50, value_change_step=1),
+      option_item_sp(title=lambda: tr('Side Radar Min Distance'), param='SideRadarMinDist', min_value=0, max_value=100, value_change_step=1),
+      # --- ONNX ---
+      toggle_item_sp(title=lambda: tr('Lane Line Check'), param='LaneLineCheck'),
+      option_item_sp(title=lambda: tr('ONNX BSD Interval'), param='OnnxBsdIntervalMs', min_value=0, max_value=1000, value_change_step=10),
+      option_item_sp(title=lambda: tr('ONNX BSD Smoothing'), param='OnnxBsdSmoothingMs', min_value=0, max_value=1000, value_change_step=10),
+      option_item_sp(title=lambda: tr('ONNX BSD Threshold'), param='OnnxBsdThreshold', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('ONNX Lane Interval'), param='OnnxLaneIntervalMs', min_value=0, max_value=1000, value_change_step=10),
+      option_item_sp(title=lambda: tr('ONNX Lane Threshold'), param='OnnxLaneThreshold', min_value=0, max_value=100, value_change_step=1),
+    ]
+
+  def _build_display_items(self):
+    return [
+      # --- HUD / Cluster ---
+      option_item_sp(title=lambda: tr('Lateral Suspend Angle'), param='LatSuspendAngleDeg', min_value=0, max_value=90, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster Navigation Map Theme'), param='ClusterNaviMapTheme', min_value=0, max_value=5, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster Navigation Map Type'), param='ClusterNaviMapType', min_value=0, max_value=2, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster Navigation Map FPS'), param='ClusterNaviMapFps', min_value=1, max_value=60, value_change_step=1),
+      option_item_sp(title=lambda: tr('Carrot Navi HUD Profile'), param='CarrotNaviHudMapProfile', min_value=0, max_value=5, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Cluster HUD'), param='ClusterHud'),
+      option_item_sp(title=lambda: tr('Cluster HUD Brightness'), param='ClusterHudBrightness', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Camera View Mode'), param='ClusterHudCameraViewMode', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Core Mode'), param='ClusterHudCoreMode', min_value=0, max_value=3, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Cluster HUD Debug'), param='ClusterHudDebug'),
+      option_item_sp(title=lambda: tr('Cluster HUD Encoder'), param='ClusterHudEncoder', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Live FPS'), param='ClusterHudLiveFps', min_value=1, max_value=60, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Cluster HUD Mirror'), param='ClusterHudMirror'),
+      option_item_sp(title=lambda: tr('Cluster HUD Orientation'), param='ClusterHudOrientation', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Panel Layout'), param='ClusterHudPanelLayout', min_value=0, max_value=5, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Priority'), param='ClusterHudPriority', min_value=0, max_value=3, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Cluster HUD Radar Display'), param='ClusterHudRadarDisplay'),
+      option_item_sp(title=lambda: tr('Cluster HUD Radar Info'), param='ClusterHudRadarInfo', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Radar Source Color'), param='ClusterHudRadarSourceColor', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Screen Mode'), param='ClusterHudScreenMode', min_value=0, max_value=3, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cluster HUD Theme'), param='ClusterHudTheme', min_value=0, max_value=5, value_change_step=1),
+      # --- Display ---
+      toggle_item_sp(title=lambda: tr('Show Camera with Cluster'), param='ShowCameraWithCluster'),
+      option_item_sp(title=lambda: tr('Show Custom Brightness'), param='ShowCustomBrightness', min_value=0, max_value=100, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Show Date Time'), param='ShowDateTime'),
+      toggle_item_sp(title=lambda: tr('Show Debug UI'), param='ShowDebugUI'),
+      toggle_item_sp(title=lambda: tr('Show Device State'), param='ShowDeviceState'),
+      toggle_item_sp(title=lambda: tr('Show Lane Info'), param='ShowLaneInfo'),
+      toggle_item_sp(title=lambda: tr('Show Model View'), param='ShowModelView'),
+      option_item_sp(title=lambda: tr('Show Plot Mode'), param='ShowPlotMode', min_value=0, max_value=3, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Show Radar Info'), param='ShowRadarInfo'),
+      toggle_item_sp(title=lambda: tr('Show Route Info'), param='ShowRouteInfo'),
+      toggle_item_sp(title=lambda: tr('Show TPMS'), param='ShowTpms'),
+      toggle_item_sp(title=lambda: tr('Software Menu'), param='SoftwareMenu'),
+      # --- Sound ---
+      option_item_sp(title=lambda: tr('Sound Volume Adjust'), param='SoundVolumeAdjust', min_value=-100, max_value=100, value_change_step=5),
+      option_item_sp(title=lambda: tr('Sound Volume Adjust Engage'), param='SoundVolumeAdjustEngage', min_value=-100, max_value=100, value_change_step=5),
+      button_item_sp(title=lambda: tr('Sound Language'), button_text=lambda: Params().get("SoundLanguageSetting") or "auto"),
+      # --- YouTube ---
+      toggle_item_sp(title=lambda: tr('Carrot YouTube Live'), param='CarrotYouTubeLive'),
+      option_item_sp(title=lambda: tr('Carrot YouTube Quality'), param='CarrotYouTubeQuality', min_value=0, max_value=3, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Carrot YouTube Timestamp'), param='CarrotYouTubeTimestamp'),
+      # --- Map ---
+      option_item_sp(title=lambda: tr('Mapbox Style'), param='MapboxStyle', min_value=0, max_value=5, value_change_step=1),
+    ]
+
+  def _build_path_items(self):
+    return [
+      # --- Path ---
+      option_item_sp(title=lambda: tr('Path Color'), param='ShowPathColor', min_value=0, max_value=10, value_change_step=1),
+      option_item_sp(title=lambda: tr('Path Color Cruise Off'), param='ShowPathColorCruiseOff', min_value=0, max_value=10, value_change_step=1),
+      option_item_sp(title=lambda: tr('Path Color Lane'), param='ShowPathColorLane', min_value=0, max_value=10, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Show Path End'), param='ShowPathEnd'),
+      option_item_sp(title=lambda: tr('Path Display Mode'), param='ShowPathMode', min_value=0, max_value=5, value_change_step=1),
+      option_item_sp(title=lambda: tr('Path Display Mode Lane'), param='ShowPathModeLane', min_value=0, max_value=5, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Tire Trajectory'), param='CarrotTireTrajectory'),
+      toggle_item_sp(title=lambda: tr('Use Lane Line Curve Speed'), param='UseLaneLineCurveSpeed'),
+      toggle_item_sp(title=lambda: tr('Use Lane Line Speed'), param='UseLaneLineSpeed'),
+    ]
+
+  def _build_vehicle_items(self):
+    return [
+      # --- Vehicle ---
+      toggle_item_sp(title=lambda: tr('Disable Driver Monitoring'), param='DisableDM'),
+      option_item_sp(title=lambda: tr('Disable Min Steer Speed'), param='DisableMinSteerSpeed', min_value=0, max_value=200, value_change_step=5),
+      toggle_item_sp(title=lambda: tr('Hyundai Camera SCC'), param='HyundaiCameraSCC'),
+      toggle_item_sp(title=lambda: tr('LDWS Vehicle'), param='IsLdwsCar'),
+      toggle_item_sp(title=lambda: tr('HDP Use'), param='HDPuse'),
+      toggle_item_sp(title=lambda: tr('Hotspot on Boot'), param='HotspotOnBoot'),
+      option_item_sp(title=lambda: tr('Max Angle Frames'), param='MaxAngleFrames', min_value=0, max_value=100, value_change_step=1),
+      option_item_sp(title=lambda: tr('Max Time Offroad (min)'), param='MaxTimeOffroad', min_value=0, max_value=11, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Record Road Camera'), param='RecordRoadCam'),
+      toggle_item_sp(title=lambda: tr('Share Data'), param='ShareData'),
+      toggle_item_sp(title=lambda: tr('Use Wide Camera'), param='UseWideCamera'),
+      toggle_item_sp(title=lambda: tr('Mute Door'), param='MuteDoor'),
+      toggle_item_sp(title=lambda: tr('Mute Seatbelt'), param='MuteSeatbelt'),
+      toggle_item_sp(title=lambda: tr('Enable Corner Radar'), param='EnableCornerRadar'),
+      toggle_item_sp(title=lambda: tr('Enable Radar Tracks'), param='EnableRadarTracks'),
+      toggle_item_sp(title=lambda: tr('Enable Speed TF'), param='EnableSpeedTF'),
+      option_item_sp(title=lambda: tr('My Driving Mode'), param='MyDrivingMode', min_value=0, max_value=5, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('My Driving Mode Auto'), param='MyDrivingModeAuto'),
+    ]
+
+  def _build_dev_items(self):
+    return [
+      # --- Developer ---
+      toggle_item_sp(title=lambda: tr('CANFD Debug'), param='CanfdDebug'),
+      toggle_item_sp(title=lambda: tr('CANFD HDA2'), param='CanfdHDA2'),
+      toggle_item_sp(title=lambda: tr('C3x Lite Hardware'), param='HardwareC3xLite'),
+      option_item_sp(title=lambda: tr('Cruise Button Test 1'), param='CruiseButtonTest1', min_value=0, max_value=5, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Button Test 2'), param='CruiseButtonTest2', min_value=0, max_value=5, value_change_step=1),
+      option_item_sp(title=lambda: tr('Cruise Button Test 3'), param='CruiseButtonTest3', min_value=0, max_value=5, value_change_step=1),
+      toggle_item_sp(title=lambda: tr('Show Debug Log'), param='ShowDebugLog'),
+    ]

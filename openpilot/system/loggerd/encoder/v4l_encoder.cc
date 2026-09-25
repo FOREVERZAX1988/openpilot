@@ -123,7 +123,18 @@ void V4LEncoder::dequeue_handler(V4LEncoder *e) {
         if (e->packet_callback) e->packet_callback(header.begin(), header.size(), ts, true, false);
       } else {
         VisionIpcBufExtra extra = e->extras.pop();
-        assert(extra.timestamp_eof/1000 == ts); // stay in sync
+        // 2026-09-20: upstream asserts here (extra.timestamp_eof/1000 == ts). A desync is
+        // recoverable -- the pop() above already keeps the 1:1 frame pairing -- but the assert
+        // aborted the whole encoderd process (SIGABRT): all camera streams died, the current
+        // segment was scrapped, and the resulting crash dump then poisoned the sunnylink upload
+        // queue. Log it (rate limited via LOGE_100) and keep encoding instead of aborting.
+        // Behaviour when in sync (the normal case) is byte-for-byte unchanged.
+        if (extra.timestamp_eof/1000 != ts) {
+          LOGE_100("%s: v4l/visionipc timestamp desync: v4l=%lld vipc=%lld delta=%lld us",
+                   e->encoder_info.publish_name,
+                   (long long)ts, (long long)(extra.timestamp_eof/1000),
+                   (long long)(ts - (int64_t)(extra.timestamp_eof/1000)));
+        }
         frame_id = extra.frame_id;
         ++idx;
         if (e->packet_callback) {

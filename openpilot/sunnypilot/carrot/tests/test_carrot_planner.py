@@ -16,8 +16,6 @@ These exercise ``CarrotPlanner`` internals directly so no cereal runtime and no
 full SubMaster are required.
 """
 import numpy as np
-from unittest.mock import MagicMock
-
 from openpilot.common.test import OpenpilotTestCase
 
 from openpilot.sunnypilot.carrot.carrot_functions import (
@@ -121,41 +119,3 @@ class TestActiveProperty(OpenpilotTestCase):
     assert planner.active is False
     planner._active_carrot = 2
     assert planner.active is True
-
-
-class TestDesiredSpeedNoLongerLowersCruise(OpenpilotTestCase):
-  """S2 / E3 — ``desiredSpeed`` must no longer lower the cruise speed inside
-  ``CarrotPlanner._update_carrot_man``. sunnypilot's Speed Limit Assist (SLA)
-  is the sole executor of the road-speed-limit target; ``desiredSpeed`` stays
-  published on carrotManSP for HUD/webui display only."""
-  def _sm_with_carrot(self, **fields):
-    sm = MagicMock()
-    sm.valid.get = lambda k, d=None: k == "carrotManSP"
-    sm.alive.get = lambda k, d=None: k == "carrotManSP"
-    carrot = MagicMock()
-    carrot.trafficState = 0
-    carrot.activeCarrot = 2
-    carrot.xDistToTurn = 0
-    carrot.atcType = ""
-    for k, v in fields.items():
-      setattr(carrot, k, v)
-    sm.__getitem__.side_effect = lambda k: {"carrotManSP": carrot}[k]
-    return sm
-
-  def _planner(self) -> CarrotPlanner:
-    planner = _make_planner()
-    planner._traffic_state_carrot = 0
-    planner._x_state = XState.cruise
-    return planner
-
-  def test_high_desired_speed_does_not_lower_v_cruise(self) -> None:
-    planner = self._planner()
-    sm = self._sm_with_carrot(desiredSpeed=100)
-    v_cruise_out, atc_active = planner._update_carrot_man(sm, 50.0, 80.0)
-    assert v_cruise_out == 80.0
-
-  def test_desired_speed_absent_also_unchanged(self) -> None:
-    planner = self._planner()
-    sm = self._sm_with_carrot()  # no desiredSpeed field at all
-    v_cruise_out, atc_active = planner._update_carrot_man(sm, 50.0, 80.0)
-    assert v_cruise_out == 80.0

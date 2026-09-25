@@ -6,6 +6,7 @@ import random
 import string
 from dataclasses import dataclass
 from openpilot.cereal import messaging, log
+from openpilot.system.ui.lib.multilang import tr
 from opendbc.car.structs import car
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.common.filter_simple import BounceFilter, FirstOrderFilter
@@ -70,22 +71,22 @@ class Alert:
 
 # Pre-defined alert instances
 ALERT_STARTUP_PENDING = Alert(
-  text1="sunnypilot Unavailable",
-  text2="Waiting to start",
+  text1=tr("sunnypilot Unavailable"),
+  text2=tr("Waiting to start"),
   size=AlertSize.mid,
   status=AlertStatus.normal,
 )
 
 ALERT_CRITICAL_TIMEOUT = Alert(
-  text1="TAKE CONTROL IMMEDIATELY",
-  text2="System Unresponsive",
+  text1=tr("TAKE CONTROL IMMEDIATELY"),
+  text2=tr("System Unresponsive"),
   size=AlertSize.full,
   status=AlertStatus.critical,
 )
 
 ALERT_CRITICAL_REBOOT = Alert(
-  text1="System Unresponsive",
-  text2="Reboot Device",
+  text1=tr("System Unresponsive"),
+  text2=tr("Reboot Device"),
   size=AlertSize.full,
   status=AlertStatus.critical,
 )
@@ -149,7 +150,7 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
       return None
 
     # Return current alert
-    ret = Alert(text1=ss.alertText1, text2=ss.alertText2, size=ss.alertSize.raw, status=ss.alertStatus.raw,
+    ret = Alert(text1=tr(ss.alertText1) if ss.alertText1 else "", text2=tr(ss.alertText2) if ss.alertText2 else "", size=ss.alertSize.raw, status=ss.alertStatus.raw,
                 visual_alert=ss.alertHudVisual, alert_type=ss.alertType)
     self._prev_alert = ret
     return ret

@@ -11,6 +11,7 @@ import platform
 import os
 import glob
 import shutil
+import time
 from datetime import datetime
 
 from openpilot.common.params import Params
@@ -252,9 +253,21 @@ def _select_map_provider() -> BaseMapData:
   return OsmMapData()
 
 
+# Amap health policy: give the provider a grace period with a valid GPS fix
+# before giving up, and retry periodically afterwards instead of disabling Amap
+# for the whole power cycle.
+AMAP_HEALTH_GRACE_SEC = 60.0
+AMAP_RETRY_COOLDOWN_SEC = 600.0
+
+
+def _amap_key_present() -> bool:
+  """Return True when the user has stored an Amap Web API key."""
+  return bool(params.get("AmapApiKey"))
+
+
 def _provider_has_key(provider: BaseMapData) -> bool:
   """Return True if the Amap provider has a usable API key."""
-  return isinstance(provider, AmapMapData) and bool(params.get("AmapApiKey"))
+  return isinstance(provider, AmapMapData) and _amap_key_present()
 
 
 def _amap_provider_healthy(provider: BaseMapData) -> bool:
@@ -276,6 +289,8 @@ def main_thread():
   rk = Ratekeeper(1, print_delay_threshold=None)
   live_map_sp = _select_map_provider()
   amap_fallback_to_osm = False
+  amap_fallback_since = 0.0
+  amap_grace_since: float | None = None
 
   # Create folder needed for OSM
   try:
@@ -293,26 +308,45 @@ def main_thread():
       clear_downloaded_maps()
       params.remove("Mapd_ClearCache")
 
-    # If the user changed the Amap map-data switch, recreate the provider.
-    if isinstance(live_map_sp, OsmMapData) and _amap_map_data_enabled() and _provider_has_key(live_map_sp):
+    # If the user changed the Amap map-data switch (or entered a key while
+    # running), recreate the provider.  After an Amap failure fallback we only
+    # retry once in a while, otherwise we would ping-pong providers every tick.
+    amap_retry_ready = amap_fallback_to_osm and (time.monotonic() - amap_fallback_since) > AMAP_RETRY_COOLDOWN_SEC
+    if (isinstance(live_map_sp, OsmMapData) and _amap_map_data_enabled() and _amap_key_present()
+        and (not amap_fallback_to_osm or amap_retry_ready)):
       cloudlog.info("mapd: switching from OSM to Amap online provider")
       live_map_sp = AmapMapData()
       amap_fallback_to_osm = False
+      amap_grace_since = None
     elif isinstance(live_map_sp, AmapMapData) and not _amap_map_data_enabled():
       cloudlog.info("mapd: Amap map data disabled; switching to OSM")
       live_map_sp = OsmMapData()
       amap_fallback_to_osm = False
+      amap_grace_since = None
 
     update_osm_db()
     _fix_custom_download_progress()
     live_map_sp.tick()
 
-    # Amap failure fallback: if we have been running Amap for a while and it
-    # still returns no usable data, fall back to OSM for this session.
-    if isinstance(live_map_sp, AmapMapData) and not amap_fallback_to_osm and not _amap_provider_healthy(live_map_sp):
-      cloudlog.warning("mapd: Amap provider returned no usable data; falling back to OSM for this session")
-      live_map_sp = OsmMapData()
-      amap_fallback_to_osm = True
+    # Amap failure fallback: only give up after the localizer has been valid for
+    # a grace period.  A parked car has no fix, which is not an Amap failure and
+    # must not disable Amap for the rest of the drive.
+    if isinstance(live_map_sp, AmapMapData) and not amap_fallback_to_osm:
+      if live_map_sp.localizer_valid:
+        if amap_grace_since is None:
+          amap_grace_since = time.monotonic()
+      else:
+        amap_grace_since = None
+
+      if (amap_grace_since is not None and (time.monotonic() - amap_grace_since) > AMAP_HEALTH_GRACE_SEC
+          and not _amap_provider_healthy(live_map_sp)):
+        cloudlog.warning("mapd: Amap provider returned no usable data with a valid GPS fix; falling back to OSM")
+        live_map_sp = OsmMapData()
+        amap_fallback_to_osm = True
+        amap_fallback_since = time.monotonic()
+        amap_grace_since = None
+    else:
+      amap_grace_since = None
 
     rk.keep_time()
 

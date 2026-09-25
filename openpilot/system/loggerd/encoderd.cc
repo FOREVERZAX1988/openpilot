@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cassert>
 #include <atomic>
 #ifdef __COMMA_HARDWARE__
@@ -62,9 +61,13 @@ void encoder_set_bitrate(std::unique_ptr<Encoder> &e) {
 }
 
 static bool livestream_camera_active(VisionStreamType stream_type) {
-  // Encode all live cameras continuously so WebRTC can switch sources instantly.
-  // The active-camera param is still used to request an IDR on the selected stream.
-  return true;
+  static Params params;
+  std::string active = params.get("LivestreamActiveCamera");
+  if (active.empty()) return true;
+  if (active == "road" && stream_type == VISION_STREAM_NARROW_ROAD) return true;
+  if (active == "wideRoad" && stream_type == VISION_STREAM_WIDE_ROAD) return true;
+  if (active == "driver" && stream_type == VISION_STREAM_CABIN) return true;
+  return false;
 }
 
 static std::atomic<int> live_laggers{0};
@@ -193,19 +196,16 @@ template <size_t N>
 void encoderd_thread(const LogCameraInfo (&cameras)[N]) {
   EncoderdState s;
 
-  std::set<VisionStreamType> expected;
-  for (const auto &cam : cameras) expected.insert(cam.stream_type);
-
   std::set<VisionStreamType> streams;
   while (!do_exit) {
     streams = VisionIpcClient::getAvailableStreams("camerad", false);
-    if (std::includes(streams.begin(), streams.end(), expected.begin(), expected.end())) {
+    if (!streams.empty()) {
       break;
     }
     util::sleep_for(100);
   }
 
-  if (!do_exit) {
+  if (!streams.empty()) {
     std::vector<std::thread> encoder_threads;
     for (auto stream : streams) {
       auto it = std::find_if(std::begin(cameras), std::end(cameras),

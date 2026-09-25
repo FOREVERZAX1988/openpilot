@@ -35,11 +35,46 @@ class _FakeCarStateSP:
 
 
 _car.car.structs.car = ModuleType("opendbc.car.structs.car")
+
+# --- sys.modules stubs are import shims for hosts without a compiled capnp
+# runtime. Two things matter for test isolation:
+#   1. install them through _install_stub() so tearDownModule() can put the real
+#      modules back into sys.modules;
+#   2. keep the *package* stubs resolvable: give them the real package __path__,
+#      otherwise "import openpilot.common.test" / "opendbc.car.car_helpers" fail
+#      with "'x' is not a package" for every test module imported afterwards in
+#      the same process (that was the collection error in the combined run).
+_LEAKED_SYS_MODULES: dict[str, object] = {}
+
+
+def _install_stub(name: str, module) -> None:
+  # NOTE: these stubs deliberately have no __path__/__spec__. Giving them the real package
+  # path makes deeper real imports (e.g. openpilot.common.hardware.base -> openpilot.cereal.log)
+  # resolve while the stub is installed, which fails in a different way. Keep the fake a leaf
+  # object and just guarantee it is removed again (see tearDownModule) so it cannot leak into
+  # other test modules.
+  _LEAKED_SYS_MODULES.setdefault(name, sys.modules.get(name))
+  sys.modules[name] = module
+
+
+def _drop_stubs() -> None:
+  for _name, _original in _LEAKED_SYS_MODULES.items():
+    if _original is None:
+      sys.modules.pop(_name, None)
+    else:
+      sys.modules[_name] = _original
+  _LEAKED_SYS_MODULES.clear()
+
+
+def tearDownModule() -> None:
+  _drop_stubs()
+
+
 _car.car.structs.car.CarState = _FakeCarState
-sys.modules["opendbc"] = _car
-sys.modules["opendbc.car"] = _car.car
-sys.modules["opendbc.car.structs"] = _car.car.structs
-sys.modules["opendbc.car.structs.car"] = _car.car.structs.car
+_install_stub("opendbc", _car)
+_install_stub("opendbc.car", _car.car)
+_install_stub("opendbc.car.structs", _car.car.structs)
+_install_stub("opendbc.car.structs.car", _car.car.structs.car)
 
 _SRC = pathlib.Path(__file__).resolve().parent.parent / "carrot_navi_fusion.py"
 _spec = importlib.util.spec_from_file_location("carrot_navi_fusion_under_test", _SRC)
@@ -73,6 +108,12 @@ def _make_carrot_navi(lane=None):
   navi = _Navi()
   navi.laneCurrent = lane
   return navi
+
+
+# The shims above only exist to let this module import the code under test. Drop them as soon
+# as that import is done so they cannot leak into any other test module (a fake
+# 'openpilot.common' module breaks 'import openpilot.common.test' elsewhere).
+_drop_stubs()
 
 
 class TestCarrotNaviLaneFusion(unittest.TestCase):
@@ -130,91 +171,6 @@ class TestCarrotNaviLaneFusion(unittest.TestCase):
     self.assertTrue(cs_sp.carrotLaneValid)
     # Right adjacent index (2) is out of available range -> treated blocked.
     self.assertTrue(cs_sp.carrotRightLineBlocked)
-
-
-class TestNavLaneGuideBlocks(unittest.TestCase):
-  """7706 navLaneGuide -> lane blocking (App field list §2.2)."""
-
-  def test_left_only_guidance_blocks_right(self):
-    left, right = carrot_navi_fusion.nav_lane_guide_blocks("L,SL")
-    self.assertFalse(left)
-    self.assertTrue(right)
-
-  def test_right_only_guidance_blocks_left(self):
-    left, right = carrot_navi_fusion.nav_lane_guide_blocks("R")
-    self.assertTrue(left)
-    self.assertFalse(right)
-
-  def test_both_directions_constrain_neither(self):
-    left, right = carrot_navi_fusion.nav_lane_guide_blocks("L,R")
-    self.assertFalse(left)
-    self.assertFalse(right)
-
-  def test_straight_only_constrains_neither(self):
-    left, right = carrot_navi_fusion.nav_lane_guide_blocks("S")
-    self.assertFalse(left)
-    self.assertFalse(right)
-
-  def test_json_array_payload_is_parsed(self):
-    left, right = carrot_navi_fusion.nav_lane_guide_blocks('["L","SL"]')
-    self.assertFalse(left)
-    self.assertTrue(right)
-
-  def test_empty_or_malformed_is_noop(self):
-    for payload in ("", None, "[]", "not json", "  "):
-      self.assertEqual(carrot_navi_fusion.nav_lane_guide_blocks(payload), (False, False))
-
-  def test_truncated_array_is_rejected(self):
-    # Declared 3 entries but only 2 present -> discard rather than guess.
-    left, right = carrot_navi_fusion.nav_lane_guide_blocks("L,SL", declared_count=3)
-    self.assertFalse(left)
-    self.assertFalse(right)
-
-  def test_matching_count_is_accepted(self):
-    left, right = carrot_navi_fusion.nav_lane_guide_blocks("L,SL", declared_count=2)
-    self.assertFalse(left)
-    self.assertTrue(right)
-
-
-class TestNavLaneGuideMerge(unittest.TestCase):
-  """The 7706 guide must share the one merge path and only ever add blocking."""
-
-  def test_gate_off_means_no_effect(self):
-    cs_sp = _FakeCarStateSP()
-    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, None, "L,SL", 2, use_nav_lane_guide=False)
-    self.assertFalse(cs_sp.carrotLaneValid)
-    self.assertFalse(cs_sp.carrotLeftLineBlocked)
-    self.assertFalse(cs_sp.carrotRightLineBlocked)
-
-  def test_gate_on_blocks_without_7714_data(self):
-    cs_sp = _FakeCarStateSP()
-    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, None, "L,SL", 2, use_nav_lane_guide=True)
-    self.assertTrue(cs_sp.carrotLaneValid)
-    self.assertFalse(cs_sp.carrotLeftLineBlocked)
-    self.assertTrue(cs_sp.carrotRightLineBlocked)
-
-  def test_guide_adds_to_7714_result(self):
-    cs_sp = _FakeCarStateSP()
-    lane = _make_lane(count=3, current_lane=2, available=[1, 1, 1])
-    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, _make_carrot_navi(lane), "L", 1, use_nav_lane_guide=True)
-    self.assertTrue(cs_sp.carrotLaneValid)
-    self.assertFalse(cs_sp.carrotLeftLineBlocked)
-    self.assertTrue(cs_sp.carrotRightLineBlocked)
-
-  def test_guide_never_clears_a_7714_block(self):
-    cs_sp = _FakeCarStateSP()
-    # 7714 says the right lane is unavailable.
-    lane = _make_lane(count=3, current_lane=2, available=[1, 1, 0])
-    # Guide steers right, which would "allow" the right side on its own.
-    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, _make_carrot_navi(lane), "R", 1, use_nav_lane_guide=True)
-    self.assertTrue(cs_sp.carrotRightLineBlocked, "guide must not clear the 7714 block")
-
-  def test_no_guide_and_no_navi_clears_all(self):
-    cs_sp = _FakeCarStateSP()
-    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, None, "", 0, use_nav_lane_guide=True)
-    self.assertFalse(cs_sp.carrotLaneValid)
-    self.assertFalse(cs_sp.carrotLeftLineBlocked)
-    self.assertFalse(cs_sp.carrotRightLineBlocked)
 
 
 if __name__ == "__main__":

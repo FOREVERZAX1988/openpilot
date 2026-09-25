@@ -1,12 +1,14 @@
 import glob
 import os
 import time
+import unittest
 
 from openpilot.common.test import OpenpilotTestCase
 import openpilot.cereal.messaging as messaging
 from openpilot.system.manager.process_config import managed_processes
 from openpilot.common.hardware.hw import Paths
 from openpilot.common.swaglog import cloudlog, ipchandler
+from openpilot.system.logmessaged import decode_record
 
 
 class TestLogmessaged(OpenpilotTestCase):
@@ -53,3 +55,25 @@ class TestLogmessaged(OpenpilotTestCase):
 
     logsize = sum([os.path.getsize(f) for f in self._get_log_files()])
     assert (n*len(msg)) < logsize < (n*(len(msg)+1024))
+
+
+class TestDecodeRecord(unittest.TestCase):
+  """Unit tests for the IPC payload decode.
+
+  A single non-UTF-8 byte (0xff) used to raise UnicodeDecodeError out of main()'s
+  loop and take logmessaged down; the manager restarted it, dropping every log
+  message produced in the meantime.
+  """
+
+  def test_invalid_byte_is_replaced_not_raised(self):
+    self.assertEqual(decode_record(b'\xff'), '\ufffd')
+
+  def test_invalid_byte_does_not_eat_the_rest(self):
+    self.assertEqual(decode_record(b'gps \xff ok'), 'gps \ufffd ok')
+
+  def test_valid_utf8_untouched(self):
+    payload = '温度 22°C'.encode()
+    self.assertEqual(decode_record(payload), '温度 22°C')
+
+  def test_empty_payload(self):
+    self.assertEqual(decode_record(b''), '')

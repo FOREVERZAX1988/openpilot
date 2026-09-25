@@ -2,7 +2,6 @@ import base64
 import gzip
 import json
 from openpilot.sunnypilot.sunnylink.api import SunnylinkApi, UNREGISTERED_SUNNYLINK_DONGLE_ID
-from openpilot.sunnypilot.sunnylink.athena.local_pairing import is_locally_paired
 from openpilot.common.params import Params, ParamKeyType
 from openpilot.common.version import is_prebuilt
 
@@ -17,11 +16,10 @@ def get_sunnylink_status(params=None) -> tuple[bool, bool, bool]:
 
 
 def sunnylink_ready(params=None) -> bool:
-  """Enabled and (cloud-registered or locally paired), and not on a temporary
-  fault. Local pairing makes never-registered devices usable over the LAN."""
+  """Check if the device is ready to communicate with Sunnylink. That means it is enabled and registered."""
   params = params or Params()
   is_sunnylink_enabled, is_registered, is_on_temporary_fault = get_sunnylink_status(params)
-  return is_sunnylink_enabled and (is_registered or is_locally_paired(params)) and not is_on_temporary_fault
+  return is_sunnylink_enabled and is_registered and not is_on_temporary_fault
 
 
 def use_sunnylink_uploader(params) -> bool:
@@ -30,11 +28,10 @@ def use_sunnylink_uploader(params) -> bool:
 
 
 def sunnylink_need_register(params=None) -> bool:
-  """Enabled, unregistered, and not locally paired — a locally paired device
-  works without cloud registration and must not be blocked."""
+  """Check if the device needs to be registered with Sunnylink."""
   params = params or Params()
   is_sunnylink_enabled, is_registered, is_on_temporary_fault = get_sunnylink_status(params)
-  return is_sunnylink_enabled and not is_registered and not is_locally_paired(params) and not is_on_temporary_fault
+  return is_sunnylink_enabled and not is_registered and not is_on_temporary_fault
 
 
 def register_sunnylink():

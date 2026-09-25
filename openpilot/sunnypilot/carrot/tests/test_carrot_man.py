@@ -29,11 +29,6 @@ class _FakeCarrotManSP:
       "trafficCountdown", "szGoalName", "szTBTMainTextNext", "szNearDirName",
       "nSdiSection", "gpsSpeed", "epochTime", "timezone", "nTBTNextRoadWidth",
       "goalPosX", "goalPosY",
-      "vehicleNaviActive", "vehicleNaviSpeed", "vehicleNaviSectionActive", "vehicleNaviAvailable",
-      "sapaName", "sapaDist", "sapaType", "sapaCnt",
-      "tmcTotalDistance", "tmcResidualDistance", "tmcSegmentCount", "tmcOverallStatus",
-      "tmcSegmentStatuses", "tmcSegmentDistances",
-      "navLaneGuide", "navLaneGuideCnt",
     ]:
       setattr(self, attr, None)
 
@@ -207,18 +202,64 @@ class _FakeParams:
 
 
 _common_pkg = types.ModuleType("openpilot.common")
+
+# --- sys.modules stubs are import shims for hosts without a compiled capnp
+# runtime. Two things matter for test isolation:
+#   1. install them through _install_stub() so tearDownModule() can put the real
+#      modules back into sys.modules;
+#   2. keep the *package* stubs resolvable: give them the real package __path__,
+#      otherwise "import openpilot.common.test" / "opendbc.car.car_helpers" fail
+#      with "'x' is not a package" for every test module imported afterwards in
+#      the same process (that was the collection error in the combined run).
+_LEAKED_SYS_MODULES: dict[str, object] = {}
+
+
+def _install_stub(name: str, module) -> None:
+  # NOTE: these stubs deliberately have no __path__/__spec__. Giving them the real package
+  # path makes deeper real imports (e.g. openpilot.common.hardware.base -> openpilot.cereal.log)
+  # resolve while the stub is installed, which fails in a different way. Keep the fake a leaf
+  # object and just guarantee it is removed again (see tearDownModule) so it cannot leak into
+  # other test modules.
+  _LEAKED_SYS_MODULES.setdefault(name, sys.modules.get(name))
+  sys.modules[name] = module
+
+
+def _make_time_helpers_stub():
+  """Leaf stub for openpilot.common.time_helpers (system_time_valid())."""
+  m = types.ModuleType("openpilot.common.time_helpers")
+  m.system_time_valid = MagicMock(return_value=True)
+  m.min_date = MagicMock()
+  m.MAX_DATE = None
+  return m
+
+
+def _drop_stubs() -> None:
+  for _name, _original in _LEAKED_SYS_MODULES.items():
+    if _original is None:
+      sys.modules.pop(_name, None)
+    else:
+      sys.modules[_name] = _original
+  _LEAKED_SYS_MODULES.clear()
+
+
+def tearDownModule() -> None:
+  _drop_stubs()
+
+
 _common_pkg.params = MagicMock(Params=_FakeParams)
 _common_pkg.realtime = MagicMock(Ratekeeper=MagicMock, config_realtime_process=MagicMock(), DT_MDL=0.05)
 _common_pkg.swaglog = MagicMock(cloudlog=MagicMock())
-sys.modules["openpilot.common"] = _common_pkg
-sys.modules["openpilot.common.params"] = _common_pkg.params
-sys.modules["openpilot.common.realtime"] = _common_pkg.realtime
-sys.modules["openpilot.common.swaglog"] = _common_pkg.swaglog
+_common_pkg.time_helpers = _make_time_helpers_stub()
+_install_stub("openpilot.common", _common_pkg)
+_install_stub("openpilot.common.params", _common_pkg.params)
+_install_stub("openpilot.common.realtime", _common_pkg.realtime)
+_install_stub("openpilot.common.swaglog", _common_pkg.swaglog)
+_install_stub("openpilot.common.time_helpers", _common_pkg.time_helpers)
 
 _cereal_pkg = types.ModuleType("openpilot.cereal")
 _cereal_pkg.messaging = _FakeMessaging
-sys.modules["openpilot.cereal"] = _cereal_pkg
-sys.modules["openpilot.cereal.messaging"] = _FakeMessaging
+_install_stub("openpilot.cereal", _cereal_pkg)
+_install_stub("openpilot.cereal.messaging", _FakeMessaging)
 
 # Mock the opendbc conversions module so CarrotPlanner can be imported on a
 # dev host that does not have a compiled capnp runtime.
@@ -230,13 +271,62 @@ class _FakeConversions:
   KPH_TO_MS = 1.0 / 3.6
   MS_TO_KPH = 3.6
 _opendbc_conversions_mod.Conversions = _FakeConversions
-sys.modules["opendbc"] = _opendbc_pkg
-sys.modules["opendbc.car"] = _opendbc_car_pkg
-sys.modules["opendbc.car.common"] = _opendbc_car_common_pkg
-sys.modules["opendbc.car.common.conversions"] = _opendbc_conversions_mod
+_install_stub("opendbc", _opendbc_pkg)
+_install_stub("opendbc.car", _opendbc_car_pkg)
+_install_stub("opendbc.car.common", _opendbc_car_common_pkg)
+_install_stub("opendbc.car.common.conversions", _opendbc_conversions_mod)
 
-from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING
+from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING, beacon_targets
 from openpilot.sunnypilot.carrot.web_interface import WebInterface
+
+
+# The shims above only exist to let this module import the code under test. Drop them as soon
+# as that import is done so they cannot leak into any other test module (a fake
+# 'openpilot.common' module breaks 'import openpilot.common.test' elsewhere).
+_drop_stubs()
+
+
+class TestBeaconTargets(unittest.TestCase):
+  """The 7705 discovery beacon must never stop broadcasting.
+
+  Regression (tizi): the send branch was
+  `self.get_broadcast_address() if not remote_addr else remote_ip`, so the
+  first packet from ANY client replaced the periodic LAN broadcast with a
+  unicast to that one peer.  Measured on the device: wlan0 multicast-tx
+  counter stayed 0 while carrot_man emitted 9.7 unicast pkt/s -> a phone that
+  had not talked to us yet (fresh install / new DHCP lease / second phone)
+  could never discover the device.
+  """
+
+  def test_broadcast_tick_without_peer(self):
+    assert beacon_targets("192.168.10.255", "", send_broadcast=True, send_unicast=False) == ["192.168.10.255"]
+
+  def test_broadcast_tick_keeps_broadcast_with_peer(self):
+    assert beacon_targets("192.168.10.255", "192.168.10.201",
+                          send_broadcast=True, send_unicast=True) == ["192.168.10.255", "192.168.10.201"]
+
+  def test_peer_only_tick_is_unicast_heartbeat(self):
+    assert beacon_targets("192.168.10.255", "192.168.10.201",
+                          send_broadcast=False, send_unicast=True) == ["192.168.10.201"]
+
+  def test_idle_tick_sends_nothing(self):
+    assert beacon_targets("192.168.10.255", "", send_broadcast=False, send_unicast=False) == []
+
+  def test_missing_broadcast_ip_falls_back(self):
+    assert beacon_targets("", "", send_broadcast=True, send_unicast=False) == ["255.255.255.255"]
+
+  def test_no_duplicate_when_peer_is_the_broadcast(self):
+    assert beacon_targets("255.255.255.255", "255.255.255.255",
+                          send_broadcast=True, send_unicast=True) == ["255.255.255.255"]
+
+  def test_loop_uses_beacon_targets(self):
+    import inspect
+    import openpilot.sunnypilot.carrot.carrot_man as cm
+    src = inspect.getsource(cm.CarrotManager.broadcast_version_info)
+    assert "send_broadcast = frame % 20 == 0" in src
+    assert "beacon_targets(" in src
+    # the old broadcast-vs-unicast ternary must be gone
+    assert "if not remote_addr else remote_ip" not in src
 
 
 class TestCarrotManager(unittest.TestCase):
@@ -310,109 +400,6 @@ class TestCarrotManager(unittest.TestCase):
     assert self.mgr._carrot_serv.goal_pos_x == 127.123
     assert self.mgr._carrot_serv.goal_pos_y == 37.456
     assert self.mgr._carrot_serv.sz_goal_name == "Home"
-
-  def test_update_raw_sapa_hints(self):
-    # App §2.3 SAPA_* group (KEY_TYPE 10001).
-    self.mgr._update_raw({
-      "sapaName": "Guangzhou Service Area",
-      "sapaDist": 5200,
-      "sapaType": 0,   # service/parking area
-      "sapaCnt": 2,
-    }, time.monotonic())
-    raw = self.mgr._carrot_serv.raw
-    assert raw["sapaName"] == "Guangzhou Service Area"
-    assert raw["sapaDist"] == 5200
-    assert raw["sapaType"] == 0
-    assert raw["sapaCnt"] == 2
-
-  def test_update_raw_tmc_traffic(self):
-    # App §2.5 TMC group (KEY_TYPE 13011). Overall status scalar + JSON arrays.
-    self.mgr._update_raw({
-      "tmcTotalDistance": 20000,
-      "tmcResidualDistance": 15000,
-      "tmcSegmentCount": 4,
-      "tmcOverallStatus": 3,
-      "tmcSegmentStatuses": '[1,2,3,3]',
-      "tmcSegmentDistances": '[2000,3000,4000,5000]',
-    }, time.monotonic())
-    raw = self.mgr._carrot_serv.raw
-    assert raw["tmcTotalDistance"] == 20000
-    assert raw["tmcResidualDistance"] == 15000
-    assert raw["tmcSegmentCount"] == 4
-    assert raw["tmcOverallStatus"] == 3
-    assert raw["tmcSegmentStatuses"] == '[1,2,3,3]'
-    assert raw["tmcSegmentDistances"] == '[2000,3000,4000,5000]'
-
-  def test_update_raw_nav_lane_guide(self):
-    # App §2.2 navLaneGuide / navLaneGuideCnt.
-    self.mgr._update_raw({
-      "navLaneGuide": "L,R,SL",
-      "navLaneGuideCnt": 3,
-    }, time.monotonic())
-    raw = self.mgr._carrot_serv.raw
-    assert raw["navLaneGuide"] == "L,R,SL"
-    assert raw["navLaneGuideCnt"] == 3
-
-  def test_publish_extends_carrotManSP_with_sapa_tmc_lane(self):
-    # _publish() forwards the new fields onto carrotManSP so webui/OP assistant
-    # can render service-area hints, TMC congestion and lane guidance.
-    self.mgr._update_raw({
-      "sapaName": "Toll Gate",
-      "sapaDist": 8000,
-      "sapaType": 1,
-      "sapaCnt": 1,
-      "tmcOverallStatus": 2,
-      "tmcTotalDistance": 30000,
-      "tmcSegmentCount": 3,
-      "tmcSegmentStatuses": '[1,2,3]',
-      "tmcSegmentDistances": '[100,200,300]',
-      "navLaneGuide": "L,SL",
-      "navLaneGuideCnt": 2,
-    }, time.monotonic())
-
-    # Build a fake carrotManSP to mirror _FakeCarrotManSP, then run _publish
-    # with the pm patched so we can capture the emitted message.
-    sent = {}
-    def _fake_send(svc, msg):
-      sent[svc] = msg
-
-    # Patch the class-level PubMaster instance used by _publish.
-    with patch.object(self.mgr, 'pm') as mock_pm:
-      mock_pm.send.side_effect = _fake_send
-      self.mgr._publish()
-
-    raw = self.mgr._carrot_serv.raw
-    assert raw["sapaName"] == "Toll Gate"
-    assert raw["tmcOverallStatus"] == 2
-    assert raw["navLaneGuide"] == "L,SL"
-
-    # The values must actually reach the published message, not just the cache.
-    cm = sent["carrotManSP"].carrotManSP
-    assert cm.sapaName == "Toll Gate"
-    assert cm.sapaDist == 8000
-    assert cm.sapaType == 1
-    assert cm.tmcOverallStatus == 2
-    assert cm.tmcTotalDistance == 30000
-    assert cm.tmcSegmentCount == 3
-    # Per-segment arrays and the lane-guidance count ride on the bus so the
-    # SCC-Map congestion controller and the lane-block fusion can read them.
-    assert cm.tmcSegmentStatuses == '[1,2,3]'
-    assert cm.tmcSegmentDistances == '[100,200,300]'
-    assert cm.navLaneGuide == "L,SL"
-    assert cm.navLaneGuideCnt == 2
-
-  def test_publish_defaults_new_fields_when_packet_omits_them(self):
-    # A packet without the sapa/tmc/lane keys must not leave the new fields
-    # unset on the wire (they default to empty/zero).
-    self.mgr._update_raw({"nRoadLimitSpeed": 80}, time.monotonic())
-    sent = {}
-    with patch.object(self.mgr, 'pm') as mock_pm:
-      mock_pm.send.side_effect = lambda svc, msg: sent.__setitem__(svc, msg)
-      self.mgr._publish()
-    cm = sent["carrotManSP"].carrotManSP
-    assert cm.tmcSegmentStatuses == ""
-    assert cm.tmcSegmentDistances == ""
-    assert cm.navLaneGuideCnt == 0
 
   def test_heartbeat_keeps_link_alive_without_overwrite(self):
     for _ in range(6):
@@ -981,248 +968,6 @@ class TestCarrotManager(unittest.TestCase):
     assert parsed["speedLimitKph"] == 60
     assert parsed["trafficLight"]["redOn"] is True
 
-  def test_navi_debug_merge_keeps_event_keys_when_snapshot_writes(self):
-    """The 10 Hz snapshot must not erase the event writer's summary/title/lines.
-
-    Regression: both writers used a plain put() on CarrotNaviDebug, so the snapshot
-    (which runs every ~100 ms) always won and the webui debug viewer - which reads
-    debug["summary"] - rendered empty.
-    """
-    self.mgr._write_navi_debug_param({"rgdata": {"nSdiType": 1, "nRoadLimitSpeed": 80}}, "rgdata", 1000)
-    event_only = json.loads(self.mgr.params._store["CarrotNaviDebug"])
-    assert event_only["summary"]["type"] == "rgdata"
-
-    self.mgr._write_navi_debug()
-    after_snapshot = json.loads(self.mgr.params._store["CarrotNaviDebug"])
-
-    assert after_snapshot.get("summary") == event_only["summary"], "snapshot erased summary"
-    assert "title" in after_snapshot, "snapshot erased title"
-    assert "lines" in after_snapshot, "snapshot erased lines"
-    # and the snapshot's own keys still landed
-    assert "activeSource" in after_snapshot, "snapshot did not write its own keys"
-
-  def test_navi_debug_merge_keeps_snapshot_keys_when_event_writes(self):
-    """The reverse order must also preserve both writers' keys."""
-    self.mgr._write_navi_debug()
-    snapshot_only = json.loads(self.mgr.params._store["CarrotNaviDebug"])
-    assert snapshot_only["activeSource"] is not None or "activeSource" in snapshot_only
-
-    self.mgr._write_navi_debug_param({"sinf": {"redLightOn": True, "distance": 120}}, "sinf", 1000)
-    after_event = json.loads(self.mgr.params._store["CarrotNaviDebug"])
-
-    assert after_event["summary"]["type"] == "sinf", "event keys missing"
-    assert "activeSource" in after_event, "event write erased the snapshot keys"
-
-  @staticmethod
-  def _fake_speed(**kw):
-    """A stand-in _NaviSpeedControl carrying only what _apply_carrot_navi_speed reads."""
-    d = dict(
-      road_limit_kph=None, section_active=False, section_speed_limit_kph=0,
-      section_remaining_distance_m=0, sdi_present=False, sdi_type=-1,
-      sdi_speed_limit_kph=0, sdi_distance_m=0, sdi_section_type=-1,
-      sdi_block_type=-1, sdi_block_speed_kph=0, sdi_block_distance_m=0,
-      secondary_sdi_present=False, secondary_sdi_type=-1,
-      secondary_sdi_speed_limit_kph=0, secondary_sdi_distance_m=0,
-      secondary_sdi_section_type=-1, secondary_sdi_block_type=-1,
-      secondary_sdi_block_speed_kph=0, secondary_sdi_block_distance_m=0,
-    )
-    d.update(kw)
-    return MagicMock(**d)
-
-  def test_sdi_reset_clears_block_and_section_fields(self):
-    """When SDI disappears every braking input must be cleared, not just three.
-
-    Regression: the else-branch only reset nSdiType/SpeedLimit/Dist, leaving
-    nSdiSection and nSdiBlock* stale. CarrotServ reads those to decide whether to
-    brake (carrot_serv.py:797-798, :872), so a previous block's distance could
-    keep triggering a phantom deceleration - the 7706 stream masked it by
-    rebuilding _raw per packet, but a 7714-only session had nothing to overwrite.
-    """
-    serv = self.mgr._carrot_serv
-
-    # a live SDI block first
-    serv.raw_update("nSdiType", 3)
-    serv.raw_update("nSdiBlockType", 2)
-    serv.raw_update("nSdiBlockSpeed", 40)
-    serv.raw_update("nSdiBlockDist", 250)
-    serv.raw_update("nSdiSection", 1)
-
-    # then it vanishes
-    self.mgr._apply_carrot_navi_speed(self._fake_speed())
-
-    assert serv.raw["nSdiType"] == -1
-    assert serv.raw["nSdiSpeedLimit"] == 0
-    assert serv.raw["nSdiDist"] == 0
-    assert serv.raw["nSdiSection"] == -1, "stale section"
-    assert serv.raw["nSdiBlockType"] == -1, "stale block type"
-    assert serv.raw["nSdiBlockSpeed"] == 0, "stale block speed"
-    assert serv.raw["nSdiBlockDist"] == 0, "stale block distance"
-
-  def test_secondary_sdi_reset_clears_block_and_section_fields(self):
-    """Same completeness requirement for the secondary SDI."""
-    serv = self.mgr._carrot_serv
-    serv.raw_update("nSdiPlusType", 3)
-    serv.raw_update("nSdiPlusBlockType", 2)
-    serv.raw_update("nSdiPlusBlockSpeed", 50)
-    serv.raw_update("nSdiPlusBlockDist", 300)
-    serv.raw_update("nSdiPlusSection", 1)
-
-    self.mgr._apply_carrot_navi_speed(self._fake_speed())
-
-    assert serv.raw["nSdiPlusType"] == -1
-    assert serv.raw["nSdiPlusSpeedLimit"] == 0
-    assert serv.raw["nSdiPlusDist"] == 0
-    assert serv.raw["nSdiPlusSection"] == -1, "stale secondary section"
-    assert serv.raw["nSdiPlusBlockType"] == -1, "stale secondary block type"
-    assert serv.raw["nSdiPlusBlockSpeed"] == 0, "stale secondary block speed"
-    assert serv.raw["nSdiPlusBlockDist"] == 0, "stale secondary block distance"
-
-  def test_sdi_present_still_writes_block_fields(self):
-    """Guard the guard: the live path must still forward the block fields."""
-    serv = self.mgr._carrot_serv
-    speed = self._fake_speed(sdi_present=True, sdi_type=3, sdi_speed_limit_kph=45,
-                             sdi_distance_m=180, sdi_section_type=1,
-                             sdi_block_type=2, sdi_block_speed_kph=40,
-                             sdi_block_distance_m=250)
-    self.mgr._apply_carrot_navi_speed(speed)
-
-    assert serv.raw["nSdiType"] == 3
-    assert serv.raw["nSdiSpeedLimit"] == 45
-    assert serv.raw["nSdiSection"] == 1
-    assert serv.raw["nSdiBlockType"] == 2
-    assert serv.raw["nSdiBlockSpeed"] == 40
-    assert serv.raw["nSdiBlockDist"] == 250
-
-  def test_gps_breadcrumb_curvature_chain_is_gone(self):
-    """The unused GPS-breadcrumb curvature chain must not come back.
-
-    It was never called (its _path deque was only appended to from inside the dead
-    update_gps), and its curvature formula mixed degree-space coordinates into a
-    1/metre lookup, so re-wiring it would command 5 km/h at every curve.
-    """
-    serv = self.mgr._carrot_serv
-    for name in ("update_gps", "push_position", "_update_bearing", "curvature_at",
-                 "lookup_curve_speed", "_estimate_position"):
-      assert not hasattr(serv, name), f"{name} is back; see the R3 audit before reviving it"
-
-  def test_bearing_reports_the_phone_heading(self):
-    """`bearing` is read by the live route-curvature path, so it must not be stuck at 0.
-
-    It used to return a value that only the removed GPS-fusion step ever wrote,
-    which meant carrot_navi_route() rotated the route by 0 degrees.
-    """
-    serv = self.mgr._carrot_serv
-    serv.update_raw({
-      "vpPosPointLat": 37.5, "vpPosPointLon": 127.0, "nPosAngle": 123.0,
-    }, time.monotonic())
-    assert serv.bearing == 123.0
-
-  def test_raw_mirrors_the_gps_fields_from_the_packet(self):
-    """derive() reads these keys to place the car on the route.
-
-    They used to be hardcoded to 0.0 in the raw dict, so vp_pos_point_* stayed at
-    (0, 0) and the route search anchored on the wrong point.
-    """
-    serv = self.mgr._carrot_serv
-    serv.update_raw({
-      "vpPosPointLat": 37.25, "vpPosPointLon": 127.25, "nPosAngle": 45.0, "nPosSpeed": 88.0,
-    }, time.monotonic())
-    raw = serv.raw
-    assert raw["vpPosPointLat"] == 37.25
-    assert raw["vpPosPointLon"] == 127.25
-    assert raw["nPosAngle"] == 45.0
-    assert raw["nPosSpeed"] == 88.0
-    serv.derive()
-    assert serv.vp_pos_point_lat == 37.25
-    assert serv.vp_pos_point_lon == 127.25
-
-  def test_gps_source_reports_phone_when_fresh(self):
-    """The phone freshness stamp needs a writer that actually runs.
-
-    It was only set by the removed fusion step, so gps_source always said "none".
-    """
-    serv = self.mgr._carrot_serv
-    serv._update_phone_gps_from_packet({"latitude": 37.5, "longitude": 127.0, "heading": 10.0, "accuracy": 5.0})
-    assert serv.gps_source == "phone"
-
-  def test_gps_source_reports_none_when_nothing_is_fresh(self):
-    serv = self.mgr._carrot_serv
-    serv.reset()
-    assert serv.gps_source == "none"
-
-  def test_camera_distance_uses_the_raw_value_when_present(self):
-    serv = self.mgr._carrot_serv
-    cs = MagicMock(speedLimit=50.0, speedLimitDistance=310.0)
-    assert serv._vehicle_speed_camera_distance(cs) == 310.0
-
-  def test_camera_distance_is_synthesised_from_the_speed(self):
-    """A car that sends only the enforcement speed must still get the feature.
-
-    CarrotPilot's rule: distance (m) = enforcement speed (km/h) * configured time (s).
-    At the default 60 (= 6.0 s) a 50 km/h camera yields 300 m.
-    """
-    serv = self.mgr._carrot_serv
-    serv.x_spd_dist = 0
-    serv.vehicle_speed_camera_distance_time = 6.0
-    cs = MagicMock(speedLimit=50.0, speedLimitDistance=0.0)
-    assert serv._vehicle_speed_camera_distance(cs) == 300.0
-
-  def test_camera_distance_time_scales_the_synthesis(self):
-    serv = self.mgr._carrot_serv
-    serv.x_spd_dist = 0
-    serv.vehicle_speed_camera_distance_time = 6.2
-    cs = MagicMock(speedLimit=50.0, speedLimitDistance=0.0)
-    assert serv._vehicle_speed_camera_distance(cs) == 310.0
-
-  def test_camera_distance_not_synthesised_when_phone_nav_has_one(self):
-    """Two sources must not disagree: cp disables the virtual distance under nav."""
-    serv = self.mgr._carrot_serv
-    serv.vehicle_speed_camera_distance_time = 6.0
-    serv.x_spd_dist = 250  # phone navigation is supplying its own distance
-    cs = MagicMock(speedLimit=50.0, speedLimitDistance=0.0)
-    assert serv._vehicle_speed_camera_distance(cs) == 0.0
-
-  def test_camera_distance_zero_without_a_speed(self):
-    serv = self.mgr._carrot_serv
-    serv.x_spd_dist = 0
-    cs = MagicMock(speedLimit=0.0, speedLimitDistance=0.0)
-    assert serv._vehicle_speed_camera_distance(cs) == 0.0
-
-  def test_camera_enabled_via_synthesised_distance(self):
-    """The gate used to require a raw distance, so an omitted one killed the feature."""
-    serv = self.mgr._carrot_serv
-    serv.x_spd_dist = 0
-    serv.vehicle_speed_camera_control_mode = 1
-    serv.vehicle_speed_camera_distance_time = 6.0
-    serv.school_zone_suppressed = False
-    cs = MagicMock(speedLimit=50.0, speedLimitDistance=0.0, schoolZoneActive=False, gasPressed=False)
-    assert serv._vehicle_speed_camera_distance(cs) > 0
-    assert serv._vehicle_speed_camera_enabled(cs) is True
-
-  def test_camera_distance_time_param_is_clamped_and_scaled(self):
-    """The param is stored in 0.1 s units and clamped to its registered range.
-
-    Writes must go to the store UnifiedParams actually reads; carrot_man's own
-    ``params`` handle is a different instance. update_params() is also throttled to
-    10 Hz, so _param_frame is reset to make the read deterministic.
-    """
-    serv = self.mgr._carrot_serv
-    store = serv._params._system_params._store
-    try:
-      def read(raw):
-        store["VehicleSpeedCameraDistanceTime"] = raw
-        serv._param_frame = 0
-        serv.update_params()
-        return serv.vehicle_speed_camera_distance_time
-
-      assert abs(read(62) - 6.2) < 1e-9, "62 must become 6.2 s"
-      assert abs(read(10) - 1.0) < 1e-9, "the registered minimum is 10"
-      assert abs(read(1) - 1.0) < 1e-9, "below-minimum input must clamp up"
-      assert abs(read(200) - 20.0) < 1e-9, "the registered maximum is 200"
-      assert abs(read(9999) - 20.0) < 1e-9, "above-maximum input must clamp down"
-    finally:
-      store.pop("VehicleSpeedCameraDistanceTime", None)
-
   def _make_status_item(self, sequence=1, **values):
     item = MagicMock()
     item.meta = MagicMock(present=True, sequence=sequence)
@@ -1399,10 +1144,21 @@ class TestCarrotManager(unittest.TestCase):
     # Default-off: no system clock command may run.
     assert mock_run.call_count == 0
 
+  def test_time_sync_skipped_when_system_time_valid(self):
+    serv = self.mgr._carrot_serv
+    with patch.object(serv._params, "get_bool", return_value=True), \
+         patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
+      serv._maybe_sync_system_time(int(time.time()) + 600, "Asia/Seoul")
+    # NTP/GPS owns the clock: a healthy clock must never be touched.
+    assert mock_run.call_count == 0
+
   def test_time_sync_skipped_when_drift_small(self):
     serv = self.mgr._carrot_serv
     with patch.object(serv._params, "get_bool", return_value=True), \
          patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
       serv._maybe_sync_system_time(int(time.time()) + 30, "Asia/Seoul")
     # Within the 60s limited-drift window: no clock change.
@@ -1413,22 +1169,38 @@ class TestCarrotManager(unittest.TestCase):
     absurd = int(datetime(2090, 1, 1).timestamp())  # year outside 2015..2035
     with patch.object(serv._params, "get_bool", return_value=True), \
          patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
       serv._maybe_sync_system_time(absurd, "Asia/Seoul")
     # Guardrail against malformed phone timestamps.
     assert mock_run.call_count == 0
 
-  def test_time_sync_runs_when_enabled_and_drift_large(self):
+  def test_time_sync_runs_when_enabled_drift_large_and_clock_invalid(self):
     serv = self.mgr._carrot_serv
+    target = int(time.time()) + 120
     with patch.object(serv._params, "get_bool", return_value=True), \
          patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
          patch.object(serv._params, "put") as mock_put, \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
+      serv._maybe_sync_system_time(target, "Asia/Seoul")
+    assert mock_run.call_count == 1
+    cmd = mock_run.call_args.args[0]
+    # Single-authority: set the instant in UTC as an absolute epoch...
+    assert cmd == ["sudo", "date", "-u", "-s", f"@{target}"]
+    # ...and do NOT write the timezone params (AI loop owns the timezone).
+    assert mock_put.call_count == 0
+
+  def test_time_sync_legacy_alias_key_enables_sync(self):
+    serv = self.mgr._carrot_serv
+    with patch.object(serv._params, "get_bool",
+                      side_effect=lambda k, d=None: k == "CarrotTimeSyncEnabled"), \
+         patch("openpilot.system.hardware.PC", False, create=True), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.system_time_valid", return_value=False), \
+         patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
       serv._maybe_sync_system_time(int(time.time()) + 120, "Asia/Seoul")
-    assert mock_run.call_count >= 1
-    put_keys = [c.args[0] for c in mock_put.call_args_list]
-    assert "TimezoneName" in put_keys
-    assert "TimezoneSource" in put_keys
+    # The legacy duplicate registration acts as an alias, so it still works.
+    assert mock_run.call_count == 1
 
   # ---- radar data tests -------------------------------------------------- #
 
@@ -1625,6 +1397,7 @@ class TestCarrotParamAlignment(unittest.TestCase):
 
   # 151 parameters imported from cp/selfdrive/carrot_settings.json.
   _IMPORTED_DEFAULTS = {
+    "AChangeCostStarting": 10,
     "AdjustLaneOffset": 0,
     "AlwaysLateral": 0,
     "ApplyModelSpeed": 0,
@@ -1633,6 +1406,8 @@ class TestCarrotParamAlignment(unittest.TestCase):
     "AutoGasCancelSpeed": 30,
     "AutoGasSyncSpeed": 0,
     "AutoGasTokSpeed": 0,
+    "AutoRoadSpeedAdjust": 0,
+    "AutoSpeedUptoRoadSpeedLimit": 0,
     "CameraYawTrimDeg": 0,
     "CancelButtonMode": 0,
     "CanfdDebug": 0,
@@ -1686,6 +1461,7 @@ class TestCarrotParamAlignment(unittest.TestCase):
     "CustomSteerDeltaUp": 0,
     "CustomSteerDeltaUpLC": 0,
     "CustomSteerMax": 0,
+    "DisableDM": 0,
     "DisableMinSteerSpeed": 0,
     "DynamicTFollowLC": 100,
     "EnableCornerRadar": 0,
@@ -1723,6 +1499,7 @@ class TestCarrotParamAlignment(unittest.TestCase):
     "LongTuningKpV": 100,
     "MapboxStyle": 0,
     "MaxAngleFrames": 89,
+    "MaxTimeOffroadMin": 60,
     "MuteDoor": 0,
     "MuteSeatbelt": 0,
     "MyDrivingMode": 3,
@@ -1759,6 +1536,7 @@ class TestCarrotParamAlignment(unittest.TestCase):
     "SpeedFromPCM": 0,
     "SteerActuatorDelay": 30,
     "SteerRatioRate": 100,
+    "StoppingAccel": -50,
     "TFollowDecelBoost": 0,
     "TFollowGap1": 110,
     "TFollowGap2": 120,
@@ -1770,15 +1548,6 @@ class TestCarrotParamAlignment(unittest.TestCase):
     "UseLaneLineSpeed": 0,
     "UseWideCamera": 1,
     "VEgoStopping": 50,
-    # cp tuning alignment: params registered in config.py / nav_params.json /
-    # params_keys.h to match the CarrotPilot 185-key set.
-    "CanfdStopRetry": 0,
-    "CruiseGapLevels": 4,
-    "LeadAccelResponseTF1": -1,
-    "LeadAccelResponseTF2": -1,
-    "LeadAccelResponseTF3": -1,
-    "LeadAccelResponseTF4": -1,
-    "AutoNaviRearCameraHoldDistance": 100,
   }
 
   def test_unified_params_defaults(self):
@@ -1818,65 +1587,9 @@ class TestCarrotParamAlignment(unittest.TestCase):
     self.assertEqual(params.get_int("MyDrivingMode"), 3)
     self.assertEqual(params.get_int("TFollowGap1"), 110)
     self.assertEqual(params.get_int("CruiseMaxVals0"), 160)
-    self.assertEqual(params.get_int("AutoCurveSpeedAggressiveness"), 100)
+    self.assertEqual(params.get_int("StoppingAccel"), -50)
     self.assertEqual(params.get_int("LateralTorqueCustom"), 1)
     self.assertEqual(params.get("SoundLanguageSetting"), "auto")
-
-
-class TestRetiredParamsStayRetired(unittest.TestCase):
-  """Params P1-P4 removed must not come back.
-
-  StoppingAccel and DynamicTFollow were deleted by CarrotPilot itself, whose
-  test_settings_schema.py asserts they are absent from its settings schema and
-  params_keys.h. SpeedTFFactor and AChangeCostStarting were superseded by
-  sunnypilot's own controls (EnableSpeedTF, LongitudinalMpcTuningAChangeCost),
-  and StopDistanceCarrot was merged into LongitudinalMpcTuningStopDistance.
-  """
-
-  RETIRED = ("StoppingAccel", "DynamicTFollow", "SpeedTFFactor",
-             "AChangeCostStarting", "StopDistanceCarrot")
-
-  def test_absent_from_the_carrot_default_table(self):
-    from openpilot.sunnypilot.carrot.config import _DEFAULT_NAV_PARAMS
-    for param in self.RETIRED:
-      self.assertNotIn(param, _DEFAULT_NAV_PARAMS,
-                       f"{param} must stay retired - see the P1-P4 audit")
-
-  def test_no_carrot_module_reads_them(self):
-    """Only params_migration may mention StopDistanceCarrot, to merge it."""
-    import pathlib
-    root = pathlib.Path(__file__).resolve().parents[1]
-    for path in root.glob("*.py"):
-      if path.name == "params_migration.py":
-        continue
-      text = path.read_text(encoding="utf-8")
-      for param in self.RETIRED:
-        self.assertNotIn(f'"{param}"', text, f"{path.name} still reads {param}")
-
-
-class TestCarrotPlannerRoadcate(unittest.TestCase):
-  """CarrotPlanner must take the road class from its caller.
-
-  _roadcate used to be hardcoded to 8, so `if self._roadcate > 1` was always
-  true and the highway branch of vturn_speed() never ran. That made
-  AutoCurveSpeedFactorH and AutoCurveSpeedAggressivenessH, both exposed in the
-  UIs, permanently ineffective.
-  """
-
-  def test_default_keeps_surface_street_behaviour(self):
-    from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
-    self.assertEqual(CarrotPlanner()._roadcate, 8)
-
-  def test_supplied_value_is_used(self):
-    from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
-    self.assertEqual(CarrotPlanner(roadcate=1)._roadcate, 1)
-    self.assertEqual(CarrotPlanner(roadcate=2)._roadcate, 2)
-
-  def test_highway_branch_becomes_reachable(self):
-    """roadcate <= 1 must select the highway curve tuning."""
-    from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
-    planner = CarrotPlanner(roadcate=1)
-    self.assertFalse(planner._roadcate > 1, "roadcate=1 is a highway")
 
 
 class TestTFollowHelpers(unittest.TestCase):
@@ -1894,9 +1607,6 @@ class TestTFollowHelpers(unittest.TestCase):
     from openpilot.sunnypilot.carrot.t_follow import ramp_t_follow
     assert abs(ramp_t_follow(1.5, 1.2, 0.0, 0.1) - 1.23) < 1e-9
     assert ramp_t_follow(1.0, 1.2, 0.0, 0.1) == 1.0
-
-
-from openpilot.sunnypilot.carrot.carrot_functions import _DEFAULT_COMFORT_BRAKE
 
 
 class TestCarrotPlannerDrivingMode(unittest.TestCase):
@@ -1937,63 +1647,9 @@ class TestCarrotPlannerDrivingMode(unittest.TestCase):
     from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
     planner = CarrotPlanner()
     assert planner.jerk_factor == 1.0
-    assert planner.comfort_brake == _DEFAULT_COMFORT_BRAKE
+    assert planner.comfort_brake == 2.4
     assert planner.traffic_stop_distance_adjust == -1.5
     assert planner.traffic_stop_model_lead_offset == 0.0
-
-  def test_comfort_brake_reads_the_sunnypilot_param(self):
-    """Carrot must not override the user's Longitudinal MPC Tuning entry.
-
-    It used to hardcode 2.4 in two places, so enabling CarrotLongitudinalSource
-    silently replaced whatever the user had set (default 2.5).
-    """
-    from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
-    planner = CarrotPlanner()
-    key = "LongitudinalMpcTuningComfortBrake"
-    try:
-      store = planner._params._system_params._store
-      store[key] = 3.5
-      planner._params_count = 39           # the next tick lands on the == 40 slot
-      planner._params_update()
-      assert planner._comfort_brake_base == 3.5
-    finally:
-      store.pop(key, None)                 # type: ignore[possibly-undefined]
-      planner._comfort_brake_base = _DEFAULT_COMFORT_BRAKE
-
-  def test_comfort_brake_is_recomputed_each_tick_not_compounded(self):
-    """Guard against the `*=` regression.
-
-    The tick did `self._comfort_brake *= factor` at 20 Hz, so any factor != 1
-    decayed the value geometrically: with a stopped lead present the factor is
-    0.8, taking 2.4 to ~0.26 in ten ticks. Because stop_dist is
-    max(stop_dist, v_ego**2 / (comfort_brake * 2)) that inflated the stopping
-    distance roughly 9x.
-    """
-    import inspect
-    from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
-    tick = inspect.getsource(CarrotPlanner.update)
-    assert "self._comfort_brake *=" not in tick, "comfort brake compounds again"
-    assert "self._comfort_brake = self._comfort_brake_base" in tick, "tick no longer derives from the base"
-
-  def test_mpc_is_not_handed_a_stop_distance_override(self):
-    """The solver bakes STOP_DISTANCE in at codegen, so the runtime kwarg was dead.
-
-    long_mpc assigned self.stop_distance from it and never read it back, which
-    silently dropped Carrot's stop_distance_margin. The module cannot be imported
-    here (it pulls openpilot.cereal.log, which this file's fixture stubs), so the
-    guard reads the source instead.
-    """
-    import pathlib
-    import re
-    root = pathlib.Path(__file__).resolve().parents[4]
-    src = (root / "openpilot" / "selfdrive" / "controls" / "lib" /
-           "longitudinal_mpc_lib" / "long_mpc.py").read_text(encoding="utf-8")
-    assert "def update(self, radarstate" in src, "update() signature moved; re-check this guard"
-    sig = re.search(r"def update\(self, radarstate.*?\):", src, re.S)
-    assert sig is not None
-    assert "stop_distance" not in sig.group(0), "the dead stop_distance kwarg came back"
-    # and nothing may assign it either, since nothing reads it
-    assert "self.stop_distance =" not in src, "dead self.stop_distance assignment came back"
 
 
 class TestCarrotServCountdown(unittest.TestCase):

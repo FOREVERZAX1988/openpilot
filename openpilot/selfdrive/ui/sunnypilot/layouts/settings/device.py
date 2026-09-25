@@ -17,6 +17,7 @@ from openpilot.system.ui.widgets.button import ButtonStyle
 from openpilot.system.ui.widgets.confirm_dialog import alert_dialog, ConfirmDialog
 from openpilot.system.ui.widgets.list_view import text_item
 from openpilot.system.ui.widgets.scroller_tici import LineSeparator
+from openpilot.common.api.comma_connect import get_api_host
 
 offroad_time_options = {
   0: 0,
@@ -123,6 +124,16 @@ class DeviceLayoutSP(DeviceLayout):
       LineSeparator(),
       text_item(lambda: tr("Serial"), self._params.get("HardwareSerial") or (lambda: tr("N/A"))),
       LineSeparator(),
+      text_item(lambda: tr("Current API Server"), lambda: get_api_host()),
+      LineSeparator(),
+      button_item_sp(
+        lambda: tr("Server"),
+        lambda: tr("KONIK") if self._params.get_bool("UseKonikServer", False) else tr("COMMA"),
+        lambda: tr("Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"),
+        callback=self._toggle_server,
+        enabled=ui_state.is_offroad()
+      ),
+      LineSeparator(),
       self._pair_device_btn,
       LineSeparator(),
       self._reset_calib_btn,
@@ -143,6 +154,22 @@ class DeviceLayoutSP(DeviceLayout):
     ]
 
     return items
+
+  # 服务器切换 - 核心逻辑：弹出确认框，确认后切换服务器并重启设备
+  def _toggle_server(self):
+    def handle_confirm(result: DialogResult):
+      if result == DialogResult.CONFIRM:
+        current_use_konik = self._params.get_bool("UseKonikServer", False)
+        self._params.put_bool("UseKonikServer", not current_use_konik, block=True)  # block: ensure flush to disk before reboot
+        self._params.put_bool_nonblocking("DoReboot", True)
+    current_use_konik = self._params.get_bool("UseKonikServer", False)
+    target_server = tr("KONIK") if not current_use_konik else tr("COMMA")
+    dialog = ConfirmDialog(
+      tr("Switch server to {}?").format(target_server),
+      tr("Confirm"),
+      callback=handle_confirm
+    )
+    gui_app.push_widget(dialog)
 
   def _offroad_transition(self):
     self._power_buttons.action_item.right_button.set_visible(ui_state.is_offroad())
@@ -193,7 +220,7 @@ class DeviceLayoutSP(DeviceLayout):
 
   @staticmethod
   def _update_max_time_offroad_label(value: int) -> str:
-    label = tr("Always On") if value == 0 else f"{value}" + tr("m") if value < 60 else f"{value // 60}" + tr("h")
+    label = tr("Always On") if value == 0 else f"{value}" + tr("min") if value < 60 else f"{value // 60}" + tr("hours")
     label += tr(" (Default)") if value == 1800 else ""
     return label
 

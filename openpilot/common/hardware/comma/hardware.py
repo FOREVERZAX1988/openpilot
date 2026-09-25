@@ -1,6 +1,5 @@
 import configparser
 import json
-import logging
 import os
 import socket
 import subprocess
@@ -15,6 +14,13 @@ from openpilot.common.esim.base import LPABase
 from openpilot.common.hardware.base import HardwareBase, ThermalConfig, ThermalZone
 from openpilot.common.hardware.comma.pins import GPIO
 from openpilot.common.hardware.comma.amplifier import Amplifier
+
+LITE = os.getenv("LITE") is not None
+
+DBUS_PROPS = 'org.freedesktop.DBus.Properties'
+
+MM = 'org.freedesktop.ModemManager1'
+MM_MODEM = MM + ".Modem"
 
 LITE = os.getenv("LITE") is not None
 
@@ -88,16 +94,7 @@ def invalidate_display_probe_cache() -> None:
 
 @lru_cache(maxsize=1)
 def probe_builtin_display() -> bool:
-  """Detect comma panel via backlight sysfs + touch IRQ (cached for process lifetime).
-
-  Backlight sysfs is the primary signal: if the panel backlight is present and
-  reports a positive max brightness, we treat the device as having a builtin
-  display. Touch detection is used only as a diagnostic hint, because some
-  boots/AGNOS versions leave the touchscreen driver (fts_ts) unprobed while the
-  display itself is fully functional. In that case the native UI should still
-  start; lack of touch will be obvious to the user and can be investigated
-  separately.
-  """
+  """Detect comma panel via backlight sysfs + touch IRQ (cached for process lifetime)."""
   if not _PANEL_BACKLIGHT.is_dir():
     return False
   try:
@@ -106,9 +103,7 @@ def probe_builtin_display() -> bool:
         return False
   except (OSError, ValueError):
     return False
-  if not _has_panel_touch():
-    logging.warning("builtin panel backlight detected but touchscreen IRQ/path missing; enabling native ui anyway")
-  return True
+  return _has_panel_touch()
 
 
 _PANDA_MCU_CACHE_PATHS = (
@@ -561,6 +556,9 @@ class HardwareComma(HardwareBase):
     ms = self.get_modem_state()
     return ms.get('tx_bytes', -1), ms.get('rx_bytes', -1)
 
+  def has_internal_panda(self):
+    return True
+
   def reset_internal_panda(self):
     gpio_init(GPIO.STM_RST_N, True)
     gpio_init(GPIO.STM_BOOT0, True)
@@ -583,8 +581,13 @@ class HardwareComma(HardwareBase):
 
   def booted(self):
     # this normally boots within 8s, but on rare occasions takes 30+s
+    # Past 2 minutes the check below can no longer return False, so skip the sudo_read:
+    # callers poll this (webui startup_blockers / hardwared), and every call used to spawn a
+    # `sudo cat /sys/kernel/debug/msm_vidc/core0/info` (was ~3/s -> 37 MB of auth.log per day).
+    if time.monotonic() >= 60*2:
+      return True
     encoder_state = sudo_read("/sys/kernel/debug/msm_vidc/core0/info")
-    if "Core state: 0" in encoder_state and (time.monotonic() < 60*2):
+    if "Core state: 0" in encoder_state:
       return False
     return True
 

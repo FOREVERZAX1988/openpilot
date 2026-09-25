@@ -97,11 +97,6 @@ _ECO_FACTOR = 0.9
 _SAFE_FACTOR = 0.8
 _HIGH_FACTOR = 1.2
 
-# Comfort deceleration fallback, matching LongitudinalMpcTuningComfortBrake's own
-# default. The live value is read from that param in _params_update so the Carrot
-# source does not override the user's Longitudinal MPC Tuning entry.
-_DEFAULT_COMFORT_BRAKE = 2.5
-
 
 def get_driving_mode_factors(driving_mode: DrivingMode,
                              eco_factor: float = _ECO_FACTOR,
@@ -240,7 +235,7 @@ class CarrotPlanner:
   a longitudinal plan source.
   """
 
-  def __init__(self, params: UnifiedParams | None = None, roadcate: int = 8) -> None:
+  def __init__(self, params: UnifiedParams | None = None) -> None:
     self._params = params or UnifiedParams()
     self._frame: int = 0
     self._params_count: int = 0
@@ -267,6 +262,7 @@ class CarrotPlanner:
     self._t_follow_gap2 = 1.3
     self._t_follow_gap3 = 1.45
     self._t_follow_gap4 = 1.6
+    self._dynamic_t_follow = 0.0
     self._dynamic_t_follow_lc = 0.0
     self._lead_accel_response = 0
     self._enable_speed_tf = 0
@@ -282,9 +278,7 @@ class CarrotPlanner:
 
     # Stop / traffic handling.
     self._stop_distance = 6.0
-    # Base comfort deceleration; scaled per-tick by the driving-mode factors below.
-    self._comfort_brake_base = _DEFAULT_COMFORT_BRAKE
-    self._comfort_brake = _DEFAULT_COMFORT_BRAKE
+    self._comfort_brake = 2.4
     self._comfort_brake_comfort_factor = 1.0
     self._traffic_light_detect_mode = 2
     self._traffic_state = TrafficState.off
@@ -340,11 +334,7 @@ class CarrotPlanner:
     self._curvature_filter = _MovingAverage(20)
     self._lat_a = 0.0
     self._max_curve = 0.0
-    # Road class from the navi packet (1 = highway, > 1 = surface street). Supplied
-    # by the caller because CarrotPlanner has no view of the raw packet; it gates
-    # the highway/surface split in vturn_speed(). Defaults to 8 so a caller that
-    # does not pass it keeps the historical surface-street behaviour.
-    self._roadcate = roadcate
+    self._roadcate = 8
 
     # Eco cruise.
     self._eco_over_speed = 2.0
@@ -354,6 +344,8 @@ class CarrotPlanner:
     self._auto_navi_speed_decel_rate = 1.5
 
     # Misc longitudinal tuning.
+    self._a_change_cost_starting = 10.0
+    self._stopping_accel = -0.5
     self._traffic_stop_distance_adjust = -1.5
 
     # Outputs.
@@ -497,6 +489,7 @@ class CarrotPlanner:
       self._t_follow_gap2 = p.get_float("TFollowGap2") / 100.0
       self._t_follow_gap3 = p.get_float("TFollowGap3") / 100.0
       self._t_follow_gap4 = p.get_float("TFollowGap4") / 100.0
+      self._dynamic_t_follow = p.get_float("DynamicTFollow") / 100.0
       self._dynamic_t_follow_lc = p.get_float("DynamicTFollowLC") / 100.0
       self._lead_accel_response = int(np.clip(p.get_int("LeadAccelResponse"), 0, 5))
       self._enable_speed_tf = p.get_int("EnableSpeedTF")
@@ -507,21 +500,16 @@ class CarrotPlanner:
         if raw > 0:
           self._cruise_max_vals[i] = raw / 100.0
     elif self._params_count == 40:
-      # Merged: the stop target distance now comes from sunnypilot's own tuning
-      # entry, the same one the MPC solver uses, so a single control governs both.
-      # Carrot's StopDistanceCarrot (cm) was retired; params_migration copies an
-      # explicitly-set value across as metres.
-      stop_distance_m = p.get_float("LongitudinalMpcTuningStopDistance")
-      if stop_distance_m > 0:
-        self._stop_distance = stop_distance_m
+      stop_distance_cm = p.get_int("StopDistanceCarrot")
+      if stop_distance_cm > 0:
+        self._stop_distance = stop_distance_cm / 100.0
       self._j_lead_factor = p.get_float("JLeadFactor3") / 100.0
       self._eco_over_speed = p.get_int("CruiseEcoControl")
       self._auto_navi_speed_decel_rate = float(p.get_int("AutoNaviSpeedDecelRate")) * 0.01
+      self._a_change_cost_starting = p.get_float("AChangeCostStarting")
+      self._stopping_accel = p.get_float("StoppingAccel") / 100.0
       self._traffic_stop_distance_adjust = p.get_float("TrafficStopDistanceAdjust") / 100.0
       self._comfort_brake_comfort_factor = get_driving_mode_comfort_brake_factor(self._my_driving_mode)
-      comfort_brake = p.get_float("LongitudinalMpcTuningComfortBrake")
-      if comfort_brake > 0:
-        self._comfort_brake_base = comfort_brake
     elif self._params_count >= 100:
       self._params_count = 0
 
@@ -537,14 +525,6 @@ class CarrotPlanner:
 
   # ---- cruise envelope helpers ------------------------------------------ #
 
-  # NOTE: no caller, and the CruiseMaxVals0-6 rows are no longer shown in either UI
-  # (they are in CARROT_TUNING_UNAVAILABLE). Carrot's cruise-acceleration envelope was
-  # never wired in: feeding it through would also need CarrotLongitudinalSource.a_target
-  # to be consumed by the MPC, which today only publishes it as an observability field
-  # (carrot_plan.aTarget). openpilot's own hardcoded A_CRUISE_MAX_VALS / A_CRUISE_MAX_BP
-  # (longitudinal_planner.py:23-24) is what actually governs, and it is a coarser version
-  # of the same curve. Wiring this would replace that envelope, so it needs device
-  # validation; the params stay registered so it can be finished later.
   def _get_carrot_accel(self, v_ego: float) -> float:
     factor = self._my_high_mode_factor if self._my_driving_mode == DrivingMode.High else self._my_safe_factor
     # np.interp is happy with mismatched monotonic arrays as long as xp is sorted.
@@ -696,12 +676,9 @@ class CarrotPlanner:
     self._x_dist_to_turn = int(getattr(carrot, "xDistToTurn", 0) or 0)
     atc_active = self._active_carrot > 1 and 0 < self._x_dist_to_turn < 100
     self._atc_type = getattr(carrot, "atcType", "") or ""
-    # NOTE: `desiredSpeed` is still published on carrotManSP for HUD/webui display
-    # only. It intentionally no longer lowers `v_cruise_kph` here: sunnypilot's
-    # Speed Limit Assist (SLA) is the single executor of the road-speed-limit
-    # target, and `desiredSpeed` is already a post-`calculate_current_speed`
-    # "currently permitted speed". Feeding it back as a set-speed change would
-    # double-count Carrot's own deceleration on top of SLA's LIMIT_ADAPT_ACC.
+    desired_speed = int(getattr(carrot, "desiredSpeed", 0) or 0)
+    if desired_speed > 0:
+      v_cruise_kph = min(v_cruise_kph, float(desired_speed))
     return v_cruise_kph, atc_active
 
   # ---- state-machine helpers --------------------------------------------- #
@@ -878,7 +855,7 @@ class CarrotPlanner:
         if can_go:
           self._x_state = XState.e2eCruise
         else:
-          self._comfort_brake = self._comfort_brake_base * self._comfort_brake_comfort_factor
+          self._comfort_brake = 2.4 * self._comfort_brake_comfort_factor
           traffic_stop_adjust_ratio = float(np.interp(v_ego_kph, [0, 100], [1.0, 0.7]))
           stop_dist = x_last * float(np.interp(x_last, [0, 50], [1.0, traffic_stop_adjust_ratio]))
           if stop_dist > 10.0:
@@ -1046,9 +1023,7 @@ class CarrotPlanner:
     if mode == "acc" and self._x_state == XState.e2ePrepare:
       mode = "blended"
 
-    # Recompute from the base every tick. This used to be `*=`, which decayed the
-    # value geometrically at 20 Hz whenever a factor != 1 was active.
-    self._comfort_brake = self._comfort_brake_base * self._my_safe_factor * self._comfort_brake_comfort_factor
+    self._comfort_brake *= self._my_safe_factor * self._comfort_brake_comfort_factor
     self._actual_stop_distance = max(0.0, self._actual_stop_distance - v_ego * DT_MDL)
 
     if stop_model_x == 1000.0:

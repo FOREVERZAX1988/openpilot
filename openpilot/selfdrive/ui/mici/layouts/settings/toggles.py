@@ -3,37 +3,146 @@ from collections.abc import Callable
 from openpilot.cereal import log
 
 from openpilot.system.ui.widgets.scroller import NavScroller
-from openpilot.selfdrive.ui.mici.widgets.button import BigParamControl, BigMultiParamToggle, BigToggle, GreyBigButton
+from openpilot.selfdrive.ui.mici.widgets.button import BigParamControl, BigMultiParamToggle, BigMultiToggle, BigToggle, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigConfirmationCircleButton
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
+from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr
 
 PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
 
+class MacanJerkControl(BigMultiToggle):
+  """Macan 加速度变化率限制（m/s^3）：点击循环切换预设值，0=关闭（存储选项值本身）"""
+  OPTIONS = ["0", "1.5", "2.5"]  # 三档：0=关 / 1.5标准 / 2.5激进（2026-08-22 用户要求三格）
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
+
+
+class MacanAccelLimitControl(BigMultiToggle):
+  # 2026-08-22 用户反馈：档位太多点击会重启 UI 不跳数值 → 改三档
+  OPTIONS = ["1.0", "1.2", "1.6"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
+
+
+class MacanStartStopDistControl(BigMultiToggle):
+  """Macan 起步安全距离（米）：3/5/10 三档（tizi 为 0/3-10 每1米，mici 简化三档）"""
+  OPTIONS = ["3", "5", "10"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 1
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, int(self.value), block=True)  # INT 参数需 int（str 会 TypeError 崩 UI）
+
+
+class MacanAccelDeadzoneControl(BigMultiToggle):
+  OPTIONS = ["0", "0.05", "0.1", "0.15", "0.2"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
+    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
+
+
+class MacanCruiseCoastControl(BigMultiToggle):
+  """Macan 巡航滑行带宽度（m/s）：0=Off / 0.3 / 0.4 / 0.5 / 0.6（005f/0060 喘息振荡修复）"""
+  OPTIONS = ["0", "0.3", "0.4", "0.5", "0.6"]
+
+  def __init__(self, text: str, param: str):
+    super().__init__(text, self.OPTIONS)
+    self._param = param
+    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
+    self._load()
+
+  def _load(self):
+    cur = self._params.get(self._param)
+    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤）
+    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 1
+    self.set_value(self.OPTIONS[idx])
+
+  def _handle_mouse_release(self, mouse_pos):
+    super()._handle_mouse_release(mouse_pos)
+    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
+
+
 class ExperimentalModeConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
     super().__init__()
 
-    accept = BigConfirmationCircleButton("enable\nexperimental mode",
+    accept = BigConfirmationCircleButton(tr("enable\nexperimental mode"),
                                          gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
                                          lambda: self.dismiss(on_confirm))
 
     self._scroller.add_widgets([
-      GreyBigButton("enabling\nexperimental mode", "scroll to continue",
+      GreyBigButton(tr("enabling\nexperimental mode"), "scroll to continue",
                     gui_app.texture("icons_mici/setup/warning.png", 64, 64)),
-      GreyBigButton("", "openpilot defaults to driving in chill mode."),
-      GreyBigButton("", "Experimental mode enables alpha-level features that aren't ready for chill mode."),
-      GreyBigButton("End-to-End Longitudinal Control"),
-      GreyBigButton("", "Let the driving model control the gas and brakes."),
-      GreyBigButton("", "openpilot will drive as it thinks a human would, including stopping for red lights and stop signs."),
-      GreyBigButton("", "The set speed will only act as an upper bound."),
-      GreyBigButton("", "This is an alpha quality feature; mistakes should be expected."),
-      GreyBigButton("New Driving Visualization"),
-      GreyBigButton("", "The path will change colors to communicate acceleration intent."),
-      GreyBigButton("", "Red for braking, green for acceleration, and gray for coasting."),
+      GreyBigButton("", tr("openpilot defaults to driving in chill mode.")),
+      GreyBigButton("", tr("Experimental mode enables alpha-level features that aren't ready for chill mode.")),
+      GreyBigButton(tr("End-to-End Longitudinal Control")),
+      GreyBigButton("", tr("Let the driving model control the gas and brakes.")),
+      GreyBigButton("", tr("openpilot will drive as it thinks a human would, including stopping for red lights and stop signs.")),
+      GreyBigButton("", tr("The set speed will only act as an upper bound.")),
+      GreyBigButton("", tr("This is an alpha quality feature; mistakes should be expected.")),
+      GreyBigButton(tr("New Driving Visualization")),
+      GreyBigButton("", tr("The path will change colors to communicate acceleration intent.")),
+      GreyBigButton("", tr("Red for braking, green for acceleration, and gray for coasting.")),
       accept,
     ])
 
@@ -42,9 +151,7 @@ class TogglesLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
 
-    self._personality_toggle = BigMultiParamToggle(tr("driving personality"), "LongitudinalPersonality", [tr("aggressive"), tr("standard"), tr("relaxed")])
-    self._accel_controller_enabled = BigParamControl(tr("enable accel controller"), "AccelPersonalityEnabled")
-    self._accel_personality_toggle = BigMultiParamToggle(tr("acceleration profile"), "AccelPersonality", [tr("eco"), tr("normal"), tr("sport")])
+    self._personality_toggle = BigMultiParamToggle(tr("driving personality"), "LongitudinalPersonality", ["aggressive", "standard", "relaxed"])
     self._experimental_btn = BigToggle(tr("experimental mode"), initial_state=ui_state.params.get_bool("ExperimentalMode"),
                                        toggle_callback=self._on_experimental_mode)
     is_metric_toggle = BigParamControl(tr("use metric units"), "IsMetric")
@@ -53,16 +160,30 @@ class TogglesLayoutMici(NavScroller):
     distraction_level_toggle = BigMultiParamToggle(
       tr("distraction detection level"),
       "DistractionDetectionLevel",
-      [tr("strict"), tr("moderate"), tr("lenient")],
+      ["strict", "moderate", "lenient"],
     )
     record_front = BigParamControl(tr("record & upload driver camera"), "RecordFront", toggle_callback=restart_needed_callback)
     record_mic = BigParamControl(tr("record & upload mic audio"), "RecordAudio", toggle_callback=restart_needed_callback)
     enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
+    macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
+    macan_start_stop_distance = MacanStartStopDistControl(tr("Startup Safe Distance (Macan)"), "MacanStartStopDistance")
+    macan_jerk_enable = BigParamControl(tr("Macan Accel Jerk Limit"), "MacanJerkLimitEnable")
+    macan_jerk_limit = MacanJerkControl(tr("Accel Jerk Limit Value (m/s^3)"), "MacanJerkLimit")
+    macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
+    macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
+    macan_verz_bridge = BigParamControl(tr("Macan Verz Bridge"), "MacanVerzBridge")
+    macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
+    macan_accel_limit = MacanAccelLimitControl(tr("Macan Accel Limit (m/s^2)"), "MacanAccelLimit")
+    macan_accel_deadzone = MacanAccelDeadzoneControl(tr("Macan Accel Deadzone (m/s^2)"), "MacanAccelDeadzone")
+    macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
+    macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
+    macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
+    macan_coast_enable = BigParamControl(tr("Macan Cruise Coast Enable"), "MacanCruiseCoastEnable")
+    macan_coast_band = MacanCruiseCoastControl(tr("Macan Cruise Coast Band (m/s)"), "MacanCruiseCoastBand")
+    macan_fusion_mode = BigParamControl(tr("Fusion Control Mode (Macan)"), "MacanFusionMode")
 
     self._scroller.add_widgets([
       self._personality_toggle,
-      self._accel_controller_enabled,
-      self._accel_personality_toggle,
       self._experimental_btn,
       is_metric_toggle,
       ldw_toggle,
@@ -71,24 +192,73 @@ class TogglesLayoutMici(NavScroller):
       record_front,
       record_mic,
       enable_openpilot,
+      macan_start_stop,
+      macan_start_stop_distance,
+      macan_jerk_enable,
+      macan_jerk_limit,
+      macan_corner_limit,
+      macan_slope_comp,
+      macan_verz_bridge,
+      macan_slope_comp_unlimited,
+      macan_accel_limit,
+      macan_deadzone_enable,
+      macan_accel_deadzone,
+      macan_radar_fusion,
+      macan_startup_gap_sync,
+      macan_coast_enable,
+      macan_coast_band,
+      macan_fusion_mode,
     ])
 
+    self._macan_start_stop = macan_start_stop
+    self._macan_start_stop_distance = macan_start_stop_distance
+    self._macan_jerk_enable = macan_jerk_enable
+    self._macan_jerk_limit = macan_jerk_limit
+    self._macan_corner_limit = macan_corner_limit
+    self._macan_slope_comp = macan_slope_comp
+    self._macan_verz_bridge = macan_verz_bridge
+    self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
+    self._macan_accel_limit = macan_accel_limit
+    self._macan_accel_deadzone = macan_accel_deadzone
+    self._macan_deadzone_enable = macan_deadzone_enable
+    self._macan_radar_fusion = macan_radar_fusion
+    self._macan_startup_gap_sync = macan_startup_gap_sync
+    self._macan_coast_enable = macan_coast_enable
+    self._macan_coast_band = macan_coast_band
+    self._macan_fusion_mode = macan_fusion_mode
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
     # Toggle lists
     self._refresh_toggles = (
       ("ExperimentalMode", self._experimental_btn),
-      ("AccelPersonalityEnabled", self._accel_controller_enabled),
       ("IsMetric", is_metric_toggle),
       ("IsLdwEnabled", ldw_toggle),
       ("AlwaysOnDM", always_on_dm_toggle),
       ("RecordFront", record_front),
+      ("MacanStartStop", macan_start_stop),
+      ("MacanStartStopDistance", macan_start_stop_distance),
+      ("MacanJerkLimitEnable", macan_jerk_enable),
+      ("MacanCornerLimit", macan_corner_limit),
+      ("MacanSlopeComp", macan_slope_comp),
+      ("MacanVerzBridge", macan_verz_bridge),
+      ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
+      ("MacanAccelLimit", macan_accel_limit),
+      ("MacanAccelDeadzone", macan_accel_deadzone),
+      ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
+      ("MacanRadarFusion", macan_radar_fusion),
+      ("MacanStartupGapSync", macan_startup_gap_sync),
+      ("MacanCruiseCoastEnable", macan_coast_enable),
+      ("MacanCruiseCoastBand", macan_coast_band),
+      ("MacanFusionMode", macan_fusion_mode),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
 
     enable_openpilot.set_enabled(lambda: not ui_state.engaged)
+    macan_start_stop_distance.set_enabled(lambda: not ui_state.engaged)
+    macan_slope_comp.set_enabled(lambda: not ui_state.engaged)
+    macan_slope_comp_unlimited.set_enabled(lambda: not ui_state.engaged)
     record_front.set_enabled(False if ui_state.params.get_bool("RecordFrontLock") else (lambda: not ui_state.engaged))
     record_mic.set_enabled(lambda: not ui_state.engaged)
 
@@ -119,16 +289,51 @@ class TogglesLayoutMici(NavScroller):
       if ui_state.has_longitudinal_control:
         self._experimental_btn.set_visible(True)
         self._personality_toggle.set_visible(True)
-        self._accel_controller_enabled.set_visible(True)
-        self._accel_personality_toggle.set_visible(True)
       else:
         # no long for now
         self._experimental_btn.set_visible(False)
         self._experimental_btn.set_checked(False)
         self._personality_toggle.set_visible(False)
-        self._accel_controller_enabled.set_visible(False)
-        self._accel_personality_toggle.set_visible(False)
         ui_state.params.remove("ExperimentalMode")
+
+    # Macan Stop and Go / Slope Comp / Steering Params: only shown for Macan (MLB)
+    if ui_state.CP is not None and ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1":
+      slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
+      self._macan_start_stop.set_visible(True)
+      # 起步安全距离：仅 SnG 开关开启时显示（联动）
+      self._macan_start_stop_distance.set_visible(ui_state.params.get_bool("MacanStartStop"))
+      self._macan_jerk_enable.set_visible(True)
+      self._macan_jerk_limit.set_visible(ui_state.params.get_bool("MacanJerkLimitEnable"))
+      self._macan_slope_comp.set_visible(True)
+      self._macan_verz_bridge.set_visible(True)
+      self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
+      self._macan_accel_limit.set_visible(True)
+      self._macan_deadzone_enable.set_visible(True)
+      self._macan_accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))
+      self._macan_radar_fusion.set_visible(True)
+      self._macan_coast_enable.set_visible(True)
+      self._macan_coast_band.set_visible(ui_state.params.get_bool("MacanCruiseCoastEnable"))
+      # 融合控制模式：仅 Macan 且 OP 纵向控制开启时可见。
+      # 2026-09-20 重新锁定：纯 OP 纵向未通过路试 → 开关恒定开、锁定不可切（只能看）。
+      op_long_on = ui_state.has_longitudinal_control
+      self._macan_fusion_mode.set_visible(op_long_on)
+      self._macan_fusion_mode.set_enabled(False)  # 锁定：不能切到关
+      ui_state.params.put_bool("MacanFusionMode", True)  # 恒定为开（参数自愈）
+      self._macan_fusion_mode.set_checked(True)
+    else:
+      self._macan_start_stop.set_visible(False)
+      self._macan_jerk_enable.set_visible(False)
+      self._macan_jerk_limit.set_visible(False)
+      self._macan_slope_comp.set_visible(False)
+      self._macan_verz_bridge.set_visible(False)
+      self._macan_slope_comp_unlimited.set_visible(False)
+      self._macan_accel_limit.set_visible(False)
+      self._macan_deadzone_enable.set_visible(False)
+      self._macan_accel_deadzone.set_visible(False)
+      self._macan_radar_fusion.set_visible(False)
+      self._macan_coast_enable.set_visible(False)
+      self._macan_coast_band.set_visible(False)
+      self._macan_fusion_mode.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
@@ -138,8 +343,6 @@ class TogglesLayoutMici(NavScroller):
     self._distraction_level_toggle.set_visible(dm_on)
     if dm_on:
       self._distraction_level_toggle._load_value()
-
-    self._accel_personality_toggle.refresh()
 
   def _on_experimental_mode(self, state: bool):
     if state and not ui_state.params.get_bool("ExperimentalModeConfirmed"):

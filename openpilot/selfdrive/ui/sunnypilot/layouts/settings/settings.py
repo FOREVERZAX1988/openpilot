@@ -66,6 +66,18 @@ class NavButton(Widget):
     self.parent = parent
     self.panel_type = p_type
     self.panel_info = p_info
+    # Activate ourselves instead of leaving hit testing to SettingsLayoutSP, which used to
+    # scan the panel_info.button_rect rects filled in below. The sidebar is a Scroller and
+    # Scroller skips the render of rows outside its viewport, so those rects keep the
+    # position the row had the last time it was on screen; a tap landing on a visible row
+    # could match the stale rect of a row that had already scrolled off (the parent took
+    # the first match in panel order) and switched to a panel that was not on screen at
+    # all. Going through the widget means the rect is the one the row is drawn at, and a
+    # row that is not rendered cannot be touched.
+    self.set_click_callback(self._activate)
+
+  def _activate(self) -> None:
+    self.parent.set_current_panel(self.panel_type)
 
   def _render(self, rect):
     is_selected = self.panel_type == self.parent._current_panel
@@ -92,9 +104,6 @@ class NavButton(Widget):
       rect.y + (OP.NAV_BTN_HEIGHT - text_size.y) / 2
     )
     rl.draw_text_ex(self.parent._font_medium, panel_name, text_pos, 55, 0, text_color)
-
-    # Store button rect for click detection
-    self.panel_info.button_rect = rect
 
 
 class SettingsLayoutSP(OP.SettingsLayout):
@@ -186,17 +195,12 @@ class SettingsLayoutSP(OP.SettingsLayout):
       return
 
   def _handle_mouse_release(self, mouse_pos: MousePos) -> None:
-    # Check close button
+    # Check close button: it is drawn inline on every frame, so its rect is never stale.
     if rl.check_collision_point_rec(mouse_pos, self._close_btn_rect):
       if self._close_callback:
         self._close_callback()
-      return
-
-    # Check navigation buttons
-    for panel_type, panel_info in self._panels.items():
-      if rl.check_collision_point_rec(mouse_pos, panel_info.button_rect) and self._sidebar_scroller.scroll_panel.is_touch_valid():
-        self.set_current_panel(panel_type)
-        return
+    # The sidebar rows are not checked here: NavButton clicks itself, so a tap can only
+    # ever resolve against the row that is actually drawn under the finger.
 
   def show_event(self):
     super().show_event()

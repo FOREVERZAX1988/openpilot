@@ -6,6 +6,7 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import asyncio
+import faulthandler
 import hashlib
 import json
 import math
@@ -271,6 +272,24 @@ NAVI_IMAGE_PARAM = "CarrotNaviImage"
 NAVI_IMAGE_BASE64_MAX_CHARS = 6 * 1024 * 1024
 NAVI_DEBUG_PARAM = "CarrotNaviDebug"
 
+
+def beacon_targets(broadcast_ip: str, remote_ip: str, *,
+                   send_broadcast: bool, send_unicast: bool) -> list[str]:
+  """UDP discovery-beacon destinations for one loop tick.
+
+  The LAN broadcast keeps its own schedule and is *never* dropped just because
+  a peer is remembered -- otherwise a phone that has not talked to this device
+  yet (fresh install, changed DHCP lease, a second phone) can never discover
+  it.  A remembered peer additionally gets a unicast heartbeat.
+  """
+  targets: list[str] = []
+  if send_broadcast:
+    targets.append(broadcast_ip or "255.255.255.255")
+  if send_unicast and remote_ip and remote_ip not in targets:
+    targets.append(remote_ip)
+  return targets
+
+
 # Korean TMAP turn-type codes from the CarrotMan app -> (maneuverType, maneuverModifier, xTurnInfo).
 # xTurnInfo semantics used by the sunnypilot UI/planner:
 #   1=left turn, 2=right turn, 3=left lane change, 4=right lane change,
@@ -284,7 +303,7 @@ V_CURVE_LOOKUP_BP: tuple[float, ...] = (
   0.0, 1 / 800, 1 / 670, 1 / 560, 1 / 440, 1 / 360, 1 / 265, 1 / 190, 1 / 135,
   1 / 85, 1 / 55, 1 / 30, 1 / 25,
 )
-V_CURVE_LOOKUP_VALS: tuple[float, ...] = (300, 150, 120, 110, 100, 90, 80, 70, 60, 50, 40, 15, 5)
+V_CRUVE_LOOKUP_VALS: tuple[float, ...] = (300, 150, 120, 110, 100, 90, 80, 70, 60, 50, 40, 15, 5)
 
 # Approximate curve-speed model: given a turn type and distance, recommend an
 # approach speed.  This is a simplified stand-in for the full polynomial model
@@ -595,18 +614,7 @@ class CarrotManager:
         cloudlog.error(f"carrot_man: failed to start AmapNavi direct comm: {e}")
     self._web: Any = None  # Lazy import: only used when ``--web`` flag is set.
 
-  def _migrate_amap_enabled(self) -> None:
-    """One-time migration from the legacy AmapEnabled switch.
-
-    ``AmapEnabled`` used to control both Amap Web map data and the 7706
-    blind-spot parser. Split it into the two semantically-correct params.
-    """
-    if self.params.get_bool("AmapEnabled"):
-      if not self.params.get_bool("AmapMapDataEnabled"):
-        self.params.put_bool("AmapMapDataEnabled", True)
-      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-
+    # Runtime state (was accidentally living in _migrate_amap_enabled()).
     self._enabled = False
     self._port = 0
     self._start_web = False
@@ -666,6 +674,20 @@ class CarrotManager:
     self._navi_event_lock = threading.Lock()
     self._last_rgdata_timestamp_ms = 0
     self._rgdata_ts_lock = threading.Lock()
+    self._navi_debug_last: dict[str, Any] | None = None
+
+
+  def _migrate_amap_enabled(self) -> None:
+    """One-time migration from the legacy AmapEnabled switch.
+
+    ``AmapEnabled`` used to control both Amap Web map data and the 7706
+    blind-spot parser. Split it into the two semantically-correct params.
+    """
+    if self.params.get_bool("AmapEnabled"):
+      if not self.params.get_bool("AmapMapDataEnabled"):
+        self.params.put_bool("AmapMapDataEnabled", True)
+      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
+        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
 
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
@@ -842,7 +864,7 @@ class CarrotManager:
           p1, p2, p3 = resampled_points[i], resampled_points[i + sample], resampled_points[i + sample * 2]
           curvature = calculate_curvature(p1, p2, p3)
           curvatures.append(curvature)
-          speed = _interp_table(abs(curvature), V_CURVE_LOOKUP_BP, V_CURVE_LOOKUP_VALS)
+          speed = _interp_table(abs(curvature), V_CURVE_LOOKUP_BP, V_CRUVE_LOOKUP_VALS)
           if abs(curvature) < 0.02:
             speed = max(speed, self._carrot_serv.n_road_limit_speed)
           speeds.append(speed)
@@ -1037,22 +1059,6 @@ class CarrotManager:
     cm.vehicleNaviSpeed = vehicle_navi_speed
     cm.vehicleNaviSectionActive = vehicle_navi_section_active
     cm.vehicleNaviAvailable = vehicle_navi_available
-
-    # Service area / toll gate hints (App §2.3 SAPA_* group).
-    cm.sapaName = _safe_str(raw.get("sapaName"), "")
-    cm.sapaDist = _safe_int(raw.get("sapaDist"), 0)
-    cm.sapaType = _safe_int(raw.get("sapaType"), 0)
-    cm.sapaCnt = _safe_int(raw.get("sapaCnt"), 0)
-    # TMC live traffic congestion (App §2.5). Per-segment arrays ride as JSON.
-    cm.tmcTotalDistance = _safe_int(raw.get("tmcTotalDistance"), 0)
-    cm.tmcResidualDistance = _safe_int(raw.get("tmcResidualDistance"), 0)
-    cm.tmcSegmentCount = _safe_int(raw.get("tmcSegmentCount"), 0)
-    cm.tmcOverallStatus = _safe_int(raw.get("tmcOverallStatus"), 0)
-    cm.tmcSegmentStatuses = _safe_str(raw.get("tmcSegmentStatuses"), "")
-    cm.tmcSegmentDistances = _safe_str(raw.get("tmcSegmentDistances"), "")
-    # Lane guidance arrow codes (App §2.2 navLaneGuide / navLaneGuideCnt).
-    cm.navLaneGuide = _safe_str(raw.get("navLaneGuide"), "")
-    cm.navLaneGuideCnt = _safe_int(raw.get("navLaneGuideCnt"), 0)
 
     navi_msg = messaging.new_message('navInstructionCarrotSP')
     navi_msg.valid = True
@@ -1282,9 +1288,7 @@ class CarrotManager:
           if self.sm.alive.get('carState', False) and self.sm.alive.get('modelV2', False):
             try:
               from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
-              # Pass the live road class: CarrotPlanner cannot see the navi packet,
-              # and without it the highway branch of vturn_speed() never ran.
-              planner = CarrotPlanner(self._unified, roadcate=self._carrot_serv.roadcate)
+              planner = CarrotPlanner(self._unified)
               vturn_speed = planner.carrot_curve_speed(self.sm)
             except Exception:
               pass
@@ -1296,12 +1300,21 @@ class CarrotManager:
           self._carrot_serv.update_navi(remote_ip, self.sm, self.pm, vturn_speed, coords, distances, route_speed)
           self._write_navi_debug()
 
-          # Broadcast every 2 seconds or when remote addr is set
-          if frame % 20 == 0 or remote_addr:
+          # Discovery cadence.  The LAN broadcast keeps its own fixed 2 s
+          # schedule and must never be replaced by the unicast to a remembered
+          # peer: the old `get_broadcast_address() if not remote_addr else
+          # remote_ip` let the first packet from ANY client flip the beacon to
+          # unicast-only, so a phone that had not talked to us yet could never
+          # find this device (measured on tizi: a 240 s listen on
+          # 0.0.0.0:7705 saw 0 packets while carrot_man emitted 9.7 unicast
+          # pkt/s -- SIGSTOP'ing the daemon dropped the rate to 0.17 pkt/s,
+          # so the traffic was provably ours and unicast).
+          send_broadcast = frame % 20 == 0
+          send_unicast = bool(remote_ip)
+          if send_broadcast or send_unicast:
             try:
-              self._broadcast_ip = self.get_broadcast_address() if not remote_addr else remote_ip
-              if not self._broadcast_ip:
-                self._broadcast_ip = "255.255.255.255"
+              if send_broadcast:
+                self._broadcast_ip = self.get_broadcast_address() or "255.255.255.255"
 
               # Get local IP
               ip_address = self.get_local_ip()
@@ -1311,16 +1324,17 @@ class CarrotManager:
 
               # Build and send message
               msg = self.make_send_message()
-              if self._broadcast_ip:
-                data = msg.encode('utf-8')
+              data = msg.encode('utf-8')
+              for dest in beacon_targets(self._broadcast_ip, remote_ip,
+                                         send_broadcast=send_broadcast, send_unicast=send_unicast):
                 try:
-                  sock.sendto(data, (self._broadcast_ip, self._broadcast_port))
+                  sock.sendto(data, (dest, self._broadcast_port))
                 except OSError as e:
                   import errno
                   if e.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ENETDOWN):
-                    cloudlog.warning(f"carrot_man: broadcast network unreachable ({e.errno})")
+                    cloudlog.warning(f"carrot_man: broadcast network unreachable ({e.errno}) -> {dest}")
                   else:
-                    cloudlog.error(f"carrot_man: broadcast error: {e}")
+                    cloudlog.error(f"carrot_man: broadcast error: {e} -> {dest}")
             except Exception as e:
               cloudlog.error(f"carrot_man: broadcast error: {e}")
 
@@ -1409,7 +1423,13 @@ class CarrotManager:
 
   def tick(self) -> None:
     self._enabled = self.params.get_bool("CarrotEnabled")
-    self._port = self.params.get("CarrotManUdpPort", return_default=True) or 0
+    # Desired port from params.  self._port must stay the port we are *actually*
+    # bound to (only _ensure_socket/_close_socket set it): assigning the desired
+    # value here made _ensure_socket() believe the socket was already on the new
+    # port, so a port change never took effect until the process restarted --
+    # while the discovery broadcast already advertised the new port, i.e. the
+    # phone was pointed at a port nobody was listening on.
+    want_port = self.params.get("CarrotManUdpPort", return_default=True) or 0
     self._start_web = self.params.get_bool("CarrotWebEnabled")
 
     self.sm.update(0)
@@ -1425,14 +1445,14 @@ class CarrotManager:
     # configured, even if CarrotEnabled is temporarily off.  The phone app
     # probes 7706 during startup / before enabling the feature, and closing
     # the socket makes the connection look "dropped".
-    if self._port <= 0:
+    if want_port <= 0:
       self._close_socket()
       self._reset_state()
       self._stop_web()
       self._is_running = False
       return
 
-    if not self._ensure_socket(self._port):
+    if not self._ensure_socket(want_port):
       return
 
     # Broadcast / ZMQ threads keep running so the phone can find us; rich
@@ -1450,14 +1470,6 @@ class CarrotManager:
 
     # Merge rich 7714 v2 navi state into CarrotServ when available.
     self._apply_carrot_navi_sp()
-
-    # Refresh the Amap blind-spot tuning cache. `update_param` throttles itself
-    # internally to every 100 frames. Without this call the cache kept its
-    # constructor defaults forever, so DisableBlindSpot / DynamicBlindRange /
-    # DynamicBlindDistance / SideRelDistTime / SidevRelDistTime were inert from
-    # both UIs. At their defaults the computed values equal those defaults, so
-    # this only makes the settings take effect.
-    self._amap_navi.update_param(self._unified)
 
     # Merge Amap direct LiDAR/camera blind-spot data into carState.
     self._amap_navi.update_navi_carstate(self.sm)
@@ -2062,16 +2074,6 @@ class CarrotManager:
       self._carrot_serv.raw_update("nSdiType", -1)
       self._carrot_serv.raw_update("nSdiSpeedLimit", 0)
       self._carrot_serv.raw_update("nSdiDist", 0)
-      # The block/section fields must be cleared with the rest. CarrotServ reads
-      # nSdiSection (carrot_serv.py:872) and nSdiBlockType/nSdiBlockDist
-      # (carrot_serv.py:797-798) to decide whether to brake, so leaving them stale
-      # keeps a previous block's distance alive and can trigger a phantom
-      # deceleration. The 7706 stream masks this by rebuilding `_raw` wholesale
-      # per packet, but with only 7714 v2 active nothing else overwrites them.
-      self._carrot_serv.raw_update("nSdiSection", -1)
-      self._carrot_serv.raw_update("nSdiBlockType", -1)
-      self._carrot_serv.raw_update("nSdiBlockSpeed", 0)
-      self._carrot_serv.raw_update("nSdiBlockDist", 0)
 
     # Secondary SDI is always forwarded so CarrotServ can use it when primary is inactive.
     if speed.secondary_sdi_present:
@@ -2086,12 +2088,6 @@ class CarrotManager:
       self._carrot_serv.raw_update("nSdiPlusType", -1)
       self._carrot_serv.raw_update("nSdiPlusSpeedLimit", 0)
       self._carrot_serv.raw_update("nSdiPlusDist", 0)
-      # See the primary SDI branch above: the block fields are braking inputs
-      # (carrot_serv.py:802-803) and must not outlive the SDI they belong to.
-      self._carrot_serv.raw_update("nSdiPlusSection", -1)
-      self._carrot_serv.raw_update("nSdiPlusBlockType", -1)
-      self._carrot_serv.raw_update("nSdiPlusBlockSpeed", 0)
-      self._carrot_serv.raw_update("nSdiPlusBlockDist", 0)
 
   def _apply_carrot_navi_vehicle(self, vehicle: _NaviVehicleControl) -> None:
     self._carrot_navi_vehicle_sequence = vehicle.sequence
@@ -2411,7 +2407,7 @@ class CarrotManager:
       debug["severity"] = severity
       debug["speedLimitKph"] = speed_limit_kph
       debug["trafficLight"] = traffic_light
-      self._merge_navi_debug(debug)
+      self.params.put(NAVI_DEBUG_PARAM, debug)
     except Exception as e:
       cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
 
@@ -2478,31 +2474,13 @@ class CarrotManager:
         "desiredSpeed": serv.desired_speed,
         "desiredSource": serv.desired_source,
       }
-      self._merge_navi_debug(debug)
-    except Exception as e:
-      cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
-
-  def _merge_navi_debug(self, updates: dict[str, Any]) -> None:
-    """Merge `updates` into the persisted CarrotNaviDebug snapshot.
-
-    Two writers target this param: the event writer (`_write_navi_debug_param`,
-    which sets `summary`/`title`/`lines`) and the 10 Hz snapshot writer
-    (`_write_navi_debug`, which sets `activeSource`/`roadLimit`/...). A plain
-    put() makes whichever ran last erase the other's keys - the snapshot fires
-    every ~100 ms, so the event keys never survived and the webui debug viewer
-    (carrot_navi_api.py reads `debug["summary"]`) always rendered empty.
-    Merging lets both writers coexist.
-    """
-    try:
-      existing = self.params.get(NAVI_DEBUG_PARAM)
-      # Params.get() decodes a JSON param to a dict, but tolerate a raw str/bytes
-      # too: an unset key reads back as "" and returning {} on an unexpected shape
-      # would erase the very keys this helper exists to preserve.
-      if isinstance(existing, (str, bytes, bytearray)):
-        existing = json.loads(existing) if len(existing) else {}
-      merged: dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
-      merged.update(updates)
-      self.params.put(NAVI_DEBUG_PARAM, merged)
+      # Params.put() writes a cross-process entry on every call; at the 10 Hz
+      # beacon cadence that is pure churn for a payload which, while parked,
+      # only changes once per second (``receivedAt`` has 1 s resolution).
+      # Skip identical payloads: still 10 Hz onroad, ~1 Hz while parked.
+      if debug != getattr(self, "_navi_debug_last", None):
+        self._navi_debug_last = debug
+        self.params.put(NAVI_DEBUG_PARAM, debug)
     except Exception as e:
       cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
 
@@ -3039,17 +3017,71 @@ class CarrotManager:
       cloudlog.error(f"carrot_man: send_tmux error: {e}")
 
 
-def _thread_excepthook(args):
-  # Catch unhandled exceptions in any daemon thread so a crash in the navi
-  # TCP/HTTP, ZMQ, broadcast or route servers is logged to cloudlog instead of
-  # silently killing the thread and leaving carrot_man half-intact.  This does
-  # NOT terminate the process nor the daemon threads -- it only surface the
-  # root cause so the next "exits after CP navigation" report produces a real
-  # traceback instead of silence.
-  cloudlog.error(
-    f"carrot_man: unhandled exception in thread {args.thread.name!r}: "
-    f"{''.join(args.exc_traceback) if args.exc_traceback else args.exc_value}"
-  )
+# ---- crash forensics + liveness -------------------------------------------------------------
+# 2026-09-20 13:30: this process died with SIGBUS and left nothing to diagnose with: the device
+# runs with `core limit 0` and apport's base64 CoreDump was a 19 byte empty shell, while the
+# last log line was 17 minutes before the death. faulthandler dumps every thread's Python stack
+# on a fatal signal, and the watchdog turns "loop went quiet" into a log line -- so the next
+# crash leaves evidence instead of a silent gap.
+FAULT_LOG_PATH = "/data/log/carrot_man_faults.log"
+TICK_STALL_WARN_S = 120.0
+WATCHDOG_HEARTBEAT_S = 600.0
+
+_last_tick = [0.0]
+
+
+CORE_LIMIT_BYTES = 256 * 1024 * 1024
+
+
+def _raise_core_limit() -> None:
+  """apport dumps carried an EMPTY CoreDump (19 byte base64 shell) because the manager hands the
+  daemon `core limit 0`. The hard limit is `unlimited`, so the process is allowed to raise its own
+  soft limit -- do that, and the next fatal signal leaves a real core (apport-unpack + gdb) instead
+  of ProcMaps-only forensics."""
+  try:
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_CORE)
+    if soft == resource.RLIM_INFINITY:
+      return
+    want = CORE_LIMIT_BYTES if hard == resource.RLIM_INFINITY else min(CORE_LIMIT_BYTES, hard)
+    if want > soft:
+      resource.setrlimit(resource.RLIMIT_CORE, (want, hard))
+      cloudlog.info(f"carrot_man: core limit raised {soft} -> {want} bytes")
+  except Exception as e:
+    # never let diagnostics take the daemon down
+    cloudlog.error(f"carrot_man: core limit setup failed: {e}")
+
+
+def _enable_crash_logging() -> None:
+  _raise_core_limit()
+  try:
+    os.makedirs(os.path.dirname(FAULT_LOG_PATH), exist_ok=True)
+    fault_file = open(FAULT_LOG_PATH, "a", buffering=1)
+    faulthandler.enable(file=fault_file, all_threads=True)
+    cloudlog.info(f"carrot_man: faulthandler enabled -> {FAULT_LOG_PATH}")
+  except Exception as e:
+    # never let diagnostics take the daemon down
+    cloudlog.error(f"carrot_man: faulthandler setup failed: {e}")
+
+
+def _watchdog_thread() -> None:
+  last_warn = 0.0
+  last_beat = time.monotonic()
+  while True:
+    time.sleep(30.0)
+    now = time.monotonic()
+    last = _last_tick[0]
+    if last and (now - last) > TICK_STALL_WARN_S and (now - last_warn) > TICK_STALL_WARN_S:
+      last_warn = now
+      cloudlog.warning(f"carrot_man: main loop stalled {now - last:.0f}s (pid {os.getpid()})")
+    if (now - last_beat) >= WATCHDOG_HEARTBEAT_S:
+      last_beat = now
+      age = (now - last) if last else -1.0
+      cloudlog.info(f"carrot_man: heartbeat pid={os.getpid()} loop_age={age:.1f}s")
+
+
+def _start_watchdog() -> None:
+  threading.Thread(target=_watchdog_thread, name="carrot_man_watchdog", daemon=True).start()
 
 
 def main_thread():
@@ -3057,31 +3089,36 @@ def main_thread():
   set_core_affinity([0, 1, 2, 3])
   os.nice(5)
 
-  # Any unhandled exception inside a daemon thread is logged (see above) rather
-  # than silently killing that thread, so navigation-triggered crashes leave an
-  # auditable cloudlog entry.
-  threading.excepthook = _thread_excepthook
-
   manager = CarrotManager()
   rk = Ratekeeper(DEFAULT_RATE, print_delay_threshold=None)
 
   while True:
     try:
       manager.tick()
-    except BaseException as e:
-      # Catch BaseException (covers SystemExit / KeyboardInterrupt / GeneratorExit
-      # in addition to Exception) so a single tick() failure can never silently
-      # take down the whole daemon.  Saving a full stack via exception() makes the
-      # root cause greppable in swaglog instead of the process vanishing without
-      # a trace.  The ONLY exit path is an explicit manager shutdown signal.
-      if isinstance(e, (KeyboardInterrupt, SystemExit)):
-        raise
+    except Exception as e:
+      # Never let a single tick() exception kill the daemon; log it and keep
+      # the main loop alive so threads (UDP listener, broadcast, ZMQ, navi
+      # servers) stay bound and manager does not mark carrot_man as dead.
       cloudlog.exception(f"carrot_man: tick() error: {e}")
+    _last_tick[0] = time.monotonic()
     rk.keep_time()
 
 
 def main():
-  main_thread()
+  _enable_crash_logging()
+  _start_watchdog()
+  try:
+    main_thread()
+  except KeyboardInterrupt:
+    # normal shutdown path (manager stops us with SIGINT); not an error
+    raise
+  except BaseException:
+    # An exit-code-1 death is otherwise invisible: manager records only the exit
+    # code and the traceback goes to our stderr, which is discarded. Log it so the
+    # next post-mortem has the reason. Fatal-signal crashes (SIGBUS/SIGSEGV) are
+    # covered separately by faulthandler -> FAULT_LOG_PATH.
+    cloudlog.exception("carrot_man: fatal error escaped main thread")
+    raise
 
 
 if __name__ == "__main__":
