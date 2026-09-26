@@ -114,11 +114,15 @@ def load_translations(path) -> tuple[dict[str, str], dict[str, list[str]]]:
       continue
 
     if line.startswith('msgid_plural '):
+      # A new msgid_plural ends the previous entry (po may not separate with blank lines).
+      finish()
       msgid_plural = _parse_quoted(line[len('msgid_plural '):])
       field = 'msgid_plural'
       continue
 
     if line.startswith('msgid '):
+      # A new msgid ends the previous entry (po may not separate with blank lines).
+      finish()
       msgid = _parse_quoted(line[len('msgid '):])
       field = 'msgid'
       continue

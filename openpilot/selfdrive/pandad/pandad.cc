@@ -64,6 +64,13 @@ Panda *connect(std::string serial="", uint32_t index=0) {
     panda->set_can_fd_auto(i, true);
   }
 
+  bool is_supported_panda = std::find(SUPPORTED_PANDA_TYPES.begin(), SUPPORTED_PANDA_TYPES.end(), panda->hw_type) != SUPPORTED_PANDA_TYPES.end();
+
+  if (!is_supported_panda) {
+    LOGW("panda %s is not supported (hw_type: %i), skipping firmware check...", panda->hw_serial().c_str(), static_cast<uint16_t>(panda->hw_type));
+    return panda.release();
+  }
+
   if (!panda->up_to_date() && !getenv("BOARDD_SKIP_FW_CHECK")) {
     throw std::runtime_error("Panda firmware out of date. Run pandad.py to update.");
   }
@@ -131,28 +138,33 @@ void fill_panda_state(cereal::PandaState::Builder &ps, cereal::PandaState::Panda
   ps.setUptime(health.uptime_pkt);
   ps.setSafetyTxBlocked(health.safety_tx_blocked_pkt);
   ps.setSafetyRxInvalid(health.safety_rx_invalid_pkt);
-  ps.setIgnitionLine((health.flags_pkt & HEALTH_FLAG_IGNITION_LINE) != 0U);
-  ps.setIgnitionCan((health.flags_pkt & HEALTH_FLAG_IGNITION_CAN) != 0U);
-  ps.setControlsAllowed((health.flags_pkt & HEALTH_FLAG_CONTROLS_ALLOWED) != 0U);
+  ps.setIgnitionLine(health.ignition_line_pkt);
+  ps.setIgnitionCan(health.ignition_can_pkt);
+  ps.setControlsAllowed(health.controls_allowed_pkt);
   ps.setTxBufferOverflow(health.tx_buffer_overflow_pkt);
   ps.setRxBufferOverflow(health.rx_buffer_overflow_pkt);
   ps.setPandaType(hw_type);
   ps.setSafetyModel(cereal::CarParams::SafetyModel(health.safety_mode_pkt));
   ps.setSafetyParam(health.safety_param_pkt);
   ps.setFaultStatus(cereal::PandaState::FaultStatus(health.fault_status_pkt));
-  ps.setPowerSaveEnabled((health.flags_pkt & HEALTH_FLAG_POWER_SAVE_ENABLED) != 0U);
-  ps.setHeartbeatLost((health.flags_pkt & HEALTH_FLAG_HEARTBEAT_LOST) != 0U);
+  ps.setPowerSaveEnabled((bool)(health.power_save_enabled_pkt));
+  ps.setHeartbeatLost((bool)(health.heartbeat_lost_pkt));
   ps.setAlternativeExperience(health.alternative_experience_pkt);
   ps.setHarnessStatus(cereal::PandaState::HarnessStatus(health.car_harness_status_pkt));
-  ps.setInterruptLoad(health.interrupt_load_pkt / 255.0f);
+  ps.setInterruptLoad(health.interrupt_load_pkt);
   ps.setFanPower(health.fan_power);
-  ps.setSafetyRxChecksInvalid((health.flags_pkt & HEALTH_FLAG_SAFETY_RX_CHECKS_INVALID) != 0U);
+  ps.setSafetyRxChecksInvalid((bool)(health.safety_rx_checks_invalid_pkt));
   ps.setSpiErrorCount(health.spi_error_count_pkt);
   ps.setSbu1Voltage(health.sbu1_voltage_mV / 1000.0f);
   ps.setSbu2Voltage(health.sbu2_voltage_mV / 1000.0f);
   ps.setSoundOutputLevel(health.sound_output_level_pkt);
-  ps.setControlsAllowedLateral(health.controls_allowed_sp_pkt & 1);
-  ps.setControlsAllowedLongitudinal((health.controls_allowed_sp_pkt >> 1) & 1);
+  // macan-long-0815-fix: panda 子模块为 7d703710a，health.h 有独立的
+  // controls_allowed_lateral_pkt / controls_allowed_longitudinal_pkt（固件 main_comms.h 已正确组装：
+  // lateral = controls_allowed || controls_allowed_lateral，longitudinal = controls_allowed）。
+  // 旧版误用单一 controls_allowed_pkt 冒充横纵——MADS 单独横向激活时 panda 已放行横向但
+  // pandad 上报 False → mads.py lateral_mismatch_counter 200帧 → controlsMismatchLateral 报警。
+  ps.setControlsAllowedLateral(health.controls_allowed_lateral_pkt);
+  ps.setControlsAllowedLongitudinal(health.controls_allowed_longitudinal_pkt);
 }
 
 void fill_panda_can_state(cereal::PandaState::PandaCanState::Builder &cs, const can_health_t &can_health) {
@@ -221,17 +233,17 @@ std::optional<bool> send_panda_states(PubMaster *pm, const std::vector<Panda *> 
     pandaCanStates.push_back(can_health);
 
     if (spoofing_started) {
-      health.flags_pkt |= HEALTH_FLAG_IGNITION_LINE;
+      health.ignition_line_pkt = 1;
     }
 
     // on comma three setups with a red panda, the dos can
     // get false positive ignitions due to the harness box
     // without a harness connector, so ignore it
     if (red_panda_comma_three && (panda->hw_type == cereal::PandaState::PandaType::DOS)) {
-      health.flags_pkt &= ~HEALTH_FLAG_IGNITION_LINE;
+      health.ignition_line_pkt = 0;
     }
 
-    ignition_local |= ((health.flags_pkt & (HEALTH_FLAG_IGNITION_LINE | HEALTH_FLAG_IGNITION_CAN)) != 0U);
+    ignition_local |= ((health.ignition_line_pkt != 0) || (health.ignition_can_pkt != 0));
 
     pandaStates.push_back(health);
   }
@@ -246,7 +258,7 @@ std::optional<bool> send_panda_states(PubMaster *pm, const std::vector<Panda *> 
     }
 
     bool power_save_desired = !ignition_local;
-    if (((health.flags_pkt & HEALTH_FLAG_POWER_SAVE_ENABLED) != 0U) != power_save_desired) {
+    if (health.power_save_enabled_pkt != power_save_desired) {
       panda->set_power_saving(power_save_desired);
     }
 

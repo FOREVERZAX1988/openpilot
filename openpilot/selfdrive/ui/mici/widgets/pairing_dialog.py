@@ -3,6 +3,7 @@ import time
 
 from openpilot.common.api import Api
 from openpilot.common.qrcode import make_texture
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state

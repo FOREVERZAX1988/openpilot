@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 #include <vector>

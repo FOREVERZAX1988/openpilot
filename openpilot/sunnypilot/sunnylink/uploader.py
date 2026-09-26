@@ -23,6 +23,24 @@ NetworkType = log.DeviceState.NetworkType
 UPLOAD_ATTR_NAME = 'user.sunny.upload'
 UPLOAD_ATTR_VALUE = b'1'
 
+# Statuses that mean 'the server will never accept this file' (bad request / forbidden / gone).
+# Retrying them just burns a request every backoff window and re-logs an ERROR forever.
+# 400 is the per-path validator: sunnylink answers {"detail":"Invalid file extension: crash/..."}
+# for a crash dump whose name carries no extension. Such a file lives in immediate_folders
+# ('crash/', 'boot/'), so next_file_to_upload() hands it back on *every* pass and it starves
+# the whole queue behind it (one ERROR every backoff window, nothing else ever uploads).
+PERMANENT_REJECT_CODES = (400, 403, 404)
+
+# Permission-type rejects mean 'this account may not upload at all': sunnylink answers 403
+# {"detail":"Upload only allowed for sponsors temporarily."} for every file of a non-sponsor
+# account. Treating each file as handled keeps the queue draining, but the process still wakes
+# up every backoff window just to be told no again. After this many consecutive permission
+# rejects we conclude the entitlement is not coming and switch EnableSunnylinkUploader off, so
+# the manager stops the process instead of queueing forever. Re-enable it from the UI once the
+# account actually has upload access.
+PERMISSION_REJECT_CODES = (403,)
+MAX_PERMISSION_REJECTS = 10
+
 MAX_UPLOAD_SIZES = {
   "qlog": 25*1e6,  # can't be too restrictive here since we use qlogs to find
   # bugs, including ones that can cause massive log sizes
@@ -86,6 +104,9 @@ class Uploader:
     # stats for last successfully uploaded file
     self.last_filename = ""
 
+    # consecutive permission (403) rejects -- see MAX_PERMISSION_REJECTS
+    self.permission_rejects = 0
+
     self.immediate_folders = ["crash/", "boot/"]
     self.immediate_priority = {"qlog": 0, "qlog.zst": 0, "qcamera.ts": 1}
 
@@ -148,7 +169,9 @@ class Uploader:
       path=key,
       access_token=self.api.get_token(),
     )
-    if url_resp.status_code == 412:
+    if url_resp.status_code != 200:
+      # Non-200 (403 sponsor-only / 401 / 429 ...) has no 'url' key; return the raw
+      # response so upload() logs the real status/body instead of KeyError('url').
       return url_resp
 
     url_resp_json = json.loads(url_resp.text)
@@ -170,6 +193,7 @@ class Uploader:
         stream.close()
 
   def upload(self, name: str, key: str, fn: str, network_type: int, metered: bool) -> bool:
+    self.last_status_code = None
     try:
       sz = os.path.getsize(fn)
     except OSError:
@@ -194,6 +218,7 @@ class Uploader:
       except Exception as e:
         last_exc = (e, traceback.format_exc())
 
+      self.last_status_code = stat.status_code if stat is not None else None
       if stat is not None and stat.status_code in (200, 201, 412):
         self.last_filename = fn
         dt = time.monotonic() - start_time
@@ -205,7 +230,27 @@ class Uploader:
           cloudlog.event("upload_success", key=key, fn=fn, sz=sz, content_length=content_length,
                          network_type=network_type, metered=metered, speed=speed)
         success = True
-      elif stat is not None:  # 401, 403... Not sure why they were up to begin with
+        self.permission_rejects = 0
+      elif stat is not None and stat.status_code in PERMANENT_REJECT_CODES:
+        # The server refuses this file outright, so retrying never helps: sunnylink answers
+        # 403 {"detail":"Upload only allowed for sponsors temporarily."} for every upload from
+        # a non-sponsor account, which pinned this uploader on the same boot/*.zst for hours
+        # (one ERROR per backoff window, and the rest of the queue never drained). Tag it as
+        # handled so it is skipped, log it once as a distinct event, and move on.
+        self.last_filename = fn
+        success = True
+        detail = stat.content[:512].decode("utf-8", errors="replace") if hasattr(stat, "content") else ""
+        # NOTE: the kwarg must not be called `error` -- swaglog derives the log level from
+        # kwargs, so a deliberate skip was logged at ERROR level and dominated the device's
+        # error report (111 of 195 ERR/WARN lines in one 4 h window). `detail` keeps the text
+        # but logs it at INFO.
+        cloudlog.event("upload_skipped_rejected", stat=stat, key=key, fn=fn, sz=sz,
+                       network_type=network_type, metered=metered, detail=detail)
+        if stat.status_code in PERMISSION_REJECT_CODES:
+          self.permission_rejects += 1
+          if self.permission_rejects >= MAX_PERMISSION_REJECTS:
+            self.disable_uploader_no_permission(stat)
+      elif stat is not None:  # 401: auth may recover once the account/token is fixed
         success = False
         cloudlog.event("upload_failed with content", stat=stat, exc=last_exc, key=key, fn=fn, sz=sz, network_type=network_type, metered=metered,
                        error=stat.content.decode("utf-8"))
@@ -222,6 +267,20 @@ class Uploader:
 
     return success
 
+
+  def disable_uploader_no_permission(self, stat) -> None:
+    """No upload entitlement (403 for everything): stop the uploader instead of retrying.
+
+    Logged once; then EnableSunnylinkUploader=False. The manager's process predicate
+    (use_sunnylink_uploader) reads that param, so the uploader process is simply not started
+    any more -- no queue churn, no repeated cloud round trips. Nothing else about Sunnylink is
+    touched, and the user can re-enable the feature from the UI at any time.
+    """
+    cloudlog.event("uploader_disabled_no_permission", count=self.permission_rejects, stat=stat)
+    try:
+      self.params.put_bool("EnableSunnylinkUploader", False, block=True)
+    except Exception:
+      cloudlog.exception("uploader: failed to disable EnableSunnylinkUploader")
 
   def step(self, network_type: int, metered: bool) -> bool | None:
     d = self.next_file_to_upload(metered)
@@ -261,6 +320,11 @@ def main(exit_event: threading.Event | None = None) -> None:
   backoff = 0.1
   while not exit_event.is_set():
     sm.update(0)
+    if not params.get_bool("EnableSunnylinkUploader"):
+      # switched off (by us after repeated 403s, or by the user): exit cleanly so the manager
+      # drops the process instead of leaving a worker running with nothing to do.
+      cloudlog.info("uploader disabled; exiting")
+      break
     offroad = params.get_bool("IsOffroad")
     network_type = sm['deviceState'].networkType if not force_wifi else NetworkType.wifi
     if network_type == NetworkType.none:
@@ -274,8 +338,11 @@ def main(exit_event: threading.Event | None = None) -> None:
     elif success:
       backoff = 0.1
     else:
-      cloudlog.info("upload backoff %r", backoff)
-      backoff = min(backoff*2, 120)
+      if uploader.last_status_code == 401:
+        backoff = 3600  # auth: recoverable (re-login / new token), so don't hammer either
+      else:
+        backoff = min(backoff*2, 120)
+      cloudlog.info("upload backoff %r (status %r)", backoff, uploader.last_status_code)
     if allow_sleep:
       time.sleep(backoff + random.uniform(0, backoff))
 

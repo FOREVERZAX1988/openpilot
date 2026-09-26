@@ -694,4 +694,69 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SoftwareMenu", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"SoundLanguageSetting", {PERSISTENT | BACKUP, STRING, "auto"}},
     {"UseWideCamera", {PERSISTENT | BACKUP, BOOL, "1"}},
+
+    {"ATCMaxSpeedKph", {PERSISTENT | BACKUP, FLOAT, "35.0"}},               // auto-turn-control speed floor cap
+    {"CarrotSectionSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},        // section/avg-SDI speed enforcement
+    {"CarrotRoadWidthTurnEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},       // use nTBTNextRoadWidth for fork turn logic
+    {"CarrotTimeSyncEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // sync device clock to carrot epochTime
+    {"ExtBlinkerCtrlTest", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"BlinkerMode", {PERSISTENT | BACKUP, INT, "1"}},
+    {"LaneStabTime", {PERSISTENT | BACKUP, INT, "50"}},
+    {"ContinuousLaneChangeCnt", {PERSISTENT | BACKUP, INT, "4"}},
+    {"ContinuousLaneChangeInterval", {PERSISTENT | BACKUP, INT, "2"}},
+    {"AutoTurnLeft", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"AutoEnTurnNewLaneTimeH", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoEnTurnNewLaneTime", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DynamicTFollow", {PERSISTENT | BACKUP, FLOAT, "0"}},
+    {"StoppingAccel", {PERSISTENT | BACKUP, INT, "-50"}},
+    {"CarrotCruiseAtcDecel", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"CarrotCruiseDecel", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"LaneChangeBsd", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaDown", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaDownLC", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaUp", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaUpLC", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerMax", {PERSISTENT | BACKUP, INT, "0"}},
+    {"VEgoStopping", {PERSISTENT | BACKUP, INT, "50"}},
+    {"AChangeCostStarting", {PERSISTENT | BACKUP, INT, "10"}},
+    {"AdjustLaneOffset", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CanfdDebug", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CanfdHDA2", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotTireTrajectory", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest1", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest2", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest3", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DisableMinSteerSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"EnableCornerRadar", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HDPuse", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HardwareC3xLite", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HyundaiCameraSCC", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"IsLdwsCar", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MaxAngleFrames", {PERSISTENT | BACKUP, INT, "89"}},
+    {"MaxTimeOffroadMin", {PERSISTENT | BACKUP, INT, "60"}},
+    {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
+    {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1.1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
+    {"UsbGpuActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"UsbGpuLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"ModelManager_DownloadIndex", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, INT}},
+    {"ModelManager_LastSyncTime_USBGPU", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
+    {"ModelManager_ModelsCache_USBGPU", {PERSISTENT | BACKUP, JSON}},
+    // macan-long fork additions (must survive every upstream merge).
+    {"MacanStartStop", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 起步跟停（视觉决定起步，OP 代发 RESUME）
+    {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "5"}},  // Macan 起步安全距离（米；0=Off/V1纯意图起步，3~10=需雷达ab或视觉>阈值，拥堵防加塞）
+    {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）
+    {"MacanSlopeCompUnlimited", {PERSISTENT | BACKUP, BOOL, "0"}}, // 坡度补偿-放开原厂力矩限制（选项2）
+    {"MacanAccelLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},        // Macan 加速度上限（m/s²，0=原厂曲线；4f实锤 aTarget>1.0 占20%激活时间）
+    {"MacanJerkLimit", {PERSISTENT | BACKUP, FLOAT, "0"}},
+    {"MacanJerkLimitEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 加速度变化率限制总开关（0=关，功能不生效）        // Macan 加速度变化率限幅（m/s³，0=关闭；削 aTarget 过冲→减猛，0051 vs 原厂 0.48 vs 0.35）
+    {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
+    {"MacanAccelDeadzoneEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan aTarget死区总开关（0=关，数值保留但不生效）
+    {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
+    {"MacanCruiseCoastEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 巡航滑行带总开关（0=关；005f/0060 喘息振荡根因修复，默认关）
+    {"MacanCruiseCoastBand", {PERSISTENT | BACKUP, FLOAT, "0.4"}}, // Macan 巡航滑行带宽度（m/s，±带内滑行输出0；0.4≈1.4km/h）
+    {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MacanVerzBridge", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan verz桥主闸（开=1.25%百分比渐进缓冲缓急刹/治喘息；关=verz直通一帧到位。深刹<=-1.5与原厂刹车请求无论开关直通保安全）
+    {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+    {"MacanFusionMode", {PERSISTENT | BACKUP, BOOL, "1"}},            // Macan 融合控制模式（1=原厂ACC与OP纵向融合控制(当前,恒开)；0=纯OP纵向(后续开发,暂不可设)）       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
 };

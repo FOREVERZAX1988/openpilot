@@ -33,6 +33,7 @@ from typing import Any
 
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.time_helpers import system_time_valid
 from openpilot.sunnypilot.carrot.config import UnifiedParams
 
 
@@ -103,6 +104,14 @@ NAV_TYPE_MAPPING: dict[int, tuple[str, str, int]] = {
   154: ("", "", 6),
   249: ("", "", 6),
 }
+
+# Curve-speed lookup table (reciprocal radius [1/m] -> km/h).
+# Used when the phone navi sends a curvature-aware speed advisory.
+V_CURVE_LOOKUP_BP: tuple[float, ...] = (
+  0.0, 1 / 800, 1 / 670, 1 / 560, 1 / 440, 1 / 360, 1 / 265, 1 / 190, 1 / 135,
+  1 / 85, 1 / 55, 1 / 30, 1 / 25,
+)
+V_CURVE_LOOKUP_VALS: tuple[float, ...] = (300, 150, 120, 110, 100, 90, 80, 70, 60, 50, 40, 15, 5)
 
 # SDI (Speed Limit Camera) type categories that mean "real" speed cameras.
 SDI_SPEED_CAMERA_TYPES: frozenset[int] = frozenset({0, 1, 2, 3, 4, 7, 8, 75, 76})
@@ -241,16 +250,19 @@ class CarrotServ:
     self._phone_gps_frame: int = 0
     self._last_update_gps_time_navi: float = 0.0
     self._last_update_gps_time_phone: float = 0.0
-    # Heading of the phone/navi GPS, in degrees. Written by update_raw from the
-    # 7706 packet and refreshed from the cached raw packet in derive(), so the
-    # 7714 v2 vehicle stream feeds it too. Read by carrot_navi_route() to rotate
-    # the route polyline into the car frame.
-    self._navi_gps_angle: float = 0.0
+    self._last_calculate_gps_time: float = 0.0
+    self._bearing_measured: float = 0.0
+    self._diff_angle_count: int = 0
+    self._bearing_offset: float = 0.0
 
     # Navi speed-control tuning (from UnifiedParams; safe defaults).
     self.auto_navi_speed_decel_rate: float = 0.8
     self.auto_navi_speed_ctrl_end: float = 7.0
 
+    # Path tracking (used by callers that need curvature / bearing).
+    self._path: deque[tuple[float, float]] = deque(maxlen=512)
+    self._bearing: float = 0.0
+    self._bearing_offset: float = 0.0
 
     # Traffic light history (2 seconds at 10 Hz).
     self._traffic_history: deque[int] = deque(maxlen=20)
@@ -359,9 +371,6 @@ class CarrotServ:
     # Vehicle CAN speed arbitration tuning (safe defaults; update_params()
     # overwrites these from params when it runs).
     self.vehicle_speed_camera_control_mode: int = 0
-    # Seconds used to synthesise a camera distance when the car sends only an
-    # enforcement speed. The param stores 0.1 s units; 6.0 matches its default 60.
-    self.vehicle_speed_camera_distance_time: float = 6.0
     self.vehicle_navi_can_control: int = 0
     self.vehicle_navi_school_zone_control: bool = False
     self.auto_navi_speed_bump_end_distance: float = 0.0
@@ -430,13 +439,10 @@ class CarrotServ:
       "nGoPosDist": _safe_int(msg.get("nGoPosDist"), 0),
       "nGoPosTime": _safe_int(msg.get("nGoPosTime"), 0),
       "szPosRoadName": _safe_str(msg.get("szPosRoadName"), ""),
-      # Carried through from the packet: derive() reads these to populate
-      # vp_pos_point_*, which carrot_navi_route() uses to locate the car on the
-      # route. Hardcoding 0.0 here left the route anchored at (0, 0).
-      "vpPosPointLat": _safe_float(msg.get("vpPosPointLat"), 0.0),
-      "vpPosPointLon": _safe_float(msg.get("vpPosPointLon"), 0.0),
-      "nPosAngle": _safe_float(msg.get("nPosAngle"), 0.0),
-      "nPosSpeed": _safe_float(msg.get("nPosSpeed"), 0.0),
+      "vpPosPointLat": 0.0,
+      "vpPosPointLon": 0.0,
+      "nPosAngle": 0.0,
+      "nPosSpeed": 0.0,
       "carrotCmdIndex": seq,
       "carrotCmd": _safe_str(msg.get("carrotCmd"), ""),
       "carrotArg": _safe_str(msg.get("carrotArg"), ""),
@@ -450,25 +456,6 @@ class CarrotServ:
       "goalPosX": _safe_float(msg.get("goalPosX"), 0.0),
       "goalPosY": _safe_float(msg.get("goalPosY"), 0.0),
       "szGoalName": _safe_str(msg.get("szGoalName"), ""),
-      # Service area / toll gate hints (App §2.3 SAPA_* group, KEY_TYPE 10001).
-      # SAPA_TYPE: 0=service/parking area, 1=toll gate, 2=checkpoint.
-      "sapaName": _safe_str(msg.get("sapaName"), ""),
-      "sapaDist": _safe_int(msg.get("sapaDist"), 0),   # -1 = invalid
-      "sapaType": _safe_int(msg.get("sapaType"), 0),
-      "sapaCnt": _safe_int(msg.get("sapaCnt"), 0),
-      # TMC live traffic congestion (App §2.5, KEY_TYPE 13011). Overall status
-      # is a scalar; per-segment statuses/distances are packed into compact
-      # JSON strings so the array survives pycapnp without per-element List
-      # management. Consumers (webui / OP assistant) json.loads() them.
-      "tmcTotalDistance": _safe_int(msg.get("tmcTotalDistance"), 0),
-      "tmcResidualDistance": _safe_int(msg.get("tmcResidualDistance"), 0),
-      "tmcSegmentCount": _safe_int(msg.get("tmcSegmentCount"), 0),
-      "tmcOverallStatus": _safe_int(msg.get("tmcOverallStatus"), 0),
-      "tmcSegmentStatuses": _safe_str(msg.get("tmcSegmentStatuses"), ""),
-      "tmcSegmentDistances": _safe_str(msg.get("tmcSegmentDistances"), ""),
-      # Lane guidance arrow codes (App §2.2 navLaneGuide / navLaneGuideCnt).
-      "navLaneGuide": _safe_str(msg.get("navLaneGuide"), ""),
-      "navLaneGuideCnt": _safe_int(msg.get("navLaneGuideCnt"), 0),
     }
 
     if "carrotCmd" in msg:
@@ -481,23 +468,11 @@ class CarrotServ:
     # 7706 navi GPS is authoritative while it is fresh.
     lat = _safe_float(msg.get("vpPosPointLat"), 0.0)
     lon = _safe_float(msg.get("vpPosPointLon"), 0.0)
-    navi_gps_present = -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0 and (lat != 0.0 or lon != 0.0)
-    if navi_gps_present:
+    if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0 and (lat != 0.0 or lon != 0.0):
       self._navi_gps_lat = lat
       self._navi_gps_lon = lon
       self._navi_gps_angle = _safe_float(msg.get("nPosAngle"), 0.0) % 360.0
       self._last_update_gps_time_navi = time.monotonic()
-    # Phone GPS fallback (App field list §1.4): when the navi block has not
-    # refreshed its fix for >3 s, fall back to the standalone phone GPS block so
-    # `vp_pos_point_*` / heading do not go stale. Without this, an app that only
-    # sends `latitude`/`longitude` leaves the route anchored at (0, 0), which
-    # silently degrades the route-curvature speed chain (TurnSpeedControlMode
-    # 2/3) to its fixed default. Purely a data-layer fallback: it fills the same
-    # `_raw` keys the navi block writes, so no new control entry point appears.
-    elif self._phone_gps_is_usable():
-      self._raw["vpPosPointLat"] = self._phone_gps_lat
-      self._raw["vpPosPointLon"] = self._phone_gps_lon
-      self._raw["nPosAngle"] = self._phone_gps_heading
     # Periodic system time sync from the phone's epochTime/timezone.
     if "epochTime" in msg and seq % 60 == 0:
       self._maybe_sync_system_time(_safe_int(msg.get("epochTime"), 0),
@@ -534,38 +509,8 @@ class CarrotServ:
         self._phone_gps_lon = lon
         self._phone_gps_heading = heading % 360.0
         self._phone_gps_accuracy = accuracy
-        # The freshness timestamp used to be set only by the (unused) GPS
-        # fusion step, so gps_source always reported the phone as stale.
-        self._last_update_gps_time_phone = time.monotonic()
         if accuracy < 15.0:
           self._phone_gps_frame += 1
-
-  # The navi GPS block is considered stale after this long without a refresh,
-  # at which point the standalone phone GPS block takes over (App field list
-  # §1.4). Matches the window used by the `gps_source` property.
-  _NAVI_GPS_FRESH_SEC = 3.0
-  # Phone fixes worse than this are not trusted as a fallback.
-  _PHONE_GPS_MAX_ACCURACY_M = 15.0
-
-  def _phone_gps_is_usable(self) -> bool:
-    """True when the standalone phone GPS block can stand in for a stale navi fix.
-
-    Guards (all must hold):
-      * the navi block has not refreshed within ``_NAVI_GPS_FRESH_SEC``;
-      * the phone fix itself is fresh (same window);
-      * the phone fix has a plausible accuracy;
-      * the phone coordinates are non-zero and in range.
-    """
-    now = time.monotonic()
-    if (now - self._last_update_gps_time_navi) <= self._NAVI_GPS_FRESH_SEC:
-      return False
-    if (now - self._last_update_gps_time_phone) > self._NAVI_GPS_FRESH_SEC:
-      return False
-    if self._phone_gps_accuracy >= self._PHONE_GPS_MAX_ACCURACY_M:
-      return False
-    if not (-90.0 <= self._phone_gps_lat <= 90.0 and -180.0 <= self._phone_gps_lon <= 180.0):
-      return False
-    return self._phone_gps_lat != 0.0 or self._phone_gps_lon != 0.0
 
   # System clock is only nudged when drift is within this window and the
   # target year is plausible. Guardrails prevent a malformed phone timestamp
@@ -574,21 +519,38 @@ class CarrotServ:
   _TIME_SYNC_MAX_YEAR = 2035
 
   def _maybe_sync_system_time(self, epoch_time: int, timezone: str) -> None:
-    """Opt-in system clock/timezone sync from the phone's 7706/7714 epochTime.
+    """Last-resort system clock sync from the phone's 7706/7714 epochTime.
 
-    Guarded by the ``CarrotNtpTimeSync`` killswitch (default OFF) because
-    modifying the system clock on a running car is dangerous and sunnypilot
-    already keeps time via NTP. When enabled, the clock is only nudged when:
-      * the killswitch param is on, AND
+    Single-authority design:
+      * the *instant* is owned by system NTP (AGNOS) + ``timed.py`` (GPS);
+      * the *timezone* is owned solely by the AI GPS/IP auto-timezone loop
+        (``ai.infra.timezone.apply_os_timezone``).
+
+    The phone packet is therefore only a **fallback** for the instant, used when
+    the device clock is plainly invalid, and it never writes the timezone (two
+    writers racing on /data/etc/localtime is exactly what we want to avoid).
+
+    The clock is nudged only when ALL of the following hold:
+      * the killswitch param is ON (``CarrotNtpTimeSync``, or the legacy
+        duplicate ``CarrotTimeSyncEnabled`` treated as an alias), AND
+      * the system clock is currently invalid (no NTP/GPS fix yet), AND
       * running on-device (not PC), AND
-      * |drift| > 60s (limited drift threshold), AND
+      * |drift| > 60s, AND
       * the target year is within a sane 2015..2035 window.
     """
-    # Killswitch: must be explicitly enabled. Default-off for safety.
-    if not self._params.get_bool("CarrotNtpTimeSync", False):
+    # Killswitch: must be explicitly enabled. Default-off for safety. Read the
+    # legacy duplicate key too so the two registrations cannot silently diverge.
+    if not (self._params.get_bool("CarrotNtpTimeSync", False) or
+            self._params.get_bool("CarrotTimeSyncEnabled", False)):
       return
     if epoch_time <= 0:
       return
+    # NTP/GPS already owns the clock: never fight a healthy time source.
+    try:
+      if system_time_valid():
+        return
+    except Exception:
+      pass
     try:
       import openpilot.system.hardware as hardware
       PC = getattr(hardware, "PC", False)
@@ -609,18 +571,13 @@ class CarrotServ:
     offset = epoch_time - now_epoch
     if abs(offset) <= 60:
       return
+    # Set only the absolute instant, unambiguously in UTC (@epoch). The timezone
+    # is intentionally NOT touched here: the AI auto-timezone loop is the single
+    # authority for /data/etc/localtime + /etc/timezone.
     try:
-      localtime_path = "/data/etc/localtime"
-      zoneinfo_path = f"/usr/share/zoneinfo/{timezone}"
-      if os.path.exists(localtime_path) or os.path.islink(localtime_path):
-        subprocess.run(["sudo", "rm", "-f", localtime_path], check=True)
-      subprocess.run(["sudo", "ln", "-s", zoneinfo_path, localtime_path], check=True)
-      formatted = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch_time))
-      subprocess.run(["sudo", "date", "-s", formatted], check=True)
-      # Persist the phone-supplied timezone as the authoritative source so the
-      # device's own time-setting logic (timed.py) does not overwrite it.
-      self._params.put("TimezoneName", timezone)
-      self._params.put("TimezoneSource", "app")
+      subprocess.run(["sudo", "date", "-u", "-s", f"@{int(epoch_time)}"], check=True)
+      cloudlog.info(f"carrot_serv: fallback clock set to epoch {epoch_time} "
+                    f"(drift {offset}s, phone tz={timezone or 'n/a'})")
     except Exception as e:
       cloudlog.error(f"carrot_serv: failed to sync system time: {e}")
 
@@ -631,14 +588,92 @@ class CarrotServ:
     """
     self._last_packet_mono = recv_mono
 
+  def update_gps(self, cs: Any | None = None, gps: Any | None = None) -> None:
+    """Fuse device GPS / 7706 navi GPS / phone GPS fallback into one position.
+
+    Should be called once per control tick with live carState and liveLocation
+    (or any service exposing latitude/longitude/bearingDeg/hasFix).
+    """
+    now = time.monotonic()
+    navi_age = now - self._last_update_gps_time_navi
+    phone_age = now - self._last_update_gps_time_phone
+    navi_valid = navi_age < 3.0 and (self._navi_gps_lat != 0.0 or self._navi_gps_lon != 0.0)
+    phone_valid = phone_age < 3.0 and (self._phone_gps_lat != 0.0 or self._phone_gps_lon != 0.0)
+
+    device_valid = False
+    device_bearing = 0.0
+    if gps is not None:
+      device_valid = bool(getattr(gps, "hasFix", False))
+      device_bearing = _safe_float(getattr(gps, "bearingDeg", 0.0), 0.0)
+
+    # Choose the freshest bearing source (navi > phone > device).
+    bearing = self._navi_gps_angle if navi_valid else (self._phone_gps_heading if phone_valid else device_bearing)
+
+    # Bearing offset smoothing when the navi source is steady.
+    if navi_valid:
+      if abs(self._bearing_measured - bearing) < 0.1:
+        self._diff_angle_count += 1
+      else:
+        self._diff_angle_count = 0
+      self._bearing_measured = bearing
+      if self._diff_angle_count > 5:
+        diff = (self._navi_gps_angle - bearing) % 360.0
+        if diff > 180.0:
+          diff -= 360.0
+        self._bearing_offset = self._bearing_offset * 0.9 + diff * 0.1
+      # Navi source is primary: update the fused position directly.
+      self._last_calculate_gps_time = now
+      lat, lon = self._navi_gps_lat, self._navi_gps_lon
+      self.vp_pos_point_lat, self.vp_pos_point_lon = lat, lon
+      return
+    else:
+      self._diff_angle_count = 0
+
+    bearing_calculated = (bearing + self._bearing_offset) % 360.0
+
+    # Navi timed out: try phone GPS, then device GPS, then dead-reckon.
+    if phone_valid:
+      self._last_update_gps_time_phone = self._last_calculate_gps_time = now
+      lat, lon = self._phone_gps_lat, self._phone_gps_lon
+      self._navi_gps_angle = self._phone_gps_heading
+    elif device_valid:
+      lat = _safe_float(getattr(gps, "latitude", 0.0), 0.0)
+      lon = _safe_float(getattr(gps, "longitude", 0.0), 0.0)
+      self._last_calculate_gps_time = now
+    else:
+      lat = lon = 0.0
+
+    dt = now - self._last_calculate_gps_time
+    if dt > 5.0:
+      self.vp_pos_point_lat = 0.0
+      self.vp_pos_point_lon = 0.0
+    elif cs is not None and dt > 0.0 and lat != 0.0 and lon != 0.0:
+      v_ego = _safe_float(getattr(cs, "vEgo", 0.0), 0.0)
+      self.vp_pos_point_lat, self.vp_pos_point_lon = self._estimate_position(
+        lat, lon, v_ego, bearing_calculated, dt,
+      )
+    else:
+      self.vp_pos_point_lat = lat
+      self.vp_pos_point_lon = lon
+
+    self._bearing = bearing_calculated
+
+  def _estimate_position(self, lat: float, lon: float, speed: float,
+                         heading_deg: float, dt: float) -> tuple[float, float]:
+    """Dead-reckon a position from speed, heading and elapsed time."""
+    r = 6371000.0
+    angle_rad = math.radians(heading_deg)
+    delta_d = speed * dt
+    delta_lat = delta_d * math.cos(angle_rad) / r
+    new_lat = lat + math.degrees(delta_lat)
+    delta_lon = delta_d * math.sin(angle_rad) / (r * math.cos(math.radians(lat)))
+    new_lon = lon + math.degrees(delta_lon)
+    return new_lat, new_lon
+
   @property
   def bearing(self) -> float:
-    """Heading in degrees, used to rotate the route into the car frame.
-
-    Sourced from the phone/navi GPS heading. This used to return a value that
-    only the removed GPS-fusion step ever wrote, so it was always 0.0.
-    """
-    return self._navi_gps_angle
+    """Fused bearing (degrees) used by the route curvature calculator."""
+    return self._bearing
 
   def is_stale(self, now_mono: float, timeout: float = 3.0) -> bool:
     return self._last_packet_mono > 0.0 and (now_mono - self._last_packet_mono) > timeout
@@ -657,7 +692,7 @@ class CarrotServ:
 
   @property
   def gps_source(self) -> str:
-    """Which navigation GPS source is currently fresh ("navi" / "phone" / "none")."""
+    """Return the currently active GPS source used for fused position."""
     now = time.monotonic()
     navi_age = now - self._last_update_gps_time_navi
     phone_age = now - self._last_update_gps_time_phone
@@ -667,7 +702,7 @@ class CarrotServ:
       return "navi"
     if phone_valid:
       return "phone"
-    return "none"
+    return "device" if self._last_calculate_gps_time > 0.0 else "none"
 
   def vehicle_speed_camera_active(self, cs: Any | None) -> bool:
     """True when vehicle CAN reports an active speed-camera zone."""
@@ -744,7 +779,10 @@ class CarrotServ:
     self._phone_gps_frame = 0
     self._last_update_gps_time_navi = 0.0
     self._last_update_gps_time_phone = 0.0
-    self._navi_gps_angle = 0.0
+    self._last_calculate_gps_time = 0.0
+    self._bearing_measured = 0.0
+    self._diff_angle_count = 0
+    self._bearing_offset = 0.0
 
   # ---- derived state ----------------------------------------------------- #
 
@@ -769,11 +807,6 @@ class CarrotServ:
       self.x_dist_to_turn_next = n_tbt_dist + n_tbt_dist_next
     else:
       self.x_dist_to_turn_next = 0
-
-    # --- heading ---------------------------------------------------------
-    # Refresh from the cache so the 7714 v2 vehicle stream (which writes
-    # _raw["nPosAngle"]) updates it as well as the 7706 packet path.
-    self._navi_gps_angle = _safe_float(r.get("nPosAngle"), 0.0) % 360.0
 
     # --- SDI -> xSpd* ----------------------------------------------------
     sdi_type = _safe_int(r.get("nSdiType"), -1)
@@ -1015,9 +1048,6 @@ class CarrotServ:
 
     # Vehicle CAN speed arbitration tuning (safe defaults for unregistered keys).
     self.vehicle_speed_camera_control_mode = min(3, max(0, p.get_int("VehicleSpeedCameraControlMode", 0)))
-    # 0.1 s units, clamped to the registered range (10-200 -> 1.0-20.0 s).
-    self.vehicle_speed_camera_distance_time = float(
-      min(200, max(10, p.get_int("VehicleSpeedCameraDistanceTime", 60)))) * 0.1
     self.vehicle_navi_can_control = min(3, max(0, p.get_int("VehicleNaviCanControl", 0)))
     self.vehicle_navi_school_zone_control = p.get_bool("VehicleNaviSchoolZoneControl", False)
     self.auto_navi_speed_bump_end_distance = float(min(5000, max(0, p.get_int("AutoNaviSpeedBumpEndDistance", 0)))) * 0.01
@@ -1042,32 +1072,12 @@ class CarrotServ:
 
   # ---- vehicle CAN speed arbitration helpers ----------------------------- #
 
-  def _vehicle_speed_camera_distance(self, cs: Any) -> float:
-    """Distance to the speed camera, synthesising one when the car omits it.
-
-    Some CAN-FD vehicles report only the enforcement speed. The configured
-    ``VehicleSpeedCameraDistanceTime`` (0.1 s units) converts that speed into a
-    virtual distance, matching CarrotPilot:
-
-        distance (m) = enforcement speed (km/h) * configured time (s)
-
-    Skipped while phone navigation supplies its own distance, so the two sources
-    cannot disagree (cp gates the virtual distance the same way).
-    """
-    distance = float(getattr(cs, "speedLimitDistance", 0.0) or 0.0)
-    if distance > 0:
-      return distance
-    speed_kph = float(getattr(cs, "speedLimit", 0.0) or 0.0)
-    if speed_kph <= 0 or self.x_spd_dist > 0:
-      return 0.0
-    return speed_kph * self.vehicle_speed_camera_distance_time
-
   def _vehicle_speed_camera_enabled(self, cs: Any) -> bool:
     """True when the vehicle CAN reports an active speed-limit camera."""
     return bool(
       self.vehicle_speed_camera_control_mode > 0 and
       getattr(cs, "speedLimit", 0.0) > 0 and
-      self._vehicle_speed_camera_distance(cs) > 0 and
+      getattr(cs, "speedLimitDistance", 0.0) > 0 and
       not (getattr(cs, "schoolZoneActive", False) and self.school_zone_suppressed) and
       not (self.vehicle_speed_camera_control_mode == 3 and getattr(cs, "gasPressed", False))
     )
@@ -1794,7 +1804,7 @@ class CarrotServ:
 
       if vehicle_speed_camera_active:
         vehicle_camera_speed = self.calculate_current_speed(
-          self._vehicle_speed_camera_distance(cs),
+          getattr(cs, "speedLimitDistance", 0.0),
           car_speed_limit * self.auto_navi_speed_safety_factor,
           self.auto_navi_speed_ctrl_end,
           self.auto_navi_speed_decel_rate,
@@ -1964,6 +1974,39 @@ class CarrotServ:
         self.x_spd_dist = distance
         self.active_carrot = 2
 
+  # ---- path / curvature helpers ------------------------------------------ #
+
+  def push_position(self, lon: float, lat: float) -> None:
+    self._path.append((float(lon), float(lat)))
+    if len(self._path) >= 3:
+      self._update_bearing()
+
+  def _update_bearing(self) -> None:
+    # Use the last 3 points to estimate bearing.
+    a, b, _ = self._path[-3], self._path[-2], self._path[-1]
+    if a == b:
+      return
+    d_lon = b[0] - a[0]
+    d_lat = b[1] - a[1]
+    self._bearing = math.degrees(math.atan2(d_lon, d_lat))
+
+  @property
+  def bearing(self) -> float:
+    return self._bearing
+
+  def curvature_at(self, distance_m: float) -> float:
+    """Approximate 1/r curvature from the last few GPS points."""
+    if len(self._path) < 3:
+      return 0.0
+    a, b, c = self._path[-3], self._path[-2], self._path[-1]
+    cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
+    len_ab = math.hypot(b[0] - a[0], b[1] - a[1])
+    len_bc = math.hypot(c[0] - b[0], c[1] - b[1])
+    if len_ab == 0 or len_bc == 0:
+      return 0.0
+    # Sign conveys left/right turn; magnitude is roughly 1/r in degrees^-1.
+    return cross / (len_ab * len_bc * len_ab) * (180.0 / math.pi) / max(distance_m, 1.0)
+
   def _interp_turn_speed(self, x_turn_info: int, distance_m: float) -> int:
     """Pick a safe curve speed for a turn of the given xTurnInfo class."""
     # Conservative table: tighter for sharper maneuvers, looser as we approach.
@@ -1982,6 +2025,13 @@ class CarrotServ:
       if distance_m <= d:
         return int(s)
     return 0
+
+  def lookup_curve_speed(self, curvature: float) -> float:
+    """Look up a recommended km/h for the given curvature (1/m)."""
+    if curvature <= 0:
+      return 0.0
+    return float(_interp_table(curvature, V_CURVE_LOOKUP_BP, V_CURVE_LOOKUP_VALS))
+
 
 def _interp_table(x: float, bp: tuple[float, ...], vals: tuple[float, ...]) -> float:
   """Plain 1-D table lookup. ``bp`` must be sorted ascending."""

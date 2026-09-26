@@ -5,18 +5,21 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import json
+import threading
 
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
+from openpilot.system.ui.sunnypilot.widgets.html_render import HtmlModalSP
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, button_item_sp, option_item_sp, multiple_button_item_sp
 from openpilot.system.ui.widgets import DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
 from openpilot.system.ui.widgets.list_view import text_item
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller_tici import Scroller
+from openpilot.sunnypilot.mapd.live_map_data.amap_map_data import check_api_key
 
 
 class NavigationLayout(Widget):
@@ -24,6 +27,8 @@ class NavigationLayout(Widget):
     super().__init__()
 
     self._params = Params()
+    self._amap_key_test_thread: threading.Thread | None = None
+    self._amap_key_test_result: tuple[bool, str] | None = None
     items = self._initialize_items()
     self._scroller = Scroller(items, line_separator=True, spacing=0)
 
@@ -59,6 +64,13 @@ class NavigationLayout(Widget):
       button_text=tr("EDIT"),
       description=tr("API key for Amap services. Tap EDIT to enter or update the key."),
       callback=self._on_amap_api_key,
+    )
+
+    self._amap_api_key_test = button_item_sp(
+      title=tr("Test Amap API Key"),
+      button_text=lambda: tr("TESTING...") if self._amap_key_test_running() else tr("TEST"),
+      description=tr("Ask the Amap road name and speed limit services with the stored key and report which ones work."),
+      callback=self._on_amap_api_key_test,
     )
 
     # The curve value now acts on the car: it is folded into SmartCruiseControlMap's
@@ -143,6 +155,7 @@ class NavigationLayout(Widget):
       self._carrot_enabled,
       self._carrot_navi_v2_enabled,
       self._amap_api_key,
+      self._amap_api_key_test,
       self._amap_curve_speed,
       self._amap_traffic_light_hint,
       self._carrot_panel_opacity,
@@ -163,6 +176,7 @@ class NavigationLayout(Widget):
     self._carrot_amap_blind_spot_enabled.action_item.set_enabled(offroad)
     self._carrot_enabled.action_item.set_enabled(offroad)
     self._amap_api_key.action_item.set_enabled(offroad)
+    self._amap_api_key_test.action_item.set_enabled(offroad)
     self._carrot_panel_opacity.action_item.set_enabled(offroad)
     self._carrot_panel_side.action_item.set_enabled(offroad)
 
@@ -178,6 +192,13 @@ class NavigationLayout(Widget):
     masked = "" if not current_key else "*" * min(len(current_key), 12)
     self._amap_api_key.action_item.set_value(masked)
 
+    # The worker thread cannot touch the render stack, so the result is handed
+    # over here and the dialog is pushed from the UI thread.
+    if self._amap_key_test_result is not None:
+      ok, message = self._amap_key_test_result
+      self._amap_key_test_result = None
+      self._show_amap_key_test_result(ok, message)
+
   def _on_amap_api_key(self):
     current_key = self._params.get("AmapApiKey") or ""
     dialog = InputDialogSP(
@@ -187,6 +208,30 @@ class NavigationLayout(Widget):
       param="AmapApiKey",
     )
     dialog.show()
+
+  def _amap_key_test_running(self) -> bool:
+    return self._amap_key_test_thread is not None and self._amap_key_test_thread.is_alive()
+
+  def _on_amap_api_key_test(self):
+    if self._amap_key_test_running():
+      return
+    self._amap_key_test_result = None
+    self._amap_key_test_thread = threading.Thread(target=self._run_amap_key_test, daemon=True)
+    self._amap_key_test_thread.start()
+
+  def _run_amap_key_test(self):
+    """Runs off the UI thread: HTTP probes take seconds and must not block rendering."""
+    key = self._params.get("AmapApiKey") or ""
+    try:
+      ok, message = check_api_key(key)
+    except Exception as e:
+      ok, message = False, tr("Test could not run: {}").format(e)
+    self._amap_key_test_result = (ok, message)
+
+  def _show_amap_key_test_result(self, ok: bool, message: str):
+    heading = tr("Amap API key is valid") if ok else tr("Amap API key has a problem")
+    body = message.replace("\n", "<br>")
+    gui_app.push_widget(HtmlModalSP(text=f"<b>{heading}</b><br><br>{body}"))
 
   def _map_provider_value(self) -> str:
     amap_on = self._params.get_bool("AmapMapDataEnabled")

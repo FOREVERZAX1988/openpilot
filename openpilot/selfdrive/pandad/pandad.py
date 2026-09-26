@@ -9,8 +9,10 @@ import subprocess
 from panda import Panda, PandaDFU, PandaProtocolMismatch, FW_PATH
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
-from openpilot.common.hardware import COMMA_HARDWARE, HARDWARE
+from openpilot.common.hardware import HARDWARE
+from openpilot.common.hardware.comma.hardware import is_tici_dos
 from openpilot.common.swaglog import cloudlog
+
 from openpilot.sunnypilot.selfdrive.pandad.rivian_long_flasher import flash_rivian_long
 
 
@@ -21,6 +23,24 @@ def get_expected_signature(panda: Panda) -> bytes:
   except Exception:
     cloudlog.exception("Error computing expected signature")
     return b""
+
+
+H7_HW_TYPES = (
+  Panda.HW_TYPE_RED_PANDA,
+  Panda.HW_TYPE_RED_PANDA_V2,
+  Panda.HW_TYPE_TRES,
+  Panda.HW_TYPE_CUATRO,
+)
+
+
+def is_h7_panda_hw(panda: Panda) -> bool:
+  return panda.get_type() in H7_HW_TYPES
+
+
+def should_launch_cpp_directly(panda_serials: list[str]) -> bool:
+  # C3 DOS: single internal F4 uses panda/ firmware; skip Python auto-flash.
+  return is_tici_dos() and len(panda_serials) == 1
+
 
 def flash_panda(panda_serial: str) -> Panda:
   try:
@@ -35,7 +55,10 @@ def flash_panda(panda_serial: str) -> Panda:
 
   panda_version = "bootstub" if panda.bootstub else panda.get_version()
   panda_signature = b"" if panda.bootstub else panda.get_signature()
-  cloudlog.warning(f"Panda {panda_serial} connected, version: {panda_version}, signature {panda_signature.hex()[:16]}, expected {fw_signature.hex()[:16]}")
+  cloudlog.warning(
+    f"Panda {panda_serial} connected, version: {panda_version}, "
+    f"signature {panda_signature.hex()[:16]}, expected {fw_signature.hex()[:16]}"
+  )
 
   if panda.bootstub or panda_signature != fw_signature:
     cloudlog.info("Panda firmware out of date, update required")
@@ -78,6 +101,7 @@ def main() -> None:
   first_run = True
   params = Params()
   no_internal_panda_count = 0
+  pandad_dir = os.path.join(BASEDIR, "openpilot/selfdrive/pandad")
 
   while not do_exit:
     try:
@@ -106,8 +130,15 @@ def main() -> None:
         continue
 
       cloudlog.info(f"{len(panda_serials)} panda(s) found, connecting - {panda_serials}")
-      # Flash pandas
 
+      if should_launch_cpp_directly(panda_serials):
+        cloudlog.warning("DOS internal panda: skipping Python panda setup, launching pandad directly")
+        first_run = False
+        os.environ['MANAGER_DAEMON'] = 'pandad'
+        os.environ['BOARDD_SKIP_FW_CHECK'] = '1'
+        process = subprocess.Popen(["./pandad", *panda_serials], cwd=pandad_dir)
+        process.wait()
+        continue
 
       flash_rivian_long(panda_serials)
 
@@ -116,7 +147,7 @@ def main() -> None:
         pandas.append(flash_panda(serial))
 
       internal_pandas = [panda for panda in pandas if panda.is_internal()]
-      if COMMA_HARDWARE and len(internal_pandas) == 0:
+      if HARDWARE.has_internal_panda() and len(internal_pandas) == 0:
         cloudlog.error("Internal panda is missing, trying again")
         no_internal_panda_count += 1
         continue
@@ -125,15 +156,17 @@ def main() -> None:
       pandas.sort(key=lambda x: (not x.is_internal(), x.get_type(), x.get_usb_serial()))
       panda_serials = [p.get_usb_serial() for p in pandas]
 
+      has_non_h7_panda = any(not is_h7_panda_hw(panda) for panda in pandas)
+
       for panda in pandas:
         health = panda.health()
         if health["heartbeat_lost"]:
           params.put_bool("PandaHeartbeatLost", True)
           cloudlog.event("heartbeat lost", deviceState=health, serial=panda.get_usb_serial())
-        if health["som_reset_triggered"]:
+        if health.get("som_reset_triggered"):
           cloudlog.event("panda.som_reset_triggered", health=health, serial=panda.get_usb_serial())
 
-        if first_run:
+        if first_run and is_h7_panda_hw(panda):
           cloudlog.info(f"Resetting panda {panda.get_usb_serial()}")
           panda.reset(reconnect=True)
 
@@ -152,7 +185,9 @@ def main() -> None:
     first_run = False
 
     os.environ['MANAGER_DAEMON'] = 'pandad'
-    process = subprocess.Popen(["./pandad", *panda_serials], cwd=os.path.join(BASEDIR, "openpilot/selfdrive/pandad"))
+    if has_non_h7_panda:
+      os.environ['BOARDD_SKIP_FW_CHECK'] = '1'
+    process = subprocess.Popen(["./pandad", *panda_serials], cwd=pandad_dir)
     process.wait()
 
 

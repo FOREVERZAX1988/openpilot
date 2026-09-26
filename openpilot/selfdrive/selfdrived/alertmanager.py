@@ -57,7 +57,7 @@ class AlertManager:
       if not v.alert:
         continue
 
-      if v.alert.event_type in clear_event_types:
+      if v.alert.event_type in clear_event_types and not v.alert.persistent:
         v.end_frame = -1
 
       # sort by priority first and then by start_frame

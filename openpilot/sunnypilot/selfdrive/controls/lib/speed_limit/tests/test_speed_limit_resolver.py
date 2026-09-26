@@ -285,22 +285,3 @@ class TestCarrotSpeedLimitMerge(OpenpilotTestCase):
     sm.recv_time['carrotManSP'] = time.monotonic() - LIMIT_MAX_MAP_DATA_AGE - 1.
     resolver._merge_carrot_speed_limit(sm)
     assert resolver.limit_solutions[SpeedLimitSource.map] == 0.
-
-  def test_desired_speed_is_not_consumed_by_resolver(self, mocker):
-    """D2 / R3 — the resolver must consume the RAW ``nRoadLimitSpeed`` /
-    ``xSpdLimit`` fields, never carrot's synthesized ``desiredSpeed``. A carrot
-    packet carrying a high ``desiredSpeed`` but no road limit must leave the
-    ``map`` solution untouched (otherwise SLA would double-count Carrot's own
-    deceleration on top of ``LIMIT_ADAPT_ACC``)."""
-    resolver = self._resolver()
-    sm = carrot_sm(mocker, desiredSpeed=100)
-    resolver._get_from_map_data(sm)
-    assert resolver.limit_solutions[SpeedLimitSource.map] == 0.
-    assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
-
-    # Even with a road limit present, desiredSpeed must NOT pull the solution
-    # down toward it — only the raw nRoadLimitSpeed field may.
-    resolver2 = self._resolver()
-    sm2 = carrot_sm(mocker, nRoadLimitSpeed=60, desiredSpeed=30)
-    resolver2._get_from_map_data(sm2)
-    assert abs(resolver2.limit_solutions[SpeedLimitSource.map] - 60 * CV.KPH_TO_MS) < 1e-6

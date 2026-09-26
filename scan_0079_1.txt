@@ -1,0 +1,4 @@
+n=5964
+first_char={(2, 1): 0.0}
+ACC05 first st2=(0.0, 2) st0=None
+char_trans=[(0.0, 2, 1)]
