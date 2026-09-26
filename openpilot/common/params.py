@@ -166,6 +166,32 @@ class Params:
   def get_bool(self, key, block=False):
     return bool(params_get_bool(self.p, self.check_key(key), block))
 
+  # ---- sunnypilot-style convenience accessors (Parms API) ----
+  # Restored: several sunnypilot modules ported into this fork call
+  # Params.get_int / get_float / get_str, which were missing from this fork's
+  # Params class, raising AttributeError at runtime. Purely additive.
+  def get_int(self, key, default=0, block=False):
+    value = self.get(key, block)
+    if value is None:
+      return default
+    try:
+      return int(value)
+    except (TypeError, ValueError):
+      return default
+
+  def get_float(self, key, default=0.0, block=False):
+    value = self.get(key, block)
+    if value is None:
+      return default
+    try:
+      return float(value)
+    except (TypeError, ValueError):
+      return default
+
+  def get_str(self, key, default="", block=False):
+    value = self.get(key, block)
+    return default if value is None else str(value)
+
   def _put_cast(self, key, dat):
     return ensure_bytes(self.python2cpp(type(dat), self.get_type(key), dat, key))
 
@@ -181,6 +207,18 @@ class Params:
 
   def put_bool(self, key, val, block=False):
     params_put_bool(self.p, self.check_key(key), val, block)
+
+  def put_int(self, key, val, block=False):
+    self.put(key, int(val), block)
+
+  def put_float(self, key, val, block=False):
+    self.put(key, float(val), block)
+
+  def put_str(self, key, val, block=False):
+    self.put(key, str(val), block)
+
+  def put_int_nonblocking(self, key, val):
+    self.put(key, int(val), block=False)
 
   def remove(self, key):
     params_remove(self.p, self.check_key(key))
