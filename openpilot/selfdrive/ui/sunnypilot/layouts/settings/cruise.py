@@ -7,7 +7,6 @@ See the LICENSE.md file in the root directory for more details.
 from enum import IntEnum
 
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise_sub_layouts.speed_limit_settings import SpeedLimitSettingsLayout
-from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise_sub_layouts.longitudinal_mpc_tuning import LongitudinalMpcTuningLayout
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, option_item_sp, simple_button_item_sp
@@ -18,7 +17,6 @@ from openpilot.system.ui.widgets.scroller_tici import Scroller
 class PanelType(IntEnum):
   CRUISE = 0
   SLA = 1
-  LONGITUDINAL_MPC_TUNING = 2
 
 
 ICBM_DESC = tr_noop("When enabled, sunnypilot will attempt to manage the built-in cruise control buttons "
@@ -38,7 +36,6 @@ class CruiseLayout(Widget):
     super().__init__()
     self._current_panel = PanelType.CRUISE
     self._speed_limit_layout = SpeedLimitSettingsLayout(lambda: self._set_current_panel(PanelType.CRUISE))
-    self._longitudinal_mpc_tuning_layout = LongitudinalMpcTuningLayout(lambda: self._set_current_panel(PanelType.CRUISE))
 
     items = self._initialize_items()
     self._scroller = Scroller(items, line_separator=True, spacing=0)
@@ -85,12 +82,6 @@ class CruiseLayout(Widget):
       callback=lambda: self._set_current_panel(PanelType.SLA)
     )
 
-    self._longitudinal_mpc_tuning_button = simple_button_item_sp(
-      button_text=lambda: tr("Longitudinal MPC Tuning"),
-      button_width=800,
-      callback=lambda: self._set_current_panel(PanelType.LONGITUDINAL_MPC_TUNING)
-    )
-
     self.dec_toggle = toggle_item_sp(
       title=tr("Enable Dynamic Experimental Control"),
       description=tr("Enable toggle to allow the model to determine when to use sunnypilot ACC or sunnypilot End to End Longitudinal."),
@@ -105,15 +96,12 @@ class CruiseLayout(Widget):
       self.custom_acc_short_increment,
       self.custom_acc_long_increment,
       self.sla_settings_button,
-      self._longitudinal_mpc_tuning_button,
     ]
     return items
 
   def _render(self, rect):
     if self._current_panel == PanelType.SLA:
       self._speed_limit_layout.render(rect)
-    elif self._current_panel == PanelType.LONGITUDINAL_MPC_TUNING:
-      self._longitudinal_mpc_tuning_layout.render(rect)
     else:
       self._scroller.render(rect)
 
@@ -127,8 +115,6 @@ class CruiseLayout(Widget):
     self._current_panel = panel
     if panel == PanelType.SLA:
       self._speed_limit_layout.show_event()
-    elif panel == PanelType.LONGITUDINAL_MPC_TUNING:
-      self._longitudinal_mpc_tuning_layout.show_event()
 
   def _update_state(self):
     super()._update_state()
@@ -144,21 +130,31 @@ class CruiseLayout(Widget):
         ui_state.params.remove("IntelligentCruiseButtonManagement")
         self.icbm_toggle.action_item.set_enabled(False)
 
-        long_desc = tr(ICMB_UNAVAILABLE)
+        long_desc = ICMB_UNAVAILABLE
         if has_long:
           if ui_state.CP.alphaLongitudinalAvailable:
-            long_desc += " " + tr(ICMB_UNAVAILABLE_LONG_AVAILABLE)
+            long_desc += " " + ICMB_UNAVAILABLE_LONG_AVAILABLE
           else:
-            long_desc += " " + tr(ICMB_UNAVAILABLE_LONG_UNAVAILABLE)
+            long_desc += " " + ICMB_UNAVAILABLE_LONG_UNAVAILABLE
 
-        new_desc = "<b>" + long_desc + "</b>\n\n" + tr(ICBM_DESC)
+        new_desc = "<b>" + tr(long_desc) + "</b>\n\n" + tr(ICBM_DESC)
         if self.icbm_toggle.description != new_desc:
           self.icbm_toggle.set_description(new_desc)
           self.icbm_toggle.show_description(True)
 
       if has_long or has_icbm:
-        software_cruise_speed = has_long and (not ui_state.CP.pcmCruise or not ui_state.CP_SP.pcmCruiseSpeed)
-        self.custom_acc_toggle.action_item.set_enabled((software_cruise_speed or has_icbm) and ui_state.is_offroad())
+        # Macan(MLB) 融合控制模式开：自定义 ACC 增量自动灰色关闭（OP 巡航速度直接跟随原厂，
+        # 步进由原厂 ACC 决定，自定义短按/长按增量与 OP 同步逻辑冲突）。
+        macan_fusion_on = (ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1" and
+                           ui_state.params.get_bool("MacanFusionMode"))
+        custom_acc_enabled = ((has_long and not ui_state.CP.pcmCruise) or has_icbm) and ui_state.is_offroad() \
+                             and not macan_fusion_on
+        self.custom_acc_toggle.action_item.set_enabled(custom_acc_enabled)
+        if macan_fusion_on:
+          self.custom_acc_toggle.action_item.set_state(False)  # 自动关闭自定义增量
+          _on = self.custom_acc_toggle.action_item.get_state()
+          self.custom_acc_short_increment.set_visible(_on)
+          self.custom_acc_long_increment.set_visible(_on)
         self.dec_toggle.action_item.set_enabled(has_long)
         self.scc_v_toggle.action_item.set_enabled(True)
         self.scc_m_toggle.action_item.set_enabled(True)
@@ -184,7 +180,7 @@ class CruiseLayout(Widget):
       show_custom_acc_desc = True
     else:
       if has_long or has_icbm:
-        if has_long and ui_state.CP.pcmCruise and ui_state.CP_SP.pcmCruiseSpeed:
+        if has_long and ui_state.CP.pcmCruise:
           new_custom_acc_desc = tr(ACC_PCMCRUISE_DISABLED_DESCRIPTION)
           show_custom_acc_desc = True
         else:
@@ -200,7 +196,6 @@ class CruiseLayout(Widget):
         self.custom_acc_toggle.show_description(True)
 
     self._on_custom_acc_toggle(self.custom_acc_toggle.action_item.get_state())
-    self._longitudinal_mpc_tuning_button.action_item.set_enabled(has_long)
 
   def _on_custom_acc_toggle(self, state):
     self.custom_acc_short_increment.set_visible(state)

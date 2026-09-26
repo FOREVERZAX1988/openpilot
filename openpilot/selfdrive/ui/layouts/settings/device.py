@@ -1,5 +1,6 @@
 import os
 import math
+import subprocess
 
 from openpilot.cereal import messaging, log
 from openpilot.common.basedir import BASEDIR
@@ -15,7 +16,6 @@ from openpilot.system.ui.widgets import Widget, DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog, alert_dialog
 from openpilot.system.ui.widgets.html_render import HtmlModal
 from openpilot.system.ui.widgets.list_view import text_item, button_item, dual_button_item
-from openpilot.system.ui.widgets.button import ButtonStyle
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from collections.abc import Callable
@@ -25,7 +25,6 @@ if gui_app.sunnypilot_ui():
 
 # Description constants
 DESCRIPTIONS = {
-  'onroad_preview': tr_noop("Preview the onroad camera view while parked. (vehicle must be off)"),
   'pair_device': tr_noop("Pair your device with comma connect (connect.comma.ai) and claim your comma prime offer."),
   'driver_camera': tr_noop("Preview the driver facing camera to ensure that driver monitoring has good visibility. (vehicle must be off)"),
   'reset_calibration': tr_noop("sunnypilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."),
@@ -69,19 +68,12 @@ class DeviceLayout(Widget):
     self._power_off_btn = dual_button_item(lambda: tr("Reboot"), lambda: tr("Power Off"),
                                            left_callback=self._reboot_prompt, right_callback=self._power_off_prompt)
 
-    self._onroad_preview_btn = button_item(lambda: tr("Onroad Preview"),
-                                           lambda: tr("EXIT" if self._params.get_bool("IsOnroadPreview") else "ENTER"),
-                                           lambda: tr(DESCRIPTIONS['onroad_preview']),
-                                           callback=self._enter_onroad_preview,
-                                           enabled=lambda: ui_state.is_offroad() or self._params.get_bool("IsOnroadPreview"))
-
     items = [
       text_item(lambda: tr("Dongle ID"), self._params.get("DongleId") or (lambda: tr("N/A"))),
       text_item(lambda: tr("Serial"), self._params.get("HardwareSerial") or (lambda: tr("N/A"))),
       self._pair_device_btn,
       button_item(lambda: tr("Driver Camera"), lambda: tr("PREVIEW"), lambda: tr(DESCRIPTIONS['driver_camera']),
                   callback=lambda: gui_app.push_widget(CabinCameraDialog()), enabled=ui_state.is_offroad),
-      self._onroad_preview_btn,
       self._reset_calib_btn,
       button_item(lambda: tr("Review Training Guide"), lambda: tr("REVIEW"), lambda: tr(DESCRIPTIONS['review_guide']),
                   self._on_review_training_guide, enabled=ui_state.is_offroad),
@@ -98,14 +90,6 @@ class DeviceLayout(Widget):
     super().show_event()
     self._scroller.show_event()
 
-  def _update_state(self):
-    super()._update_state()
-    if self._onroad_preview_btn is not None:
-      is_preview = self._params.get_bool("IsOnroadPreview")
-      action = self._onroad_preview_btn.action_item
-      if hasattr(action, "_button"):
-        action._button.set_button_style(ButtonStyle.PRIMARY if is_preview else ButtonStyle.LIST_ACTION)
-
   def _render(self, rect):
     self._scroller.render(rect)
 
@@ -113,14 +97,28 @@ class DeviceLayout(Widget):
     def handle_language_selection(result: DialogResult):
       if result == DialogResult.CONFIRM and self._select_language_dialog:
         selected_language = multilang.languages[self._select_language_dialog.selection]
-        multilang.change_language(selected_language)
-        gui_app.on_language_changed(selected_language)
-        self._update_calib_description()
+        # 先确认再切换：确定=切换语言+重启UI，取消=保持原语言（避免切换后空白无法恢复）
+        gui_app.push_widget(ConfirmDialog(
+          tr("Language changed. Restart the UI to apply."),
+          confirm_text=tr("OK"),
+          cancel_text=tr("Cancel"),
+          callback=lambda r: self._apply_language_selection(selected_language, r),
+        ))
       self._select_language_dialog = None
 
     self._select_language_dialog = MultiOptionDialog(tr("Select a language"), multilang.languages, multilang.codes[multilang.language],
                                                      option_font_weight=FontWeight.UNIFONT, callback=handle_language_selection)
     gui_app.push_widget(self._select_language_dialog)
+
+  def _apply_language_selection(self, selected_language: str, result: DialogResult):
+    # 取消=不切换（保持原语言）；确定=切换语言并重启 UI（防字体热重载空白）
+    if result != DialogResult.CONFIRM:
+      return
+    multilang.change_language(selected_language)
+    gui_app.on_language_changed(selected_language)
+    self._update_calib_description()
+    # ui 进程 restart_if_crash=True，pkill 后 manager 自动拉起
+    subprocess.run(["pkill", "-f", "openpilot.selfdrive.ui.ui"], check=False)
 
   def _reset_calibration_prompt(self):
     if ui_state.engaged:

@@ -7,7 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 from collections.abc import Callable, Sequence
 
 import pyray as rl
-from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight, TextAlignment, TextAlignmentVertical, font_fallback
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.widgets.toggle import ToggleSP
@@ -135,9 +135,12 @@ class MultipleButtonActionSP(MultipleButtonAction):
                param: str | None = None):
     MultipleButtonAction.__init__(self, buttons, button_width, selected_index, callback)
     self.param_key = param
-    self.params = Params()
+    self.params = unified_params
     if self.param_key:
-      self.selected_button = int(self.params.get(self.param_key, return_default=True))
+      # A param that is not registered (or a Params binding returning None) must not blow up
+      # layout construction - fall back to the caller-provided selected_index.
+      value = self.params.get(self.param_key)
+      self.selected_button = int(value) if value is not None else selected_index
     self._anim_x: float | None = None
     self.enabled_buttons: set[int] | None = None
 
@@ -386,7 +389,8 @@ def option_item_sp(title: str | Callable[[], str], param: str,
                    use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None, inline: bool = False) -> ListItemSP:
   action = OptionControlSP(
     param, min_value, max_value, value_change_step,
-    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback
+    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback,
+    input_title=title,
   )
   return ListItemSP(title=title, description=description, action_item=action, icon=icon, inline=inline)
 
@@ -403,17 +407,6 @@ def dual_button_item_sp(left_text: str | Callable[[], str], right_text: str | Ca
   action = DualButtonActionSP(left_text, right_text, left_callback, right_callback, enabled, border_radius)
   return ListItemSP(title="", description=description, action_item=action)
 
-
-class LineSeparatorSP(LineSeparator):
-  def __init__(self, height: int = 1):
-    super().__init__()
-    self._rect = rl.Rectangle(0, 0, 0, height)
-
-  def _render(self, _):
-    line_y = int(self._rect.y + self._rect.height // 2)
-    rl.draw_line(int(self._rect.x) + LINE_PADDING, line_y,
-                 int(self._rect.x + self._rect.width) - LINE_PADDING, line_y,
-                 LINE_COLOR)
 
 
 class SectionHeadingSP(Widget):
@@ -463,3 +456,15 @@ class SectionHeadingSP(Widget):
 
 def section_heading_sp(label: str | Callable[[], str]) -> SectionHeadingSP:
   return SectionHeadingSP(label=label)
+
+
+class LineSeparatorSP(LineSeparator):
+  def __init__(self, height: int = 1):
+    super().__init__()
+    self._rect = rl.Rectangle(0, 0, 0, height)
+
+  def _render(self, _):
+    line_y = int(self._rect.y + self._rect.height // 2)
+    rl.draw_line(int(self._rect.x) + LINE_PADDING, line_y,
+                 int(self._rect.x + self._rect.width) - LINE_PADDING, line_y,
+                 LINE_COLOR)

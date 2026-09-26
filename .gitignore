@@ -1,6 +1,7 @@
 venv/
 .venv/
 .pydeps/
+.pydeps/
 .ci_cache
 .env
 .clang-format
@@ -115,10 +116,10 @@ TASK.md
 CLAUDE.md
 SKILL.md
 
-# runtime session logs
-sessions/
-
 ### JetBrains ###
 !.idea/customTargets.xml
 !.idea/tools/*
 !.run/*
+
+# agent tool outputs (may contain secrets such as github PAT)
+tool_results/

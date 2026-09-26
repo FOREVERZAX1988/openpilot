@@ -12,7 +12,6 @@ from msgq.visionipc import VisionIpcClient
 
 
 from openpilot.common.params import Params
-from openpilot.common.dm import is_dm_disabled
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.gps import get_gps_location_service
@@ -61,7 +60,7 @@ class SelfdriveD(CruiseHelper):
     self.params = Params()
 
     # Ensure the current branch is cached, otherwise the first cycle lags
-    get_build_metadata()
+    build_metadata = get_build_metadata()
 
     if CP is None:
       cloudlog.info("selfdrived is waiting for CarParams")
@@ -99,12 +98,9 @@ class SelfdriveD(CruiseHelper):
     # TODO: de-couple selfdrived with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
 
-    ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan'] + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP']
-    disable_dm = is_dm_disabled(self.params)
-    if SIMULATION or disable_dm:
+    ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan'] + ['modelDataV2SP', 'longitudinalPlanSP']
+    if SIMULATION:
       ignore += ['cabinCameraState', 'managerState']
-    if disable_dm:
-      ignore += ['driverMonitoringState', 'driverStateV2']
     if REPLAY:
       # no vipc in replay will make them ignored anyways
       ignore += ['narrowRoadCameraState', 'wideRoadCameraState']
@@ -112,7 +108,7 @@ class SelfdriveD(CruiseHelper):
                                    'carOutput', 'driverMonitoringState', 'longitudinalPlan', 'deviceMotion', 'lateralDelay',
                                    'managerState', 'vehicleParameters', 'radarState', 'lateralTorqueParameters',
                                    'controlsState', 'carControl', 'driverAssistance', 'alertDebug', 'userBookmark',
-                                   'lateralManeuverPlan', 'modelDataV2SP', 'longitudinalPlanSP', 'carStateSP'] + \
+                                   'lateralManeuverPlan', 'modelDataV2SP', 'longitudinalPlanSP'] + \
                                    self.camera_packets + self.sensor_packets + self.gps_packets,
                                   ignore_alive=ignore, ignore_avg_freq=ignore,
                                   ignore_valid=ignore, frequency=int(1/DT_CTRL))
@@ -146,12 +142,32 @@ class SelfdriveD(CruiseHelper):
     self.logged_comm_issue = None
     self.not_running_prev = None
     self.experimental_mode = False
+    # 车距档位自跟踪（与 carstate.stock_zeitluecke 同源：值1=拉近-1/值2=拉远+1，默认3格）
+    self._zeitluecke = 3
     self.personality = get_sanitize_int_param(
       "LongitudinalPersonality",
       min(log.LongitudinalPersonality.schema.enumerants.values()),
       max(log.LongitudinalPersonality.schema.enumerants.values()),
       self.params
     )
+    # 车距档与 personality 双向同步（MacanStartupGapSync 决定方向）：
+    # 开（OP主导）：记忆风格 → 车距档（4格→从容/3格→标准/1格→激进），保持首次
+    #   按键渐进，并代发 DIST 脉冲让原厂 ACC 内部档位对齐（StopAndGo/StartupGapSync）。
+    # 关（车辆主导）：跟随原厂点火默认 3 格 → OP 风格重置为标准并写回 param——
+    #   否则 params_thread 每 100ms 把旧记忆拉回，车辆主导被覆盖。
+    _gap_sync = False
+    try:
+      _gap_sync = self.params.get_bool("MacanStartupGapSync")
+    except Exception:
+      pass
+    if _gap_sync:
+      self._zeitluecke = {2: 4, 1: 3, 0: 1}.get(self.personality, 3)
+    else:
+      self._zeitluecke = 3
+      if self.personality != 1:
+        self.personality = 1
+        self.params.put("LongitudinalPersonality", 1)
+
     self.recalibrating_seen = False
     self.dm_lockout_set = False
     self.dm_uncertain_alerted = False
@@ -161,7 +177,8 @@ class SelfdriveD(CruiseHelper):
     self.ignored_processes = {'mapd', }
 
     # Determine startup event
-    self.startup_event = EventName.startup
+    is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote
+    self.startup_event = EventName.startup # if is_remote and build_metadata.tested_channel else EventName.startupMaster
     if HARDWARE.get_device_type() == 'mici':
       self.startup_event = None
     if not car_recognized:
@@ -198,18 +215,17 @@ class SelfdriveD(CruiseHelper):
       self.events.add(EventName.joystickDebug)
       self.startup_event = None
 
-    loading = self.params.get_bool("ChestnutLoading")
+    loading = self.params.get_bool("UsbGpuLoading")
     if self.big_model_loading and not loading:
       self.big_model_ready_t = time.monotonic()
-      self.events_sp.add(custom.OnroadEventSP.EventName.bigModelReady)
     self.big_model_loading = loading
     if self.big_model_loading:
       self.events.add(EventName.bigModelLoading)
 
-    big_active = self.params.get("ChestnutActive")
-    chestnut_present = self.sm['deviceState'].chestnutPresent
+    big_active = self.params.get("UsbGpuActive")
+    usbgpu_present = self.sm['deviceState'].chestnutPresent
     model_unavailable = big_active is True and self.sm.seen['modelV2'] and not self.sm.alive['modelV2']
-    big_failed = big_active is False or model_unavailable or (self.big_model_active and not chestnut_present)
+    big_failed = big_active is False or model_unavailable or (self.big_model_active and not usbgpu_present)
     if big_failed and not self.big_model_failed:
       self.events.add(EventName.bigModelFailed)
     self.big_model_failed = big_failed
@@ -251,7 +267,7 @@ class SelfdriveD(CruiseHelper):
       self.events.add(EventName.resumeBlocked)
 
     # Handle DM
-    if not self.CP.notCar and not is_dm_disabled(self.params):
+    if not self.CP.notCar:
       # Block engaging until lockout times out or ignition reset
       if self.sm['driverMonitoringState'].lockout and not self.dm_lockout_set:
         self.params.put_bool("DriverTooDistracted", True)
@@ -355,16 +371,9 @@ class SelfdriveD(CruiseHelper):
     if self.sm['modelV2'].meta.laneChangeState == LaneChangeState.preLaneChange:
       direction = self.sm['modelV2'].meta.laneChangeDirection
       mdv2sp = self.sm['modelDataV2SP']
-      cs_sp = self.sm['carStateSP']
-      carrot_left_blocked = cs_sp.carrotLaneValid and cs_sp.carrotLeftLineBlocked
-      carrot_right_blocked = cs_sp.carrotLaneValid and cs_sp.carrotRightLineBlocked
 
       if (CS.leftBlindspot and direction == LaneChangeDirection.left) or \
          (CS.rightBlindspot and direction == LaneChangeDirection.right):
-        self.events.add(EventName.laneChangeBlocked)
-
-      elif (carrot_left_blocked and direction == LaneChangeDirection.left) or \
-           (carrot_right_blocked and direction == LaneChangeDirection.right):
         self.events.add(EventName.laneChangeBlocked)
 
       elif (mdv2sp.leftLaneChangeEdgeBlock and direction == LaneChangeDirection.left) or \
@@ -476,10 +485,17 @@ class SelfdriveD(CruiseHelper):
       self.events.add(EventName.sensorDataInvalid)
 
     if not REPLAY:
-      # Check for mismatch between openpilot and car's PCM
-      cruise_mismatch = CS.cruiseState.enabled and (not self.enabled or not self.CP.pcmCruise)
+      # Check for mismatch between openpilot and car's PCM.
+      # Macan 适配：原条件 `CS.cruiseState.enabled and (not enabled or not pcmCruise)` 是 pcm 语义，
+      # 非 pcm 车（Macan）`not pcmCruise` 恒真 → 车辆 TSK_04 回声=1 时永远满足 → 激活 6 秒后持续
+      # 误报 cruiseMismatch（0000003e seg3/5/6 各 54/83/68 次实锤）。恢复标准语义：
+      # 非 pcm 且 OP enabled 但车辆未激活（TSK_04=0）才算真异常（如 seg4 停车误激活场景）。
+      cruise_mismatch = not self.CP.pcmCruise and self.enabled and not CS.cruiseState.enabled
       self.cruise_mismatch_counter = self.cruise_mismatch_counter + 1 if cruise_mismatch else 0
-      if self.cruise_mismatch_counter > int(6. / DT_CTRL):
+      # 2026-08-12 00000041 实锤：6s 阈值 > panda pcm_cruise_check 撤控后 mismatch_counter 2s
+      # 触发 controlsMismatch——OP 从不跟随原厂退出（events.py cruiseMismatch 曾为空实现）。
+      # 缩到 1s（<2s）：原厂巡航退出后 OP 立即跟随退出，mismatch_counter 只数 <100 帧不触发。
+      if self.cruise_mismatch_counter > int(1. / DT_CTRL):
         self.events.add(EventName.cruiseMismatch)
 
     # Send a "steering required alert" if saturation count has reached the limit
@@ -524,14 +540,22 @@ class SelfdriveD(CruiseHelper):
 
     CruiseHelper.update(self, CS, self.events_sp, self.experimental_mode)
 
-    # decrement personality on distance button press
+    # Longitudinal personality is bound to stock ACC distance bars (zeitluecke, VW/MLB):
+    # 4 bars (farthest) -> relaxed(2), 3/2 -> standard(1), 1 (closest) -> aggressive(0).
+    # carState 是 capnp 消息无 stock_zeitluecke 字段，故从 buttonEvents 自跟踪推导：
+    # 值1(Dist-1/拉近)=gapAdjustCruise → -1格；值2(Dist+1/拉远)=altButton2 → +1格
+    # （与 carstate.stock_zeitluecke 同源同逻辑，启动默认 3 格）。
     if self.CP.openpilotLongitudinalControl:
-      if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents):
-        if not self.experimental_mode_switched:
-          self.personality = (self.personality - 1) % 3
-          self.params.put('LongitudinalPersonality', self.personality)
-          self.events.add(EventName.personalityChanged)
-        self.experimental_mode_switched = False
+      for be in CS.buttonEvents:
+        if be.pressed and be.type == ButtonType.gapAdjustCruise:
+          self._zeitluecke = max(1, self._zeitluecke - 1)
+        elif be.pressed and be.type == ButtonType.altButton2:
+          self._zeitluecke = min(4, self._zeitluecke + 1)
+      new_personality = {4: 2, 3: 1, 2: 1, 1: 0}.get(self._zeitluecke)
+      if new_personality is not None and new_personality != self.personality:
+        self.personality = new_personality
+        self.params.put('LongitudinalPersonality', self.personality)
+        self.events.add(EventName.personalityChanged)
 
     self.icbm.run(CS, self.sm['carControl'], self.sm['longitudinalPlanSP'], self.is_metric)
 

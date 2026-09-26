@@ -8,6 +8,17 @@ from openpilot.common.hardware.hw import Paths
 from openpilot.common.swaglog import get_file_handler
 
 
+def decode_record(payload: bytes) -> str:
+  """Decode a swaglog payload sent over the IPC socket.
+
+  Lossy on purpose: a single non-UTF-8 byte (came from a process logging raw
+  binary/GPS data) used to raise UnicodeDecodeError straight out of main()'s
+  loop, killing logmessaged -- the manager then restarted it and every log
+  message produced in the meantime was dropped.
+  """
+  return payload.decode("utf-8", errors="replace")
+
+
 def main() -> NoReturn:
   log_handler = get_file_handler()
   log_handler.setFormatter(SwagLogFileFormatter(None))
@@ -24,8 +35,10 @@ def main() -> NoReturn:
   try:
     while True:
       dat = b''.join(sock.recv_multipart())
+      if not dat:
+        continue  # empty frame: nothing to log, and dat[0] would IndexError
       level = dat[0]
-      record = dat[1:].decode("utf-8")
+      record = decode_record(dat[1:])
       if level >= log_level:
         log_handler.emit(record)
 
