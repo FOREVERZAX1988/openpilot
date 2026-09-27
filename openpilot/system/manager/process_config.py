@@ -16,6 +16,9 @@ from openpilot.sunnypilot.sunnylink.utils import sunnylink_need_register, sunnyl
 
 WEBCAM = os.getenv("USE_WEBCAM") is not None
 LITE = os.getenv("LITE") is not None
+# Lets an external launcher own the carrot API/web stack, matching CarrotPilot's
+# `enabled=not CARROT_WEB_EXTERNAL` gate on carrot_server.
+CARROT_WEB_EXTERNAL = os.getenv("CARROT_WEB_EXTERNAL") == "1"
 
 def driverview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started or params.get_bool("IsDriverViewEnabled")
@@ -235,6 +238,12 @@ procs += [
   # its gates on its own cycle, so the link would stay dead until a manager pass.
   PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", always_run, restart_if_crash=True),
   PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", always_run, restart_if_crash=True),
+  # CarrotPilot-compatible API server on port 7000: the parameter REST API plus, as they
+  # are ported, the /ws raw and camera streams. The companion app (navipilot / CP 搭子)
+  # treats 7000 as its main channel, so without it the app reports "设备未连接" and its
+  # conditional-experiment mode cannot switch. always_run like CarrotPilot's; the gate only
+  # exists so an external launcher can take the stack over.
+  PythonProcess("carrot_server", "openpilot.sunnypilot.carrot.carrot_server", always_run, enabled=not CARROT_WEB_EXTERNAL),
 
   # Xiaoge ONNX BSD/Lane detection
   # Reads VisionIPC camera buffers, runs ONNX inference, publishes to customReservedRawData0.
