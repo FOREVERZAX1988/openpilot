@@ -13,7 +13,6 @@ that simply has no eGPU is the failure this pins down.
 
 `LiveRuntime` is tested with a fake `messaging` so it needs neither zmq nor capnp.
 """
-import asyncio
 import unittest
 
 from openpilot.sunnypilot.carrot.server.services.device_info import listening_ports

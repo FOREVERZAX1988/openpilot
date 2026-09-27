@@ -33,7 +33,16 @@ async def api_params_bulk(request: web.Request) -> web.Response:
     return web.json_response({"ok": False, "error": "missing names"}, status=400)
 
   params = request.app[PARAMS_KEY]
-  values = get_param_values(params, names)
+  values = get_param_values(params, [name for name in names if name != "DeviceType"])
+  # DeviceType is not a parameter: it is read from the hardware layer, and the app asks
+  # for it alongside real settings, so it is answered here rather than 400'd.
+  if "DeviceType" in names:
+    try:
+      from openpilot.system.hardware import HARDWARE
+
+      values["DeviceType"] = HARDWARE.get_device_type()
+    except Exception:
+      values["DeviceType"] = "unknown"
   return web.json_response({"ok": True, "values": values})
 
 

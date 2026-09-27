@@ -31,7 +31,9 @@ except Exception:
   _HAVE_AIOHTTP = False
 
 try:
-  from openpilot.common.params import Params
+  # Imported for its side effect only: the HTTP tests below run where the native
+  # Params library exists and are skipped where it does not.
+  import openpilot.common.params  # noqa: F401
 
   _HAVE_PARAMS = True
 except Exception:
@@ -229,6 +231,12 @@ class TestParamEndpoints(unittest.IsolatedAsyncioTestCase):
     resp = await self.client.get('/api/params_bulk?names=IsMetric,DefinitelyNotAKey')
     self.assertEqual(resp.status, 200)
     self.assertIn('IsMetric', (await resp.json())['values'])
+
+  async def test_device_type_is_answered_though_it_is_not_a_parameter(self):
+    # The app asks for it next to real settings; a 400 there loses the whole batch.
+    resp = await self.client.get('/api/params_bulk?names=DeviceType')
+    self.assertEqual(resp.status, 200)
+    self.assertIn('DeviceType', (await resp.json())['values'])
 
 
 if __name__ == '__main__':
