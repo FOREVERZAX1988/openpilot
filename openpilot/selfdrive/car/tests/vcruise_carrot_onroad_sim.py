@@ -244,6 +244,17 @@ class _CarState:
     self.vEgoCluster = v_ego
     self.aEgo = 0.0
     self.steeringAngleDeg = 0.0
+    self.steeringPressed = False
+    # update_v_cruise() reads these before it reaches the code under test - canValid
+    # gates the Bluetooth-remote CommandReader. Without them every check below died on
+    # AttributeError and the harness silently sat at 3/14, which is why this file went
+    # unnoticed: a stand-in that is missing a field the real CarState has turns a
+    # harness into a no-op instead of a failure signal.
+    self.canValid = True
+    self.canTimeout = False
+    self.espDisabled = False
+    self.leftBlindspot = False
+    self.rightBlindspot = False
     self.gasPressed = gas_pressed
     self.brakePressed = brake_pressed
     self.brakeHoldActive = False

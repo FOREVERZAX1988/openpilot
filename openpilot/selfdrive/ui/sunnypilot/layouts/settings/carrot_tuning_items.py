@@ -85,7 +85,7 @@ def build_navi_items():
 
     section_heading_sp(tr('Road Speed Limits')),
     option_item_sp(title=tr('Speed Source PCM'), param='SpeedFromPCM', min_value=0, max_value=2, value_change_step=1,
-                   description=tr('BYD only: with 1 the car reports its own ACC set speed over CAN.')),
+                   description=tr('1 = take the ACC set speed from the car (PCM). Required on Toyota: its PCM consumes the +/- buttons itself, so openpilot would otherwise keep its own set speed while the cluster moves.')),
     option_item_sp(title=tr('Road Speed Limit Offset'), param='AutoRoadSpeedLimitOffset', min_value=-20, max_value=20, value_change_step=1),
     option_item_sp(title=tr('Road Type'), param='RoadType', min_value=0, max_value=2, value_change_step=1),
 

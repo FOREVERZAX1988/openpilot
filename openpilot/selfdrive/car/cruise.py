@@ -410,6 +410,24 @@ class VCruiseCarrot(VCruiseHelper):
       self.carrot_cmd = ""
       self.carrot_arg = ""
 
+  @property
+  def pcm_owns_set_speed(self) -> bool:
+    """True when the car's PCM owns the set speed and openpilot cannot see the buttons.
+
+    opendbc's Toyota carstate only ever emits `lkas` (LFA) and `gapAdjustCruise`
+    (distance) button events - the ACC accel/decel/resume/set presses are consumed by
+    the PCM, which keeps and displays its own set speed on the cluster. So on a Toyota
+    with `pcmCruise`, `CS.buttonEvents` is empty for the speed buttons and carrot's own
+    button state machine has nothing to consume: the ONLY way `v_cruise_kph` can follow
+    the steering wheel is to read the PCM's value back out of `CS.cruiseState.speed`.
+
+    Gating that on the `SpeedFromPCM` param alone (default 0) left such a car stuck on
+    openpilot's internal set speed: the cluster moved when the driver pressed +/-, but
+    openpilot kept its old value (and, with openpilotLongitudinalControl on, actually
+    controlled to it). Reported as "cluster went to 80, openpilot still showed 40".
+    """
+    return self.CP.brand == "toyota" and self.CP.pcmCruise
+
   def update_v_cruise(self, CS, enabled, is_metric, sm=None, CS_SP=None):
     self._add_log("")
     self.update_params(is_metric)
@@ -504,9 +522,14 @@ class VCruiseCarrot(VCruiseHelper):
         self.v_cruise_kph = np.clip(v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max)
         self.v_cruise_cluster_kph = self.v_cruise_kph
       else:
-        if self.speed_from_pcm == 1:
-          self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-          self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        if self.speed_from_pcm == 1 or self.pcm_owns_set_speed:
+          # The PCM is the source of truth for the set speed (see
+          # pcm_owns_set_speed). Guard the value: a PCM that has not reported a set
+          # speed yet (speed == 0 while cruise is available) must not zero the
+          # planner target - the base VCruiseHelper maps that case to V_CRUISE_UNSET.
+          if CS.cruiseState.speed > 0:
+            self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+            self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
         else:
           self.v_cruise_kph = np.clip(v_cruise_kph, 30, self._cruise_speed_max)
           self.v_cruise_cluster_kph = self.v_cruise_kph
