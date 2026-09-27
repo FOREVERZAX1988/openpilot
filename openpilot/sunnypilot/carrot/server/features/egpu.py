@@ -15,7 +15,7 @@ import logging
 
 from aiohttp import web
 
-from ..services.live_runtime import LiveRuntime
+
 
 logger = logging.getLogger("openpilot.carrot.server.egpu")
 
@@ -25,16 +25,8 @@ EGPU_NOTE = "eGPU is reported through deviceState/chestnutState; no big-model co
 def _runtime(request: web.Request):
   from .system import RUNTIME_KEY
 
-  runtime = request.app.get(RUNTIME_KEY)
-  if runtime is None:
-    try:
-      from openpilot.cereal import messaging
-
-      runtime = LiveRuntime(messaging)
-      request.app[RUNTIME_KEY] = runtime
-    except Exception:
-      return None
-  return runtime
+  holder = request.app.get(RUNTIME_KEY)
+  return holder.get() if holder is not None else None
 
 
 async def api_status(request: web.Request) -> web.Response:

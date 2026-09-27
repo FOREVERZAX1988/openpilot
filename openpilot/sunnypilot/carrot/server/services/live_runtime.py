@@ -146,3 +146,37 @@ class LiveRuntime:
         sock.close()
       except Exception:
         pass
+
+
+class RuntimeHolder:
+  """Owns the one `LiveRuntime` for the app, created on first use.
+
+  aiohttp warns when an application's state is changed after it has started, and the
+  routes that need the runtime can be the first thing a client asks for. Holding a
+  mutable object - created while the app is still being built - keeps the app's own
+  state untouched, and keeps the "cereal missing" answer in one place.
+  """
+
+  def __init__(self, services=LIVE_RUNTIME_SERVICES):
+    self._services = services
+    self._runtime = None
+    self._error = ""
+
+  def get(self):
+    if self._runtime is None:
+      try:
+        from openpilot.cereal import messaging
+      except Exception as exc:
+        self._error = str(exc)
+        return None
+      self._runtime = LiveRuntime(messaging, self._services)
+      self._error = ""
+    return self._runtime
+
+  def error(self) -> str:
+    return self._error
+
+  def close(self) -> None:
+    if self._runtime is not None:
+      self._runtime.close()
+      self._runtime = None

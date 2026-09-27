@@ -22,6 +22,7 @@ import time
 from aiohttp import web
 
 from ..services.device_info import get_calibration_status, get_device_network_snapshot, refresh_device_network
+from ..services.live_runtime import RuntimeHolder
 
 logger = logging.getLogger("openpilot.carrot.server.system")
 
@@ -37,7 +38,7 @@ def _params():
 
 
 def _engaged(request: web.Request) -> bool:
-  runtime = request.app.get(RUNTIME_KEY)
+  runtime = _runtime(request)
   if runtime is not None:
     try:
       if runtime.is_engaged():
@@ -62,19 +63,15 @@ async def api_heartbeat_status(request: web.Request) -> web.Response:
   return web.json_response({"ok": True, "hb": request.app.get("hb_last"), "now": time.monotonic()})
 
 
+def _runtime(request: web.Request):
+  holder = request.app.get(RUNTIME_KEY)
+  return holder.get() if holder is not None else None
+
+
 async def api_live_runtime(request: web.Request) -> web.Response:
-  runtime = request.app.get(RUNTIME_KEY)
+  runtime = _runtime(request)
   if runtime is None:
-    try:
-      from openpilot.cereal import messaging
-
-      from ..services.live_runtime import LiveRuntime
-
-      runtime = LiveRuntime(messaging)
-      request.app[RUNTIME_KEY] = runtime
-    except Exception as exc:
-      logger.warning("carrot_server: live runtime unavailable: %s", exc)
-      return web.json_response({"ok": False, "error": f"live runtime unavailable: {exc}"}, status=503)
+    return web.json_response({"ok": False, "error": "cereal unavailable"}, status=503)
   return web.json_response(await asyncio.to_thread(runtime.snapshot))
 
 
@@ -196,16 +193,16 @@ async def api_time_sync(request: web.Request) -> web.Response:
 
 
 async def _close_runtime(app: web.Application) -> None:
-  runtime = app.get(RUNTIME_KEY)
-  if runtime is not None:
+  holder = app.get(RUNTIME_KEY)
+  if holder is not None:
     try:
-      runtime.close()
+      holder.close()
     except Exception:
       pass
 
 
 def register(app: web.Application) -> None:
-  app[RUNTIME_KEY] = None
+  app[RUNTIME_KEY] = RuntimeHolder()
   app.router.add_get("/api/heartbeat_status", api_heartbeat_status)
   app.router.add_get("/api/live_runtime", api_live_runtime)
   app.router.add_get("/api/device_network", api_device_network)

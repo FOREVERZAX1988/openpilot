@@ -18,7 +18,7 @@ import logging
 from aiohttp import web
 
 from ..services.device_info import listening_ports
-from ..services.live_runtime import LiveRuntime, json_safe
+from ..services.live_runtime import json_safe
 
 logger = logging.getLogger("openpilot.carrot.server.carrot_navi")
 
@@ -42,17 +42,8 @@ CAPABILITIES = {
 def _runtime(request: web.Request):
   from .system import RUNTIME_KEY
 
-  runtime = request.app.get(RUNTIME_KEY)
-  if runtime is None:
-    try:
-      from openpilot.cereal import messaging
-
-      runtime = LiveRuntime(messaging)
-      request.app[RUNTIME_KEY] = runtime
-    except Exception as exc:
-      logger.warning("carrot_server: carrot navi status unavailable: %s", exc)
-      return None
-  return runtime
+  holder = request.app.get(RUNTIME_KEY)
+  return holder.get() if holder is not None else None
 
 
 async def api_status(request: web.Request) -> web.Response:
