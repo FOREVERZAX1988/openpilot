@@ -48,6 +48,17 @@ async def api_params_bulk(request: web.Request) -> web.Response:
       values["DeviceType"] = HARDWARE.get_device_type()
     except Exception:
       values["DeviceType"] = "unknown"
+
+  # Pick up values the driving code changed behind our back (the steering-wheel gap button
+  # writes some parameters directly), so the change history can explain them. Restricted to
+  # catalog keys, because DeviceType and friends change on every read and are not settings.
+  try:
+    from ..services.param_changes import observe_param_values
+    from ..services.settings import carrot_defaults
+
+    observe_param_values(values, allowed=set(carrot_defaults()))
+  except Exception:  # pragma: no cover - a history miss must never fail a read
+    pass
   return web.json_response({"ok": True, "values": values})
 
 
@@ -65,10 +76,24 @@ async def api_param_set(request: web.Request) -> web.Response:
     return web.json_response({"ok": False, "error": "missing value"}, status=400)
 
   params = request.app[PARAMS_KEY]
+
+  # Read the old value before writing so the history can show what it replaced.
+  before = get_param_values(params, [name] if isinstance(name, str) else []).get(name)
+
   try:
     stored = set_param_value(params, name, body.get("value"))
   except ParamWriteError as exc:
     return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+  # Writing while driving stays allowed on purpose; the history just records it. The append
+  # never raises, so a log problem cannot turn a successful write into a reported failure.
+  if before != stored:
+    try:
+      from ..services.param_changes import append_param_change
+
+      append_param_change(name, before, json_safe(stored), source=body.get("source", "web_ui"))
+    except Exception:  # pragma: no cover - a history miss must never fail a write
+      pass
 
   return web.json_response({"ok": True, "name": name, "value": json_safe(stored)})
 

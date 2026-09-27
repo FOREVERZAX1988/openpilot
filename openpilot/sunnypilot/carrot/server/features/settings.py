@@ -52,7 +52,22 @@ async def api_setting_unit_index(request: web.Request) -> web.Response:
   return web.json_response({"ok": True, "units": {}})
 
 
+async def api_setting_unit_index_set(request: web.Request) -> web.Response:
+  """Accepted and echoed back, so a client that saves the index does not see an error.
+
+  Nothing is persisted: this fork derives every setting's range from its carrot default, so
+  a second, client-held copy of the same fact would be one that can drift out of step.
+  """
+  try:
+    body = await request.json()
+  except Exception:
+    body = {}
+  units = body.get("units") if isinstance(body, dict) and isinstance(body.get("units"), dict) else {}
+  return web.json_response({"ok": True, "units": units, "persisted": False})
+
+
 def register(app: web.Application) -> None:
   app.router.add_get("/api/settings", api_settings)
   app.router.add_get("/api/settings/snapshot", api_settings_snapshot)
   app.router.add_get("/api/setting_unit_index", api_setting_unit_index)
+  app.router.add_post("/api/setting_unit_index", api_setting_unit_index_set)

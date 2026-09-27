@@ -15,14 +15,21 @@ import logging
 
 from aiohttp import web
 
+from . import config
 from .features import bluetooth as bluetooth_feature
 from .features import camera as camera_feature
 from .features import carrot_navi as carrot_navi_feature
 from .features import cars as cars_feature
+from .features import credentials as credentials_feature
 from .features import egpu as egpu_feature
+from .features import intro as intro_feature
 from .features import params as params_feature
+from .features import params_extra as params_extra_feature
+from .features import preferences as preferences_feature
 from .features import settings as settings_feature
 from .features import system as system_feature
+from .features import tools as tools_feature
+from .features import unsupported as unsupported_feature
 from .features import ws as ws_feature
 
 logger = logging.getLogger("openpilot.carrot.server")
@@ -59,16 +66,36 @@ def create_app(params=None) -> web.Application:
   app[params_feature.PARAMS_KEY] = params
 
   params_feature.register(app)
+  params_extra_feature.register(app)
   ws_feature.register(app)
   camera_feature.register(app)
   system_feature.register(app)
   settings_feature.register(app)
+  preferences_feature.register(app)
   cars_feature.register(app)
   carrot_navi_feature.register(app)
   egpu_feature.register(app)
   bluetooth_feature.register(app)
+  tools_feature.register(app)
+  credentials_feature.register(app)
+  intro_feature.register(app)
+  # Registered last: it claims the wildcard prefixes for the subsystems this fork does not
+  # run, so a real route must never be shadowed by a refusal.
+  unsupported_feature.register(app)
   app.router.add_get("/api/health", _health)
+  app.router.add_get("/", _index)
   return app
+
+
+async def _index(request: web.Request) -> web.Response:
+  """What a browser sees when it is pointed at the device - cheaper than guessing."""
+  routes = sorted({str(resource.canonical) for resource in request.app.router.resources()})
+  return web.json_response({
+    "ok": True,
+    "service": "carrot_server",
+    "port": config.DEFAULT_PORT,
+    "routes": routes,
+  })
 
 
 async def _health(request: web.Request) -> web.Response:
