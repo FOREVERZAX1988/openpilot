@@ -2,6 +2,10 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 PYDEPS_DIR="/data/.pydeps"    # outside $DIR so overlay updates do not wipe pip deps
+# Offline wheels tracked in the checkout. The device cannot reach pypi.org (TLS dies
+# with SSL_ERROR_SYSCALL), so anything the fork needs at runtime ships here and is
+# installed with --no-index. Same layout as CarrotPilot's third_party/wheels.
+WHEEL_DIR="$DIR/third_party/wheels"
 
 # AGNOS updates can drop /usr/local/venv/bin from PATH. Restore it so scons,
 # pip and the venv Python wrappers are reachable.
@@ -183,6 +187,50 @@ ensure_pip_deps() {
   fi
   rm -rf "$tmpdir"/pip-* 2>/dev/null || true
   echo "[ensure_pip_deps] installed: ${requirements[*]}" >> /tmp/bootstrap.log
+}
+
+# Probe form is "<import>" or "<import>; assert <expr>". The assertion matters: a
+# present-but-wrong package must count as missing. `import cv2` happily accepts a cv2
+# built without dnn.readNetFromONNX, and that build cannot run xiaoge's inference -
+# which is exactly how the vision path stayed silently dead. CarrotPilot asserts the
+# same two properties.
+python_package_ok() {
+  local probe="$1"
+  local py=$(find_python python3.12) || return 1
+  local py_path=$(setup_python_path "$DIR")
+  PYTHONPATH="$py_path" "$py" -c "import ${probe}" >/dev/null 2>&1
+}
+
+# Installs one dependency from $WHEEL_DIR, preferring the bundled wheel over the
+# network. Returns non-zero when the probe still fails afterwards, so callers can
+# decide whether the package was required.
+ensure_wheel_package() {
+  local probe="$1"   # e.g. "cv2; assert cv2.__version__ == '4.13.0'"
+  local req="$2"     # e.g. "opencv-python-headless==4.13.0.92"
+  local pydeps="$PYDEPS_DIR"
+
+  python_package_ok "$probe" && return 0
+  [ -d "$WHEEL_DIR" ] || { echo "[wheels] $req: no $WHEEL_DIR; skipping" >> /tmp/bootstrap.log; return 1; }
+
+  local py=$(find_python python3.12) || return 1
+  local tmpdir=$(pip_scratch_dir)
+  mkdir -p "$pydeps" 2>/dev/null || return 1
+
+  # --no-deps is deliberate: these wheels only need numpy, and numpy must keep coming
+  # from AGNOS. Letting pip resolve dependencies would also pull its own numpy into
+  # $PYDEPS_DIR (observed: numpy 2.5.3 next to AGNOS's 2.5.1). CarrotPilot installs
+  # the same wheels the same way.
+  if TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --no-index --no-deps --disable-pip-version-check \
+       --find-links "$WHEEL_DIR" --target "$pydeps" "$req" >> /tmp/bootstrap.log 2>&1 \
+     && python_package_ok "$probe"; then
+    rm -rf "$tmpdir"/pip-* 2>/dev/null || true
+    echo "[wheels] installed $req" >> /tmp/bootstrap.log
+    return 0
+  fi
+
+  rm -rf "$tmpdir"/pip-* 2>/dev/null || true
+  echo "[wheels] $req unavailable from $WHEEL_DIR; treated as optional" >> /tmp/bootstrap.log
+  return 1
 }
 
 start_service() {
@@ -393,21 +441,37 @@ link_repos() {
 }
 
 bootstrap_deps() {
-  # Core deps needed by ai/aid.py and webui/webuid.py. Installed together so a
-  # single overlay update does not leave either service unable to import.
+  # Bundled offline wheels first. These gate one fork feature each, and the device has
+  # no route to pypi.org, so they must not depend on the network.
   #
-  # cv2 is for xiaoge's V-ASM vision server (carrot/xiaoge/v_asm_server.py), which
-  # runs as a thread of xiaoge_data. It needs cv2.dnn.readNetFromONNX to load
-  # xiaoge/assets/{lane,v_asm_model}.onnx and publish the blind-spot / lane results
-  # on customReservedRawData0 for card.py to merge into carState.
+  #   cv2     - xiaoge's V-ASM vision server (carrot/xiaoge/v_asm_server.py) runs as a
+  #             thread of xiaoge_data and needs cv2.dnn.readNetFromONNX to load
+  #             xiaoge/assets/{lane,v_asm_model}.onnx and publish blind-spot / lane
+  #             results on customReservedRawData0 for card.py to merge into carState.
+  #             While it was missing, create_server() raised, the daemon thread died,
+  #             and because xiaoge_data itself keeps running (it also serves the 7711
+  #             stream) the manager still showed it healthy - no "进程未运行" alert.
+  #             Measured 2026-09-27 on the road: 16 segments, zero customReservedRawData0.
+  #   shapely - carrot_man resamples the 7714 route at 10 m intervals with
+  #             shapely.geometry.LineString to derive curvature and curve speed. Its
+  #             absence is guarded by SHAPELY_AVAILABLE, so it degrades silently rather
+  #             than raising: route curvature and curve-speed limiting are simply off.
+  #   psutil  - carrot_man.get_broadcast_address() enumerates interfaces with
+  #             psutil.net_if_addrs() to find the right UDP 7705 broadcast address, and
+  #             carrot_navi's discovery beacon does the same.
+  #   qrcode  - the Carrot Web pairing dialog.
   #
-  # It was missing from this list, and that failure mode is silent: create_server()
-  # raises, the daemon thread dies, but xiaoge_data itself keeps running (it also
-  # serves the 7711 stream), so the manager reports the process as healthy and no
-  # "进程未运行" alert is raised. The whole vision half of the feature is simply off,
-  # and card.py's merge path stays a no-op. That is exactly what the 2026-09-27
-  # device showed: out of 16 route segments, zero customReservedRawData0 messages.
-  ensure_pip_deps aiohttp jinja2 pyzmq zstandard numpy requests tqdm jeepney cv2
+  # All optional: no feature may block startup. --no-deps keeps numpy from AGNOS.
+  ensure_wheel_package "cv2; assert cv2.__version__ == '4.13.0'; assert hasattr(cv2.dnn, 'readNetFromONNX')" \
+    "opencv-python-headless==4.13.0.92"
+  ensure_wheel_package "shapely" "shapely==2.1.2"
+  ensure_wheel_package "psutil" "psutil==7.2.2"
+  ensure_wheel_package "qrcode" "qrcode==8.2"
+
+  # Network group: needed by ai/aid.py and webui/webuid.py (and carrot_man /
+  # carrot_navi). Installed together so a single overlay update does not leave either
+  # service unable to import. These are not bundled as wheels.
+  ensure_pip_deps aiohttp jinja2 pyzmq zstandard numpy requests tqdm jeepney
 }
 
 # Retries bootstrap_deps() until it succeeds, because a single attempt at boot is
