@@ -42,14 +42,15 @@ class _FakeSock:
     pass
 
 
-def _capture(peers):
+def _capture(peers, active=False):
   """Run one broadcast_once() with the socket and the interface list faked out."""
   sink = []
   real_socket, real_targets = carrot_navi.socket.socket, carrot_navi.discovery_targets
   carrot_navi.socket.socket = lambda *_a, **_k: _FakeSock(sink)
   carrot_navi.discovery_targets = lambda _ip=None: SENTINEL_TARGETS
   try:
-    beacon = carrot_navi.CarrotNaviDiscoveryBeacon(peers=(lambda: peers) if peers is not None else None)
+    beacon = carrot_navi.CarrotNaviDiscoveryBeacon(peers=(lambda: peers) if peers is not None else None,
+                                                   active_provider=lambda: active)
     beacon.broadcast_once()
   finally:
     carrot_navi.socket.socket, carrot_navi.discovery_targets = real_socket, real_targets
@@ -85,6 +86,15 @@ class TestDiscoveryBeaconUnicast(unittest.TestCase):
       self.assertIn(('10.0.0.9', carrot_navi.DISCOVERY_PORT), [a for _, a, _ in sends])
     finally:
       carrot_navi.DISCOVERY_PEER_IPS.clear()
+
+  def test_every_datagram_carries_the_engagement_state(self):
+    # The app reads `active` off whatever 7705 datagram it parsed last. carrot_man only
+    # broadcasts every 2s while this beacon is far more frequent, so a beacon without
+    # the field makes the indicator depend on arrival order.
+    for _, _, data in _capture(('10.0.0.5',), active=True):
+      self.assertEqual(json.loads(data)['active'], True)
+    for _, _, data in _capture(('10.0.0.5',), active=False):
+      self.assertEqual(json.loads(data)['active'], False)
 
 
 if __name__ == '__main__':

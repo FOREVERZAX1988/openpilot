@@ -38,7 +38,12 @@ async def api_params_bulk(request: web.Request) -> web.Response:
   # for it alongside real settings, so it is answered here rather than 400'd.
   if "DeviceType" in names:
     try:
-      from openpilot.system.hardware import HARDWARE
+      # sunnypilot keeps HARDWARE in common.hardware; openpilot upstream has it under
+      # system.hardware. Try both so the answer does not depend on which layout is live.
+      try:
+        from openpilot.common.hardware import HARDWARE
+      except ImportError:
+        from openpilot.system.hardware import HARDWARE
 
       values["DeviceType"] = HARDWARE.get_device_type()
     except Exception:

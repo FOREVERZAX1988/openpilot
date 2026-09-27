@@ -174,12 +174,29 @@ def discovery_targets(advertise_ip: str | None = None) -> tuple[tuple[str, str],
   return tuple(dict.fromkeys(targets))
 
 
+def _engaged_default() -> bool:
+  """`IsEngaged` is maintained by hardwared from selfdriveState.enabled."""
+  try:
+    from openpilot.common.params import Params
+
+    return bool(Params().get_bool("IsEngaged"))
+  except Exception:
+    return False
+
+
 class CarrotNaviDiscoveryBeacon:
   def __init__(self, advertise_ip: str | None = None, interval_s: float = DISCOVERY_INTERVAL_S,
-               port: int = DEFAULT_PORT, peers=None) -> None:
+               port: int = DEFAULT_PORT, peers=None, active_provider=None) -> None:
     self.advertise_ip = advertise_ip
     self.interval_s = max(0.2, float(interval_s))
     self._port = int(port)
+    # `active` is what the app reads off UDP 7705 to decide whether openpilot is
+    # actually controlling the car. This beacon is the one the app sees most often -
+    # carrot_man's is every 2s, this one every DISCOVERY_INTERVAL_S - so omitting the
+    # field here means whichever datagram the app last parsed decides the indicator.
+    # hardwared keeps IsEngaged equal to selfdriveState.enabled, which is the same
+    # source carrot_man uses, so both beacons agree.
+    self._active = active_provider if active_provider is not None else _engaged_default
     # Optional callable returning the IPs to unicast to; defaults to every app that has
     # opened a WebSocket on this process.
     self._peers = peers
@@ -212,7 +229,12 @@ class CarrotNaviDiscoveryBeacon:
       # Include the WebSocket port. Without it a client that discovers us here can
       # only fall back to the hard-coded 7706, which carrot_man owns - it would
       # "find" the device and then send its data to the wrong service.
-      body = json.dumps({"ip": source_ip, "navi_debug": 1, "port": self._port}).encode("utf-8")
+      body = json.dumps({
+        "ip": source_ip,
+        "navi_debug": 1,
+        "port": self._port,
+        "active": bool(self._active()),
+      }).encode("utf-8")
       sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
       try:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -1333,11 +1355,11 @@ def main() -> None:
     # dead 7714 with nothing in swaglog. manager's daemons write stdout to
     # /dev/null (process.py Popen), which is why the console print alone is not
     # enough to diagnose this from logs.
-    _msg = (
-      "[carrot_navi] aiohttp is not installed; 7714 v2 WebSocket receiver cannot start. "
-      "Install aiohttp (e.g. pip install --target /data/.pydeps aiohttp) or rebuild the AGNOS image. "
-      "This process will idle to avoid manager restart loops."
-    )
+    _msg = " ".join((
+      "[carrot_navi] aiohttp is not installed; 7714 v2 WebSocket receiver cannot start.",
+      "Install aiohttp (e.g. pip install --target /data/.pydeps aiohttp) or rebuild the AGNOS image.",
+      "This process will idle to avoid manager restart loops.",
+    ))
     print(_msg, flush=True)
     try:
       from openpilot.common.swaglog import cloudlog
