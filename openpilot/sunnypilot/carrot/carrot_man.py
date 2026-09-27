@@ -2113,7 +2113,10 @@ class CarrotManager:
           "ts": _navi_int(crossroad, "ts", 0),
         }
         try:
-          self.params.put("CarrotNaviCrossroad", json.dumps(payload))
+          # A JSON parameter takes the object, not a serialized string: Params casts with
+          # python2cpp(dict, ParamKeyType.JSON) and raises TypeError on a str, which made
+          # every tick log a failure and left the value never written.
+          self.params.put("CarrotNaviCrossroad", payload)
         except Exception as e:
           cloudlog.error(f"carrot_man: failed to write CarrotNaviCrossroad param: {e}")
 
@@ -2639,7 +2642,8 @@ class CarrotManager:
       pass
 
     try:
-      self.params.put("TrafficLight", json.dumps(payload))
+      # A JSON parameter takes the object, not a serialized string - see CarrotNaviCrossroad.
+      self.params.put("TrafficLight", payload)
     except Exception as e:
       cloudlog.error(f"carrot_man: failed to write TrafficLight param: {e}")
 

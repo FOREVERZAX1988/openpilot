@@ -837,7 +837,8 @@ class TestCarrotManager(unittest.TestCase):
 
     stored = self.mgr.params._store.get("CarrotNaviCrossroad")
     assert stored is not None
-    parsed = json.loads(stored)
+    # A JSON parameter is stored as the object; older callers serialized it first.
+    parsed = json.loads(stored) if isinstance(stored, (str, bytes)) else stored
     assert parsed["distanceM"] == 350
     assert parsed["imageCode"] == 42
     assert parsed["imageUrl"] == "https://example.com/cross.png"
