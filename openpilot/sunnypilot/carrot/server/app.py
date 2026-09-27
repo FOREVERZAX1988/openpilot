@@ -15,7 +15,15 @@ import logging
 
 from aiohttp import web
 
+from .features import bluetooth as bluetooth_feature
+from .features import camera as camera_feature
+from .features import carrot_navi as carrot_navi_feature
+from .features import cars as cars_feature
+from .features import egpu as egpu_feature
 from .features import params as params_feature
+from .features import settings as settings_feature
+from .features import system as system_feature
+from .features import ws as ws_feature
 
 logger = logging.getLogger("openpilot.carrot.server")
 
@@ -51,6 +59,14 @@ def create_app(params=None) -> web.Application:
   app[params_feature.PARAMS_KEY] = params
 
   params_feature.register(app)
+  ws_feature.register(app)
+  camera_feature.register(app)
+  system_feature.register(app)
+  settings_feature.register(app)
+  cars_feature.register(app)
+  carrot_navi_feature.register(app)
+  egpu_feature.register(app)
+  bluetooth_feature.register(app)
   app.router.add_get("/api/health", _health)
   return app
 

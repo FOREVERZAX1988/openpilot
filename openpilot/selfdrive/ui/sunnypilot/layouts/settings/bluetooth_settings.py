@@ -49,11 +49,14 @@ BT_DEFAULTS = {
 _CONFIG_PATH = '/data/params/d/CarrotBluetooth'
 _RUNTIME_PATH = '/dev/shm/carrot-bluetooth'
 
-API_BASE = 'http://127.0.0.1:5080'
+# The carrot API server on 7000 owns Bluetooth for every client - this panel, the
+# companion app and any script - so a mapping edited on the phone is the mapping the
+# daemon runs. (This panel previously called a port nothing listened on.)
+API_BASE = 'http://127.0.0.1:7000'
 
 
 def _api_path(operation: str | None = None) -> str:
-  base = f'{API_BASE}/api/opui/bluetooth'
+  base = f'{API_BASE}/api/bluetooth'
   return f'{base}/{operation}' if operation else base
 
 
