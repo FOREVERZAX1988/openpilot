@@ -45,6 +45,24 @@ class CarState(Protocol):
   rightBlindspot: bool
 
 
+def lane_width_meters(meta, field: str) -> float:
+  """Read a target lane width (metres) from ModelDataV2.meta.
+
+  laneWidthLeft / laneWidthRight are CarrotPilot model extensions that this fork's
+  ModelDataV2.MetaData schema does NOT define (see cereal/log.capnp), so the attribute is
+  absent at runtime.  Reading it directly raised AttributeError, which escaped the
+  ``except (OSError, ValueError)`` guard in v_asm_server.run_camera and silently killed the
+  wide-road camera thread on the first left/right lane change, permanently disabling VASM.
+
+  Missing data fails closed (0.0 m) so the blindspot gate stays inactive instead of trusting
+  a lane width that cannot be verified on this fork.
+  """
+  try:
+    return float(getattr(meta, field, 0.0))
+  except (TypeError, ValueError):
+    return 0.0
+
+
 def _lane_type(value: object, field: str) -> int:
   if isinstance(value, bool) or not isinstance(value, int) or value not in XIAOGE_LANE_TYPES:
     raise ValueError(f"{field} must be -1, 0, or 1")

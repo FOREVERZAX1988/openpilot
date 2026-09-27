@@ -29,7 +29,7 @@ from openpilot.cereal import log
 from openpilot.sunnypilot.carrot.xiaoge.lane_inference import DEFAULT_LANE_MODEL_PATH, LaneInference, prepare_lane_image
 from openpilot.sunnypilot.carrot.xiaoge.nv12 import nv12_y_plane, pack_nv12
 from openpilot.sunnypilot.carrot.xiaoge.v_asm_inference import DEFAULT_MODEL_PATH, VASMInference
-from openpilot.sunnypilot.carrot.xiaoge.xiaoge_vision import XIAOGE_BLINDSPOT_TIMEOUT_NS, XIAOGE_LANE_TIMEOUT_NS
+from openpilot.sunnypilot.carrot.xiaoge.xiaoge_vision import XIAOGE_BLINDSPOT_TIMEOUT_NS, XIAOGE_LANE_TIMEOUT_NS, lane_width_meters
 
 try:
   import cv2
@@ -408,15 +408,15 @@ class VASMService:
       if speed < VASM_MIN_SPEED_MPS or speed > VASM_MAX_SPEED_MPS:
         gate = {"active": False, "side": "", "reason": "speed outside 30-120 km/h", "laneWidth": 0.0}
       elif direction == log.LaneChangeDirection.left:
-        width = float(self.sm["modelV2"].meta.laneWidthLeft)
+        width = lane_width_meters(self.sm["modelV2"].meta, "laneWidthLeft")
         gate = {"active": width >= VASM_MIN_LANE_WIDTH_METERS, "side": "left", "reason": "", "laneWidth": width}
       elif direction == log.LaneChangeDirection.right:
-        width = float(self.sm["modelV2"].meta.laneWidthRight)
+        width = lane_width_meters(self.sm["modelV2"].meta, "laneWidthRight")
         gate = {"active": width >= VASM_MIN_LANE_WIDTH_METERS, "side": "right", "reason": "", "laneWidth": width}
       else:
         gate = {"active": False, "side": "", "reason": "no lane-change direction", "laneWidth": 0.0}
       if gate["side"] and not gate["active"]:
-        gate["reason"] = "target lane width below 3.0 m"
+        gate["reason"] = "lane width unavailable on this fork" if gate["laneWidth"] <= 0.0 else "target lane width below 3.0 m"
     with self.lock:
       self.vasm_gate = gate
     return bool(gate["active"]), str(gate["side"])
@@ -539,7 +539,10 @@ class VASMService:
             "updatedMonoTimeNanos": time.monotonic_ns(),
           }
         self.publish_vision_result()
-      except (OSError, ValueError) as error:
+      except (OSError, ValueError, AttributeError) as error:
+        # AttributeError is included defensively: a cereal field that exists in a
+        # CarrotPilot schema but not in this fork's (e.g. ModelDataV2.meta.laneWidth*)
+        # must degrade to an error string instead of silently killing this thread.
         with self.lock:
           self.camera_error = str(error)
         client = None
@@ -600,7 +603,8 @@ class VASMService:
           res["updatedMonoTimeNanos"] = time.monotonic_ns()
           self.lane_result = res
         self.publish_vision_result()
-      except (OSError, ValueError) as error:
+      except (OSError, ValueError, AttributeError) as error:
+        # See run_camera: guard against cereal-schema drift killing the thread silently.
         with self.lock:
           self.lane_camera_error = str(error)
         client = None
