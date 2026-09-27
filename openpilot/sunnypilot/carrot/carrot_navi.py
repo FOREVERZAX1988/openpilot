@@ -176,12 +176,23 @@ def discovery_targets(advertise_ip: str | None = None) -> tuple[tuple[str, str],
 
 class CarrotNaviDiscoveryBeacon:
   def __init__(self, advertise_ip: str | None = None, interval_s: float = DISCOVERY_INTERVAL_S,
-               port: int = DEFAULT_PORT) -> None:
+               port: int = DEFAULT_PORT, peers=None) -> None:
     self.advertise_ip = advertise_ip
     self.interval_s = max(0.2, float(interval_s))
     self._port = int(port)
+    # Optional callable returning the IPs to unicast to; defaults to every app that has
+    # opened a WebSocket on this process.
+    self._peers = peers
     self._stop = threading.Event()
     self._thread: threading.Thread | None = None
+
+  def _peer_ips(self) -> tuple[str, ...]:
+    if self._peers is not None:
+      try:
+        return tuple(self._peers())
+      except Exception:
+        return ()
+    return tuple(DISCOVERY_PEER_IPS)
 
   def start(self) -> None:
     if self._thread is not None:
@@ -207,6 +218,19 @@ class CarrotNaviDiscoveryBeacon:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.bind((source_ip, 0))
         sock.sendto(body, (broadcast_ip, DISCOVERY_PORT))
+        # Also address every app that is already connected, directly. Delivery of the
+        # broadcast copy depends on the AP forwarding it, and on Android the receiving
+        # socket can miss it while the app is backgrounded; a directly addressed copy
+        # does not have that failure mode. Sending it is harmless when the app is not
+        # listening (it only listens on 7705 while it has no control socket - see
+        # carrot_navi_api.md section 1).
+        for peer_ip in self._peer_ips():
+          if peer_ip in ("", "0.0.0.0", "127.0.0.1"):
+            continue
+          try:
+            sock.sendto(body, (peer_ip, DISCOVERY_PORT))
+          except OSError:
+            continue
       except OSError:
         continue
       finally:
@@ -973,6 +997,13 @@ RECEIVER_KEY = web.AppKey("carrot_navi_receiver", CarrotNaviReceiver)
 WEBSOCKETS_KEY = web.AppKey("carrot_navi_websockets", set)
 MAP_CONFIG_READER_KEY = web.AppKey("carrot_navi_map_config_reader", Callable)
 
+# IPs that have opened a v2 WebSocket on this process. The discovery beacon unicasts its
+# datagram to them on top of broadcasting: the app only listens on UDP 7705 while it has
+# no control socket (carrot_navi_api.md section 1), so re-discovery after a drop has to
+# work without a broadcast round trip. Module-level because the beacon thread is started
+# before the aiohttp application exists.
+DISCOVERY_PEER_IPS: set[str] = set()
+
 
 class ClusterNaviMapParamReader:
   """Reads map-render configuration from params.
@@ -1031,6 +1062,9 @@ class ClusterNaviMapParamReader:
 
 def _track_websocket(request: web.Request, ws: web.WebSocketResponse) -> None:
   request.app[WEBSOCKETS_KEY].add(ws)
+  remote = getattr(request, "remote", None)
+  if remote:
+    DISCOVERY_PEER_IPS.add(remote)
 
 
 def _untrack_websocket(request: web.Request, ws: web.WebSocketResponse) -> None:
