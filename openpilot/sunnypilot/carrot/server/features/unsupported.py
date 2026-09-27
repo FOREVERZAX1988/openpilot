@@ -77,7 +77,10 @@ async def api_xiaoge(request: web.Request) -> web.Response:
   """Proxy the xiaoge V-ASM page so the phone can reach it without opening 8082 on the LAN."""
   import aiohttp
 
-  upstream = f"{XIAOGE_UPSTREAM}{request.path_qs if request.path_qs else '/'}"
+  # The mount point is stripped before the path is forwarded: upstream serves the page at
+  # "/", and passing "/xiaoge/" through unchanged makes it answer 404 for its own index.
+  tail = request.path_qs[len("/xiaoge"):]
+  upstream = f"{XIAOGE_UPSTREAM}{tail if tail else '/'}"
   timeout = aiohttp.ClientTimeout(total=XIAOGE_TIMEOUT_SEC)
   try:
     async with aiohttp.ClientSession(timeout=timeout) as session:
