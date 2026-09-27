@@ -48,8 +48,10 @@ from openpilot.sunnypilot.carrot.radar_motion.lane_change_gap import (
   LaneChangeGapTracker,
 )
 from openpilot.sunnypilot.carrot.t_follow import (
+  get_lead_response_for_gap,
   get_t_follow_mode_factor,
   get_t_follow_mode_max,
+  ramp_mode_t_follow_factor,
   ramp_t_follow,
 )
 from openpilot.sunnypilot.carrot.traffic_stop import TrafficStopModelLeadMatcher
@@ -371,6 +373,9 @@ class CarrotPlanner:
     self._my_safe_mode_factor = _SAFE_FACTOR
     self._my_high_mode_factor = _HIGH_FACTOR
     self._my_t_follow_factor = 1.0
+    # Ramped copy of _my_t_follow_factor. The driving mode is applied gradually on the way
+    # down (see ramp_mode_t_follow_factor) so clearing Safe does not snap the gap shut.
+    self._tf_mode_factor = 1.0
     self._apply_driving_mode_factors()
 
     # Follow-distance breakpoints (seconds) - one per LongitudinalPersonality.
@@ -380,6 +385,7 @@ class CarrotPlanner:
     self._t_follow_gap4 = 1.6
     self._dynamic_t_follow_lc = 0.0
     self._lead_accel_response = 0
+    self._lead_response_tf = (-1, -1, -1, -1)
     self._enable_speed_tf = 0
     self._t_follow_decel_boost = 0.0
     self._t_follow_decel_extra = 0.0
@@ -615,6 +621,12 @@ class CarrotPlanner:
       self._t_follow_gap4 = p.get_float("TFollowGap4") / 100.0
       self._dynamic_t_follow_lc = p.get_float("DynamicTFollowLC") / 100.0
       self._lead_accel_response = int(np.clip(p.get_int("LeadAccelResponse"), 0, 5))
+      # Per-gap overrides for the lead acceleration response; "-1" (the default) means
+      # "use LeadAccelResponse". These four params were registered but never read, so the
+      # per-gap table and the driving-mode ceiling (get_mode_lead_response) never applied.
+      self._lead_response_tf = tuple(
+        int(np.clip(p.get_int(f"LeadAccelResponseTF{i}"), -1, 5)) for i in range(1, 5)
+      )
       self._enable_speed_tf = p.get_int("EnableSpeedTF")
       self._t_follow_decel_boost = p.get_float("TFollowDecelBoost") / 100.0
     elif self._params_count == 30:
@@ -738,18 +750,32 @@ class CarrotPlanner:
 
     Mirrors the CarrotPlanner interface used by CarrotPilot's longitudinal MPC.
     """
+    # Resolve the lead acceleration response the way CarrotPilot does: the per-gap
+    # override first, then the driving-mode ceiling (a comfort mode may soften the
+    # response, never raise it). get_mode_lead_response was defined but never called, so
+    # both layers were inert and only the flat LeadAccelResponse reached this decision.
+    lead_response = get_mode_lead_response(
+      get_lead_response_for_gap(self._lead_accel_response, self._lead_response_tf, personality),
+      self._my_driving_mode,
+    )
     force_configured_tf_target = (
       lead_status and not getattr(self, 'lane_change_active', False)
       and np.isfinite(lead_accel)
       and lead_accel > 0.5
-      and self._lead_accel_response >= 2
+      and lead_response >= 2
     )
     tf_base = self._get_base_t_follow(personality, v_ego, use_speed_tf=not force_configured_tf_target)
     if force_configured_tf_target:
       tf_mode_target = tf_base
     else:
       tf_target = self._apply_speed_t_follow_scale(tf_base, v_ego)
-      tf_mode_target = float(tf_target * self._my_t_follow_factor)
+      # Ramp only the release of the mode margin: raising it (Normal -> Safe) applies at
+      # once, dropping it (Safe -> Normal) is spread over a few seconds so the gap does
+      # not snap shut under the driver.
+      self._tf_mode_factor = ramp_mode_t_follow_factor(
+        self._my_t_follow_factor, getattr(self, '_tf_mode_factor', self._my_t_follow_factor), DT_MDL,
+      )
+      tf_mode_target = float(tf_target * self._tf_mode_factor)
     tf_adjusted = self._apply_decel_hold_and_boost_t_follow(tf_mode_target, a_ego)
     tf_final = self._clip_t_follow(tf_adjusted)
     self._tf_applied = float(tf_final)
