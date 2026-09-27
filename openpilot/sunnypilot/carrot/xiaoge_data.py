@@ -158,7 +158,7 @@ class XiaogeDataBroadcaster:
     return {
       "vEgo": max(float(car_state.vEgo), 0.0),
       "steeringAngleDeg": float(car_state.steeringAngleDeg),
-      "leftLatDist": float(car_state.leftLatDist),
+      "leftLatDist": float(getattr(car_state, "leftLatDist", 0.0)),
       "leftBlindspot": bool(car_state.leftBlindspot),
       "rightBlindspot": bool(car_state.rightBlindspot),
     }
