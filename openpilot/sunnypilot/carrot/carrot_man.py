@@ -1277,27 +1277,35 @@ class CarrotManager:
   # ---- broadcast (P1-1) ------------------------------------------------- #
 
   def get_broadcast_address(self) -> str | None:
-    """Get broadcast address for UDP broadcast."""
+    """Broadcast address of the interface carrying the default route.
+
+    This enumerates every interface and prefers the one whose address matches the
+    default-route source. It replaces a hard-coded ['wlan0', 'eth0', ...] list that
+    missed USB / tethering interfaces; on a miss the datagram went out as the limited
+    broadcast 255.255.255.255 via whatever interface the default route used, so a phone
+    attached over a different interface never received the UDP 7705 discovery beacon and
+    the app reported 7705 inactive. CarrotPilot resolves this the same way, via psutil.
+    """
     try:
-      # Try common network interfaces
-      interfaces = ['wlan0', 'eth0', 'enp0s3', 'br0', 'wlp2s0']
-      for iface in interfaces:
-        try:
-          with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            # Use SIOCGIFBRDADDR ioctl to get broadcast address
-            import fcntl
-            import struct
-            ip = fcntl.ioctl(
-              s.fileno(),
-              0x8919,  # SIOCGIFBRDADDR
-              struct.pack('256s', iface.encode('utf-8')[:15])
-            )[20:24]
-            return socket.inet_ntoa(ip)
-        except Exception:
-          continue
-      return "255.255.255.255"  # Fallback address
-    except Exception:
-      return None
+      import ipaddress
+      import psutil
+
+      local_ip = self.get_local_ip()
+      ipv4_addrs = [
+        addr
+        for addresses in psutil.net_if_addrs().values()
+        for addr in addresses
+        if addr.family == socket.AF_INET and not addr.address.startswith("127.")
+      ]
+      ipv4_addrs.sort(key=lambda addr: addr.address != local_ip)
+      for addr in ipv4_addrs:
+        if addr.broadcast:
+          return addr.broadcast
+        if addr.netmask:
+          return str(ipaddress.ip_network(f"{addr.address}/{addr.netmask}", strict=False).broadcast_address)
+    except Exception as e:
+      cloudlog.error(f"carrot_man: failed to resolve broadcast address: {e}")
+    return "255.255.255.255"
 
   def get_local_ip(self) -> str:
     """Get local IP address by connecting to external server."""
@@ -1373,6 +1381,10 @@ class CarrotManager:
               if ip_address != self._ip_address:
                 self._ip_address = ip_address
                 self._remote_addr = ""
+                # Publish the address the carrot web panel (port 8088) is reachable on.
+                # The QR dialog in the car UI reads NetworkAddress straight from Params;
+                # nothing wrote it in this fork, so the QR code always rendered empty.
+                self.params.put_nonblocking("NetworkAddress", ip_address)
 
               # Build and send message
               msg = self.make_send_message()
@@ -1488,12 +1500,17 @@ class CarrotManager:
     if not self._ensure_socket(self._port):
       return
 
-    # Broadcast / ZMQ threads keep running so the phone can find us; rich
-    # navi processing and web UI only run when the feature is enabled.
+    # The 7705 discovery beacon, the 7706 listener and the ZMQ / route threads must
+    # stay live even while CarrotEnabled is off: the phone app discovers the unit on
+    # UDP 7705 and only then opens the 7714 v2 link, so a disabled device still has to
+    # be findable. CarrotPilot starts all of these unconditionally from __init__; here
+    # they start before the enabled gate so the rich navi / publish / web work below can
+    # stay gated without taking the beacon down with it.
+    self._start_background_threads()
+
     if not self._enabled:
       self._drain_packets()
       self._stop_web()
-      self._is_running = False
       return
 
     self._maybe_start_web()
@@ -1524,6 +1541,15 @@ class CarrotManager:
     self._derive_state(v_ego_kph)
     self._publish()
 
+  def _start_background_threads(self) -> None:
+    """Start the long-lived background threads (idempotent).
+
+    These must not be gated behind CarrotEnabled. The phone app discovers the unit
+    on UDP 7705 (broadcast_version_info) and only then opens the 7714 v2 link, so a
+    device with the feature switched off still has to be findable. CarrotPilot starts
+    every one of these unconditionally from __init__; in this fork they start before
+    the enabled gate in tick(), and the rich navi / publish / web work stays gated.
+    """
     # Start broadcast thread if not running (P1-1)
     if not self._is_running:
       self._is_running = True

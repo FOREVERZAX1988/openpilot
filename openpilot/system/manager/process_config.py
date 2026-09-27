@@ -220,11 +220,20 @@ procs += [
   # amapNaviSP removed: carrot_man now only produces carrotManSP /
   # navInstructionCarrotSP. AmapApiKey is still used by AmapMapData (Web API
   # fallback for speed limits / road names).
+  #
+  # always_run, NOT carrot_enabled: carrot_man is the only UDP 7705 discovery
+  # advertiser on this fork, and the phone app must find the unit on 7705 before
+  # it can enable anything. CarrotEnabled defaults to "0", so gating the process
+  # on it made every default device invisible to the app ("7705 未激活").
+  # CarrotPilot runs this process with always_run for the same reason.
+  # carrot_man still gates its own rich navi / publish / web work on
+  # CarrotEnabled inside tick(); only the listener and the beacon stay live.
+  #
   # restart_if_crash=True: carrot_man is the 7706 UDP discovery/navi backbone;
   # without it the phone app cannot find the unit. On crash the manager must
   # auto-relaunch it rather than leaving the feature dead until a manual reboot
   # (mirrors carrot_navi below).
-  PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", carrot_enabled, restart_if_crash=True),
+  PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", always_run, restart_if_crash=True),
   PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", carrot_navi_v2_enabled, restart_if_crash=True),
 
   # Xiaoge ONNX BSD/Lane detection
