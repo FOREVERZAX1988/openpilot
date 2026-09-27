@@ -264,6 +264,7 @@ class _CarState:
     self.pcmCruiseGap = 0
     self.leftBlinker = False
     self.rightBlinker = False
+    self.canValid = True
     self.buttonEvents = [_ButtonEvent(getattr(ButtonType, t) if isinstance(t, str) else t, p)
                          for t, p in buttons]
 
