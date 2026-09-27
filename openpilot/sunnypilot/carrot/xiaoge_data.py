@@ -213,8 +213,8 @@ class XiaogeDataBroadcaster:
     ]
     meta = model_v2.meta
     data["meta"] = {
-      "distanceToRoadEdgeLeft": float(meta.distanceToRoadEdgeLeft),
-      "distanceToRoadEdgeRight": float(meta.distanceToRoadEdgeRight),
+      "distanceToRoadEdgeLeft": float(getattr(meta, "distanceToRoadEdgeLeft", 0.0)),
+      "distanceToRoadEdgeRight": float(getattr(meta, "distanceToRoadEdgeRight", 0.0)),
     }
     if model_v2.orientationRate.z:
       data["curvature"] = {"maxOrientationRate": max((float(x) for x in model_v2.orientationRate.z), key=abs)}
