@@ -56,8 +56,12 @@ ensure_pip_dep() {
       curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
         "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || true
     fi
-    local index_url="${PIP_INDEX_URL:-https://pypi.org/simple}"
-    PYTHONPATH="$py_path" "$py" -m pip install --index-url="$index_url" --target="$pydeps" "$module" >> /tmp/bootstrap.log 2>&1 || return 1
+    # The device cannot reach pypi.org (TLS dies with SSL_ERROR_SYSCALL); same reason
+    # the get-pip bootstrap above prefers mirrors.aliyun.com. Override with PIP_INDEX_URL.
+    local index_url="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
+    local tmpdir=$(pip_scratch_dir)
+    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --index-url="$index_url" --target="$pydeps" "$module" >> /tmp/bootstrap.log 2>&1 || return 1
+    rm -rf "$tmpdir"/pip-* 2>/dev/null || true
   fi
 }
 
@@ -80,6 +84,40 @@ wait_for_dns() {
     waited=$((waited + 1))
   done
   return 1
+}
+
+# Scratch space for pip. AGNOS's $TMPDIR is a 150 MB tmpfs (/tmp), which is too small
+# to unpack a wheel like opencv-python-headless (~35 MB packed, ~90 MB unpacked plus
+# numpy): the install dies with ENOSPC before a single byte reaches $PYDEPS_DIR - that
+# is what kept cv2 uninstalled. Scratch goes next to the target instead, where /data
+# has room; fall back to $TMPDIR if that is not writable.
+pip_scratch_dir() {
+  local dir="${PIP_TMPDIR:-/data/.pip-tmp}"
+  if mkdir -p "$dir" 2>/dev/null; then
+    echo "$dir"
+  else
+    echo "${TMPDIR:-/tmp}"
+  fi
+}
+
+# Maps an import name to a pip requirement. Only needed where the two differ:
+# ensure_pip_deps probes with `import <name>` and then hands the same name to pip,
+# which works for aiohttp/numpy/... but not for cv2 - the OpenCV wheel is called
+# `opencv-python-headless`. Without this, xiaoge's V-ASM vision server never starts
+# (see bootstrap_deps) and the failure is invisible.
+pip_requirement_for() {
+  case "$1" in
+    cv2)
+      # Single source of truth for the pin: xiaoge/requirements.txt in this repo.
+      local pinned
+      pinned=$(grep -m1 '^opencv-python-headless' \
+        "$DIR/openpilot/sunnypilot/carrot/xiaoge/requirements.txt" 2>/dev/null)
+      echo "${pinned:-opencv-python-headless}"
+      ;;
+    *)
+      echo "$1"
+      ;;
+  esac
 }
 
 # Ensures a list of pip packages are importable.
@@ -107,7 +145,13 @@ ensure_pip_deps() {
     return 0
   fi
 
-  echo "[ensure_pip_deps] missing: ${missing[*]}; waiting for DNS..." >> /tmp/bootstrap.log
+  # pip gets the requirement names, not the import names (cv2 -> opencv-python-headless).
+  local requirements=()
+  for module in "${missing[@]}"; do
+    requirements+=("$(pip_requirement_for "$module")")
+  done
+
+  echo "[ensure_pip_deps] missing: ${missing[*]} -> ${requirements[*]}; waiting for DNS..." >> /tmp/bootstrap.log
   if ! wait_for_dns 60; then
     echo "[ensure_pip_deps] DNS not ready after 60s; deferring install" >> /tmp/bootstrap.log
     # Must report failure, not success: the caller uses this status to decide
@@ -123,15 +167,22 @@ ensure_pip_deps() {
       "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || return 1
   fi
 
-  local index_url="${PIP_INDEX_URL:-https://pypi.org/simple}"
+  # The device cannot reach pypi.org (TLS dies with SSL_ERROR_SYSCALL); same reason
+  # the get-pip bootstrap below prefers mirrors.aliyun.com. Override with PIP_INDEX_URL.
+  local index_url="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
   # --upgrade makes this a real repair path: a package directory left behind by an
   # interrupted download makes plain install report "already exists" and skip the
   # copy, so the import check would keep failing and the retry loop would spin.
-  if ! PYTHONPATH="$py_path" "$py" -m pip install --upgrade --index-url="$index_url" --target="$pydeps" "${missing[@]}" >> /tmp/bootstrap.log 2>&1; then
+  # --no-cache-dir keeps the wheel cache off the almost-full rootfs (90% used), and
+  # TMPDIR moves pip's unpacking off the 150 MB tmpfs.
+  local tmpdir=$(pip_scratch_dir)
+  if ! TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade --index-url="$index_url" --target="$pydeps" "${requirements[@]}" >> /tmp/bootstrap.log 2>&1; then
     echo "[ensure_pip_deps] install failed; will retry on next keep_alive cycle" >> /tmp/bootstrap.log
+    rm -rf "$tmpdir"/pip-* 2>/dev/null || true
     return 1
   fi
-  echo "[ensure_pip_deps] installed: ${missing[*]}" >> /tmp/bootstrap.log
+  rm -rf "$tmpdir"/pip-* 2>/dev/null || true
+  echo "[ensure_pip_deps] installed: ${requirements[*]}" >> /tmp/bootstrap.log
 }
 
 start_service() {
@@ -344,7 +395,19 @@ link_repos() {
 bootstrap_deps() {
   # Core deps needed by ai/aid.py and webui/webuid.py. Installed together so a
   # single overlay update does not leave either service unable to import.
-  ensure_pip_deps aiohttp jinja2 pyzmq zstandard numpy requests tqdm jeepney
+  #
+  # cv2 is for xiaoge's V-ASM vision server (carrot/xiaoge/v_asm_server.py), which
+  # runs as a thread of xiaoge_data. It needs cv2.dnn.readNetFromONNX to load
+  # xiaoge/assets/{lane,v_asm_model}.onnx and publish the blind-spot / lane results
+  # on customReservedRawData0 for card.py to merge into carState.
+  #
+  # It was missing from this list, and that failure mode is silent: create_server()
+  # raises, the daemon thread dies, but xiaoge_data itself keeps running (it also
+  # serves the 7711 stream), so the manager reports the process as healthy and no
+  # "进程未运行" alert is raised. The whole vision half of the feature is simply off,
+  # and card.py's merge path stays a no-op. That is exactly what the 2026-09-27
+  # device showed: out of 16 route segments, zero customReservedRawData0 messages.
+  ensure_pip_deps aiohttp jinja2 pyzmq zstandard numpy requests tqdm jeepney cv2
 }
 
 # Retries bootstrap_deps() until it succeeds, because a single attempt at boot is
