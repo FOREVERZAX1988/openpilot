@@ -5956,8 +5956,6 @@ msgstr "藍牙遙控器"
 msgid "Bluetooth adapter unavailable"
 msgstr "藍牙適配器不可用"
 
-msgid "Requires stationary & disengaged state"
-msgstr "需要車輛靜止且巡航已解除"
 
 msgid "Scanning..."
 msgstr "搜索中..."

@@ -6047,8 +6047,6 @@ msgstr "蓝牙遥控器"
 msgid "Bluetooth adapter unavailable"
 msgstr "蓝牙适配器不可用"
 
-msgid "Requires stationary & disengaged state"
-msgstr "需要车辆静止且巡航已解除"
 
 msgid "Scanning..."
 msgstr "搜索中..."

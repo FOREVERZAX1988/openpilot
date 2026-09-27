@@ -4117,8 +4117,6 @@ msgstr "Bluetooth Remotes"
 msgid "Bluetooth adapter unavailable"
 msgstr "Bluetooth adapter unavailable"
 
-msgid "Requires stationary & disengaged state"
-msgstr "Requires stationary & disengaged state"
 
 msgid "Scanning..."
 msgstr "Scanning..."

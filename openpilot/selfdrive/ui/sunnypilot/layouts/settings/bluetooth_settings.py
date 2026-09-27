@@ -265,8 +265,6 @@ class CarrotBluetoothLayout(Widget):
       return tr("Bluetooth power node not detected")
     if not state.available:
       return tr("No Bluetooth adapter found")
-    if not state.runtime.stationary:
-      return tr("Requires stationary & disengaged state")
     if self._is_scanning_active(state):
       return tr("Scanning...")
     if not state.radio_enabled:
@@ -346,7 +344,7 @@ class CarrotBluetoothLayout(Widget):
   def _maybe_auto_scan(self, state: BTState) -> None:
     if self._auto_scanned:
       return
-    if not state.available or not state.radio_enabled or not state.runtime.stationary:
+    if not state.available or not state.radio_enabled:
       return
     self._auto_scanned = True
     self._scanning_until = time.monotonic() + 32
@@ -416,7 +414,7 @@ class CarrotBluetoothLayout(Widget):
   def _render_header(self, rect: rl.Rectangle, state: BTState, error_text: str, status_text: str) -> float:
     y = rect.y + 20
     top_h = 100
-    can_act = state.runtime.stationary and state.available
+    can_act = state.available
     discovering = self._is_scanning_active(state)
 
     # Scan / Stop button
@@ -726,7 +724,7 @@ class CarrotBluetoothLayout(Widget):
     self._back_btn.render()
     y += 100
 
-    can_act = state.runtime.stationary and state.available
+    can_act = state.available
     row_h = 120
     gap = 24
 
