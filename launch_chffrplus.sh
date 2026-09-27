@@ -118,6 +118,12 @@ pip_requirement_for() {
         "$DIR/openpilot/sunnypilot/carrot/xiaoge/requirements.txt" 2>/dev/null)
       echo "${pinned:-opencv-python-headless}"
       ;;
+    zmq)
+      # zmq is the import name; pyzmq is the wheel. Probing with `import pyzmq`
+      # always reported "missing", so bootstrap_deps never returned success and
+      # the boot-time retry loop spun forever.
+      echo "pyzmq"
+      ;;
     *)
       echo "$1"
       ;;
@@ -471,7 +477,7 @@ bootstrap_deps() {
   # Network group: needed by ai/aid.py and webui/webuid.py (and carrot_man /
   # carrot_navi). Installed together so a single overlay update does not leave either
   # service unable to import. These are not bundled as wheels.
-  ensure_pip_deps aiohttp jinja2 pyzmq zstandard numpy requests tqdm jeepney
+  ensure_pip_deps aiohttp jinja2 zmq zstandard numpy requests tqdm jeepney
 }
 
 # Retries bootstrap_deps() until it succeeds, because a single attempt at boot is

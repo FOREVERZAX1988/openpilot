@@ -243,7 +243,11 @@ procs += [
   # treats 7000 as its main channel, so without it the app reports "设备未连接" and its
   # conditional-experiment mode cannot switch. always_run like CarrotPilot's; the gate only
   # exists so an external launcher can take the stack over.
-  PythonProcess("carrot_server", "openpilot.sunnypilot.carrot.carrot_server", always_run, enabled=not CARROT_WEB_EXTERNAL),
+  # restart_if_crash: the app's main channel must come back on its own. Without it the
+  # manager leaves the port dead until the next ignition cycle, which the app reports as
+  # "设备未连接" with nothing on the device to explain why.
+  PythonProcess("carrot_server", "openpilot.sunnypilot.carrot.carrot_server", always_run,
+                enabled=not CARROT_WEB_EXTERNAL, restart_if_crash=True),
 
   # Xiaoge ONNX BSD/Lane detection
   # Reads VisionIPC camera buffers, runs ONNX inference, publishes to customReservedRawData0.
