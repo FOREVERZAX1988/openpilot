@@ -67,6 +67,53 @@ class TestBeaconProcessGate(unittest.TestCase):
       "and the app cannot enable anything until it has found the unit. CarrotEnabled defaults to off.")
 
 
+class TestCarrotProcessFleetIsUngated(unittest.TestCase):
+  """CarrotPilot runs every carrot_* process with `always_run`.
+
+  A process gate is the wrong home for these switches: the phone app drives the
+  feature at runtime, and the manager only re-evaluates its gates on the manager
+  cycle, so a gated process cannot come up at the moment the app connects. Only
+  carrot_man used to be always_run here, which is why a default device answered
+  on 7705 but had no 7714 v2 link (carrot_navi) and no Bluetooth remote
+  (carrot_bluetooth).
+  """
+
+  def _process_args(self, name: str) -> str:
+    """The gate + kwargs of a `PythonProcess("name", "module", <here>),` entry."""
+    src = PROCESS_CONFIG.read_text(encoding="utf-8")
+    match = re.search(rf'PythonProcess\(\s*["\']{name}["\']\s*,\s*[^,\n]+,\s*([^)]*)\)', src)
+    self.assertIsNotNone(match, f"PythonProcess entry for {name!r} not found")
+    return match.group(1)
+
+  def test_carrot_navi_is_always_run(self):
+    args = self._process_args("carrot_navi")
+    self.assertTrue(
+      args.startswith("always_run"),
+      f"carrot_navi must use always_run (CarrotPilot: 'carrot_navi permanently owns TCP 7714'), "
+      f"got {args!r}. Whether its stream reaches the driving stack is the CarrotNaviV2Enabled "
+      f"behaviour switch in card.py, not a process gate.")
+
+  def test_carrot_bluetooth_is_always_run_on_comma_hardware(self):
+    args = self._process_args("carrot_bluetooth")
+    self.assertTrue(
+      args.startswith("always_run"),
+      f"carrot_bluetooth must use always_run (CarrotPilot: 'always_run, enabled=TICI'), got {args!r}. "
+      f"Gating it on CarrotEnabled meant a unit with the master switch off could not pair its remote.")
+    self.assertIn(
+      "enabled=COMMA_HARDWARE", args,
+      "CarrotPilot restricts the Bluetooth daemon to TICI hardware; this fork has no TICI symbol, "
+      "so COMMA_HARDWARE (AGNOS present) is the equivalent - without it the daemon would also try "
+      "to run on PC dev machines, where evdev Bluetooth HID nodes do not exist.")
+
+  def test_v2_killswitch_is_no_longer_a_process_gate(self):
+    src = PROCESS_CONFIG.read_text(encoding="utf-8")
+    self.assertNotIn(
+      "carrot_navi_v2_enabled", src,
+      "the CarrotNaviV2Enabled process gate must stay deleted: carrot_navi is always_run now, and "
+      "carrot_man.carrot_man.process_config must not grow a second, contradicting definition of "
+      "what that param means.")
+
+
 class TestBeaconThreadIsNotGated(unittest.TestCase):
   def test_beacon_starts_before_the_enabled_gate(self):
     code = _method_code("tick")

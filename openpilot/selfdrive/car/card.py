@@ -382,6 +382,13 @@ class Car:
       self.is_metric = self.params.get_bool("IsMetric")
       self.experimental_mode = self.params.get_bool("ExperimentalMode") and self.CP.openpilotLongitudinalControl
       self.carrot_enabled = self.params.get_bool("CarrotEnabled")
+      # These two are the *behaviour* switches for the carrot navi path, not
+      # process gates: carrot_navi (TCP 7714) is always_run, so flipping them must
+      # take effect without restarting card. They used to be read once in
+      # __init__ only, so a runtime change silently did nothing until the next
+      # reboot - which read as "the toggle is broken".
+      self.carrot_navi_v2_enabled = self.params.get_bool("CarrotNaviV2Enabled")
+      self.carrot_nav_lane_guide_block = self.params.get_bool("CarrotNavLaneGuideBlockEnabled")
 
       # sunnypilot
       self.dynamic_experimental_control = self.params.get_bool("DynamicExperimentalControl")

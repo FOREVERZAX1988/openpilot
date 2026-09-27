@@ -1463,7 +1463,16 @@ class CarrotManager:
     msg['active'] = active
     msg['xState'] = x_state
     msg['carcruiseSpeed'] = car_cruise_speed
-    msg['navi_debug'] = 1 if self.params.get_bool("CarrotNaviV2Enabled") else 0
+    # `navi_debug` is legacy and ignored by the app (carrot_navi_api.md: "retained
+    # for legacy aggregate-state diagnostics and does not create a separate v2
+    # item"), so it carries no routing information - the app only reads `ip` from
+    # this datagram and then connects to TCP 7714. CarrotPilot hard-codes 0 here
+    # and lets carrot_navi's own 7705 beacon advertise the v2 endpoint; that
+    # beacon is now always up because carrot_navi is always_run, so keying this
+    # field off CarrotNaviV2Enabled would only report a process that gating no
+    # longer controls. CarrotNaviV2Enabled remains the behaviour switch for
+    # *consuming* the v2 stream (card.py).
+    msg['navi_debug'] = 0
 
     return json.dumps(msg, ensure_ascii=False)
 

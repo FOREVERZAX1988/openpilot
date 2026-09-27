@@ -108,9 +108,13 @@ class NavigationLayout(Widget):
       callback=self._on_carrot_navi_debug,
     )
 
+    # Behaviour switch, not a process gate: carrot_navi (TCP 7714) is always_run,
+    # matching CarrotPilot, so the link is always reachable. This only decides
+    # whether what it produces is merged into the driving stack (card.py).
     self._carrot_navi_v2_enabled = toggle_item_sp(
       title=tr("Enable Carrot Navi v2 (7714)"),
-      description=tr("Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images)."),
+      description=tr("Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). "
+                     "The 7714 link always runs; this only decides whether its data is used."),
       param="CarrotNaviV2Enabled",
     )
 

@@ -120,13 +120,6 @@ def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
   # carrot_man gates its own behaviour with the IsOnroad param
   return params.get_bool("CarrotEnabled")
 
-def carrot_navi_v2_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
-  # 7714 WebSocket v2 navi link. Gated by the master CarrotEnabled switch AND
-  # the dedicated killswitch CarrotNaviV2Enabled (default off). The WebSocket
-  # receiver depends on the phone app, so it auto-restarts on crash rather
-  # than taking down the 7706 carrot_man path.
-  return params.get_bool("CarrotEnabled") and params.get_bool("CarrotNaviV2Enabled")
-
 def mapd_ready(started: bool, params: Params, CP: car.CarParams) -> bool:
   return bool(os.path.exists(Paths.mapd_root()))
 
@@ -221,20 +214,27 @@ procs += [
   # navInstructionCarrotSP. AmapApiKey is still used by AmapMapData (Web API
   # fallback for speed limits / road names).
   #
-  # always_run, NOT carrot_enabled: carrot_man is the only UDP 7705 discovery
-  # advertiser on this fork, and the phone app must find the unit on 7705 before
-  # it can enable anything. CarrotEnabled defaults to "0", so gating the process
-  # on it made every default device invisible to the app ("7705 未激活").
-  # CarrotPilot runs this process with always_run for the same reason.
-  # carrot_man still gates its own rich navi / publish / web work on
-  # CarrotEnabled inside tick(); only the listener and the beacon stay live.
+  # always_run, NOT carrot_enabled: carrot_man is the UDP 7705 discovery
+  # advertiser and the 7706 listener on this fork, and the phone app must find
+  # the unit on 7705 before it can enable anything. CarrotEnabled defaults to
+  # "0", so gating the process on it made every default device invisible to the
+  # app ("7705 未激活"). CarrotPilot runs every carrot_* process with
+  # always_run for the same reason; carrot_man still gates its own rich navi /
+  # publish / web work on CarrotEnabled inside tick(), so only the listener and
+  # the beacon stay live on a device with the feature switched off.
   #
-  # restart_if_crash=True: carrot_man is the 7706 UDP discovery/navi backbone;
-  # without it the phone app cannot find the unit. On crash the manager must
-  # auto-relaunch it rather than leaving the feature dead until a manual reboot
-  # (mirrors carrot_navi below).
+  # restart_if_crash=True for both: they are the discovery + navi backbone.
+  # Without it a crash leaves the unit unfindable until a manual reboot; the
+  # manager must auto-relaunch them (mirrors CarrotPilot).
+  #
+  # carrot_navi (TCP 7714 v2) is always_run exactly like CarrotPilot: it owns
+  # 7714 for the lifetime of the unit and only speaks when the app connects.
+  # Whether the data it produces reaches the driving stack is a *behaviour*
+  # switch (`CarrotNaviV2Enabled`, read by card.py), not a process gate - a
+  # gated process cannot come up on demand, because the manager only re-evaluates
+  # its gates on its own cycle, so the link would stay dead until a manager pass.
   PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", always_run, restart_if_crash=True),
-  PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", carrot_navi_v2_enabled, restart_if_crash=True),
+  PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", always_run, restart_if_crash=True),
 
   # Xiaoge ONNX BSD/Lane detection
   # Reads VisionIPC camera buffers, runs ONNX inference, publishes to customReservedRawData0.
@@ -249,7 +249,13 @@ procs += [
   # Reads evdev input events from paired Bluetooth HID remotes (e.g. Yiser J6).
   # Publishes cruise/lane commands to /dev/shm/carrot-bluetooth/{cruise,lane}.json.
   # CommandReader in cruise.py / desire_helper.py consumes these commands.
-  PythonProcess("carrot_bluetooth", "openpilot.sunnypilot.carrot.bluetooth.daemon", carrot_enabled, restart_if_crash=True),
+  #
+  # always_run + enabled=COMMA_HARDWARE mirrors CarrotPilot's
+  # `always_run, enabled=TICI`: Bluetooth HID remotes only exist on comma
+  # hardware (AGNOS exposes the evdev nodes), and the old gate on CarrotEnabled
+  # meant a unit with the master switch off could not pair its remote. This fork
+  # has no `TICI` symbol - `COMMA_HARDWARE` (AGNOS present) is its equivalent.
+  PythonProcess("carrot_bluetooth", "openpilot.sunnypilot.carrot.bluetooth.daemon", always_run, enabled=COMMA_HARDWARE, restart_if_crash=True),
 
   # locationd
   NativeProcess("locationd_llk", "openpilot/sunnypilot/selfdrive/locationd", ["./locationd"], only_onroad),

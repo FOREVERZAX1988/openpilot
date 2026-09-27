@@ -1592,19 +1592,20 @@ class TestCarrotManager(unittest.TestCase):
     serv.derive(0.0)
     assert serv.x_spd_type == 1
 
-  def test_broadcast_message_advertises_navi_debug_when_v2_enabled(self):
+  def test_broadcast_message_navi_debug_is_legacy_zero(self):
+    # CarrotPilot hard-codes navi_debug=0 in this beacon: the field is legacy
+    # (carrot_navi_api.md - "retained for legacy aggregate-state diagnostics and
+    # does not create a separate v2 item") and the app only reads `ip` from the
+    # datagram before connecting to TCP 7714. The v2 endpoint is advertised by
+    # carrot_navi's own 7705 beacon (which sends 1), and that process is
+    # always_run now - so this value must NOT depend on CarrotNaviV2Enabled,
+    # which survives only as the stream-consumption switch in card.py.
     self.mgr.sm["carState"] = MagicMock(vEgoCluster=0.0, vCruise=0, logCarrot="", cruiseState=MagicMock(speed=0.0))
     self.mgr.sm["selfdriveState"] = MagicMock(active=False)
-    self.mgr.params.put("CarrotNaviV2Enabled", b"1")
-    msg = json.loads(self.mgr.make_send_message())
-    assert msg["navi_debug"] == 1
-
-  def test_broadcast_message_does_not_advertise_navi_debug_when_v2_disabled(self):
-    self.mgr.sm["carState"] = MagicMock(vEgoCluster=0.0, vCruise=0, logCarrot="", cruiseState=MagicMock(speed=0.0))
-    self.mgr.sm["selfdriveState"] = MagicMock(active=False)
-    self.mgr.params.put("CarrotNaviV2Enabled", b"0")
-    msg = json.loads(self.mgr.make_send_message())
-    assert msg["navi_debug"] == 0
+    for raw in (b"0", b"1"):
+      self.mgr.params.put("CarrotNaviV2Enabled", raw)
+      msg = json.loads(self.mgr.make_send_message())
+      assert msg["navi_debug"] == 0
 
 
 class TestCarrotParamAlignment(unittest.TestCase):

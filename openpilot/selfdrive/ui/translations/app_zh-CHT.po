@@ -5735,8 +5735,8 @@ msgid "Use navigation desired speed to limit cruise speed."
 msgstr "使用導航建議速度限制巡航速度。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images)."
-msgstr "使用 7714 WebSocket v2 豐富導航資料流（紅綠燈、車道、路口影像）。"
+msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
+msgstr "使用 7714 WebSocket v2 豐富導航資料流（紅綠燈、車道、路口影像）。7714 連結始終執行，此處只決定是否使用其資料。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Enable Amap Map Data"

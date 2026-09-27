@@ -361,9 +361,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // Parse 7706 UDP blind-spot / LiDAR / extBlinker fields (AmapNaviServ).
     {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    // 7714 WebSocket v2 navi link killswitch. Default off so the new
-    // carrotNavi process never starts unless explicitly enabled. Requires
-    // CarrotEnabled as the master switch (see process_config.py).
+    // Behaviour switch for the 7714 WebSocket v2 navi stream. When off, card.py
+    // consumes only the 7706 navLaneGuide path and ignores the v2 lane data.
+    // NOT a process gate: carrot_navi is always_run (mirrors CarrotPilot) so the
+    // 7714 endpoint is always reachable; this only decides whether what it
+    // produces reaches the driving stack.
     {"CarrotNaviV2Enabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // Opt-in system time sync from the phone's 7706/7714 epochTime/timezone.
     // Default OFF: modifying the system clock on a running car is dangerous and

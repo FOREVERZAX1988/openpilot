@@ -5842,8 +5842,8 @@ msgid "Use navigation desired speed to limit cruise speed."
 msgstr "使用导航建议速度限制巡航速度。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images)."
-msgstr "使用 7714 WebSocket v2 富导航数据流（红绿灯、车道、路口图像）。"
+msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
+msgstr "使用 7714 WebSocket v2 富导航数据流（红绿灯、车道、路口图像）。7714 链接始终运行，此处只决定是否使用其数据。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Alert Volume"
