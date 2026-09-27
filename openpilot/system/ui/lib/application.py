@@ -798,7 +798,7 @@ class GuiApplication(GuiApplicationExt):
         unifont = font_weight_file == FontWeight.UNIFONT
         codepoints = sorted(map(ord, unifont_chars if unifont else base_chars))
         codepoint_buffer = rl.ffi.new("int[]", codepoints)
-        font = rl.load_font_ex((fspath / font_weight_file).as_posix(), 16 if unifont else 200,
+        font = rl.load_font_ex((fspath / font_weight_file).as_posix(), 60 if unifont else 200,
                                rl.ffi.cast("int *", codepoint_buffer), len(codepoints))
         if font_weight_file != FontWeight.UNIFONT:
           rl.gen_texture_mipmaps(font.texture)
