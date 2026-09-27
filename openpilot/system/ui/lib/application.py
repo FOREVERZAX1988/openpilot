@@ -152,7 +152,14 @@ def font_fallback(font: rl.Font, text: str | None = None) -> rl.Font:
   to the Noto fallback for strings that need it, which is both correct and
   cheaper than swapping the font unconditionally for every CJK-language label.
   The 1-arg call form (text omitted) is preserved for existing callers.
+
+  NOTE: if the caller already selected the UNIFONT font (e.g. the language
+  selector menu), never override it. unifont covers all scripts (CJK, Korean,
+  Thai, Cyrillic, ...), so swapping it to the per-language Noto subset would
+  render non-matching scripts as "?".
   """
+  if font is gui_app.font(FontWeight.UNIFONT):
+    return font
   if not multilang.requires_font_fallback():
     return font
   if text is None or _text_requires_font_fallback(text):
