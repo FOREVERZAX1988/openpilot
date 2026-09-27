@@ -27,12 +27,25 @@ _common_pkg.realtime = types.ModuleType("openpilot.common.realtime")
 _common_pkg.realtime.DT_CTRL = 0.01
 _common_pkg.params = MagicMock()
 _common_pkg.swaglog = MagicMock(cloudlog=MagicMock())
+# Saved and restored around the import below: a stub left in sys.modules replaces
+# "openpilot.common" with a non-package object and breaks every later test module in the
+# same process (see the same guard in test_carrot_man.py).
+_SAVED_MODULES = {name: sys.modules.get(name) for name in (
+  "openpilot.common", "openpilot.common.realtime", "openpilot.common.params", "openpilot.common.swaglog",
+)}
 sys.modules["openpilot.common"] = _common_pkg
 sys.modules["openpilot.common.realtime"] = _common_pkg.realtime
 sys.modules["openpilot.common.params"] = _common_pkg.params
 sys.modules["openpilot.common.swaglog"] = _common_pkg.swaglog
 
 from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
+
+for _name, _module in _SAVED_MODULES.items():
+  if _module is None:
+    sys.modules.pop(_name, None)
+  else:
+    sys.modules[_name] = _module
+del _name, _module
 
 
 class _FakeCS:

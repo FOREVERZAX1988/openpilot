@@ -36,6 +36,11 @@ class _FakeCarStateSP:
 
 _car.car.structs.car = ModuleType("opendbc.car.structs.car")
 _car.car.structs.car.CarState = _FakeCarState
+# Saved and restored around the module exec below; a stub left in sys.modules would make
+# every later test module in the same process see a fake opendbc (see test_carrot_man.py).
+_SAVED_MODULES = {name: sys.modules.get(name) for name in (
+  "opendbc", "opendbc.car", "opendbc.car.structs", "opendbc.car.structs.car",
+)}
 sys.modules["opendbc"] = _car
 sys.modules["opendbc.car"] = _car.car
 sys.modules["opendbc.car.structs"] = _car.car.structs
@@ -46,6 +51,13 @@ _spec = importlib.util.spec_from_file_location("carrot_navi_fusion_under_test", 
 carrot_navi_fusion = importlib.util.module_from_spec(_spec)
 sys.modules["carrot_navi_fusion_under_test"] = carrot_navi_fusion
 _spec.loader.exec_module(carrot_navi_fusion)
+
+for _name, _module in _SAVED_MODULES.items():
+  if _module is None:
+    sys.modules.pop(_name, None)
+  else:
+    sys.modules[_name] = _module
+del _name, _module
 
 
 def _make_lane(count: int, current_lane: int, available: list[int], present: bool = True):

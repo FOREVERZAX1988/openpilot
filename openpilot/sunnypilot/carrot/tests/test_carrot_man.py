@@ -211,6 +211,19 @@ _common_pkg = types.ModuleType("openpilot.common")
 _common_pkg.params = MagicMock(Params=_FakeParams)
 _common_pkg.realtime = MagicMock(Ratekeeper=MagicMock, config_realtime_process=MagicMock(), DT_MDL=0.05)
 _common_pkg.swaglog = MagicMock(cloudlog=MagicMock())
+# Save the real modules so they can be put back after the imports below. Leaving these
+# stubs installed poisons every later test module in the same process: "openpilot.common"
+# becomes a non-package object, and test_carrot_planner's
+# `from openpilot.common.test import OpenpilotTestCase` then fails with
+# "'openpilot.common' is not a package" - on the device as well, where the real modules
+# do exist. That is the single error that made the whole carrot suite red
+# (device: 307 tests, 1 error; test_carrot_planner alone: 10 tests, OK).
+_SAVED_MODULES = {name: sys.modules.get(name) for name in (
+  "openpilot.common", "openpilot.common.params", "openpilot.common.realtime", "openpilot.common.swaglog",
+  "openpilot.cereal", "openpilot.cereal.messaging",
+  "opendbc", "opendbc.car", "opendbc.car.common", "opendbc.car.common.conversions",
+)}
+
 sys.modules["openpilot.common"] = _common_pkg
 sys.modules["openpilot.common.params"] = _common_pkg.params
 sys.modules["openpilot.common.realtime"] = _common_pkg.realtime
@@ -2188,6 +2201,22 @@ class TestCarrotServCountdown(unittest.TestCase):
     serv._update_countdown_alert(100, "hda", 60.0)
     assert serv.sdi_inform is False
     assert serv.carrot_left_sec == 100
+
+
+# Put the real modules back. This has to happen at the very end of the module: this file
+# has module-level imports of the code under test spread through it (see the
+# carrot_functions import above), and every one of them needs the stubs. Once they are
+# bound, the stubs have done their job - leaving them installed is what broke the rest of
+# the suite, because "openpilot.common" ends up as a non-package object and any later
+# module importing openpilot.common.test dies with "'openpilot.common' is not a package".
+# That was the suite's only error on the device too (307 tests, 1 error, while
+# test_carrot_planner alone passed 10/10).
+for _name, _module in _SAVED_MODULES.items():
+  if _module is None:
+    sys.modules.pop(_name, None)
+  else:
+    sys.modules[_name] = _module
+del _name, _module
 
 
 if __name__ == "__main__":
