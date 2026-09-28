@@ -1,13 +1,34 @@
+import unittest
+
 from opendbc.can.parser import CANParser
 from opendbc.car import create_button_events
 from opendbc.car.structs import car
-from opendbc.car.toyota.carstate import get_virtual_cruise_button, VIRTUAL_CRUISE_BUTTONS
+try:
+  from opendbc.car.toyota.carstate import get_virtual_cruise_button, VIRTUAL_CRUISE_BUTTONS
+  _HAS_TOYOTA_VIRTUAL_CRUISE = True
+except ImportError:
+  # The opendbc fork pinned by macanlong-test has no Toyota virtual-cruise helpers, so the
+  # Toyota virtual-cruise case below cannot run here. Keep the import optional so the rest of
+  # this module (custom ACC increments, which Macan does exercise) still collects and runs.
+  get_virtual_cruise_button = None
+  VIRTUAL_CRUISE_BUTTONS = None
+  _HAS_TOYOTA_VIRTUAL_CRUISE = False
 from openpilot.cereal import custom
 from openpilot.common.constants import CV
 from openpilot.common.parameterized import parameterized, parameterized_class
 from openpilot.common.params import Params
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.selfdrive.car.cruise import TOYOTA_VIRTUAL_CRUISE_LONG_PRESS, VCruiseHelper, V_CRUISE_INITIAL, V_CRUISE_UNSET
+from openpilot.selfdrive.car.cruise import VCruiseHelper, V_CRUISE_INITIAL, V_CRUISE_UNSET
+try:
+  from openpilot.selfdrive.car.cruise import TOYOTA_VIRTUAL_CRUISE_LONG_PRESS
+except ImportError:
+  # Same story as the opendbc Toyota helpers above: this constant lives only on the Toyota
+  # virtual-cruise code path, which this branch does not carry. Only TestToyotaVirtualCruiseSpeed
+  # references it. It is also read in a class-body decorator (TOYOTA_VIRTUAL_CRUISE_LONG_PRESS - 1),
+  # which is evaluated at import time, so fall back to the real upstream value (65) rather than None
+  # and let the skip flag below gate the class.
+  TOYOTA_VIRTUAL_CRUISE_LONG_PRESS = 65  # upstream openpilot/selfdrive/car/cruise.py
+  _HAS_TOYOTA_VIRTUAL_CRUISE = False
 from openpilot.selfdrive.car.tests.test_cruise_speed import TestVCruiseHelper
 from openpilot.sunnypilot.selfdrive.car.interfaces import initialize_params
 
@@ -160,6 +181,8 @@ class TestCustomAccIncrements(TestVCruiseHelper):
     assert self.v_cruise_helper.v_cruise_kph == initial_speed + 10  # Should fallback to 10
 
 
+@unittest.skipUnless(_HAS_TOYOTA_VIRTUAL_CRUISE,
+                     "opendbc fork pinned by macanlong-test lacks Toyota virtual-cruise helpers")
 class TestToyotaVirtualCruiseSpeed(OpenpilotTestCase):
   def setup_method(self):
     self.params = Params()
