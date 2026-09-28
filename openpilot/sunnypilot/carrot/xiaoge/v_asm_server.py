@@ -469,7 +469,8 @@ class VASMService:
     return output.getvalue()
 
   def run_camera(self) -> None:
-    from msgq.visionipc import VisionIpcClient, VisionStreamType
+    from msgq.visionipc import VisionIpcClient
+    from openpilot.cereal.visionipc import VisionStreamType
 
     client = None
     while self.running:
@@ -549,13 +550,14 @@ class VASMService:
         time.sleep(1.0)
 
   def run_road_camera(self) -> None:
-    from msgq.visionipc import VisionIpcClient, VisionStreamType
+    from msgq.visionipc import VisionIpcClient
+    from openpilot.cereal.visionipc import VisionStreamType
 
     client = None
     while self.running:
       try:
         if client is None or not client.is_connected():
-          client = VisionIpcClient("camerad", VisionStreamType.VISION_STREAM_ROAD, True)
+          client = VisionIpcClient("camerad", VisionStreamType.VISION_STREAM_NARROW_ROAD, True)
           if not client.connect(False):
             with self.lock:
               self.lane_camera_error = "road camera is unavailable; start openpilot/camerad first"

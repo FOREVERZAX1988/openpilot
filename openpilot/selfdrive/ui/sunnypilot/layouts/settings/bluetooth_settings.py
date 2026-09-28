@@ -393,7 +393,32 @@ class CarrotBluetoothLayout(Widget):
 
     # Normal device list UI
     content_top = self._render_header(rect, state, error_text, status_text)
+    content_top = self._render_main_controls(rect, content_top, state)
     self._render_devices(rect, content_top, state)
+
+  def _render_main_controls(self, rect: rl.Rectangle, y: float, state: BTState) -> float:
+    """Bluetooth master + Discoverable toggles on the main page."""
+    row_h = 120
+    gap = 24
+    can_act = state.available
+
+    y = self._render_advanced_row(
+      rect, y, row_h,
+      tr("Bluetooth"), tr("Turn Bluetooth radio on or off."),
+      self._radio_toggle, state.radio_enabled, can_act, self._on_radio_toggled,
+      self._last_radio_state,
+    )
+    self._last_radio_state = state.radio_enabled
+    y += gap
+
+    y = self._render_advanced_row(
+      rect, y, row_h,
+      tr("Discoverable"), tr("Allow other devices to find this device."),
+      self._discoverable_toggle, state.discoverable, can_act and state.radio_enabled,
+      self._on_discoverable_toggled, self._last_discoverable_state,
+    )
+    self._last_discoverable_state = state.discoverable
+    return y + 20
 
   def _render_empty_state(self, rect: rl.Rectangle, icon: str, title: str, desc: str,
                           btn: Button, btn_label: str | None = None) -> None:
@@ -730,26 +755,6 @@ class CarrotBluetoothLayout(Widget):
     can_act = state.available
     row_h = 120
     gap = 24
-
-    # Bluetooth master toggle
-    y = self._render_advanced_row(
-      rect, y, row_h,
-      tr("Bluetooth"), tr("Turn Bluetooth radio on or off."),
-      self._radio_toggle, state.radio_enabled, can_act, self._on_radio_toggled,
-      self._last_radio_state,
-    )
-    self._last_radio_state = state.radio_enabled
-    y += gap
-
-    # Discoverable toggle
-    y = self._render_advanced_row(
-      rect, y, row_h,
-      tr("Discoverable"), tr("Allow other devices to find this device."),
-      self._discoverable_toggle, state.discoverable, can_act and state.radio_enabled,
-      self._on_discoverable_toggled, self._last_discoverable_state,
-    )
-    self._last_discoverable_state = state.discoverable
-    y += gap
 
     # Device name
     y = self._render_name_row(rect, y, state, can_act)
