@@ -5,6 +5,8 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 
+from __future__ import annotations
+
 import threading
 import time
 from dataclasses import dataclass, field
