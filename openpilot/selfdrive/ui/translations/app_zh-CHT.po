@@ -1921,6 +1921,10 @@ msgid "Enable Bluetooth"
 msgstr "啟用藍牙"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Enable Carrot Blind Spot Data"
+msgstr "啟用Carrot盲區資料"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Enable Carrot Navi v2 (7714)"
 msgstr "啟用 Carrot 導航 v2（7714）"
 
@@ -5523,16 +5527,16 @@ msgid "Use navigation desired speed to limit cruise speed."
 msgstr "使用導航建議速度限制巡航速度。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation or Amap is the source you trust, since the offline data can be out of date."
-msgstr "使用離線 OSM 地圖資料取得限速與路名。關閉後完全忽略離線地圖——當你更信任導航或高德資料時很有用，因為離線資料可能已過時。"
+msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
+msgstr "使用離線 OSM 地圖資料取得限速與路名。關閉後完全忽略離線地圖——當你更信任導航資料時很有用，因為離線資料可能已過時。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images)."
-msgstr "使用 7714 WebSocket v2 豐富導航資料流（紅綠燈、車道、路口影像）。"
+msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
+msgstr "使用 7714 WebSocket v2 豐富導航資料流（紅綠燈、車道、路口影像）。7714 鏈路始終執行；此項僅決定是否使用其資料。"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. Your attention is required at all times to use this feature."
-msgstr "啟用 sunnypilot 的自適應巡航和車道保持輔助。使用時請始終保持注意力集中。"
+msgstr "使用 7714 WebSocket v2 豐富導航資料流（紅綠燈、車道、路口影像）。7714 鏈路始終執行；此項僅決定是否使用其資料。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
 msgid "Use the vehicle's auto brake hold feature on supported TSS2 hybrid Toyotas."
