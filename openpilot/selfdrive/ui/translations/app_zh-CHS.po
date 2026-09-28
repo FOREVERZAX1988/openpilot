@@ -5615,7 +5615,7 @@ msgstr "使用 7714 WebSocket v2 富导航数据流（红绿灯、车道、路�
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. Your attention is required at all times to use this feature."
-msgstr "使用 7714 WebSocket v2 富导航数据流（红绿灯、车道、路口图像）。7714 链路始终运行；此项仅决定是否使用其数据。"
+msgstr "启用 sunnypilot 的自适应巡航和车道保持辅助。使用时请始终保持注意力集中。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
 msgid "Use the vehicle's auto brake hold feature on supported TSS2 hybrid Toyotas."
