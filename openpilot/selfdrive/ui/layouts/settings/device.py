@@ -16,6 +16,7 @@ from openpilot.system.ui.widgets import Widget, DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog, alert_dialog
 from openpilot.system.ui.widgets.html_render import HtmlModal
 from openpilot.system.ui.widgets.list_view import text_item, button_item, dual_button_item
+from openpilot.system.ui.widgets.button import ButtonStyle
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from collections.abc import Callable
@@ -25,6 +26,7 @@ if gui_app.sunnypilot_ui():
 
 # Description constants
 DESCRIPTIONS = {
+  'onroad_preview': tr_noop("Preview the onroad camera view while parked. (vehicle must be off)"),
   'pair_device': tr_noop("Pair your device with comma connect (connect.comma.ai) and claim your comma prime offer."),
   'driver_camera': tr_noop("Preview the driver facing camera to ensure that driver monitoring has good visibility. (vehicle must be off)"),
   'reset_calibration': tr_noop("sunnypilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."),
@@ -68,12 +70,19 @@ class DeviceLayout(Widget):
     self._power_off_btn = dual_button_item(lambda: tr("Reboot"), lambda: tr("Power Off"),
                                            left_callback=self._reboot_prompt, right_callback=self._power_off_prompt)
 
+    self._onroad_preview_btn = button_item(lambda: tr("Onroad Preview"),
+                                           lambda: tr("EXIT" if self._params.get_bool("IsOnroadPreview") else "ENTER"),
+                                           lambda: tr(DESCRIPTIONS['onroad_preview']),
+                                           callback=self._enter_onroad_preview,
+                                           enabled=lambda: ui_state.is_offroad() or self._params.get_bool("IsOnroadPreview"))
+
     items = [
       text_item(lambda: tr("Dongle ID"), self._params.get("DongleId") or (lambda: tr("N/A"))),
       text_item(lambda: tr("Serial"), self._params.get("HardwareSerial") or (lambda: tr("N/A"))),
       self._pair_device_btn,
       button_item(lambda: tr("Driver Camera"), lambda: tr("PREVIEW"), lambda: tr(DESCRIPTIONS['driver_camera']),
                   callback=lambda: gui_app.push_widget(CabinCameraDialog()), enabled=ui_state.is_offroad),
+      self._onroad_preview_btn,
       self._reset_calib_btn,
       button_item(lambda: tr("Review Training Guide"), lambda: tr("REVIEW"), lambda: tr(DESCRIPTIONS['review_guide']),
                   self._on_review_training_guide, enabled=ui_state.is_offroad),
@@ -89,6 +98,14 @@ class DeviceLayout(Widget):
   def show_event(self):
     super().show_event()
     self._scroller.show_event()
+
+  def _update_state(self):
+    super()._update_state()
+    if self._onroad_preview_btn is not None:
+      is_preview = self._params.get_bool("IsOnroadPreview")
+      action = self._onroad_preview_btn.action_item
+      if hasattr(action, "_button"):
+        action._button.set_button_style(ButtonStyle.PRIMARY if is_preview else ButtonStyle.LIST_ACTION)
 
   def _render(self, rect):
     self._scroller.render(rect)

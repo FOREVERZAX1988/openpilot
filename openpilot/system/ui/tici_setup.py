@@ -114,11 +114,11 @@ class Setup(Widget):
             text_alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP,
             text_padding=60, icon=self._yellow_warning_icon if has_icon else None)
       for text, has_icon in [
-        ("Use caution when installing third-party software.", False),
-        ("It has not been tested by comma.", True),
-        ("It may not comply with relevant safety standards.", True),
-        ("It may cause damage to your device and/or vehicle.", True),
-        ("If you'd like to proceed, use https://flash.comma.ai to restore your device to a factory state later.", False)
+        (tr("Use caution when installing third-party software."), False),
+        (tr("It has not been tested by comma."), True),
+        (tr("It may not comply with relevant safety standards."), True),
+        (tr("It may cause damage to your device and/or vehicle."), True),
+        (tr("If you'd like to proceed, use https://flash.comma.ai to restore your device to a factory state later."), False)
       ]
     ]
 

@@ -7,7 +7,7 @@ _cache: dict[int, rl.Vector2] = {}
 
 def measure_text_cached(font: rl.Font, text: str, font_size: int, spacing: float = 0) -> rl.Vector2:
   """Caches text measurements to avoid redundant calculations."""
-  font = font_fallback(font)
+  font = font_fallback(font, text)
   spacing = round(spacing, 4)
   key = hash((font.texture.id, text, font_size, spacing))
   if key in _cache:
@@ -18,3 +18,9 @@ def measure_text_cached(font: rl.Font, text: str, font_size: int, spacing: float
 
   _cache[key] = result
   return result
+
+
+def clear_cache() -> None:
+  """Drop every entry. Keys embed font.texture.id, and raylib recycles those, so entries
+  measured against a replaced font atlas would otherwise be returned for the new one."""
+  _cache.clear()

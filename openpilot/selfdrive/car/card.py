@@ -410,7 +410,11 @@ class Car:
 
 
 def main():
-  config_realtime_process(4, Priority.CTRL_HIGH)
+  # CAN reader. Splitting card away from controlsd/selfdrived is the exact layout
+  # CarrotPilot ships (card on 5, controlsd/selfdrived on 6). Keeping all three on
+  # core 4 pinned that core at ~99% under load - one GC/scheduler hiccup pushed
+  # selfdrived's Ratekeeper past its 11.1ms budget and the UI warned "系统滞后".
+  config_realtime_process(5, Priority.CTRL_HIGH)
   car = Car()
   car.card_thread()
 

@@ -12,7 +12,6 @@ from openpilot.common.params import Params
 from openpilot.common.hardware import HARDWARE
 from openpilot.common.hardware.comma.hardware import is_tici_dos
 from openpilot.common.swaglog import cloudlog
-
 from openpilot.sunnypilot.selfdrive.pandad.rivian_long_flasher import flash_rivian_long
 
 

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <atomic>
 #ifdef __COMMA_HARDWARE__
@@ -196,16 +197,19 @@ template <size_t N>
 void encoderd_thread(const LogCameraInfo (&cameras)[N]) {
   EncoderdState s;
 
+  std::set<VisionStreamType> expected;
+  for (const auto &cam : cameras) expected.insert(cam.stream_type);
+
   std::set<VisionStreamType> streams;
   while (!do_exit) {
     streams = VisionIpcClient::getAvailableStreams("camerad", false);
-    if (!streams.empty()) {
+    if (std::includes(streams.begin(), streams.end(), expected.begin(), expected.end())) {
       break;
     }
     util::sleep_for(100);
   }
 
-  if (!streams.empty()) {
+  if (!do_exit) {
     std::vector<std::thread> encoder_threads;
     for (auto stream : streams) {
       auto it = std::find_if(std::begin(cameras), std::end(cameras),

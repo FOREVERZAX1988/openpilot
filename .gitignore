@@ -116,6 +116,9 @@ TASK.md
 CLAUDE.md
 SKILL.md
 
+# runtime session logs
+sessions/
+
 ### JetBrains ###
 !.idea/customTargets.xml
 !.idea/tools/*

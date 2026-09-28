@@ -1,5 +1,4 @@
 import os
-import operator
 import platform
 
 from opendbc.car.structs import car
@@ -9,6 +8,7 @@ from openpilot.common.hardware import PC, COMMA_HARDWARE, HARDWARE
 from openpilot.system.manager.process import PythonProcess, NativeProcess, DaemonProcess
 from openpilot.common.hardware.hw import Paths
 
+from openpilot.common.dm import is_dm_disabled
 from openpilot.sunnypilot.mapd.mapd_manager import MAPD_PATH
 
 from openpilot.sunnypilot.models.helpers import get_active_model_runner
@@ -22,6 +22,9 @@ CARROT_WEB_EXTERNAL = os.getenv("CARROT_WEB_EXTERNAL") == "1"
 
 def driverview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started or params.get_bool("IsDriverViewEnabled")
+
+def dm_process(started: bool, params: Params, CP: car.CarParams) -> bool:
+  return driverview(started, params, CP) and not is_dm_disabled(params)
 
 def notcar(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and CP.notCar
@@ -105,6 +108,17 @@ def is_stock_model(started, params, CP: car.CarParams) -> bool:
   """Check if the active model runner is stock."""
   return bool(get_active_model_runner(params, not started) == custom.ModelManagerSP.Runner.stock)
 
+def imu_calibration_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  return params.get_bool("ImuCalibrationEnabled")
+
+def imu_calibration_disabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  return not params.get_bool("ImuCalibrationEnabled")
+
+def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # run even offroad: web panel (8088) / UDP / FTP must work while parked;
+  # carrot_man gates its own behaviour with the IsOnroad param
+  return params.get_bool("CarrotEnabled")
+
 def mapd_ready(started: bool, params: Params, CP: car.CarParams) -> bool:
   return bool(os.path.exists(Paths.mapd_root()))
 
@@ -120,10 +134,10 @@ def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("CarrotEnabled")
 
 def or_(*fns):
-  return lambda *args: operator.or_(*(fn(*args) for fn in fns))
+  return lambda *args: any(fn(*args) for fn in fns)
 
 def and_(*fns):
-  return lambda *args: operator.and_(*(fn(*args) for fn in fns))
+  return lambda *args: all(fn(*args) for fn in fns)
 
 def not_(*fns):
   return lambda *args: operator.not_(*(fn(*args) for fn in fns))
@@ -139,7 +153,7 @@ procs = [
   # swaglog IPC socket) stayed dead until reboot and every log message was silently dropped.
   PythonProcess("logmessaged", "openpilot.system.logmessaged", always_run, restart_if_crash=True),
 
-  NativeProcess("camerad", "openpilot/system/camerad", ["./camerad"], or_(driverview, livestream), enabled=not WEBCAM),
+  NativeProcess("camerad", "openpilot/system/camerad", ["./camerad"], or_(driverview, livestream, onroad_preview), enabled=not WEBCAM),
   PythonProcess("webcamerad", "openpilot.system.camerad.webcam.camerad", driverview, enabled=WEBCAM),
   PythonProcess("proclogd", "openpilot.system.proclogd", only_onroad, enabled=platform.system() != "Darwin"),
   PythonProcess("journald", "openpilot.system.journald", only_onroad, platform.system() != "Darwin"),
@@ -155,7 +169,8 @@ procs = [
   PythonProcess("beepd", "openpilot.sunnypilot.selfdrive.ui.beepd", beep, enabled=LITE),
   PythonProcess("locationd", "openpilot.selfdrive.locationd.locationd", only_onroad),
   NativeProcess("_pandad", "openpilot/selfdrive/pandad", ["./pandad"], always_run, enabled=False),
-  PythonProcess("calibrationd", "openpilot.selfdrive.locationd.calibrationd", only_onroad),
+  PythonProcess("calibrationd", "openpilot.selfdrive.locationd.calibrationd", and_(only_onroad, imu_calibration_disabled)),
+  PythonProcess("imu_calibrationd", "openpilot.selfdrive.locationd.imu_calibrationd", and_(only_onroad, imu_calibration_enabled)),
   PythonProcess("torqued", "openpilot.selfdrive.locationd.torqued", only_onroad),
   PythonProcess("controlsd", "openpilot.selfdrive.controls.controlsd", and_(not_joystick, iscar)),
   PythonProcess("joystickd", "openpilot.tools.joystick.joystickd", or_(joystick, notcar)),
@@ -195,7 +210,7 @@ procs = [
 procs += [
   # Models
   PythonProcess("models_manager", "openpilot.sunnypilot.models.manager", only_offroad),
-  NativeProcess("modeld_tinygrad", "openpilot/sunnypilot/modeld_v2", ["./modeld"], and_(only_onroad, is_tinygrad_model)),
+  NativeProcess("modeld_tinygrad", "openpilot/sunnypilot/modeld_v2", ["./modeld"], and_(or_(only_onroad, onroad_preview), is_tinygrad_model)),
 
   # Backup
   PythonProcess("backup_manager", "openpilot.sunnypilot.sunnylink.backups.manager", and_(only_offroad, sunnylink_ready_shim)),

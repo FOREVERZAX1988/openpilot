@@ -8,6 +8,7 @@ from openpilot.selfdrive.ui.lib.prime_state import PrimeType
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.wifi_manager import WifiManager, Network, MeteredType
+from openpilot.system.ui.lib.multilang import tr
 
 
 class NetworkLayoutMici(NavScroller):
@@ -51,9 +52,9 @@ class NetworkLayoutMici(NavScroller):
     def network_metered_callback(value: str):
       self._network_metered_btn.set_enabled(False)
       metered = {
-        'default': MeteredType.UNKNOWN,
-        'metered': MeteredType.YES,
-        'unmetered': MeteredType.NO
+        tr('default'): MeteredType.UNKNOWN,
+        tr('metered'): MeteredType.YES,
+        tr('unmetered'): MeteredType.NO
       }.get(value, MeteredType.UNKNOWN)
       self._wifi_manager.set_current_network_metered(metered)
 
@@ -136,7 +137,7 @@ class NetworkLayoutMici(NavScroller):
     # Update network metered
     self._network_metered_btn.set_value(
       {
-        MeteredType.UNKNOWN: 'default',
-        MeteredType.YES: 'metered',
-        MeteredType.NO: 'unmetered'
-      }.get(self._wifi_manager.current_network_metered, 'default'))
+        MeteredType.UNKNOWN: tr('default'),
+        MeteredType.YES: tr('metered'),
+        MeteredType.NO: tr('unmetered')
+      }.get(self._wifi_manager.current_network_metered, tr('default')))

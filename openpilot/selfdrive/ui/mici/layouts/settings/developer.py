@@ -4,6 +4,7 @@ from openpilot.system.ui.widgets.scroller import NavScroller
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigToggle, BigParamControl, BigCircleParamControl, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigInputDialog, BigConfirmationCircleButton
 from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr
@@ -51,7 +52,7 @@ class DeveloperLayoutMici(NavScroller):
         self._ssh_fetcher.fetch(username, on_response)
       else:
         self._ssh_fetcher.clear()
-        self._ssh_keys_btn.set_value("Not set")
+        self._ssh_keys_btn.set_value(tr("Not set"))
 
     def ssh_keys_callback():
       github_username = ui_state.params.get("GithubUsername") or ""

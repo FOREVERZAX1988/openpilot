@@ -134,7 +134,7 @@ class Updater(Scroller):
       for line in self.process.stdout:
         parts = line.strip().split(":")
         if len(parts) == 2:
-          self.progress_text = parts[0].lower()
+          self.progress_text = tr(parts[0].lower())
           try:
             self.progress_value = int(float(parts[1]))
           except ValueError:

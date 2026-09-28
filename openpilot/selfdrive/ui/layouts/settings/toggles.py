@@ -43,6 +43,7 @@ DESCRIPTIONS = {
     "Lenient: Only alerts on clear distractions. "
   ),
   'RecordFront': tr_noop("Upload data from the driver facing camera and help improve the driver monitoring algorithm."),
+  "DisableDM": tr_noop("Disable driver monitoring (no cabin camera required). Similar to LITE mode."),
   "IsMetric": tr_noop("Display speed in km/h instead of mph."),
   "RecordAudio": tr_noop("Record and store microphone audio while driving. The audio will be included in the dashcam video in comma connect."),
 }
@@ -85,6 +86,12 @@ class TogglesLayout(Widget):
         DESCRIPTIONS["AlwaysOnDM"],
         "monitoring.png",
         False,
+      ),
+      "DisableDM": (
+        lambda: tr("Disable Driver Monitoring"),
+        DESCRIPTIONS["DisableDM"],
+        "monitoring.png",
+        True,
       ),
       "RecordFront": (
         lambda: tr("Record and Upload Driver Camera"),
@@ -163,6 +170,10 @@ class TogglesLayout(Widget):
       # insert longitudinal personality after NDOG toggle
       if param == "DisengageOnAccelerator":
         self._toggles["LongitudinalPersonality"] = self._long_personality_setting
+
+      if param == "AlwaysOnDM":
+        self._toggles["DistractionDetectionLevel"] = self._distraction_detection_level
+        self._update_distraction_detection_visibility()
 
       if param == "AlwaysOnDM":
         self._toggles["DistractionDetectionLevel"] = self._distraction_detection_level

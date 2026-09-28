@@ -245,7 +245,7 @@ class TrainingGuideAttentionNotice(Scroller):
   def __init__(self, continue_callback: Callable[[], None]):
     super().__init__()
 
-    continue_button = BigPillButton("next")
+    continue_button = BigPillButton(tr("next"))
     continue_button.set_click_callback(continue_callback)
 
     self._scroller.add_widgets([
@@ -263,12 +263,17 @@ class TrainingGuide(NavWidget):
   def __init__(self, completed_callback: Callable[[], None]):
     super().__init__()
 
-    self._steps = [
-      TrainingGuideAttentionNotice(continue_callback=lambda: gui_app.push_widget(self._steps[1])),
-      TrainingGuidePreDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[2])),
-      TrainingGuideDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[3])),
-      TrainingGuideRecordFront(continue_callback=completed_callback),
-    ]
+    if ui_state.params.get_bool("DisableDM"):
+      self._steps = [
+        TrainingGuideAttentionNotice(continue_callback=completed_callback),
+      ]
+    else:
+      self._steps = [
+        TrainingGuideAttentionNotice(continue_callback=lambda: gui_app.push_widget(self._steps[1])),
+        TrainingGuidePreDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[2])),
+        TrainingGuideDMTutorial(continue_callback=lambda: gui_app.push_widget(self._steps[3])),
+        TrainingGuideRecordFront(continue_callback=completed_callback),
+      ]
 
     self._child(self._steps[0])
     self._steps[0].set_enabled(lambda: self.enabled and not self.is_dismissing)  # for nav stack
