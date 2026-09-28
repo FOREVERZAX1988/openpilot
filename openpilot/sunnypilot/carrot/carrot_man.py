@@ -606,10 +606,26 @@ class CarrotManager:
   Unknown fields are ignored so the protocol remains forward-compatible.
   """
 
+  # --- class-level backstops (do NOT delete) -------------------------------- #
+  # Each of these is (re)assigned per instance in __init__ below. The class-level
+  # values exist so that a *partially* initialised instance - __init__ raised, or a
+  # refactor moved the runtime-state block into a helper that is not called - still
+  # finds the attribute and degrades, instead of looping forever on
+  #   carrot_man: tick() error: 'CarrotManager' object has no attribute '_lock'
+  # main_thread() swallows tick() exceptions, so such a loop is silent apart from
+  # cloudlog and takes the 7705 beacon + carrotManSP publishing down with it.
+  # Pinned by tests/test_carrot_manager_state_init.py.
+  _lock: threading.Lock = threading.Lock()
+  _sock: socket.socket | None = None
+  _port: int = 0
+  _enabled: bool = False
+  _start_web: bool = False
+
   def __init__(self):
     self.params = Params()
     self.params_memory = Params("/dev/shm/params")
     self._unified = UnifiedParams()
+    self._migrate_amap_enabled()
     # selfdriveState feeds `active`, longitudinalPlan feeds xState/trafficState; without
     # them the 7705 broadcast read `sm.alive.get('selfdriveState', False)` which is always
     # False for an unsubscribed service, so the app's ADAS indicator was permanently 0.
@@ -638,18 +654,7 @@ class CarrotManager:
     # frames; see the call site in broadcast_version_info.
     self._curve_planner: Any = None
 
-  def _migrate_amap_enabled(self) -> None:
-    """One-time migration from the legacy AmapEnabled switch.
-
-    ``AmapEnabled`` used to control both Amap Web map data and the 7706
-    blind-spot parser. Split it into the two semantically-correct params.
-    """
-    if self.params.get_bool("AmapEnabled"):
-      if not self.params.get_bool("AmapMapDataEnabled"):
-        self.params.put_bool("AmapMapDataEnabled", True)
-      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-
+    # Runtime state (was accidentally living in _migrate_amap_enabled()).
     self._enabled = False
     self._port = 0
     self._start_web = False
@@ -721,6 +726,18 @@ class CarrotManager:
     self._navi_event_lock = threading.Lock()
     self._last_rgdata_timestamp_ms = 0
     self._rgdata_ts_lock = threading.Lock()
+
+  def _migrate_amap_enabled(self) -> None:
+    """One-time migration from the legacy AmapEnabled switch.
+
+    ``AmapEnabled`` used to control both Amap Web map data and the 7706
+    blind-spot parser. Split it into the two semantically-correct params.
+    """
+    if self.params.get_bool("AmapEnabled"):
+      if not self.params.get_bool("AmapMapDataEnabled"):
+        self.params.put_bool("AmapMapDataEnabled", True)
+      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
+        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
 
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
@@ -1558,8 +1575,13 @@ class CarrotManager:
 
   def tick(self) -> None:
     self._enabled = self.params.get_bool("CarrotEnabled")
-    # Fixed, not configurable: see CARROT_MAN_UDP_PORT.
-    self._port = CARROT_MAN_UDP_PORT
+    # Fixed, not configurable: see CARROT_MAN_UDP_PORT.  Deliberately a *local*:
+    # self._port is the port the socket is bound to and is owned by
+    # _ensure_socket() / _close_socket() only.  Assigning it here made
+    # _ensure_socket() short-circuit (it skips the rebind when
+    # self._port == port) and made the discovery beacon advertise a port nobody
+    # was listening on.  See tests/test_carrot_man_port_ownership.py.
+    want_port = CARROT_MAN_UDP_PORT
     self._start_web = self.params.get_bool("CarrotWebEnabled")
 
     self.sm.update(0)
@@ -1580,7 +1602,7 @@ class CarrotManager:
     # thread - cannot be reached. That guard was the reason a device with the
     # default CarrotManUdpPort=0 was silent on both 7705 and 7706.
 
-    if not self._ensure_socket(self._port):
+    if not self._ensure_socket(want_port):
       return
 
     # The 7705 discovery beacon, the 7706 listener and the ZMQ / route threads must
