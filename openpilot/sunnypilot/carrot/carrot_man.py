@@ -235,6 +235,18 @@ def _navi_float(obj: Any, name: str, default: float = 0.0) -> float:
     return default
 
 
+def _car_float(obj: Any, name: str, default: float = 0.0) -> float:
+  """Safe float extraction from a capnp reader / mock / None attribute."""
+  try:
+    value = getattr(obj, name, default)
+    if value is None:
+      return default
+    value = float(value)
+    return value if math.isfinite(value) else default
+  except (TypeError, ValueError, OverflowError, AttributeError):
+    return default
+
+
 def _navi_text(obj: Any, name: str) -> str:
   try:
     return str(_navi_get(obj, name, "") or "")
@@ -259,6 +271,14 @@ def _navi_meta(item: Any) -> tuple[bool, int]:
 
 
 DEFAULT_RATE = 10.  # Hz
+
+# How long the UDP status broadcast (7705) holds the last fresh speed/cruise/active when the
+# cereal source briefly lapses. `sm.alive` for carState is only a 10/freq = 0.1 s window,
+# so a momentary GC / Ratekeeper / heavy-navi stall flips it False and - without this hold -
+# the broadcast would dump every value to 0. A genuinely stopped car still reports 0 here
+# (carState keeps publishing vEgoCluster == 0, so alive stays True); this only prevents a
+# spurious 0 from a ~1 s hiccup.
+BROADCAST_HOLD_SEC = 1.5
 UDP_BUFFER_SIZE = 4096
 PACKET_TIMEOUT_SEC = 8.0
 
@@ -590,9 +610,12 @@ class CarrotManager:
     self.params = Params()
     self.params_memory = Params("/dev/shm/params")
     self._unified = UnifiedParams()
-    self._migrate_amap_enabled()
+    # selfdriveState feeds `active`, longitudinalPlan feeds xState/trafficState; without
+    # them the 7705 broadcast read `sm.alive.get('selfdriveState', False)` which is always
+    # False for an unsubscribed service, so the app's ADAS indicator was permanently 0.
     self.sm = messaging.SubMaster(['deviceState', 'carState', 'controlsState', 'modelV2', 'carParams',
-                                   'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP'])
+                                   'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP',
+                                   'selfdriveState', 'longitudinalPlan'])
     self.pm = messaging.PubMaster(['carrotManSP', 'navInstructionCarrotSP', 'navRoute'])
     self._car_name_synced = None
 
@@ -657,6 +680,14 @@ class CarrotManager:
     self._is_running = False
     self._broadcast_thread: threading.Thread | None = None
 
+    # Last fresh values for the UDP status broadcast, held across a source lapse so a
+    # transient cereal gap never flashes the phone HUD to 0. See BROADCAST_HOLD_SEC.
+    self._bcast_v_ego_kph = 0.0
+    self._bcast_v_cruise_kph = 0.0
+    self._bcast_cruise_speed = 0.0
+    self._bcast_active = False
+    self._bcast_fresh_ts = -1.0  # time.monotonic() of the last alive read
+
     # ZMQ remote command state (P1-2)
     self._zmq_thread: threading.Thread | None = None
     self._zmq_running = False
@@ -693,13 +724,7 @@ class CarrotManager:
 
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
-    if self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-      return True
-    # Legacy fallback: if only the old param is set, migrate and enable.
-    if self.params.get_bool("AmapEnabled"):
-      self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-      return True
-    return False
+    return self.params.get_bool("CarrotAmapBlindSpotEnabled")
 
   # ---- socket plumbing -------------------------------------------------- #
 
@@ -1167,9 +1192,30 @@ class CarrotManager:
         self._copy_maneuvers_from_7714(ni, guidance)
         self._copy_lanes(ni, guidance)
 
-    self.pm.send('carrotManSP', carrot_msg)
-    self.pm.send('navInstructionCarrotSP', navi_msg)
+    self._send_or_recreate('carrotManSP', carrot_msg)
+    self._send_or_recreate('navInstructionCarrotSP', navi_msg)
     self._write_navi_debug()
+
+  def _send_or_recreate(self, service: str, msg) -> None:
+    """Publish ``msg``, rebuilding the PubMaster socket when it was taken over.
+
+    ``msgq.PubSocket.send`` raises ``MultiplePublishersError`` ("Address already in
+    use") when a previous instance of this process is still holding the same IPC
+    endpoint - which is exactly what happens across a fast manager restart: the old
+    carrot_man has not exited yet when the new one starts publishing. Without this,
+    every tick logged the same traceback at 10 Hz and carrotManSP was never
+    published, so the phone HUD and SpeedLimitResolver saw a dead Carrot.
+    """
+    try:
+      self.pm.send(service, msg)
+    except Exception as e:
+      if 'Address already in use' not in str(e):
+        raise
+      cloudlog.warning(f"carrot_man: {service} publisher taken over; recreating PubMaster ({e})")
+      try:
+        self.pm = messaging.PubMaster(['carrotManSP', 'navInstructionCarrotSP', 'navRoute'])
+      except Exception:
+        cloudlog.exception("carrot_man: failed to recreate PubMaster")
 
   # ---- radar data (P1-3) ------------------------------------------------ #
 
@@ -1413,9 +1459,43 @@ class CarrotManager:
     finally:
       self._is_running = False
 
+  def _refresh_broadcast_status(self, now: float) -> None:
+    """Recompute the values the UDP status broadcast carries, holding last-good on a lapse.
+
+    `sm.alive` for carState is a 10/freq = 0.1 s window - far shorter than the occasional
+    GC / Ratekeeper / heavy-navi stall this process hits while driving - so a momentary lag
+    flips it False. Without a hold, the broadcast would dump speed/cruise/active to 0 for a
+    hiccup, which is exactly the "仪表盘 80、app 跳 0" flicker. A genuinely stopped car still
+    reports 0 here because carState keeps publishing (vEgoCluster -> 0) while alive stays
+    True; the hold only suppresses a spurious 0 from a transient source lapse.
+    """
+    if self.sm.alive.get('carState', False):
+      cs = self.sm['carState']
+      self._bcast_v_ego_kph = _car_float(cs, 'vEgoCluster') * 3.6
+      self._bcast_v_cruise_kph = _car_float(cs, 'vCruise')
+      cruise_state = getattr(cs, 'cruiseState', None)
+      self._bcast_cruise_speed = _car_float(cruise_state, 'speed') * 3.6
+      self._bcast_fresh_ts = max(self._bcast_fresh_ts, now)
+    if self.sm.alive.get('selfdriveState', False):
+      try:
+        self._bcast_active = bool(self.sm['selfdriveState'].active)
+      except Exception:
+        self._bcast_active = False
+      self._bcast_fresh_ts = max(self._bcast_fresh_ts, now)
+
+    # Nothing has been fresh for longer than the grace -> the source truly lapsed (device
+    # off / car off / a real disconnect); let real zeros through instead of holding forever.
+    if now - self._bcast_fresh_ts > BROADCAST_HOLD_SEC:
+      self._bcast_v_ego_kph = 0.0
+      self._bcast_v_cruise_kph = 0.0
+      self._bcast_cruise_speed = 0.0
+      self._bcast_active = False
+
   def make_send_message(self) -> str:
     """Build broadcast message for phone app."""
     import json
+
+    self._refresh_broadcast_status(self._mono_now())
 
     msg = {}
     msg['Carrot2'] = self.params.get("Version", b'').decode() if isinstance(self.params.get("Version"), bytes) else (self.params.get("Version") or '')
@@ -1425,13 +1505,11 @@ class CarrotManager:
     # Always advertise the fixed listen port.
     msg['port'] = CARROT_MAN_UDP_PORT
 
-    v_ego_kph = 0
-    v_cruise_kph = 0
+    v_ego_kph = int(round(self._bcast_v_ego_kph))
+    v_cruise_kph = self._bcast_v_cruise_kph
     log_carrot = ""
     if self.sm.alive.get('carState', False):
       carState = self.sm['carState']
-      v_ego_kph = int(carState.vEgoCluster * 3.6 + 0.5)
-      v_cruise_kph = carState.vCruise
       log_carrot = getattr(carState, 'logCarrot', '')
 
     msg['v_ego_kph'] = v_ego_kph
@@ -1447,15 +1525,11 @@ class CarrotManager:
     msg['goalPosY'] = self._carrot_serv.goal_pos_y
     msg['szGoalName'] = self._carrot_serv.sz_goal_name
 
-    # Control-state fields used by the phone app for diagnostics.
-    active = False
+    # Control-state fields used by the phone app for diagnostics. active / carcruiseSpeed come
+    # from the held broadcast state so they too never flash to 0 on a brief cereal lapse.
+    active = self._bcast_active
     x_state = 0
-    car_cruise_speed = 0.0
-    if self.sm.alive.get('carState', False):
-      car_state = self.sm['carState']
-      car_cruise_speed = float(getattr(getattr(car_state, 'cruiseState', None), 'speed', 0.0) or 0.0) * 3.6
-    if self.sm.alive.get('selfdriveState', False):
-      active = bool(self.sm['selfdriveState'].active)
+    car_cruise_speed = self._bcast_cruise_speed
     if self.sm.alive.get('longitudinalPlan', False):
       lp = self.sm['longitudinalPlan']
       x_state = int(getattr(lp, 'xState', 0) or 0)

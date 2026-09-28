@@ -28,13 +28,10 @@ def dmonitoringd_thread():
       continue
 
     valid = sm.all_checks()
-    if demo_mode and sm.valid['driverStateV2']:
-      # Driver view / onboarding preview: always run the policy so face
-      # detection and DM state are live even when AlwaysOnDM is disabled.
-      # Matches sunnypilot upstream behavior (no always_on gate).
+    if DM.always_on and demo_mode and sm.valid['driverStateV2']:
       DM.run_step(sm, demo=True)
       DM.set_distract_level_params()
-    elif valid:
+    elif DM.always_on and valid:
       DM.run_step(sm, demo=demo_mode)
       DM.set_distract_level_params()
 

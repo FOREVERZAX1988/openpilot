@@ -62,13 +62,9 @@ void encoder_set_bitrate(std::unique_ptr<Encoder> &e) {
 }
 
 static bool livestream_camera_active(VisionStreamType stream_type) {
-  static Params params;
-  std::string active = params.get("LivestreamActiveCamera");
-  if (active.empty()) return true;
-  if (active == "road" && stream_type == VISION_STREAM_NARROW_ROAD) return true;
-  if (active == "wideRoad" && stream_type == VISION_STREAM_WIDE_ROAD) return true;
-  if (active == "driver" && stream_type == VISION_STREAM_CABIN) return true;
-  return false;
+  // Encode all live cameras continuously so WebRTC can switch sources instantly.
+  // The active-camera param is still used to request an IDR on the selected stream.
+  return true;
 }
 
 static std::atomic<int> live_laggers{0};

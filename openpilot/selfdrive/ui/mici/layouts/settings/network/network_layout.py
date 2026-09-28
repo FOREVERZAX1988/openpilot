@@ -6,7 +6,6 @@ from openpilot.selfdrive.ui.mici.widgets.dialog import BigInputDialog
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.lib.prime_state import PrimeType
 from openpilot.system.ui.lib.application import gui_app
-from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.wifi_manager import WifiManager, Network, MeteredType
 from openpilot.system.ui.lib.multilang import tr
 
@@ -60,7 +59,7 @@ class NetworkLayoutMici(NavScroller):
 
     # TODO: signal for current network metered type when changing networks, this is wrong until you press it once
     # TODO: disable when not connected
-    self._network_metered_btn = BigMultiToggle(tr("network usage"), ["default", "metered", "unmetered"], select_callback=network_metered_callback)
+    self._network_metered_btn = BigMultiToggle(tr("network usage"), [tr("default"), tr("metered"), tr("unmetered")], select_callback=network_metered_callback)
     self._network_metered_btn.set_enabled(False)
 
     self._wifi_button = WifiNetworkButton(self._wifi_manager)

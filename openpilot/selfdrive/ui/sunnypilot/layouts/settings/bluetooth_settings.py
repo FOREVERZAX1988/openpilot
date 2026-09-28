@@ -178,6 +178,9 @@ class CarrotBluetoothLayout(Widget):
     # Scroll panel for device list
     self._scroll_panel = GuiScrollPanel()
 
+    # Per-device row button cache (re-created when device set changes)
+    self._device_btns: dict[str, Button] = {}
+
     # Status / error labels
     self._status_text = ''
     self._error_text = ''
@@ -392,7 +395,7 @@ class CarrotBluetoothLayout(Widget):
       return
 
     # Normal device list UI
-    content_top = self._render_header(rect, state, error_text, status_text)
+    content_top = self._render_header(rect, state, error_text)
     self._render_devices(rect, content_top, state)
 
   def _render_empty_state(self, rect: rl.Rectangle, icon: str, title: str, desc: str,
@@ -414,7 +417,7 @@ class CarrotBluetoothLayout(Widget):
     btn.set_rect(rl.Rectangle(rect.x + (rect.width - btn_w) / 2, y, btn_w, 110))
     btn.render()
 
-  def _render_header(self, rect: rl.Rectangle, state: BTState, error_text: str, status_text: str) -> float:
+  def _render_header(self, rect: rl.Rectangle, state: BTState, error_text: str) -> float:
     y = rect.y + 20
     top_h = 100
     can_act = state.available
@@ -432,12 +435,6 @@ class CarrotBluetoothLayout(Widget):
     self._adv_btn.render()
 
     y += top_h + 40
-
-    # Status
-    status_color = rl.Color(255, 220, 80, 255) if discovering else rl.WHITE
-    gui_label(rl.Rectangle(rect.x, y, rect.width, self._label_height), status_text, font_size=42,
-              alignment=TextAlignment.CENTER, color=status_color)
-    y += self._label_height
 
     # Error
     if error_text:
@@ -458,7 +455,7 @@ class CarrotBluetoothLayout(Widget):
                 font_size=45, alignment=TextAlignment.CENTER, color=rl.Color(150, 150, 150, 255))
       return
 
-    row_h = self._item_height + 20
+    row_h = 140
     group_title_h = 60
     total_h = 0
     if paired:
@@ -473,74 +470,81 @@ class CarrotBluetoothLayout(Widget):
     rl.begin_scissor_mode(int(scissor_rect.x), int(scissor_rect.y), int(scissor_rect.width), int(scissor_rect.height))
     y = rect.y + offset
     if paired:
-      gui_label(rl.Rectangle(rect.x, y, rect.width, group_title_h), tr("Paired devices"),
+      gui_label(rl.Rectangle(rect.x + self._padding, y, rect.width, group_title_h), tr("Paired devices"),
                 font_size=36, alignment=TextAlignment.LEFT, color=rl.Color(150, 150, 150, 255))
       y += group_title_h
-      for dev in paired:
-        item_rect = rl.Rectangle(rect.x, y, rect.width, self._item_height)
+      for i, dev in enumerate(paired):
+        item_rect = rl.Rectangle(rect.x, y, rect.width, row_h)
         if rl.check_collision_recs(item_rect, scissor_rect):
-          self._render_device_card(item_rect, dev, state)
+          self._render_device_row(item_rect, dev, state, is_last=i == len(paired) - 1 and not found)
         y += row_h
 
     if found:
-      gui_label(rl.Rectangle(rect.x, y, rect.width, group_title_h), tr("Available devices"),
+      gui_label(rl.Rectangle(rect.x + self._padding, y, rect.width, group_title_h), tr("Available devices"),
                 font_size=36, alignment=TextAlignment.LEFT, color=rl.Color(150, 150, 150, 255))
       y += group_title_h
-      for dev in found:
-        item_rect = rl.Rectangle(rect.x, y, rect.width, self._item_height)
+      for i, dev in enumerate(found):
+        item_rect = rl.Rectangle(rect.x, y, rect.width, row_h)
         if rl.check_collision_recs(item_rect, scissor_rect):
-          self._render_device_card(item_rect, dev, state)
+          self._render_device_row(item_rect, dev, state, is_last=i == len(found) - 1)
         y += row_h
 
     rl.end_scissor_mode()
 
-  def _render_device_card(self, rect: rl.Rectangle, dev: BTDevice, state: BTState) -> None:
-    bg_color = rl.Color(69, 96, 230, 40) if dev.paired else rl.Color(40, 40, 40, 255)
-    rl.draw_rectangle_rounded(rect, 0.15, 12, bg_color)
+  def _render_device_row(self, rect: rl.Rectangle, dev: BTDevice, state: BTState, is_last: bool) -> None:
+    """Network-style row: full-width transparent button, text left, signal/actions right, separator."""
+    row_btn = self._device_btns.get(dev.address)
+    if row_btn is None:
+      row_btn = Button(dev.name or dev.address, lambda _d=dev: self._on_edit_device(_d),
+                       font_size=50, text_alignment=TextAlignment.LEFT,
+                       button_style=ButtonStyle.TRANSPARENT_WHITE_TEXT)
+      row_btn.set_touch_valid_callback(lambda: self._scroll_panel.is_touch_valid())
+      self._device_btns[dev.address] = row_btn
+    else:
+      row_btn.set_text(dev.name or dev.address)
+    row_btn.render(rect)
 
     mouse_pos = rl.get_mouse_position()
     clicked = rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT)
     btn_gap = 16
 
-    # Action buttons on the far right. Compute widths first.
+    # Compute action buttons from right edge.
     if not dev.paired:
-      pair_w = max(160, int(measure_text_cached(gui_app.font(), tr("Pair"), 38).x + 60))
+      pair_w = max(140, int(measure_text_cached(gui_app.font(), tr("Pair"), 36).x + 50))
       action_btns = [
         (self._connect_btn, pair_w, tr("Pair"), ButtonStyle.PRIMARY, lambda: self._confirm_pair(dev)),
       ]
     else:
       conn_label = tr("Disconnect") if dev.connected else tr("Connect")
-      conn_w = max(160, int(measure_text_cached(gui_app.font(), conn_label, 38).x + 60))
-      edit_w = max(120, int(measure_text_cached(gui_app.font(), tr("Edit"), 38).x + 50))
-      forget_w = max(120, int(measure_text_cached(gui_app.font(), tr("Forget"), 38).x + 50))
+      conn_w = max(160, int(measure_text_cached(gui_app.font(), conn_label, 36).x + 50))
+      forget_w = max(140, int(measure_text_cached(gui_app.font(), tr("Forget"), 36).x + 50))
       action_btns = [
         (self._connect_btn, conn_w, conn_label,
          ButtonStyle.NORMAL if dev.connected else ButtonStyle.PRIMARY,
          lambda: self._on_device_action(dev, 'connect' if not dev.connected else 'disconnect')),
-        (self._edit_btn, edit_w, tr("Edit"), ButtonStyle.NORMAL, lambda: self._on_edit_device(dev)),
         (self._forget_btn, forget_w, tr("Forget"), ButtonStyle.DANGER, lambda: self._confirm_forget(dev)),
       ]
 
     total_action_w = sum(w for _, w, _, _, _ in action_btns) + btn_gap * (len(action_btns) - 1)
     action_right = rect.x + rect.width - self._padding
 
-    # RSSI sits immediately to the left of the action buttons.
+    # RSSI column to the left of action buttons.
     rssi_str = ''
     rssi_w = 0
     if dev.rssi is not None:
       rssi_str = f"{dev.rssi} dBm"
-      rssi_size = measure_text_cached(gui_app.font(), rssi_str, 34)
+      rssi_size = measure_text_cached(gui_app.font(), rssi_str, 32)
       rssi_w = rssi_size.x
-    rssi_col_w = max(120, rssi_w + 20)
+    rssi_col_w = max(110, rssi_w + 20)
     rssi_right = action_right - total_action_w - self._padding
 
-    # Main text area is everything left of the RSSI column; scissor it so long
-    # names never draw over the signal/action area.
+    # Main text area (left of RSSI/actions) is scissored.
     main_right = rssi_right - rssi_col_w - self._padding
     text_x = rect.x + self._padding
     rl.begin_scissor_mode(int(rect.x), int(rect.y), int(max(0, main_right - rect.x)), int(rect.height))
 
-    rl.draw_text_ex(gui_app.font(), dev.name or dev.address, rl.Vector2(text_x, rect.y + 18), 55, 0, rl.WHITE)
+    name_y = rect.y + 22
+    rl.draw_text_ex(gui_app.font(), dev.name or dev.address, rl.Vector2(text_x, name_y), 50, 0, rl.WHITE)
 
     status_parts = [dev.address]
     if dev.connected:
@@ -550,36 +554,41 @@ class CarrotBluetoothLayout(Widget):
     if dev.battery is not None:
       status_parts.append(f"{tr('Battery')} {dev.battery}%")
     status_str = ' · '.join(status_parts)
-    rl.draw_text_ex(gui_app.font(), status_str, rl.Vector2(text_x, rect.y + 78), 38, 0, rl.Color(160, 160, 160, 255))
+    rl.draw_text_ex(gui_app.font(), status_str, rl.Vector2(text_x, rect.y + 76), 34, 0, rl.Color(160, 160, 160, 255))
 
     if dev.address in state.config_devices:
       cfg = state.config_devices[dev.address]
       mapping_status = tr("Mapping on") if cfg.get('enabled') else tr("Mapping off")
       if dev.grabbed:
         mapping_status += ' · ' + tr("Receiving input")
-      rl.draw_text_ex(gui_app.font(), mapping_status, rl.Vector2(text_x, rect.y + 118), 38, 0, rl.Color(120, 200, 120, 255))
+      rl.draw_text_ex(gui_app.font(), mapping_status, rl.Vector2(text_x, rect.y + 112), 32, 0, rl.Color(120, 200, 120, 255))
 
     rl.end_scissor_mode()
 
     # Draw RSSI
     if dev.rssi is not None:
-      rssi_y = rect.y + (self._item_height - 34) / 2
+      rssi_y = rect.y + (rect.height - 32) / 2
       rl.draw_text_ex(gui_app.font(), rssi_str, rl.Vector2(rssi_right - rssi_w, rssi_y),
-                      34, 0, rl.Color(120, 180, 255, 255))
+                      32, 0, rl.Color(120, 180, 255, 255))
 
-    # Draw action buttons and handle clicks
+    # Draw action buttons
     x = action_right - total_action_w
     for btn, w, label, style, cb in action_btns:
       btn.set_text(label)
       btn.set_button_style(style)
       btn.set_enabled(True)
       btn.set_touch_valid_callback(lambda: self._scroll_panel.is_touch_valid())
-      btn_rect = rl.Rectangle(x, rect.y + (self._item_height - self._btn_height) // 2, w, self._btn_height)
+      btn_rect = rl.Rectangle(x, rect.y + (rect.height - self._btn_height) // 2, w, self._btn_height)
       btn.set_rect(btn_rect)
       btn.render()
       if clicked and rl.check_collision_point_rec(mouse_pos, btn_rect):
         cb()
       x += w + btn_gap
+
+    # Separator line like the network list.
+    if not is_last:
+      line_y = int(rect.y + rect.height - 1)
+      rl.draw_line(int(rect.x + self._padding), line_y, int(rect.x + rect.width - self._padding), line_y, rl.Color(80, 80, 80, 255))
 
   def _confirm_pair(self, dev: BTDevice) -> None:
     def on_result(result: DialogResult):
@@ -749,7 +758,7 @@ class CarrotBluetoothLayout(Widget):
       self._on_discoverable_toggled, self._last_discoverable_state,
     )
     self._last_discoverable_state = state.discoverable
-    y += gap
+    y += gap + 20
 
     # Device name
     y = self._render_name_row(rect, y, state, can_act)

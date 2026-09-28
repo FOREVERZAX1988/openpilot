@@ -10,11 +10,11 @@ from openpilot.sunnypilot.mapd.live_map_data.base_map_data import BaseMapData
 class NoMapData(BaseMapData):
   """A map-data provider that supplies nothing.
 
-  Used when the user has turned off both online (Amap) and offline (OSM) map data. It
-  exists so that "no provider" is an explicit, well-defined state rather than a special
-  case threaded through the manager: the rest of the pipeline keeps receiving
-  liveMapDataSP, with every "valid" flag false, which is exactly the same thing it sees
-  on a road where the provider simply has no data.
+  Used when the user has turned off offline (OSM) map data. It exists so that
+  "no provider" is an explicit, well-defined state rather than a special case threaded
+  through the manager: the rest of the pipeline keeps receiving liveMapDataSP, with
+  every "valid" flag false, which is exactly the same thing it sees on a road where the
+  provider simply has no data.
 
   This matters because consumers key off the validity flags, not off the provider type.
   The speed-limit resolver already requires `speedLimitValid`, and the map controller

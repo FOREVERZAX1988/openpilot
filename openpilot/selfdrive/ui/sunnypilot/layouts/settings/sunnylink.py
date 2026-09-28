@@ -48,7 +48,7 @@ class SunnylinkHeader(Widget):
     super().__init__()
 
     self._title = UnifiedLabel(
-      text=tr("sunnylink"),
+      text=tr("🚀 sunnylink 🚀"),
       font_size=90,
       font_weight=FontWeight.BOLD,
       text_color=rl.WHITE,
@@ -358,7 +358,7 @@ class SunnylinkLayout(Widget):
         "Welcome back!! We're excited to see you've enabled sunnylink again!")
       color = rl.Color(0, 255, 0, 255)  # Green
     else:
-      description = ("♥ " + tr("Not going to lie, it's sad to see you disabled sunnylink") +
+      description = ("😢 " + tr("Not going to lie, it's sad to see you disabled sunnylink") +
                      tr(", but we'll be here when you're ready to come back."))
       color = rl.Color(255, 165, 0, 255)  # Orange
     self._sunnylink_description.set_text(description)

@@ -311,6 +311,40 @@ class VASMService:
       self.lane_interval_seconds = lane_interval_seconds
     return self.status()
 
+  def store_toggle_values(self, payload: object) -> dict:
+    """Persist arbitrary toggle values posted by the phone app on 8082.
+
+    navipilot (the CP companion app) posts a flat ``{key: scalar}`` map to
+    ``POST /store_toggle_values`` instead of going through ``/api/param_set`` on
+    7000. Keys are looked up in the registered Params store first so a known key
+    keeps its declared type (``Params.put`` raises on a type mismatch rather than
+    casting); anything unregistered is written into the nav_params.json cache so
+    the user's choice is not silently dropped.
+    """
+    if not isinstance(payload, dict):
+      raise ValueError("toggle values must be a JSON object")
+    # Some app builds wrap the map under "values" / "toggles"; accept both.
+    body = payload
+    for wrapper in ("values", "toggles", "params"):
+      inner = payload.get(wrapper)
+      if isinstance(inner, dict):
+        body = inner
+        break
+
+    stored: dict[str, object] = {}
+    rejected: dict[str, str] = {}
+    for key, value in body.items():
+      if not isinstance(key, str) or not key:
+        continue
+      try:
+        if self.params is not None:
+          stored[key] = self.params.put(key, value)
+        else:
+          rejected[key] = "params store unavailable"
+      except Exception as error:  # UnknownKeyName / TypeError / read-only store
+        rejected[key] = str(error)
+    return {"success": True, "stored": stored, "rejected": rejected}
+
   def status(self) -> dict:
     self._refresh_settings_from_params()
     with self.lock:
@@ -469,7 +503,8 @@ class VASMService:
     return output.getvalue()
 
   def run_camera(self) -> None:
-    from msgq.visionipc import VisionIpcClient, VisionStreamType
+    from msgq.visionipc import VisionIpcClient
+    from openpilot.cereal.visionipc import VisionStreamType
 
     client = None
     while self.running:
@@ -549,13 +584,14 @@ class VASMService:
         time.sleep(1.0)
 
   def run_road_camera(self) -> None:
-    from msgq.visionipc import VisionIpcClient, VisionStreamType
+    from msgq.visionipc import VisionIpcClient
+    from openpilot.cereal.visionipc import VisionStreamType
 
     client = None
     while self.running:
       try:
         if client is None or not client.is_connected():
-          client = VisionIpcClient("camerad", VisionStreamType.VISION_STREAM_ROAD, True)
+          client = VisionIpcClient("camerad", VisionStreamType.VISION_STREAM_NARROW_ROAD, True)
           if not client.connect(False):
             with self.lock:
               self.lane_camera_error = "road camera is unavailable; start openpilot/camerad first"
@@ -673,6 +709,9 @@ class Handler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.OK, self.service.save_config(payload))
       elif path == "/api/settings":
         self._json(HTTPStatus.OK, self.service.set_settings(payload))
+      elif path == "/store_toggle_values":
+        # navipilot posts its toggle map here instead of 7000/api/param_set.
+        self._json(HTTPStatus.OK, self.service.store_toggle_values(payload))
       else:
         self.send_error(HTTPStatus.NOT_FOUND)
     except (ValueError, json.JSONDecodeError) as error:

@@ -1,6 +1,5 @@
 import os
 import platform
-import operator
 
 from opendbc.car.structs import car
 from openpilot.cereal import custom
@@ -85,10 +84,6 @@ def livestream(started: bool, params: Params, CP: car.CarParams) -> bool:
 def onroad_preview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("IsOnroadPreview")
 
-def use_github_runner(started, params, CP: car.CarParams) -> bool:
-  return not PC and params.get_bool("EnableGithubRunner") and (
-    not params.get_bool("NetworkMetered") and not params.get_bool("GithubRunnerSufficientVoltage"))
-
 def use_copyparty(started, params, CP: car.CarParams) -> bool:
   return bool(params.get_bool("EnableCopyparty"))
 
@@ -132,19 +127,11 @@ def uploader_ready(started: bool, params: Params, CP: car.CarParams) -> bool:
 
   return always_run(started, params, CP)
 
-def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
-  # run even offroad: web panel (8088) / UDP / FTP must work while parked;
-  # carrot_man gates its own behaviour with the IsOnroad param
-  return params.get_bool("CarrotEnabled")
-
 def or_(*fns):
   return lambda *args: any(fn(*args) for fn in fns)
 
 def and_(*fns):
   return lambda *args: all(fn(*args) for fn in fns)
-
-def not_(*fns):
-  return lambda *args: operator.not_(*(fn(*args) for fn in fns))
 
 procs = [
   DaemonProcess("manage_athenad", "openpilot.system.athena.manage_athenad", "AthenadPid"),
@@ -152,10 +139,7 @@ procs = [
   NativeProcess("loggerd", "openpilot/system/loggerd", ["./loggerd"], logging),
   NativeProcess("encoderd", "openpilot/system/loggerd", ["./encoderd"], only_onroad),
   NativeProcess("stream_encoderd", "openpilot/system/loggerd", ["./encoderd", "--stream"], or_(livestream, notcar)),
-  # restart_if_crash: same trap as carrot_man below -- ManagerProcess.start() returns early
-  # while self.proc is not None, so a crashed logmessaged (e.g. a non-UTF-8 byte on the
-  # swaglog IPC socket) stayed dead until reboot and every log message was silently dropped.
-  PythonProcess("logmessaged", "openpilot.system.logmessaged", always_run, restart_if_crash=True),
+  PythonProcess("logmessaged", "openpilot.system.logmessaged", always_run),
 
   NativeProcess("camerad", "openpilot/system/camerad", ["./camerad"], or_(driverview, livestream, onroad_preview), enabled=not WEBCAM),
   PythonProcess("webcamerad", "openpilot.system.camerad.webcam.camerad", driverview, enabled=WEBCAM),
@@ -164,8 +148,8 @@ procs = [
   PythonProcess("micd", "openpilot.system.micd", iscar, enabled=not LITE),
   PythonProcess("timed", "openpilot.system.timed", always_run, enabled=not PC),
 
-  PythonProcess("modeld", "openpilot.selfdrive.modeld.modeld", and_(only_onroad, is_stock_model)),
-  PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", driverview, enabled=(WEBCAM or not PC) and not LITE),
+  PythonProcess("modeld", "openpilot.selfdrive.modeld.modeld", and_(or_(only_onroad, onroad_preview), is_stock_model)),
+  PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", dm_process, enabled=(WEBCAM or not PC) and not LITE),
 
   PythonProcess("sensord", "openpilot.system.sensord.sensord", only_onroad, enabled=not PC),
   PythonProcess("ui", "openpilot.selfdrive.ui.ui", and_(always_run, builtin_display), restart_if_crash=True),
@@ -181,7 +165,7 @@ procs = [
   PythonProcess("selfdrived", "openpilot.selfdrive.selfdrived.selfdrived", only_onroad),
   PythonProcess("card", "openpilot.selfdrive.car.card", only_onroad),
   PythonProcess("deleter", "openpilot.system.loggerd.deleter", always_run),
-  PythonProcess("dmonitoringd", "openpilot.selfdrive.monitoring.dmonitoringd", driverview, enabled=(WEBCAM or not PC) and not LITE),
+  PythonProcess("dmonitoringd", "openpilot.selfdrive.monitoring.dmonitoringd", dm_process, enabled=(WEBCAM or not PC) and not LITE),
   PythonProcess("qcomgpsd", "openpilot.system.qcomgpsd.qcomgpsd", qcomgps, enabled=COMMA_HARDWARE),
   PythonProcess("pandad", "openpilot.selfdrive.pandad.pandad", always_run),
   PythonProcess("paramsd", "openpilot.selfdrive.locationd.paramsd", only_onroad),
@@ -223,10 +207,9 @@ procs += [
   NativeProcess("mapd", Paths.mapd_root(), ["bash", "-c", f"{MAPD_PATH} > /dev/null 2>&1"], mapd_ready),
   PythonProcess("mapd_manager", "openpilot.sunnypilot.mapd.mapd_manager", always_run),
 
-  # Amap / Carrot
-  # amapNaviSP removed: carrot_man now only produces carrotManSP /
-  # navInstructionCarrotSP. AmapApiKey is still used by AmapMapData (Web API
-  # fallback for speed limits / road names).
+  # Carrot
+  # amapNaviSP and AmapMapData (Web API) removed: carrot_man now only produces
+  # carrotManSP / navInstructionCarrotSP. OSM remains the map-data provider.
   #
   # always_run, NOT carrot_enabled: carrot_man is the UDP 7705 discovery
   # advertiser and the 7706 listener on this fork, and the phone app must find
@@ -285,15 +268,8 @@ procs += [
   NativeProcess("locationd_llk", "openpilot/sunnypilot/selfdrive/locationd", ["./locationd"], only_onroad),
 ]
 
-if os.path.exists("./github_runner.sh"):
-  procs += [NativeProcess("github_runner_start", "openpilot/system/manager",
-                          ["./github_runner.sh", "start"], and_(only_offroad, use_github_runner), sigkill=False)]
-
 if os.path.exists("../../sunnypilot/sunnylink/uploader.py"):
-  # restart_if_crash=True: PythonProcess defaults to False -> if this process ever exits it never
-  # comes back until the manager itself is restarted (seen 2026-09-20: killed uploader stayed down).
-  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader",
-                          use_sunnylink_uploader_shim, restart_if_crash=True)]
+  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader", use_sunnylink_uploader_shim)]
 
 if os.path.exists("../../third_party/copyparty/copyparty-sfx.py"):
   sunnypilot_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

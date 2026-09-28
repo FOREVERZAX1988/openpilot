@@ -52,23 +52,20 @@ def tearDownModule() -> None:
 # compiled capnp runtime (mirrors the mocks in test_carrot_man.py). When the
 # combined test run already installed these fakes, setdefault keeps them.
 if "opendbc.car.common.conversions" not in sys.modules:
-  _opendbc = sys.modules.get("opendbc") or types.ModuleType("opendbc")
-  _install_stub("opendbc", _opendbc)
-  _opendbc_car = sys.modules.get("opendbc.car") or types.ModuleType("opendbc.car")
-  _install_stub("opendbc.car", _opendbc_car)
-  _opendbc_car_common = sys.modules.get("opendbc.car.common") or types.ModuleType("opendbc.car.common")
-  _install_stub("opendbc.car.common", _opendbc_car_common)
+  _opendbc = sys.modules.setdefault("opendbc", types.ModuleType("opendbc"))
+  _opendbc_car = sys.modules.setdefault("opendbc.car", types.ModuleType("opendbc.car"))
+  _opendbc_car_common = sys.modules.setdefault("opendbc.car.common", types.ModuleType("opendbc.car.common"))
   _conv = types.ModuleType("opendbc.car.common.conversions")
   class _Conversions:
     KPH_TO_MS = 1.0 / 3.6
     MS_TO_KPH = 3.6
   _conv.Conversions = _Conversions
-  _install_stub("opendbc.car.common.conversions", _conv)
+  sys.modules["opendbc.car.common.conversions"] = _conv
 
 if "openpilot.common.realtime" not in sys.modules:
   _rt = types.ModuleType("openpilot.common.realtime")
   _rt.DT_MDL = 0.05
-  _install_stub("openpilot.common.realtime", _rt)
+  sys.modules["openpilot.common.realtime"] = _rt
 
 
 from openpilot.sunnypilot.carrot.traffic_stop import (

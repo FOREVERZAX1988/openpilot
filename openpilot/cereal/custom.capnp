@@ -448,7 +448,6 @@ struct OnroadEventSP @0xda96579883444c35 {
     trafficSignGreen @26;
     trafficSignChanged @27;
     trafficStopping @28;
-    macanAutoResume @29;  # Macan 起步跟停：OP 代发 RESUME 解除原厂停车保持（带 engage 音效）
   }
 }
 
@@ -587,7 +586,19 @@ struct CarStateSP @0xb86e6369214c01c8 {
   # Merged by apply_xiaoge_vision_result() which preserves color codes from other sources.
   xiaogeLeftLaneLine @7 :Int16;
   xiaogeRightLaneLine @8 :Int16;
+
+  # Hybrid engine state (toyota HYBRID flag). Written by the brand's carstate_ext and
+  # read by longitudinal_planner.get_max_accel_override so an engine-off hybrid is not
+  # asked for acceleration it cannot deliver.
+  #
+  # Appended at @9/@10 rather than the @1/@2 this branch originally used: the other
+  # side of the merge had already taken @1-@8 for the Carrot/Xiaoge fields above.
+  # Ordinals are the wire contract, so renumbering here is the only safe resolution -
+  # reusing @1/@2 would silently alias engineOff onto carrotLaneValid.
+  engineOff @9 :Bool;
+  engineRpm @10 :Float32;
 }
+
 
 struct LiveMapDataSP @0xf416ec09499d9d19 {
   speedLimitValid @0 :Bool;

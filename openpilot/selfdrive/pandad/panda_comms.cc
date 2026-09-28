@@ -7,20 +7,6 @@
 
 #include "common/swaglog.h"
 
-static bool is_panda_usb_device(uint16_t vid, uint16_t pid) {
-  if (vid != 0x3801 && vid != 0xbbaa) {
-    return false;
-  }
-  if (pid == 0xddcc || pid == 0xddee) {
-    return true;
-  }
-  // bootstub PIDs (e.g. 0xddee, 0xddce)
-  if ((pid & 0xFFF0) == 0xDDE0) {
-    return true;
-  }
-  return false;
-}
-
 static libusb_context *init_usb_ctx() {
   libusb_context *context = nullptr;
   int err = libusb_init(&context);
@@ -42,7 +28,6 @@ PandaUsbHandle::PandaUsbHandle(std::string serial) : PandaCommsHandle(serial) {
   ssize_t num_devices;
   libusb_device **dev_list = NULL;
   int err = 0;
-  int config = 0;
   ctx = init_usb_ctx();
   if (!ctx) { goto fail; }
 
@@ -52,20 +37,13 @@ PandaUsbHandle::PandaUsbHandle(std::string serial) : PandaCommsHandle(serial) {
   for (size_t i = 0; i < num_devices; ++i) {
     libusb_device_descriptor desc;
     libusb_get_device_descriptor(dev_list[i], &desc);
-    if (is_panda_usb_device(desc.idVendor, desc.idProduct)) {
+    if (desc.idVendor == 0x3801 && desc.idProduct == 0xddcc) {
       int ret = libusb_open(dev_list[i], &dev_handle);
-      if (dev_handle == NULL || ret < 0) {
-        dev_handle = NULL;
-        continue;
-      }
+      if (dev_handle == NULL || ret < 0) { goto fail; }
 
       unsigned char desc_serial[26] = { 0 };
       ret = libusb_get_string_descriptor_ascii(dev_handle, desc.iSerialNumber, desc_serial, std::size(desc_serial));
-      if (ret < 0) {
-        libusb_close(dev_handle);
-        dev_handle = NULL;
-        continue;
-      }
+      if (ret < 0) { goto fail; }
 
       hw_serial = std::string((char *)desc_serial, ret);
       if (serial.empty() || serial == hw_serial) {
@@ -83,11 +61,8 @@ PandaUsbHandle::PandaUsbHandle(std::string serial) : PandaCommsHandle(serial) {
     libusb_detach_kernel_driver(dev_handle, 0);
   }
 
-  err = libusb_get_configuration(dev_handle, &config);
-  if (err != 0 || config != 1) {
-    err = libusb_set_configuration(dev_handle, 1);
-    if (err != 0 && err != LIBUSB_ERROR_BUSY) { goto fail; }
-  }
+  err = libusb_set_configuration(dev_handle, 1);
+  if (err != 0) { goto fail; }
 
   err = libusb_claim_interface(dev_handle, 0);
   if (err != 0) { goto fail; }
@@ -136,15 +111,15 @@ std::vector<std::string> PandaUsbHandle::list() {
     libusb_device *device = dev_list[i];
     libusb_device_descriptor desc;
     libusb_get_device_descriptor(device, &desc);
-    if (is_panda_usb_device(desc.idVendor, desc.idProduct)) {
+    if (desc.idVendor == 0x3801 && desc.idProduct == 0xddcc) {
       libusb_device_handle *handle = NULL;
       int ret = libusb_open(device, &handle);
-      if (ret < 0) { continue; }
+      if (ret < 0) { goto finish; }
 
       unsigned char desc_serial[26] = { 0 };
       ret = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, desc_serial, std::size(desc_serial));
       libusb_close(handle);
-      if (ret < 0) { continue; }
+      if (ret < 0) { goto finish; }
 
       serials.push_back(std::string((char *)desc_serial, ret));
     }

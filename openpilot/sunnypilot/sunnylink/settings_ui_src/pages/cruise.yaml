@@ -290,22 +290,18 @@ sections:
         field: has_icbm
         equals: true
 - id: carrot_navigation
-  title: Amap / Carrot Navigation
+  title: OSM / Carrot Navigation
   description: Phone projection, navigation data, and dynamic cruise tuning
   enablement:
   - $ref: '#/macros/offroad'
   items:
-  - key: AmapMapDataEnabled
-    widget: toggle
-    title: Enable Amap Map Data
-    description: Use Amap (Gaode) online map data for speed limits and road names in China.
   - key: OsmMapDataEnabled
     widget: toggle
     title: Enable OSM Map Data
     description: Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - the offline data can be years out of date.
   - key: CarrotAmapBlindSpotEnabled
     widget: toggle
-    title: Enable Amap Blind Spot Data
+    title: Enable Carrot Blind Spot Data
     description: Parse blind-spot / LiDAR / extBlinker fields from the 7706 UDP stream.
   - key: CarrotEnabled
     widget: toggle

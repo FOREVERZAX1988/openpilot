@@ -23,13 +23,6 @@ DBUS_PROPS = 'org.freedesktop.DBus.Properties'
 MM = 'org.freedesktop.ModemManager1'
 MM_MODEM = MM + ".Modem"
 
-LITE = os.getenv("LITE") is not None
-
-DBUS_PROPS = 'org.freedesktop.DBus.Properties'
-
-MM = 'org.freedesktop.ModemManager1'
-MM_MODEM = MM + ".Modem"
-
 MODEM_STATE_PATH = "/dev/shm/modem"
 TIMEOUT = 0.1
 
@@ -95,7 +88,16 @@ def invalidate_display_probe_cache() -> None:
 
 @lru_cache(maxsize=1)
 def probe_builtin_display() -> bool:
-  """Detect comma panel via backlight sysfs + touch IRQ (cached for process lifetime)."""
+  """Detect comma panel via backlight sysfs + touch IRQ (cached for process lifetime).
+
+  Backlight sysfs is the primary signal: if the panel backlight is present and
+  reports a positive max brightness, we treat the device as having a builtin
+  display. Touch detection is used only as a diagnostic hint, because some
+  boots/AGNOS versions leave the touchscreen driver (fts_ts) unprobed while the
+  display itself is fully functional. In that case the native UI should still
+  start; lack of touch will be obvious to the user and can be investigated
+  separately.
+  """
   if not _PANEL_BACKLIGHT.is_dir():
     return False
   try:
@@ -104,7 +106,9 @@ def probe_builtin_display() -> bool:
         return False
   except (OSError, ValueError):
     return False
-  return _has_panel_touch()
+  if not _has_panel_touch():
+    logging.warning("builtin panel backlight detected but touchscreen IRQ/path missing; enabling native ui anyway")
+  return True
 
 
 _PANDA_MCU_CACHE_PATHS = (
@@ -461,6 +465,36 @@ class HardwareComma(HardwareBase):
     except Exception:
       return 0
 
+  # CPUs isolated with the kernel's `isolcpus=` argument. On carrot's custom SDM845
+  # kernel this is 6,7, and the whole runtime depends on them staying online: modeld
+  # pins itself to 7, camerad to 6, and set_power_save() sends the GPU/camera IRQs
+  # there. Linux does NOT take isolcpus cores offline, so they keep working.
+  ISOLATED_CPUS = (6, 7)
+
+  def get_isolated_cpus(self) -> tuple[int, ...]:
+    """Cores currently isolated by the kernel, from /sys/devices/system/cpu/isolated.
+
+    Reading this instead of trusting ISOLATED_CPUS keeps the power save path honest
+    on stock AGNOS, where nothing is isolated and the full big cluster can be offlined.
+    """
+    try:
+      with open('/sys/devices/system/cpu/isolated') as f:
+        spec = f.read().strip()
+    except OSError:
+      return self.ISOLATED_CPUS
+
+    if not spec:
+      return ()
+
+    isolated: set[int] = set()
+    for part in spec.split(','):
+      if '-' in part:
+        lo, hi = part.split('-', 1)
+        isolated.update(range(int(lo), int(hi) + 1))
+      else:
+        isolated.add(int(part))
+    return tuple(sorted(isolated))
+
   def set_power_save(self, powersave_enabled):
     # amplifier, 100mW at idle
     if self.amplifier is not None:
@@ -470,8 +504,16 @@ class HardwareComma(HardwareBase):
 
     # *** CPU config ***
 
-    # offline big cluster
+    # Offline the big cluster, except for cores the kernel isolated for realtime
+    # work. modeld/camerad hard-pin to 6/7 and hit EINVAL on an offline CPU, so
+    # offlining those cores also breaks every daemon that boots while power save is
+    # active (manager keeps restarting modeld into the same crash). Keeping them
+    # online still saves most of the idle power: nothing but isolated realtime work
+    # runs there, so they sit at their lowest OPP.
+    isolated = set(self.get_isolated_cpus())
     for i in range(4, 8):
+      if i in isolated:
+        continue
       val = '0' if powersave_enabled else '1'
       sudo_write(val, f'/sys/devices/system/cpu/cpu{i}/online')
 
@@ -563,9 +605,6 @@ class HardwareComma(HardwareBase):
     ms = self.get_modem_state()
     return ms.get('tx_bytes', -1), ms.get('rx_bytes', -1)
 
-  def has_internal_panda(self):
-    return True
-
   def reset_internal_panda(self):
     gpio_init(GPIO.STM_RST_N, True)
     gpio_init(GPIO.STM_BOOT0, True)
@@ -588,13 +627,8 @@ class HardwareComma(HardwareBase):
 
   def booted(self):
     # this normally boots within 8s, but on rare occasions takes 30+s
-    # Past 2 minutes the check below can no longer return False, so skip the sudo_read:
-    # callers poll this (webui startup_blockers / hardwared), and every call used to spawn a
-    # `sudo cat /sys/kernel/debug/msm_vidc/core0/info` (was ~3/s -> 37 MB of auth.log per day).
-    if time.monotonic() >= 60*2:
-      return True
     encoder_state = sudo_read("/sys/kernel/debug/msm_vidc/core0/info")
-    if "Core state: 0" in encoder_state:
+    if "Core state: 0" in encoder_state and (time.monotonic() < 60*2):
       return False
     return True
 

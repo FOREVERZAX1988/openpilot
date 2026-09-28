@@ -5,6 +5,7 @@ import logging
 import os
 import select
 import signal
+import string
 import struct
 import subprocess
 import tempfile
@@ -17,7 +18,6 @@ from ipaddress import IPv4Address, AddressValueError
 from enum import Enum
 
 from openpilot.common.hardware.comma.hardware import is_tici_dos
-
 
 logging.basicConfig(
   level=logging.INFO,
@@ -564,7 +564,7 @@ class Modem:
     imei = parse_imei_lines(self._at("AT+CGSN"))
 
     iccid = (self._atv("AT+QCCID", "+QCCID:") or "").rstrip("F")
-    if not iccid.isdigit():
+    if not all(c in string.hexdigits for c in iccid):
       iccid = ""
 
     imsi_lines = self._at("AT+CIMI")

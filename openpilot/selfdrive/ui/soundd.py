@@ -54,8 +54,8 @@ sound_list_sp: dict[int, tuple[str, int | None, float]] = {
 
 sound_list: dict[int, tuple[str, int | None, float]] = {
   # AudibleAlert, file name, play count (none for infinite)
-  AudibleAlert.engage: ("engage_tizi.wav", 1, MAX_VOLUME),
-  AudibleAlert.disengage: ("disengage_tizi.wav", 1, MAX_VOLUME),
+  AudibleAlert.engage: ("engage.wav", 1, MAX_VOLUME),
+  AudibleAlert.disengage: ("disengage.wav", 1, MAX_VOLUME),
   AudibleAlert.refuse: ("refuse.wav", 1, MAX_VOLUME),
 
   AudibleAlert.prompt: ("warning.wav", 1, MAX_VOLUME),
@@ -106,12 +106,6 @@ sound_list: dict[int, tuple[str, int | None, float]] = {
   AudibleAlertSP.newLane: ("audio_new_lane.wav", None, MAX_VOLUME),
   AudibleAlertSP.laneChangeEnd: ("audio_lane_change_end.wav", None, MAX_VOLUME),
 }
-if HARDWARE.get_device_type() in ("tici", "tizi"):
-  sound_list.update({
-    AudibleAlert.engage: ("engage_tizi.wav", 1, MAX_VOLUME),
-    AudibleAlert.disengage: ("disengage_tizi.wav", 1, MAX_VOLUME),
-  })
-
 
 def check_selfdrive_timeout_alert(sm):
   ss_missing = time.monotonic() - sm.recv_time['selfdriveState']
@@ -264,6 +258,13 @@ class Soundd(QuietMode):
         alert_name = f'audio{carrot_man.leftSec}'
         if hasattr(AudibleAlertSP, alert_name):
           self.update_alert(getattr(AudibleAlertSP, alert_name))
+      elif carrot_man.leftSec == 0:
+        # Countdown finished. Mirrors cp's update_carrot_alert(); sp registered the
+        # longDisengaged asset but never played it.
+        self.update_alert(AudibleAlertSP.longDisengaged)
+      elif carrot_man.leftSec == 11:
+        # First frame of the countdown, used as an early warning.
+        self.update_alert(AudibleAlert.promptDistracted)
 
     atc_type = carrot_man.atcType if hasattr(carrot_man, 'atcType') else ""
     if atc_type != self.carrot_atc_type_prev:
@@ -318,12 +319,14 @@ class Soundd(QuietMode):
             sm.update(0)
 
             self.load_param()
+            self._load_volume_adjust()
 
             # freeze volume during alerts to avoid mic feedback increasing volume
             if sm.updated['soundPressure']:
               self.spl_filter_weighted.update(sm["soundPressure"].soundPressureWeightedDb)
               if self.current_alert == AudibleAlert.none:
                 self.current_volume = self.calculate_volume(float(self.spl_filter_weighted.x))
+                self.current_volume *= self.soundVolumeAdjust
 
             self.get_audible_alert(sm)
             self.get_carrot_alert(sm)

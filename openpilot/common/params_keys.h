@@ -344,20 +344,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LongitudinalMpcTuningLeadDangerFactor", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
 
     // Amap / Carrot (phone projection & navigation)
-    // AmapEnabled is deprecated: it historically controlled both Amap Web map
-    // data and the 7706 blind-spot parser. It is kept here only for one-time
-    // migration to AmapMapDataEnabled / CarrotAmapBlindSpotEnabled.
-    {"AmapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"AmapApiKey", {PERSISTENT | DONT_LOG, STRING}},
-    // Use Amap (Gaode) online Web API for speed limits / road names.
-    {"AmapMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // CarrotAmapBlindSpotEnabled controls 7706 UDP blind-spot / LiDAR / extBlinker
+    // fields and is unrelated to the removed Amap Web map-data provider.
     // OSM offline map data. Off means "do not use the offline map for speed limits
-    // or road names", so a user who relies on Amap or carrot can silence the
-    // offline fallback. Default 1 keeps existing behaviour.
+    // or road names", so a user who relies on carrot can silence the offline
+    // fallback. Default 1 keeps existing behaviour.
     {"OsmMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
-    // Set once the legacy AmapEnabled switch has been migrated, so the migration
-    // cannot run again and silently re-enable Amap after the user disabled it.
-    {"AmapLegacyMigrated", {PERSISTENT, BOOL, "0"}},
     // Parse 7706 UDP blind-spot / LiDAR / extBlinker fields (AmapNaviServ).
     {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -502,8 +494,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SpeedCorrect60", {PERSISTENT, INT, "0"}},
     {"SpeedCorrect90", {PERSISTENT, INT, "0"}},
     {"CarrotNavLaneGuideBlockEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // let 7706 navLaneGuide block non-guided adjacent lanes
-    {"AmapCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // use Amap Web polyline for curve speed
-    {"AmapTrafficLightHintEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},      // use Amap Web traffic-light hints
+
     // Carrot speed/turn/navi tuning surface. Defaults mirror cp/fp behavior where applicable;
     // keys are registered so UnifiedParams writes land in the cross-process Params store.
     {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},
@@ -696,6 +687,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SoftwareMenu", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"SoundLanguageSetting", {PERSISTENT | BACKUP, STRING, "auto"}},
     {"UseWideCamera", {PERSISTENT | BACKUP, BOOL, "1"}},
+
 
     {"ATCMaxSpeedKph", {PERSISTENT | BACKUP, FLOAT, "35.0"}},               // auto-turn-control speed floor cap
     {"CarrotSectionSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},        // section/avg-SDI speed enforcement

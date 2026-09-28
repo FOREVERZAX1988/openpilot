@@ -50,12 +50,39 @@ manager 托管进程），而不是在 fork 里再长出一套并行控制面。
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | **1** | `server/` 骨架 + `/api/param_set` `/api/params_bulk` `/api/health` + 托管进程 `carrot_server` | ✅ 完成（24 tests，设备端到端实测通过） |
-| 2 | `/ws/raw_multiplex`（cp `realtime/raw_protocol.py` 37 + `raw_services.py` 45 + `transports/raw_ws.py` 325 + `features/ws.py` 99） | 待做 |
-| 3 | `/ws/camera/{camera}`（`realtime/transports/camera_ws.py` 471） | 待做 |
-| 4 | `/ws/compact_state` 及原生部分（652 + C++/Cython） | 待做 |
-| 5 | `features/system.py` + `features/cars.py` + `features/settings.py` 等只读设备/设置接口 | 待做 |
-| 6 | dashcam / terminal / tools / youtube_live / support_terminal / recovery(6999) | 待评估（体量大、与 App 主链无关） |
-| 7 | 8082 补 `POST /store_toggle_values` | 待做（小） |
+| 2 | `/ws/raw_multiplex`（cp `realtime/raw_protocol.py` 37 + `raw_services.py` 45 + `transports/raw_ws.py` 325 + `features/ws.py` 99） | ✅ 完成（`features/ws.py` + `services/raw_protocol.py` / `raw_services.py` / `raw_relay.py`） |
+| 3 | `/ws/camera/{camera}`（`realtime/transports/camera_ws.py` 471） | ✅ 完成（`features/camera.py` + `services/camera_relay.py`） |
+| 4 | `/ws/compact_state` 及原生部分（652 + C++/Cython） | ❌ 有意不实现：cp 的紧凑二进制 HUD 协议无 cereal 对应，猜一个会给出解码成错误数字的流；由 `features/unsupported.py` 回 501 |
+| 5 | `features/system.py` + `features/cars.py` + `features/settings.py` 等只读设备/设置接口 | ✅ 完成（`features/system.py` 9 路由、`cars.py`、`settings.py`、`preferences.py`、`credentials.py`） |
+| 6 | dashcam / terminal / tools / youtube_live / support_terminal / recovery(6999) | ⏸️ 有意不实现，见 `features/unsupported.py` 的逐项理由（媒体子系统/无鉴权远程 shell/云直播） |
+| 7 | 8082 补 `POST /store_toggle_values` | ✅ 完成（`VASMService.store_toggle_values` + v_asm_server 路由） |
+
+> 2026-09-28 复核：设备实测 7000/7706/7709/7710/7711/7712/7713/7714/12345/8082 全部在监听，
+> 7705 广播正常发出。6999 与 8088 不在监听属预期（前者有意不实现，后者是 sp 自有面板未启用）。
+
+## 3.1 明确不实现清单（有意为之，不是遗漏）
+
+| 项 | 理由 |
+|---|---|
+| `/ws/compact_state` | Carrot Vision 的字节打包 HUD 协议在 sp 无对应 cereal 消息 |
+| dashcam / screenrecord / replay | ~30 文件 ffmpeg 媒体子系统；sp 已有自己的路线存储与回放 |
+| terminal / support_terminal | 7000 上的无鉴权远程 shell，同网段任何设备可执行车辆控制机上的命令 |
+| youtube_live / vision_diag / vision_test | 云直播与 Carrot Vision 上传/测试台 |
+| `/ws/carrot_navi/media`、`/stream`、`/ws/web_sound` | cp 自有 web HUD 的 fMP4/声音通道，sp 不跑该 HUD |
+| 6999 recovery 服务 | cp 的独立 PTY recovery 终端（2,563 行），同样是无鉴权 shell |
+
+以上均由 `features/unsupported.py` 注册为 501（而不是留 404），让客户端能区分
+「本 fork 较旧」与「URL 写错了」。
+
+## 3.2 cereal 模式差异（已知，需谨慎）
+
+| 字段 | cp | sp | 影响 |
+|---|---|---|---|
+| `CarState.leftLatDist` | `@69`，hyundai carstate 写入 | **不存在**（sp 的 `@69` 是 `vehicleNaviSpeed`） | `xiaoge_data.collect_car_state` 用 `getattr(..., 0.0)` 兜底，不会崩；值恒为 0 |
+| `ModelDataV2.MetaData.laneWidthLeft/Right` | 存在 | **不存在** | `xiaoge_vision.lane_width_meters` 已做容错；直接读会 AttributeError |
+
+补齐 `leftLatDist` 需要一个新的 ordinal（不能用 69），并同步 hyundai carstate 与
+capnp 生成代码；属 schema 变更，需设备侧重新生成后再验证。
 
 ## 4. 统一控制原则（所有阶段共同遵守）
 

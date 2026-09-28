@@ -5,21 +5,15 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import json
-import threading
 
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr
-from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
-from openpilot.system.ui.sunnypilot.widgets.html_render import HtmlModalSP
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, button_item_sp, option_item_sp, multiple_button_item_sp
-from openpilot.system.ui.widgets import DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
-from openpilot.system.ui.widgets.list_view import text_item
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller_tici import Scroller
-from openpilot.sunnypilot.mapd.live_map_data.amap_map_data import check_api_key
 
 
 class NavigationLayout(Widget):
@@ -27,28 +21,20 @@ class NavigationLayout(Widget):
     super().__init__()
 
     self._params = Params()
-    self._amap_key_test_thread: threading.Thread | None = None
-    self._amap_key_test_result: tuple[bool, str] | None = None
     items = self._initialize_items()
     self._scroller = Scroller(items, line_separator=True, spacing=0)
 
   def _initialize_items(self):
-    self._amap_map_data_enabled = toggle_item_sp(
-      title=tr("Enable Amap Map Data"),
-      description=tr("Use Amap (Gaode) online map data for speed limits and road names in China."),
-      param="AmapMapDataEnabled",
-    )
-
     self._osm_map_data_enabled = toggle_item_sp(
       title=tr("Enable OSM Map Data"),
       description=tr("Use offline OSM map data for speed limits and road names. Turn off "
-                     "to ignore the offline map entirely - useful when navigation or Amap "
-                     "is the source you trust, since the offline data can be out of date."),
+                     "to ignore the offline map entirely - useful when navigation is the "
+                     "source you trust, since the offline data can be out of date."),
       param="OsmMapDataEnabled",
     )
 
     self._carrot_amap_blind_spot_enabled = toggle_item_sp(
-      title=tr("Enable Amap Blind Spot Data"),
+      title=tr("Enable Carrot Blind Spot Data"),
       description=tr("Parse blind-spot / LiDAR / extBlinker fields from the 7706 UDP stream."),
       param="CarrotAmapBlindSpotEnabled",
     )
@@ -57,67 +43,6 @@ class NavigationLayout(Widget):
       title=tr("Enable Carrot Navigation"),
       description=tr("Use Carrot navigation data for map-based features."),
       param="CarrotEnabled",
-    )
-
-    self._amap_api_key = button_item_sp(
-      title=tr("Amap API Key"),
-      button_text=tr("EDIT"),
-      description=tr("API key for Amap services. Tap EDIT to enter or update the key."),
-      callback=self._on_amap_api_key,
-    )
-
-    self._amap_api_key_test = button_item_sp(
-      title=tr("Test Amap API Key"),
-      button_text=lambda: tr("TESTING...") if self._amap_key_test_running() else tr("TEST"),
-      description=tr("Ask the Amap road name and speed limit services with the stored key and report which ones work."),
-      callback=self._on_amap_api_key_test,
-    )
-
-    # The curve value now acts on the car: it is folded into SmartCruiseControlMap's
-    # target as one of the navigation-deceleration sources, so it needs that controller
-    # (and its own master switch) to be on. It is still never a speed-limit sign - it
-    # only ever lowers the target. The light count remains display-only and, as of this
-    # change, has no consumer yet; its description says so rather than implying it works.
-    self._amap_curve_speed = toggle_item_sp(
-      title=tr("Amap Curve Speed"),
-      description=tr("Slow for curves using the Amap route shape. Only ever lowers the "
-                     "target speed; arms its controller automatically with Carrot on."),
-      param="AmapCurveSpeedEnabled",
-    )
-
-    self._amap_traffic_light_hint = toggle_item_sp(
-      title=tr("Amap Traffic Light Hint"),
-      description=tr("Count traffic lights on the route ahead from the Amap route."),
-      param="AmapTrafficLightHintEnabled",
-    )
-
-    self._carrot_panel_opacity = option_item_sp(
-      title=tr("Carrot Nav Panel Opacity"),
-      description=tr("Opacity of the onroad Carrot navigation panel, in percent. Default 100."),
-      param="CarrotPanelOpacity",
-      min_value=10, max_value=100, value_change_step=5,
-    )
-
-    self._carrot_panel_side = multiple_button_item_sp(
-      title=tr("Carrot Nav Panel Side"),
-      description=tr("Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."),
-      buttons=[lambda: tr("Left"), lambda: tr("Right")],
-      selected_index=1,
-      button_width=360,
-      param="CarrotPanelSide",
-    )
-
-    self._map_provider = text_item(
-      lambda: tr("Map Provider"),
-      self._map_provider_value,
-      description=tr("Current map data source used for speed limits and road names. Amap requires an API key to be set above."),
-    )
-
-    self._carrot_navi_debug = button_item_sp(
-      title=tr("Carrot Navi Debug"),
-      button_text=tr("VIEW"),
-      description=tr("View the last navigation event summary handled by CarrotManager."),
-      callback=self._on_carrot_navi_debug,
     )
 
     # Behaviour switch, not a process gate: carrot_navi (TCP 7714) is always_run,
@@ -152,23 +77,22 @@ class NavigationLayout(Widget):
       min_value=0, max_value=2, value_change_step=1,
     )
 
+    self._carrot_navi_debug = button_item_sp(
+      title=tr("Carrot Navi Debug"),
+      button_text=tr("VIEW"),
+      description=tr("View the last navigation event summary handled by CarrotManager."),
+      callback=self._on_carrot_navi_debug,
+    )
+
     items = [
-      self._amap_map_data_enabled,
       self._osm_map_data_enabled,
-      self._carrot_amap_blind_spot_enabled,
       self._carrot_enabled,
       self._carrot_navi_v2_enabled,
-      self._amap_api_key,
-      self._amap_api_key_test,
-      self._amap_curve_speed,
-      self._amap_traffic_light_hint,
-      self._carrot_panel_opacity,
-      self._carrot_panel_side,
-      self._map_provider,
-      self._carrot_navi_debug,
       self._carrot_atc_blinker,
       self._carrot_nav_cruise_speed,
       self._haptic_speed_camera,
+      self._carrot_amap_blind_spot_enabled,
+      self._carrot_navi_debug,
     ]
     return items
 
@@ -176,13 +100,8 @@ class NavigationLayout(Widget):
     super()._update_state()
 
     offroad = ui_state.is_offroad()
-    self._amap_map_data_enabled.action_item.set_enabled(offroad)
     self._carrot_amap_blind_spot_enabled.action_item.set_enabled(offroad)
     self._carrot_enabled.action_item.set_enabled(offroad)
-    self._amap_api_key.action_item.set_enabled(offroad)
-    self._amap_api_key_test.action_item.set_enabled(offroad)
-    self._carrot_panel_opacity.action_item.set_enabled(offroad)
-    self._carrot_panel_side.action_item.set_enabled(offroad)
 
     # The v2 link and the nav-speed limit only mean anything with Carrot on,
     # matching the webui panel's visible_if conditions. Read the param rather than
@@ -191,56 +110,6 @@ class NavigationLayout(Widget):
     self._carrot_navi_v2_enabled.set_visible(carrot_on)
     self._carrot_nav_cruise_speed.set_visible(carrot_on)
     self._haptic_speed_camera.set_visible(carrot_on)
-
-    current_key = self._params.get("AmapApiKey") or ""
-    masked = "" if not current_key else "*" * min(len(current_key), 12)
-    self._amap_api_key.action_item.set_value(masked)
-
-    # The worker thread cannot touch the render stack, so the result is handed
-    # over here and the dialog is pushed from the UI thread.
-    if self._amap_key_test_result is not None:
-      ok, message = self._amap_key_test_result
-      self._amap_key_test_result = None
-      self._show_amap_key_test_result(ok, message)
-
-  def _on_amap_api_key(self):
-    current_key = self._params.get("AmapApiKey") or ""
-    dialog = InputDialogSP(
-      title=tr("Enter Amap API Key"),
-      sub_title=tr("Your key is stored locally and is not uploaded."),
-      current_text=current_key,
-      param="AmapApiKey",
-    )
-    dialog.show()
-
-  def _amap_key_test_running(self) -> bool:
-    return self._amap_key_test_thread is not None and self._amap_key_test_thread.is_alive()
-
-  def _on_amap_api_key_test(self):
-    if self._amap_key_test_running():
-      return
-    self._amap_key_test_result = None
-    self._amap_key_test_thread = threading.Thread(target=self._run_amap_key_test, daemon=True)
-    self._amap_key_test_thread.start()
-
-  def _run_amap_key_test(self):
-    """Runs off the UI thread: HTTP probes take seconds and must not block rendering."""
-    key = self._params.get("AmapApiKey") or ""
-    try:
-      ok, message = check_api_key(key)
-    except Exception as e:
-      ok, message = False, tr("Test could not run: {}").format(e)
-    self._amap_key_test_result = (ok, message)
-
-  def _show_amap_key_test_result(self, ok: bool, message: str):
-    heading = tr("Amap API key is valid") if ok else tr("Amap API key has a problem")
-    body = message.replace("\n", "<br>")
-    gui_app.push_widget(HtmlModalSP(text=f"<b>{heading}</b><br><br>{body}"))
-
-  def _map_provider_value(self) -> str:
-    amap_on = self._params.get_bool("AmapMapDataEnabled")
-    key = (self._params.get("AmapApiKey") or "").strip()
-    return tr("Amap") if (amap_on and key) else tr("OSM")
 
   def _on_carrot_navi_debug(self):
     # CarrotNaviDebug is registered as a JSON param (params_keys.h), so Params.get()

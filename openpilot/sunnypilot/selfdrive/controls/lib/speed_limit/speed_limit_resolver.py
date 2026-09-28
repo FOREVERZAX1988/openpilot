@@ -162,6 +162,19 @@ class SpeedLimitResolver:
     cereal schema and invalidate route logs). The merged value can only *lower*
     the map solution, never raise it, so it stays conservative. Controlled by
     ``CarrotNavCruiseSpeedEnabled``.
+
+    R3 / D2 — we deliberately read the RAW ``nRoadLimitSpeed`` / ``xSpdLimit``
+    fields here and NOT carrot's synthesized ``desiredSpeed``. ``desiredSpeed``
+    is already a *post-``calculate_current_speed``* "currently permitted speed":
+    it is the output of Carrot's own deceleration model (``AutoNaviSpeedDecelRate``
+    / ``AutoNaviSpeedCtrlEnd``), i.e. "the speed you may be at right now after
+    Carrot has already started braking." If we folded ``desiredSpeed`` into the
+    resolver, SLA would then apply its own ``LIMIT_ADAPT_ACC`` advance-braking
+    and adapting acceleration on top of an already-braked-down value, counting
+    the deceleration twice and braking earlier/harder than either model intends.
+    The raw fields are the *inputs* from which ``desiredSpeed`` is derived, so
+    consuming them loses nothing for the road-limit feature. Do not "helpfully"
+    switch this to ``desiredSpeed`` — it reintroduces the double-decel trap.
     """
     if not self.use_carrot_limits:
       return
@@ -209,11 +222,11 @@ class SpeedLimitResolver:
 
       # carrot takes priority over the map provider outright: when the phone is
       # projecting navigation, its limit wins whether it is higher or lower than what
-      # OSM/Amap reported. This replaces the previous lower-only rule, which meant a
-      # limit carrot considered authoritative could be silently outvoted by the offline
-      # map. Requested explicitly, and the priority matches how the data is produced: a
-      # phone projecting a route has the road the driver is actually on, while the
-      # offline map can be years out of date or simply lack the section.
+      # OSM reported. This replaces the previous lower-only rule, which meant a limit
+      # carrot considered authoritative could be silently outvoted by the offline map.
+      # Requested explicitly, and the priority matches how the data is produced: a phone
+      # projecting a route has the road the driver is actually on, while the offline map
+      # can be years out of date or simply lack the section.
       #
       # The car's own CAN limit is still merged as a separate source and can still be
       # stricter, so a physical sign the vehicle reports is not overridden here - see

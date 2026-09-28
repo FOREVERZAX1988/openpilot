@@ -130,8 +130,12 @@ def _get_macan_deadzone():
 def get_coast_accel(pitch):
   return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
-def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, accel_coast, allow_throttle):
-  max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
+def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, accel_coast, allow_throttle,
+                       max_accel_override=None):
+  if max_accel_override is not None:
+    max_accel = max_accel_override
+  else:
+    max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
   max_accel = _macan_accel_limited(max_accel, CP)
   # Macan 弯道系数：方向盘角 >5° 线性压低纵向上限（解决"头没转正就加速"——4f 实测62%加速在弯道）
   # 独立开关：MacanCornerLimit（BOOL）——UI 启停下方按钮；基于当前上限（限幅后）缩放，直道 factor=1 不变
