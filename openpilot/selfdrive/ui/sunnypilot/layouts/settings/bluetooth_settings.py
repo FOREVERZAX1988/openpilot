@@ -13,7 +13,7 @@ from typing import Callable
 
 import pyray as rl
 
-from openpilot.system.ui.lib.application import gui_app, MousePos, TextAlignment
+from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, TextAlignment
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.scroll_panel import GuiScrollPanel
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -30,6 +30,23 @@ ACTIONS = (
   'accelCruiseLong', 'decelCruiseLong', 'gapAdjustCruiseLong', 'lfaButtonLong', 'cancelLong',
   'laneLeft', 'laneRight', 'paddleDecel', 'carrotCruise',
 )
+
+# Action Buttons in a device row are built with this font size / Label padding.
+# Widths must be measured with the *same* values, or the Label is wider than its
+# button and wrap_text() breaks the caption over two lines ("Disconnec" + "t").
+DEVICE_ACTION_FONT_SIZE = 40
+DEVICE_ACTION_TEXT_PADDING = 20  # Button -> Label default text_padding, per side
+
+# Mapping-editor vertical metrics. The body is scrollable, but these keep the
+# whole editor on one screen at 1080p so the Save row is reachable without it.
+EDITOR_PROFILE_ROW_H = 78
+EDITOR_TOGGLE_ROW_H = 70
+EDITOR_HEADING_H = 56
+EDITOR_GESTURE_HEADER_H = 46
+EDITOR_ROW_H = 60
+EDITOR_ROW_GAP = 8
+EDITOR_FOOTER_GAP = 8
+EDITOR_FOOTER_H = 72
 
 MAPPING_BUTTONS = ('up', 'down', 'left', 'right', 'center', '1', '2')
 GESTURES = ('single', 'double', 'long')
@@ -170,13 +187,15 @@ class CarrotBluetoothLayout(Widget):
     self._item_height = 160
     self._btn_height = 80
     self._label_height = 60
-    self._mapping_row_height = 80
+    self._mapping_row_height = EDITOR_ROW_H
     self._gesture_col_width = 220
     self._padding = 30
     self._content_width = 0
 
-    # Scroll panel for device list
+    # Scroll panels: one for the device list, one for the mapping editor body
+    # (separate instances so their offsets don't bleed into each other).
     self._scroll_panel = GuiScrollPanel()
+    self._editor_scroll = GuiScrollPanel()
 
     # Per-device row button cache (re-created when device set changes)
     self._device_btns: dict[str, Button] = {}
@@ -193,11 +212,13 @@ class CarrotBluetoothLayout(Widget):
     self._retry_btn = Button(tr("Retry"), self._on_retry_clicked, button_style=ButtonStyle.PRIMARY, font_size=52, border_radius=24)
     self._radio_toggle = Toggle(self._state.radio_enabled, self._on_radio_toggled)
     self._discoverable_toggle = Toggle(False, self._on_discoverable_toggled)
-    self._save_btn = Button(tr("Save"), self._on_save_clicked, button_style=ButtonStyle.PRIMARY, font_size=45, border_radius=15)
+    # font_size 40: "Test / Learn" must fit its quarter-width footer cell without
+    # wrap_text() splitting it onto a second line.
+    self._save_btn = Button(tr("Save"), self._on_save_clicked, button_style=ButtonStyle.PRIMARY, font_size=40, border_radius=15)
     self._name_action_btn = Button(tr("Edit"), self._on_name_action_clicked, button_style=ButtonStyle.NORMAL, font_size=40, border_radius=15)
     self._reset_btn = Button(tr("Reset Bluetooth"), self._on_reset_clicked, button_style=ButtonStyle.DANGER, font_size=45, border_radius=15)
-    self._test_btn = Button(tr("Test / Learn"), self._on_test_clicked, button_style=ButtonStyle.NORMAL, font_size=45, border_radius=15)
-    self._stop_btn = Button(tr("Stop Test"), self._on_stop_clicked, button_style=ButtonStyle.DANGER, font_size=45, border_radius=15)
+    self._test_btn = Button(tr("Test / Learn"), self._on_test_clicked, button_style=ButtonStyle.NORMAL, font_size=40, border_radius=15)
+    self._stop_btn = Button(tr("Stop Test"), self._on_stop_clicked, button_style=ButtonStyle.DANGER, font_size=40, border_radius=15)
     self._back_btn = Button(tr("Back"), self._on_back_clicked, button_style=ButtonStyle.NORMAL, font_size=45, border_radius=15)
     self._connect_btn = Button('', self._on_connect_clicked, button_style=ButtonStyle.PRIMARY, font_size=40, border_radius=15)
     self._forget_btn = Button(tr("Forget"), self._on_forget_clicked, button_style=ButtonStyle.DANGER, font_size=40, border_radius=15)
@@ -343,7 +364,8 @@ class CarrotBluetoothLayout(Widget):
       self._render_advanced(rect, state)
     else:
       self._render_main(rect, state, error_text, status_text)
-      self._handle_prompt(state)
+      if self._panel == BTPanel.DEVICES:
+        self._handle_prompt(state)
 
     self._maybe_auto_scan(state)
 
@@ -396,6 +418,13 @@ class CarrotBluetoothLayout(Widget):
 
     # Normal device list UI
     content_top = self._render_header(rect, state, error_text)
+
+    # The Scan / Advanced buttons render (and consume input) before the list. If one
+    # of them was tapped we already changed panel, so stop here - otherwise the list
+    # below is still processed in the same frame against the panel we just left.
+    if self._panel != BTPanel.DEVICES:
+      return
+
     self._render_devices(rect, content_top, state)
 
   def _render_empty_state(self, rect: rl.Rectangle, icon: str, title: str, desc: str,
@@ -463,12 +492,16 @@ class CarrotBluetoothLayout(Widget):
     if found:
       total_h += group_title_h + len(found) * row_h
 
-    content_rect = rl.Rectangle(rect.x, rect.y, rect.width, total_h)
-    scissor_rect = rl.Rectangle(rect.x, start_y, rect.width, rect.height - (start_y - rect.y))
+    # The list lives *below* the header. Laying it out from rect.y made the first
+    # row sit underneath the Scan / Advanced buttons: only a sliver of its text
+    # showed at the top, yet its full-width row button stayed tappable, so tapping
+    # "Advanced" also opened that device's mapping editor.
+    content_rect = rl.Rectangle(rect.x, start_y, rect.width, total_h)
+    scissor_rect = rl.Rectangle(rect.x, start_y, rect.width, max(0.0, rect.height - (start_y - rect.y)))
     offset = self._scroll_panel.update(scissor_rect, content_rect)
 
     rl.begin_scissor_mode(int(scissor_rect.x), int(scissor_rect.y), int(scissor_rect.width), int(scissor_rect.height))
-    y = rect.y + offset
+    y = start_y + offset
     if paired:
       gui_label(rl.Rectangle(rect.x + self._padding, y, rect.width, group_title_h), tr("Paired devices"),
                 font_size=36, alignment=TextAlignment.LEFT, color=rl.Color(150, 150, 150, 255))
@@ -476,7 +509,8 @@ class CarrotBluetoothLayout(Widget):
       for i, dev in enumerate(paired):
         item_rect = rl.Rectangle(rect.x, y, rect.width, row_h)
         if rl.check_collision_recs(item_rect, scissor_rect):
-          self._render_device_row(item_rect, dev, state, is_last=i == len(paired) - 1 and not found)
+          self._render_device_row(item_rect, dev, state, is_last=i == len(paired) - 1 and not found,
+                                  clip_rect=scissor_rect)
         y += row_h
 
     if found:
@@ -486,43 +520,64 @@ class CarrotBluetoothLayout(Widget):
       for i, dev in enumerate(found):
         item_rect = rl.Rectangle(rect.x, y, rect.width, row_h)
         if rl.check_collision_recs(item_rect, scissor_rect):
-          self._render_device_row(item_rect, dev, state, is_last=i == len(found) - 1)
+          self._render_device_row(item_rect, dev, state, is_last=i == len(found) - 1,
+                                  clip_rect=scissor_rect)
         y += row_h
 
     rl.end_scissor_mode()
 
-  def _render_device_row(self, rect: rl.Rectangle, dev: BTDevice, state: BTState, is_last: bool) -> None:
+  def _fitted_btn_width(self, label: str, font_size: int, min_width: int) -> int:
+    """Width that fits *label* on one line in a Button rendered at *font_size*.
+
+    Measure with the same font size and padding the Button/Label really use.
+    Measuring at a different size let the caption outgrow the button, and
+    wrap_text() then split it over two lines ("Disconnec" + "t").
+    """
+    text_w = measure_text_cached(gui_app.font(FontWeight.MEDIUM), label, font_size).x
+    return max(min_width, int(text_w + DEVICE_ACTION_TEXT_PADDING * 2 + 20))
+
+  def _action_btn_width(self, label: str) -> int:
+    """Width for a device-row action Button (font size 40, row-sized)."""
+    return self._fitted_btn_width(label, DEVICE_ACTION_FONT_SIZE, 160)
+
+  def _render_device_row(self, rect: rl.Rectangle, dev: BTDevice, state: BTState, is_last: bool,
+                         clip_rect: rl.Rectangle | None = None) -> None:
     """Network-style row: full-width transparent button, text left, signal/actions right, separator."""
+    # Rows scroll under the header, so clip the *hit* area to the visible band too.
+    # Otherwise the hidden part of a row stays tappable and a tap on the header
+    # activates whatever row is hidden behind it.
+    visible_rect = rl.get_collision_rec(rect, clip_rect) if clip_rect is not None else rect
+
     row_btn = self._device_btns.get(dev.address)
     if row_btn is None:
-      row_btn = Button(dev.name or dev.address, lambda _d=dev: self._on_edit_device(_d),
+      # Empty caption on purpose: the row's text is drawn below, scissored to the
+      # text column. Putting the device name on the Button drew a second,
+      # un-clipped copy (two overlapping names, and long names ran under the
+      # RSSI / action buttons).
+      row_btn = Button('', lambda _d=dev: self._on_edit_device(_d),
                        font_size=50, text_alignment=TextAlignment.LEFT,
                        button_style=ButtonStyle.TRANSPARENT_WHITE_TEXT)
       row_btn.set_touch_valid_callback(lambda: self._scroll_panel.is_touch_valid())
       self._device_btns[dev.address] = row_btn
-    else:
-      row_btn.set_text(dev.name or dev.address)
+    row_btn.set_parent_rect(visible_rect)
     row_btn.render(rect)
 
-    mouse_pos = rl.get_mouse_position()
-    clicked = rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT)
     btn_gap = 16
 
     # Compute action buttons from right edge.
     if not dev.paired:
-      pair_w = max(140, int(measure_text_cached(gui_app.font(), tr("Pair"), 36).x + 50))
       action_btns = [
-        (self._connect_btn, pair_w, tr("Pair"), ButtonStyle.PRIMARY, lambda: self._confirm_pair(dev)),
+        (self._connect_btn, self._action_btn_width(tr("Pair")), tr("Pair"), ButtonStyle.PRIMARY,
+         lambda: self._confirm_pair(dev)),
       ]
     else:
       conn_label = tr("Disconnect") if dev.connected else tr("Connect")
-      conn_w = max(160, int(measure_text_cached(gui_app.font(), conn_label, 36).x + 50))
-      forget_w = max(140, int(measure_text_cached(gui_app.font(), tr("Forget"), 36).x + 50))
       action_btns = [
-        (self._connect_btn, conn_w, conn_label,
+        (self._connect_btn, self._action_btn_width(conn_label), conn_label,
          ButtonStyle.NORMAL if dev.connected else ButtonStyle.PRIMARY,
          lambda: self._on_device_action(dev, 'connect' if not dev.connected else 'disconnect')),
-        (self._forget_btn, forget_w, tr("Forget"), ButtonStyle.DANGER, lambda: self._confirm_forget(dev)),
+        (self._forget_btn, self._action_btn_width(tr("Forget")), tr("Forget"), ButtonStyle.DANGER,
+         lambda: self._confirm_forget(dev)),
       ]
 
     total_action_w = sum(w for _, w, _, _, _ in action_btns) + btn_gap * (len(action_btns) - 1)
@@ -579,10 +634,10 @@ class CarrotBluetoothLayout(Widget):
       btn.set_enabled(True)
       btn.set_touch_valid_callback(lambda: self._scroll_panel.is_touch_valid())
       btn_rect = rl.Rectangle(x, rect.y + (rect.height - self._btn_height) // 2, w, self._btn_height)
+      btn.set_click_callback(cb)
+      btn.set_parent_rect(rl.get_collision_rec(btn_rect, clip_rect) if clip_rect is not None else btn_rect)
       btn.set_rect(btn_rect)
       btn.render()
-      if clicked and rl.check_collision_point_rec(mouse_pos, btn_rect):
-        cb()
       x += w + btn_gap
 
     # Separator line like the network list.
@@ -653,81 +708,127 @@ class CarrotBluetoothLayout(Widget):
       self._keyboard.set_callback(on_passkey)
       gui_app.push_widget(self._keyboard)
 
+  def _editor_gesture_col_width(self, rect: rl.Rectangle) -> float:
+    """Column width for the gesture buttons: use the spare width so action
+    captions ("Cruise \u2212 Long") fit instead of wrapping or eliding."""
+    first_col_x = rect.x + self._padding + 150
+    usable = (rect.x + rect.width - self._padding) - first_col_x
+    return max(self._gesture_col_width, usable / len(GESTURES))
+
+  def _editor_body_height(self) -> float:
+    """Height of the scrollable editor body. Must match the layout in
+    _render_editor so the scrollbar range is right."""
+    rows = EDITOR_ROW_H + EDITOR_ROW_GAP
+    return (EDITOR_PROFILE_ROW_H + EDITOR_TOGGLE_ROW_H + EDITOR_HEADING_H + EDITOR_GESTURE_HEADER_H +
+            len(MAPPING_BUTTONS) * rows + EDITOR_FOOTER_GAP + EDITOR_FOOTER_H)
+
   def _render_editor(self, rect: rl.Rectangle, state: BTState) -> None:
-    if self._draft is None:
+    draft = self._draft
+    if draft is None:
       return
 
+    # --- fixed header: device name + Back -------------------------------------
     y = rect.y + 20
-    name = self._draft.name or self._selected_address or ''
+    name = draft.name or self._selected_address or ''
     gui_label(rl.Rectangle(rect.x, y, rect.width, 70), name, font_size=55, alignment=TextAlignment.CENTER)
-    y += 90
+    y += 80
 
     self._back_btn.set_rect(rl.Rectangle(rect.x + self._padding, y, 200, 70))
     self._back_btn.render()
-    y += 100
+
+    # Back consumes its own tap while rendering and has already dropped the draft
+    # and switched to the list, so stop drawing this frame.
+    if self._draft is not draft:
+      return
+
+    # --- scrollable body ------------------------------------------------------
+    # The mapping grid is taller than the panel on its own; without the scroller
+    # the Save / Test row sat below the screen and could never be tapped.
+    body_top = y + 90
+    scissor_rect = rl.Rectangle(rect.x, body_top, rect.width, max(0.0, (rect.y + rect.height) - body_top))
+    offset = self._editor_scroll.update(scissor_rect, rl.Rectangle(rect.x, body_top, rect.width, self._editor_body_height()))
+
+    def clipped(r: rl.Rectangle) -> rl.Rectangle:
+      """Restrict a widget's hit area to the visible body, so nothing off-screen
+      (or scrolled under the header) can be activated."""
+      return rl.get_collision_rec(r, scissor_rect)
+
+    rl.begin_scissor_mode(int(scissor_rect.x), int(scissor_rect.y),
+                          int(scissor_rect.width), int(scissor_rect.height))
+    y = body_top + offset
 
     rl.draw_text_ex(gui_app.font(), tr("Profile"), rl.Vector2(rect.x + self._padding, y + 5), 45, 0, rl.Color(200, 200, 200, 255))
-    profile_h = 70
+    profile_h = 60
     profile_rect = rl.Rectangle(rect.x + 220, y, 380, profile_h)
     rl.draw_rectangle_rounded(profile_rect, 0.3, 10, rl.Color(60, 60, 60, 255))
-    profile_text = self._draft.profile
-    rl.draw_text_ex(gui_app.font(), profile_text, rl.Vector2(profile_rect.x + 15, profile_rect.y + 15), 45, 0, rl.WHITE)
-    y += profile_h + 30
+    rl.draw_text_ex(gui_app.font(), draft.profile, rl.Vector2(profile_rect.x + 15, profile_rect.y + 12), 42, 0, rl.WHITE)
+    y += EDITOR_PROFILE_ROW_H
 
     rl.draw_text_ex(gui_app.font(), tr("Use Carrot mapping"), rl.Vector2(rect.x + self._padding, y + 5), 45, 0, rl.Color(200, 200, 200, 255))
     toggle_x = rect.x + rect.width - 200
     toggle_rect = rl.Rectangle(toggle_x, y, 160, 60)
-    toggle_on = self._draft.enabled
+    toggle_on = draft.enabled
     bg = rl.Color(70, 91, 234, 255) if toggle_on else rl.Color(80, 80, 80, 255)
     rl.draw_rectangle_rounded(toggle_rect, 0.5, 10, bg)
     label = tr("ON") if toggle_on else tr("OFF")
     rl.draw_text_ex(gui_app.font(), label, rl.Vector2(toggle_rect.x + 55, toggle_rect.y + 10), 40, 0, rl.WHITE)
-    if rl.check_collision_point_rec(rl.get_mouse_position(), toggle_rect) and rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT):
-      self._draft.enabled = not self._draft.enabled
+    # Hit test is done by hand here, so clip it to the visible body as well.
+    mouse_pos = rl.get_mouse_position()
+    if (rl.check_collision_point_rec(mouse_pos, toggle_rect) and rl.check_collision_point_rec(mouse_pos, scissor_rect)
+        and rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT)):
+      draft.enabled = not draft.enabled
       self._dirty = True
-    y += 90
+    y += EDITOR_TOGGLE_ROW_H
 
     rl.draw_text_ex(gui_app.font(), tr("Button Mapping"), rl.Vector2(rect.x + self._padding, y), 50, 0, rl.WHITE)
-    y += 60
+    y += EDITOR_HEADING_H
 
-    col_x = rect.x + 180
+    col_w = self._editor_gesture_col_width(rect)
+    col_x = rect.x + self._padding + 150
     for gesture in GESTURES:
       rl.draw_text_ex(gui_app.font(), tr(GESTURE_LABELS.get(gesture, gesture)), rl.Vector2(col_x, y), 38, 0, rl.Color(150, 150, 150, 255))
-      col_x += self._gesture_col_width
-    y += 50
+      col_x += col_w
+    y += EDITOR_GESTURE_HEADER_H
 
     for btn_name in MAPPING_BUTTONS:
       rl.draw_text_ex(gui_app.font(), tr(btn_name), rl.Vector2(rect.x + self._padding, y + 10), 45, 0, rl.WHITE)
-      col_x = rect.x + 180
+      col_x = rect.x + self._padding + 150
       for gesture in GESTURES:
         token = f'{btn_name}_{gesture}'
-        action = self._draft.mapping.get(token, 'none')
+        action = draft.mapping.get(token, 'none')
         btn = self._gesture_btns[btn_name][gesture]
         btn.set_text(self._action_label(action))
-        btn.set_rect(rl.Rectangle(col_x, y, self._gesture_col_width - 10, self._mapping_row_height))
+        btn_rect = rl.Rectangle(col_x, y, col_w - 10, EDITOR_ROW_H)
+        btn.set_touch_valid_callback(lambda: self._editor_scroll.is_touch_valid())
+        btn.set_parent_rect(clipped(btn_rect))
+        btn.set_rect(btn_rect)
         btn.render()
-        col_x += self._gesture_col_width
-      y += self._mapping_row_height + 15
+        col_x += col_w
+      y += EDITOR_ROW_H + EDITOR_ROW_GAP
 
-    y += 10
+    y += EDITOR_FOOTER_GAP
     btn_y = y
     gap = 20
     btn_w = (rect.width - self._padding * 2 - gap * 3) // 4
     x = rect.x + self._padding
-    self._save_btn.set_rect(rl.Rectangle(x, btn_y, btn_w, 80))
+    self._save_btn.set_rect(rl.Rectangle(x, btn_y, btn_w, EDITOR_FOOTER_H))
     self._save_btn.render()
     x += btn_w + gap
 
     is_learning = state.learning_addr == self._selected_address
     if is_learning:
-      self._stop_btn.set_rect(rl.Rectangle(x, btn_y, btn_w, 80))
+      self._stop_btn.set_rect(rl.Rectangle(x, btn_y, btn_w, EDITOR_FOOTER_H))
+      self._stop_btn.set_parent_rect(clipped(rl.Rectangle(x, btn_y, btn_w, EDITOR_FOOTER_H)))
       self._stop_btn.render()
     else:
-      self._test_btn.set_rect(rl.Rectangle(x, btn_y, btn_w, 80))
+      self._test_btn.set_rect(rl.Rectangle(x, btn_y, btn_w, EDITOR_FOOTER_H))
+      self._test_btn.set_parent_rect(clipped(rl.Rectangle(x, btn_y, btn_w, EDITOR_FOOTER_H)))
       self._test_btn.render()
     x += btn_w + gap
 
     rl.draw_text_ex(gui_app.font(), self._last_event_text[:60], rl.Vector2(x, btn_y + 20), 38, 0, rl.Color(150, 255, 150, 255))
+
+    rl.end_scissor_mode()
 
   def _render_advanced(self, rect: rl.Rectangle, state: BTState) -> None:
     y = rect.y + 20
@@ -848,7 +949,9 @@ class CarrotBluetoothLayout(Widget):
               alignment=TextAlignment.LEFT, color=rl.Color(170, 170, 170, 255))
     y += 80
 
-    self._reset_btn.set_rect(rl.Rectangle(rect.x + self._padding, y, 360, 90))
+    reset_w = min(self._fitted_btn_width(tr("Reset Bluetooth"), 45, 360),
+                  int(rect.width - self._padding * 2))
+    self._reset_btn.set_rect(rl.Rectangle(rect.x + self._padding, y, reset_w, 90))
     self._reset_btn.set_enabled(can_act)
     self._reset_btn.render()
     return y + 110
