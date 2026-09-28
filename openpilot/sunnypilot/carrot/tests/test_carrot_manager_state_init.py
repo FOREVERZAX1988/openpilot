@@ -38,6 +38,7 @@ inspected with ast, exactly like test_carrot_man_port_ownership.py.
 '''
 
 import ast
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -123,29 +124,121 @@ class TestCarrotManagerStateInit(unittest.TestCase):
     missing = sorted(RUNTIME_STATE - _assigned(self.methods["__init__"]))
     self.assertFalse(
       missing,
-      "CarrotManager.__init__ must seed these runtime attributes itself "
-      f"(missing: {missing}); leaving them to a helper is what produced the "
-      "'object has no attribute _lock' boot loop.")
+      f"CarrotManager.__init__ must seed these runtime attributes (missing: {missing}); leaving them to a helper produced the '_lock' boot loop.")
 
   def test_migration_helper_does_not_own_runtime_state(self):
     leaked = sorted(RUNTIME_STATE & _assigned(self.methods["_migrate_amap_enabled"]))
     self.assertFalse(
       leaked,
-      "runtime state must not live in _migrate_amap_enabled(): that helper is a "
-      f"conditional one-shot param migration, not a safe owner (found: {leaked})")
+      f"runtime state must not live in _migrate_amap_enabled(): it is a conditional one-shot param migration, not a safe owner (found: {leaked})")
 
   def test_init_calls_the_migration_helper(self):
     self.assertIn(
       "_migrate_amap_enabled", _called_self_methods(self.methods["__init__"]),
-      "__init__ must call self._migrate_amap_enabled() or the legacy AmapEnabled "
-      "migration never runs")
+      "__init__ must call self._migrate_amap_enabled() or the legacy AmapEnabled migration never runs")
 
   def test_class_level_backstop_exists(self):
     missing = sorted(BACKSTOP - _assigned_names_in_class_body(self.cls))
     self.assertFalse(
       missing,
-      f"class-level backstop(s) removed: {missing} - a partially initialised "
-      "instance would loop on AttributeError in tick() again")
+      f"class-level backstop(s) removed: {missing} - a partially initialised instance would loop on AttributeError in tick() again")
+
+
+class UnknownKeyNameStub(Exception):
+  """Stand-in for openpilot.common.params.UnknownKeyName (importing the real one
+  would drag in libparams_c.so)."""
+
+
+class _StubParams:
+  """Minimal Params double: raises for keys that are not registered, exactly like
+  Params.check_key() does."""
+
+  def __init__(self, values=None, unknown=()):
+    self.values = dict(values or {})
+    self.unknown = set(unknown)
+    self.writes: list[tuple[str, bool]] = []
+
+  def get_bool(self, key):
+    if key in self.unknown:
+      raise UnknownKeyNameStub(key)
+    return bool(self.values.get(key, False))
+
+  def put_bool(self, key, value):
+    if key in self.unknown:
+      raise UnknownKeyNameStub(key)
+    self.writes.append((key, value))
+    self.values[key] = bool(value)
+
+
+class _Holder:
+  def __init__(self, params):
+    self.params = params
+
+
+class TestAmapMigrationToleratesRemovedKeys(unittest.TestCase):
+  """AmapEnabled / AmapMapDataEnabled were deleted from params_keys.h together
+  with the Amap Web provider, and Params raises UnknownKeyName for anything not
+  registered.  __init__ calls this helper and main_thread() builds CarrotManager
+  *outside* its try/except, so an unguarded access aborting the constructor would
+  hand the daemon to the manager's restart loop - the same shape as the _lock
+  boot loop above.
+
+  The helper is extracted from the real source and executed against a stub, so
+  the guard is verified behaviourally instead of by pattern matching.
+  """
+
+  @staticmethod
+  def _helper():
+    source = CARROT_MAN.read_text()
+    node = _methods(_class(ast.parse(source)))["_migrate_amap_enabled"]
+    namespace = {"UnknownKeyName": UnknownKeyNameStub}
+    exec(textwrap.dedent(ast.get_source_segment(source, node)), namespace, namespace)
+    return namespace["_migrate_amap_enabled"]
+
+  def test_unregistered_legacy_key_is_not_fatal(self):
+    params = _StubParams(unknown={"AmapEnabled", "AmapMapDataEnabled"})
+    self._helper()(_Holder(params))  # must not raise
+
+  def test_missing_key_midway_does_not_abort_the_rest_of_the_migration(self):
+    params = _StubParams({"AmapEnabled": True}, unknown={"AmapMapDataEnabled"})
+    self._helper()(_Holder(params))
+    self.assertIn(
+      ("CarrotAmapBlindSpotEnabled", True), params.writes,
+      "a key removed upstream must not stop the still-registered sibling key from being migrated")
+
+  def test_legacy_switch_still_migrates_when_keys_exist(self):
+    params = _StubParams({"AmapEnabled": True})
+    self._helper()(_Holder(params))
+    self.assertEqual(
+      sorted(params.writes),
+      [("AmapMapDataEnabled", True), ("CarrotAmapBlindSpotEnabled", True)])
+
+  def test_nothing_written_when_legacy_switch_is_off(self):
+    params = _StubParams({"AmapEnabled": False})
+    self._helper()(_Holder(params))
+    self.assertEqual(params.writes, [])
+
+  def test_every_param_access_in_the_helper_is_guarded(self):
+    node = _methods(_class(ast.parse(CARROT_MAN.read_text())))["_migrate_amap_enabled"]
+    tries = [n for n in ast.walk(node) if isinstance(n, ast.Try)]
+    handled = {h.type.id for t in tries for h in t.handlers
+               if isinstance(h.type, ast.Name)}
+    self.assertIn(
+      "UnknownKeyName", handled,
+      "_migrate_amap_enabled() must catch UnknownKeyName: an unregistered key aborts CarrotManager.__init__, so the manager restarts the daemon in a loop")
+
+    guarded = {sub.value for t in tries for sub in ast.walk(t)
+               if isinstance(sub, ast.Constant) and isinstance(sub.value, str)}
+    accessed = {arg.value for call in ast.walk(node) if isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Attribute)
+                and isinstance(call.func.value, ast.Attribute)
+                and call.func.value.attr == "params"
+                for arg in call.args
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str)}
+    self.assertTrue(accessed, "expected the helper to touch Param keys")
+    self.assertEqual(
+      sorted(accessed - guarded), [],
+      "every param name read/written by _migrate_amap_enabled() must sit inside a try/except UnknownKeyName block")
 
 
 if __name__ == "__main__":

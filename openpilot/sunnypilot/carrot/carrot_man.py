@@ -15,7 +15,7 @@ import threading
 import time
 from typing import Any
 
-from openpilot.common.params import Params
+from openpilot.common.params import Params, UnknownKeyName
 from openpilot.common.realtime import Ratekeeper, config_realtime_process, set_core_affinity
 from openpilot.common.swaglog import cloudlog
 import openpilot.cereal.messaging as messaging
@@ -732,12 +732,30 @@ class CarrotManager:
 
     ``AmapEnabled`` used to control both Amap Web map data and the 7706
     blind-spot parser. Split it into the two semantically-correct params.
+
+    ``AmapEnabled`` and ``AmapMapDataEnabled`` were deleted from params_keys.h
+    along with the Amap Web provider, and ``Params`` raises ``UnknownKeyName``
+    for keys that are not registered.  This helper runs from ``__init__``, which
+    main_thread() builds *outside* its try/except, so an unguarded access would
+    abort the constructor and have the manager restart the daemon in a loop (the
+    same shape as the ``_lock`` boot loop).  An unregistered legacy key only
+    means there is nothing left to migrate.
     """
-    if self.params.get_bool("AmapEnabled"):
-      if not self.params.get_bool("AmapMapDataEnabled"):
-        self.params.put_bool("AmapMapDataEnabled", True)
-      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
+    try:
+      legacy_enabled = self.params.get_bool("AmapEnabled")
+    except UnknownKeyName:
+      return
+
+    if not legacy_enabled:
+      return
+
+    for key in ("AmapMapDataEnabled", "CarrotAmapBlindSpotEnabled"):
+      try:
+        if not self.params.get_bool(key):
+          self.params.put_bool(key, True)
+      except UnknownKeyName:
+        # Key removed upstream; nothing to migrate for this one.
+        continue
 
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
@@ -3244,8 +3262,7 @@ def _thread_excepthook(args):
   # root cause so the next "exits after CP navigation" report produces a real
   # traceback instead of silence.
   cloudlog.error(
-    f"carrot_man: unhandled exception in thread {args.thread.name!r}: "
-    f"{''.join(args.exc_traceback) if args.exc_traceback else args.exc_value}"
+    f"carrot_man: unhandled exception in thread {args.thread.name!r}: {''.join(args.exc_traceback) if args.exc_traceback else args.exc_value}"
   )
 
 
