@@ -11,6 +11,7 @@ from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
 from openpilot.system.ui.widgets.slider import RedBigSlider, BigSlider
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.selfdrive.ui.mici.widgets.button import BigCircleButton, GreyBigButton
+from openpilot.system.ui.lib.multilang import tr
 
 DEBUG = False
 
@@ -78,7 +79,7 @@ class BigInputDialog(BigDialogBase):
                confirm_callback: Callable[[str], None] | None = None,
                auto_return_to_letters: str = ""):
     super().__init__()
-    self._hint_label = UnifiedLabel(hint, font_size=35, text_color=rl.Color(255, 255, 255, int(255 * 0.35)),
+    self._hint_label = UnifiedLabel(tr(hint), font_size=35, text_color=rl.Color(255, 255, 255, int(255 * 0.35)),
                                     font_weight=FontWeight.MEDIUM)
     self._keyboard = MiciKeyboard(auto_return_to_letters=auto_return_to_letters)
     self._keyboard.set_text(default_text)

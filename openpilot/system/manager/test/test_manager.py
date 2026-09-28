@@ -11,7 +11,7 @@ from openpilot.common.params import Params
 import openpilot.system.manager.manager as manager
 from openpilot.system.manager.process import ensure_running
 from openpilot.system.manager.process_config import managed_processes, procs
-from openpilot.common.hardware import HARDWARE
+from openpilot.common.hardware import COMMA_HARDWARE, HARDWARE
 
 os.environ['FAKEUPLOAD'] = "1"
 
@@ -19,6 +19,12 @@ MAX_STARTUP_TIME = 3
 BLACKLIST_PROCS = ['manage_athenad', 'pandad', 'pigeond']
 
 
+# Running this suite on a comma device fights the live manager: manager.main() and
+# manager_cleanup() (teardown) start/stop the real managed processes, so a device run
+# can kill onroad processes mid-drive. The params store itself is already isolated by
+# OpenpilotTestCase (OpenpilotPrefix -> /data/params/<prefix>), so clear_all() is safe;
+# it is the process management that is not. Keep it to PC/CI.
+@unittest.skipIf(COMMA_HARDWARE, "starts/stops the real manager stack: PC/CI only")
 class TestManager(OpenpilotTestCase):
   def setup_method(self):
     HARDWARE.set_power_save(False)

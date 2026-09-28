@@ -637,6 +637,19 @@ class CarrotManager:
     # VisionCurveSpeed release history, which is what carries the envelope across
     # frames; see the call site in broadcast_version_info.
     self._curve_planner: Any = None
+
+  def _migrate_amap_enabled(self) -> None:
+    """One-time migration from the legacy AmapEnabled switch.
+
+    ``AmapEnabled`` used to control both Amap Web map data and the 7706
+    blind-spot parser. Split it into the two semantically-correct params.
+    """
+    if self.params.get_bool("AmapEnabled"):
+      if not self.params.get_bool("AmapMapDataEnabled"):
+        self.params.put_bool("AmapMapDataEnabled", True)
+      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
+        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
+
     self._enabled = False
     self._port = 0
     self._start_web = False

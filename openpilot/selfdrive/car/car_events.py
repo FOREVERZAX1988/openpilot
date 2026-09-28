@@ -142,9 +142,20 @@ class CarEvents:
       events.add(EventName.steerOverride)
     if CS.steeringDisengage and not CS_prev.steeringDisengage:
       events.add(EventName.steerDisengage)
-    if CS.brakePressed and CS.standstill:
+    if CS.brakePressed and CS.standstill and any(
+        be.type in (ButtonType.accelCruise, ButtonType.resumeCruise, ButtonType.decelCruise, ButtonType.setCruise)
+        for be in CS.buttonEvents):
+      # 00000045 实锤：只在按巡航键（SET/RES/+/-）时触发提示——D档刹车未按SET不再每帧add，
+      # 否则 NO_ENTRY alert 持续显示不消失（用户反馈"切D档没按SET也提示且不消失"）。
+      # 00000046 实锤：激活在松开帧触发（33.44s en=1），`be.pressed` 只覆盖按下帧（33.30s），
+      # NO_ENTRY 在松开帧已消失 → 停车+刹车按 SET 激活成功但原厂拒绝（csEn=0）→ 空转1s后静默退出。
+      # 去掉 be.pressed：松开帧（pressed=0 的 setCruise 条目）也 add → NO_ENTRY 覆盖激活帧。
+      # 安全性：行驶中（brake=0 或 standstill=0）外层条件不满足不触发；松刹车后条件解除可正常激活。
       events.add(EventName.preEnableStandstill)
-    if CS.gasPressed:
+    # VW(MLB/MQB/PQ) + OP纵向：踩油门不触发 overrideLongitudinal 事件——longActive 保持，
+    # acc_control_value 在 long_active 分支内处理 gas（4 if gas else 3），对齐原厂 st=4 override。
+    # 否则 controlsd longActive=False 会发 st=2（待机），ECU 看到「激活→待机跳变+油门」锁死 ACC。
+    if CS.gasPressed and not (self.CP.brand == 'volkswagen' and self.CP.openpilotLongitudinalControl):
       events.add(EventName.gasPressedOverride)
     if CS.vehicleSensorsInvalid:
       events.add(EventName.vehicleSensorsInvalid)

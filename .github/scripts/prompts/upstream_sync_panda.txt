@@ -1,0 +1,19 @@
+你是 fork 仓库的同步机器人。当前仓库刚从 sunnypilot 上游 master 合并到 master-c3-new，存在 Git 冲突。
+
+任务：
+1. 解决所有冲突标记
+2. 保留 C3 comma three 的 DOS / 内置 F4 Panda 适配
+3. 解决后 git add 并 commit：sync: resolve merge conflicts (OpenCode)
+
+本仓库：panda（mouxangithub/panda fork）
+
+必须保留：
+- board/stm32f4/** 与 boards/dos.h（HW_TYPE_DOS，C3 双 Panda）
+- pyproject.toml 中 opendbc 依赖指向 mouxangithub/opendbc@master-c3
+- 同一 `panda/` 树同时产出 F4（`panda.bin.signed`）与 H7（`panda_h7.bin.signed`）固件
+
+禁止：
+- 因上游删除 stm32f4 而跟随删除 DOS 支持
+- 把 opendbc 依赖改成 sunnypilot 官方地址
+
+用中文简要说明取舍。

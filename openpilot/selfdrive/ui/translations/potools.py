@@ -329,8 +329,10 @@ def merge_po(po_path: str | Path, pot_path: str | Path) -> None:
 
   existing = {e.msgid: e for e in po_entries}
   merged = []
+  pot_ids: set[str] = set()
 
   for pot_e in pot_entries:
+    pot_ids.add(pot_e.msgid)
     if pot_e.msgid in existing:
       old = existing[pot_e.msgid]
       old.source_refs = pot_e.source_refs
@@ -342,5 +344,18 @@ def merge_po(po_path: str | Path, pot_path: str | Path) -> None:
     else:
       merged.append(pot_e)
 
+  # Preserve translations that are no longer produced by the AST extractor.
+  # Driving-event / alert strings (selfdrived/events.py) and other labels that
+  # are looked up with tr() at display time are NOT extracted into the .pot, so
+  # dropping anything not in the template would silently wipe every such
+  # translation on each regeneration (recurring regression). Keep them.
+  preserved = 0
+  for msgid, old in existing.items():
+    if msgid not in pot_ids:
+      merged.append(old)
+      preserved += 1
+
   merged.sort(key=lambda e: e.msgid)
   write_po(po_path, _build_po_header(language), merged)
+  if preserved:
+    print(f"{Path(po_path).name}: preserved {preserved} non-extracted entries")

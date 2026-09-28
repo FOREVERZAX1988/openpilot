@@ -142,7 +142,9 @@ class ModularAssistiveDrivingSystem:
         if self.pedal_pressed_non_gas_pressed(CS):
           self.transition_paused_state()
 
-      self.events.remove(EventName.preEnableStandstill)
+      # 2026-08-13: 不再无条件移除 preEnableStandstill——否则 D 档停车+刹车按 SET 的
+      # 纵向提示（'纵向暂不可用：松开制动方可激活'）被吞掉。横向放行已由下方 lkasEnable
+      # 分支（168-172/187 行）按条件精确 remove（00000041 问题1 修复），此处无需再删。
       self.events.remove(EventName.belowEngageSpeed)
       self.events.remove(EventName.speedTooLow)
       self.events.remove(EventName.cruiseDisabled)
@@ -166,6 +168,10 @@ class ModularAssistiveDrivingSystem:
       if self.main_enabled_toggle:
         if CS.cruiseState.available and not self.selfdrive.CS_prev.cruiseState.available:
           self.events_sp.add(EventNameSP.lkasEnable)
+          # 横向放行（00000041 问题1）：D档停车/踩刹车开 LKAS 不被 preEnableStandstill(NO_ENTRY) 挡。
+          # 调用顺序 selfdrive 状态机(635) 先跑已挡纵向；此处 remove 仅放行 MADS 横向（637 后跑）。
+          # 原厂语义：LKAS 只跟 ACC 总开关+档位有关，D档不管车速/刹车都可启用（P档 wrongGear 仍挡→paused）。
+          self.events.remove(EventName.preEnableStandstill)
 
     for be in CS.buttonEvents:
       if be.type == ButtonType.cancel:
@@ -179,6 +185,8 @@ class ModularAssistiveDrivingSystem:
             self.events_sp.add(EventNameSP.lkasDisable)
         else:
           self.events_sp.add(EventNameSP.lkasEnable)
+          # 横向放行（00000041 问题1）：LKAS 按钮开启时同样放行停车限制，语义同上
+          self.events.remove(EventName.preEnableStandstill)
 
     if not CS.cruiseState.available and not self.no_main_cruise:
       self.events.remove(EventName.buttonEnable)
