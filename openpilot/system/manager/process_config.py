@@ -1,5 +1,6 @@
 import os
 import platform
+import operator
 
 from opendbc.car.structs import car
 from openpilot.cereal import custom
@@ -80,6 +81,9 @@ def only_offroad(started: bool, params: Params, CP: car.CarParams) -> bool:
 
 def livestream(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("IsLiveStreaming")
+
+def onroad_preview(started: bool, params: Params, CP: car.CarParams) -> bool:
+  return params.get_bool("IsOnroadPreview")
 
 def use_github_runner(started, params, CP: car.CarParams) -> bool:
   return not PC and params.get_bool("EnableGithubRunner") and (
