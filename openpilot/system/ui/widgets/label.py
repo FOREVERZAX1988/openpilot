@@ -87,11 +87,16 @@ class Label(Widget):
                icon: Union[rl.Texture, None] = None,
                elide_right: bool = False,
                line_scale=1.0,
+               no_fallback: bool = False,
                ):
 
     super().__init__()
     self._font_weight = font_weight
     self._font = gui_app.font(self._font_weight)
+    # When set, draw with the raw (e.g. UNIFONT) face and skip the Noto CJK
+    # fallback. The language-picker items need this: the CJK fallback subset has
+    # no glyphs for Korean/Thai/Cyrillic language names, which then render as '?'.
+    self._no_fallback = no_fallback
     self._font_size = font_size
     self._text_alignment = text_alignment
     self._text_alignment_vertical = text_alignment_vertical
@@ -187,7 +192,8 @@ class Label(Widget):
       elif self._text_alignment == TextAlignment.RIGHT:
         line_pos.x += self._rect.width - text_size.x - self._text_padding
 
-      rl.draw_text_ex(font_fallback(self._font, text), text, line_pos, self._font_size, 0, self._text_color)
+      rl.draw_text_ex(self._font if self._no_fallback else font_fallback(self._font, text), text, line_pos,
+                       self._font_size, 0, self._text_color)
       text_pos.y += (text_size.y or self._font_size * FONT_SCALE) * self._line_scale
 
 
