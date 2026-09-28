@@ -322,11 +322,11 @@ def make_sm(cs, cs_sp, enabled=False, alive=None):
 
 def build_cp(pcm_cruise=False, openpilot_long=True):
   return types.SimpleNamespace(pcmCruise=pcm_cruise, openpilotLongitudinalControl=openpilot_long,
-                               brand='hyundai', carFingerprint='TEST')
+                               brand='hyundai', carFingerprint='TEST', flags=0)
 
 
 def build_cp_sp():
-  return types.SimpleNamespace(pcmCruiseSpeed=False)
+  return types.SimpleNamespace(pcmCruiseSpeed=False, flags=0)
 
 
 print('=== VCruiseCarrot onroad simulation ===')
@@ -489,6 +489,48 @@ def t_long_soak():
 
 step('4000-tick randomized soak', t_long_soak)
 
+
+def t_macan_dual_source_fusion():
+  """Macan 双源抢控制权回归: OP(VCruiseCarrot v_cruise) 必须镜像原厂 ACC 设定速度,
+  避免 OP 与原厂 ACC 双控制器竞争导致喘息(突然加速/减速)。"""
+  from openpilot.common.constants import CV
+  cp = build_cp(pcm_cruise=False, openpilot_long=True)
+  cp.carFingerprint = 'PORSCHE_MACAN_MK1'
+  cp.brand = 'volkswagen'
+  mh = VCruiseCarrot(cp, build_cp_sp())
+
+  # PORSCHE_MACAN_MK1 -> macan_fusion 恒为真
+  assert mh.macan_fusion, 'Macan(MLB) 必须开启 fusion v_cruise 镜像'
+
+  # 原厂 ACC 设定速度 = 80 km/h。fusion 下 OP 必须强制镜像原厂设定,
+  # 即使 OP 内部/按键想自立不同值, 也不能分裂成双源竞争。
+  stock_kph = 80.0
+  stock_ms = stock_kph / CV.MS_TO_KPH
+  cs = make_cs(v_ego=15.0, available=True, enabled=True)
+  cs.cruiseState.speed = stock_ms
+  cs.cruiseState.speedCluster = stock_ms
+  mh.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  assert abs(mh.v_cruise_kph - stock_kph) < 0.01, (
+    f'Macan fusion: OP v_cruise 应镜像原厂 {stock_kph} km/h, 实际 {mh.v_cruise_kph}')
+  assert abs(mh.v_cruise_cluster_kph - stock_kph) < 0.01, (
+    f'Macan fusion: cluster 显示应镜像原厂 {stock_kph} km/h, 实际 {mh.v_cruise_cluster_kph}')
+
+  # OP 按 +按钮(accelCruise) 尝试递增 — fusion 模式下不得改写镜像(原厂闭环回灌)
+  cs2 = make_cs(v_ego=15.0, available=True, enabled=True, buttons=[('accelCruise', True)])
+  cs2.cruiseState.speed = stock_ms
+  cs2.cruiseState.speedCluster = stock_ms
+  mh.update_v_cruise(cs2, True, True, make_sm(cs2, make_cs_sp(), enabled=True), make_cs_sp())
+  assert abs(mh.v_cruise_kph - stock_kph) < 0.01, (
+    f'Macan fusion + accel: OP v_cruise 不得脱离原厂, 实际 {mh.v_cruise_kph}')
+
+  # 原厂 speed=0(清除) -> v_cruise 回 UNSET(255)
+  cs4 = make_cs(v_ego=0.0, available=True, enabled=False)
+  cs4.cruiseState.speed = 0.0
+  cs4.cruiseState.speedCluster = 0.0
+  mh.update_v_cruise(cs4, False, True, make_sm(cs4, make_cs_sp()), make_cs_sp())
+  assert mh.v_cruise_kph == 255, f'Macan fusion speed=0 应回 UNSET(255), 实际 {mh.v_cruise_kph}'
+
+step('Macan 双源抢控制权: v_cruise 镜像原厂 ACC 设定(防喘息)', t_macan_dual_source_fusion)
 
 print()
 print(f'PASSED {PASS}, FAILED {FAIL}')
