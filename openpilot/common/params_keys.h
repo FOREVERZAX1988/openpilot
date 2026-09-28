@@ -344,12 +344,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LongitudinalMpcTuningLeadDangerFactor", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
 
     // Amap / Carrot (phone projection & navigation)
-    // AmapEnabled is the legacy phone-projection switch that used to control both
-    // Amap Web map data and the 7706 UDP blind-spot parser. Amap Web has been
-    // removed; only the 7706 blind-spot migration remains in carrot_man.
     // CarrotAmapBlindSpotEnabled controls 7706 UDP blind-spot / LiDAR / extBlinker
-    // fields and is unrelated to Amap Web.
-    {"AmapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // fields and is unrelated to the removed Amap Web map-data provider.
     // OSM offline map data. Off means "do not use the offline map for speed limits
     // or road names", so a user who relies on carrot can silence the offline
     // fallback. Default 1 keeps existing behaviour.

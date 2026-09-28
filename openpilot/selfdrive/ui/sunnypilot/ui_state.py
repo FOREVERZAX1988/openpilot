@@ -186,7 +186,7 @@ class UIStateSP:
     self.boot_offroad_mode = self.params.get("DeviceBootMode", return_default=True)
     self.always_offroad = self.params.get_bool("OffroadMode")
     self.screensaver_enabled = self.params.get_bool("ScreenSaverEnabled")
-    self.carrot_amap_blind_spot_enabled = self.params.get_bool("CarrotAmapBlindSpotEnabled") or self.params.get_bool("AmapEnabled")
+    self.carrot_amap_blind_spot_enabled = self.params.get_bool("CarrotAmapBlindSpotEnabled")
 
     if not self._sp_initialized:
       self._sp_initialized = True

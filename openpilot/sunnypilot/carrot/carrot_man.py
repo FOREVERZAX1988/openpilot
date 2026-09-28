@@ -610,7 +610,6 @@ class CarrotManager:
     self.params = Params()
     self.params_memory = Params("/dev/shm/params")
     self._unified = UnifiedParams()
-    self._migrate_amap_enabled()
     # selfdriveState feeds `active`, longitudinalPlan feeds xState/trafficState; without
     # them the 7705 broadcast read `sm.alive.get('selfdriveState', False)` which is always
     # False for an unsubscribed service, so the app's ADAS indicator was permanently 0.
@@ -638,19 +637,6 @@ class CarrotManager:
     # VisionCurveSpeed release history, which is what carries the envelope across
     # frames; see the call site in broadcast_version_info.
     self._curve_planner: Any = None
-
-  def _migrate_amap_enabled(self) -> None:
-    """One-time migration from the legacy AmapEnabled switch.
-
-    ``AmapEnabled`` used to control both Amap Web map data and the 7706
-    blind-spot parser. Amap Web has been removed, so only the 7706 blind-spot
-    flag is migrated here, and the legacy key is then deleted.
-    """
-    if self.params.get_bool("AmapEnabled"):
-      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-      self.params.remove("AmapEnabled")
-
     self._enabled = False
     self._port = 0
     self._start_web = False
@@ -725,13 +711,7 @@ class CarrotManager:
 
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
-    if self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-      return True
-    # Legacy fallback: if only the old param is set, migrate and enable.
-    if self.params.get_bool("AmapEnabled"):
-      self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-      return True
-    return False
+    return self.params.get_bool("CarrotAmapBlindSpotEnabled")
 
   # ---- socket plumbing -------------------------------------------------- #
 

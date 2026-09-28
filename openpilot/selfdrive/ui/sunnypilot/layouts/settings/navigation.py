@@ -45,22 +45,6 @@ class NavigationLayout(Widget):
       param="CarrotEnabled",
     )
 
-    self._carrot_panel_opacity = option_item_sp(
-      title=tr("Carrot Nav Panel Opacity"),
-      description=tr("Opacity of the onroad Carrot navigation panel, in percent. Default 100."),
-      param="CarrotPanelOpacity",
-      min_value=10, max_value=100, value_change_step=5,
-    )
-
-    self._carrot_panel_side = multiple_button_item_sp(
-      title=tr("Carrot Nav Panel Side"),
-      description=tr("Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."),
-      buttons=[lambda: tr("Left"), lambda: tr("Right")],
-      selected_index=1,
-      button_width=360,
-      param="CarrotPanelSide",
-    )
-
     self._carrot_navi_debug = button_item_sp(
       title=tr("Carrot Navi Debug"),
       button_text=tr("VIEW"),
@@ -102,15 +86,13 @@ class NavigationLayout(Widget):
 
     items = [
       self._osm_map_data_enabled,
-      self._carrot_amap_blind_spot_enabled,
       self._carrot_enabled,
       self._carrot_navi_v2_enabled,
-      self._carrot_panel_opacity,
-      self._carrot_panel_side,
-      self._carrot_navi_debug,
+      self._carrot_amap_blind_spot_enabled,
       self._carrot_atc_blinker,
       self._carrot_nav_cruise_speed,
       self._haptic_speed_camera,
+      self._carrot_navi_debug,
     ]
     return items
 
@@ -120,8 +102,6 @@ class NavigationLayout(Widget):
     offroad = ui_state.is_offroad()
     self._carrot_amap_blind_spot_enabled.action_item.set_enabled(offroad)
     self._carrot_enabled.action_item.set_enabled(offroad)
-    self._carrot_panel_opacity.action_item.set_enabled(offroad)
-    self._carrot_panel_side.action_item.set_enabled(offroad)
 
     # The v2 link and the nav-speed limit only mean anything with Carrot on,
     # matching the webui panel's visible_if conditions. Read the param rather than

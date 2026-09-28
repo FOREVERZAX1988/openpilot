@@ -642,14 +642,6 @@ msgid "Carrot ATC Turn Signal"
 msgstr "Carrot ATC 转向灯"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Opacity"
-msgstr "Carrot 导航面板透明度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Side"
-msgstr "Carrot 导航面板位置"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Carrot Navi Debug"
 msgstr "Carrot 导航调试"
 
@@ -2253,10 +2245,6 @@ msgstr "前车危险系数"
 msgid "Lead Departure Alert (Beta)"
 msgstr "前车起步提醒（Beta）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Left"
-msgstr "左侧"
-
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Lenient"
 msgstr "宽松"
@@ -2742,10 +2730,6 @@ msgstr "行车预览"
 msgid "Onroad Uploads"
 msgstr "行驶中上传"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
-msgstr "Carrot 导航面板的透明度，以百分比表示。默认 100。"
-
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Open"
 msgstr "打开"
@@ -2918,10 +2902,6 @@ msgstr "请重启后重试。"
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
 msgstr "驾驶员监控能见度不佳。请确保设备能清楚看到驾驶员。可在设备设置中检查。极端光照和/或非传统安装位置也可能触发此警报。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."
-msgstr "Carrot 导航面板在路上的位置。默认：右侧（紧邻速度显示）。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Post-Blinker Delay"
@@ -3200,7 +3180,6 @@ msgstr "查看训练指南"
 msgid "Review the rules, features, and limitations of sunnypilot"
 msgstr "查看 sunnypilot 的规则、功能与限制"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Right"
 msgstr "右侧"

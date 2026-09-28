@@ -3273,22 +3273,6 @@ msgid "Use Carrot navigation data for map-based features."
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Opacity"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Side"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Carrot Navi Debug"
 msgstr ""
 
@@ -3326,15 +3310,6 @@ msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Steering-wheel nudge when carrot decelerates for a speed camera."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Left"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
-msgid "Right"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
@@ -4287,6 +4262,10 @@ msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Bottom"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
+msgid "Right"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py

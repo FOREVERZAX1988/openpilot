@@ -642,14 +642,6 @@ msgid "Carrot ATC Turn Signal"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Opacity"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Side"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Carrot Navi Debug"
 msgstr ""
 
@@ -2236,10 +2228,6 @@ msgstr ""
 msgid "Lead Departure Alert (Beta)"
 msgstr "Alerta de salida de plomo (Beta)"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Left"
-msgstr ""
-
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Lenient"
 msgstr ""
@@ -2725,10 +2713,6 @@ msgstr ""
 msgid "Onroad Uploads"
 msgstr "Cargas en carretera"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
-msgstr ""
-
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Open"
 msgstr "Abrir"
@@ -2897,10 +2881,6 @@ msgstr "Reinicie e inténtelo de nuevo."
 
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
@@ -3180,7 +3160,6 @@ msgstr "Revisar guía de entrenamiento"
 msgid "Review the rules, features, and limitations of sunnypilot"
 msgstr "Revise las reglas, características y limitaciones de sunnypilot"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Right"
 msgstr "Bien"

@@ -642,14 +642,6 @@ msgid "Carrot ATC Turn Signal"
 msgstr "Carrot ATC 方向燈"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Opacity"
-msgstr "Carrot 導航面板透明度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Side"
-msgstr "Carrot 導航面板位置"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Carrot Navi Debug"
 msgstr "Carrot 導航偵錯"
 
@@ -2250,10 +2242,6 @@ msgstr ""
 msgid "Lead Departure Alert (Beta)"
 msgstr "引匯出發警報（測試版）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Left"
-msgstr "左側"
-
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Lenient"
 msgstr "寬鬆"
@@ -2739,10 +2727,6 @@ msgstr "上路預覽"
 msgid "Onroad Uploads"
 msgstr "行駛時上傳"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
-msgstr "Carrot 導航面板的透明度，以百分比表示。預設 100。"
-
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Open"
 msgstr "開啟"
@@ -2915,10 +2899,6 @@ msgstr "請重新啟動並重試。"
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
 msgstr "駕駛員監控能見度不佳。請確保裝置能清楚看到駕駛員。可在裝置設定中檢查。極端光照和/或非傳統安裝位置也可能觸發此警報。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."
-msgstr "Carrot 導航面板在路上的位置。預設：右側（緊鄰速度顯示）。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Post-Blinker Delay"
@@ -3197,7 +3177,6 @@ msgstr "檢視訓練指南"
 msgid "Review the rules, features, and limitations of sunnypilot"
 msgstr "檢視 sunnypilot 的規則、功能和限制"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Right"
 msgstr "正確的"
