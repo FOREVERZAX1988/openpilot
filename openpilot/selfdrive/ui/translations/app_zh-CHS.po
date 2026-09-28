@@ -241,7 +241,7 @@ msgstr "全部州/省（约 6.0 GB）"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Allow other devices to find this device."
-msgstr ""
+msgstr "允许其他设备发现本设备。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\tesla.py
 msgid "Allows the driver to provide limited steering input while openpilot is engaged."
@@ -509,7 +509,7 @@ msgstr "当前 AGNOS 内核未暴露蓝牙 UART"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Bluetooth disabled"
-msgstr ""
+msgstr "蓝牙已关闭"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Bluetooth is not installed"
@@ -1221,7 +1221,7 @@ msgstr "断开连接"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Discoverable"
-msgstr ""
+msgstr "可被发现"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Disengage"
@@ -3988,7 +3988,7 @@ msgstr "行程"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Turn Bluetooth radio on or off."
-msgstr ""
+msgstr "打开或关闭蓝牙射频。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Turn Speed"

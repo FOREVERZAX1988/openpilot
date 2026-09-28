@@ -241,7 +241,7 @@ msgstr "所有狀態 (~6.0 GB)"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Allow other devices to find this device."
-msgstr ""
+msgstr "允許其他裝置發現本裝置。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\tesla.py
 msgid "Allows the driver to provide limited steering input while openpilot is engaged."
@@ -509,7 +509,7 @@ msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Bluetooth disabled"
-msgstr ""
+msgstr "藍牙已關閉"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Bluetooth is not installed"
@@ -1221,7 +1221,7 @@ msgstr "中斷連線"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Discoverable"
-msgstr ""
+msgstr "可被發現"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Disengage"
@@ -3985,7 +3985,7 @@ msgstr "行程統計"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Turn Bluetooth radio on or off."
-msgstr ""
+msgstr "開啟或關閉藍牙射頻。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Turn Speed"
