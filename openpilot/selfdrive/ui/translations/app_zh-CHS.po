@@ -635,7 +635,7 @@ msgstr "仅车辆：只使用车辆限速数据。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Carrot"
-msgstr ""
+msgstr "Carrot 调参"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Carrot ATC Turn Signal"
@@ -648,6 +648,62 @@ msgstr "Carrot 导航调试"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 msgid "Carrot Web Panel"
 msgstr "Carrot 网页面板"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Start / Engage"
+msgstr "启动 / 接管"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "How openpilot engages cruise and which steering wheel buttons control it."
+msgstr "openpilot 如何激活巡航，以及方向盘上哪些按钮控制它。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Cruise & Following"
+msgstr "巡航与跟车"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Following distance, longitudinal gains, acceleration limits and cruise behavior."
+msgstr "跟车距离、纵向增益、加速度限制和巡航行为。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Navigation-based speed control, speed cameras, road limits and speed bumps."
+msgstr "基于导航的限速控制、测速相机、道路限速和减速带。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Turns & Curves"
+msgstr "转弯与弯道"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Automatic turn, fork / merge and curve speed control."
+msgstr "自动转向、岔路/汇入与弯道速度控制。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Lateral Tuning"
+msgstr "横向调校"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Steering geometry, MPC costs, torque tuning, lane change and blind spot."
+msgstr "转向几何、MPC 代价、扭矩调校、变道与盲区。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Display & Sound"
+msgstr "显示与声音"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Cluster HUD, on-screen overlays, sound, YouTube and map style."
+msgstr "仪表盘 HUD、屏幕叠加层、声音、YouTube 与地图样式。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Vehicle-specific overrides and convenience options."
+msgstr "车型专属覆盖与便利选项。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Debug and diagnostic toggles. Use with caution."
+msgstr "调试与诊断开关，请谨慎使用。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "eGPU / big model status and configuration."
+msgstr "eGPU / 大模型状态与配置。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "CarrotCruise"
