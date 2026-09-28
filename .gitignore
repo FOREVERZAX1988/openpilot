@@ -122,3 +122,7 @@ sessions/
 !.idea/customTargets.xml
 !.idea/tools/*
 !.run/*
+
+# Agent tool result artifacts (contain secrets) - never commit
+tool_results/
+.ai/tool_results/
