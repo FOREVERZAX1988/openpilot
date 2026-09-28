@@ -40,6 +40,18 @@ msgstr "--"
 msgid "---"
 msgstr "---"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "0=Off, 1=Limit to nav speed, 2=Limit with early decel."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "0=Off, 1=Speed only, 2=Speed + steering."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "1 = take the ACC set speed from the car (PCM). Required on Toyota: its PCM consumes the +/- buttons itself, so openpilot would otherwise keep its own set speed while the cluster moves."
+msgstr ""
+
 #: openpilot\selfdrive\ui\widgets\prime.py
 msgid "1 year of drive storage"
 msgstr "1 year of drive storage"
@@ -136,6 +148,7 @@ msgstr ""
 msgid "ADD"
 msgstr "ADD"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
 msgid "AHEAD"
 msgstr "AHEAD"
@@ -148,16 +161,20 @@ msgstr "ALL TIME"
 msgid "ALT."
 msgstr "ALT."
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "API key for Amap services. Tap EDIT to enter or update the key."
-msgstr ""
-
 #: openpilot\system\ui\widgets\network.py
 msgid "APN Setting"
 msgstr "APN Setting"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "ATC Turn Control"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Acceleration Change Cost"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\toggles.py
+msgid "Acceleration Profile"
 msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
@@ -184,6 +201,8 @@ msgstr "Adjust Software Delay"
 msgid "Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay value is 0.2"
 msgstr "Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay value is 0.2"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 #: openpilot\system\ui\widgets\network.py
 msgid "Advanced"
 msgstr "Advanced"
@@ -196,9 +215,21 @@ msgstr "Aggressive"
 msgid "Agree"
 msgstr "Agree"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Alert Volume"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "All"
 msgstr "All"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "All Speeds"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "All Speeds + Distance"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "All provinces"
@@ -207,6 +238,10 @@ msgstr ""
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "All states (~6.0 GB)"
 msgstr "All states (~6.0 GB)"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Allow other devices to find this device."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\tesla.py
 msgid "Allows the driver to provide limited steering input while openpilot is engaged."
@@ -219,14 +254,6 @@ msgstr "Always On"
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Always-On Driver Monitoring"
 msgstr "Always-On Driver Monitoring"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Amap API Key"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Amap Navi UDP Port"
-msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "An alpha version of sunnypilot longitudinal control can be tested, along with Experimental mode, on non-release branches."
@@ -243,6 +270,10 @@ msgstr ""
 #: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
 msgid "Any fast phone or laptop charger should be fine."
 msgstr "Any fast phone or laptop charger should be fine."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Apply Model Speed"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Apply a custom timeout for settings UI.<br>This is the time after which settings UI closes automatically if user is not interacting with the screen."
@@ -300,6 +331,10 @@ msgstr "Assist"
 msgid "Assist: Adjusts the vehicle's cruise speed based on the current road's speed limit when operating the +/- buttons."
 msgstr "Assist: Adjusts the vehicle's cruise speed based on the current road's speed limit when operating the +/- buttons."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Auto (Dark)"
 msgstr "Auto (Dark)"
@@ -307,6 +342,22 @@ msgstr "Auto (Dark)"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Auto (Default)"
 msgstr "Auto (Default)"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Camera"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Engage"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Gas"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Gas Sync Speed"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Auto Lane Change by Blinker"
@@ -316,18 +367,70 @@ msgstr "Auto Lane Change by Blinker"
 msgid "Auto Lane Change: Delay with Blind Spot"
 msgstr "Auto Lane Change: Delay with Blind Spot"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Start / Cruise"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Turn Control"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Turn Distance Offset"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Turn End Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Turn Speed Threshold"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Turn on Navi Lane Change"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Up 40 km/h Highway Limit"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Up 40 km/h Road Limit"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Up Highway Limit"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Up Road Limit"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Available devices"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "B.D."
 msgstr "B.D."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "BYD only: feed corner-radar tracks into the radar interface."
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\onboarding.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\onboarding.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_policy.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 #: openpilot\system\ui\tici_setup.py
 #: openpilot\system\ui\tici_updater.py
 #: openpilot\system\ui\widgets\network.py
@@ -349,6 +452,10 @@ msgstr "Backup Failed"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Backup Settings"
 msgstr "Backup Settings"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Battery"
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\prime.py
 msgid "Become a comma prime member at connect.comma.ai"
@@ -374,6 +481,10 @@ msgstr ""
 msgid "Big model unavailable, {} is driving until the next drive."
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Blind Spot"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Block Lane Change: Road Edge Detection"
 msgstr "Block Lane Change: Road Edge Detection"
@@ -381,6 +492,40 @@ msgstr "Block Lane Change: Road Edge Detection"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Blocks the lane change if the model sees a road edge on your signaled side."
 msgstr "Blocks the lane change if the model sees a road edge on your signaled side."
+
+#: openpilot\selfdrive\ui\layouts\settings\settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth UART not available"
+msgstr "Bluetooth UART not available"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth UART not exposed by this AGNOS kernel"
+msgstr "Bluetooth UART not exposed by this AGNOS kernel"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth disabled"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth is not installed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth power node not detected"
+msgstr "Bluetooth power node not detected"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth radio hardware not detected"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth service is stopped"
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\pairing_dialog.py
 msgid "Bookmark connect.comma.ai to your home screen to use it like an app"
@@ -390,11 +535,16 @@ msgstr "Bookmark connect.comma.ai to your home screen to use it like an app"
 msgid "Bottom"
 msgstr "Bottom"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Button Mapping"
+msgstr "Button Mapping"
+
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "CHANGE"
 msgstr "CHANGE"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "CHECK"
@@ -407,6 +557,14 @@ msgstr "CHILL MODE ON"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "CLEAR"
 msgstr "CLEAR"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
+msgid "CLEARING..."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "CONFIGURE"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\sidebar.py
 #: openpilot\system\ui\widgets\network.py
@@ -429,6 +587,7 @@ msgstr "Calibration completed"
 msgid "Calibration failed"
 msgstr "Calibration failed"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\system\ui\tici_reset.py
 #: openpilot\system\ui\widgets\confirm_dialog.py
@@ -438,9 +597,17 @@ msgstr "Calibration failed"
 msgid "Cancel"
 msgstr "Cancel"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cancel Button Mode"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Cancel Download"
 msgstr "Cancel Download"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cancel Long"
+msgstr "Cancel Long"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Cancel Verification"
@@ -466,6 +633,34 @@ msgstr "Car Only"
 msgid "Car Only: Use Speed Limit data only from Car"
 msgstr "Car Only: Use Speed Limit data only from Car"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
+msgid "Carrot"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot ATC Turn Signal"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Nav Panel Opacity"
+msgstr "Carrot Nav Panel Opacity"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Nav Panel Side"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Navi Debug"
+msgstr "Carrot Navi Debug"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Carrot Web Panel"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "CarrotCruise"
+msgstr "CarrotCruise"
+
 #: openpilot\system\ui\widgets\network.py
 msgid "Cellular Metered"
 msgstr "Cellular Metered"
@@ -478,6 +673,22 @@ msgstr "Change Language"
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Changing this setting will restart sunnypilot if the car is powered on."
 msgstr "Changing this setting will restart sunnypilot if the car is powered on."
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Check Chestnut"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Checks USB 5 Gbps, firmware, 12V/PCIe, and GPU execution."
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\settings.py
+msgid "Chestnut AI"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Chestnut Status"
+msgstr ""
 
 #: openpilot\system\ui\tici_setup.py
 msgid "Choose Software to Use"
@@ -519,6 +730,94 @@ msgstr "Close"
 msgid "Cloud"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD (external display required)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Brightness"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Camera View Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Core Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Debug"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Encoder"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Live FPS"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Mirror"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Orientation"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Panel Layout"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Priority"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Radar Display"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Radar Info"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Radar Source Color"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Screen Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD Theme"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster Map"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster Map Profile"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster Navigation Map FPS"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster Navigation Map Theme"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster Navigation Map Type"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\imu_calibration.py
 msgid "Collecting dynamic data — drive straight"
 msgstr "Collecting dynamic data — drive straight"
@@ -526,6 +825,10 @@ msgstr "Collecting dynamic data — drive straight"
 #: openpilot\selfdrive\ui\layouts\settings\imu_calibration.py
 msgid "Collecting static data — keep parked"
 msgstr "Collecting static data — keep parked"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Color radar tracks by their detection source."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 msgid "Colors represent vehicle fingerprint status:"
@@ -555,11 +858,20 @@ msgstr "Computing calibration..."
 msgid "Computing..."
 msgstr "Computing..."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 #: openpilot\system\ui\tici_reset.py
 msgid "Confirm"
 msgstr "Confirm"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Confirm pairing with \"{}\"?"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Connect"
+msgstr "Connect"
 
 #: openpilot\system\ui\tici_setup.py
 #: openpilot\system\ui\tici_updater.py
@@ -568,6 +880,14 @@ msgstr "Connect to Wi-Fi"
 
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Connect to internet to check for updates. sunnypilot won't automatically start until it connects to internet to check for updates."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Connected"
+msgstr "Connected"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Connection Check"
 msgstr ""
 
 #: openpilot\system\ui\tici_setup.py
@@ -586,6 +906,10 @@ msgstr "Controls state of the device after boot/sleep."
 msgid "Cooperative Steering (Beta)"
 msgstr "Cooperative Steering (Beta)"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Countdown Mode"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Country"
 msgstr "Country"
@@ -594,9 +918,93 @@ msgstr "Country"
 msgid "Cruise"
 msgstr "Cruise"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise +"
+msgstr "Cruise +"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise + Long"
+msgstr "Cruise + Long"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Button Long Delay"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Button Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Buttons & Speed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Gap Levels"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise On Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 1"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 2"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 3"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 4"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 5"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed Unit"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed Unit (Basic)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise −"
+msgstr "Cruise −"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise − Long"
+msgstr "Cruise − Long"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Current State"
+msgstr "Current State"
+
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 msgid "Current Version"
 msgstr "Current Version"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Curve Speed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Curve Speed Factor"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Curve Speed Factor (Highway)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Curve Speed Lower Limit"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Custom ACC Speed Increments"
@@ -650,9 +1058,29 @@ msgstr "DOWNLOAD"
 msgid "Danger Zone Cost"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Dark"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Database Update"
 msgstr "Database Update"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug Graph"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug Graph Right"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug System"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\onboarding.py
 msgid "Decline"
@@ -662,6 +1090,7 @@ msgstr "Decline"
 msgid "Decline, uninstall sunnypilot"
 msgstr "Decline, uninstall sunnypilot"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
@@ -675,6 +1104,10 @@ msgstr "Default: Device will boot/wake-up normally & will be ready to engage."
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Delay before lateral control resumes after the turn signal ends."
 msgstr "Delay before lateral control resumes after the turn signal ends."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Description"
+msgstr "Description"
 
 #: openpilot\selfdrive\ui\layouts\settings\settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
@@ -694,6 +1127,10 @@ msgstr "Device"
 msgid "Device must be registered with the comma.ai backend to pair."
 msgstr "Device must be registered with the comma.ai backend to pair."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Device name"
+msgstr ""
+
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
 msgstr ""
@@ -710,6 +1147,10 @@ msgstr ""
 msgid "Disable"
 msgstr "Disable"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Disable Blind Spot"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Disable Driver Monitoring"
 msgstr ""
@@ -725,6 +1166,14 @@ msgstr ""
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
 msgstr "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Disconnect"
+msgstr "Disconnect"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Discoverable"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Disengage"
@@ -808,6 +1257,14 @@ msgstr "Distance"
 msgid "Distance Cost"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Distance after the speed limit point to resume normal cruise."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Distance before the turn to end control."
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Distraction Detection Level"
 msgstr ""
@@ -856,6 +1313,10 @@ msgstr "Downloading Maps..."
 msgid "Downloading..."
 msgstr "Downloading..."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Draw radar tracks on the external cluster."
+msgstr ""
+
 #: openpilot\selfdrive\ui\mici\layouts\settings\imu_calibration.py
 msgid "Drive straight"
 msgstr "Drive straight"
@@ -877,13 +1338,37 @@ msgstr ""
 msgid "Drives"
 msgstr "Drives"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Driving Left"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Driving Mode"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Driving Personality"
 msgstr "Driving Personality"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Driving Right"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
 msgid "Dynamic"
 msgstr "Dynamic"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Dynamic Blind Spot Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Dynamic Blind Spot Range"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Dynamic Follow Time on Lane Change"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "E"
@@ -893,7 +1378,6 @@ msgstr "E"
 msgid "E.T."
 msgstr "E.T."
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\system\ui\widgets\network.py
 msgid "EDIT"
 msgstr "EDIT"
@@ -915,6 +1399,26 @@ msgstr "EXPERIMENTAL MODE ON"
 msgid "Early Access: Become a sunnypilot Sponsor"
 msgstr "Early Access: Become a sunnypilot Sponsor"
 
+#: openpilot\selfdrive\ui\layouts\settings\toggles.py
+msgid "Eco"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Eco Cruise Control"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\toggles.py
+msgid "Eco is gentlest, Normal balances a prompt start with smooth catch-up, and Sport is more responsive."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Edit"
+msgstr "Edit"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Ego Bottom"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\developer.py
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\onboarding.py
@@ -935,12 +1439,24 @@ msgstr "Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle
 msgid "Enable ADB"
 msgstr "Enable ADB"
 
+#: openpilot\selfdrive\ui\layouts\settings\toggles.py
+msgid "Enable Accel Controller"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Enable Always Offroad"
 msgstr "Enable Always Offroad"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Enable Bluetooth"
+msgstr "Enable Bluetooth"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enable Amap Navigation"
+msgid "Enable Carrot Blind Spot Data"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable Carrot Navi v2 (7714)"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
@@ -958,6 +1474,14 @@ msgstr "Enable Dynamic Experimental Control"
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Enable Lane Departure Warnings"
 msgstr "Enable Lane Departure Warnings"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable OSM Map Data"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Enable Radar Tracks"
+msgstr ""
 
 #: openpilot\system\ui\widgets\network.py
 msgid "Enable Roaming"
@@ -987,6 +1511,14 @@ msgstr "Enable auto-calibration for devices mounted at large or arbitrary angles
 msgid "Enable custom Short & Long press increments for cruise speed increase/decrease."
 msgstr "Enable custom Short & Long press increments for cruise speed increase/decrease."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Enable drive mode btn link"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Enable enhanced blind-spot monitoring behavior for certain Prius TSS2 and TSS-P Toyotas."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Enable sunnylink"
 msgstr "Enable sunnylink"
@@ -1005,6 +1537,10 @@ msgstr "Enable sunnypilot"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Enable the beloved MADS feature. Disable toggle to revert back to stock sunnypilot engagement/disengagement."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Enable the cluster map HUD profile overlay."
 msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
@@ -1051,6 +1587,10 @@ msgstr "Enforce Torque Lateral Control"
 msgid "Enforces the torque lateral controller to use the fixed values instead of the learned values from Self-Tune. Enabling this toggle overrides Self-Tune values."
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Engage Chime Volume"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Engage lateral and longitudinal control with cruise control engagement."
 msgstr "Engage lateral and longitudinal control with cruise control engagement."
@@ -1063,8 +1603,8 @@ msgstr "Ensure the entered URL is valid, and the device's internet connection is
 msgid "Enter APN"
 msgstr "Enter APN"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enter Amap API Key"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Enter PIN"
 msgstr ""
 
 #: openpilot\system\ui\widgets\network.py
@@ -1083,6 +1623,10 @@ msgstr "Enter model year (e.g., 2021) and model (Toyota Corolla):"
 msgid "Enter new tethering password"
 msgstr "Enter new tethering password"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Enter passkey"
+msgstr ""
+
 #: openpilot\system\ui\widgets\network.py
 msgid "Enter password"
 msgstr "Enter password"
@@ -1090,6 +1634,10 @@ msgstr "Enter password"
 #: openpilot\system\ui\sunnypilot\widgets\tree_dialog.py
 msgid "Enter search query"
 msgstr "Enter search query"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Enter this code in the sunnylink app on your phone."
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\ssh_key.py
 msgid "Enter your GitHub username"
@@ -1139,6 +1687,7 @@ msgstr "Experimental mode is currently unavailable on this car since the car's s
 msgid "FAULT"
 msgstr "FAULT"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "FETCHING..."
 msgstr "FETCHING..."
@@ -1155,17 +1704,25 @@ msgstr "FRIC."
 msgid "Failed"
 msgstr "Failed"
 
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "Failed to get available branches. Ensure you're connected to the internet and try again."
+msgstr ""
+
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Failed to register with comma.ai backend. It will not connect or upload to comma.ai servers, and receives no support from comma.ai. If this is a device purchased at comma.ai/shop, open a ticket at https://comma.ai/support."
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Fan Speed"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Favorites"
 msgstr "Favorites"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "Fetching Latest Models"
-msgstr "Fetching Latest Models"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fine-tune stop distance for traffic lights (cm)."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 msgid "Fingerprinted automatically"
@@ -1194,6 +1751,18 @@ msgstr "Fixed"
 msgid "Fixed: Adds a fixed offset [Speed Limit + Offset]"
 msgstr "Fixed: Adds a fixed offset [Speed Limit + Offset]"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Flash an AGNOS with Bluetooth support or plug in a USB Bluetooth dongle."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fold the phone app traffic congestion report into map-based cruise control. Only ever lowers the target speed. Needs Smart Cruise Control - Map to be on as well."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Follow Deceleration Boost"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Follow Time - Aggressive"
 msgstr ""
@@ -1206,9 +1775,29 @@ msgstr ""
 msgid "Follow Time - Standard"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Follow Time Gap 1"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Follow Time Gap 2"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Follow Time Gap 3"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Follow Time Gap 4"
+msgstr ""
+
 #: openpilot\system\ui\sunnypilot\widgets\sunnylink_pairing_dialog.py
 msgid "Follow the prompts to complete the pairing process"
 msgstr "Follow the prompts to complete the pairing process"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Following Distance"
+msgstr ""
 
 #: openpilot\system\ui\mici_reset.py
 msgid ""
@@ -1251,13 +1840,78 @@ msgstr ""
 msgid "For secure backup, restore, and remote configuration"
 msgstr "For secure backup, restore, and remote configuration"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\system\ui\widgets\network.py
 msgid "Forget"
 msgstr "Forget"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Forget \"{}\"?"
+msgstr ""
+
 #: openpilot\system\ui\widgets\network.py
 msgid "Forget Wi-Fi Network \"{}\"?"
 msgstr "Forget Wi-Fi Network \"{}\"?"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Blinker Trigger Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Blinker Trigger Distance (Highway)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Control"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Decel Rate"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Decel Rate (Highway)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Decel Trigger Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Decel Trigger Distance (Highway)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Keep Speed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Keep Speed (Highway)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Merge Distance Offset"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Merge Distance Offset (Highway)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Minimum Speed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Minimum Speed (Highway)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Navi Trigger Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Navi Trigger Distance (Highway)"
+msgstr ""
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
 msgid "Frequently Asked Questions"
@@ -1275,6 +1929,14 @@ msgstr "GB"
 msgid "GOOD"
 msgstr "GOOD"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "GPU Clock"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "GPU Usage"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\onroad\circular_alerts.py
 msgid ""
 "GREEN\n"
@@ -1282,6 +1944,10 @@ msgid ""
 msgstr ""
 "GREEN\n"
 "LIGHT"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Gap"
+msgstr "Gap"
 
 #: openpilot\system\ui\tici_setup.py
 msgid "Getting Started"
@@ -1307,6 +1973,18 @@ msgstr "Green Traffic Light Alert (Beta)"
 msgid "HIGH"
 msgstr "HIGH"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Haptic Feedback (Speed Camera)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Hardware / Tests"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Hardware H.264"
+msgstr ""
+
 #: openpilot\system\ui\widgets\network.py
 msgid "Hidden Network"
 msgstr "Hidden Network"
@@ -1319,13 +1997,37 @@ msgstr ""
 msgid "Hide the Firehose prompt on the home screen. The prompt will not be rendered when this is enabled."
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Highway Curve Aggressiveness"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\trips.py
 msgid "Hours"
 msgstr "Hours"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How aggressively the car reacts to lead car acceleration changes."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How early to react to curves on normal roads. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How early to react to curves on the highway. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "How long the screen saver runs before the screen turns off."
 msgstr "How long the screen saver runs before the screen turns off."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How much lateral acceleration to allow at or above 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How much lateral acceleration to allow below 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
@@ -1381,9 +2083,21 @@ msgstr "Information: Displays the current road's speed limit."
 msgid "Install"
 msgstr "Install"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Install BlueZ to enable Bluetooth HID remotes and device management."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Install Bluetooth"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 msgid "Install Update"
 msgstr "Install Update"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Installing..."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Intelligent Cruise Button Management (ICBM) (Alpha)"
@@ -1411,6 +2125,10 @@ msgstr ""
 
 #: openpilot\system\ui\tici_setup.py
 msgid "It may not comply with relevant safety standards."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "JPEG"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
@@ -1449,6 +2167,19 @@ msgstr ""
 "LEAD VEHICLE\n"
 "DEPARTING"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "LFA"
+msgstr "LFA"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "LFA Button Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "LFA Long"
+msgstr "LFA Long"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
 msgid "LIMIT"
 msgstr "LIMIT"
@@ -1460,6 +2191,18 @@ msgstr "LOADING"
 #: openpilot\selfdrive\ui\layouts\sidebar.py
 msgid "LTE"
 msgstr "LTE"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lane Guide Blocking"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Lane Left"
+msgstr "Lane Left"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Lane Right"
+msgstr "Lane Right"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Last checked {}"
@@ -1477,6 +2220,14 @@ msgstr ""
 msgid "Lateral Maneuver Mode"
 msgstr "Lateral Maneuver Mode"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lateral Suspend Angle"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lead Acceleration Response"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Lead Danger Factor"
 msgstr ""
@@ -1484,6 +2235,10 @@ msgstr ""
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Lead Departure Alert (Beta)"
 msgstr "Lead Departure Alert (Beta)"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Left"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Lenient"
@@ -1496,6 +2251,30 @@ msgstr "Less Restrict Settings for Self-Tune (Beta)"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Less strict settings when using Self-Tune. This allows torqued to be more forgiving when learning values."
 msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Let the Carrot app's turn instruction act as a turn signal. This reaches the car's real turn signal, so it is off by default."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Let the phone app guided-lane arrows block lane changes toward non-guided lanes. Only ever adds blocking."
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\toggles.py
+msgid "Lets you choose how sunnypilot starts, catches up, and settles at the cruise speed. Emergency braking and stopping are unchanged."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Light"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Linear"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logic."
+msgstr "Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logic."
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Live Learning Steer Delay"
@@ -1519,6 +2298,10 @@ msgstr ""
 msgid "Long Press Increment"
 msgstr "Long Press Increment"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Longitudinal Gains"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Longitudinal MPC Tuning"
 msgstr ""
@@ -1537,6 +2320,7 @@ msgstr ""
 
 #: openpilot\selfdrive\ui\mici\onroad\hud_renderer.py
 #: openpilot\selfdrive\ui\onroad\hud_renderer.py
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\hud_renderer.py
 msgid "MAX"
 msgstr "MAX"
@@ -1545,6 +2329,14 @@ msgstr "MAX"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "MB"
 msgstr "MB"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
+msgid "MPH"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Manage the mobile app(s) connected over Wi-Fi: pair a new app "
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Manual Real-Time Tuning"
@@ -1570,9 +2362,25 @@ msgstr "Map Only"
 msgid "Map Only: Use Speed Limit data only from OpenStreetMaps"
 msgstr "Map Only: Use Speed Limit data only from OpenStreetMaps"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Map Turn Speed Factor"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Mapd Version"
 msgstr "Mapd Version"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Mapping off"
+msgstr "Mapping off"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Mapping on"
+msgstr "Mapping on"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Master switch for the external cluster HUD renderer."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Max Time Offroad"
@@ -1582,6 +2390,10 @@ msgstr "Max Time Offroad"
 msgid "Maximize your training data uploads to improve openpilot's driving models."
 msgstr "Maximize your training data uploads to improve openpilot's driving models."
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Memory Temp"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\trips.py
 msgid "Miles"
 msgstr "Miles"
@@ -1589,6 +2401,10 @@ msgstr "Miles"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Minimum Speed to Pause Lateral Control"
 msgstr "Minimum Speed to Pause Lateral Control"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Mirror the external cluster display horizontally."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Model Status"
@@ -1605,6 +2421,14 @@ msgstr ""
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Modular Assistive Driving System (MADS)"
 msgstr "Modular Assistive Driving System (MADS)"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "My Driving Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "My Driving Mode Auto"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "N"
@@ -1628,10 +2452,47 @@ msgstr "NO"
 msgid "NW"
 msgstr "NW"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Name shown to other Bluetooth devices."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navi"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Navigation"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Control (advanced)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Navigation Cruise Speed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Speed Control"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Speed Ctrl End Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Speed Ctrl Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Speed Decel Rate"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Speed Safety Factor"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
 msgid "Near"
 msgstr "Near"
@@ -1645,9 +2506,14 @@ msgstr "Network"
 msgid "Neural Network Lateral Control (NNLC)"
 msgstr "Neural Network Lateral Control (NNLC)"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "No"
 msgstr "No"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "No Bluetooth adapter found"
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\ssh_key.py
 msgid "No SSH keys found for user '{}'"
@@ -1661,6 +2527,14 @@ msgstr "No custom software found at this URL."
 msgid "No custom software found at this URL: {url}"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "No devices found"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "No eGPU (big model) is selected. The default model is running."
+msgstr "No eGPU (big model) is selected. The default model is running."
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 msgid "No models are available for this hardware yet. Connect to the internet and refresh the model list."
@@ -1669,6 +2543,12 @@ msgstr ""
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 msgid "No models available"
 msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "No navigation event received yet."
+msgstr ""
+"No navigation event received yet.waiting for\n"
+"internet..."
 
 #: openpilot\selfdrive\ui\layouts\settings\imu_calibration.py
 msgid "No quality data"
@@ -1686,6 +2566,8 @@ msgstr "No vehicle selected"
 msgid "No, we selectively pull a subset of your segments."
 msgstr "No, we selectively pull a subset of your segments."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 msgid "None"
 msgstr "None"
@@ -1697,6 +2579,14 @@ msgstr "None: No Offset"
 #: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
 msgid "Nope, just drive as you normally would."
 msgstr "Nope, just drive as you normally would."
+
+#: openpilot\selfdrive\ui\layouts\settings\toggles.py
+msgid "Normal"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Normal Road Curve Aggressiveness"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Not Paired"
@@ -1747,6 +2637,7 @@ msgstr "Nudgeless"
 msgid "N·dm"
 msgstr "N·dm"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "OFF"
 msgstr "OFF"
@@ -1756,21 +2647,32 @@ msgstr "OFF"
 msgid "OFFLINE"
 msgstr "OFFLINE"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 #: openpilot\system\ui\widgets\confirm_dialog.py
 #: openpilot\system\ui\widgets\html_render.py
 msgid "OK"
 msgstr "OK"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "ON"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\sidebar.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\sidebar.py
 msgid "ONLINE"
 msgstr "ONLINE"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "OPEN"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "OSM"
 msgstr "OSM"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
@@ -1784,6 +2686,7 @@ msgid "Off: Disables the Speed Limit functions."
 msgstr "Off: Disables the Speed Limit functions."
 
 #: openpilot\selfdrive\ui\mici\layouts\home.py
+#: openpilot\selfdrive\ui\widgets\carrot_web_dialog.py
 msgid "Offline"
 msgstr ""
 
@@ -1824,9 +2727,17 @@ msgstr ""
 msgid "Onroad Uploads"
 msgstr "Onroad Uploads"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
+msgstr "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
+
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Open"
 msgstr "Open"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Open a 5-minute pairing window and show the code to "
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid ""
@@ -1840,6 +2751,7 @@ msgid "Orientation"
 msgstr "Orientation"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "PAIR"
 msgstr "PAIR"
 
@@ -1851,6 +2763,10 @@ msgstr "PANDA"
 msgid "PAST WEEK"
 msgstr "PAST WEEK"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "PCIe LTSSM"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "PREVIEW"
 msgstr "PREVIEW"
@@ -1858,6 +2774,18 @@ msgstr "PREVIEW"
 #: openpilot\selfdrive\ui\widgets\prime.py
 msgid "PRIME FEATURES:"
 msgstr "PRIME FEATURES:"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Paddle −"
+msgstr "Paddle −"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Pair"
+msgstr "Pair"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Pair App"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Pair Device"
@@ -1870,6 +2798,14 @@ msgstr "Pair GitHub Account"
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Pair device"
 msgstr "Pair device"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Pair with \"{}\"?"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Pair with mobile app"
+msgstr ""
 
 #: openpilot\system\ui\sunnypilot\widgets\sunnylink_pairing_dialog.py
 msgid "Pair your GitHub account"
@@ -1888,13 +2824,26 @@ msgstr "Pair your device to your comma account"
 msgid "Pair your device with comma connect (connect.comma.ai) and claim your comma prime offer."
 msgstr "Pair your device with comma connect (connect.comma.ai) and claim your comma prime offer."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Paired"
 msgstr "Paired"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Paired devices"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Pairing code: {}"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\imu_calibration.py
 msgid "Park on level ground, then drive straight to calibrate the device orientation."
 msgstr "Park on level ground, then drive straight to calibrate the device orientation."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Parse blind-spot / LiDAR / extBlinker fields from the 7706 UDP stream."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Pause"
@@ -1911,6 +2860,14 @@ msgstr "Pause lateral control with blinker when traveling below the desired spee
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Pause: ALC will pause when the brake pedal is pressed."
 msgstr "Pause: ALC will pause when the brake pedal is pressed."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Percent of nav speed to use as target (100 = exact limit)."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Percent of the nav-recommended turn speed to use."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 msgid "Percent: Adds a percent offset [Speed Limit + (Offset % Speed Limit)]"
@@ -1944,9 +2901,21 @@ msgstr "Please reboot and try again."
 msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Post-Blinker Delay"
 msgstr "Post-Blinker Delay"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Power Draw"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Power Limit"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
@@ -1977,6 +2946,10 @@ msgstr "Preview the driver facing camera to ensure that driver monitoring has go
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Preview the onroad camera view while parked. (vehicle must be off)"
 msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Profile"
+msgstr "Profile"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Province"
@@ -2037,9 +3010,17 @@ msgstr "RESET"
 msgid "REVIEW"
 msgstr "REVIEW"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Radar / Tracks"
+msgstr ""
+
 #: openpilot\system\ui\sunnypilot\widgets\sunnylink_pairing_dialog.py
 msgid "Re-enter the \"sunnylink\" panel to verify sponsorship status"
 msgstr "Re-enter the \"sunnylink\" panel to verify sponsorship status"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Ready"
+msgstr "Ready"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Real-Time & Offline"
@@ -2074,6 +3055,10 @@ msgstr "Reboot device"
 msgid "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line without a turn signal activated while driving over 31 mph (50 km/h)."
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Receiving input"
+msgstr "Receiving input"
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Record and Upload Driver Camera"
 msgstr "Record and Upload Driver Camera"
@@ -2090,13 +3075,9 @@ msgstr "Record and store microphone audio while driving. The audio will be inclu
 msgid "Refresh Model List"
 msgstr "Refresh Model List"
 
-#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
-msgid "refresh models"
-msgstr "refresh models"
-
-#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
-msgid "fetching..."
-msgstr "fetching..."
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Refresh rate of the external cluster map, in frames per second."
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
@@ -2123,6 +3104,10 @@ msgstr "Remote access"
 msgid "Remote snapshots"
 msgstr "Remote snapshots"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Remove all pairings and restart the Bluetooth service."
+msgstr ""
+
 #: openpilot\selfdrive\ui\widgets\ssh_key.py
 msgid "Request timed out"
 msgstr "Request timed out"
@@ -2132,6 +3117,10 @@ msgstr "Request timed out"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Reset"
 msgstr "Reset"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Reset Bluetooth"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Reset Calibration"
@@ -2181,6 +3170,10 @@ msgstr "Restore Settings"
 msgid "Restoring {progress}%"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Retry"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Review Training Guide"
 msgstr "Review Training Guide"
@@ -2189,6 +3182,7 @@ msgstr "Review Training Guide"
 msgid "Review the rules, features, and limitations of sunnypilot"
 msgstr "Review the rules, features, and limitations of sunnypilot"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Right"
 msgstr "Right"
@@ -2197,14 +3191,36 @@ msgstr "Right"
 msgid "Right & Bottom"
 msgstr "Right & Bottom"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Camera"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Limit Raising"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Speed Limit Offset"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Speed Limits"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Type"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "S"
 msgstr "S"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\smart_cruise_control.py
 msgid "SCC-M"
 msgstr "SCC-M"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\smart_cruise_control.py
 msgid "SCC-V"
 msgstr "SCC-V"
@@ -2221,6 +3237,7 @@ msgstr "SE"
 msgid "SELECT"
 msgstr "SELECT"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
 msgid "SPEED"
 msgstr "SPEED"
@@ -2253,6 +3270,23 @@ msgstr "SUNNYLINK"
 msgid "SW"
 msgstr "SW"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Same Direction Speed Cam Filter"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Save"
+msgstr "Save"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Scale every alert sound, in percent. 100 keeps the current loudness."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Scale the engage / disengage / reverse chimes, in percent."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 msgid "Scan"
 msgstr "Scan"
@@ -2269,9 +3303,14 @@ msgstr "Scan the QR code to visit sunnyhaibin's GitHub Sponsors page"
 msgid "Scanning Wi-Fi networks..."
 msgstr "Scanning Wi-Fi networks..."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 msgid "Scanning..."
 msgstr "Scanning..."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "School Zone CAN Control"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Screen Brightness"
@@ -2357,10 +3396,18 @@ msgstr ""
 msgid "Self-Tune"
 msgstr "Self-Tune"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Send navigation-based speed limits to the car over CAN."
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Serial"
 msgstr "Serial"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Serve the carrot tuning page (/nav_params) and four-corner radar visualisation (/radar) on port 8088."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Set a timer to delay the auto lane change operation when the blinker is used. No nudge on the steering wheel is required to auto lane change if a timer is set. Default is Nudge.<br>Please use caution when using this feature. Only use the blinker when traffic and road conditions permit."
@@ -2386,6 +3433,10 @@ msgstr "Settings restored. Confirm to restart the interface."
 msgid "Sharing your data with comma helps improve openpilot and sunnypilot for everyone."
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Shift the auto turn trigger point earlier or later."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Short Press Increment"
 msgstr "Short Press Increment"
@@ -2398,6 +3449,10 @@ msgstr "Show Advanced Controls"
 msgid "Show Blind Spot Warnings"
 msgstr "Show Blind Spot Warnings"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Show Debug Log"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Show a screen saver when the device is offroad and idle, instead of turning the screen off."
 msgstr "Show a screen saver when the device is offroad and idle, instead of turning the screen off."
@@ -2408,6 +3463,26 @@ msgstr "Show a timer on the HUD when the car is at a standstill."
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Show an indicator on the left side of the screen to display real-time vehicle acceleration and deceleration. This displays what the car is currently doing, not what the planner is requesting."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Show debug overlays on the external cluster."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Shrink the follow distance as speed rises. Off disables it; the three profiles differ in how far up the speed range the gap keeps tightening."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Side Blind Spot Delay"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Side Relative Distance Time"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Side vRel Distance Time"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
@@ -2435,9 +3510,41 @@ msgstr "Software"
 msgid "Software Delay:"
 msgstr "Software Delay:"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Software H.264"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Speed"
 msgstr "Speed"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed + Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Bump End Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Bump Hold Time"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Bump Target Speed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Bumps"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Camera Alert Time"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Camera Control Mode"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
@@ -2451,6 +3558,22 @@ msgstr "Speed Limit Offset"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_policy.py
 msgid "Speed Limit Source"
 msgstr "Speed Limit Source"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Source PCM"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed at which cruise set speed is re-synchronized. Tesla BYD only."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed below which auto turn activates."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed-dependent Follow Time"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Speedometer: Always Display True Speed"
@@ -2467,6 +3590,10 @@ msgstr "Sponsor Status"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Sponsorship isn't required for basic backup/restore"
 msgstr "Sponsorship isn't required for basic backup/restore"
+
+#: openpilot\selfdrive\ui\layouts\settings\toggles.py
+msgid "Sport"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Standard"
@@ -2488,6 +3615,10 @@ msgstr "Start IMU Calibration"
 msgid "Start over"
 msgstr "Start over"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Start the Bluetooth service to scan and pair devices."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
@@ -2503,6 +3634,10 @@ msgstr "State"
 msgid "Status"
 msgstr "Status"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Status Details"
+msgstr "Status Details"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Steering"
 msgstr "Steering"
@@ -2515,9 +3650,33 @@ msgstr "Steering Arc"
 msgid "Steering Mode on Brake Pedal"
 msgstr "Steering Mode on Brake Pedal"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Steering Suspend"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Steering angle at which lateral control pauses while you steer. 300° effectively disables it. CarrotPilot stores 0.1-degree units for this parameter but its code, like this port, compares the raw value against the steering angle, so the number reads as degrees here."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Steering-wheel nudge when carrot decelerates for a speed camera."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Stop"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Stop / Speed Camera"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Stop Distance"
 msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Stop Test"
+msgstr "Stop Test"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\subaru.py
 msgid "Stop and Go (Beta)"
@@ -2533,6 +3692,26 @@ msgstr "Stop and Go for Manual Parking Brake (Beta)"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Strict"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Sunnylink Local Connections"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Supply Current"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Supply Fault"
+msgstr ""
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Supply Voltage"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Synthesises a camera distance when the car sends only an enforcement speed. 0.1 s units; 60 = 6.0 s."
 msgstr ""
 
 #: openpilot\system\ui\tici_reset.py
@@ -2571,6 +3750,14 @@ msgstr ""
 msgid "Target Branch"
 msgstr "Target Branch"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Temperature"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Test / Learn"
+msgstr "Test / Learn"
+
 #: openpilot\system\ui\widgets\network.py
 msgid "Tethering Password"
 msgstr "Tethering Password"
@@ -2583,6 +3770,10 @@ msgstr ""
 msgid "The reset cannot be undone. You have been warned."
 msgstr "The reset cannot be undone. You have been warned."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
+msgstr "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
+
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "This alert will be cleared when new maps are downloaded."
 msgstr ""
@@ -2590,6 +3781,14 @@ msgstr ""
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\tesla.py
 msgid "This allows the use of full MADS functionality when enabled."
 msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "This device or AGNOS build lacks /dev/btpower."
+msgstr "This device or AGNOS build lacks /dev/btpower."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
+msgstr "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "This feature can only be used with sunnypilot longitudinal control enabled."
@@ -2698,16 +3897,52 @@ msgstr "Torque Control Tune Version"
 msgid "Total Delay:"
 msgstr "Total Delay:"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Toyota: Auto Brake Hold FOR TSS2 HYBRID CARS"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Toyota: Prius TSS2 BSM and some tssp"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Toyota: custom longitudinal for TSS2"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Traffic Congestion Slowdown"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Traffic Light Detect Mode"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Traffic Stop Distance Adjust"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Training Guide"
 msgstr "Training Guide"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Trip Report"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Trips"
 msgstr "Trips"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "UDP port used to receive Amap navigation instructions."
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Turn Bluetooth radio on or off."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Turn Speed"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Turn Speed Control Mode"
 msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\developer.py
@@ -2718,10 +3953,18 @@ msgstr "UI Debug Mode"
 msgid "UNINSTALL"
 msgstr "UNINSTALL"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "UNPAIR"
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\home.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\home.py
 msgid "UPDATE"
 msgstr "UPDATE"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "USB Link"
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid ""
@@ -2749,6 +3992,10 @@ msgstr "Uninstall"
 msgid "Unknown"
 msgstr "Unknown"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Unpair"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 msgid "Unrecognized Vehicle"
 msgstr "Unrecognized Vehicle"
@@ -2773,9 +4020,9 @@ msgstr "Upgrade Now"
 msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 msgstr "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use Amap (Gaode) navigation data for map-based features."
-msgstr ""
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Use Carrot mapping"
+msgstr "Use Carrot mapping"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Use Carrot navigation data for map-based features."
@@ -2793,6 +4040,10 @@ msgstr "Use Lane Turn Desires"
 msgid "Use Metric System"
 msgstr "Use Metric System"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Use a custom longitudinal tuning profile for TSS2 Toyota vehicles."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\tesla.py
 msgid "Use a multi-finger press on the infotainment screen to toggle MADS."
 msgstr ""
@@ -2805,8 +4056,24 @@ msgstr ""
 msgid "Use map data to estimate the appropriate speed to drive through turns ahead."
 msgstr "Use map data to estimate the appropriate speed to drive through turns ahead."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use navigation desired speed to limit cruise speed."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. Your attention is required at all times to use this feature."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
+msgid "Use the vehicle's auto brake hold feature on supported TSS2 hybrid Toyotas."
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
@@ -2819,6 +4086,7 @@ msgstr "VEHICLE"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "VIEW"
 msgstr "VIEW"
 
@@ -2827,9 +4095,25 @@ msgstr "VIEW"
 msgid "Vehicle"
 msgstr "Vehicle"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Vehicle CAN Speed Arbitration"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Vehicle Navi CAN Control"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Vehicle Speed"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "View the error log for sunnypilot crashes."
 msgstr "View the error log for sunnypilot crashes."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "View the last navigation event summary handled by CarrotManager."
+msgstr "View the last navigation event summary handled by CarrotManager."
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Virtually shift camera's perspective to move model's center to Left(+ values) or Right (- values)"
@@ -2854,6 +4138,10 @@ msgstr "WARNING: Low Voltage"
 #: openpilot\system\ui\tici_setup.py
 msgid "Waiting for internet"
 msgstr "Waiting for internet"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "Waiting for the app…"
+msgstr ""
 
 #: openpilot\selfdrive\ui\onroad\alert_renderer.py
 msgid "Waiting to start"
@@ -2923,6 +4211,10 @@ msgstr "Wi-Fi"
 msgid "Wi-Fi Network Metered"
 msgstr "Wi-Fi Network Metered"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Wide Camera"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "Would you like to delete this log?"
 msgstr "Would you like to delete this log?"
@@ -2931,6 +4223,7 @@ msgstr "Would you like to delete this log?"
 msgid "Wrong password"
 msgstr "Wrong password"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "Yes"
 msgstr "Yes"
@@ -2955,8 +4248,8 @@ msgstr ""
 msgid "You must accept the Terms of Service to use sunnypilot. Read the latest terms at https://sunnypilot.ai/terms before continuing."
 msgstr "You must accept the Terms of Service to use sunnypilot. Read the latest terms at https://sunnypilot.ai/terms before continuing."
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Your key is stored locally and is not uploaded."
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "You will need the pairing code again to reconnect it."
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
@@ -2970,6 +4263,10 @@ msgstr "Your vehicle will use the Dynamic longitudinal tuning."
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
 msgid "Your vehicle will use the Predictive longitudinal tuning."
 msgstr "Your vehicle will use the Predictive longitudinal tuning."
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "acceleration profile"
+msgstr ""
 
 #: openpilot\selfdrive\ui\mici\layouts\onboarding.py
 msgid ""
@@ -3082,6 +4379,14 @@ msgstr "checking..."
 #: openpilot\system\ui\mici_setup.py
 msgid "choose software"
 msgstr "choose software"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "clear cache"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "clearing..."
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\prime.py
 msgid "comma prime"
@@ -3210,6 +4515,50 @@ msgstr ""
 msgid "driving personality"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
+msgstr "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU / Big Model"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Active"
+msgstr "eGPU Active"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Available"
+msgstr "eGPU Available"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Failed"
+msgstr "eGPU Failed"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Loading..."
+msgstr "eGPU Loading..."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Not Active"
+msgstr "eGPU Not Active"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU big model is being loaded. This may take a moment."
+msgstr "eGPU big model is being loaded. This may take a moment."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU big model is running and healthy."
+msgstr "eGPU big model is running and healthy."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU was selected but failed to start. Check device connection and model files."
+msgstr "eGPU was selected but failed to start. Check device connection and model files."
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "eco"
+msgstr ""
+
 #: openpilot\selfdrive\ui\mici\layouts\settings\network\network_layout.py
 msgid "edit"
 msgstr ""
@@ -3221,6 +4570,10 @@ msgid ""
 msgstr ""
 "enable\n"
 "sunnylink"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "enable accel controller"
+msgstr ""
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\network\network_layout.py
 msgid "enable roaming"
@@ -3251,6 +4604,10 @@ msgstr ""
 msgid "enter password..."
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
+msgid "enter this code in the sunnylink app"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 msgid "error"
 msgstr "error"
@@ -3276,6 +4633,10 @@ msgstr "failed"
 msgid "failed to check for update"
 msgstr "failed to check for update"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "fetching..."
+msgstr "fetching..."
+
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 msgid "finalizing update..."
 msgstr "finalizing update..."
@@ -3284,6 +4645,7 @@ msgstr "finalizing update..."
 msgid "firehose"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\system\ui\widgets\network.py
 msgid "for \"{}\""
 msgstr "for \"{}\""
@@ -3321,18 +4683,19 @@ msgstr ""
 msgid "imu calibration"
 msgstr ""
 
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "install now"
+msgstr ""
+
 #: openpilot\system\ui\mici_setup.py
 msgid "install openpilot"
 msgstr "install openpilot"
-
-#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
-msgid "install update"
-msgstr ""
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
 msgid "joystick debug mode"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
 msgid "km"
 msgstr "km"
@@ -3342,6 +4705,7 @@ msgstr "km"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\chevron_metrics.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_renderer.py
@@ -3368,6 +4732,10 @@ msgstr "leave blank for automatic configuration"
 msgid "left"
 msgstr "left"
 
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "lenient"
+msgstr ""
+
 #: openpilot\system\ui\mici_updater.py
 msgid "loading"
 msgstr "loading"
@@ -3381,6 +4749,7 @@ msgid "longitudinal maneuver mode"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\chevron_metrics.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
@@ -3396,6 +4765,7 @@ msgstr "m/s^2"
 msgid "metered"
 msgstr "metered"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
 msgid "mi"
 msgstr "mi"
@@ -3403,6 +4773,10 @@ msgstr "mi"
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings.py
 msgid "models"
 msgstr "models"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "moderate"
+msgstr ""
 
 #: openpilot\selfdrive\ui\mici\onroad\hud_renderer.py
 #: openpilot\selfdrive\ui\onroad\hud_renderer.py
@@ -3445,6 +4819,10 @@ msgstr "no internet"
 msgid "no, don't upload"
 msgstr ""
 
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "normal"
+msgstr ""
+
 #: openpilot\selfdrive\ui\mici\layouts\settings\network\wifi_ui.py
 msgid "not in range"
 msgstr ""
@@ -3463,12 +4841,24 @@ msgstr ""
 msgid "or go to https://sunnypilot.ai/terms"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "or unpair existing ones."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
 msgid "pair"
 msgstr "pair"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
+msgid "pair app"
+msgstr ""
+
 #: openpilot\selfdrive\ui\mici\widgets\pairing_dialog.py
 msgid "pair with comma connect"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
+msgid "pair with mobile app"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\widgets\sunnylink_pairing_dialog.py
@@ -3516,6 +4906,10 @@ msgstr ""
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "record & upload mic audio"
 msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "refresh models"
+msgstr "refresh models"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "relaxed"
@@ -3597,6 +4991,10 @@ msgstr "select model"
 msgid "settings backed up"
 msgstr "settings backed up"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "slide to"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
 msgid "slide to backup"
 msgstr "slide to backup"
@@ -3637,6 +5035,10 @@ msgstr "slide to restart"
 msgid "slide to restore"
 msgstr "slide to restore"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
+msgid "slide to unpair"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "small"
 msgstr ""
@@ -3662,6 +5064,10 @@ msgid "sponsor tier"
 msgstr "sponsor tier"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "sport"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "standard"
 msgstr ""
 
@@ -3677,6 +5083,10 @@ msgstr ""
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\network\wifi_ui.py
 msgid "starting..."
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "strict"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\onboarding.py
@@ -3704,6 +5114,10 @@ msgstr "sunnylink enables secured remote access to your comma device from anywhe
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\onboarding.py
 msgid "sunnylink is designed to be enabled as part of sunnypilot's core functionality. If sunnylink is disabled, features such as settings management, remote monitoring, real-time dashboards will be unavailable."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
+msgid "sunnylink local"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
@@ -3838,6 +5252,10 @@ msgstr ""
 msgid "try again later."
 msgstr "try again later."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
+msgid "type into the app. Closing the dialog cancels pairing."
+msgstr ""
+
 #: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
 msgid "ui debug mode"
 msgstr ""
@@ -3918,39 +5336,9 @@ msgid ""
 "internet..."
 msgstr ""
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Opacity"
-msgstr "Carrot Nav Panel Opacity"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
-msgstr "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Map Provider"
-msgstr "Map Provider"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Current map data source used for speed limits and road names. Amap requires an API key to be set above."
-msgstr "Current map data source used for speed limits and road names. Amap requires an API key to be set above."
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Navi Debug"
-msgstr "Carrot Navi Debug"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "View the last navigation event summary handled by CarrotManager."
-msgstr "View the last navigation event summary handled by CarrotManager."
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Amap"
-msgstr "Amap"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "No navigation event received yet."
-msgstr "No navigation event received yet."
-"waiting for\n"
-"internet..."
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\sunnylink.py
+msgid "waiting for the app…"
+msgstr ""
 
 #: openpilot\selfdrive\ui\mici\layouts\onboarding.py
 msgid "what is sunnypilot?"
@@ -4044,292 +5432,3 @@ msgstr "✓ SUBSCRIBED"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
 
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "strict"
-msgstr "strict"
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "moderate"
-msgstr "moderate"
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "lenient"
-msgstr "lenient"
-#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
-msgid "clear cache"
-msgstr "clear cache"
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "enable accel controller"
-msgstr "enable accel controller"
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "acceleration profile"
-msgstr "acceleration profile"
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "eco"
-msgstr "eco"
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "normal"
-msgstr "normal"
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "sport"
-msgstr "sport"
-#: openpilot\selfdrive\ui\layouts\settings\toggles.py
-msgid "Enable Accel Controller"
-msgstr "Enable Accel Controller"
-#: openpilot\selfdrive\ui\layouts\settings\toggles.py
-msgid "Acceleration Profile"
-msgstr "Acceleration Profile"
-#: openpilot\selfdrive\ui\layouts\settings\toggles.py
-msgid "Eco"
-msgstr "Eco"
-#: openpilot\selfdrive\ui\layouts\settings\toggles.py
-msgid "Normal"
-msgstr "Normal"
-#: openpilot\selfdrive\ui\layouts\settings\toggles.py
-msgid "Sport"
-msgstr "Sport"
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Toyota: Auto Brake Hold FOR TSS2 HYBRID CARS"
-msgstr "Toyota: Auto Brake Hold FOR TSS2 HYBRID CARS"
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Use the vehicle's auto brake hold feature on supported TSS2 hybrid Toyotas."
-msgstr "Use the vehicle's auto brake hold feature on supported TSS2 hybrid Toyotas."
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Toyota: Prius TSS2 BSM and some tssp"
-msgstr "Toyota: Prius TSS2 BSM and some tssp"
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Enable enhanced blind-spot monitoring behavior for certain Prius TSS2 and TSS-P Toyotas."
-msgstr "Enable enhanced blind-spot monitoring behavior for certain Prius TSS2 and TSS-P Toyotas."
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Toyota: custom longitudinal for TSS2"
-msgstr "Toyota: custom longitudinal for TSS2"
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Use a custom longitudinal tuning profile for TSS2 Toyota vehicles."
-msgstr "Use a custom longitudinal tuning profile for TSS2 Toyota vehicles."
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Enable drive mode btn link"
-msgstr "Enable drive mode btn link"
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
-msgid "Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logic."
-msgstr "Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logic."
-
-msgid "Bluetooth Remotes"
-msgstr "Bluetooth Remotes"
-
-msgid "Bluetooth adapter unavailable"
-msgstr "Bluetooth adapter unavailable"
-
-
-msgid "Scanning..."
-msgstr "Scanning..."
-
-msgid "Ready"
-msgstr "Ready"
-
-msgid "Enable Bluetooth"
-msgstr "Enable Bluetooth"
-
-msgid "Disable Bluetooth"
-msgstr "Disable Bluetooth"
-
-msgid "Scan (30s)"
-msgstr "Scan (30s)"
-
-msgid "Cancel"
-msgstr "Cancel"
-
-msgid "Put your device in pairing mode and scan. Disconnect it from your previous phone if needed."
-msgstr "Put your device in pairing mode and scan. Disconnect it from your previous phone if needed."
-
-msgid "Paired"
-msgstr "Paired"
-
-msgid "Connected"
-msgstr "Connected"
-
-msgid "Battery {}%"
-msgstr "Battery {}%"
-
-msgid "Mapping on"
-msgstr "Mapping on"
-
-msgid "Mapping off"
-msgstr "Mapping off"
-
-msgid "Receiving input"
-msgstr "Receiving input"
-
-msgid "Pair"
-msgstr "Pair"
-
-msgid "Disconnect"
-msgstr "Disconnect"
-
-msgid "Connect"
-msgstr "Connect"
-
-msgid "Forget"
-msgstr "Forget"
-
-msgid "Edit"
-msgstr "Edit"
-
-msgid "Back"
-msgstr "Back"
-
-msgid "Profile"
-msgstr "Profile"
-
-msgid "Generic keyboard / HID"
-msgstr "Generic keyboard / HID"
-
-msgid "Use Carrot mapping"
-msgstr "Use Carrot mapping"
-
-msgid "Button Mapping"
-msgstr "Button Mapping"
-
-msgid "None"
-msgstr "None"
-
-msgid "Cruise +"
-msgstr "Cruise +"
-
-msgid "Cruise −"
-msgstr "Cruise −"
-
-msgid "Cruise + Long"
-msgstr "Cruise + Long"
-
-msgid "Cruise − Long"
-msgstr "Cruise − Long"
-
-msgid "Gap"
-msgstr "Gap"
-
-msgid "LFA"
-msgstr "LFA"
-
-msgid "LFA Long"
-msgstr "LFA Long"
-
-msgid "Cancel Long"
-msgstr "Cancel Long"
-
-msgid "Lane Left"
-msgstr "Lane Left"
-
-msgid "Lane Right"
-msgstr "Lane Right"
-
-msgid "Paddle −"
-msgstr "Paddle −"
-
-msgid "CarrotCruise"
-msgstr "CarrotCruise"
-
-msgid "Save"
-msgstr "Save"
-
-msgid "Saved"
-msgstr "Saved"
-
-msgid "Test / Learn"
-msgstr "Test / Learn"
-
-msgid "Stop Test"
-msgstr "Stop Test"
-
-msgid "Testing"
-msgstr "Testing"
-
-msgid "Test mode active"
-msgstr "Test mode active"
-
-msgid "Save your changes"
-msgstr "Save your changes"
-
-msgid "Exclusive HID capture active"
-msgstr "Exclusive HID capture active"
-
-msgid "Waiting for HID capture (check connection and mapping)"
-msgstr "Waiting for HID capture (check connection and mapping)"
-
-msgid "Pairing confirmation"
-msgstr "Pairing confirmation"
-
-msgid "Enter the code shown on the other device"
-msgstr "Enter the code shown on the other device"
-
-msgid "Confirm"
-msgstr "Confirm"
-
-msgid "Short"
-msgstr "Short"
-
-msgid "Double"
-msgstr "Double"
-
-msgid "Long"
-msgstr "Long"
-
-msgid "Forget this device?"
-msgstr "Forget this device?"
-
-msgid "Bluetooth"
-msgstr "Bluetooth"
-
-msgid "eGPU Not Active"
-msgstr "eGPU Not Active"
-
-msgid "eGPU Active"
-msgstr "eGPU Active"
-
-msgid "eGPU Failed"
-msgstr "eGPU Failed"
-
-msgid "eGPU Loading..."
-msgstr "eGPU Loading..."
-
-msgid "No eGPU (big model) is selected. The default model is running."
-msgstr "No eGPU (big model) is selected. The default model is running."
-
-msgid "eGPU big model is running and healthy."
-msgstr "eGPU big model is running and healthy."
-
-msgid "eGPU was selected but failed to start. Check device connection and model files."
-msgstr "eGPU was selected but failed to start. Check device connection and model files."
-
-msgid "eGPU big model is being loaded. This may take a moment."
-msgstr "eGPU big model is being loaded. This may take a moment."
-
-msgid "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
-msgstr "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
-
-msgid "Status Details"
-msgstr "Status Details"
-
-msgid "Current State"
-msgstr "Current State"
-
-msgid "eGPU Available"
-msgstr "eGPU Available"
-
-msgid "Description"
-msgstr "Description"
-
-msgid "Bluetooth UART not exposed by this AGNOS kernel"
-msgstr "Bluetooth UART not exposed by this AGNOS kernel"
-
-msgid "Bluetooth UART not available"
-msgstr "Bluetooth UART not available"
-
-msgid "Bluetooth power node not detected"
-msgstr "Bluetooth power node not detected"
-
-msgid "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
-msgstr "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
-
-msgid "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
-msgstr "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
-
-msgid "This device or AGNOS build lacks /dev/btpower."
-msgstr "This device or AGNOS build lacks /dev/btpower."

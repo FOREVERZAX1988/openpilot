@@ -41,10 +41,12 @@ _TRAFFIC_LIGHT_STATE_MAP = {
 _TRAFFIC_LIGHT_SOURCE_MAP = {
   FusedSource.NONE: TrafficLightState.Source.none,
   FusedSource.CARROT: TrafficLightState.Source.carrot,
-  FusedSource.AMAP: TrafficLightState.Source.amap,
   FusedSource.VISION: TrafficLightState.Source.vision,
   FusedSource.FUSED: TrafficLightState.Source.fused,
 }
+# NOTE: FusedSource.AMAP / TrafficLightState.Source.amap are kept in their
+# respective enums for cereal ordinal compatibility, but no live Amap Web source
+# exists any more.
 
 E2E_BRAKE_HOLD_ACCEL = -0.2  # m/s^2
 

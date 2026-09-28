@@ -220,11 +220,6 @@ def update_osm_db() -> None:
     mem_params.put("LastGPSPosition", "{}", block=True)
 
 
-def _amap_map_data_enabled() -> bool:
-  """Amap Web API provider is removed; always return False so OSM remains the only provider."""
-  return False
-
-
 def _osm_map_data_enabled() -> bool:
   """Return True when the offline OSM provider may be used.
 

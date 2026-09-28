@@ -644,11 +644,12 @@ class CarrotManager:
 
     ``AmapEnabled`` used to control both Amap Web map data and the 7706
     blind-spot parser. Amap Web has been removed, so only the 7706 blind-spot
-    flag is migrated here.
+    flag is migrated here, and the legacy key is then deleted.
     """
     if self.params.get_bool("AmapEnabled"):
       if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
         self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
+      self.params.remove("AmapEnabled")
 
     self._enabled = False
     self._port = 0

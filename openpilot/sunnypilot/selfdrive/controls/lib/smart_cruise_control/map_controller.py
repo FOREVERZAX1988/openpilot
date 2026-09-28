@@ -52,11 +52,6 @@ TMC_MIN_CAP_DELTA_MS = 1.0
 # Carrot map-deceleration sources (ATC turn speed, curve speed, route-curvature speed).
 # Same freshness budget as the TMC arrays: they arrive on the same carrotManSP packet.
 MAP_DECEL_MAX_AGE_SEC = 10.0
-# Amap's route curve speed arrives on liveMapDataSP instead - a different packet with a
-# different publisher and refresh cadence - so it gets its own budget rather than
-# sharing the carrot one. mapd_manager refreshes on a 2 s TTL / 20 m movement, so 10 s
-# is ~5 refreshes of slack and still tight enough that a lost lock cannot linger.
-AMAP_CURVE_MAX_AGE_SEC = 10.0
 # Only fold a value in when it is meaningfully below the current target, so tiny
 # differences do not flap the state machine.
 MAP_DECEL_MIN_DELTA_MS = 1.0
@@ -192,10 +187,6 @@ class SmartCruiseControlMap:
     self.map_decel_speed = 0.0
     self.map_decel_source = ""
 
-    # Amap Web API map-route curve speed has been removed; this consumer is kept
-    # hard-disabled so the _amap_curve_candidates path never runs.
-    self.use_amap_curve = False
-
   def get_v_target_from_control(self) -> float:
     if self.is_active:
       return max(self.v_target, MIN_V)
@@ -257,11 +248,11 @@ class SmartCruiseControlMap:
   def _update_carrot_map_decel(self, sm) -> None:
     """Fold map-derived navigation deceleration into ``self.v_target``.
 
-    Handles the map-derived "slow down for something ahead" sources:
-      * ``atcSpeed``    - ATC turn speed (auto turn control)          [carrot]
-      * ``vTurnSpeedMs``- the turn-table curve speed                  [carrot]
-      * ``routeSpeed``  - route-curvature speed from the nav polyline [carrot]
-      * ``curveSpeed``  - route-shape curve speed from Amap           [liveMapData]
+    Handles the map-derived "slow down for something ahead" sources from the carrot
+    phone navigation stream:
+      * ``atcSpeed``    - ATC turn speed (auto turn control)
+      * ``vTurnSpeedMs``- the turn-table curve speed
+      * ``routeSpeed``  - route-curvature speed from the nav polyline
 
     Why here and not in SLA: SLA owns speed-limit *signs* - absolute constraints the
     driver can see - while navigation-driven deceleration for a point ahead is what this
@@ -271,9 +262,7 @@ class SmartCruiseControlMap:
     visual curbside case stays with SmartCruiseControlVision, which is model-derived
     rather than map-derived.
 
-    The carrot family is gated by ``CarrotMapDecelEnabled``; the Amap Web
-    curve-speed path has been removed, so ``_amap_curve_candidates`` is no longer
-    active (``use_amap_curve`` is hard-disabled).
+    Gated by ``CarrotMapDecelEnabled``.
 
     Only ever LOWERS the target, and only by a meaningful margin:
       * a stale or inactive packet is ignored entirely;
@@ -286,17 +275,11 @@ class SmartCruiseControlMap:
     if sm is None:
       return
     try:
-      # Collect from every eligible source, then take the lowest. The two families
-      # arrive on different packets and must be gated independently: a carrot packet
-      # that is absent, stale or inactive says nothing about whether Amap's route
-      # curve speed is usable, and vice versa. Returning early on either one would
-      # silently disable the other.
+      # Collect Carrot map-deceleration candidates, then take the lowest.
       candidates: list[tuple[float, float, str]] = []
 
       if self.use_carrot_map_decel:
         candidates.extend(self._carrot_decel_candidates(sm))
-      if self.use_amap_curve:
-        candidates.extend(self._amap_curve_candidates(sm))
 
       best = 0.0
       best_label = ""
@@ -349,33 +332,11 @@ class SmartCruiseControlMap:
        float(getattr(carrot, "routeDist", 0.0) or 0.0), "route"),
     ]
 
-  def _amap_curve_candidates(self, sm) -> list[tuple[float, float, str]]:
-    """Amap's route-shape curve speed, as ``(ms, m, label)``.
-
-    Read from ``liveMapDataSP`` (published by mapd_manager), which carries its own
-    ``curveSpeedValid`` flag. That flag is authoritative: a zero speed with the flag
-    clear means "no curve constraint" - a straight road or a provider without route
-    geometry - and must never be read as "stop". A stale packet is ignored on the
-    same principle as the carrot sources.
-    """
-    if not sm.valid.get("liveMapDataSP", False) or not sm.alive.get("liveMapDataSP", False):
-      return []
-    if time.monotonic() - sm.recv_time["liveMapDataSP"] > AMAP_CURVE_MAX_AGE_SEC:
-      return []
-    map_data = sm["liveMapDataSP"]
-    if not bool(getattr(map_data, "curveSpeedValid", False)):
-      return []
-    speed = float(getattr(map_data, "curveSpeed", 0.0) or 0.0)
-    dist = float(getattr(map_data, "curveSpeedDistance", 0.0) or 0.0)
-    return [(speed, dist, "amap_curve")]
-
   def update_params(self):
     if self.frame % int(PARAMS_UPDATE_PERIOD / DT_MDL) == 0:
       self.enabled = self.params.get_bool("SmartCruiseControlMap")
       self.use_carrot_congestion = self.params.get_bool("CarrotTrafficCongestionEnabled")
       self.use_carrot_map_decel = self.params.get_bool("CarrotMapDecelEnabled")
-      # Amap Web API curve speed has been removed; keep the consumer hard-disabled.
-      self.use_amap_curve = False
       # Auto-arm: with carrot navigation on, any of its map-deceleration sub-features
       # turns this controller on by itself. SCC Map stays the single execution path -
       # the user just no longer has to find and flip a second switch to make the first

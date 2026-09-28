@@ -40,6 +40,18 @@ msgstr "--"
 msgid "---"
 msgstr "---"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "0=Off, 1=Limit to nav speed, 2=Limit with early decel."
+msgstr "0=关闭，1=限制到导航限速，2=提前减速并限制到导航限速。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "0=Off, 1=Speed only, 2=Speed + steering."
+msgstr "0=关闭，1=仅控制速度，2=控制速度+转向。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "1 = take the ACC set speed from the car (PCM). Required on Toyota: its PCM consumes the +/- buttons itself, so openpilot would otherwise keep its own set speed while the cluster moves."
+msgstr ""
+
 #: openpilot\selfdrive\ui\widgets\prime.py
 msgid "1 year of drive storage"
 msgstr "1 年行驶数据存储"
@@ -149,29 +161,13 @@ msgstr "全部时间"
 msgid "ALT."
 msgstr "海拔"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Haptic Feedback (Speed Camera)"
-msgstr "测速相机触觉反馈"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Steering-wheel nudge when carrot decelerates for a speed camera."
-msgstr "carrot 因测速相机减速时轻振方向盘。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Count traffic lights on the route ahead from the Amap route."
-msgstr "统计高德路线上前方红绿灯数量。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Slow for curves using the Amap route shape. Only ever lowers the target speed; arms its controller automatically with Carrot on."
-msgstr "根据高德路线形状弯道减速。只降不升；开启 Carrot 后自动就绪其控制器。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "API key for Amap services. Tap EDIT to enter or update the key."
-msgstr "高德服务API密钥。点击编辑以输入或更新密钥。"
-
 #: openpilot\system\ui\widgets\network.py
 msgid "APN Setting"
 msgstr "APN 设置"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "ATC Turn Control"
+msgstr "ATC 转弯控制"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Acceleration Change Cost"
@@ -205,6 +201,8 @@ msgstr "调整软件延迟"
 msgid "Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay value is 0.2"
 msgstr "关闭实时学习转向延迟时，调整软件延迟值。默认软件延迟为 0.2。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 #: openpilot\system\ui\widgets\network.py
 msgid "Advanced"
 msgstr "高级"
@@ -217,9 +215,21 @@ msgstr "激进"
 msgid "Agree"
 msgstr "同意"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Alert Volume"
+msgstr "提示音音量"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "All"
 msgstr "全部"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "All Speeds"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "All Speeds + Distance"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "All provinces"
@@ -229,13 +239,13 @@ msgstr "全部省份"
 msgid "All states (~6.0 GB)"
 msgstr "全部州/省（约 6.0 GB）"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Allow other devices to find this device."
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\tesla.py
 msgid "Allows the driver to provide limited steering input while openpilot is engaged."
 msgstr "允许驾驶员在 openpilot 接管时提供有限的转向输入。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Always Lateral"
-msgstr "始终启用横向控制"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Always On"
@@ -244,10 +254,6 @@ msgstr "始终开启"
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Always-On Driver Monitoring"
 msgstr "始终启用驾驶员监控"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Amap API Key"
-msgstr "高德API密钥"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "An alpha version of sunnypilot longitudinal control can be tested, along with Experimental mode, on non-release branches."
@@ -264,6 +270,10 @@ msgstr "设备操作系统更新正在后台下载。准备就绪后将提示您
 #: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
 msgid "Any fast phone or laptop charger should be fine."
 msgstr "任何手机或笔记本快充充电器均可。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Apply Model Speed"
+msgstr "模型速度融合"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Apply a custom timeout for settings UI.<br>This is the time after which settings UI closes automatically if user is not interacting with the screen."
@@ -321,6 +331,10 @@ msgstr "辅助"
 msgid "Assist: Adjusts the vehicle's cruise speed based on the current road's speed limit when operating the +/- buttons."
 msgstr "辅助：按下 +/- 按钮时，根据当前道路限速调整巡航速度。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Auto (Dark)"
 msgstr "自动（深色）"
@@ -329,33 +343,21 @@ msgstr "自动（深色）"
 msgid "Auto (Default)"
 msgstr "自动（默认）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Cruise Speed"
-msgstr "自动设定巡航速度"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Camera"
+msgstr ""
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Engage"
 msgstr "自动开启辅助驾驶"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Enter New Lane Time"
-msgstr "自动进入新车道时间"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Gas"
+msgstr "自动油门"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Enter New Lane Time (Highway)"
-msgstr "自动进入新车道时间（高速）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Gas Cancel Speed"
-msgstr "自动油门取消速度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Gas Sync Speed"
 msgstr "自动油门同步速度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Gas Takeover Speed"
-msgstr "自动油门接管速度"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Auto Lane Change by Blinker"
@@ -365,67 +367,70 @@ msgstr "通过转向灯自动变道"
 msgid "Auto Lane Change: Delay with Blind Spot"
 msgstr "自动变道：盲区时延迟"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Speed Up to Road Limit"
-msgstr "自动提速至道路限速"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Auto Start / Cruise"
+msgstr "自动启动 / 巡航"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Turn Control"
 msgstr "自动转向控制"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Turn Distance Offset"
 msgstr "自动转向距离偏移"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Turn End Distance"
 msgstr "自动转向结束距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Turn Left"
-msgstr "自动左转"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Auto Turn Outside Road Edge"
-msgstr "非路沿处允许自动转向"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Turn Speed Threshold"
 msgstr "自动转向车速阈值"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Turn on Navi Lane Change"
 msgstr "导航变道时自动转向"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Up 40 km/h Highway Limit"
 msgstr "高速 40 km/h 限速自动提升"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Up 40 km/h Road Limit"
 msgstr "40 km/h 限速自动提升"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Up Highway Limit"
 msgstr "高速公路限速自动提升"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Up Road Limit"
 msgstr "自动提升道路限速"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Available devices"
+msgstr "可用设备"
 
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "B.D."
 msgstr "方位"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "BYD only: feed corner-radar tracks into the radar interface."
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\onboarding.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\onboarding.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_policy.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 #: openpilot\system\ui\tici_setup.py
 #: openpilot\system\ui\tici_updater.py
 #: openpilot\system\ui\widgets\network.py
@@ -448,9 +453,9 @@ msgstr "备份失败"
 msgid "Backup Settings"
 msgstr "备份设置"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Basic Cruise Preset Speed Unit"
-msgstr "基础巡航预设速度单位"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Battery"
+msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\prime.py
 msgid "Become a comma prime member at connect.comma.ai"
@@ -476,13 +481,9 @@ msgstr "大模型不可用，下次行驶前无法使用。"
 msgid "Big model unavailable, {} is driving until the next drive."
 msgstr "大模型不可用，下次行驶前由 {} 驾驶。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Blind Spot Delay Time"
-msgstr "盲区检测延迟"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Blinker Mode"
-msgstr "转向灯模式"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Blind Spot"
+msgstr "盲区"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Block Lane Change: Road Edge Detection"
@@ -492,6 +493,40 @@ msgstr "阻止变道：路沿检测"
 msgid "Blocks the lane change if the model sees a road edge on your signaled side."
 msgstr "当模型在你打转向灯的一侧检测到路沿时，阻止变道。"
 
+#: openpilot\selfdrive\ui\layouts\settings\settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
+msgid "Bluetooth"
+msgstr "蓝牙"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth UART not available"
+msgstr "蓝牙 UART 不可用"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth UART not exposed by this AGNOS kernel"
+msgstr "当前 AGNOS 内核未暴露蓝牙 UART"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth disabled"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth is not installed"
+msgstr "蓝牙未安装"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth power node not detected"
+msgstr "未检测到蓝牙电源节点"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth radio hardware not detected"
+msgstr "未检测到蓝牙射频硬件"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Bluetooth service is stopped"
+msgstr "蓝牙服务已停止"
+
 #: openpilot\selfdrive\ui\widgets\pairing_dialog.py
 msgid "Bookmark connect.comma.ai to your home screen to use it like an app"
 msgstr "将 connect.comma.ai 添加到主屏幕，像应用一样使用"
@@ -500,27 +535,20 @@ msgstr "将 connect.comma.ai 添加到主屏幕，像应用一样使用"
 msgid "Bottom"
 msgstr "底部"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "C3x Lite Hardware"
-msgstr "C3X Lite 硬件"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "CANFD Debug"
-msgstr "CANFD 调试"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "CANFD HDA2"
-msgstr "CANFD HDA2"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Button Mapping"
+msgstr "按钮映射"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "CHANGE"
 msgstr "更改"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "CHECK"
-msgstr "检查"
+msgstr "检测"
 
 #: openpilot\selfdrive\ui\widgets\exp_mode_button.py
 msgid "CHILL MODE ON"
@@ -559,10 +587,7 @@ msgstr "校准完成"
 msgid "Calibration failed"
 msgstr "校准失败"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Camera Yaw Trim"
-msgstr "相机偏航修正"
-
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\system\ui\tici_reset.py
 #: openpilot\system\ui\widgets\confirm_dialog.py
@@ -572,13 +597,17 @@ msgstr "相机偏航修正"
 msgid "Cancel"
 msgstr "取消"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cancel Button Mode"
 msgstr "取消按钮模式"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Cancel Download"
 msgstr "取消下载"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cancel Long"
+msgstr "取消长按"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Cancel Verification"
@@ -604,33 +633,33 @@ msgstr "仅车辆"
 msgid "Car Only: Use Speed Limit data only from Car"
 msgstr "仅车辆：只使用车辆限速数据。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Carrot Cruise ATC Decel"
-msgstr "Carrot 巡航 ATC 减速强度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Carrot Cruise Decel"
-msgstr "Carrot 巡航减速强度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Carrot Navi HUD Profile"
-msgstr "Carrot HUD 地图配置"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
+msgid "Carrot"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Tuning"
-msgstr "Carrot 调校"
+msgid "Carrot ATC Turn Signal"
+msgstr "Carrot ATC 转向灯"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Nav Panel Opacity"
+msgstr "Carrot 导航面板透明度"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Nav Panel Side"
+msgstr "Carrot 导航面板位置"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Carrot Navi Debug"
+msgstr "Carrot 导航调试"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Carrot YouTube Live"
-msgstr "Carrot YouTube 直播"
+msgid "Carrot Web Panel"
+msgstr "Carrot 网页面板"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Carrot YouTube Quality"
-msgstr "Carrot YouTube 画质"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Carrot YouTube Timestamp"
-msgstr "Carrot YouTube 时间戳"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "CarrotCruise"
+msgstr "CarrotCruise"
 
 #: openpilot\system\ui\widgets\network.py
 msgid "Cellular Metered"
@@ -644,6 +673,22 @@ msgstr "更改语言"
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Changing this setting will restart sunnypilot if the car is powered on."
 msgstr "车辆通电时更改此设置将重启 sunnypilot。"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Check Chestnut"
+msgstr "检测 Chestnut"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Checks USB 5 Gbps, firmware, 12V/PCIe, and GPU execution."
+msgstr "检测 USB 5 Gbps、固件、12V/PCIe 和 GPU 执行状态"
+
+#: openpilot\selfdrive\ui\layouts\settings\settings.py
+msgid "Chestnut AI"
+msgstr "Chestnut AI 加速器"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Chestnut Status"
+msgstr "Chestnut 状态"
 
 #: openpilot\system\ui\tici_setup.py
 msgid "Choose Software to Use"
@@ -685,79 +730,91 @@ msgstr "关闭"
 msgid "Cloud"
 msgstr "云端"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD"
 msgstr "仪表 HUD"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster HUD (external display required)"
+msgstr "仪表 HUD（需要外接副屏）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Brightness"
 msgstr "仪表 HUD 亮度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Camera View Mode"
 msgstr "仪表 HUD 相机视图模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Core Mode"
 msgstr "仪表 HUD 核心模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Debug"
 msgstr "仪表 HUD 调试"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Encoder"
 msgstr "仪表 HUD 编码器"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Live FPS"
 msgstr "仪表 HUD 实时帧率"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Mirror"
 msgstr "仪表 HUD 镜像"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Orientation"
 msgstr "仪表 HUD 方向"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Panel Layout"
 msgstr "仪表 HUD 面板布局"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Priority"
 msgstr "仪表 HUD 优先级"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Radar Display"
 msgstr "仪表 HUD 雷达显示"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Radar Info"
 msgstr "仪表 HUD 雷达信息"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Radar Source Color"
 msgstr "仪表 HUD 雷达颜色源"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Screen Mode"
 msgstr "仪表 HUD 屏幕模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster HUD Theme"
 msgstr "仪表 HUD 主题"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster Map"
+msgstr "仪表地图"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cluster Map Profile"
+msgstr "仪表地图配置"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster Navigation Map FPS"
 msgstr "仪表导航地图帧率"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster Navigation Map Theme"
 msgstr "仪表导航地图主题"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cluster Navigation Map Type"
 msgstr "仪表导航地图类型"
 
@@ -768,6 +825,10 @@ msgstr "正在收集动态数据 — 请直线行驶"
 #: openpilot\selfdrive\ui\layouts\settings\imu_calibration.py
 msgid "Collecting static data — keep parked"
 msgstr "正在收集静态数据 — 请保持停车"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Color radar tracks by their detection source."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 msgid "Colors represent vehicle fingerprint status:"
@@ -797,11 +858,20 @@ msgstr "正在计算校准..."
 msgid "Computing..."
 msgstr "正在计算..."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 #: openpilot\system\ui\tici_reset.py
 msgid "Confirm"
 msgstr "确认"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Confirm pairing with \"{}\"?"
+msgstr "确认与“{}”配对？"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Connect"
+msgstr "连接"
 
 #: openpilot\system\ui\tici_setup.py
 #: openpilot\system\ui\tici_updater.py
@@ -812,6 +882,14 @@ msgstr "连接 Wi-Fi"
 msgid "Connect to internet to check for updates. sunnypilot won't automatically start until it connects to internet to check for updates."
 msgstr "请连接互联网以检查更新。sunnypilot 在连接互联网检查更新之前不会自动启动。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Connected"
+msgstr "已连接"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Connection Check"
+msgstr "连接检测"
+
 #: openpilot\system\ui\tici_setup.py
 msgid "Continue"
 msgstr "继续"
@@ -819,18 +897,6 @@ msgstr "继续"
 #: openpilot\system\ui\tici_setup.py
 msgid "Continue without Wi-Fi"
 msgstr "不连接 Wi-Fi 继续"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Continuous Lane Change"
-msgstr "连续变道"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Continuous Lane Change Count"
-msgstr "连续变道次数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Continuous Lane Change Interval"
-msgstr "连续变道间隔"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Controls state of the device after boot/sleep."
@@ -840,7 +906,7 @@ msgstr "控制设备启动/唤醒后的状态。"
 msgid "Cooperative Steering (Beta)"
 msgstr "协同转向（Beta）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Countdown Mode"
 msgstr "倒计时模式"
 
@@ -848,110 +914,101 @@ msgstr "倒计时模式"
 msgid "Country"
 msgstr "国家/地区"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Cruise"
 msgstr "巡航"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Button Long Press Delay"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise +"
+msgstr "巡航 +"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise + Long"
+msgstr "巡航 + 长按"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Button Long Delay"
 msgstr "巡航按钮长按延迟"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cruise Button Mode"
 msgstr "巡航按钮模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Button Test 1"
-msgstr "巡航按钮测试 1"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Buttons & Speed"
+msgstr "巡航按钮与速度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Button Test 2"
-msgstr "巡航按钮测试 2"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Gap Levels"
+msgstr "跟车距离档位数"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Button Test 3"
-msgstr "巡航按钮测试 3"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Max Acceleration 0"
-msgstr "巡航最大加速度 0"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Max Acceleration 1"
-msgstr "巡航最大加速度 1"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Max Acceleration 2"
-msgstr "巡航最大加速度 2"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Max Acceleration 3"
-msgstr "巡航最大加速度 3"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Max Acceleration 4"
-msgstr "巡航最大加速度 4"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Max Acceleration 5"
-msgstr "巡航最大加速度 5"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Max Acceleration 6"
-msgstr "巡航最大加速度 6"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cruise On Distance"
 msgstr "达到设定距离自动开启"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Preset Speed 1"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 1"
 msgstr "巡航预设速度 1"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Preset Speed 2"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 2"
 msgstr "巡航预设速度 2"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Preset Speed 3"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 3"
 msgstr "巡航预设速度 3"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Preset Speed 4"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 4"
 msgstr "巡航预设速度 4"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Preset Speed 5"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed 5"
 msgstr "巡航预设速度 5"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Preset Speed Unit"
-msgstr "巡航预设速度单位"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed Unit"
+msgstr "巡航速度步进"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Speed Unit (Basic)"
+msgstr "巡航速度步进（基础）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise −"
+msgstr "巡航 −"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Cruise − Long"
+msgstr "巡航 − 长按"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Current State"
+msgstr "当前状态"
 
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 msgid "Current Version"
 msgstr "当前版本"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Curve Speed"
+msgstr "弯道速度"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Curve Speed Factor"
 msgstr "弯道限速系数"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Curve Speed Factor (Highway)"
 msgstr "弯道限速系数（高速）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Curve Speed Lower Limit"
 msgstr "弯道限速下限"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Custom ACC Speed Increments"
 msgstr "自定义 ACC 速度增量"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Custom Lateral Torque"
-msgstr "自定义横向扭矩"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
 msgid "Custom Longitudinal Tuning"
@@ -960,10 +1017,6 @@ msgstr "自定义纵向调校"
 #: openpilot\system\ui\tici_setup.py
 msgid "Custom Software"
 msgstr "自定义软件"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Custom Steer Ratio"
-msgstr "自定义转向比"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Customize Lane Change"
@@ -1005,9 +1058,29 @@ msgstr "下载"
 msgid "Danger Zone Cost"
 msgstr "危险区域成本"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Dark"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Database Update"
 msgstr "数据库更新"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug Graph"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug Graph Right"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Debug System"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\onboarding.py
 msgid "Decline"
@@ -1017,6 +1090,7 @@ msgstr "拒绝"
 msgid "Decline, uninstall sunnypilot"
 msgstr "拒绝并卸载 sunnypilot"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
@@ -1031,8 +1105,11 @@ msgstr "默认：设备正常启动/唤醒，随时可以接管。"
 msgid "Delay before lateral control resumes after the turn signal ends."
 msgstr "转向灯关闭后，横向控制恢复前的延迟时间。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Description"
+msgstr "说明"
+
 #: openpilot\selfdrive\ui\layouts\settings\settings.py
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Developer"
 msgstr "开发者"
@@ -1050,6 +1127,10 @@ msgstr "设备"
 msgid "Device must be registered with the comma.ai backend to pair."
 msgstr "设备必须先在 comma.ai 后台注册才能配对。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Device name"
+msgstr "设备名称"
+
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
 msgstr "设备温度过高。系统正在降温，完成后才能启动。当前内部组件温度：%1"
@@ -1066,18 +1147,13 @@ msgstr ""
 msgid "Disable"
 msgstr "禁用"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Disable Blind Spot"
 msgstr "禁用盲区检测"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 msgid "Disable Driver Monitoring"
 msgstr "禁用驾驶员监控"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Disable Min Steer Speed"
-msgstr "禁用最低转向速度"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\software.py
 msgid "Disable Updates"
@@ -1090,6 +1166,14 @@ msgstr "禁用驾驶员监控（无需舱内摄像头），效果类似 LITE 模
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
 msgstr "关闭 sunnypilot 纵向控制（alpha）开关，以启用智能巡航按钮管理。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Disconnect"
+msgstr "断开连接"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Discoverable"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Disengage"
@@ -1129,7 +1213,6 @@ msgstr "脱离以开始校准"
 msgid "Disengage: ALC will disengage when the brake pedal is pressed."
 msgstr "脱离：踩下制动踏板时，ALC 将脱离。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Display"
 msgstr "显示"
@@ -1173,6 +1256,14 @@ msgstr "距离"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Distance Cost"
 msgstr "距离成本"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Distance after the speed limit point to resume normal cruise."
+msgstr "经过限速点后恢复正常巡航的距离。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Distance before the turn to end control."
+msgstr "弯道前结束控制的距离。"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Distraction Detection Level"
@@ -1222,6 +1313,10 @@ msgstr "正在下载地图..."
 msgid "Downloading..."
 msgstr "正在下载..."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Draw radar tracks on the external cluster."
+msgstr ""
+
 #: openpilot\selfdrive\ui\mici\layouts\settings\imu_calibration.py
 msgid "Drive straight"
 msgstr "直线行驶"
@@ -1243,27 +1338,35 @@ msgstr "驾驶员摄像头不可用"
 msgid "Drives"
 msgstr "行程"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Driving Left"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Driving Mode"
+msgstr "驾驶模式"
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Driving Personality"
 msgstr "驾驶风格"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Driving Right"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
 msgid "Dynamic"
 msgstr "动态"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Dynamic Blind Spot Distance"
 msgstr "动态盲区距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Dynamic Blind Spot Range"
 msgstr "动态盲区范围"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Dynamic Follow Time"
-msgstr "动态跟车时距"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Dynamic Follow Time on Lane Change"
 msgstr "变道时动态跟车时距"
 
@@ -1275,7 +1378,6 @@ msgstr "东"
 msgid "E.T."
 msgstr "扭矩"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\system\ui\widgets\network.py
 msgid "EDIT"
 msgstr "编辑"
@@ -1301,13 +1403,21 @@ msgstr "抢先体验：成为 sunnypilot 赞助者"
 msgid "Eco"
 msgstr "经济"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Eco Cruise Control"
 msgstr "经济巡航控制"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Eco is gentlest, Normal balances a prompt start with smooth catch-up, and Sport is more responsive."
 msgstr "经济最柔和，标准兼顾迅速起步与平顺追赶，运动则更灵敏。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Edit"
+msgstr "编辑"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Ego Bottom"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\developer.py
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
@@ -1337,33 +1447,21 @@ msgstr "启用加速控制器"
 msgid "Enable Always Offroad"
 msgstr "启用始终离路"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Enable Bluetooth"
+msgstr "启用蓝牙"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Enable Carrot Blind Spot Data"
 msgstr "启用 Carrot 盲区数据"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enable Amap Map Data"
-msgstr "启用高德地图数据"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enable OSM Map Data"
-msgstr "启用 OSM 离线地图数据"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
-msgstr "使用离线 OSM 地图数据获取限速和路名。关闭后完全忽略离线地图——当你更信任导航数据时很有用，因为离线数据可能已过时。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enable Amap Navigation"
-msgstr "启用高德导航"
+msgid "Enable Carrot Navi v2 (7714)"
+msgstr "启用 Carrot 导航 v2（7714）"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Enable Carrot Navigation"
 msgstr "启用Carrot导航"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Enable Corner Radar"
-msgstr "启用角雷达"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Enable Custom Tuning"
@@ -1377,7 +1475,11 @@ msgstr "启用动态实验控制"
 msgid "Enable Lane Departure Warnings"
 msgstr "启用车道偏离警示"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable OSM Map Data"
+msgstr "启用 OSM 离线地图数据"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Enable Radar Tracks"
 msgstr "启用雷达跟踪"
 
@@ -1388,10 +1490,6 @@ msgstr "启用漫游"
 #: openpilot\selfdrive\ui\layouts\settings\developer.py
 msgid "Enable SSH"
 msgstr "启用 SSH"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Enable Speed TF"
-msgstr "启用速度 TF"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Enable Standstill Timer"
@@ -1441,6 +1539,10 @@ msgstr "启用 sunnypilot"
 msgid "Enable the beloved MADS feature. Disable toggle to revert back to stock sunnypilot engagement/disengagement."
 msgstr "启用备受喜爱的 MADS 功能。关闭此开关以恢复为默认的 sunnypilot 接管/脱离方式。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Enable the cluster map HUD profile overlay."
+msgstr ""
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Enable the sunnypilot longitudinal control (alpha) toggle to allow Experimental mode."
 msgstr "启用 sunnypilot 纵向控制（alpha）开关，以允许实验模式。"
@@ -1485,6 +1587,10 @@ msgstr "强制使用扭矩横向控制"
 msgid "Enforces the torque lateral controller to use the fixed values instead of the learned values from Self-Tune. Enabling this toggle overrides Self-Tune values."
 msgstr "强制扭矩横向控制器使用固定值，而非自调校的学习值。启用此开关将覆盖自调校值。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Engage Chime Volume"
+msgstr "接管提示音音量"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Engage lateral and longitudinal control with cruise control engagement."
 msgstr "随巡航控制接管同时启用横向与纵向控制。"
@@ -1497,9 +1603,9 @@ msgstr "请确认输入的 URL 有效,且设备的网络连接正常。"
 msgid "Enter APN"
 msgstr "输入 APN"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enter Amap API Key"
-msgstr "输入高德API密钥"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Enter PIN"
+msgstr "输入 PIN"
 
 #: openpilot\system\ui\widgets\network.py
 msgid "Enter SSID"
@@ -1516,6 +1622,10 @@ msgstr "输入车型年份（如 2021）和车型（Toyota Corolla）："
 #: openpilot\system\ui\widgets\network.py
 msgid "Enter new tethering password"
 msgstr "输入新的网络共享密码"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Enter passkey"
+msgstr "输入配对码"
 
 #: openpilot\system\ui\widgets\network.py
 msgid "Enter password"
@@ -1573,14 +1683,11 @@ msgstr "实验性功能，为配备机械手刹的 Subaru Global 车型启用走
 msgid "Experimental mode is currently unavailable on this car since the car's stock ACC is used for longitudinal control."
 msgstr "此车型当前无法使用实验模式，因为纵向控制使用的是原厂 ACC。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Extended Blinker Test"
-msgstr "扩展转向灯测试"
-
 #: openpilot\selfdrive\ui\sunnypilot\layouts\sidebar.py
 msgid "FAULT"
 msgstr "故障"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "FETCHING..."
 msgstr "获取中..."
@@ -1605,13 +1712,17 @@ msgstr "无法获取可用分支。请确认已连接网络后重试。"
 msgid "Failed to register with comma.ai backend. It will not connect or upload to comma.ai servers, and receives no support from comma.ai. If this is a device purchased at comma.ai/shop, open a ticket at https://comma.ai/support."
 msgstr "无法向 comma.ai 后端注册。设备不会连接或上传到 comma.ai 服务器，也不享有 comma.ai 支持。若从 comma.ai/shop 购买，请在 https://comma.ai/support 提交工单。"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Fan Speed"
+msgstr "风扇转速"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Favorites"
 msgstr "收藏"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "Fetching Latest Models"
-msgstr "正在获取最新模型"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fine-tune stop distance for traffic lights (cm)."
+msgstr "红绿灯停车距离的微调（厘米）。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 msgid "Fingerprinted automatically"
@@ -1640,7 +1751,15 @@ msgstr "固定"
 msgid "Fixed: Adds a fixed offset [Speed Limit + Offset]"
 msgstr "固定：添加固定偏移量 [限速 + 偏移量]"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Flash an AGNOS with Bluetooth support or plug in a USB Bluetooth dongle."
+msgstr "刷入支持蓝牙的 AGNOS 系统，或插入 USB 蓝牙适配器。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fold the phone app traffic congestion report into map-based cruise control. Only ever lowers the target speed. Needs Smart Cruise Control - Map to be on as well."
+msgstr "将手机 App 的路况拥堵数据并入地图巡航控制，只会降低目标车速。需同时开启「地图智能巡航」。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Follow Deceleration Boost"
 msgstr "跟车减速增强"
 
@@ -1656,25 +1775,29 @@ msgstr "跟车时间 - 从容"
 msgid "Follow Time - Standard"
 msgstr "跟车时间 - 标准"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Follow Time Gap 1"
 msgstr "跟车时距 1"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Follow Time Gap 2"
 msgstr "跟车时距 2"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Follow Time Gap 3"
 msgstr "跟车时距 3"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Follow Time Gap 4"
 msgstr "跟车时距 4"
 
 #: openpilot\system\ui\sunnypilot\widgets\sunnylink_pairing_dialog.py
 msgid "Follow the prompts to complete the pairing process"
 msgstr "按照提示完成配对流程"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Following Distance"
+msgstr "跟车距离"
 
 #: openpilot\system\ui\mici_reset.py
 msgid ""
@@ -1734,67 +1857,76 @@ msgstr ""
 msgid "For secure backup, restore, and remote configuration"
 msgstr "用于安全备份、恢复和远程配置"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\system\ui\widgets\network.py
 msgid "Forget"
-msgstr "忘记"
+msgstr "移除"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Forget \"{}\"?"
+msgstr "是否忘记“{}”？"
 
 #: openpilot\system\ui\widgets\network.py
 msgid "Forget Wi-Fi Network \"{}\"?"
 msgstr "要忘记 Wi-Fi 网络“{}”吗？"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Blinker Trigger Distance"
 msgstr "匝道转向灯触发距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Blinker Trigger Distance (Highway)"
 msgstr "匝道转向灯触发距离（高速）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fork Control"
+msgstr "匝道控制"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Decel Rate"
 msgstr "匝道减速率"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Decel Rate (Highway)"
 msgstr "匝道减速率（高速）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Decel Trigger Distance"
 msgstr "匝道减速触发距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Decel Trigger Distance (Highway)"
 msgstr "匝道减速触发距离（高速）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Keep Speed"
 msgstr "匝道保持速度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Keep Speed (Highway)"
 msgstr "匝道保持速度（高速）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Merge Distance Offset"
 msgstr "匝道汇入距离偏移"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Merge Distance Offset (Highway)"
 msgstr "匝道汇入距离偏移（高速）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Minimum Speed"
 msgstr "匝道最低速度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Minimum Speed (Highway)"
 msgstr "匝道最低速度（高速）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Navi Trigger Distance"
 msgstr "导航匝道触发距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Navi Trigger Distance (Highway)"
 msgstr "导航匝道触发距离（高速）"
 
@@ -1814,6 +1946,14 @@ msgstr "GB"
 msgid "GOOD"
 msgstr "良好"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "GPU Clock"
+msgstr "GPU 频率"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "GPU Usage"
+msgstr "GPU 使用率"
+
 #: openpilot\selfdrive\ui\sunnypilot\onroad\circular_alerts.py
 msgid ""
 "GREEN\n"
@@ -1821,6 +1961,10 @@ msgid ""
 msgstr ""
 "绿灯\n"
 "通行"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Gap"
+msgstr "间距"
 
 #: openpilot\system\ui\tici_setup.py
 msgid "Getting Started"
@@ -1842,13 +1986,21 @@ msgstr "在手机上前往 https://connect.comma.ai"
 msgid "Green Traffic Light Alert (Beta)"
 msgstr "绿灯提醒（Beta）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "HDP Use"
-msgstr "HDP 使用"
-
 #: openpilot\selfdrive\ui\layouts\sidebar.py
 msgid "HIGH"
 msgstr "高"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Haptic Feedback (Speed Camera)"
+msgstr "测速相机触觉反馈"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Hardware / Tests"
+msgstr "硬件 / 测试"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Hardware H.264"
+msgstr ""
 
 #: openpilot\system\ui\widgets\network.py
 msgid "Hidden Network"
@@ -1862,25 +2014,37 @@ msgstr "隐藏 Firehose 提示"
 msgid "Hide the Firehose prompt on the home screen. The prompt will not be rendered when this is enabled."
 msgstr "隐藏首页的 Firehose 提示。启用后该提示将完全不再渲染。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Highway Curve Aggressiveness"
 msgstr "高速弯道激进程度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Hotspot on Boot"
-msgstr "开机启动热点"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\trips.py
 msgid "Hours"
 msgstr "小时"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How aggressively the car reacts to lead car acceleration changes."
+msgstr "前车加减速时本车的响应积极程度。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How early to react to curves on normal roads. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
+msgstr "普通道路上对弯道的响应早晚。数值越小，对越缓的弯也会响应。仅在「智能巡航控制（视觉）」开启时生效。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How early to react to curves on the highway. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
+msgstr "高速公路上对弯道的响应早晚。数值越小，对越缓的弯也会响应。仅在「智能巡航控制（视觉）」开启时生效。"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "How long the screen saver runs before the screen turns off."
 msgstr "屏幕保护运行多久后关闭屏幕。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Hyundai Camera SCC"
-msgstr "现代摄像头自适应巡航"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How much lateral acceleration to allow at or above 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
+msgstr "80 km/h 及以上允许的横向加速度，单位为百分比。数值越大过弯越快。100 为中性值。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How much lateral acceleration to allow below 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
+msgstr "80 km/h 以下允许的横向加速度，单位为百分比。数值越大过弯越快。100 为中性值。"
 
 #: openpilot\selfdrive\ui\layouts\settings\settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
@@ -1936,9 +2100,21 @@ msgstr "信息：显示当前道路限速。"
 msgid "Install"
 msgstr "安装"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Install BlueZ to enable Bluetooth HID remotes and device management."
+msgstr "安装 BlueZ 以启用蓝牙 HID 遥控器与设备管理。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Install Bluetooth"
+msgstr "安装蓝牙"
+
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 msgid "Install Update"
 msgstr "安装更新"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Installing..."
+msgstr "安装中..."
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Intelligent Cruise Button Management (ICBM) (Alpha)"
@@ -1968,6 +2144,10 @@ msgstr "它可能损坏你的设备和/或车辆。"
 msgid "It may not comply with relevant safety standards."
 msgstr "它可能不符合相关安全标准。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "JPEG"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Jerk Cost"
 msgstr "加加速度成本"
@@ -1996,10 +2176,6 @@ msgstr "横加系数"
 msgid "L.S."
 msgstr "前车速度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "LDWS Vehicle"
-msgstr "车道偏离预警车辆"
-
 #: openpilot\selfdrive\ui\sunnypilot\onroad\circular_alerts.py
 msgid ""
 "LEAD VEHICLE\n"
@@ -2008,9 +2184,17 @@ msgstr ""
 "前车\n"
 "起步"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "LFA"
+msgstr "LFA"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "LFA Button Mode"
 msgstr "车道保持按钮模式"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "LFA Long"
+msgstr "LFA 长按"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onroad_info_panel.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\speed_limit.py
@@ -2025,107 +2209,39 @@ msgstr "加载中"
 msgid "LTE"
 msgstr "LTE"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Change BSD"
-msgstr "变道盲区检测"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lane Guide Blocking"
+msgstr "车道引导封锁"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Change Delay"
-msgstr "变道延迟"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Lane Left"
+msgstr "向左变道"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Change Need Torque"
-msgstr "变道需要手力"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Change Start Cost"
-msgstr "变道起步代价"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Line Check"
-msgstr "车道线检查"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Offset Adjust"
-msgstr "车道偏移调整"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Stabilization Time"
-msgstr "车道稳定时间"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Lane Right"
+msgstr "向右变道"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Last checked {}"
 msgstr "最后检查：{}"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Acceleration Cost"
-msgstr "横向加速度代价"
-
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Lateral Acceleration Factor"
 msgstr "横向加速度系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Jerk Cost"
-msgstr "横向急动度代价"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Lateral Jerk Torque Controller"
 msgstr "横向 Jerk 扭矩控制器"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral MPC Input Offset"
-msgstr "横向输入偏移"
-
 #: openpilot\selfdrive\ui\layouts\settings\developer.py
 msgid "Lateral Maneuver Mode"
 msgstr "横向机动模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Motion Cost"
-msgstr "横向运动代价"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Path Cost"
-msgstr "横向路径代价"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Smooth Seconds"
-msgstr "横向平滑时间"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Steering Rate Cost"
-msgstr "横向转向速率代价"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Lateral Suspend Angle"
 msgstr "横向挂起角度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Torque Accel Factor"
-msgstr "横向扭矩加速度系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Torque Derivative"
-msgstr "横向扭矩微分系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Torque Feedforward"
-msgstr "横向扭矩前馈系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Torque Friction"
-msgstr "横向扭矩摩擦系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Torque Integral Velocity"
-msgstr "横向扭矩积分速度系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Torque Proportional"
-msgstr "横向扭矩比例速度系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Lead Acceleration Response"
 msgstr "前车加速响应"
 
@@ -2136,6 +2252,10 @@ msgstr "前车危险系数"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Lead Departure Alert (Beta)"
 msgstr "前车起步提醒（Beta）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Left"
+msgstr "左侧"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Lenient"
@@ -2149,9 +2269,25 @@ msgstr "自调校宽松设置（Beta）"
 msgid "Less strict settings when using Self-Tune. This allows torqued to be more forgiving when learning values."
 msgstr "使用自调校时采用较宽松的设置。这让 torqued 在学习值时更加宽容。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Let the Carrot app's turn instruction act as a turn signal. This reaches the car's real turn signal, so it is off by default."
+msgstr "允许 Carrot 应用的转向指令充当转向灯。该功能会作用到车辆真实转向灯，因此默认关闭。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Let the phone app guided-lane arrows block lane changes toward non-guided lanes. Only ever adds blocking."
+msgstr "允许手机 App 的车道引导箭头封锁向非引导车道的变道，只会增加封锁。"
+
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Lets you choose how sunnypilot starts, catches up, and settles at the cruise speed. Emergency braking and stopping are unchanged."
 msgstr "让您选择 sunnypilot 如何起步、追赶并稳定到巡航速度。紧急制动和停车不受影响。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Light"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Linear"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
 msgid "Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logic."
@@ -2179,17 +2315,9 @@ msgstr "本地"
 msgid "Long Press Increment"
 msgstr "长按增量"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Longitudinal Actuator Delay"
-msgstr "纵向执行器延迟补偿"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Longitudinal Feedforward"
-msgstr "纵向前馈系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Longitudinal Integral Velocity"
-msgstr "纵向积分速度系数"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Longitudinal Gains"
+msgstr "纵向控制增益"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Longitudinal MPC Tuning"
@@ -2198,10 +2326,6 @@ msgstr "纵向 MPC 调校"
 #: openpilot\selfdrive\ui\layouts\settings\developer.py
 msgid "Longitudinal Maneuver Mode"
 msgstr "纵向机动模式"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Longitudinal Proportional Velocity"
-msgstr "纵向比例速度系数"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Looks ahead at planned steering to reduce sudden corrections, so the wheel moves more smoothly through turns. Works with Self-Tune and custom tuning. Thanks to @twilsonco for the implementation."
@@ -2255,37 +2379,37 @@ msgstr "仅地图"
 msgid "Map Only: Use Speed Limit data only from OpenStreetMaps"
 msgstr "仅地图：只使用 OpenStreetMaps 限速数据。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Map Turn Speed Factor"
 msgstr "地图弯道速度系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Mapbox Style"
-msgstr "Mapbox 地图样式"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Mapd Version"
 msgstr "Mapd 版本"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Max Angle Frames"
-msgstr "最大角度帧数"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Mapping off"
+msgstr "映射关闭"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Max Steer Angle"
-msgstr "自定义最大转向角"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Mapping on"
+msgstr "映射开启"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Master switch for the external cluster HUD renderer."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Max Time Offroad"
 msgstr "最长离路时间"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Max Time Offroad (min)"
-msgstr "Max Time Offroad (min)"
-
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Maximize your training data uploads to improve openpilot's driving models."
 msgstr "最大化训练数据上传，以改进 openpilot 的驾驶模型。"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Memory Temp"
+msgstr "显存温度"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\trips.py
 msgid "Miles"
@@ -2295,9 +2419,9 @@ msgstr "英里"
 msgid "Minimum Speed to Pause Lateral Control"
 msgstr "暂停横向控制的最低速度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Model Speed Compensation"
-msgstr "模型速度补偿"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Mirror the external cluster display horizontally."
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Model Status"
@@ -2315,19 +2439,11 @@ msgstr "适中"
 msgid "Modular Assistive Driving System (MADS)"
 msgstr "模块化辅助驾驶系统（MADS）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Mute Door"
-msgstr "静音车门"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Mute Seatbelt"
-msgstr "静音安全带"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "My Driving Mode"
 msgstr "我的驾驶模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "My Driving Mode Auto"
 msgstr "我的驾驶模式自动"
 
@@ -2353,24 +2469,43 @@ msgstr "无"
 msgid "NW"
 msgstr "西北"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Name shown to other Bluetooth devices."
+msgstr "其他蓝牙设备看到的名称。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navi"
+msgstr "导航"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Navigation"
 msgstr "导航"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Control (advanced)"
+msgstr "导航控制（高级）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Navigation Cruise Speed"
+msgstr "导航巡航速度"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Navigation Speed Control"
+msgstr "导航限速控制"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Navigation Speed Ctrl End Distance"
 msgstr "导航限速控制结束距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Navigation Speed Ctrl Mode"
 msgstr "导航限速控制模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Navigation Speed Decel Rate"
 msgstr "导航限速减速率"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Navigation Speed Safety Factor"
 msgstr "导航限速安全余量"
 
@@ -2388,13 +2523,14 @@ msgstr "网络"
 msgid "Neural Network Lateral Control (NNLC)"
 msgstr "神经网络横向控制（NNLC）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "New Lane Width Difference"
-msgstr "新车道宽度差阈值"
-
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "No"
 msgstr "否"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "No Bluetooth adapter found"
+msgstr "未找到蓝牙适配器"
 
 #: openpilot\selfdrive\ui\widgets\ssh_key.py
 msgid "No SSH keys found for user '{}'"
@@ -2408,6 +2544,14 @@ msgstr "此 URL 下未找到自定义软件。"
 msgid "No custom software found at this URL: {url}"
 msgstr "此 URL 下未找到自定义软件:{url}"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "No devices found"
+msgstr "未找到设备"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "No eGPU (big model) is selected. The default model is running."
+msgstr "未选择 eGPU（大模型），正在运行默认模型。"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 msgid "No models are available for this hardware yet. Connect to the internet and refresh the model list."
@@ -2416,6 +2560,10 @@ msgstr "此硬件暂无可用的模型。请连接互联网并刷新模型列表
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 msgid "No models available"
 msgstr "无可用模型"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "No navigation event received yet."
+msgstr "尚未收到导航事件。"
 
 #: openpilot\selfdrive\ui\layouts\settings\imu_calibration.py
 msgid "No quality data"
@@ -2433,9 +2581,11 @@ msgstr "未选择车辆"
 msgid "No, we selectively pull a subset of your segments."
 msgstr "不，我们只选择性地上传您的部分行驶片段。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 msgid "None"
-msgstr "无"
+msgstr "无动作"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 msgid "None: No Offset"
@@ -2448,6 +2598,10 @@ msgstr "不，正常驾驶即可。"
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Normal"
 msgstr "标准"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Normal Road Curve Aggressiveness"
+msgstr "普通道路弯道激进程度"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Not Paired"
@@ -2498,6 +2652,7 @@ msgstr "无需轻推"
 msgid "N·dm"
 msgstr "N·dm"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\onroad\developer_ui\elements.py
 msgid "OFF"
 msgstr "关"
@@ -2507,11 +2662,17 @@ msgstr "关"
 msgid "OFFLINE"
 msgstr "离线"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 #: openpilot\system\ui\widgets\confirm_dialog.py
 #: openpilot\system\ui\widgets\html_render.py
 msgid "OK"
 msgstr "确定"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "ON"
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\sidebar.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\sidebar.py
@@ -2519,29 +2680,14 @@ msgid "ONLINE"
 msgstr "在线"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "ONNX BSD Interval"
-msgstr "ONNX 盲区检测间隔"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "ONNX BSD Smoothing"
-msgstr "ONNX 盲区检测平滑"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "ONNX BSD Threshold"
-msgstr "ONNX 盲区检测阈值"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "ONNX Lane Interval"
-msgstr "ONNX 车道检测间隔"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "ONNX Lane Threshold"
-msgstr "ONNX 车道检测阈值"
+msgid "OPEN"
+msgstr "打开"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "OSM"
 msgstr "OSM"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
@@ -2555,6 +2701,7 @@ msgid "Off: Disables the Speed Limit functions."
 msgstr "关：禁用限速功能。"
 
 #: openpilot\selfdrive\ui\mici\layouts\home.py
+#: openpilot\selfdrive\ui\widgets\carrot_web_dialog.py
 msgid "Offline"
 msgstr "离线"
 
@@ -2595,6 +2742,10 @@ msgstr "行车预览"
 msgid "Onroad Uploads"
 msgstr "行驶中上传"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
+msgstr "Carrot 导航面板的透明度，以百分比表示。默认 100。"
+
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Open"
 msgstr "打开"
@@ -2618,6 +2769,7 @@ msgid "Orientation"
 msgstr "安装方向"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "PAIR"
 msgstr "配对"
 
@@ -2629,6 +2781,10 @@ msgstr "PANDA"
 msgid "PAST WEEK"
 msgstr "过去一周"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "PCIe LTSSM"
+msgstr "PCIe 状态"
+
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "PREVIEW"
 msgstr "预览"
@@ -2637,9 +2793,13 @@ msgstr "预览"
 msgid "PRIME FEATURES:"
 msgstr "PRIME 功能："
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Paddle Mode"
-msgstr "换挡拨片模式"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Paddle −"
+msgstr "拨片 −"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Pair"
+msgstr "配对"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Pair App"
@@ -2656,6 +2816,10 @@ msgstr "绑定 GitHub 账号"
 #: openpilot\selfdrive\ui\widgets\setup.py
 msgid "Pair device"
 msgstr "配对设备"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Pair with \"{}\"?"
+msgstr "是否与“{}”配对？"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Pair with mobile app"
@@ -2678,9 +2842,18 @@ msgstr "将设备配对到您的 comma 账号"
 msgid "Pair your device with comma connect (connect.comma.ai) and claim your comma prime offer."
 msgstr "将设备与 comma connect（connect.comma.ai）配对，领取您的 comma prime 优惠。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Paired"
 msgstr "已配对"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Paired devices"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Pairing code: {}"
+msgstr "配对码：{}"
 
 #: openpilot\selfdrive\ui\layouts\settings\imu_calibration.py
 msgid "Park on level ground, then drive straight to calibrate the device orientation."
@@ -2689,34 +2862,6 @@ msgstr "将车辆停放在水平地面上，然后直线行驶以校准设备安
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Parse blind-spot / LiDAR / extBlinker fields from the 7706 UDP stream."
 msgstr "从 7706 UDP 数据流中解析盲区 / LiDAR / extBlinker 字段。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path"
-msgstr "轨迹"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path Color"
-msgstr "路径颜色"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path Color Cruise Off"
-msgstr "未巡航路径颜色"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path Color Lane"
-msgstr "车道路径颜色"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path Display Mode"
-msgstr "路径显示模式"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path Display Mode Lane"
-msgstr "车道路径显示模式"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path Offset"
-msgstr "路径偏移"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Pause"
@@ -2733,6 +2878,14 @@ msgstr "行驶速度低于所选速度且转向灯亮起时，暂停横向控制
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
 msgid "Pause: ALC will pause when the brake pedal is pressed."
 msgstr "暂停：踩下制动踏板时，ALC 将暂停。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Percent of nav speed to use as target (100 = exact limit)."
+msgstr "以导航限速为基准的目标速度百分比（100=严格按限速）。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Percent of the nav-recommended turn speed to use."
+msgstr "使用导航推荐过弯速度的百分比。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
 msgid "Percent: Adds a percent offset [Speed Limit + (Offset % Speed Limit)]"
@@ -2766,9 +2919,21 @@ msgstr "请重启后重试。"
 msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
 msgstr "驾驶员监控能见度不佳。请确保设备能清楚看到驾驶员。可在设备设置中检查。极端光照和/或非传统安装位置也可能触发此警报。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."
+msgstr "Carrot 导航面板在路上的位置。默认：右侧（紧邻速度显示）。"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Post-Blinker Delay"
 msgstr "转向灯后延迟"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Power Draw"
+msgstr "功率"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Power Limit"
+msgstr "功率上限"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
@@ -2799,6 +2964,10 @@ msgstr "预览车内摄像头以确保驾驶员监控视野良好。（车辆必
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Preview the onroad camera view while parked. (vehicle must be off)"
 msgstr "停车时预览行车摄像头画面。（车辆必须熄火）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Profile"
+msgstr "输入类型"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Province"
@@ -2859,9 +3028,17 @@ msgstr "重置"
 msgid "REVIEW"
 msgstr "查看"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Radar / Tracks"
+msgstr "雷达 / 目标"
+
 #: openpilot\system\ui\sunnypilot\widgets\sunnylink_pairing_dialog.py
 msgid "Re-enter the \"sunnylink\" panel to verify sponsorship status"
 msgstr "重新进入“sunnylink”面板以验证赞助状态"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Ready"
+msgstr "就绪"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
 msgid "Real-Time & Offline"
@@ -2896,9 +3073,9 @@ msgstr "重启设备"
 msgid "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line without a turn signal activated while driving over 31 mph (50 km/h)."
 msgstr "当车速超过 31 mph（50 km/h）且未打转向灯时，如果车辆偏离检测到的车道线，将收到重返车道的提醒。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Record Road Camera"
-msgstr "录制道路摄像头"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Receiving input"
+msgstr "接收输入中"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Record and Upload Driver Camera"
@@ -2916,13 +3093,9 @@ msgstr "行驶时录制并保存麦克风音频。音频将包含在 comma conne
 msgid "Refresh Model List"
 msgstr "刷新模型列表"
 
-#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
-msgid "refresh models"
-msgstr "刷新模型"
-
-#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
-msgid "fetching..."
-msgstr "获取中..."
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Refresh rate of the external cluster map, in frames per second."
+msgstr ""
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
@@ -2949,6 +3122,10 @@ msgstr "远程访问"
 msgid "Remote snapshots"
 msgstr "远程快照"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Remove all pairings and restart the Bluetooth service."
+msgstr "移除所有配对并重启蓝牙服务。"
+
 #: openpilot\selfdrive\ui\widgets\ssh_key.py
 msgid "Request timed out"
 msgstr "请求超时"
@@ -2958,6 +3135,10 @@ msgstr "请求超时"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Reset"
 msgstr "重置"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Reset Bluetooth"
+msgstr "重置蓝牙"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Reset Calibration"
@@ -3007,6 +3188,10 @@ msgstr "恢复设置"
 msgid "Restoring {progress}%"
 msgstr "正在恢复 {progress}%"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Retry"
+msgstr "重试"
+
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Review Training Guide"
 msgstr "查看训练指南"
@@ -3015,6 +3200,7 @@ msgstr "查看训练指南"
 msgid "Review the rules, features, and limitations of sunnypilot"
 msgstr "查看 sunnypilot 的规则、功能与限制"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Right"
 msgstr "右侧"
@@ -3023,15 +3209,23 @@ msgstr "右侧"
 msgid "Right & Bottom"
 msgstr "右侧与底部"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Road Speed Auto Adjust"
-msgstr "道路限速自动修正"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Camera"
+msgstr ""
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Limit Raising"
+msgstr "限速上调"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Road Speed Limit Offset"
 msgstr "道路限速偏移量"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Road Speed Limits"
+msgstr "道路限速"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Road Type"
 msgstr "道路类型"
 
@@ -3094,10 +3288,23 @@ msgstr "SUNNYLINK"
 msgid "SW"
 msgstr "西南"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Same Direction Speed Cam Filter"
 msgstr "同方向测速相机过滤"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Save"
+msgstr "保存"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Scale every alert sound, in percent. 100 keeps the current loudness."
+msgstr "按百分比缩放所有提示音。100 表示保持当前音量。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Scale the engage / disengage / reverse chimes, in percent."
+msgstr "按百分比缩放接管、退出接管与倒车提示音。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 msgid "Scan"
 msgstr "扫描"
@@ -3114,11 +3321,12 @@ msgstr "扫描二维码访问 sunnyhaibin 的 GitHub 赞助页面"
 msgid "Scanning Wi-Fi networks..."
 msgstr "正在扫描 Wi-Fi 网络..."
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\network.py
 msgid "Scanning..."
-msgstr "扫描中..."
+msgstr "搜索中..."
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "School Zone CAN Control"
 msgstr "学校区域 CAN 控制"
 
@@ -3206,10 +3414,18 @@ msgstr "选择更多手指数量可减少误触发。"
 msgid "Self-Tune"
 msgstr "自调校"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Send navigation-based speed limits to the car over CAN."
+msgstr "通过CAN把基于导航的限速信息发送给车辆。"
+
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Serial"
 msgstr "序列号"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "Serve the carrot tuning page (/nav_params) and four-corner radar visualisation (/radar) on port 8088."
+msgstr "在 8088 端口提供 Carrot 调参页面（/nav_params）和四角雷达可视化（/radar）。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Set a timer to delay the auto lane change operation when the blinker is used. No nudge on the steering wheel is required to auto lane change if a timer is set. Default is Nudge.<br>Please use caution when using this feature. Only use the blinker when traffic and road conditions permit."
@@ -3231,13 +3447,13 @@ msgstr "设置备份完成。"
 msgid "Settings restored. Confirm to restart the interface."
 msgstr "设置已恢复。确认以重启界面。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Share Data"
-msgstr "共享数据"
-
 #: openpilot\selfdrive\ui\mici\layouts\onboarding.py
 msgid "Sharing your data with comma helps improve openpilot and sunnypilot for everyone."
 msgstr "与 comma 分享您的数据有助于为所有人改进 openpilot 和 sunnypilot。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Shift the auto turn trigger point earlier or later."
+msgstr "让自动过弯触发点提前或延后。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Short Press Increment"
@@ -3251,57 +3467,9 @@ msgstr "显示高级控制"
 msgid "Show Blind Spot Warnings"
 msgstr "显示盲区警告"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Camera with Cluster"
-msgstr "仪表显示摄像头"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Custom Brightness"
-msgstr "自定义亮度显示"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Date Time"
-msgstr "显示日期时间"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Show Debug Log"
 msgstr "显示调试日志"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Debug UI"
-msgstr "显示调试界面"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Device State"
-msgstr "显示设备状态"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Lane Info"
-msgstr "显示车道信息"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Model View"
-msgstr "显示模型视图"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Path End"
-msgstr "路径终点显示"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Plot Mode"
-msgstr "显示绘图模式"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Radar Info"
-msgstr "显示雷达信息"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show Route Info"
-msgstr "显示路线信息"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Show TPMS"
-msgstr "显示胎压"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\display.py
 msgid "Show a screen saver when the device is offroad and idle, instead of turning the screen off."
@@ -3315,19 +3483,23 @@ msgstr "车辆静止时在 HUD 上显示计时器。"
 msgid "Show an indicator on the left side of the screen to display real-time vehicle acceleration and deceleration. This displays what the car is currently doing, not what the planner is requesting."
 msgstr "在屏幕左侧显示指示条，展示实时车辆加速和减速信息。显示的是车辆当前的实际状态，而非规划器的请求值。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Show debug overlays on the external cluster."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Shrink the follow distance as speed rises. Off disables it; the three profiles differ in how far up the speed range the gap keeps tightening."
+msgstr "车速升高时缩短跟车距离。关闭则不启用；三个配置的区别在于跟车距离持续收紧到多高的车速。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Side Blind Spot Delay"
 msgstr "侧向盲区延迟"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Side Radar Min Distance"
-msgstr "侧向雷达最小距离"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Side Relative Distance Time"
 msgstr "侧向相对距离时间"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Side vRel Distance Time"
 msgstr "侧向相对速度时间"
 
@@ -3347,10 +3519,6 @@ msgstr "智能巡航控制 - 视觉"
 msgid "Snooze Update"
 msgstr "延后更新"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Soft Hold on Cancel"
-msgstr "取消后自动驻车"
-
 #: openpilot\selfdrive\ui\layouts\settings\settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Software"
@@ -3360,50 +3528,41 @@ msgstr "软件"
 msgid "Software Delay:"
 msgstr "软件延迟："
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Software Menu"
-msgstr "软件菜单"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Software H.264"
+msgstr ""
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Sound Language"
-msgstr "提示音语言"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Sound Volume Adjust"
-msgstr "提示音音量调整"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Sound Volume Adjust Engage"
-msgstr "激活提示音音量"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Speed"
 msgstr "速度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed + Distance"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed Bump End Distance"
 msgstr "减速带结束距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed Bump Hold Time"
 msgstr "减速带保持时间"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed Bump Target Speed"
 msgstr "减速带目标速度"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed Bumps"
+msgstr "减速带"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed Camera Alert Time"
 msgstr "测速相机提前提醒时间"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed Camera Control Mode"
 msgstr "测速相机控制模式"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Speed Camera Haptic Alert"
-msgstr "测速相机震动提醒"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\speed_limit_settings.py
@@ -3418,9 +3577,21 @@ msgstr "限速偏移量"
 msgid "Speed Limit Source"
 msgstr "限速来源"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed Source PCM"
 msgstr "车速来源 PCM"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed at which cruise set speed is re-synchronized. Tesla BYD only."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed below which auto turn activates."
+msgstr "自动过弯功能激活的车速上限。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Speed-dependent Follow Time"
+msgstr "随速度变化跟车时间"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Speedometer: Always Display True Speed"
@@ -3450,10 +3621,6 @@ msgstr "标准"
 msgid "Standard is recommended. In aggressive mode, sunnypilot will follow lead cars closer and be more aggressive with the gas and brake. In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with your steering wheel distance button."
 msgstr "推荐使用标准模式。在激进模式下，sunnypilot 将与前车保持更近的距离，油门和刹车操作更积极。在放松模式下，sunnypilot 将与前车保持更远的距离。在支持的车辆上，您可以通过方向盘上的车距按钮循环切换这些驾驶风格。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Start"
-msgstr "开始"
-
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
 msgid "Start Download"
 msgstr "开始下载"
@@ -3465,6 +3632,10 @@ msgstr "开始 IMU 校准"
 #: openpilot\system\ui\tici_setup.py
 msgid "Start over"
 msgstr "重新开始"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Start the Bluetooth service to scan and pair devices."
+msgstr "启动蓝牙服务以搜索并配对设备。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
@@ -3481,29 +3652,9 @@ msgstr "州/省"
 msgid "Status"
 msgstr "状态"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steer Actuator Delay"
-msgstr "转向执行器延迟"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steer Delta Down"
-msgstr "转向变化率下限"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steer Delta Down (Lane Change)"
-msgstr "变道转向变化率下限"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steer Delta Up"
-msgstr "转向变化率上限"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steer Delta Up (Lane Change)"
-msgstr "变道转向变化率上限"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steer Ratio Rate"
-msgstr "转向比变化率"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Status Details"
+msgstr "状态详情"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Steering"
@@ -3517,21 +3668,33 @@ msgstr "转向弧线"
 msgid "Steering Mode on Brake Pedal"
 msgstr "制动踏板时的转向模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Stock Blinker Control"
-msgstr "原车转向灯控制"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Steering Suspend"
+msgstr "转向暂停"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Steering angle at which lateral control pauses while you steer. 300° effectively disables it. CarrotPilot stores 0.1-degree units for this parameter but its code, like this port, compares the raw value against the steering angle, so the number reads as degrees here."
+msgstr "转向角超过该值时，横向控制会在你转向期间暂停。300° 实际上等于关闭。CarrotPilot 为此参数声明了 0.1 度单位，但它的代码与本移植一样，直接拿原始值与转向角比较，所以这里的数值按度理解。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Steering-wheel nudge when carrot decelerates for a speed camera."
+msgstr "carrot 因测速相机减速时轻振方向盘。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Stop"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Stop / Speed Camera"
+msgstr "停止线 / 测速摄像头"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_sub_layouts\longitudinal_mpc_tuning.py
 msgid "Stop Distance"
 msgstr "停车距离"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Stop Speed Threshold"
-msgstr "停车判定车速"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Stop Target Distance"
-msgstr "停车目标距离"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Stop Test"
+msgstr "停止试验"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\subaru.py
 msgid "Stop and Go (Beta)"
@@ -3545,10 +3708,6 @@ msgstr "走走停停 Hack（Alpha）"
 msgid "Stop and Go for Manual Parking Brake (Beta)"
 msgstr "手动驻车制动走走停停（Beta）"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Stopping Acceleration"
-msgstr "停车加速度"
-
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Strict"
 msgstr "严格"
@@ -3556,6 +3715,22 @@ msgstr "严格"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Sunnylink Local Connections"
 msgstr "sunnylink 本地连接"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Supply Current"
+msgstr "供电电流"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Supply Fault"
+msgstr "供电故障"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Supply Voltage"
+msgstr "供电电压"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Synthesises a camera distance when the car sends only an enforcement speed. 0.1 s units; 60 = 6.0 s."
+msgstr ""
 
 #: openpilot\system\ui\tici_reset.py
 msgid "System Reset"
@@ -3593,6 +3768,14 @@ msgstr "正在拍摄摄像头快照。完成前系统将不会启动。"
 msgid "Target Branch"
 msgstr "目标分支"
 
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "Temperature"
+msgstr "温度"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Test / Learn"
+msgstr "键位学习 / 试验"
+
 #: openpilot\system\ui\widgets\network.py
 msgid "Tethering Password"
 msgstr "网络共享密码"
@@ -3605,6 +3788,10 @@ msgstr "驾驶员监测系统可开关，建议保持长期开启。"
 msgid "The reset cannot be undone. You have been warned."
 msgstr "重置操作无法撤销，请注意。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
+msgstr "当前 AGNOS 内核未暴露 /dev/ttyHS1，请重刷支持蓝牙的 AGNOS 版本。"
+
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "This alert will be cleared when new maps are downloaded."
 msgstr "下载新地图后此警报将清除。"
@@ -3612,6 +3799,14 @@ msgstr "下载新地图后此警报将清除。"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\tesla.py
 msgid "This allows the use of full MADS functionality when enabled."
 msgstr "启用后可使用完整的 MADS 功能。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "This device or AGNOS build lacks /dev/btpower."
+msgstr "当前设备或 AGNOS 版本缺少 /dev/btpower。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
+msgstr "当前设备或 AGNOS 版本缺少所需的蓝牙 UART 和电源节点。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "This feature can only be used with sunnypilot longitudinal control enabled."
@@ -3695,10 +3890,6 @@ msgstr "这将开始下载过程，可能需要一段时间完成。"
 msgid "Time"
 msgstr "时间"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Tire Trajectory"
-msgstr "轮胎轨迹"
-
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\lane_change_settings.py
 msgid "Toggle to enable a delay timer for seamless lane changes when blind spot monitoring (BSM) detects a obstructing vehicle, ensuring safe maneuvering."
 msgstr "启用后，在盲区监测（BSM）检测到障碍车辆时，使用延迟计时器实现无缝变道，确保安全操控。"
@@ -3736,11 +3927,15 @@ msgstr "Toyota：Prius TSS2 BSM 及部分 TSS-P"
 msgid "Toyota: custom longitudinal for TSS2"
 msgstr "Toyota：TSS2 自定义纵向控制"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Traffic Congestion Slowdown"
+msgstr "路况拥堵降速"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Traffic Light Detect Mode"
 msgstr "红绿灯检测模式"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Traffic Stop Distance Adjust"
 msgstr "红绿灯停车距离修正"
 
@@ -3748,15 +3943,23 @@ msgstr "红绿灯停车距离修正"
 msgid "Training Guide"
 msgstr "训练指南"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Trip Report"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Trips"
 msgstr "行程"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Tuning"
-msgstr "调节"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Turn Bluetooth radio on or off."
+msgstr ""
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Turn Speed"
+msgstr "转弯速度"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Turn Speed Control Mode"
 msgstr "弯道速度控制模式"
 
@@ -3776,6 +3979,10 @@ msgstr "解绑"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\home.py
 msgid "UPDATE"
 msgstr "更新"
+
+#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
+msgid "USB Link"
+msgstr "USB 链路"
 
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid ""
@@ -3833,13 +4040,9 @@ msgstr "立即升级"
 msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 msgstr "上传车内摄像头数据，帮助改进驾驶员监控算法。"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use Amap (Gaode) navigation data for map-based features."
-msgstr "使用高德导航数据，用于地图相关功能。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use Amap (Gaode) online map data for speed limits and road names in China."
-msgstr "在中国使用高德（Amap）在线地图数据，获取限速和道路名称。"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Use Carrot mapping"
+msgstr "使用 Carrot 映射（阻断原始 HID 输入）"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Use Carrot navigation data for map-based features."
@@ -3849,14 +4052,6 @@ msgstr "使用Carrot导航数据，用于地图相关功能。"
 msgid "Use IMU Calibration"
 msgstr "使用 IMU 校准"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Use Lane Line Curve Speed"
-msgstr "使用车道线弯道限速"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Use Lane Line Speed"
-msgstr "使用车道线速度"
-
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Use Lane Turn Desires"
 msgstr "使用变道意图"
@@ -3864,10 +4059,6 @@ msgstr "使用变道意图"
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Use Metric System"
 msgstr "使用公制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Use Wide Camera"
-msgstr "使用广角摄像头"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\toyota.py
 msgid "Use a custom longitudinal tuning profile for TSS2 Toyota vehicles."
@@ -3884,6 +4075,18 @@ msgstr "安装第三方软件时请谨慎。"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Use map data to estimate the appropriate speed to drive through turns ahead."
 msgstr "使用地图数据估算前方弯道的适当通过速度。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use navigation desired speed to limit cruise speed."
+msgstr "使用导航建议速度限制巡航速度。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
+msgstr "使用离线 OSM 地图数据获取限速和路名。关闭后完全忽略离线地图——当你更信任导航数据时很有用，因为离线数据可能已过时。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
+msgstr "使用 7714 WebSocket v2 富导航数据流（红绿灯、车道、路口图像）。7714 链接始终运行，此处只决定是否使用其数据。"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. Your attention is required at all times to use this feature."
@@ -3903,22 +4106,34 @@ msgstr "车辆"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "VIEW"
 msgstr "查看"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\platform_selector.py
 msgid "Vehicle"
 msgstr "车辆"
 
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Vehicle CAN Speed Arbitration"
+msgstr "车辆 CAN 速度仲裁"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Vehicle Navi CAN Control"
 msgstr "车辆导航 CAN 控制"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Vehicle Speed"
+msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "View the error log for sunnypilot crashes."
 msgstr "查看 sunnypilot 崩溃的错误日志。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "View the last navigation event summary handled by CarrotManager."
+msgstr "查看 CarrotManager 处理的最后一次导航事件摘要。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Virtually shift camera's perspective to move model's center to Left(+ values) or Right (- values)"
@@ -4016,6 +4231,10 @@ msgstr "Wi-Fi"
 msgid "Wi-Fi Network Metered"
 msgstr "Wi-Fi 计量网络"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Wide Camera"
+msgstr ""
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "Would you like to delete this log?"
 msgstr "确定要删除此日志吗？"
@@ -4024,6 +4243,7 @@ msgstr "确定要删除此日志吗？"
 msgid "Wrong password"
 msgstr "密码错误"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
 msgid "Yes"
 msgstr "是"
@@ -4051,10 +4271,6 @@ msgstr "使用 sunnypilot 前必须接受服务条款。继续前请先阅读最
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "You will need the pairing code again to reconnect it."
 msgstr "重新连接时需要再次输入配对码。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Your key is stored locally and is not uploaded."
-msgstr "您的密钥仅本地存储，不会上传。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
 msgid "Your vehicle will use the Default longitudinal tuning."
@@ -4323,6 +4539,46 @@ msgstr "驾驶员摄像头数据"
 msgid "driving personality"
 msgstr "驾驶风格"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
+msgstr "未检测到 eGPU（Chestnut）硬件，请连接 eGPU 设备后启用。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU / Big Model"
+msgstr "eGPU / 大模型"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Active"
+msgstr "eGPU 运行中"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Available"
+msgstr "eGPU 可用"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Failed"
+msgstr "eGPU 失败"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Loading..."
+msgstr "eGPU 加载中..."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Not Active"
+msgstr "eGPU 未激活"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU big model is being loaded. This may take a moment."
+msgstr "eGPU 大模型正在加载中，请稍候。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU big model is running and healthy."
+msgstr "eGPU 大模型运行正常。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU was selected but failed to start. Check device connection and model files."
+msgstr "eGPU 已被选中但启动失败，请检查设备连接和模型文件。"
+
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "eco"
 msgstr "经济"
@@ -4401,6 +4657,10 @@ msgstr "失败"
 msgid "failed to check for update"
 msgstr "检查更新失败"
 
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "fetching..."
+msgstr "获取中..."
+
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 msgid "finalizing update..."
 msgstr "正在完成更新..."
@@ -4409,6 +4669,7 @@ msgstr "正在完成更新..."
 msgid "firehose"
 msgstr "Firehose"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 #: openpilot\system\ui\widgets\network.py
 msgid "for \"{}\""
 msgstr "用于“{}”"
@@ -4671,6 +4932,10 @@ msgstr "录制并上传驾驶员摄像头"
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "record & upload mic audio"
 msgstr "录制并上传麦克风音频"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "refresh models"
+msgstr "刷新模型"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "relaxed"
@@ -5204,1209 +5469,3 @@ msgstr "已订阅"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 SunnyLink 🚀"
 
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Auto Start / Cruise"
-msgstr "自动启动 / 巡航"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Configure how openpilot automatically engages cruise control and sets speed."
-msgstr "配置 openpilot 如何自动开启巡航并设定速度。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "0=Off, 1=Auto engage when conditions met, 2=Auto engage with brake release."
-msgstr "0=关闭，1=条件满足时自动开启，2=松刹车后自动开启。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Automatically set cruise speed from road limit or nav speed."
-msgstr "根据道路限速或导航速度自动设定巡航速度。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Distance in meters to automatically enable cruise when a lead car is detected (0=disabled)."
-msgstr "检测到前车时自动开启巡航的距离（米，0=禁用）。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Steering Wheel Buttons"
-msgstr "方向盘按键"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Behavior of the cruise +/- buttons."
-msgstr "巡航加减键的行为。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Keep brakes applied after canceling cruise."
-msgstr "取消巡航后保持刹车。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Milliseconds before a long press is registered."
-msgstr "长按生效前的毫秒数。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Speed Presets"
-msgstr "速度预设"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Quick-set cruise speeds activated by steering wheel buttons."
-msgstr "通过方向盘按键快速设定的巡航速度。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "LFA / Paddle"
-msgstr "LFA / 拨片"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Behavior of the LFA/LKAS button."
-msgstr "LFA/LKAS 按键的行为。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Behavior of the steering wheel paddles."
-msgstr "方向盘拨片的行为。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Auto Gas"
-msgstr "自动油门"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Resume throttle automatically after driver override."
-msgstr "驾驶员接管后自动恢复油门。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Speed threshold below which auto gas is disabled."
-msgstr "自动油门禁用的速度阈值。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Speed at which cruise set speed is re-synchronized."
-msgstr "重新同步巡航设定速度的车速。"
-
-#: openpilot\\selfdrive\\ui\\sunnypilot\\layouts\\settings\\carrot_tuning.py
-msgid "Speed at which the driver can resume auto gas after pressing the brake."
-msgstr "踩刹车后允许恢复自动油门的车速。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Navi"
-msgstr "导航"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Disp"
-msgstr "显示"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Car"
-msgstr "车辆"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Dev"
-msgstr "开发"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Following Distance"
-msgstr "跟车距离"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Time gaps for each cruise distance button setting and dynamic adjustments."
-msgstr "各挡位巡航跟车距离以及根据车速动态调整的时距。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Extra following distance added based on speed."
-msgstr "根据车速额外增加的跟车距离。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Longitudinal Gains"
-msgstr "纵向控制增益"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "PID-style tuning for acceleration response and comfort."
-msgstr "类似PID的加减速响应与舒适性调节。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "How aggressively the car reacts to lead car acceleration changes."
-msgstr "前车加减速时本车的响应积极程度。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Target acceleration when coming to a complete stop."
-msgstr "完全刹停时的目标加速度。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Acceleration Limits"
-msgstr "加速度限制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Maximum allowed acceleration for each speed range (m/s²)."
-msgstr "各速度段允许的最大加速度（m/s²）。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise Behavior"
-msgstr "巡航行为"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Speed below which the car is considered stopped."
-msgstr "车辆被视为已停止的速度阈值。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Navigation Speed Control"
-msgstr "导航限速控制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "How the car slows down and adjusts speed using navigation data."
-msgstr "利用导航数据自动减速与调整车速的方式。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "0=Off, 1=Limit to nav speed, 2=Limit with early decel."
-msgstr "0=关闭，1=限制到导航限速，2=提前减速并限制到导航限速。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Percent of nav speed to use as target (100 = exact limit)."
-msgstr "以导航限速为基准的目标速度百分比（100=严格按限速）。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Distance after the speed limit point to resume normal cruise."
-msgstr "经过限速点后恢复正常巡航的距离。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Stop / Speed Camera"
-msgstr "停止线 / 测速摄像头"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Target stopping distance from stop line or traffic light (cm)."
-msgstr "目标停止线与红绿灯的停车距离（厘米）。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Fine-tune stop distance for traffic lights (cm)."
-msgstr "红绿灯停车距离的微调（厘米）。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Road Speed Limits"
-msgstr "道路限速"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Vehicle Navigation"
-msgstr "车辆导航"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Send navigation-based speed limits to the car over CAN."
-msgstr "通过CAN把基于导航的限速信息发送给车辆。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Navigation Speed Bumps"
-msgstr "导航减速带"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Automatic steering and speed adjustments for turns."
-msgstr "过弯时自动调整转向与车速。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "0=Off, 1=Speed only, 2=Speed + steering."
-msgstr "0=关闭，1=仅控制速度，2=控制速度+转向。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Speed below which auto turn activates."
-msgstr "自动过弯功能激活的车速上限。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Distance before the turn to end control."
-msgstr "弯道前结束控制的距离。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Shift the auto turn trigger point earlier or later."
-msgstr "让自动过弯触发点提前或延后。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Fork / Merge Control"
-msgstr "匝道 / 汇流控制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Behavior when approaching highway exits and merges."
-msgstr "接近高速出口与汇流区域时的行为。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Curve Speed"
-msgstr "弯道速度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Slow down for curves using map or vision data."
-msgstr "利用地图或视觉数据在弯道前自动减速。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Percent of the nav-recommended turn speed to use."
-msgstr "使用导航推荐过弯速度的百分比。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Road Speed Limits Override"
-msgstr "道路限速覆盖"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Control"
-msgstr "横向控制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "MPC costs and steering geometry tuning."
-msgstr "MPC权重与转向几何参数调节。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steering Torque"
-msgstr "转向扭矩"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lane Change"
-msgstr "变道"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Behavior and safety checks for automatic lane changes."
-msgstr "自动变道的行为与安全检查设置。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Use blind spot detection before lane changes."
-msgstr "变道前使用盲区检测。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Blind Spot"
-msgstr "盲区"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "ONNX Models"
-msgstr "ONNX 模型"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "HUD / Cluster"
-msgstr "HUD / 仪表"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cluster display and HUD overlay settings."
-msgstr "仪表显示与HUD叠加层设置。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steering angle threshold to temporarily suspend lateral control."
-msgstr "临时暂停横向控制的转向角阈值。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "On-Screen Display"
-msgstr "屏幕显示"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Sound"
-msgstr "声音"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "YouTube"
-msgstr "YouTube"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Map"
-msgstr "地图"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Path Rendering"
-msgstr "路径渲染"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Colors and display modes for the planned driving path."
-msgstr "规划行驶路径的颜色与显示模式。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Vehicle Behavior"
-msgstr "车辆行为"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Vehicle-specific overrides and convenience options."
-msgstr "车辆特定的覆盖与便利选项。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Debug and diagnostic toggles. Use with caution."
-msgstr "调试与诊断开关，请谨慎使用。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Start / Engage"
-msgstr "启动 / 接管"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "How openpilot engages cruise and which steering wheel buttons control it."
-msgstr "openpilot 如何开启巡航，以及由哪些方向盘按键控制。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cruise & Following"
-msgstr "巡航与跟车"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Following distance, longitudinal gains, acceleration limits and cruise behavior."
-msgstr "跟车时距、纵向增益、加速度限制与巡航行为。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Navigation-based speed control, speed cameras, road limits and speed bumps."
-msgstr "基于导航的速度控制、测速照相、道路限速与减速带。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Turns & Curves"
-msgstr "转弯与弯道"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Automatic turn, fork / merge and curve speed control."
-msgstr "自动转弯、匝道汇流与弯道速度控制。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Lateral Tuning"
-msgstr "横向调校"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Steering geometry, MPC costs, torque tuning, lane change and blind spot."
-msgstr "转向几何、MPC 权重、扭矩调校、变道与盲区。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Display & Sound"
-msgstr "显示与声音"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "Cluster HUD, on-screen overlays, sound, YouTube and map style."
-msgstr "仪表 HUD、屏幕叠加层、声音、YouTube 与地图样式。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "OPEN"
-msgstr "打开"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Buttons & Speed"
-msgstr "巡航按钮与速度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Speed Unit"
-msgstr "巡航速度步进"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Speed Unit (Basic)"
-msgstr "巡航速度步进（基础）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Speed 1"
-msgstr "巡航预设速度 1"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Speed 2"
-msgstr "巡航预设速度 2"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Speed 3"
-msgstr "巡航预设速度 3"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Speed 4"
-msgstr "巡航预设速度 4"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Speed 5"
-msgstr "巡航预设速度 5"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Button Long Delay"
-msgstr "巡航按钮长按延迟"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Apply Model Speed"
-msgstr "模型速度融合"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cruise Gap Levels"
-msgstr "跟车距离档位数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "ATC Turn Control"
-msgstr "ATC 转弯控制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Auto Turn / New Lane"
-msgstr "自动转弯 / 新车道"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Button Behavior"
-msgstr "按键行为"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "CAN-FD Debug"
-msgstr "CAN-FD 调试"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cluster Map"
-msgstr "仪表地图"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cluster Map Profile"
-msgstr "仪表地图配置"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Comfort"
-msgstr "舒适性"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Driver / Safety"
-msgstr "驾驶员 / 安全"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Driving Data"
-msgstr "行车数据"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Driving Mode"
-msgstr "驾驶模式"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Fork Control"
-msgstr "匝道控制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Hardware / Tests"
-msgstr "硬件 / 测试"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lane Line / ONNX"
-msgstr "车道线 / ONNX"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Normal Road Curve Aggressiveness"
-msgstr "普通道路弯道激进程度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "How aggressively curve speed is reduced on normal roads. Was read by the planner but never registered, so it had no effect."
-msgstr "普通道路上弯道降速的激进程度。此前规划器会读取但从未注册，因此不生效。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Speed-dependent Follow Time"
-msgstr "随速度变化跟车时间"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Navigation Control (advanced)"
-msgstr "导航控制（高级）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Traffic Congestion Slowdown"
-msgstr "路况拥堵降速"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Fold the phone app traffic congestion report into map-based cruise control. Only ever lowers the target speed. Needs Smart Cruise Control - Map to be on as well."
-msgstr "将手机 App 的路况拥堵数据并入地图巡航控制，只会降低目标车速。需同时开启「地图智能巡航」。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lane Guide Blocking"
-msgstr "车道引导封锁"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Let the phone app guided-lane arrows block lane changes toward non-guided lanes. Only ever adds blocking."
-msgstr "允许手机 App 的车道引导箭头封锁向非引导车道的变道，只会增加封锁。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lateral MPC Costs"
-msgstr "横向 MPC 权重"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lateral Mode"
-msgstr "横向模式"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lateral Smoothing"
-msgstr "横向平滑"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lateral Torque"
-msgstr "横向扭矩"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "On-Screen Info"
-msgstr "屏幕信息"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Path Appearance"
-msgstr "路径外观"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Radar / Tracks"
-msgstr "雷达 / 目标"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Road Limit Raising"
-msgstr "限速上调"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Sound / Map"
-msgstr "声音 / 地图"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Speed Bumps"
-msgstr "减速带"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Steering Limits"
-msgstr "转向限制"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Steering Suspend"
-msgstr "转向暂停"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Timeouts"
-msgstr "超时"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Trajectory / Lane Line"
-msgstr "轨迹 / 车道线"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Turn Speed"
-msgstr "转弯速度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Vehicle CAN Speed Arbitration"
-msgstr "车辆 CAN 速度仲裁"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Vehicle Features"
-msgstr "车辆功能"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "YouTube Live"
-msgstr "YouTube 直播"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lead Accel Response (Gap 1)"
-msgstr "前车加速度响应（档位 1）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lead Accel Response (Gap 2)"
-msgstr "前车加速度响应（档位 2）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lead Accel Response (Gap 3)"
-msgstr "前车加速度响应（档位 3）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Lead Accel Response (Gap 4)"
-msgstr "前车加速度响应（档位 4）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Speed Time-Gap Factor"
-msgstr "速度-时距系数"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Follow-Gap Levels"
-msgstr "跟车档位数量"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Navi Rear-Camera Hold Distance"
-msgstr "导航后摄像头保持距离"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "CANFD Stop & Retry"
-msgstr "CANFD 停止后重试"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Cluster HUD (external display required)"
-msgstr "仪表 HUD（需要外接副屏）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Requires a TURZX USB cluster display, which is not supported in this build yet. These settings are stored but have no effect until the display is added."
-msgstr "需要 TURZX USB 外接副屏，本版本尚未支持。这些设置会被保存，但在接入副屏前不起作用。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Acceleration Limits (not applied yet)"
-msgstr "加速度限制（尚未生效）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot UDP Port"
-msgstr "Carrot UDP 端口"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Web Panel"
-msgstr "Carrot 网页面板"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Disabled"
-msgstr "已禁用"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enable Carrot Navi v2 (7714)"
-msgstr "启用 Carrot 导航 v2（7714）"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enter the UDP port (0-65535). 0 disables the listener."
-msgstr "输入 UDP 端口（0-65535）。0 表示关闭监听。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Navigation Cruise Speed"
-msgstr "导航巡航速度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Serve the carrot tuning page (/nav_params) and four-corner radar visualisation (/radar) on port 8088."
-msgstr "在 8088 端口提供 Carrot 调参页面（/nav_params）和四角雷达可视化（/radar）。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "UDP port the Carrot companion app sends navigation data to. Must match the app; 0 disables the listener."
-msgstr "Carrot 手机 App 发送导航数据的 UDP 端口。必须与 App 一致；0 表示关闭监听。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use navigation desired speed to limit cruise speed."
-msgstr "使用导航建议速度限制巡航速度。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
-msgstr "使用 7714 WebSocket v2 富导航数据流（红绿灯、车道、路口图像）。7714 链接始终运行，此处只决定是否使用其数据。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Alert Volume"
-msgstr "提示音音量"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Engage Chime Volume"
-msgstr "接管提示音音量"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Steering angle at which lateral control pauses while you steer. 300° effectively disables it. CarrotPilot stores 0.1-degree units for this parameter but its code, like this port, compares the raw value against the steering angle, so the number reads as degrees here."
-msgstr "转向角超过该值时，横向控制会在你转向期间暂停。300° 实际上等于关闭。CarrotPilot 为此参数声明了 0.1 度单位，但它的代码与本移植一样，直接拿原始值与转向角比较，所以这里的数值按度理解。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Shrink the follow distance as speed rises. Off disables it; the three profiles differ in how far up the speed range the gap keeps tightening."
-msgstr "车速升高时缩短跟车距离。关闭则不启用；三个配置的区别在于跟车距离持续收紧到多高的车速。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Scale every alert sound, in percent. 100 keeps the current loudness."
-msgstr "按百分比缩放所有提示音。100 表示保持当前音量。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Scale the engage / disengage / reverse chimes, in percent."
-msgstr "按百分比缩放接管、退出接管与倒车提示音。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Amap Curve Speed"
-msgstr "高德弯道速度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Amap Traffic Light Hint"
-msgstr "高德红绿灯提示"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Slow for curves using the Amap route shape. Only ever lowers the target speed; needs Smart Cruise Control - Map to be on as well."
-msgstr "使用高德路线形状为弯道减速。只会降低目标车速，需同时开启「地图智能巡航」。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Count traffic lights on the route ahead. Not yet shown anywhere; no effect for now."
-msgstr "统计前方路线上的红绿灯数量。尚未在任何界面显示，目前无效果。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "The phone app connects here. Default 7706; only change it if the app is configured differently. 0 disables the listener."
-msgstr "手机应用连接到此处。默认 7706，仅当应用配置不同时才需更改。填 0 将关闭监听。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Enter the UDP port (0-65535). Default 7706, which the phone app expects. 0 disables the listener."
-msgstr "输入 UDP 端口（0-65535）。默认 7706，即手机应用所期望的端口。填 0 将关闭监听。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "UDP port the Carrot companion app sends navigation data to. The phone app connects here. Default 7706; only change it if the app is configured differently. 0 disables the listener."
-msgstr "Carrot 手机应用发送导航数据所用的 UDP 端口，手机应用连接到此处。默认 7706，仅当应用配置不同时才需更改。填 0 将关闭监听。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot ATC Turn Signal"
-msgstr "Carrot ATC 转向灯"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Let the Carrot app's turn instruction act as a turn signal. This reaches the car's real turn signal, so it is off by default."
-msgstr "允许 Carrot 应用的转向指令充当转向灯。该功能会作用到车辆真实转向灯，因此默认关闭。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "How much lateral acceleration to allow below 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
-msgstr "80 km/h 以下允许的横向加速度，单位为百分比。数值越大过弯越快。100 为中性值。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "How early to react to curves on normal roads. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
-msgstr "普通道路上对弯道的响应早晚。数值越小，对越缓的弯也会响应。仅在「智能巡航控制（视觉）」开启时生效。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "How much lateral acceleration to allow at or above 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
-msgstr "80 km/h 及以上允许的横向加速度，单位为百分比。数值越大过弯越快。100 为中性值。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "How early to react to curves on the highway. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
-msgstr "高速公路上对弯道的响应早晚。数值越小，对越缓的弯也会响应。仅在「智能巡航控制（视觉）」开启时生效。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Opacity"
-msgstr "Carrot 导航面板透明度"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Opacity of the onroad Carrot navigation panel, in percent. Default 100."
-msgstr "Carrot 导航面板的透明度，以百分比表示。默认 100。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Nav Panel Side"
-msgstr "Carrot 导航面板位置"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Left"
-msgstr "左侧"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Position of the onroad Carrot navigation panel. Default: Right (next to speed display)."
-msgstr "Carrot 导航面板在路上的位置。默认：右侧（紧邻速度显示）。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Map Provider"
-msgstr "地图提供商"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Current map data source used for speed limits and road names. Amap requires an API key to be set above."
-msgstr "当前用于限速和道路名的地图数据源。高德地图需要先在上方设置 API 密钥。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Carrot Navi Debug"
-msgstr "Carrot 导航调试"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "View the last navigation event summary handled by CarrotManager."
-msgstr "查看 CarrotManager 处理的最后一次导航事件摘要。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "Amap"
-msgstr "高德"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
-msgid "No navigation event received yet."
-msgstr "尚未收到导航事件。"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Chestnut AI"
-msgstr "Chestnut AI 加速器"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Chestnut Status"
-msgstr "Chestnut 状态"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "USB Link"
-msgstr "USB 链路"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Temperature"
-msgstr "温度"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Memory Temp"
-msgstr "显存温度"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Power Draw"
-msgstr "功率"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Power Limit"
-msgstr "功率上限"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "GPU Usage"
-msgstr "GPU 使用率"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "GPU Clock"
-msgstr "GPU 频率"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Fan Speed"
-msgstr "风扇转速"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "PCIe LTSSM"
-msgstr "PCIe 状态"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Supply Voltage"
-msgstr "供电电压"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Supply Current"
-msgstr "供电电流"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Supply Fault"
-msgstr "供电故障"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Connection Check"
-msgstr "连接检测"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Check Chestnut"
-msgstr "检测 Chestnut"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "CHECK"
-msgstr "检测"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "Checks USB 5 Gbps, firmware, 12V/PCIe, and GPU execution."
-msgstr "检测 USB 5 Gbps、固件、12V/PCIe 和 GPU 执行状态"
-
-#: openpilot\selfdrive\ui\layouts\settings\chestnut.py
-msgid "not checked"
-msgstr "未检测"
-
-msgid "Bluetooth Remotes"
-msgstr "蓝牙遥控器"
-
-msgid "Bluetooth adapter unavailable"
-msgstr "蓝牙适配器不可用"
-
-
-msgid "Scanning..."
-msgstr "搜索中..."
-
-msgid "Ready"
-msgstr "就绪"
-
-msgid "Enable Bluetooth"
-msgstr "启用蓝牙"
-
-msgid "Disable Bluetooth"
-msgstr "禁用蓝牙"
-
-msgid "Scan (30s)"
-msgstr "搜索设备 (30秒)"
-
-msgid "Cancel"
-msgstr "取消"
-
-msgid "Put your device in pairing mode and scan. Disconnect it from your previous phone if needed."
-msgstr "将设备置于配对模式并搜索。如需从手机断开，请先断开连接。"
-
-msgid "Paired"
-msgstr "已配对"
-
-msgid "Connected"
-msgstr "已连接"
-
-msgid "Battery {}%"
-msgstr "电量 {}%"
-
-msgid "Mapping on"
-msgstr "映射开启"
-
-msgid "Mapping off"
-msgstr "映射关闭"
-
-msgid "Receiving input"
-msgstr "接收输入中"
-
-msgid "Pair"
-msgstr "配对"
-
-msgid "Disconnect"
-msgstr "断开连接"
-
-msgid "Connect"
-msgstr "连接"
-
-msgid "Forget"
-msgstr "移除"
-
-msgid "Edit"
-msgstr "编辑"
-
-msgid "Back"
-msgstr "返回"
-
-msgid "Profile"
-msgstr "输入类型"
-
-msgid "Generic keyboard / HID"
-msgstr "通用键盘 / HID"
-
-msgid "Use Carrot mapping"
-msgstr "使用 Carrot 映射（阻断原始 HID 输入）"
-
-msgid "Button Mapping"
-msgstr "按钮映射"
-
-msgid "None"
-msgstr "无动作"
-
-msgid "Cruise +"
-msgstr "巡航 +"
-
-msgid "Cruise −"
-msgstr "巡航 −"
-
-msgid "Cruise + Long"
-msgstr "巡航 + 长按"
-
-msgid "Cruise − Long"
-msgstr "巡航 − 长按"
-
-msgid "Gap"
-msgstr "间距"
-
-msgid "LFA"
-msgstr "LFA"
-
-msgid "LFA Long"
-msgstr "LFA 长按"
-
-msgid "Cancel Long"
-msgstr "取消长按"
-
-msgid "Lane Left"
-msgstr "向左变道"
-
-msgid "Lane Right"
-msgstr "向右变道"
-
-msgid "Paddle −"
-msgstr "拨片 −"
-
-msgid "CarrotCruise"
-msgstr "CarrotCruise"
-
-msgid "Save"
-msgstr "保存"
-
-msgid "Saved"
-msgstr "已保存"
-
-msgid "Test / Learn"
-msgstr "键位学习 / 试验"
-
-msgid "Stop Test"
-msgstr "停止试验"
-
-msgid "Testing"
-msgstr "试验模式中"
-
-msgid "Test mode active"
-msgstr "试验模式已激活"
-
-msgid "Save your changes"
-msgstr "请先保存更改"
-
-msgid "Exclusive HID capture active"
-msgstr "HID 输入独占中"
-
-msgid "Waiting for HID capture (check connection and mapping)"
-msgstr "等待 HID 独占（请检查连接和映射）"
-
-msgid "Pairing confirmation"
-msgstr "配对确认"
-
-msgid "Enter the code shown on the other device"
-msgstr "输入对方设备上显示的验证码"
-
-msgid "Confirm"
-msgstr "确认"
-
-msgid "Short"
-msgstr "短按"
-
-msgid "Double"
-msgstr "双击"
-
-msgid "Long"
-msgstr "长按"
-
-msgid "Forget this device?"
-msgstr "要移除此设备吗？"
-
-msgid "Bluetooth"
-msgstr "蓝牙"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "eGPU"
-msgstr "eGPU"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
-msgid "eGPU / big model status and configuration."
-msgstr "eGPU / 大模型状态与配置。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "eGPU / Big Model"
-msgstr "eGPU / 大模型"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "eGPU Status"
-msgstr "eGPU 状态"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Current eGPU (Chestnut) connection and model status."
-msgstr "当前 eGPU（Chestnut）连接与模型状态。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Not detected"
-msgstr "未检测到"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
-msgid "Ready"
-msgstr "就绪"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU Not Active"
-msgstr "eGPU 未激活"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU Active"
-msgstr "eGPU 运行中"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU Failed"
-msgstr "eGPU 失败"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU Loading..."
-msgstr "eGPU 加载中..."
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "No eGPU (big model) is selected. The default model is running."
-msgstr "未选择 eGPU（大模型），正在运行默认模型。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU big model is running and healthy."
-msgstr "eGPU 大模型运行正常。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU was selected but failed to start. Check device connection and model files."
-msgstr "eGPU 已被选中但启动失败，请检查设备连接和模型文件。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU big model is being loaded. This may take a moment."
-msgstr "eGPU 大模型正在加载中，请稍候。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
-msgstr "未检测到 eGPU（Chestnut）硬件，请连接 eGPU 设备后启用。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "Status Details"
-msgstr "状态详情"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "Current State"
-msgstr "当前状态"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "eGPU Available"
-msgstr "eGPU 可用"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
-msgid "Description"
-msgstr "说明"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Bluetooth is not installed"
-msgstr "蓝牙未安装"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Install BlueZ to enable Bluetooth HID remotes and device management."
-msgstr "安装 BlueZ 以启用蓝牙 HID 遥控器与设备管理。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Bluetooth service is stopped"
-msgstr "蓝牙服务已停止"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Start the Bluetooth service to scan and pair devices."
-msgstr "启动蓝牙服务以搜索并配对设备。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "No Bluetooth adapter found"
-msgstr "未找到蓝牙适配器"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Flash an AGNOS with Bluetooth support or plug in a USB Bluetooth dongle."
-msgstr "刷入支持蓝牙的 AGNOS 系统，或插入 USB 蓝牙适配器。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Install Bluetooth"
-msgstr "安装蓝牙"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Enable Bluetooth"
-msgstr "启用蓝牙"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Retry"
-msgstr "重试"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Installing..."
-msgstr "安装中..."
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "No devices found"
-msgstr "未找到设备"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Available devices"
-msgstr "可用设备"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Pair with \"{}\"?"
-msgstr "是否与“{}”配对？"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Forget \"{}\"?"
-msgstr "是否忘记“{}”？"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Pairing code: {}"
-msgstr "配对码：{}"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Confirm pairing with \"{}\"?"
-msgstr "确认与“{}”配对？"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Enter PIN"
-msgstr "输入 PIN"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Enter passkey"
-msgstr "输入配对码"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Device name"
-msgstr "设备名称"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Name shown to other Bluetooth devices."
-msgstr "其他蓝牙设备看到的名称。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "No paired devices"
-msgstr "没有已配对设备"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Reset Bluetooth"
-msgstr "重置蓝牙"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Remove all pairings and restart the Bluetooth service."
-msgstr "移除所有配对并重启蓝牙服务。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Bluetooth radio hardware not detected"
-msgstr "未检测到蓝牙射频硬件"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "This AGNOS or device variant lacks the required Bluetooth UART/power nodes."
-msgstr "当前 AGNOS 或设备变种缺少所需的蓝牙 UART / 电源节点。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Bluetooth UART not exposed by this AGNOS kernel"
-msgstr "当前 AGNOS 内核未暴露蓝牙 UART"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Bluetooth UART not available"
-msgstr "蓝牙 UART 不可用"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "Bluetooth power node not detected"
-msgstr "未检测到蓝牙电源节点"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
-msgstr "当前 AGNOS 内核未暴露 /dev/ttyHS1，请重刷支持蓝牙的 AGNOS 版本。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
-msgstr "当前设备或 AGNOS 版本缺少所需的蓝牙 UART 和电源节点。"
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
-msgid "This device or AGNOS build lacks /dev/btpower."
-msgstr "当前设备或 AGNOS 版本缺少 /dev/btpower。"

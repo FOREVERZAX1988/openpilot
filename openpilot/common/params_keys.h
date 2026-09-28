@@ -344,21 +344,16 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LongitudinalMpcTuningLeadDangerFactor", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
 
     // Amap / Carrot (phone projection & navigation)
-    // Amap Web map-data provider has been removed; the following three Amap keys
-    // are kept registered so existing values are cleaned up by Params migration
-    // rather than left as orphan files, but they are no longer exposed in UI or
-    // used by mapd_manager. CarrotAmapBlindSpotEnabled still controls 7706 UDP
-    // blind-spot parsing and is unrelated to Amap Web.
+    // AmapEnabled is the legacy phone-projection switch that used to control both
+    // Amap Web map data and the 7706 UDP blind-spot parser. Amap Web has been
+    // removed; only the 7706 blind-spot migration remains in carrot_man.
+    // CarrotAmapBlindSpotEnabled controls 7706 UDP blind-spot / LiDAR / extBlinker
+    // fields and is unrelated to Amap Web.
     {"AmapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"AmapApiKey", {PERSISTENT | DONT_LOG, STRING}},
-    {"AmapMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // OSM offline map data. Off means "do not use the offline map for speed limits
     // or road names", so a user who relies on carrot can silence the offline
     // fallback. Default 1 keeps existing behaviour.
     {"OsmMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
-    // Set once the legacy AmapEnabled switch has been migrated, so the migration
-    // cannot run again and silently re-enable Amap after the user disabled it.
-    {"AmapLegacyMigrated", {PERSISTENT, BOOL, "0"}},
     // Parse 7706 UDP blind-spot / LiDAR / extBlinker fields (AmapNaviServ).
     {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -503,8 +498,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SpeedCorrect60", {PERSISTENT, INT, "0"}},
     {"SpeedCorrect90", {PERSISTENT, INT, "0"}},
     {"CarrotNavLaneGuideBlockEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // let 7706 navLaneGuide block non-guided adjacent lanes
-    {"AmapCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // DEPRECATED: Amap Web provider removed
-    {"AmapTrafficLightHintEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},      // DEPRECATED: Amap Web provider removed
     // Carrot speed/turn/navi tuning surface. Defaults mirror cp/fp behavior where applicable;
     // keys are registered so UnifiedParams writes land in the cross-process Params store.
     {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},

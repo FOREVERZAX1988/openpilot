@@ -113,11 +113,6 @@ def imu_calibration_enabled(started: bool, params: Params, CP: car.CarParams) ->
 def imu_calibration_disabled(started: bool, params: Params, CP: car.CarParams) -> bool:
   return not params.get_bool("ImuCalibrationEnabled")
 
-def amap_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
-  # Amap Web API provider has been removed; kept for backward compatibility with
-  # any external callers, but always returns False.
-  return False
-
 def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
   # run even offroad: web panel (8088) / UDP / FTP must work while parked;
   # carrot_man gates its own behaviour with the IsOnroad param
