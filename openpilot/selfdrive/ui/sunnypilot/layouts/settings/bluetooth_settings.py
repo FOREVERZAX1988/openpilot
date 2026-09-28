@@ -865,10 +865,12 @@ class CarrotBluetoothLayout(Widget):
 
     # Device name
     y = self._render_name_row(rect, y, state, can_act)
-    y += gap + 20
+    # The name row is two lines tall (title/description, then input + button) where
+    # it used to be one, so drop the ad-hoc extra spacing that followed it. Same
+    # 24 px rhythm as the toggle rows above, and the page keeps its old footprint.
+    y += gap
 
     # Reset section
-    y += 30
     y = self._render_reset_section(rect, y, state, can_act)
 
   def _render_advanced_row(self, rect: rl.Rectangle, y: float, row_h: float,
@@ -896,33 +898,40 @@ class CarrotBluetoothLayout(Widget):
     return y + row_h
 
   def _render_name_row(self, rect: rl.Rectangle, y: float, state: BTState, can_act: bool) -> float:
-    row_h = 120
+    # Title + description own the first line, the name input + Edit/Save button the
+    # second. They used to share a single 120 px row: the input box was vertically
+    # centred (y + 25, 70 tall) while the two labels were drawn from the row top
+    # (y and y + 48), so the box background was painted straight over "Device name"
+    # and its description - the text and the box visibly overlapped.
+    title_h = 50
+    desc_h = 40
+    box_h = 70
+    line_gap = 16
+
+    gui_label(rl.Rectangle(rect.x + self._padding, y, rect.width - self._padding * 2, title_h),
+              tr("Device name"), font_size=46, alignment=TextAlignment.LEFT)
+    desc_y = y + title_h
+    gui_label(rl.Rectangle(rect.x + self._padding, desc_y, rect.width - self._padding * 2, desc_h),
+              tr("Name shown to other Bluetooth devices."), font_size=32,
+              alignment=TextAlignment.LEFT, color=rl.Color(170, 170, 170, 255))
+
+    input_y = desc_y + desc_h + line_gap
     btn_w = max(160, int(measure_text_cached(gui_app.font(), tr("Save"), 40).x + 50),
                 int(measure_text_cached(gui_app.font(), tr("Edit"), 40).x + 50))
     gap = 20
-    control_w = btn_w + gap
     control_x = rect.x + rect.width - self._padding - btn_w
-    control_y = y + (row_h - 70) / 2
-
-    title_rect = rl.Rectangle(rect.x + self._padding, y,
-                              rect.width - self._padding * 2 - control_w - 20, 50)
-    gui_label(title_rect, tr("Device name"), font_size=46, alignment=TextAlignment.LEFT)
-    desc_rect = rl.Rectangle(rect.x + self._padding, y + 48,
-                             rect.width - self._padding * 2 - control_w - 20, 40)
-    gui_label(desc_rect, tr("Name shown to other Bluetooth devices."), font_size=32,
-              alignment=TextAlignment.LEFT, color=rl.Color(170, 170, 170, 255))
 
     # Name value sits to the left of the single action button.
     name_max_w = control_x - gap - (rect.x + self._padding)
-    name_rect = rl.Rectangle(rect.x + self._padding, control_y, name_max_w, 70)
+    name_rect = rl.Rectangle(rect.x + self._padding, input_y, name_max_w, box_h)
     rl.draw_rectangle_rounded(name_rect, 0.2, 10, rl.Color(50, 50, 50, 255))
 
     name_text = self._name_input
     name_size = measure_text_cached(gui_app.font(), name_text, 40)
     text_x = name_rect.x + 15
-    text_y = name_rect.y + (70 - name_size.y) / 2
+    text_y = name_rect.y + (box_h - name_size.y) / 2
     if name_size.x > name_max_w - 30:
-      rl.begin_scissor_mode(int(name_rect.x), int(name_rect.y), int(name_max_w), int(70))
+      rl.begin_scissor_mode(int(name_rect.x), int(name_rect.y), int(name_max_w), int(box_h))
       rl.draw_text_ex(gui_app.font(), name_text, rl.Vector2(text_x, text_y), 40, 0, rl.WHITE)
       rl.end_scissor_mode()
     else:
@@ -934,11 +943,11 @@ class CarrotBluetoothLayout(Widget):
     btn_style = ButtonStyle.PRIMARY if has_changes else ButtonStyle.NORMAL
     self._name_action_btn.set_text(btn_label)
     self._name_action_btn.set_button_style(btn_style)
-    self._name_action_btn.set_rect(rl.Rectangle(control_x, control_y, btn_w, 70))
+    self._name_action_btn.set_rect(rl.Rectangle(control_x, input_y, btn_w, box_h))
     self._name_action_btn.set_enabled(can_act)
     self._name_action_btn.render()
 
-    return y + row_h
+    return input_y + box_h
 
   def _render_reset_section(self, rect: rl.Rectangle, y: float, state: BTState, can_act: bool) -> float:
     title_h = 60

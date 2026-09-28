@@ -287,6 +287,56 @@ def test_advanced_captions_fit():
         f"width={layout._reset_btn.rect.width} need={need:.0f}")
 
 
+# ---------------------------------------------------------------------------
+# 9. The Advanced page's "Device name" row must not draw its labels under the
+#    name input box, and the page must still fit inside the panel.
+# ---------------------------------------------------------------------------
+def _overlap(a, b):
+  return (min(a.x + a.width, b.x + b.width) - max(a.x, b.x) > 0 and
+          min(a.y + a.height, b.y + b.height) - max(a.y, b.y) > 0)
+
+
+def test_advanced_name_row_layout():
+  print("\n9. Advanced page: name labels sit above the input box")
+  from openpilot.selfdrive.ui.sunnypilot.layouts.settings import bluetooth_settings as bt
+
+  layout = fresh_layout(RECT)
+  layout._on_advanced_clicked()
+
+  labels = []
+  orig = bt.gui_label
+  bt.gui_label = lambda rect, text, **kw: labels.append((text, rect))
+  try:
+    layout.render(RECT)
+  finally:
+    bt.gui_label = orig
+
+  texts = [text for text, _ in labels]
+  by_text = dict(labels)
+  title = by_text.get("Device name")
+  desc = by_text.get("Name shown to other Bluetooth devices.")
+  check("name-row title is drawn once", texts.count("Device name") == 1, f"texts={texts}")
+  check("name-row description is drawn once", texts.count("Name shown to other Bluetooth devices.") == 1,
+        f"texts={texts}")
+  if title is None or desc is None:
+    return
+
+  btn = layout._name_action_btn.rect
+  check("title and description do not overlap each other", not _overlap(title, desc),
+        f"title={title.y}..{title.y + title.height} desc={desc.y}..{desc.y + desc.height}")
+  check("title ends above the name input box", title.y + title.height <= btn.y,
+        f"title bottom={title.y + title.height} input.y={btn.y}")
+  check("description ends above the name input box", desc.y + desc.height <= btn.y,
+        f"desc bottom={desc.y + desc.height} input.y={btn.y}")
+  check("name input box is 70 px tall (caption has room)", abs(btn.height - 70) < 1e-6,
+        f"height={btn.height}")
+
+  reset = layout._reset_btn.rect
+  check("advanced page still fits inside the panel",
+        reset.y + reset.height <= RECT.y + RECT.height,
+        f"reset bottom={reset.y + reset.height} panel bottom={RECT.y + RECT.height}")
+
+
 def main():
   test_first_row_below_header()
   test_advanced_tap_opens_advanced_only()
@@ -296,6 +346,7 @@ def main():
   test_blind_spot_translation()
   test_editor_fits_panel()
   test_advanced_captions_fit()
+  test_advanced_name_row_layout()
 
   print()
   if FAILURES:
