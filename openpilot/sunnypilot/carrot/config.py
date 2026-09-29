@@ -26,6 +26,30 @@ except ImportError:
   UnknownKeyName = KeyError  # type: ignore[misc,assignment]
 
 
+def _is_unknown_key_error(exc: BaseException) -> bool:
+  """True when ``exc`` is the Params "key is not registered" signal.
+
+  ``UnknownKeyName`` cannot always be named in an ``except`` tuple: PC dev mocks and
+  several test shims rebind it to a non-exception object, and ``except (..., UnknownKeyName)``
+  then raises "catching classes that do not inherit from BaseException" *while handling the
+  real error* - which took the whole write path down (see
+  test_unified_params_write.test_write_survives_a_non_exception_UnknownKeyName_binding).
+  So match on the class when it is usable and on the name otherwise.
+  """
+  if isinstance(UnknownKeyName, type) and issubclass(UnknownKeyName, BaseException):
+    if isinstance(exc, UnknownKeyName):
+      return True
+  return type(exc).__name__ == "UnknownKeyName"
+
+
+# _write_to_system outcomes. "unknown" and "failed" must stay distinct: an unregistered
+# key belongs in the nav_params.json cache, a *rejected* write does not (get() prefers the
+# store, so the cached copy would never be read - it would only dirty the tracked file).
+_WRITE_OK = "ok"
+_WRITE_UNKNOWN_KEY = "unknown_key"
+_WRITE_FAILED = "failed"
+
+
 _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   # ATC / turn offsets
   "AutoTurnDistOffset": 0,
@@ -283,6 +307,7 @@ class UnifiedParams:
     try:
       with open(self._nav_json_file, "w", encoding="utf-8") as fh:
         json.dump(self._nav_data, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")  # keep the repo-tracked file diff-clean / POSIX-text
     except OSError:
       pass
 
@@ -303,31 +328,43 @@ class UnifiedParams:
     """
     try:
       return self._system_params.get(key)
-    except (KeyError, AttributeError, UnknownKeyName):
+    except Exception as exc:  # noqa: BLE001 - any read failure means "not available"
+      if isinstance(exc, (KeyError, AttributeError)) or _is_unknown_key_error(exc):
+        return None
       return None
 
-  def _write_to_system(self, key: str, value: Any) -> bool:
-    """Attempt to write ``value`` to the system Params. Returns success.
+  def _write_to_system(self, key: str, value: Any) -> str:
+    """Write ``value`` to the system Params. Returns one of the ``_WRITE_*`` outcomes.
 
-    Params only exposes put / put_bool (there is no put_int or put_float); it casts
-    by the key's registered type. Calling put_int here raised AttributeError, which
-    the handler below swallowed, so every int and float write silently fell through
-    to the nav_params.json cache instead of reaching Params.
+    Params only exposes put / put_bool (there is no put_int or put_float) and it casts
+    strictly against the key's registered type: ``put`` with a float on an INT key, or
+    with an int on a BOOL key, raises TypeError. The old code guessed the type from the
+    *value* and swallowed the error, so a registered tuning key silently fell through to
+    the nav_params.json cache and the setting never took effect (``get()`` prefers the
+    store). Cast by the registered type instead, which is what Params will do anyway.
     """
     try:
-      if self._is_bool(value):
+      key_type = self._system_params.get_type(key)
+    except Exception as exc:  # noqa: BLE001 - the store decides what a bad key looks like
+      return _WRITE_UNKNOWN_KEY if _is_unknown_key_error(exc) else _WRITE_FAILED
+
+    try:
+      type_name = getattr(key_type, "name", None) or str(key_type)
+      if type_name == "BOOL":
+        # bool(3) is True: a BOOL key must go through put_bool, not put (which rejects
+        # an int for a BOOL key).
         self._system_params.put_bool(key, bool(value))
-      elif self._is_int(value):
+      elif type_name == "INT":
         self._system_params.put(key, int(value))
-      elif self._is_float(value):
+      elif type_name == "FLOAT":
         self._system_params.put(key, float(value))
+      elif type_name == "STRING":
+        self._system_params.put(key, value if isinstance(value, str) else str(value))
       else:
-        self._system_params.put(key, str(value))
-      return True
-    except (KeyError, AttributeError, UnknownKeyName):
-      return False
-    except Exception:
-      return False
+        self._system_params.put(key, value)
+      return _WRITE_OK
+    except Exception as exc:  # noqa: BLE001
+      return _WRITE_UNKNOWN_KEY if _is_unknown_key_error(exc) else _WRITE_FAILED
 
   # ---- public API ---------------------------------------------------------
 
@@ -363,10 +400,12 @@ class UnifiedParams:
       return default
 
   def put(self, key: str, value: Any) -> None:
-    # Try to persist to the global store first; if the key is not
-    # registered, fall back to the JSON cache so the user's choice is not
-    # silently dropped.
-    if not self._write_to_system(key, value):
+    # Persist to the global store first; if the key is not registered, fall back to the
+    # JSON cache so the user's choice is not silently dropped. A *rejected* write is not
+    # cached: get() prefers the store value (or its schema default), so the cached copy
+    # would never be read and would only dirty the repo-tracked nav_params.json.
+    outcome = self._write_to_system(key, value)
+    if outcome == _WRITE_UNKNOWN_KEY:
       self._nav_data[key] = value
       self._save_nav_params()
 
