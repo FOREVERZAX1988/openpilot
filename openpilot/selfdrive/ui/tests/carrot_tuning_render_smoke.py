@@ -569,11 +569,42 @@ def main() -> int:
 
   check("open, back, open again", reopen_after_back)
 
+  def scroll_row_into_view(row):
+    """Scroll `row` fully inside the viewport, the way a user would before tapping it.
+
+    Only the first row (and half of the second) fits the 900 px panel, and the scroller
+    clips everything below the fold - so an off-screen row really is untappable and a
+    raw tap at its rect is never delivered. Asserting tap-ability of all rows therefore
+    has to scroll first; without this the check only proved that row 0 and row 1 work
+    (rows 2..8 reported `None`, i.e. "no navigation", which looked like a broken page).
+    """
+    viewport_bottom = content.y + content.height
+    panel = root._scroller.scroll_panel
+    for _ in range(40):
+      frame([])
+      if content.y <= row.rect.y and row.rect.y + row.rect.height <= viewport_bottom:
+        # The list must come to rest or the row swallows the tap: ListItemSP only
+        # forwards a click while scroll_panel.is_touch_valid() (state IDLE, velocity
+        # below MIN_VELOCITY_FOR_CLICKING).
+        for _ in range(180):
+          frame([])
+          if panel.is_touch_valid():
+            return True
+        return False
+      # Swipe up inside the viewport to reveal the rows below (dy < 0 scrolls down).
+      drag(row.rect.x + 120, content.y + content.height * 0.5, dy=-140)
+
+    return False
+
   def all_rows_tappable():
     bad = []
     for i in range(len(root._nav_rows)):
       reset()
-      tap(*row_tap_point(root._nav_rows[i]))
+      row = root._nav_rows[i]
+      if not scroll_row_into_view(row):
+        bad.append((i, "row never became reachable"))
+        continue
+      tap(*row_tap_point(row))
       if root._current_group != CarrotGroupKey(i):
         bad.append((i, root._current_group))
     assert not bad, f"rows that did not navigate: {bad}"

@@ -224,10 +224,31 @@ _SAVED_MODULES = {name: sys.modules.get(name) for name in (
   "opendbc", "opendbc.car", "opendbc.car.common", "opendbc.car.common.conversions",
 )}
 
+def _restore_stub_modules() -> None:
+  """Put the real modules back (idempotent)."""
+  for _name, _module in _SAVED_MODULES.items():
+    if _module is None:
+      sys.modules.pop(_name, None)
+    else:
+      sys.modules[_name] = _module
+
+
 sys.modules["openpilot.common"] = _common_pkg
 sys.modules["openpilot.common.params"] = _common_pkg.params
 sys.modules["openpilot.common.realtime"] = _common_pkg.realtime
 sys.modules["openpilot.common.swaglog"] = _common_pkg.swaglog
+# The stubs must cover every openpilot.common.* the code under test imports at module
+# level. When one is missing the *import below* raises, and because the restore used to
+# live at the end of this file the stub then stayed in sys.modules for the rest of the
+# process: "openpilot.common" became a non-package object and every later test module
+# died with "'openpilot.common' is not a package". That is exactly how the
+# time_helpers import removed from carrot_serv.py took out the whole carrot suite.
+# Stubs are still kept installed during the tests (below), only a *failure* restores
+# them early.
+_common_pkg.time_helpers = MagicMock(system_time_valid=MagicMock(return_value=True))
+_common_pkg.time_helpers.system_time_valid = MagicMock(return_value=True)
+sys.modules["openpilot.common.time_helpers"] = _common_pkg.time_helpers
+_SAVED_MODULES.setdefault("openpilot.common.time_helpers", None)
 
 _cereal_pkg = types.ModuleType("openpilot.cereal")
 _cereal_pkg.messaging = _FakeMessaging
@@ -249,8 +270,12 @@ sys.modules["opendbc.car"] = _opendbc_car_pkg
 sys.modules["opendbc.car.common"] = _opendbc_car_common_pkg
 sys.modules["opendbc.car.common.conversions"] = _opendbc_conversions_mod
 
-from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING
-from openpilot.sunnypilot.carrot.web_interface import WebInterface
+try:
+  from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING
+  from openpilot.sunnypilot.carrot.web_interface import WebInterface
+except BaseException:
+  _restore_stub_modules()
+  raise
 
 
 class TestCarrotManager(unittest.TestCase):
@@ -2261,12 +2286,7 @@ class TestCarrotServCountdown(unittest.TestCase):
 # module importing openpilot.common.test dies with "'openpilot.common' is not a package".
 # That was the suite's only error on the device too (307 tests, 1 error, while
 # test_carrot_planner alone passed 10/10).
-for _name, _module in _SAVED_MODULES.items():
-  if _module is None:
-    sys.modules.pop(_name, None)
-  else:
-    sys.modules[_name] = _module
-del _name, _module
+_restore_stub_modules()
 
 
 if __name__ == "__main__":
