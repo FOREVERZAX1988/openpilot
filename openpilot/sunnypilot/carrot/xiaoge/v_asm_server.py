@@ -223,10 +223,14 @@ class VASMService:
     self._lane_fps_window_count = 0
     self.lane_result = dict(LANE_RESULT_INVALID)
     # Plan A onroad gate, shared by the wide-road (blind spot) and road (lane) threads.
-    # Its own SubMaster: run_camera already calls sm.update(0) on self.sm, and two
-    # threads must not drive the same SubMaster (sockets + per-service dicts are not
-    # thread safe).  Everything here is written under self.lock.
+    # Its own SubMaster: run_camera drives self.sm, so the gate must not use that one.
+    # BOTH camera threads call _update_onroad_gate(), and messaging.SubMaster.update() is
+    # not thread safe (it swaps the per-service capnp readers; a reader freed by a
+    # concurrent update() is the capnp SIGBUS that restarted carrot_man -- abddb1065d), so
+    # the shared instance is serialized with onroad_sm_lock.  The verdict dict is written
+    # under self.lock.
     self.onroad_sm = messaging.SubMaster(["deviceState"])
+    self.onroad_sm_lock = threading.Lock()
     self.onroad_gate = {"active": True, "started": None, "reason": REASON_UNKNOWN}
     self.params = params if params is not None else create_params()
     self.last_param_refresh_at = 0.0
@@ -455,10 +459,14 @@ class VASMService:
     inference.  See onroad_gate.py for the policy and the fail-open rationale.  The
     blind-spot pipeline keeps its own speed gate on top of this one.
     """
-    self.onroad_sm.update(0)
-    available = self.onroad_sm.all_alive(["deviceState"]) and self.onroad_sm.all_valid(["deviceState"])
-    started = bool(self.onroad_sm["deviceState"].started) if available else False
-    active, reason = xiaoge_inference_allowed(device_state_available=available, started=started)
+    # Two camera threads call this, so the shared SubMaster is serialized: update() is not
+    # thread safe (see the note in __init__ / abddb1065d).  The verdict may be stale by a
+    # frame, which is fine -- deviceState changes at ~2 Hz.
+    with self.onroad_sm_lock:
+      self.onroad_sm.update(0)
+      available = self.onroad_sm.all_alive(["deviceState"]) and self.onroad_sm.all_valid(["deviceState"])
+      started = bool(self.onroad_sm["deviceState"].started) if available else False
+      active, reason = xiaoge_inference_allowed(device_state_available=available, started=started)
     with self.lock:
       self.onroad_gate = {
         "active": active,

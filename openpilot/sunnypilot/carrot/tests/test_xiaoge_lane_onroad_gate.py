@@ -89,6 +89,16 @@ class TestGateWiring(unittest.TestCase):
     self.assertIn("self.onroad_sm.update(0)", gate)
     self.assertNotIn("self.sm.update", gate)
 
+  def test_gate_serializes_the_shared_submaster(self):
+    # BOTH camera threads call the gate, and SubMaster.update() is not thread safe (a
+    # capnp reader swapped out by a concurrent update() in another thread is the SIGBUS
+    # that restarted carrot_man, abddb1065d), so the shared update() must be serialized.
+    self.assertIn("self.onroad_sm_lock", VASM_SOURCE)
+    gate = function_body(VASM_SOURCE, "_update_onroad_gate")
+    lock_at = gate.index("with self.onroad_sm_lock:")
+    update_at = gate.index("self.onroad_sm.update(0)")
+    self.assertLess(lock_at, update_at, "the update must happen inside the lock")
+
   def test_status_exposes_the_gate(self):
     status = function_body(VASM_SOURCE, "status")
     self.assertIn('"onroadGate": self.onroad_gate', status)
