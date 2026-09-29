@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from collections.abc import Callable
 from openpilot.cereal import log
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, FONT_SCALE, FALLBACK_FONT_SCALE
-from openpilot.system.ui.lib.multilang import tr, tr_noop, multilang
+from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, FONT_SCALE
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
@@ -241,15 +240,15 @@ class Sidebar(Widget, SidebarSP):
     # Draw border
     rl.draw_rectangle_rounded_lines_ex(metric_rect, 0.3, 10, 2, Colors.METRIC_BORDER)
 
-    # Draw label and value
+    # Draw label and value, vertically centered as a block (same convention as system/ui/widgets/label.py)
     labels = [tr(metric.label), tr(metric.value)]
-    _fs = FONT_SCALE * (FALLBACK_FONT_SCALE if multilang.requires_font_fallback() else 1.0)
-    text_y = metric_rect.y + (metric_rect.height / 2 - len(labels) * FONT_SIZE * _fs)
-    for text in labels:
-      text_size = measure_text_cached(self._font_bold, text, FONT_SIZE)
-      text_y += text_size.y
+    text_sizes = [measure_text_cached(self._font_bold, text, FONT_SIZE) for text in labels]
+    total_height = sum(size.y for size in text_sizes) or len(labels) * FONT_SIZE * FONT_SCALE
+    text_y = metric_rect.y + (metric_rect.height - total_height) / 2
+    for text, text_size in zip(labels, text_sizes, strict=True):
       text_pos = rl.Vector2(
         metric_rect.x + 22 + (metric_rect.width - 22 - text_size.x) / 2,
         text_y
       )
       rl.draw_text_ex(self._font_bold, text, text_pos, FONT_SIZE, 0, Colors.WHITE)
+      text_y += text_size.y or FONT_SIZE * FONT_SCALE
