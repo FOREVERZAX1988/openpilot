@@ -757,6 +757,17 @@ class CarrotManager:
         # Key removed upstream; nothing to migrate for this one.
         continue
 
+    # Consume the legacy key, matching upstream. Without this the migration runs on
+    # every boot for as long as a pre-removal libparams still resolves "AmapEnabled",
+    # and each run re-enables CarrotAmapBlindSpotEnabled - so a user who deliberately
+    # turned the 7706 blind-spot parser off would find it back on after every reboot.
+    # AmapLegacyMigrated (the old "already ran" marker) was deleted from params_keys.h
+    # along with the provider, so the removal itself is what ends the migration.
+    try:
+      self.params.remove("AmapEnabled")
+    except UnknownKeyName:
+      pass
+
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
     return self.params.get_bool("CarrotAmapBlindSpotEnabled")

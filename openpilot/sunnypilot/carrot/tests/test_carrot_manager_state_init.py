@@ -157,6 +157,7 @@ class _StubParams:
     self.values = dict(values or {})
     self.unknown = set(unknown)
     self.writes: list[tuple[str, bool]] = []
+    self.removed: list[str] = []
 
   def get_bool(self, key):
     if key in self.unknown:
@@ -168,6 +169,12 @@ class _StubParams:
       raise UnknownKeyNameStub(key)
     self.writes.append((key, value))
     self.values[key] = bool(value)
+
+  def remove(self, key):
+    if key in self.unknown:
+      raise UnknownKeyNameStub(key)
+    self.removed.append(key)
+    self.values.pop(key, None)
 
 
 class _Holder:
@@ -212,6 +219,32 @@ class TestAmapMigrationToleratesRemovedKeys(unittest.TestCase):
     self.assertEqual(
       sorted(params.writes),
       [("AmapMapDataEnabled", True), ("CarrotAmapBlindSpotEnabled", True)])
+
+  def test_legacy_switch_is_consumed_so_the_migration_runs_once(self):
+    """The migration must end by deleting AmapEnabled (upstream does the same).
+
+    AmapLegacyMigrated - the old "already ran" marker - was deleted from
+    params_keys.h with the provider, so without consuming the legacy key every boot
+    re-ran this helper and re-enabled CarrotAmapBlindSpotEnabled. A user who had
+    deliberately switched the 7706 blind-spot parser off would find it back on after
+    every reboot.
+    """
+    params = _StubParams({"AmapEnabled": True})
+    self._helper()(_Holder(params))
+    self.assertEqual(params.removed, ["AmapEnabled"])
+    self.assertNotIn("AmapEnabled", params.values)
+
+    # Second run over the same store: nothing left to migrate, nothing re-enabled.
+    params.writes.clear()
+    params2 = _StubParams(params.values)
+    self._helper()(_Holder(params2))
+    self.assertEqual(params2.writes, [])
+
+  def test_removing_an_unregistered_legacy_key_is_not_fatal(self):
+    """Post-rebuild libparams no longer knows AmapEnabled at all."""
+    params = _StubParams(unknown={"AmapEnabled", "AmapMapDataEnabled"})
+    self._helper()(_Holder(params))  # must not raise
+    self.assertEqual(params.removed, [])
 
   def test_nothing_written_when_legacy_switch_is_off(self):
     params = _StubParams({"AmapEnabled": False})
