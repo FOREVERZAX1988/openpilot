@@ -33,7 +33,6 @@ from typing import Any
 
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
-from openpilot.common.time_helpers import system_time_valid
 from openpilot.sunnypilot.carrot.config import UnifiedParams
 
 
@@ -104,14 +103,6 @@ NAV_TYPE_MAPPING: dict[int, tuple[str, str, int]] = {
   154: ("", "", 6),
   249: ("", "", 6),
 }
-
-# Curve-speed lookup table (reciprocal radius [1/m] -> km/h).
-# Used when the phone navi sends a curvature-aware speed advisory.
-V_CURVE_LOOKUP_BP: tuple[float, ...] = (
-  0.0, 1 / 800, 1 / 670, 1 / 560, 1 / 440, 1 / 360, 1 / 265, 1 / 190, 1 / 135,
-  1 / 85, 1 / 55, 1 / 30, 1 / 25,
-)
-V_CURVE_LOOKUP_VALS: tuple[float, ...] = (300, 150, 120, 110, 100, 90, 80, 70, 60, 50, 40, 15, 5)
 
 # SDI (Speed Limit Camera) type categories that mean "real" speed cameras.
 SDI_SPEED_CAMERA_TYPES: frozenset[int] = frozenset({0, 1, 2, 3, 4, 7, 8, 75, 76})
@@ -260,10 +251,6 @@ class CarrotServ:
     self.auto_navi_speed_decel_rate: float = 0.8
     self.auto_navi_speed_ctrl_end: float = 7.0
 
-    # Path tracking (used by callers that need curvature / bearing).
-    self._path: deque[tuple[float, float]] = deque(maxlen=512)
-    self._bearing: float = 0.0
-    self._bearing_offset: float = 0.0
 
     # Traffic light history (2 seconds at 10 Hz).
     self._traffic_history: deque[int] = deque(maxlen=20)
@@ -1976,38 +1963,13 @@ class CarrotServ:
         self.x_spd_dist = distance
         self.active_carrot = 2
 
-  # ---- path / curvature helpers ------------------------------------------ #
-
-  def push_position(self, lon: float, lat: float) -> None:
-    self._path.append((float(lon), float(lat)))
-    if len(self._path) >= 3:
-      self._update_bearing()
-
-  def _update_bearing(self) -> None:
-    # Use the last 3 points to estimate bearing.
-    a, b, _ = self._path[-3], self._path[-2], self._path[-1]
-    if a == b:
-      return
-    d_lon = b[0] - a[0]
-    d_lat = b[1] - a[1]
-    self._bearing = math.degrees(math.atan2(d_lon, d_lat))
-
-  @property
-  def bearing(self) -> float:
-    return self._bearing
-
-  def curvature_at(self, distance_m: float) -> float:
-    """Approximate 1/r curvature from the last few GPS points."""
-    if len(self._path) < 3:
-      return 0.0
-    a, b, c = self._path[-3], self._path[-2], self._path[-1]
-    cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
-    len_ab = math.hypot(b[0] - a[0], b[1] - a[1])
-    len_bc = math.hypot(c[0] - b[0], c[1] - b[1])
-    if len_ab == 0 or len_bc == 0:
-      return 0.0
-    # Sign conveys left/right turn; magnitude is roughly 1/r in degrees^-1.
-    return cross / (len_ab * len_bc * len_ab) * (180.0 / math.pi) / max(distance_m, 1.0)
+  # The GPS-breadcrumb curvature chain that used to live here (push_position,
+  # _update_bearing, a second `bearing` property, curvature_at, lookup_curve_speed) is
+  # deliberately gone: nothing called it, and because its `bearing` property was defined
+  # *after* the live one above it shadowed the real heading, so carrot_navi_route()
+  # rotated the route by 0 degrees. `bearing` now returns the phone/navi nPosAngle.
+  # Do not re-add it without re-running the R3 audit - see
+  # test_carrot_man.TestCarrotManager.test_gps_breadcrumb_curvature_chain_is_gone.
 
   def _interp_turn_speed(self, x_turn_info: int, distance_m: float) -> int:
     """Pick a safe curve speed for a turn of the given xTurnInfo class."""
@@ -2027,12 +1989,6 @@ class CarrotServ:
       if distance_m <= d:
         return int(s)
     return 0
-
-  def lookup_curve_speed(self, curvature: float) -> float:
-    """Look up a recommended km/h for the given curvature (1/m)."""
-    if curvature <= 0:
-      return 0.0
-    return float(_interp_table(curvature, V_CURVE_LOOKUP_BP, V_CURVE_LOOKUP_VALS))
 
 
 def _interp_table(x: float, bp: tuple[float, ...], vals: tuple[float, ...]) -> float:
