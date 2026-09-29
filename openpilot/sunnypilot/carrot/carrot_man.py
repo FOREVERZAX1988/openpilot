@@ -39,6 +39,14 @@ except ImportError:
   SHAPELY_AVAILABLE = False
 
 
+# Cereal services carrot_man subscribes to.  Every thread that needs cereal data owns its
+# own SubMaster built from this list (see CarrotManager.__init__); sharing one instance
+# across threads is what caused the capnp SIGBUS restarts.
+SM_SERVICES = ['deviceState', 'carState', 'controlsState', 'modelV2', 'carParams',
+               'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP',
+               'selfdriveState', 'longitudinalPlan']
+
+
 # ---- 7714 WebSocket v2 parsed control structures ------------------------- #
 
 class _NaviControlBase:
@@ -629,9 +637,21 @@ class CarrotManager:
     # selfdriveState feeds `active`, longitudinalPlan feeds xState/trafficState; without
     # them the 7705 broadcast read `sm.alive.get('selfdriveState', False)` which is always
     # False for an unsubscribed service, so the app's ADAS indicator was permanently 0.
-    self.sm = messaging.SubMaster(['deviceState', 'carState', 'controlsState', 'modelV2', 'carParams',
-                                   'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP',
-                                   'selfdriveState', 'longitudinalPlan'])
+    # SubMaster.update() is NOT thread safe: it swaps the per-service capnp readers that
+    # __getitem__ hands out, dropping the message the previous reader belonged to.  The UDP
+    # broadcaster, the ZMQ remote-command thread and the web radar feed all used to read this
+    # one instance while the main loop was updating it, so a reader could be replaced (and its
+    # underlying message freed) from another thread mid-use.  capnp then dereferenced the
+    # dangling object and raised SIGBUS/BUS_ADRALN (`__aarch64_ldadd4_acq_rel` in capnp.so),
+    # which is what restarted carrot_man every few minutes.  One SubMaster per thread removes
+    # the sharing entirely: each thread calls update() on the instance it owns.
+    self.sm = messaging.SubMaster(SM_SERVICES)       # owned by the main loop (tick)
+    self.sm_bg = messaging.SubMaster(SM_SERVICES)    # owned by broadcast_version_info
+    self.sm_zmq = messaging.SubMaster(SM_SERVICES)   # owned by carrot_cmd_zmq
+    self.sm_web = messaging.SubMaster(SM_SERVICES)   # owned by the web/radar feed
+    # WebInterface is a ThreadingHTTPServer: several request handlers can ask for the radar
+    # snapshot at once, so the web SubMaster is serialized with its own lock.
+    self._sm_web_lock = threading.Lock()
     self.pm = messaging.PubMaster(['carrotManSP', 'navInstructionCarrotSP', 'navRoute'])
     self._car_name_synced = None
 
@@ -879,12 +899,15 @@ class CarrotManager:
 
   # ---- navigation path (P0-1) -------------------------------------------- #
 
-  def carrot_navi_route(self) -> tuple[list[tuple[float, float]], list[float], float]:
+  def carrot_navi_route(self, sm=None) -> tuple[list[tuple[float, float]], list[float], float]:
     """Calculate navigation route with curvature-aware speed limits.
 
     Returns:
       (resampled_points, resampled_distances, out_speed)
     """
+    if sm is None:
+      sm = self.sm
+
     # Check if navi is active
     if not self._navi_points_active or not SHAPELY_AVAILABLE:
       if self._navi_points_active:
@@ -948,7 +971,7 @@ class CarrotManager:
         accel_limit_kmh = accel_limit * 3.6  # Convert to km/h per second
         out_speeds = [0.0] * len(speeds)
         out_speeds[-1] = speeds[-1]
-        v_ego_kph = self.sm['carState'].vEgo * 3.6 if self.sm.alive.get('carState', False) else 0.0
+        v_ego_kph = sm['carState'].vEgo * 3.6 if sm.alive.get('carState', False) else 0.0
 
         time_delay = self._carrot_serv.auto_navi_speed_ctrl_end
         time_wait = 0.0
@@ -982,17 +1005,21 @@ class CarrotManager:
   def _derive_state(self, v_ego_kph: float) -> None:
     self._carrot_serv.derive(v_ego_kph=v_ego_kph)
 
-  def _stock_nav_instruction_active(self) -> bool:
+  def _stock_nav_instruction_active(self, sm=None) -> bool:
     """True when the stock navInstruction service is alive and valid."""
-    return bool(self.sm.alive.get("navInstruction", False) and self.sm.valid.get("navInstruction", False))
+    if sm is None:
+      sm = self.sm
+    return bool(sm.alive.get("navInstruction", False) and sm.valid.get("navInstruction", False))
 
-  def _apply_stock_nav_instruction(self, ni: Any) -> None:
+  def _apply_stock_nav_instruction(self, ni: Any, sm=None) -> None:
     """Copy fields from stock ``navInstruction`` into ``navInstructionCarrotSP``.
 
     Called as a fallback when Carrot phone navigation is not active so that
     consumers of ``navInstructionCarrotSP`` still receive guidance from navd.
     """
-    stock = self.sm["navInstruction"]
+    if sm is None:
+      sm = self.sm
+    stock = sm["navInstruction"]
     ni.maneuverPrimaryText = _safe_str(getattr(stock, "maneuverPrimaryText", ""), "")
     ni.maneuverSecondaryText = _safe_str(getattr(stock, "maneuverSecondaryText", ""), "")
     ni.maneuverDistance = float(getattr(stock, "maneuverDistance", 0.0) or 0.0)
@@ -1265,7 +1292,17 @@ class CarrotManager:
 
   # ---- radar data (P1-3) ------------------------------------------------ #
 
-  def get_radar_data(self) -> dict[str, Any]:
+  def _web_radar_data(self) -> dict[str, Any]:
+    """Radar snapshot for the web thread, using the SubMaster that thread owns.
+
+    The HTTP/radar feed runs on its own thread; it must never touch ``self.sm`` (owned by
+    the main loop) or the capnp readers would race the main loop's update().
+    """
+    with self._sm_web_lock:
+      self.sm_web.update(0)
+      return self.get_radar_data(self.sm_web)
+
+  def get_radar_data(self, sm=None) -> dict[str, Any]:
     """Return a JSON-friendly radar snapshot for the web UI.
 
     Sources:
@@ -1273,6 +1310,8 @@ class CarrotManager:
       * ``radarState`` -> fused leadOne / leadTwo
       * ``AmapNaviServ.shared_data`` -> four-corner radar / blind spot
     """
+    if sm is None:
+      sm = self.sm
     radar_data: dict[str, Any] = {
       "points": [],
       "tracks": [],
@@ -1282,8 +1321,8 @@ class CarrotManager:
 
     try:
       # 1. Point cloud from radarTracks (Car.RadarData).
-      if self.sm.alive.get("radarTracks", False):
-        radar_tracks = self.sm["radarTracks"]
+      if sm.alive.get("radarTracks", False):
+        radar_tracks = sm["radarTracks"]
         points = getattr(radar_tracks, "points", None) or []
         for point in points:
           radar_data["points"].append({
@@ -1296,8 +1335,8 @@ class CarrotManager:
         radar_data["tracks"] = list(radar_data["points"])
 
       # 2. Fused leads from radarState.
-      if self.sm.alive.get("radarState", False):
-        radar_state = self.sm["radarState"]
+      if sm.alive.get("radarState", False):
+        radar_state = sm["radarState"]
         for attr, label in (("leadOne", "leadOne"), ("leadTwo", "leadTwo")):
           lead = getattr(radar_state, attr, None)
           if lead is None:
@@ -1354,7 +1393,7 @@ class CarrotManager:
     except ImportError as exc:
       cloudlog.warning(f"carrot_man: web interface unavailable: {exc}")
       return
-    self._web = WebInterface(self._amap_navi, params=self._unified, radar_source=self.get_radar_data)
+    self._web = WebInterface(self._amap_navi, params=self._unified, radar_source=self._web_radar_data)
     self._web.start()
 
   def _stop_web(self) -> None:
@@ -1428,7 +1467,7 @@ class CarrotManager:
       frame = 0
       while self._is_running:
         try:
-          self.sm.update(0)
+          self.sm_bg.update(0)
 
           # Get remote address
           remote_addr = self._remote_addr
@@ -1443,23 +1482,23 @@ class CarrotManager:
           # to a per-frame lookup. The road class is refreshed on the live instance
           # for the same reason - it is read from the navi packet, which changes.
           vturn_speed = 0.0
-          if self.sm.alive.get('carState', False) and self.sm.alive.get('modelV2', False):
+          if self.sm_bg.alive.get('carState', False) and self.sm_bg.alive.get('modelV2', False):
             try:
               if self._curve_planner is None:
                 from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
                 self._curve_planner = CarrotPlanner(self._unified, roadcate=self._carrot_serv.roadcate)
               self._curve_planner.set_roadcate(self._carrot_serv.roadcate)
-              vturn_speed = self._curve_planner.carrot_curve_speed(self.sm)
+              vturn_speed = self._curve_planner.carrot_curve_speed(self.sm_bg)
             except Exception as e:
               # Was a bare `pass`, which hid a broken curve pipeline completely.
               cloudlog.warning(f"carrot_man: curve speed failed: {e}")
 
           # Calculate navigation route
-          coords, distances, route_speed = self.carrot_navi_route()
+          coords, distances, route_speed = self.carrot_navi_route(self.sm_bg)
 
           # Update navi
-          self._carrot_serv.update_navi(remote_ip, self.sm, self.pm, vturn_speed, coords, distances, route_speed)
-          self._write_navi_debug()
+          self._carrot_serv.update_navi(remote_ip, self.sm_bg, self.pm, vturn_speed, coords, distances, route_speed)
+          self._write_navi_debug(self.sm_bg)
 
           # Broadcast every 2 seconds or when remote addr is set
           if frame % 20 == 0 or remote_addr:
@@ -1479,7 +1518,7 @@ class CarrotManager:
                 self.params.put_nonblocking("NetworkAddress", ip_address)
 
               # Build and send message
-              msg = self.make_send_message()
+              msg = self.make_send_message(self.sm_bg)
               if self._broadcast_ip:
                 data = msg.encode('utf-8')
                 try:
@@ -1505,7 +1544,7 @@ class CarrotManager:
     finally:
       self._is_running = False
 
-  def _refresh_broadcast_status(self, now: float) -> None:
+  def _refresh_broadcast_status(self, now: float, sm=None) -> None:
     """Recompute the values the UDP status broadcast carries, holding last-good on a lapse.
 
     `sm.alive` for carState is a 10/freq = 0.1 s window - far shorter than the occasional
@@ -1515,16 +1554,18 @@ class CarrotManager:
     reports 0 here because carState keeps publishing (vEgoCluster -> 0) while alive stays
     True; the hold only suppresses a spurious 0 from a transient source lapse.
     """
-    if self.sm.alive.get('carState', False):
-      cs = self.sm['carState']
+    if sm is None:
+      sm = self.sm
+    if sm.alive.get('carState', False):
+      cs = sm['carState']
       self._bcast_v_ego_kph = _car_float(cs, 'vEgoCluster') * 3.6
       self._bcast_v_cruise_kph = _car_float(cs, 'vCruise')
       cruise_state = getattr(cs, 'cruiseState', None)
       self._bcast_cruise_speed = _car_float(cruise_state, 'speed') * 3.6
       self._bcast_fresh_ts = max(self._bcast_fresh_ts, now)
-    if self.sm.alive.get('selfdriveState', False):
+    if sm.alive.get('selfdriveState', False):
       try:
-        self._bcast_active = bool(self.sm['selfdriveState'].active)
+        self._bcast_active = bool(sm['selfdriveState'].active)
       except Exception:
         self._bcast_active = False
       self._bcast_fresh_ts = max(self._bcast_fresh_ts, now)
@@ -1537,11 +1578,13 @@ class CarrotManager:
       self._bcast_cruise_speed = 0.0
       self._bcast_active = False
 
-  def make_send_message(self) -> str:
+  def make_send_message(self, sm=None) -> str:
     """Build broadcast message for phone app."""
     import json
 
-    self._refresh_broadcast_status(self._mono_now())
+    if sm is None:
+      sm = self.sm
+    self._refresh_broadcast_status(self._mono_now(), sm)
 
     msg = {}
     msg['Carrot2'] = self.params.get("Version", b'').decode() if isinstance(self.params.get("Version"), bytes) else (self.params.get("Version") or '')
@@ -1554,8 +1597,8 @@ class CarrotManager:
     v_ego_kph = int(round(self._bcast_v_ego_kph))
     v_cruise_kph = self._bcast_v_cruise_kph
     log_carrot = ""
-    if self.sm.alive.get('carState', False):
-      carState = self.sm['carState']
+    if sm.alive.get('carState', False):
+      carState = sm['carState']
       log_carrot = getattr(carState, 'logCarrot', '')
 
     msg['v_ego_kph'] = v_ego_kph
@@ -1576,8 +1619,8 @@ class CarrotManager:
     active = self._bcast_active
     x_state = 0
     car_cruise_speed = self._bcast_cruise_speed
-    if self.sm.alive.get('longitudinalPlan', False):
-      lp = self.sm['longitudinalPlan']
+    if sm.alive.get('longitudinalPlan', False):
+      lp = sm['longitudinalPlan']
       x_state = int(getattr(lp, 'xState', 0) or 0)
       msg['trafficState'] = int(getattr(lp, 'trafficState', msg['trafficState']) or 0)
     msg['active'] = active
@@ -1797,6 +1840,8 @@ class CarrotManager:
       while self._zmq_running:
         try:
           socks = dict(poller.poll(100))
+          # This thread owns its own SubMaster; never read the main loop's self.sm here.
+          self.sm_zmq.update(0)
 
           if socket in socks and socks[socket] == zmq.POLLIN:
             message = socket.recv(zmq.NOBLOCK)
@@ -1820,8 +1865,8 @@ class CarrotManager:
 
             # Check network connection
             network_connected = False
-            if self.sm.alive.get('deviceState', False):
-              network_type = self.sm['deviceState'].networkType
+            if self.sm_zmq.alive.get('deviceState', False):
+              network_type = self.sm_zmq['deviceState'].networkType
               network_connected = network_type != 0  # NetworkType.none
 
             # Send tmux data after 50 seconds onroad
@@ -1829,14 +1874,14 @@ class CarrotManager:
               self.make_tmux_data()
 
             if self._is_onroad_count > 500 and not self._is_tmux_sent and network_connected:
-              self.send_tmux("Ekdrmsvkdlffjt7710", "onroad", send_settings=True)
+              self.send_tmux("Ekdrmsvkdlffjt7710", "onroad", send_settings=True, sm=self.sm_zmq)
               self._is_tmux_sent = True
 
             # Send exception if CarrotException is set
             if self.params.get_bool("CarrotException") and network_connected:
               self.params.put_bool("CarrotException", False)
               self.make_tmux_data()
-              self.send_tmux("Ekdrmsvkdlffjt7710", "exception")
+              self.send_tmux("Ekdrmsvkdlffjt7710", "exception", sm=self.sm_zmq)
 
           elif 'echo_cmd' in json_obj:
             # Execute remote command
@@ -1875,7 +1920,7 @@ class CarrotManager:
           elif 'tmux_send' in json_obj:
             # Send tmux data
             self.make_tmux_data()
-            self.send_tmux(json_obj['tmux_send'], "tmux_send")
+            self.send_tmux(json_obj['tmux_send'], "tmux_send", sm=self.sm_zmq)
             echo = json.dumps({
               "tmux_send": json_obj['tmux_send'],
               "result": "success",
@@ -2640,12 +2685,14 @@ class CarrotManager:
     except Exception as e:
       cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
 
-  def _write_navi_debug(self) -> None:
+  def _write_navi_debug(self, sm=None) -> None:
     """Persist a rich debug snapshot of the current navigation state."""
+    if sm is None:
+      sm = self.sm
     try:
       serv = self._carrot_serv
       raw = serv.raw
-      cs = self.sm["carState"] if self.sm.alive.get("carState", False) else None
+      cs = sm["carState"] if sm.alive.get("carState", False) else None
 
       now_mono = self._mono_now()
       last_packet = serv.last_packet_mono
@@ -2657,13 +2704,13 @@ class CarrotManager:
         active_source = "7714"
       elif self._remote_addr or packet_fresh:
         active_source = "7706"
-      elif self._stock_nav_instruction_active():
+      elif self._stock_nav_instruction_active(sm):
         active_source = "stock"
       else:
         active_source = "none"
 
       if active_source == "stock":
-        stock = self.sm["navInstruction"]
+        stock = sm["navInstruction"]
         time_remaining = float(getattr(stock, "timeRemaining", 0.0) or 0.0)
         distance_remaining = float(getattr(stock, "distanceRemaining", 0.0) or 0.0)
         maneuver = {
@@ -3199,10 +3246,13 @@ class CarrotManager:
     except Exception as e:
       cloudlog.error(f"carrot_man: make_tmux_data error: {e}")
 
-  def send_tmux(self, ftp_password: str, tmux_why: str, send_settings: bool = False) -> None:
+  def send_tmux(self, ftp_password: str, tmux_why: str, send_settings: bool = False, sm=None) -> None:
     """Send tmux data via FTP."""
     from datetime import datetime
     from ftplib import FTP
+
+    if sm is None:
+      sm = self.sm
 
     ftp_server = "shind0.synology.me"
     ftp_port = 8021
@@ -3217,8 +3267,8 @@ class CarrotManager:
       car_selected = self.params.get("CarName")
       if isinstance(car_selected, bytes):
         car_selected = car_selected.decode('utf-8')
-      if not car_selected and self.sm.alive.get('carParams', False):
-        car_selected = self.sm['carParams'].carFingerprint or ""
+      if not car_selected and sm.alive.get('carParams', False):
+        car_selected = sm['carParams'].carFingerprint or ""
       if not car_selected:
         car_selected = "none"
 
