@@ -11,6 +11,21 @@ from pathlib import Path
 # <repo_root>/openpilot/sunnypilot/carrot/tests/<this file> -> <repo_root>
 ROOT = Path(__file__).resolve().parents[4]
 
+# main() reports the missing aiohttp through cloudlog.error, which lands in the device's
+# swaglog archive. Running this test on the device therefore injected "[carrot_navi]
+# aiohttp is not installed; 7714 ... cannot start" ERROR lines that look exactly like a
+# real dead receiver (they cost a diagnosis detour more than once). Stub cloudlog out in
+# the child process: the test asserts the idle-path behaviour, not the log sink.
+SWAGLOG_STUB = """
+import sys, types
+_stub = types.ModuleType('openpilot.common.swaglog')
+class _SilentLog:
+  def __getattr__(self, name):
+    return lambda *args, **kwargs: None
+_stub.cloudlog = _SilentLog()
+sys.modules['openpilot.common.swaglog'] = _stub
+"""
+
 
 class TestCarrotNaviWithoutAiohttp(unittest.TestCase):
   """Ensure carrot_navi can be imported and queried when aiohttp is absent."""
@@ -59,7 +74,7 @@ print('msg=', cn.WSMsgType.TEXT)
 
   def test_main_idles_without_aiohttp(self) -> None:
     """main() must enter an idle loop instead of crashing or returning."""
-    code = """
+    code = SWAGLOG_STUB + """
 import sys, threading, time
 sys.modules['aiohttp'] = None
 for name in list(sys.modules):
