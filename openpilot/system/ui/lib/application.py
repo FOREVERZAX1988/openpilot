@@ -973,6 +973,13 @@ class GuiApplication(GuiApplicationExt):
   def _monitor_fps(self):
     fps = rl.get_fps()
 
+    # raylib reports 0 until it has accumulated a full second of frames, so the first
+    # frames after (re)start read as 0. Treating that as a drop logged the misleading
+    # "FPS dropped below 20: 0" warnings in swaglog, and with STRICT_MODE=1 the
+    # critical branch would have called os._exit(1) on the very first frame.
+    if fps <= 0:
+      return
+
     # Log FPS drop below threshold at regular intervals
     if fps < self._target_fps * FPS_DROP_THRESHOLD:
       current_time = time.monotonic()

@@ -16,6 +16,13 @@ source "$DIR/launch_env.sh"
 # ---------------------------------------------------------------------------
 # Shared helpers for Python path setup and dependency bootstrapping.
 # AGNOS rootfs is read-only; pip deps are installed into $PYDEPS_DIR on first boot.
+#
+# Every network call below runs *before* ./manager.py, so all of them are time-bounded
+# (curl --connect-timeout/--max-time, pip --timeout/--retries 0): on a network that is
+# associated but half-working (phone hotspot) an unbounded download stalls the boot for
+# minutes with the comma logo frozen on screen. bootstrap_deps_retry() keeps retrying in
+# the background, so a deferred install self-heals instead of blocking the UI.
+# system/tests/test_launch_boot_bootstrap.py pins this.
 # ---------------------------------------------------------------------------
 find_python() {
   local py="$1"
@@ -57,14 +64,14 @@ ensure_pip_dep() {
     [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null || return 1
     if ! "$py" -c "import pip" 2>/dev/null; then
       # Device network cannot reach bootstrap.pypa.io, so prefer Aliyun mirror.
-      curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+      curl -fsSL --connect-timeout 5 --max-time 30 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
         "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || true
     fi
     # The device cannot reach pypi.org (TLS dies with SSL_ERROR_SYSCALL); same reason
     # the get-pip bootstrap above prefers mirrors.aliyun.com. Override with PIP_INDEX_URL.
     local index_url="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
     local tmpdir=$(pip_scratch_dir)
-    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --index-url="$index_url" --target="$pydeps" "$module" >> /tmp/bootstrap.log 2>&1 || return 1
+    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --timeout 15 --retries 0 --index-url="$index_url" --target="$pydeps" "$module" >> /tmp/bootstrap.log 2>&1 || return 1
     rm -rf "$tmpdir"/pip-* 2>/dev/null || true
   fi
 }
@@ -173,7 +180,7 @@ ensure_pip_deps() {
 
   [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null || return 1
   if ! "$py" -c "import pip" 2>/dev/null; then
-    curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+    curl -fsSL --connect-timeout 5 --max-time 30 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
       "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || return 1
   fi
 
@@ -186,7 +193,7 @@ ensure_pip_deps() {
   # --no-cache-dir keeps the wheel cache off the almost-full rootfs (90% used), and
   # TMPDIR moves pip's unpacking off the 150 MB tmpfs.
   local tmpdir=$(pip_scratch_dir)
-  if ! TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade --index-url="$index_url" --target="$pydeps" "${requirements[@]}" >> /tmp/bootstrap.log 2>&1; then
+  if ! TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade --timeout 15 --retries 0 --index-url="$index_url" --target="$pydeps" "${requirements[@]}" >> /tmp/bootstrap.log 2>&1; then
     echo "[ensure_pip_deps] install failed; will retry on next keep_alive cycle" >> /tmp/bootstrap.log
     rm -rf "$tmpdir"/pip-* 2>/dev/null || true
     return 1
@@ -226,7 +233,7 @@ ensure_wheel_package() {
   # from AGNOS. Letting pip resolve dependencies would also pull its own numpy into
   # $PYDEPS_DIR (observed: numpy 2.5.3 next to AGNOS's 2.5.1). CarrotPilot installs
   # the same wheels the same way.
-  if TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --no-index --no-deps --disable-pip-version-check \
+  if TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --timeout 15 --retries 0 --no-index --no-deps --disable-pip-version-check \
        --find-links "$WHEEL_DIR" --target "$pydeps" "$req" >> /tmp/bootstrap.log 2>&1 \
      && python_package_ok "$probe"; then
     rm -rf "$tmpdir"/pip-* 2>/dev/null || true

@@ -18,8 +18,39 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-try:
+def _import_aiohttp() -> tuple[Any, Any]:
+  """Import aiohttp, retrying with the bundled wheel dirs before giving up.
+
+  launch_chffrplus.sh puts /data/.pydeps on PYTHONPATH (see
+  system/tests/test_launch_boot_bootstrap.py), but a receiver started from a different
+  environment - a manual/debug launch, a boot that raced the wheel install, a
+  hot-updated source tree - silently loses 7714: the import fails, main() idles, and the
+  phone app just shows a dead receiver with nothing in the UI. Retry once with the known
+  wheel directories on sys.path so that failure mode needs a genuinely missing wheel.
+  """
+  try:
+    from aiohttp import WSMsgType, web
+    return WSMsgType, web
+  except ImportError:
+    pass
+
+  import importlib
+  import sys
+
+  from pathlib import Path
+
+  repo_root = Path(__file__).resolve().parents[3]
+  for candidate in (Path("/data/.pydeps"), repo_root / ".pydeps"):
+    if candidate.is_dir() and str(candidate) not in sys.path:
+      sys.path.append(str(candidate))
+  importlib.invalidate_caches()
+
   from aiohttp import WSMsgType, web
+  return WSMsgType, web
+
+
+try:
+  WSMsgType, web = _import_aiohttp()
   _AIOHTTP_AVAILABLE = True
 except ImportError:  # pragma: no cover - exercised on stock AGNOS without aiohttp
   _AIOHTTP_AVAILABLE = False
