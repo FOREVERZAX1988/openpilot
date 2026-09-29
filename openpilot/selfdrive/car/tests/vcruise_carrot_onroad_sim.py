@@ -11,7 +11,7 @@ only fire at engage time (signature mismatches, missing capnp fields, Params API
 misuse) which py_compile and code review both miss.
 
 Run from the repo root:
-    PYTHONPATH=E:\\sp python .workbuddy/onroad_sim.py
+    python openpilot/selfdrive/car/tests/vcruise_carrot_onroad_sim.py
 """
 from __future__ import annotations
 

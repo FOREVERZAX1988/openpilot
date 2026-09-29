@@ -6,6 +6,10 @@ import os
 import subprocess
 import sys
 import unittest
+from pathlib import Path
+
+# <repo_root>/openpilot/sunnypilot/carrot/tests/<this file> -> <repo_root>
+ROOT = Path(__file__).resolve().parents[4]
 
 
 class TestCarrotNaviWithoutAiohttp(unittest.TestCase):
@@ -13,7 +17,13 @@ class TestCarrotNaviWithoutAiohttp(unittest.TestCase):
 
   def _run_in_subprocess(self, code: str) -> subprocess.CompletedProcess:
     env = os.environ.copy()
-    env["PYTHONPATH"] = "E:/sp/openpilot"
+    # Derive the import root from this checkout instead of a hardcoded developer
+    # path (used to be "E:/sp/openpilot"), so the subprocess can import
+    # ``openpilot.*`` regardless of where the repo actually lives.
+    paths = [str(ROOT)]
+    if env.get("PYTHONPATH"):
+      paths.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(paths)
     # Make sure we use the same interpreter as the test runner.
     python = sys.executable
     return subprocess.run(
