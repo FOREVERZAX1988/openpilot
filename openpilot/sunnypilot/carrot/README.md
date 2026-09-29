@@ -64,6 +64,28 @@ consumer:
 Card-side switches are refreshed in `card.py::params_thread`, so flipping them takes
 effect without a reboot.
 
+### xiaoge models: onroad-only gate (plan A)
+
+`xiaoge_data` runs whenever `CarrotEnabled` is set, so on a parked, ignition-off car the
+lane ONNX pipeline kept inferring with nobody in the vehicle. Both xiaoge pipelines are now
+gated by onroad only (`xiaoge/onroad_gate.py`, `deviceState.started` -- the same flag the
+manager uses for `IsOffroad`):
+
+| State | xiaoge ONNX | Why |
+|---|---|---|
+| onroad, including standstill (red light, idling, traffic jam, ACC stop-and-go) | lane model runs every `OnnxLaneIntervalMs`; blind-spot model keeps its own 30-120 km/h gate | the lane signal has to stay fresh during a drive; a standstill is still onroad |
+| offroad (ignition off / parked / garage) | both models paused, camera polls back off 5 ms -> 50 ms, the last published lane result is cleared at once | nobody is in the car, so stop burning CPU on it |
+
+A speed gate was the alternative (pause below ~5 km/h after a ~10 s grace) and was
+rejected: it would stop refreshing the lane signal while stopped, which is exactly when
+navigation / traffic-light lane guidance wants it.
+
+`/status` reports the live decision as `onroadGate` (`active` / `started` / `reason`); if
+`deviceState` is not available the gate fails **open** (runs) and says so in `reason` rather
+than silently disabling the feature. This only gates our auxiliary signals
+(`carStateSP.xiaogeLeft/RightLaneLine` and the xiaoge blind-spot hints); the car's own lane
+keeping, localisation and factory BSD do not come from these pipelines.
+
 ### Deliberate divergence: the 8088 control plane is opt-in
 
 CarrotPilot's `carrot_server` (port 7000) is `always_run` unless `CARROT_WEB_EXTERNAL=1`.

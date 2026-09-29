@@ -28,6 +28,7 @@ import openpilot.cereal.messaging as messaging
 from openpilot.cereal import log
 from openpilot.sunnypilot.carrot.xiaoge.lane_inference import DEFAULT_LANE_MODEL_PATH, LaneInference, prepare_lane_image
 from openpilot.sunnypilot.carrot.xiaoge.nv12 import nv12_y_plane, pack_nv12
+from openpilot.sunnypilot.carrot.xiaoge.onroad_gate import REASON_UNKNOWN, xiaoge_inference_allowed
 from openpilot.sunnypilot.carrot.xiaoge.v_asm_inference import DEFAULT_MODEL_PATH, VASMInference
 from openpilot.sunnypilot.carrot.xiaoge.xiaoge_vision import XIAOGE_BLINDSPOT_TIMEOUT_NS, XIAOGE_LANE_TIMEOUT_NS, lane_width_meters
 
@@ -58,6 +59,23 @@ FOLLOWUP_WINDOW_SECONDS = 1.5
 VASM_MIN_SPEED_MPS = 30.0 / 3.6
 VASM_MAX_SPEED_MPS = 120.0 / 3.6
 VASM_MIN_LANE_WIDTH_METERS = 3.0
+# Plan A: both xiaoge pipelines are gated by onroad only (see onroad_gate.py).  Offroad
+# neither thread has inference to feed, so their camera polls back off from the 5 ms
+# onroad cadence; 50 ms still picks up an onroad transition within one frame and keeps
+# the debug /snapshot endpoint responsive.
+OFFROAD_POLL_INTERVAL_SECONDS = 0.05
+# The lane payload published while offroad: an explicit "no lane" that downstream
+# (card.py -> carStateSP.xiaoge*LaneLine, 4 s freshness window) drops immediately.
+LANE_RESULT_INVALID = {
+  "leftLine": -1,
+  "rightLine": -1,
+  "leftConf": 0.0,
+  "rightConf": 0.0,
+  "candidatesCount": 0,
+  "valid": False,
+  "error": "",
+  "updatedMonoTimeNanos": 0,
+}
 CAMERA_TIMEOUT_SECONDS = 2.0
 SNAPSHOT_TIMEOUT_SECONDS = 5.0
 # VisionIPC recv holds the GIL while waiting. Poll without blocking, then sleep
@@ -203,16 +221,13 @@ class VASMService:
     self.lane_inference_fps = 0.0
     self._lane_fps_window_start = time.monotonic()
     self._lane_fps_window_count = 0
-    self.lane_result = {
-      "leftLine": -1,
-      "rightLine": -1,
-      "leftConf": 0.0,
-      "rightConf": 0.0,
-      "candidatesCount": 0,
-      "valid": False,
-      "error": "",
-      "updatedMonoTimeNanos": 0,
-    }
+    self.lane_result = dict(LANE_RESULT_INVALID)
+    # Plan A onroad gate, shared by the wide-road (blind spot) and road (lane) threads.
+    # Its own SubMaster: run_camera already calls sm.update(0) on self.sm, and two
+    # threads must not drive the same SubMaster (sockets + per-service dicts are not
+    # thread safe).  Everything here is written under self.lock.
+    self.onroad_sm = messaging.SubMaster(["deviceState"])
+    self.onroad_gate = {"active": True, "started": None, "reason": REASON_UNKNOWN}
     self.params = params if params is not None else create_params()
     self.last_param_refresh_at = 0.0
     self._refresh_settings_from_params(force=True)
@@ -379,6 +394,7 @@ class VASMService:
         "configured": bool(self.config),
         "configuredSides": list(self.inference.configured_sides),
         "gate": self.vasm_gate,
+        "onroadGate": self.onroad_gate,
         "threshold": self.threshold,
         "smoothingSeconds": self.smoothing_seconds,
         "baseIntervalSeconds": self.base_interval_seconds,
@@ -430,6 +446,26 @@ class VASMService:
       if self.snapshot_responses[stream_type] < requested:
         return None
       return self.last_road_jpeg if stream_type == "road" else self.last_jpeg
+
+  def _update_onroad_gate(self) -> tuple[bool, str]:
+    """Plan A: run either xiaoge model only while the device is onroad.
+
+    Standstill is still onroad (red light, idling, traffic jam, ACC stop-and-go), so the
+    lane signal never goes stale during a drive; only ignition-off / parked skips the
+    inference.  See onroad_gate.py for the policy and the fail-open rationale.  The
+    blind-spot pipeline keeps its own speed gate on top of this one.
+    """
+    self.onroad_sm.update(0)
+    available = self.onroad_sm.all_alive(["deviceState"]) and self.onroad_sm.all_valid(["deviceState"])
+    started = bool(self.onroad_sm["deviceState"].started) if available else False
+    active, reason = xiaoge_inference_allowed(device_state_available=available, started=started)
+    with self.lock:
+      self.onroad_gate = {
+        "active": active,
+        "started": started if available else None,
+        "reason": reason,
+      }
+    return active, reason
 
   def _update_vasm_gate(self) -> tuple[bool, str]:
     self.sm.update(0)
@@ -523,7 +559,13 @@ class VASMService:
           continue
         now = time.monotonic()
         self._refresh_settings_from_params()
-        gate_active, side = self._update_vasm_gate()
+        onroad, offroad_reason = self._update_onroad_gate()
+        if onroad:
+          gate_active, side = self._update_vasm_gate()
+        else:
+          # Plan A: offroad nobody is in the car.  The speed gate below would already
+          # refuse to infer at 0 km/h, so this only skips the per-frame gate work.
+          gate_active, side = False, ""
         publish_clear = False
         with self.lock:
           self.last_frame_at = now
@@ -533,6 +575,8 @@ class VASMService:
             self.snapshot_responses["wide"] = self.snapshot_requests["wide"]
             self.snapshot_condition.notify_all()
           if not gate_active:
+            if not onroad:
+              self.vasm_gate = {"active": False, "side": "", "reason": offroad_reason, "laneWidth": 0.0}
             publish_clear = self.vasm_result["left"] or self.vasm_result["right"]
             self.vasm_result = {"left": False, "right": False, "side": "", "updatedMonoTimeNanos": time.monotonic_ns()}
           else:
@@ -542,6 +586,8 @@ class VASMService:
         if not gate_active:
           if publish_clear:
             self.publish_vision_result()
+          if not onroad:
+            time.sleep(OFFROAD_POLL_INTERVAL_SECONDS)
           continue
         with self.vasm_inference_lock:
           configured_sides = self.inference.configured_sides
@@ -604,7 +650,8 @@ class VASMService:
           continue
         now = time.monotonic()
         self._refresh_settings_from_params()
-        frame = nv12_y_plane(buffer.data, buffer.width, buffer.height, buffer.stride)
+        onroad, _ = self._update_onroad_gate()
+        lane_publish_clear = False
         with self.lock:
           self.last_road_frame_at = now
           self.lane_camera_error = ""
@@ -612,12 +659,24 @@ class VASMService:
             self.last_road_jpeg = self._lane_jpeg_from_nv12(buffer.data, buffer.width, buffer.height, buffer.stride)
             self.snapshot_responses["road"] = self.snapshot_requests["road"]
             self.snapshot_condition.notify_all()
-          if not self.lane_inference.valid:
+          if not onroad:
+            # Plan A: parked, ignition off -> skip the lane ONNX inference entirely.
+            # Clear whatever we were still publishing so it expires now instead of
+            # lingering for the 4 s freshness window.
+            lane_publish_clear = bool(self.lane_result["valid"])
+            self.lane_result = dict(LANE_RESULT_INVALID, updatedMonoTimeNanos=time.monotonic_ns())
+          elif not self.lane_inference.valid:
             continue
-          if now - self.last_lane_inference_at < self.lane_interval_seconds:
+          elif now - self.last_lane_inference_at < self.lane_interval_seconds:
             continue
-
-          lane_threshold = self.lane_threshold
+          else:
+            lane_threshold = self.lane_threshold
+        if not onroad:
+          if lane_publish_clear:
+            self.publish_vision_result()
+          time.sleep(OFFROAD_POLL_INTERVAL_SECONDS)
+          continue
+        frame = nv12_y_plane(buffer.data, buffer.width, buffer.height, buffer.stride)
         t0 = time.monotonic()
         cpu0 = time.thread_time()
         res = self.lane_inference.infer(
