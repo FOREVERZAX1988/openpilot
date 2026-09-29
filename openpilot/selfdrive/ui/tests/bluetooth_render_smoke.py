@@ -79,6 +79,14 @@ def _measure_text(text, size):
   return len(text or "") * size * _ADVANCE
 
 
+# Record every draw_text_ex call so we can assert no text is drawn twice (ghosting).
+DRAWN: list[tuple] = []
+
+
+def _draw_text_ex(font, text, pos, size, spacing, color):
+  DRAWN.append((str(text), pos.x, pos.y, size))
+
+
 def build_fake_pyray():
   m = _FakeModule("pyray")
   m.Rectangle = Rect
@@ -115,7 +123,7 @@ def build_fake_pyray():
   m.draw_rectangle_rounded = lambda *a, **k: None
   m.draw_rectangle = lambda *a, **k: None
   m.draw_line = lambda *a, **k: None
-  m.draw_text_ex = lambda *a, **k: None
+  m.draw_text_ex = _draw_text_ex
   m.draw_texture_v = lambda *a, **k: None
   return m
 
@@ -335,6 +343,23 @@ def main():
   # Main device list panel
   layout._render(rect)
   assert layout._panel == BTPanel.DEVICES
+
+  # Ghosting regression check: each device name must be drawn exactly once.
+  # A duplicated name (once from the row Button, once from draw_text_ex) at
+  # different vertical offsets is the exact "重影" symptom that was reported.
+  from collections import Counter
+  drawn_names = Counter(t for t, x, y, s in DRAWN if t in ("Yiser-J6", "Phone"))
+  assert drawn_names.get("Yiser-J6", 0) == 1, f"Yiser-J6 drawn {drawn_names.get('Yiser-J6')} times"
+  assert drawn_names.get("Phone", 0) == 1, f"Phone drawn {drawn_names.get('Phone')} times"
+
+  # Row buttons must cover only the left text area, NOT the whole row. If a row
+  # button spanned the full width it would swallow taps meant for the Pair /
+  # Connect / Forget action buttons and (worse) open the editor instead of
+  # confirming a pairing.
+  for addr in ("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"):
+    row_btn = layout._device_btns.get(addr)
+    assert row_btn is not None and row_btn.rect.width < rect.width, \
+      f"row button for {addr} must not span the whole row"
 
   # Advanced panel with toggles + name row + reset
   layout._on_advanced_clicked()

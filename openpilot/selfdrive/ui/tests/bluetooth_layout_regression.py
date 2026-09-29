@@ -337,6 +337,63 @@ def test_advanced_name_row_layout():
         f"reset bottom={reset.y + reset.height} panel bottom={RECT.y + RECT.height}")
 
 
+# ---------------------------------------------------------------------------
+# 10. Row action buttons must actually respond, and the row tap must not eat
+#     their taps. Two defects met here: a full-width row button covered the
+#     Pair / Connect / Forget buttons (so tapping "Pair" opened the mapping
+#     editor), and one shared Button instance was rendered once per row per
+#     frame, so the second render reset the press state the first had just set
+#     and a normal tap (press and release in different frames) was dropped.
+# ---------------------------------------------------------------------------
+def test_row_action_buttons_respond():
+  print("\n10. row action buttons respond and are not swallowed by the row tap")
+  layout = fresh_layout(RECT)
+  paired, unpaired = "AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"
+
+  calls = []
+  layout._confirm_pair = lambda dev: calls.append(("pair", dev.address))
+  layout._confirm_forget = lambda dev: calls.append(("forget", dev.address))
+  layout._on_device_action = lambda dev, op: calls.append((op, dev.address))
+
+  def action_btn(addr, action):
+    """Per-row Button; falls back to the old shared instances so a regression
+    shows up as a dropped tap, not as a missing attribute."""
+    btn = getattr(layout, "_row_action_btns", {}).get((addr, action))
+    if btn is None:
+      btn = getattr(layout, "_forget_btn" if action == "forget" else "_connect_btn", None)
+    return btn
+
+  for addr, action, label, expect in (
+      (unpaired, "pair", "Pair", ("pair", unpaired)),
+      (paired, "connect", "Disconnect", ("disconnect", paired)),
+      (paired, "forget", "Forget", ("forget", paired)),
+  ):
+    btn = action_btn(addr, action)
+    if btn is None:
+      check(f"'{label}' action button exists for {addr}", False, "no Button instance")
+      continue
+    calls.clear()
+    tap(layout, RECT, *center(btn.rect))
+    check(f"tapping '{label}' fires its action", expect in calls, f"calls={calls}")
+    check(f"tapping '{label}' does not open the editor", layout._panel == BTPanel.DEVICES,
+          f"got {BTPanel(layout._panel).name}")
+    layout._panel = BTPanel.DEVICES
+
+  # The row's own tap target still works: paired -> editor, unpaired -> confirm.
+  row = layout._device_btns[paired]
+  tap(layout, RECT, row.rect.x + 40, row.rect.y + row.rect.height / 2)
+  check("tapping a paired row opens the editor", layout._panel == BTPanel.EDITOR,
+        f"got {BTPanel(layout._panel).name}")
+
+  layout._panel = BTPanel.DEVICES
+  calls.clear()
+  row = layout._device_btns[unpaired]
+  tap(layout, RECT, row.rect.x + 40, row.rect.y + row.rect.height / 2)
+  check("tapping an unpaired row asks to confirm pairing", ("pair", unpaired) in calls, f"calls={calls}")
+  check("tapping an unpaired row does not open the editor", layout._panel == BTPanel.DEVICES,
+        f"got {BTPanel(layout._panel).name}")
+
+
 def main():
   test_first_row_below_header()
   test_advanced_tap_opens_advanced_only()
@@ -347,6 +404,7 @@ def main():
   test_editor_fits_panel()
   test_advanced_captions_fit()
   test_advanced_name_row_layout()
+  test_row_action_buttons_respond()
 
   print()
   if FAILURES:

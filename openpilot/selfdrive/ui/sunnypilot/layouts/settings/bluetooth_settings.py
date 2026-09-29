@@ -201,6 +201,8 @@ class CarrotBluetoothLayout(Widget):
 
     # Per-device row button cache (re-created when device set changes)
     self._device_btns: dict[str, Button] = {}
+    # (address, action) -> Button. One instance per row: see _row_action_btn.
+    self._row_action_btns: dict[tuple[str, str], Button] = {}
 
     # Status / error labels
     self._status_text = ''
@@ -222,8 +224,6 @@ class CarrotBluetoothLayout(Widget):
     self._test_btn = Button(tr("Test / Learn"), self._on_test_clicked, button_style=ButtonStyle.NORMAL, font_size=40, border_radius=15)
     self._stop_btn = Button(tr("Stop Test"), self._on_stop_clicked, button_style=ButtonStyle.DANGER, font_size=40, border_radius=15)
     self._back_btn = Button(tr("Back"), self._on_back_clicked, button_style=ButtonStyle.NORMAL, font_size=45, border_radius=15)
-    self._connect_btn = Button('', self._on_connect_clicked, button_style=ButtonStyle.PRIMARY, font_size=40, border_radius=15)
-    self._forget_btn = Button(tr("Forget"), self._on_forget_clicked, button_style=ButtonStyle.DANGER, font_size=40, border_radius=15)
     self._edit_btn = Button(tr("Edit"), self._on_edit_clicked, button_style=ButtonStyle.NORMAL, font_size=40, border_radius=15)
 
     self._last_radio_state = self._state.radio_enabled
@@ -542,44 +542,48 @@ class CarrotBluetoothLayout(Widget):
     """Width for a device-row action Button (font size 40, row-sized)."""
     return self._fitted_btn_width(label, DEVICE_ACTION_FONT_SIZE, 160)
 
+  def _row_action_btn(self, address: str, action: str) -> Button:
+    """One Button instance per (row, action) pair.
+
+    A single shared instance is rendered once per device row *within the same
+    frame*. Widget._process_mouse_events keys off per-instance press state, so
+    the second render reset the state the first had just set -- a normal tap
+    (press in one frame, release in the next) on "Pair" was silently dropped.
+    """
+    key = (address, action)
+    btn = self._row_action_btns.get(key)
+    if btn is None:
+      btn = Button('', None, button_style=ButtonStyle.NORMAL,
+                   font_size=DEVICE_ACTION_FONT_SIZE, border_radius=15)
+      btn.set_touch_valid_callback(lambda: self._scroll_panel.is_touch_valid())
+      self._row_action_btns[key] = btn
+    return btn
+
   def _render_device_row(self, rect: rl.Rectangle, dev: BTDevice, state: BTState, is_last: bool,
                          clip_rect: rl.Rectangle | None = None) -> None:
-    """Network-style row: full-width transparent button, text left, signal/actions right, separator."""
-    # Rows scroll under the header, so clip the *hit* area to the visible band too.
-    # Otherwise the hidden part of a row stays tappable and a tap on the header
-    # activates whatever row is hidden behind it.
-    visible_rect = rl.get_collision_rec(rect, clip_rect) if clip_rect is not None else rect
+    """Network-style row: text left, signal/actions right, separator.
 
-    row_btn = self._device_btns.get(dev.address)
-    if row_btn is None:
-      # Empty caption on purpose: the row's text is drawn below, scissored to the
-      # text column. Putting the device name on the Button drew a second,
-      # un-clipped copy (two overlapping names, and long names ran under the
-      # RSSI / action buttons).
-      row_btn = Button('', lambda _d=dev: self._on_edit_device(_d),
-                       font_size=50, text_alignment=TextAlignment.LEFT,
-                       button_style=ButtonStyle.TRANSPARENT_WHITE_TEXT)
-      row_btn.set_touch_valid_callback(lambda: self._scroll_panel.is_touch_valid())
-      self._device_btns[dev.address] = row_btn
-    row_btn.set_parent_rect(visible_rect)
-    row_btn.render(rect)
-
+    The row's tap target is the *text column* only, and its hit area is clipped
+    to the visible band. A full-width row button used to swallow taps meant for
+    the Pair / Connect / Forget action buttons, and an unclipped one stayed
+    tappable underneath the header while the row itself scrolled out of view.
+    """
     btn_gap = 16
 
     # Compute action buttons from right edge.
     if not dev.paired:
       action_btns = [
-        (self._connect_btn, self._action_btn_width(tr("Pair")), tr("Pair"), ButtonStyle.PRIMARY,
-         lambda: self._confirm_pair(dev)),
+        (self._row_action_btn(dev.address, 'pair'), self._action_btn_width(tr("Pair")), tr("Pair"),
+         ButtonStyle.PRIMARY, lambda: self._confirm_pair(dev)),
       ]
     else:
       conn_label = tr("Disconnect") if dev.connected else tr("Connect")
       action_btns = [
-        (self._connect_btn, self._action_btn_width(conn_label), conn_label,
+        (self._row_action_btn(dev.address, 'connect'), self._action_btn_width(conn_label), conn_label,
          ButtonStyle.NORMAL if dev.connected else ButtonStyle.PRIMARY,
          lambda: self._on_device_action(dev, 'connect' if not dev.connected else 'disconnect')),
-        (self._forget_btn, self._action_btn_width(tr("Forget")), tr("Forget"), ButtonStyle.DANGER,
-         lambda: self._confirm_forget(dev)),
+        (self._row_action_btn(dev.address, 'forget'), self._action_btn_width(tr("Forget")), tr("Forget"),
+         ButtonStyle.DANGER, lambda: self._confirm_forget(dev)),
       ]
 
     total_action_w = sum(w for _, w, _, _, _ in action_btns) + btn_gap * (len(action_btns) - 1)
@@ -598,7 +602,25 @@ class CarrotBluetoothLayout(Widget):
     # Main text area (left of RSSI/actions) is scissored.
     main_right = rssi_right - rssi_col_w - self._padding
     text_x = rect.x + self._padding
-    rl.begin_scissor_mode(int(rect.x), int(rect.y), int(max(0, main_right - rect.x)), int(rect.height))
+
+    # Row button == text column (left of RSSI/actions), hit area clipped to the
+    # visible band so the hidden part of a scrolled row is not tappable.
+    text_rect = rl.Rectangle(rect.x, rect.y, max(0.0, main_right - rect.x), rect.height)
+    row_btn = self._device_btns.get(dev.address)
+    if row_btn is None:
+      # Empty caption on purpose: the row's text is drawn below, scissored to the
+      # text column. Putting the device name on the Button drew a second,
+      # un-clipped copy (two overlapping names, and long names ran under the
+      # RSSI / action buttons).
+      row_btn = Button('', lambda _d=dev: self._on_row_clicked(_d),
+                       font_size=50, text_alignment=TextAlignment.LEFT,
+                       button_style=ButtonStyle.TRANSPARENT_WHITE_TEXT)
+      row_btn.set_touch_valid_callback(lambda: self._scroll_panel.is_touch_valid())
+      self._device_btns[dev.address] = row_btn
+    row_btn.set_parent_rect(rl.get_collision_rec(text_rect, clip_rect) if clip_rect is not None else text_rect)
+    row_btn.render(text_rect)
+
+    rl.begin_scissor_mode(int(text_rect.x), int(text_rect.y), int(text_rect.width), int(text_rect.height))
 
     name_y = rect.y + 22
     rl.draw_text_ex(gui_app.font(), dev.name or dev.address, rl.Vector2(text_x, name_y), 50, 0, rl.WHITE)
@@ -1035,12 +1057,6 @@ class CarrotBluetoothLayout(Widget):
   def _on_retry_clicked(self) -> None:
     self._fetch_state()
 
-  def _on_connect_clicked(self) -> None:
-    pass
-
-  def _on_forget_clicked(self) -> None:
-    pass
-
   def _on_edit_clicked(self) -> None:
     pass
 
@@ -1071,6 +1087,13 @@ class CarrotBluetoothLayout(Widget):
         self._panel = BTPanel.DEVICES
     else:
       self._http_async(operation, {'address': dev.address})
+
+  def _on_row_clicked(self, dev: BTDevice) -> None:
+    """Whole-row tap: pair first for an unpaired device, open the editor for a paired one."""
+    if not dev.paired:
+      self._confirm_pair(dev)
+    else:
+      self._on_edit_device(dev)
 
   def _on_edit_device(self, dev: BTDevice) -> None:
     self._selected_address = dev.address
