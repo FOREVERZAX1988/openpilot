@@ -1487,7 +1487,7 @@ class CarrotManager:
                 except OSError as e:
                   import errno
                   if e.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ENETDOWN):
-                    cloudlog.warning(f"carrot_man: broadcast network unreachable ({e.errno})")
+                    cloudlog.debug(f"carrot_man: broadcast network unreachable ({e.errno})")
                   else:
                     cloudlog.error(f"carrot_man: broadcast error: {e}")
             except Exception as e:
