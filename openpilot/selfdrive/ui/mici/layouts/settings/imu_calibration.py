@@ -10,7 +10,7 @@ from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigParamContro
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog
-from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.application import FontWeight, gui_app
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller import NavScroller
@@ -37,7 +37,7 @@ class ImuCalibrationInfo(Widget):
     status_y = rect.y + rect.height * 0.20
     angles_y = rect.y + rect.height * 0.50
     quality_y = rect.y + rect.height * 0.75
-    font = gui_app.font("normal")
+    font = gui_app.font(FontWeight.NORMAL)
     status_width = measure_text_cached(font, self._status, status_size, 0).x
     rl.draw_text_ex(font, self._status,
                     rl.Vector2(rect.x + (rect.width - status_width) / 2, status_y),
