@@ -404,6 +404,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotTrafficLightFusionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // fuse carrot / Amap / vision traffic lights
     {"TrafficLightNavCautionOnly", {PERSISTENT | BACKUP, BOOL, "1"}},       // fused red light only warns; set 0 to allow stop assist
     {"DesireArbiterEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},             // lateral lane-change/fork desire from nav
+    // Let carrot ATC (auto turn control) synthesise a turn signal from the phone's
+    // navigation intent. OFF by default. When on, an ATC/atcType/forkLeft-style packet
+    // makes desire_helper treat a blinker as pressed, which reaches the vehicle: the
+    // synthetic blinker drives LaneChangeState.preLaneChange -> modelV2 laneChangeState
+    // -> controlsd CC.left/rightBlinker -> the car's own turn-signal CAN message. That is
+    // a navigation intent becoming a vehicle actuation, so it has to be an explicit
+    // choice rather than the default.
+    {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ATCMaxSpeedKph", {PERSISTENT | BACKUP, FLOAT, "35.0"}},               // auto-turn-control speed floor cap
     {"CarrotSourceTimeoutMs", {PERSISTENT | BACKUP, INT, "2000"}},          // carrot packet timeout [ms]
     {"AmapCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // use Amap Web polyline for curve speed
