@@ -13,21 +13,12 @@ export PATH="/usr/local/venv/bin:${PATH}"
 
 source "$DIR/launch_env.sh"
 
-is_headless_boot() {
-  case "${OPENPILOT_HEADLESS,,}" in 1|true|yes) return 0 ;; esac
-  if [ -d /sys/class/backlight/panel0-backlight ]; then
-    if ! grep -q fts_ts /proc/interrupts 2>/dev/null && \
-       [ ! -e /dev/input/by-path/platform-894000.i2c-event ]; then
-      return 0
-    fi
-  fi
+find_python() {
+  local py="$1"
+  command -v "$py" >/dev/null 2>&1 && echo "$py" && return 0
+  command -v python3 >/dev/null 2>&1 && echo python3 && return 0
   return 1
 }
-
-function agnos_init {
-  # TODO: move this to agnos
-  sudo rm -f /data/etc/NetworkManager/system-connections/*.nmmeta
-  rm -f /data/scons_cache/config.lock
 
 setup_python_path() {
   local root="$1"
@@ -47,24 +38,30 @@ ensure_pip_dep() {
   local py_path=$(setup_python_path "$DIR")
   local lockfile="/tmp/ensure_pip_dep_${module}.lock"
 
-  # Check if AGNOS update is required
-  if [ $(< /VERSION) != "$AGNOS_VERSION" ]; then
-    AGNOS_PY="$DIR/openpilot/common/hardware/comma/agnos.py"
-    MANIFEST="$DIR/openpilot/common/hardware/comma/agnos.json"
-    if [ ! -f "$MANIFEST" ]; then
-      MANIFEST="$DIR/openpilot/system/hardware/comma/agnos.json"
+  # Fast path: skip import check if the package directory already exists.
+  [ -d "$pydeps/$module" ] && return 0
+
+  # Only one pip install at a time; concurrent calls from keep-alive loops
+  # race on the same .pydeps directory and slow each other down.
+  exec 200>"$lockfile"
+  flock 200 || return 1
+
+  # Re-check after acquiring lock in case another instance just installed it.
+  [ -d "$pydeps/$module" ] && return 0
+
+  if ! PYTHONPATH="$py_path" "$py" -c "import $module" 2>/dev/null; then
+    [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null || return 1
+    if ! "$py" -c "import pip" 2>/dev/null; then
+      # Device network cannot reach bootstrap.pypa.io, so prefer Aliyun mirror.
+      curl -fsSL --connect-timeout 5 --max-time 30 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+        "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || true
     fi
-    if [ ! -f "$MANIFEST" ]; then
-      MANIFEST="$DIR/common/hardware/comma/agnos.json"
-    fi
-    if $AGNOS_PY --verify $MANIFEST; then
-      sudo reboot
-    fi
-    if is_headless_boot; then
-      echo "[agnos] headless: OS update required ($(cat /VERSION) -> $AGNOS_VERSION). Use WebUI Software → AGNOS, or SSH: $AGNOS_PY --swap $MANIFEST" | tee -a /tmp/agnos_pending.log
-      return 0
-    fi
-    $DIR/openpilot/common/hardware/comma/updater $AGNOS_PY $MANIFEST
+    # The device cannot reach pypi.org (TLS dies with SSL_ERROR_SYSCALL); same reason
+    # the get-pip bootstrap above prefers mirrors.aliyun.com. Override with PIP_INDEX_URL.
+    local index_url="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
+    local tmpdir=$(pip_scratch_dir)
+    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --timeout 15 --retries 0 --index-url="$index_url" --target="$pydeps" "$module" >> /tmp/bootstrap.log 2>&1 || return 1
+    rm -rf "$tmpdir"/pip-* 2>/dev/null || true
   fi
 }
 
@@ -193,13 +190,8 @@ mount_nvme() {
     [ -b /dev/nvme0n1p1 ] && break
     sleep 1
   done
+  [ ! -b /dev/nvme0n1p1 ] && return 0
 
-  # Returns 0 (success) so the boot process continues without errors
-  if [ ! -b /dev/nvme0n1p1 ]; then
-    return 0
-  fi
-
-  # We assume /data/media/0/realdata exists per defaults
   if ! mountpoint -q /data/media/0/realdata; then
     mount /dev/nvme0n1p1 /data/media/0/realdata
   fi
@@ -208,14 +200,8 @@ mount_nvme() {
     OWNER="$(stat -c '%U' /data/media/0/realdata)"
     GROUP="$(stat -c '%G' /data/media/0/realdata)"
     PERM="$(stat -c '%a' /data/media/0/realdata)"
-
-    if [ "$OWNER" != "comma" ] || [ "$GROUP" != "comma" ]; then
-      chown comma:comma /data/media/0/realdata
-    fi
-
-    if [ "$PERM" != "755" ]; then
-      chmod 755 /data/media/0/realdata
-    fi
+    [ "$OWNER" != "comma" ] || [ "$GROUP" != "comma" ] && chown comma:comma /data/media/0/realdata
+    [ "$PERM" != "755" ] && chmod 755 /data/media/0/realdata
   fi
 }
 
@@ -340,7 +326,7 @@ ensure_pip_deps() {
 
   [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null || return 1
   if ! "$py" -c "import pip" 2>/dev/null; then
-    curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+    curl -fsSL --connect-timeout 5 --max-time 30 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
       "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || return 1
   fi
 
@@ -353,7 +339,7 @@ ensure_pip_deps() {
   # --no-cache-dir keeps the wheel cache off the almost-full rootfs (90% used), and
   # TMPDIR moves pip's unpacking off the 150 MB tmpfs.
   local tmpdir=$(pip_scratch_dir)
-  if ! TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade --index-url="$index_url" --target="$pydeps" "${requirements[@]}" >> /tmp/bootstrap.log 2>&1; then
+  if ! TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade --timeout 15 --retries 0 --index-url="$index_url" --target="$pydeps" "${requirements[@]}" >> /tmp/bootstrap.log 2>&1; then
     echo "[ensure_pip_deps] install failed; will retry on next keep_alive cycle" >> /tmp/bootstrap.log
     rm -rf "$tmpdir"/pip-* 2>/dev/null || true
     return 1
@@ -393,7 +379,7 @@ ensure_wheel_package() {
   # from AGNOS. Letting pip resolve dependencies would also pull its own numpy into
   # $PYDEPS_DIR (observed: numpy 2.5.3 next to AGNOS's 2.5.1). CarrotPilot installs
   # the same wheels the same way.
-  if TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --no-index --no-deps --disable-pip-version-check \
+  if TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --timeout 15 --retries 0 --no-index --no-deps --disable-pip-version-check \
        --find-links "$WHEEL_DIR" --target "$pydeps" "$req" >> /tmp/bootstrap.log 2>&1 \
      && python_package_ok "$probe"; then
     rm -rf "$tmpdir"/pip-* 2>/dev/null || true
@@ -558,21 +544,6 @@ set_aux_panda() {
   echo none | sudo tee "$mode" >/dev/null 2>&1
 }
 
-  # hardware specific init
-  if [ -f /AGNOS ]; then
-    set_tici_hw
-    set_lite_hw
-    agnos_init
-  fi
-
-  if mountpoint -q /data/media/0/realdata; then
-    OWNER="$(stat -c '%U' /data/media/0/realdata)"
-    GROUP="$(stat -c '%G' /data/media/0/realdata)"
-    PERM="$(stat -c '%a' /data/media/0/realdata)"
-    [ "$OWNER" != "comma" ] || [ "$GROUP" != "comma" ] && chown comma:comma /data/media/0/realdata
-    [ "$PERM" != "755" ] && chmod 755 /data/media/0/realdata
-  fi
-}
 
 set_lite_hw() {
   [ "$(comma_device_slug)" = "tici" ] || return 0
@@ -646,7 +617,7 @@ ensure_updater_deps() {
 
   # 1) Offline wheel first (no network needed).
   if [ -n "$wheel" ]; then
-    if TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --no-index --no-deps \
+    if TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --timeout 15 --retries 0 --no-index --no-deps \
          --disable-pip-version-check --target "$pydeps" "$wheel" >> /tmp/bootstrap.log 2>&1 \
        && PYTHONPATH="$py_path" "$py" -c "import serial" >/dev/null 2>&1; then
       echo "[ensure_updater_deps] installed pyserial from bundled wheel" >> /tmp/bootstrap.log
@@ -658,11 +629,11 @@ ensure_updater_deps() {
   # 2) Network fallback via the pip mirror.
   if wait_for_dns 30; then
     if ! "$py" -c "import pip" >/dev/null 2>&1; then
-      curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+      curl -fsSL --connect-timeout 5 --max-time 30 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
         "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || true
     fi
     local index_url="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
-    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade \
+    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --timeout 15 --retries 0 --upgrade \
       --index-url="$index_url" --target="$pydeps" pyserial >> /tmp/bootstrap.log 2>&1 || true
   fi
 
