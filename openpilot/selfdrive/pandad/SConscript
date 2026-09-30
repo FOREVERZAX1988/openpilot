@@ -2,12 +2,7 @@ Import('env', 'arch', 'common', 'messaging')
 
 if arch != "Darwin":
   import libusb
-  env = env.Clone()
-  env['CPPPATH'] += [libusb.INCLUDE_DIR]
-  env['LIBPATH'] += [libusb.LIB_DIR]
-
-  libs = [common, messaging, 'pthread', 'usb-1.0']
-  panda = env.Library('panda', ['panda.cc', 'panda_comms.cc', 'spi.cc'])
+  import opendbc
 
   pandad_env = env.Clone()
   pandad_env['CPPPATH'] += [libusb.INCLUDE_DIR, opendbc.INCLUDE_PATH]
