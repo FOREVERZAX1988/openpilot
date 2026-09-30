@@ -10,7 +10,6 @@ from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.widgets.nav_widget import NavWidget
 from openpilot.system.ui.lib.application import FontWeight, gui_app
 from openpilot.system.ui.widgets.label import UnifiedLabel
-from openpilot.system.ui.lib.multilang import tr
 
 
 class PairingDialog(NavWidget):

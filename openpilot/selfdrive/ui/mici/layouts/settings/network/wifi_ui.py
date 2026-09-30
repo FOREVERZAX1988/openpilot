@@ -11,7 +11,6 @@ from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller import NavScroller
 from openpilot.system.ui.lib.wifi_manager import WifiManager, Network, SecurityType, normalize_ssid
-from openpilot.system.ui.lib.multilang import tr
 
 
 class LoadingAnimation(Widget):
