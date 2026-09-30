@@ -50,7 +50,10 @@ from openpilot.common.hardware.hw import Paths
 from openpilot.system.athena.rpc import dispatcher, handle, is_call, is_response, loads
 
 
-ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
+# 服务器切换（2026-08-13 移植）：动态返回 athena 服务器地址
+def get_athena_host():
+    from openpilot.common.params import Params
+    return "wss://athena.konik.ai" if Params().get_bool("UseKonikServer") else "wss://athena.comma.ai"
 HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
 LOCAL_PORT_WHITELIST = {22, }  # SSH
 
@@ -740,7 +743,8 @@ def startLocalProxy(global_end_event: threading.Event, remote_ws_uri: str, local
   cloudlog.debug("athena.startLocalProxy.starting")
   dongle_id = Params().get("DongleId")
   identity_token = Api(dongle_id).get_token()
-  ws = create_connection(remote_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
+  dynamic_ws_uri = get_athena_host() + "/ws/v2/" + dongle_id
+  ws = create_connection(dynamic_ws_uri, cookie="jwt=" + identity_token, enable_multithread=True)
 
   return start_local_proxy_shim(global_end_event, local_port, ws)
 
@@ -782,8 +786,11 @@ def start_local_proxy_shim(global_end_event: threading.Event, local_port: int, w
 
 @dispatcher.add_method
 def getPublicKey() -> str | None:
-  _, _, public_key = get_key_pair()
-  return public_key
+  if not os.path.isfile(Paths.persist_root() + '/comma/id_rsa.pub'):
+    return None
+
+  with open(Paths.persist_root() + '/comma/id_rsa.pub') as f:
+    return f.read()
 
 
 @dispatcher.add_method
@@ -872,57 +879,70 @@ def add_log_to_queue(log_path, log_id, is_sunnylink=False):
   MAX_SIZE_KB = 32
   MAX_SIZE_BYTES = MAX_SIZE_KB * 1024
 
-  with open(log_path) as f:
-    data = f.read()
+  # The swaglog dir is scanned wholesale, so a stray non-text file can land here (a core
+  # dump, a compressed/rotated log, ...). Reading one used to raise UnicodeDecodeError (or
+  # MemoryError, for a multi-MB file) and abort the whole log_handler iteration, logging
+  # "athena.log_handler.exception" once per hour. Skip the file with a warning instead.
+  # A valid UTF-8 swaglog file takes the exact same path as before.
+  try:
+    with open(log_path) as f:
+      data = f.read()
+  except UnicodeDecodeError:
+    cloudlog.warning(f"Log file {log_path} is not UTF-8 text, skipping.")
+    return
+  except (MemoryError, OSError) as e:
+    cloudlog.warning(f"Log file {log_path} could not be read ({type(e).__name__}), skipping.")
+    return
 
-    # Check if the file is empty
-    if not data:
-      cloudlog.warning(f"Log file {log_path} is empty.")
-      return
 
-    # Initialize variables for encoding
-    payload = data
-    is_compressed = False
+  # Check if the file is empty
+  if not data:
+    cloudlog.warning(f"Log file {log_path} is empty.")
+    return
 
-    # Log the current size of the file
-    current_size = len(json.dumps(payload).encode("utf-8")) + len(log_id.encode("utf-8")) + 100  # Add 100 bytes to account for encoding overhead
-    cloudlog.debug(f"Current size of log file {log_path}: {current_size} bytes")
+  # Initialize variables for encoding
+  payload = data
+  is_compressed = False
 
-    if is_sunnylink and current_size > MAX_SIZE_BYTES:
-      # Compress and encode the data if it exceeds the maximum size
-      compressed_data = gzip.compress(data.encode())
-      payload = base64.b64encode(compressed_data).decode()
-      is_compressed = True
+  # Log the current size of the file
+  current_size = len(json.dumps(payload).encode("utf-8")) + len(log_id.encode("utf-8")) + 100  # Add 100 bytes to account for encoding overhead
+  cloudlog.debug(f"Current size of log file {log_path}: {current_size} bytes")
 
-      # Log the size after compression and encoding
-      compressed_size = len(compressed_data)
-      encoded_size = len(payload)
-      cloudlog.debug(f"Size of log file {log_path} " +
-                     f"after compression: {compressed_size} bytes, " +
-                     f"after encoding: {encoded_size} bytes")
+  if is_sunnylink and current_size > MAX_SIZE_BYTES:
+    # Compress and encode the data if it exceeds the maximum size
+    compressed_data = gzip.compress(data.encode())
+    payload = base64.b64encode(compressed_data).decode()
+    is_compressed = True
 
-    params: dict[str, str | bool] = {"logs": payload}
-    if is_sunnylink and is_compressed:
-      params["compressed"] = is_compressed
+    # Log the size after compression and encoding
+    compressed_size = len(compressed_data)
+    encoded_size = len(payload)
+    cloudlog.debug(f"Size of log file {log_path} " +
+                   f"after compression: {compressed_size} bytes, " +
+                   f"after encoding: {encoded_size} bytes")
 
-    jsonrpc: dict = {
-      "method": "forwardLogs",
-      "params": params,
-      "jsonrpc": "2.0",
-      "id": log_id
-    }
+  params: dict[str, str | bool] = {"logs": payload}
+  if is_sunnylink and is_compressed:
+    params["compressed"] = is_compressed
 
-    jsonrpc_str = json.dumps(jsonrpc)
-    size_in_bytes = len(jsonrpc_str.encode('utf-8'))
+  jsonrpc: dict = {
+    "method": "forwardLogs",
+    "params": params,
+    "jsonrpc": "2.0",
+    "id": log_id
+  }
 
-    if is_sunnylink and size_in_bytes <= MAX_SIZE_BYTES:
-      cloudlog.debug(f"Target is sunnylink and log file {log_path} is small enough to send in one request ({size_in_bytes} bytes).")
-      send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
-    elif is_sunnylink:
-      cloudlog.warning(f"Target is sunnylink and log file {log_path} is too large to send in one request.")
-    else:
-      cloudlog.debug(f"Target is not sunnylink, proceeding to send log file {log_path} in one request ({size_in_bytes} bytes).")
-      send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
+  jsonrpc_str = json.dumps(jsonrpc)
+  size_in_bytes = len(jsonrpc_str.encode('utf-8'))
+
+  if is_sunnylink and size_in_bytes <= MAX_SIZE_BYTES:
+    cloudlog.debug(f"Target is sunnylink and log file {log_path} is small enough to send in one request ({size_in_bytes} bytes).")
+    send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
+  elif is_sunnylink:
+    cloudlog.warning(f"Target is sunnylink and log file {log_path} is too large to send in one request.")
+  else:
+    cloudlog.debug(f"Target is not sunnylink, proceeding to send log file {log_path} in one request ({size_in_bytes} bytes).")
+    send_queue_push(jsonrpc_str, SEND_PRIORITY_LOW)
 
 
 def log_handler(end_event: threading.Event, log_attr_name=LOG_ATTR_NAME) -> None:
@@ -1151,7 +1171,7 @@ def main(exit_event: threading.Event | None = None):
   dongle_id = params.get("DongleId")
   UploadQueueCache.initialize(upload_queue)
 
-  ws_uri = ATHENA_HOST + "/ws/v2/" + dongle_id
+  ws_uri = get_athena_host() + "/ws/v2/" + dongle_id
   api = Api(dongle_id)
 
   conn_start = None

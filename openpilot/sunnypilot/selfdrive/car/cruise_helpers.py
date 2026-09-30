@@ -45,7 +45,7 @@ class CruiseHelper:
     self.CP = CP
     self.params = Params()
 
-    self.button_frame_counts = {ButtonType.gapAdjustCruise: 0}
+    self.button_frame_counts = {ButtonType.altButton2: 0}
     self._experimental_mode = False
     self.experimental_mode_switched = False
     # Set on a fresh distance-button press, consumed once, so holding the button does
@@ -57,7 +57,7 @@ class CruiseHelper:
       if CS.cruiseState.available:
         self.update_button_frame_counts(CS)
 
-        # toggle experimental mode once on distance button hold
+        # toggle experimental mode once on gap-adjust-plus (Dist+1, value 2) button hold
         self.update_experimental_mode(events, experimental_mode)
 
         # A short press cycles the follow gap instead. Skipped while the long press is
@@ -110,11 +110,13 @@ class CruiseHelper:
       button = button_event.type.raw
       if button in self.button_frame_counts:
         self.button_frame_counts[button] = int(button_event.pressed)
-        if button == ButtonType.gapAdjustCruise and button_event.pressed:
-          self._gap_press_pending = True
+        # 按钮松开时复位切换标志：允许下一次长按再次切换实验/普通模式
+        # （否则 experimental_mode_switched 置 True 后永远挡住后续切换，只能切一次）
+        if not button_event.pressed:
+          self.experimental_mode_switched = False
 
   def update_experimental_mode(self, events, experimental_mode) -> None:
-    if self.button_frame_counts[ButtonType.gapAdjustCruise] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:
+    if self.button_frame_counts[ButtonType.altButton2] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:
       self._experimental_mode = not experimental_mode
       self.params.put_bool("ExperimentalMode", self._experimental_mode)
       events.add(EventNameSP.experimentalModeSwitched)
