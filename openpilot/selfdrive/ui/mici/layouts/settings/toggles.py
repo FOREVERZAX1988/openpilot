@@ -31,6 +31,8 @@ class MacanJerkControl(BigMultiToggle):
     idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
     self.set_value(self.OPTIONS[idx])
 
+  refresh = _load  # 供 _update_toggles() 统一从 Params 重新读取
+
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
     self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
@@ -52,6 +54,8 @@ class MacanAccelLimitControl(BigMultiToggle):
     # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
     idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
     self.set_value(self.OPTIONS[idx])
+
+  refresh = _load  # 供 _update_toggles() 统一从 Params 重新读取
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
@@ -75,6 +79,8 @@ class MacanStartStopDistControl(BigMultiToggle):
     idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 1
     self.set_value(self.OPTIONS[idx])
 
+  refresh = _load  # 供 _update_toggles() 统一从 Params 重新读取
+
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
     self._params.put(self._param, int(self.value), block=True)  # INT 参数需 int（str 会 TypeError 崩 UI）
@@ -96,6 +102,8 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
     idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
     self.set_value(self.OPTIONS[idx])
 
+  refresh = _load  # 供 _update_toggles() 统一从 Params 重新读取
+
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
     self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
@@ -116,6 +124,8 @@ class MacanCruiseCoastControl(BigMultiToggle):
     # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤）
     idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 1
     self.set_value(self.OPTIONS[idx])
+
+  refresh = _load  # 供 _update_toggles() 统一从 Params 重新读取
 
   def _handle_mouse_release(self, mouse_pos):
     super()._handle_mouse_release(mouse_pos)
@@ -340,14 +350,22 @@ class TogglesLayoutMici(NavScroller):
       self._macan_fusion_mode.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
+    # 多档控件(BigMultiParamToggle/Macan*Control)没有布尔语义，必须走 refresh() 取值，
+    # 否则 set_checked() 无效果（仅设置未被绘制的 _checked）。2026-09-30 修复。
     for key, item in self._refresh_toggles:
-      item.set_checked(ui_state.params.get_bool(key))
+      if hasattr(item, "refresh"):
+        item.refresh()
+      else:
+        item.set_checked(ui_state.params.get_bool(key))
 
     dm_on = ui_state.params.get_bool("AlwaysOnDM")
     self._distraction_level_toggle.set_visible(dm_on)
     if dm_on:
       self._distraction_level_toggle._load_value()
 
+    # BigMultiParamToggle 没有 refresh()，只有 _load_value()；
+    # 误调 refresh() 会在 push_widget(toggles_panel) 时抛 AttributeError，导致 UI 进程崩
+    # 重启（表现为"按 toggle 选项重启 UI"）。2026-09-30 修复。
     self._accel_personality_toggle.refresh()
 
   def _on_experimental_mode(self, state: bool):
