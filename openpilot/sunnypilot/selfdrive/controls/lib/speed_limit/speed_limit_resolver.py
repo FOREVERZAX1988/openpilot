@@ -91,7 +91,6 @@ class SpeedLimitResolver:
     # via CarrotNavCruiseSpeedEnabled; the actual speed control still requires
     # SpeedLimitMode == assist, so this alone never changes vehicle behaviour.
     self.use_carrot_limits = self.params.get_bool("CarrotNavCruiseSpeedEnabled")
-    self._carrot_merge_warned = False  # one-shot: avoid a log flood every frame
 
     self.v_ego = 0.
     self.distance = 0.
@@ -162,19 +161,6 @@ class SpeedLimitResolver:
     cereal schema and invalidate route logs). The merged value can only *lower*
     the map solution, never raise it, so it stays conservative. Controlled by
     ``CarrotNavCruiseSpeedEnabled``.
-
-    R3 / D2 — we deliberately read the RAW ``nRoadLimitSpeed`` / ``xSpdLimit``
-    fields here and NOT carrot's synthesized ``desiredSpeed``. ``desiredSpeed``
-    is already a *post-``calculate_current_speed``* "currently permitted speed":
-    it is the output of Carrot's own deceleration model (``AutoNaviSpeedDecelRate``
-    / ``AutoNaviSpeedCtrlEnd``), i.e. "the speed you may be at right now after
-    Carrot has already started braking." If we folded ``desiredSpeed`` into the
-    resolver, SLA would then apply its own ``LIMIT_ADAPT_ACC`` advance-braking
-    and adapting acceleration on top of an already-braked-down value, counting
-    the deceleration twice and braking earlier/harder than either model intends.
-    The raw fields are the *inputs* from which ``desiredSpeed`` is derived, so
-    consuming them loses nothing for the road-limit feature. Do not "helpfully"
-    switch this to ``desiredSpeed`` — it reintroduces the double-decel trap.
     """
     if not self.use_carrot_limits:
       return
@@ -210,37 +196,20 @@ class SpeedLimitResolver:
             limit_ms = sdi_limit_ms
             distance = sdi_dist
 
-      # NOTE: ATC / curve / route speeds are NOT handled here. They were briefly folded
-      # into this map source, but they are navigation-driven deceleration for a point
-      # ahead, which SmartCruiseControlMap already models with its jerk/accel-limited
-      # lookahead - see _update_carrot_map_decel. SLA stays the owner of speed-limit
-      # signs: absolute constraints, sourced from nRoadLimitSpeed and the SDI limit.
-
       # If both limits are absent, do nothing.
       if limit_ms <= 0.:
         return
 
-      # carrot takes priority over the map provider outright: when the phone is
-      # projecting navigation, its limit wins whether it is higher or lower than what
-      # OSM reported. This replaces the previous lower-only rule, which meant a limit
-      # carrot considered authoritative could be silently outvoted by the offline map.
-      # Requested explicitly, and the priority matches how the data is produced: a phone
-      # projecting a route has the road the driver is actually on, while the offline map
-      # can be years out of date or simply lack the section.
-      #
-      # The car's own CAN limit is still merged as a separate source and can still be
-      # stricter, so a physical sign the vehicle reports is not overridden here - see
-      # _get_from_car_state and the combined policy.
+      # If a road-class limit is already active from map data, only allow carrot
+      # to *lower* it. This prevents a navigation glitch from raising the limit
+      # above what the car's own map source says.
+      current = self.limit_solutions[SpeedLimitSource.map]
+      if current > 0. and limit_ms >= current:
+        return
+
       self.limit_solutions[SpeedLimitSource.map] = limit_ms
       self.distance_solutions[SpeedLimitSource.map] = distance
-    except Exception as e:
-      # Log rather than swallow. This block silently returning is why a broken carrot
-      # limit link went unnoticed: carrot_man published nRoadLimitSpeed from `_raw`
-      # while every producer except KISA wrote the attribute, so the limit simply never
-      # appeared, and there was nothing in swaglog to say why.
-      if not self._carrot_merge_warned:
-        self._carrot_merge_warned = True
-        cloudlog.warning(f"speed_limit_resolver: carrot limit merge failed: {type(e).__name__}: {e}")
+    except Exception:
       return
 
   def _process_map_data(self, sm: messaging.SubMaster) -> None:

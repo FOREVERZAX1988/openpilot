@@ -4,14 +4,13 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-import requests
 import threading
 import time
 import pyray as rl
 
 from openpilot.common.constants import CV
 from openpilot.common.params import Params
-from openpilot.selfdrive.ui.sunnypilot.lib.drive_stats import refresh_local_drive_stats, fetch_cloud_drive_stats
+from openpilot.selfdrive.ui.sunnypilot.lib.drive_stats import refresh_local_drive_stats
 from openpilot.selfdrive.ui.ui_state import ui_state, device
 from openpilot.system.ui.lib.application import gui_app, FontWeight, FONT_SCALE
 from openpilot.system.ui.lib.multilang import tr
@@ -20,8 +19,7 @@ from openpilot.system.ui.widgets import Widget
 
 
 class TripsLayout(Widget):
-  DATA_SOURCE_PARAM = "TripsDataSource"
-  LOCAL_KEY = "LocalDriveStats"
+  PARAM_KEY = "LocalDriveStats"
   UPDATE_INTERVAL = 30  # seconds
 
   TOGGLE_HEIGHT = 80
@@ -31,9 +29,7 @@ class TripsLayout(Widget):
   def __init__(self):
     super().__init__()
     self._params = Params()
-    self._session = requests.Session()
-    self._data_source = self._get_data_source()
-    self._stats = self._get_local_stats() if self._data_source == "local" else {}
+    self._stats = self._get_stats()
 
     self._icon_distance = gui_app.texture("icons/road.png", 100, 100, keep_aspect_ratio=True)
     self._icon_drives = gui_app.texture("icons_mici/wheel.png", 80, 80, keep_aspect_ratio=True)
@@ -48,7 +44,7 @@ class TripsLayout(Widget):
 
   def show_event(self):
     super().show_event()
-    if self._data_source == "cloud" or not self._stats.get("all"):
+    if not self._stats.get("all"):
       threading.Thread(target=self._refresh_drive_stats, daemon=True).start()
 
   def __del__(self):
@@ -74,14 +70,7 @@ class TripsLayout(Widget):
     return stats
 
   def _refresh_drive_stats(self):
-    # Always keep local stats up to date in the background
-    refresh_local_drive_stats(self._params, self.LOCAL_KEY)
-    if self._data_source == "cloud":
-      cloud_stats = fetch_cloud_drive_stats(self._params, self._session)
-      if "error" not in cloud_stats:
-        self._stats = cloud_stats
-    else:
-      self._stats = self._get_local_stats()
+    self._stats = refresh_local_drive_stats(self._params, self.PARAM_KEY)
 
   def _update_loop(self):
     while self._running:

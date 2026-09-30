@@ -235,26 +235,10 @@ class TestCarrotSpeedLimitMerge(OpenpilotTestCase):
     assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * CV.KPH_TO_MS) < 1e-6
     assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
 
-  def test_carrot_raises_an_existing_map_limit(self, mocker):
-    """carrot takes priority over the map provider outright.
-
-    This replaces test_carrot_cannot_raise_an_existing_map_limit. The old rule was
-    lower-only, which meant a limit carrot considered authoritative could be outvoted by
-    the offline map - explicitly changed so a projecting phone wins either way. The car's
-    own CAN limit is a separate source and can still be stricter, so this does not
-    override a physical sign.
-    """
+  def test_carrot_cannot_raise_an_existing_map_limit(self, mocker):
     resolver = self._resolver()
     resolver.limit_solutions[SpeedLimitSource.map] = 40 * CV.KPH_TO_MS
     resolver._merge_carrot_speed_limit(carrot_sm(mocker, nRoadLimitSpeed=80))
-    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 80 * CV.KPH_TO_MS) < 1e-6
-
-  def test_carrot_lowers_an_existing_map_limit_too(self, mocker):
-    """The lower direction still works - priority is not 'ignore carrot when it is
-    stricter'."""
-    resolver = self._resolver()
-    resolver.limit_solutions[SpeedLimitSource.map] = 80 * CV.KPH_TO_MS
-    resolver._merge_carrot_speed_limit(carrot_sm(mocker, nRoadLimitSpeed=40))
     assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 40 * CV.KPH_TO_MS) < 1e-6
 
   def test_carrot_out_of_range_is_rejected(self, mocker):
@@ -285,22 +269,3 @@ class TestCarrotSpeedLimitMerge(OpenpilotTestCase):
     sm.recv_time['carrotManSP'] = time.monotonic() - LIMIT_MAX_MAP_DATA_AGE - 1.
     resolver._merge_carrot_speed_limit(sm)
     assert resolver.limit_solutions[SpeedLimitSource.map] == 0.
-
-  def test_desired_speed_is_not_consumed_by_resolver(self, mocker):
-    """D2 / R3 — the resolver must consume the RAW ``nRoadLimitSpeed`` /
-    ``xSpdLimit`` fields, never carrot's synthesized ``desiredSpeed``. A carrot
-    packet carrying a high ``desiredSpeed`` but no road limit must leave the
-    ``map`` solution untouched (otherwise SLA would double-count Carrot's own
-    deceleration on top of ``LIMIT_ADAPT_ACC``)."""
-    resolver = self._resolver()
-    sm = carrot_sm(mocker, desiredSpeed=100)
-    resolver._get_from_map_data(sm)
-    assert resolver.limit_solutions[SpeedLimitSource.map] == 0.
-    assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
-
-    # Even with a road limit present, desiredSpeed must NOT pull the solution
-    # down toward it — only the raw nRoadLimitSpeed field may.
-    resolver2 = self._resolver()
-    sm2 = carrot_sm(mocker, nRoadLimitSpeed=60, desiredSpeed=30)
-    resolver2._get_from_map_data(sm2)
-    assert abs(resolver2.limit_solutions[SpeedLimitSource.map] - 60 * CV.KPH_TO_MS) < 1e-6

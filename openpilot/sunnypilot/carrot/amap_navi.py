@@ -430,29 +430,87 @@ class AmapNaviServ:
       self._dynamic_blind_range = params.get_int("DynamicBlindRange")
       self._dynamic_blind_distance = params.get_int("DynamicBlindDistance")
     self._frame += 1
-# Removed: lidar_object_blind() had no caller anywhere in the tree (verified by AST/grep).
-# Deleting it is why DynamicBlindRange / DynamicBlindDistance / DisableBlindSpot no
-# longer appear to be consumed; those params only ever fed this dead function.
-  def blind_spot_hint(self) -> tuple[bool, bool]:
-    """Carrot's blind-spot hint as (left, right). Pure read, writes nothing.
 
-    This used to be update_navi_carstate(sm), which assigned
-    ``sm['carState'].leftBlindspot = True``. SubMaster.__getitem__ returns a capnp
-    _DynamicStructReader (cereal/messaging/__init__.py:226,229-230 via as_reader(),
-    and :259) and its attributes cannot be assigned, so that raised AttributeError.
-    Because the call sits inside CarrotManager.tick() with _derive_state() and
-    _publish() after it, a single LiDAR-reported blind spot aborted the rest of the
-    tick and carrotManSP stopped being published - taking SLA, TMC congestion and
-    lane-guide blocking down with it, silently apart from one swaglog line.
+  def lidar_object_blind(self, sm: Any) -> tuple[bool, bool, bool, bool]:
+    """Dynamic blind spot masking based on navigation guidance.
 
-    carrot now only publishes the hint (CarStateSP.carrotLeft/RightBlindHint) and
-    card.py merges it into the real carState, which is single-writer and matches how
-    the 7714 lane hints already work.
+    Returns:
+      (lf_blind_mask, lb_blind_mask, rf_blind_mask, rb_blind_mask)
     """
+    lf_blind_mask = False
+    lb_blind_mask = False
+    rf_blind_mask = False
+    rb_blind_mask = False
+
+    # Dynamic blind range adjustment
+    if self._dynamic_blind_range >= 1:
+      if not sm.alive.get("carrotManSP", False) or not sm.alive.get("modelV2", False):
+        return lf_blind_mask, lb_blind_mask, rf_blind_mask, rb_blind_mask
+      carrot_man = sm['carrotManSP']
+      model_v2 = sm['modelV2']
+      meta = model_v2.meta
+
+      atc_type = carrot_man.atcType
+      lane_width_left = round(getattr(meta, 'laneWidthLeft', 0.0), 1)
+      lane_width_right = round(getattr(meta, 'laneWidthRight', 0.0), 1)
+
+      atc_blinker_state = BLINKER_NONE
+      turn_left_right = False
+      fork_left_right = False
+      atc_left_right = False
+
+      # Check navigation control type
+      if atc_type in ["turn left", "turn right"]:
+        atc_blinker_state = BLINKER_LEFT if "left" in atc_type else BLINKER_RIGHT
+        turn_left_right = True
+      elif atc_type in ["fork left", "fork right"]:
+        atc_blinker_state = BLINKER_LEFT if "left" in atc_type else BLINKER_RIGHT
+        fork_left_right = True
+      elif atc_type in ["fork left now", "fork right now"]:
+        atc_blinker_state = BLINKER_LEFT if "left" in atc_type else BLINKER_RIGHT
+        fork_left_right = True
+      elif atc_type in ["atc left", "atc right"]:
+        atc_blinker_state = BLINKER_LEFT if "left" in atc_type else BLINKER_RIGHT
+        atc_left_right = True
+
+      # Dynamically limit lidar blind spot side and front/back ranges
+      if (fork_left_right or atc_left_right or turn_left_right) and self._dynamic_blind_range >= 1:
+        sd = self.shared_data
+        if sd.main_lf_xrel is not None and sd.main_lf_xrel > lane_width_left * 1000.0:
+          lf_blind_mask = True
+        if sd.main_lb_xrel is not None and sd.main_lb_xrel > lane_width_left * 1000.0:
+          lb_blind_mask = True
+        if sd.main_rf_xrel is not None and sd.main_rf_xrel > lane_width_right * 1000.0:
+          rf_blind_mask = True
+        if sd.main_rb_xrel is not None and sd.main_rb_xrel > lane_width_right * 1000.0:
+          rb_blind_mask = True
+
+        if fork_left_right:
+          if atc_blinker_state == BLINKER_LEFT:
+            if sd.main_lf_drel is not None and sd.main_lf_drel > 5000:
+              lf_blind_mask = True
+            if sd.main_lb_drel is not None and sd.main_lb_drel < -10000:
+              lb_blind_mask = True
+          elif atc_blinker_state == BLINKER_RIGHT:
+            if sd.main_rf_drel is not None and sd.main_rf_drel > 5000:
+              rf_blind_mask = True
+            if sd.main_rb_drel is not None and sd.main_rb_drel < -10000:
+              rb_blind_mask = True
+
+    return lf_blind_mask, lb_blind_mask, rf_blind_mask, rb_blind_mask
+
+  def update_navi_carstate(self, sm: Any) -> None:
+    """Update carState with amap blind spot data."""
+    if not sm.alive['carState']:
+      return
+
     sd = self.shared_data
-    left = bool(sd.left_blind or sd.lidar_left_blind or sd.lidar_car_left_blind)
-    right = bool(sd.right_blind or sd.lidar_right_blind or sd.lidar_car_right_blind)
-    return left, right
+
+    # Merge blind spot data into carState
+    if sd.left_blind or sd.lidar_left_blind or sd.lidar_car_left_blind:
+      sm['carState'].leftBlindspot = True
+    if sd.right_blind or sd.lidar_right_blind or sd.lidar_car_right_blind:
+      sm['carState'].rightBlindspot = True
 
   def get_radar_data(self) -> dict[str, Any]:
     """Get radar data for web display."""
@@ -518,11 +576,10 @@ class AmapNaviServ:
   def start_navi_comm(self, listen_port: int | None = None) -> None:
     """Start all UDP communication threads.
 
-    NOTE: the previous version of this docstring claimed the method "currently has
-    **no call site** in the tree". That is wrong for this tree - CarrotManager calls
-    it in its constructor (carrot_man.py:604) whenever CarrotAmapBlindSpotEnabled is
-    set, so the direct LiDAR/camera receiver on UDP 4211 does start. The claim was
-    actively misleading while diagnosing the reader-write bug in this class.
+    NOTE: this method currently has **no call site** in the tree — the
+    direct LiDAR/camera UDP path stays dormant until C3 device validation
+    (2026-09-05 decision).  SP's production blind-spot data arrives via
+    the CarrotMan protocol / ADAS socket instead.
     """
     self._listen_port = self._resolve_listen_port(listen_port)
     threading.Thread(target=self._udp_recv_thread, daemon=True).start()

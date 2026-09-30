@@ -4,9 +4,11 @@ from collections.abc import Callable
 from typing import Union
 import pyray as rl
 
-from openpilot.system.ui.lib.application import gui_app, FontWeight, DEFAULT_TEXT_SIZE, DEFAULT_TEXT_COLOR, FONT_SCALE, TextAlignment, TextAlignmentVertical, font_fallback
+from openpilot.system.ui.lib.application import gui_app, FontWeight, DEFAULT_TEXT_SIZE, DEFAULT_TEXT_COLOR, FONT_SCALE, FALLBACK_FONT_SCALE, TextAlignment, TextAlignmentVertical, font_fallback
+from openpilot.system.ui.lib.multilang import multilang
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.lib.text_measure import measure_text_cached
+from openpilot.system.ui.lib.utils import GuiStyleContext
 from openpilot.system.ui.lib.wrap_text import wrap_text
 from openpilot.system.ui.lib.emoji import find_emoji, emoji_tex
 
@@ -72,6 +74,43 @@ def gui_label(
   # Draw the text in the specified rectangle
   # TODO: add wrapping and proper centering for multiline text
   rl.draw_text_ex(font_fallback(font, display_text), display_text, rl.Vector2(text_x, text_y), font_size, 0, color)
+
+
+def gui_text_box(
+  rect: rl.Rectangle,
+  text: str,
+  font_size: int = DEFAULT_TEXT_SIZE,
+  color: rl.Color = DEFAULT_TEXT_COLOR,
+  alignment: int = TextAlignment.LEFT,
+  alignment_vertical: int = TextAlignmentVertical.TOP,
+  font_weight: FontWeight = FontWeight.NORMAL,
+  line_scale: float = 1.0,
+):
+  # NOTE: rl.gui_label() draws with raylib's *internal* GUI font, i.e. whatever gui_set_font()
+  # installed -- it does NOT go through our raylib draw_text_ex patch, so the CJK fallback font
+  # was never used here and every Chinese string on this screen (AGNOS update / reset body text)
+  # rendered as "?". Install the Noto fallback as the GUI font for CJK languages and scale the
+  # style text size the same way the draw path does.
+  fallback = multilang.requires_font_fallback()
+  text_scale = FONT_SCALE * (FALLBACK_FONT_SCALE if fallback else 1.0)
+  styles = [
+    (rl.GuiControl.DEFAULT, rl.GuiControlProperty.TEXT_COLOR_NORMAL, rl.color_to_int(color)),
+    (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_SIZE, round(font_size * text_scale)),
+    (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_LINE_SPACING, round(font_size * text_scale * line_scale)),
+    (rl.GuiControl.DEFAULT, rl.GuiControlProperty.TEXT_ALIGNMENT, alignment),
+    (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_ALIGNMENT_VERTICAL, alignment_vertical),
+    (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_WRAP_MODE, rl.GuiTextWrapMode.TEXT_WRAP_WORD)
+  ]
+  if fallback:
+    rl.gui_set_font(gui_app.fallback_font())
+  elif font_weight != FontWeight.NORMAL:
+    rl.gui_set_font(gui_app.font(font_weight))
+
+  with GuiStyleContext(styles):
+    rl.gui_label(rect, text)
+
+  if fallback or font_weight != FontWeight.NORMAL:
+    rl.gui_set_font(gui_app.font(FontWeight.NORMAL))
 
 
 # Non-interactive text area. Can render an optional specified icon.

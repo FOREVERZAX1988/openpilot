@@ -230,16 +230,8 @@ def main() -> NoReturn:
 
   # connect to modem
   diag = connect_diag()
-  try:
-    setup_quectel(diag)
-    cloudlog.warning("quectel setup done")
-  except Exception as e:
-    # Keep the process alive so managerState stays healthy even if the modem
-    # DIAG setup is not usable on this device/firmware combination.
-    cloudlog.event("qcomgpsd_setup_failed", error=str(e))
-    while True:
-      time.sleep(60)
-
+  setup_quectel(diag)
+  cloudlog.warning("quectel setup done")
   gpio_init(GPIO.GNSS_PWR_EN, True)
   gpio_set(GPIO.GNSS_PWR_EN, True)
 

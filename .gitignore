@@ -1,6 +1,7 @@
 venv/
 .venv/
 .pydeps/
+.pydeps/
 .ci_cache
 .env
 .clang-format
@@ -122,3 +123,6 @@ sessions/
 !.idea/customTargets.xml
 !.idea/tools/*
 !.run/*
+
+# agent tool outputs (may contain secrets such as github PAT)
+tool_results/

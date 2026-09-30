@@ -8,6 +8,7 @@ import datetime
 import os
 import platform
 import requests
+import shutil
 import threading
 from pathlib import Path
 from time import monotonic
@@ -89,21 +90,16 @@ class OSMLayout(Widget):
     if MAP_PATH.exists():
       shutil.rmtree(MAP_PATH)
 
-    for param in ("OsmDownloadedDate", "OsmLocal", "OsmLocationName", "OsmLocationTitle", "OsmStateName", "OsmStateTitle", "OSMDownloadProgress"):
+    for param in ("OsmDownloadedDate", "OsmLocal", "OsmLocationName", "OsmLocationTitle", "OsmStateName", "OsmStateTitle"):
       ui_state.params.remove(param)
-    # Also clear mem_params so a half-finished download from a prior session does not
-    # auto-resume after the user explicitly asked to wipe everything.
-    self._mem_params.remove("OSMDownloadLocations")
-    self._mem_params.remove("OSMDownloadBounds")
-    ui_state.params.put_bool("OsmDbUpdatesCheck", False)
+
     self._delete_maps_btn.action_item.set_enabled(True)
     self._delete_maps_btn.action_item.set_text(tr("DELETE"))
-    self._update_map_size()
+    threading.Thread(target=self._do_delete_maps).start()
 
   def _on_confirm_delete_maps(self):
-    ui_state.params.put_bool("Mapd_ClearCache", True)
-    self._delete_maps_btn.action_item.set_enabled(True)
-    self._delete_maps_btn.action_item.set_text(tr("DELETE"))
+    self._delete_maps_btn.action_item.set_enabled(False)
+    self._delete_maps_btn.action_item.set_text(tr("DELETING..."))
     threading.Thread(target=self._do_delete_maps).start()
 
   def _delete_maps(self):
@@ -174,13 +170,7 @@ class OSMLayout(Widget):
     key = "OsmLocation" if region_type == "Country" else "OsmState"
     current = ui_state.params.get(f"{key}Name") or ""
 
-    if region_type == "Country":
-      dialog_title = tr("Select Country")
-    elif country == CHINA_NATION_REF:
-      dialog_title = tr("Select Province")
-    else:
-      dialog_title = tr("Select State")
-    dialog = TreeOptionDialog(dialog_title, [TreeFolder(folder="", nodes=locations)], current_ref=current, search_prompt=tr("Perform a search"))
+    dialog = TreeOptionDialog(tr(f"Select {region_type}"), [TreeFolder(folder="", nodes=locations)], current_ref=current, search_prompt=tr("Perform a search"))
     dialog.on_exit = lambda res: self._handle_region_selection(region_type, locations, key, res, dialog.selection_ref)
     gui_app.push_widget(dialog)
 
@@ -213,17 +203,17 @@ class OSMLayout(Widget):
         progress_perc = 0.0
 
       if failed:
-        text = tr("{}% - Downloading Maps").format(0)
+        text = tr("0% - Downloading Maps")
         btn_text = tr("Error: Invalid download. Retry.")
         self._current_percent = 0.0
       elif total > 0 and downloading:
         self._current_percent = progress_perc
         perc_int = int(progress_perc)
-        text = tr("{}% - Downloading Maps").format(perc_int)
-        btn_text = f"{done}/{total} ({perc_int}%)"
+        text = tr(f"{perc_int}% - Downloading Maps")
+        btn_text = tr(f"{done}/{total} ({perc_int}%)")
       else:
         self._current_percent = 0.0
-        text = tr("{}% - Downloading Maps").format(0)
+        text = tr("0% - Downloading Maps")
         btn_text = tr("Downloading Maps...")
 
       self._progress.action_item.update(self._current_percent, text, show_progress=total > 0 and downloading and not failed)

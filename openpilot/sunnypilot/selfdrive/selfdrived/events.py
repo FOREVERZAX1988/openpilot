@@ -31,7 +31,7 @@ IS_MICI = HARDWARE.get_device_type() == 'mici'
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   speedLimit = sm['longitudinalPlanSP'].speedLimit.resolver.speedLimit
   speed = round(speedLimit * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH))
-  message = f'正在调整至限速 {speed} {"公里/时" if metric else "英里/时"}'
+  message = f'Adjusting to Speed Limit {speed} {"km/h" if metric else "mph"}'
   return Alert(
     message,
     "",
@@ -55,8 +55,9 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     cst_low, cst_high = PCM_LONG_REQUIRED_MAX_SET_SPEED[metric]
     pcm_long_required_max = cst_low if speed_limit_final_last_conv < CONFIRM_SPEED_THRESHOLD[metric] else cst_high
     pcm_long_required_max_set_speed_conv = round(pcm_long_required_max * speed_conv)
+    
 
-    alert_1_str = f"限速辅助：请将设定速度调至 {pcm_long_required_max_set_speed_conv} {"公里/时" if metric else "英里/时"} 以启用"
+    alert_1_str = f"Speed Limit Assist: adjust set speed to {pcm_long_required_max_set_speed_conv} {"km/h" if metric else "mph"} to engage"
   else:
     if IS_MICI:
       if set_speed_conv < speed_limit_final_last_conv:
@@ -90,6 +91,10 @@ class EventsSP(EventsBase):
 
 EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # sunnypilot
+  EventNameSP.macanAutoResume: {
+    ET.ENABLE: EngagementAlert(AudibleAlert.engage),  # Macan Stop and Go: play engage sound, no state change
+  },
+
   EventNameSP.lkasEnable: {
     ET.ENABLE: EngagementAlert(AudibleAlert.engage),
   },
@@ -134,19 +139,19 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
     ET.NO_ENTRY: Alert(
-      "挡位不在D挡",
-      "sunnypilot 不可用",
+      "Gear not in Drive",
+      "sunnypilot unavailable",
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 0.),
   },
 
   EventNameSP.silentReverseGear: {
     ET.PERMANENT: Alert(
-      "倒车中",
+      "Reverse Gear",
       "",
       AlertStatus.normal, AlertSize.full,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-    ET.NO_ENTRY: NoEntryAlert("倒档"),
+    ET.NO_ENTRY: NoEntryAlert("Reverse"),
   },
 
   EventNameSP.silentDoorOpen: {
@@ -164,7 +169,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("安全带未系"),
+    ET.NO_ENTRY: NoEntryAlert("Seatbelt Not Latched"),
   },
 
   EventNameSP.silentParkBrake: {
@@ -173,12 +178,12 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("停车制动已启用"),
+    ET.NO_ENTRY: NoEntryAlert("Park Brake Engaged"),
   },
 
   EventNameSP.controlsMismatchLateral: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("控制不匹配：横向"),
-    ET.NO_ENTRY: NoEntryAlert("控制不匹配：横向"),
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("Lateral Control Mismatch"),
+    ET.NO_ENTRY: NoEntryAlert("Lateral Control Mismatch"),
   },
 
   EventNameSP.experimentalModeSwitched: {
@@ -219,7 +224,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.speedLimitChanged: {
     ET.WARNING: Alert(
-      "设定速度已更改",
+      "Set Speed Changed",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.),
@@ -231,7 +236,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.speedLimitPending: {
     ET.WARNING: Alert(
-      "正在自动调整至上次限速",
+      "Adjusting to Last Speed Limit",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.),
@@ -251,40 +256,5 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.userPrompt, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.1),
-  },
-
-  EventNameSP.bigModelReady: {
-    ET.PERMANENT: Alert(
-      "大模型已就绪",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 2.),
-  },
-
-  # Carrot / Amap traffic-light advisories.  Only the SP enum has
-  # trafficSignGreen/trafficSignChanged/trafficStopping; surface them in
-  # the same place the model-based detection would so the HUD can show
-  # a single, consistent prompt regardless of where the signal came
-  # from.  Kept as small / non-blocking so the planner can still react.
-  EventNameSP.trafficSignGreen: {
-    ET.WARNING: Alert(
-      "Carrot：识别到绿灯",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.5),
-  },
-  EventNameSP.trafficSignChanged: {
-    ET.WARNING: Alert(
-      "Carrot：信号灯状态变化",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
-  },
-  EventNameSP.trafficStopping: {
-    ET.WARNING: Alert(
-      "Carrot：准备停车",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
   },
 }

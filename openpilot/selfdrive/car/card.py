@@ -11,13 +11,13 @@ from opendbc.car.structs import car
 from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper
 from openpilot.common.swaglog import cloudlog, ForwardingHandler
+
 from opendbc.car import DT_CTRL, structs
 from opendbc.car.can_definitions import CanData, CanRecvCallable, CanSendCallable
 from opendbc.car.carlog import carlog
 from opendbc.car.fw_versions import ObdCallback
 from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
-from opendbc.safety import ALTERNATIVE_EXPERIENCE
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
 from openpilot.selfdrive.car.cruise import VCruiseCarrot
 from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp
@@ -76,7 +76,7 @@ class Car:
 
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
-    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'longitudinalPlan', 'radarState', 'drivingModelData'] + ['carControlSP', 'longitudinalPlanSP', 'carrotManSP', 'carrotNaviSP'] + ['customReservedRawData0'])
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'radarState'] + ['carControlSP', 'longitudinalPlanSP'])
     self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks'] + ['carParamsSP', 'carStateSP'])
 
     self.can_rcv_cum_timeout_counter = 0
@@ -129,9 +129,6 @@ class Car:
       self.RI = RI
 
     self.CP.alternativeExperience = 0
-    if self.params.get_bool("ToyotaAutoHold"):
-      self.CP.alternativeExperience |= ALTERNATIVE_EXPERIENCE.ALLOW_AEB
-
     # mads
     set_alternative_experience(self.CP, self.CP_SP, self.params)
     set_car_specific_params(self.CP, self.CP_SP, self.params)
@@ -371,6 +368,11 @@ class Car:
     initialized = (not any(e.name == EventName.selfdriveInitializing for e in self.sm['onroadEvents']) and
                    self.sm.seen['onroadEvents'])
     if not self.CP.passive and initialized:
+      # 车距显示路线A：注入 OP 融合前车距离（radard 发布的 radarState.leadOne），
+      # 供 carcontroller 在原厂雷达无目标时补位仪表 ACC 车距图标。纯显示层，不参与 ACC_05 控制。
+      rs = self.sm['radarState']
+      self.CI.CS.op_lead_dRel = float(rs.leadOne.dRel) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
+      self.CI.CS.op_lead_vLead = float(rs.leadOne.vLead) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
       self.controls_update(CS, self.sm['carControl'], self.sm['carControlSP'])
 
     self.initialized_prev = initialized

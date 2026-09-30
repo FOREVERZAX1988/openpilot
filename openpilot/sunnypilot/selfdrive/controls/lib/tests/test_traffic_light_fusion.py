@@ -21,17 +21,17 @@ from openpilot.sunnypilot.selfdrive.controls.lib.traffic_light_fusion import (
 )
 
 
-def _run(fusion: TrafficLightFusion, carrot: RawLight, vision_red: bool,
-         vision_green: bool, distance: float, n: int = 10) -> None:
+def _run(fusion: TrafficLightFusion, carrot: RawLight, amap: RawLight,
+         vision_red: bool, vision_green: bool, distance: float, n: int = 10) -> None:
   """Feed the same frame n times to build up confirmation counters."""
   for _ in range(n):
-    fusion.fuse(carrot, vision_red, vision_green, distance)
+    fusion.fuse(carrot, amap, vision_red, vision_green, distance)
 
 
 class TestTrafficLightFusionFuse(OpenpilotTestCase):
   def test_nav_only_red_is_caution_by_default(self) -> None:
     fusion = TrafficLightFusion()
-    _run(fusion, RawLight.RED, False, False, 50.0)
+    _run(fusion, RawLight.RED, RawLight.OFF, False, False, 50.0)
     # Default: nav-only red never commands a stop assist -> caution RED.
     assert fusion.state == FusedState.RED
     assert fusion.source == FusedSource.CARROT
@@ -40,47 +40,53 @@ class TestTrafficLightFusionFuse(OpenpilotTestCase):
     fusion = TrafficLightFusion()
     fusion._fusion_enabled = True
     fusion._nav_caution_only = False
-    _run(fusion, RawLight.RED, False, False, 50.0)
+    _run(fusion, RawLight.RED, RawLight.OFF, False, False, 50.0)
     assert fusion.state == FusedState.RED_CONFIRMED
     assert fusion.source == FusedSource.FUSED
 
   def test_vision_red_is_confirmed(self) -> None:
     fusion = TrafficLightFusion()
-    _run(fusion, RawLight.OFF, True, False, 30.0)
+    _run(fusion, RawLight.OFF, RawLight.OFF, True, False, 30.0)
     assert fusion.state == FusedState.RED_CONFIRMED
     assert fusion.source == FusedSource.VISION
 
   def test_vision_green_is_confirmed(self) -> None:
     fusion = TrafficLightFusion()
-    _run(fusion, RawLight.OFF, False, True, 30.0)
+    _run(fusion, RawLight.OFF, RawLight.OFF, False, True, 30.0)
     assert fusion.state == FusedState.GREEN_CONFIRMED
 
   def test_nav_only_green_is_caution(self) -> None:
     fusion = TrafficLightFusion()
-    _run(fusion, RawLight.GREEN, False, False, 50.0)
+    _run(fusion, RawLight.GREEN, RawLight.OFF, False, False, 50.0)
     assert fusion.state == FusedState.GREEN
+
+  def test_amap_red_counts_as_nav(self) -> None:
+    fusion = TrafficLightFusion()
+    _run(fusion, RawLight.OFF, RawLight.RED, False, False, 50.0)
+    assert fusion.state == FusedState.RED
+    assert fusion.source == FusedSource.AMAP
 
   def test_conflict_vision_green_nav_red_is_unknown(self) -> None:
     fusion = TrafficLightFusion()
     # Vision green confirmed + nav red (no vision red) -> ambiguous -> unknown.
-    _run(fusion, RawLight.RED, False, True, 30.0)
+    _run(fusion, RawLight.RED, RawLight.OFF, False, True, 30.0)
     assert fusion.state == FusedState.UNKNOWN
     assert fusion.source == FusedSource.FUSED
 
   def test_all_off_is_unknown(self) -> None:
     fusion = TrafficLightFusion()
-    _run(fusion, RawLight.OFF, False, False, 0.0)
+    _run(fusion, RawLight.OFF, RawLight.OFF, False, False, 0.0)
     assert fusion.state == FusedState.UNKNOWN
 
   def test_single_frame_does_not_confirm(self) -> None:
     fusion = TrafficLightFusion()
-    fusion.fuse(RawLight.RED, False, False, 50.0)
+    fusion.fuse(RawLight.RED, RawLight.OFF, False, False, 50.0)
     # One frame is not enough to confirm (needs >= 5).
     assert fusion.state == FusedState.UNKNOWN
 
   def test_left_turn_treated_as_go(self) -> None:
     fusion = TrafficLightFusion()
-    _run(fusion, RawLight.LEFT, False, False, 50.0)
+    _run(fusion, RawLight.LEFT, RawLight.OFF, False, False, 50.0)
     # Left-turn green is a "go" hint -> caution GREEN (not a stop).
     assert fusion.state == FusedState.GREEN
 

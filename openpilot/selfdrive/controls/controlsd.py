@@ -24,6 +24,7 @@ from openpilot.selfdrive.modeld.modeld import LAT_SMOOTH_SECONDS
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 
 from openpilot.sunnypilot.selfdrive.controls.controlsd_ext import ControlsExt
+from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
 
 State = log.SelfdriveState.OpenpilotState
 LaneChangeState = log.LaneChangeState
@@ -61,6 +62,7 @@ class Controls(ControlsExt):
     self.calibrated_pose: Pose | None = None
 
     self.LoC = LongControl(self.CP, self.CP_SP)
+    self.carrot_controls = CarrotControls(self.CP)
     self.VM = VehicleModel(self.CP)
     self.LaC: LatControl
     if self.CP.steerControlType == car.CarParams.SteerControlType.angle:
@@ -121,12 +123,7 @@ class Controls(ControlsExt):
 
     CC.latActive = _lat_active and not CS.steerFaultTemporary and not CS.steerFaultPermanent and \
                    (not standstill or self.CP.steerAtStandstill)
-    # NOTE: carrot's lat-suspend used to override CC.latActive here, i.e. AFTER the
-    # sunnypilot lateral-enable arbitration in get_lat_active(). That made it a second
-    # independent gate on the actuator, and it ran regardless of CarrotEnabled because
-    # nothing consulted that switch. It is now folded into ControlsExt.get_lat_active
-    # (blinker_pause_lateral -> carrot_controls.wants_suspend -> MADS), so lateral
-    # enable has exactly one decision point.
+    CC.latActive = self.carrot_controls.lat_suspend_control(CS, CC.latActive)
     CC.longActive = CC.enabled and not any(e.overrideLongitudinal for e in self.sm['onroadEvents']) and \
                     (self.CP.openpilotLongitudinalControl or not self.CP_SP.pcmCruiseSpeed)
 

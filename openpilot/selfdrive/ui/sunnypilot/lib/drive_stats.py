@@ -1,5 +1,5 @@
 """
-Drive statistics from on-device route logs and comma connect cloud API.
+Local drive statistics from on-device route logs (no cloud API).
 """
 from __future__ import annotations
 
@@ -8,35 +8,25 @@ import re
 import time
 from datetime import datetime, timedelta
 
-from openpilot.common.api import api_get
 from openpilot.common.hardware.hw import Paths
 from openpilot.common.swaglog import cloudlog
-from openpilot.selfdrive.ui.lib.api_helpers import get_token
-from openpilot.system.athena.registration import UNREGISTERED_DONGLE_ID
 from openpilot.tools.lib.logreader import LogReader
 
 SEGMENT_DIR_RE = re.compile(
-  r"^(?P<route>.+)--(?P<seg>\d+)$"
+  r"^(?P<route>.+\|\d{4}-\d{2}-\d{2}--\d{2}-\d{2}-\d{2})--(?P<seg>\d+)$"
 )
 ROUTE_TIME_RE = re.compile(r"\|(\d{4}-\d{2}-\d{2}--\d{2}-\d{2}-\d{2})$")
 METERS_PER_MILE = 1609.344
 
 
-def _route_start(route_key: str, segment_path: str | None = None) -> datetime | None:
-  # openpilot upstream format: dongle_id|YYYY-MM-DD--HH-MM-SS
+def _route_start(route_key: str) -> datetime | None:
   match = ROUTE_TIME_RE.search(route_key)
-  if match:
-    try:
-      return datetime.strptime(match.group(1), "%Y-%m-%d--%H-%M-%S")
-    except ValueError:
-      return None
-  # Alternate format (e.g. 00000015--4132fbd72e--N): fall back to segment mtime
-  if segment_path is not None and os.path.isdir(segment_path):
-    try:
-      return datetime.fromtimestamp(os.path.getmtime(segment_path))
-    except OSError:
-      pass
-  return None
+  if not match:
+    return None
+  try:
+    return datetime.strptime(match.group(1), "%Y-%m-%d--%H-%M-%S")
+  except ValueError:
+    return None
 
 
 def _qlog_path(log_root: str, segment_name: str) -> str | None:
@@ -129,7 +119,7 @@ def compute_local_drive_stats(log_root: str | None = None, cache: dict | None = 
     buckets["all"]["distance"] = float(buckets["all"]["distance"]) + route_miles
     buckets["all"]["minutes"] = float(buckets["all"]["minutes"]) + route_minutes
 
-    route_start = _route_start(route_key, os.path.join(log_root, segment_names[0]))
+    route_start = _route_start(route_key)
     if route_start is not None and route_start >= week_cutoff:
       seen_routes["week"].add(route_key)
       buckets["week"]["routes"] = len(seen_routes["week"])
@@ -149,25 +139,3 @@ def refresh_local_drive_stats(params, param_key: str = "LocalDriveStats") -> dic
   stats = compute_local_drive_stats(cache=cache)
   params.put(param_key, stats)
   return stats
-
-
-def fetch_cloud_drive_stats(params, session=None) -> dict:
-  """Fetch drive stats directly from comma connect cloud API (no caching)."""
-  try:
-    dongle_id = params.get("DongleId")
-    if not dongle_id or dongle_id == UNREGISTERED_DONGLE_ID:
-      return {"error": "unregistered", "all": _empty_bucket(), "week": _empty_bucket()}
-
-    identity_token = get_token(dongle_id)
-    response = api_get(f"v1.1/devices/{dongle_id}/stats", access_token=identity_token, session=session)
-    if response.status_code == 200:
-      data = response.json()
-      return {
-        "all": data.get("all", _empty_bucket()),
-        "week": data.get("week", _empty_bucket()),
-      }
-    else:
-      return {"error": f"http_{response.status_code}", "all": _empty_bucket(), "week": _empty_bucket()}
-  except Exception as e:
-    cloudlog.error(f"Failed to fetch drive stats: {e}")
-    return {"error": str(e), "all": _empty_bucket(), "week": _empty_bucket()}

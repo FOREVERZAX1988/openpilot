@@ -174,42 +174,12 @@ def discovery_targets(advertise_ip: str | None = None) -> tuple[tuple[str, str],
   return tuple(dict.fromkeys(targets))
 
 
-def _engaged_default() -> bool:
-  """`IsEngaged` is maintained by hardwared from selfdriveState.enabled."""
-  try:
-    from openpilot.common.params import Params
-
-    return bool(Params().get_bool("IsEngaged"))
-  except Exception:
-    return False
-
-
 class CarrotNaviDiscoveryBeacon:
-  def __init__(self, advertise_ip: str | None = None, interval_s: float = DISCOVERY_INTERVAL_S,
-               port: int = DEFAULT_PORT, peers=None, active_provider=None) -> None:
+  def __init__(self, advertise_ip: str | None = None, interval_s: float = DISCOVERY_INTERVAL_S) -> None:
     self.advertise_ip = advertise_ip
     self.interval_s = max(0.2, float(interval_s))
-    self._port = int(port)
-    # `active` is what the app reads off UDP 7705 to decide whether openpilot is
-    # actually controlling the car. This beacon is the one the app sees most often -
-    # carrot_man's is every 2s, this one every DISCOVERY_INTERVAL_S - so omitting the
-    # field here means whichever datagram the app last parsed decides the indicator.
-    # hardwared keeps IsEngaged equal to selfdriveState.enabled, which is the same
-    # source carrot_man uses, so both beacons agree.
-    self._active = active_provider if active_provider is not None else _engaged_default
-    # Optional callable returning the IPs to unicast to; defaults to every app that has
-    # opened a WebSocket on this process.
-    self._peers = peers
     self._stop = threading.Event()
     self._thread: threading.Thread | None = None
-
-  def _peer_ips(self) -> tuple[str, ...]:
-    if self._peers is not None:
-      try:
-        return tuple(self._peers())
-      except Exception:
-        return ()
-    return tuple(DISCOVERY_PEER_IPS)
 
   def start(self) -> None:
     if self._thread is not None:
@@ -226,33 +196,12 @@ class CarrotNaviDiscoveryBeacon:
 
   def broadcast_once(self) -> None:
     for source_ip, broadcast_ip in discovery_targets(self.advertise_ip):
-      # Include the WebSocket port. Without it a client that discovers us here can
-      # only fall back to the hard-coded 7706, which carrot_man owns - it would
-      # "find" the device and then send its data to the wrong service.
-      body = json.dumps({
-        "ip": source_ip,
-        "navi_debug": 1,
-        "port": self._port,
-        "active": bool(self._active()),
-      }).encode("utf-8")
+      body = json.dumps({"ip": source_ip, "navi_debug": 1}).encode("utf-8")
       sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
       try:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.bind((source_ip, 0))
         sock.sendto(body, (broadcast_ip, DISCOVERY_PORT))
-        # Also address every app that is already connected, directly. Delivery of the
-        # broadcast copy depends on the AP forwarding it, and on Android the receiving
-        # socket can miss it while the app is backgrounded; a directly addressed copy
-        # does not have that failure mode. Sending it is harmless when the app is not
-        # listening (it only listens on 7705 while it has no control socket - see
-        # carrot_navi_api.md section 1).
-        for peer_ip in self._peer_ips():
-          if peer_ip in ("", "0.0.0.0", "127.0.0.1"):
-            continue
-          try:
-            sock.sendto(body, (peer_ip, DISCOVERY_PORT))
-          except OSError:
-            continue
       except OSError:
         continue
       finally:
@@ -1019,13 +968,6 @@ RECEIVER_KEY = web.AppKey("carrot_navi_receiver", CarrotNaviReceiver)
 WEBSOCKETS_KEY = web.AppKey("carrot_navi_websockets", set)
 MAP_CONFIG_READER_KEY = web.AppKey("carrot_navi_map_config_reader", Callable)
 
-# IPs that have opened a v2 WebSocket on this process. The discovery beacon unicasts its
-# datagram to them on top of broadcasting: the app only listens on UDP 7705 while it has
-# no control socket (carrot_navi_api.md section 1), so re-discovery after a drop has to
-# work without a broadcast round trip. Module-level because the beacon thread is started
-# before the aiohttp application exists.
-DISCOVERY_PEER_IPS: set[str] = set()
-
 
 class ClusterNaviMapParamReader:
   """Reads map-render configuration from params.
@@ -1084,9 +1026,6 @@ class ClusterNaviMapParamReader:
 
 def _track_websocket(request: web.Request, ws: web.WebSocketResponse) -> None:
   request.app[WEBSOCKETS_KEY].add(ws)
-  remote = getattr(request, "remote", None)
-  if remote:
-    DISCOVERY_PEER_IPS.add(remote)
 
 
 def _untrack_websocket(request: web.Request, ws: web.WebSocketResponse) -> None:
@@ -1350,23 +1289,12 @@ def main() -> None:
   args = parser.parse_args()
 
   if not _AIOHTTP_AVAILABLE:
-    # Print for the console AND cloudlog for the log archive: on a C3 this failure
-    # was only visible in the tmux console, so a device that looked healthy had a
-    # dead 7714 with nothing in swaglog. manager's daemons write stdout to
-    # /dev/null (process.py Popen), which is why the console print alone is not
-    # enough to diagnose this from logs.
-    _msg = " ".join((
-      "[carrot_navi] aiohttp is not installed; 7714 v2 WebSocket receiver cannot start.",
-      "Install aiohttp (e.g. pip install --target /data/.pydeps aiohttp) or rebuild the AGNOS image.",
+    print(
+      "[carrot_navi] aiohttp is not installed; 7714 v2 WebSocket receiver cannot start. "
+      "Install aiohttp (e.g. pip install --target /data/.pydeps aiohttp) or rebuild the AGNOS image. "
       "This process will idle to avoid manager restart loops.",
-    ))
-    print(_msg, flush=True)
-    try:
-      from openpilot.common.swaglog import cloudlog
-
-      cloudlog.error(_msg)
-    except Exception:
-      pass
+      flush=True,
+    )
     # Keep the process alive so manager does not restart-loop, but do not serve traffic.
     while True:
       time.sleep(3600)
@@ -1393,7 +1321,7 @@ def main() -> None:
     screen_center_y_ratio=screen_center_y_ratio,
   )
   advertise_ip = args.advertise_ip or (args.host if args.host not in ("", "0.0.0.0", "::") else None)
-  beacon = None if args.no_beacon else CarrotNaviDiscoveryBeacon(advertise_ip, port=args.port)
+  beacon = None if args.no_beacon else CarrotNaviDiscoveryBeacon(advertise_ip)
   publisher = None
   if not args.no_cereal:
     try:
