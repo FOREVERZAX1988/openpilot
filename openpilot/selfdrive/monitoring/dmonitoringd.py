@@ -28,10 +28,13 @@ def dmonitoringd_thread():
       continue
 
     valid = sm.all_checks()
-    if DM.always_on and demo_mode and sm.valid['driverStateV2']:
+    # the always-on toggle only controls event handling inside the policy, it must
+    # never gate run_step: otherwise faceDetected stays frozen at False whenever
+    # AlwaysOnDM is unset/off (breaks the onboarding driver monitoring check)
+    if demo_mode and sm.valid['driverStateV2']:
       DM.run_step(sm, demo=True)
       DM.set_distract_level_params()
-    elif DM.always_on and valid:
+    elif valid:
       DM.run_step(sm, demo=demo_mode)
       DM.set_distract_level_params()
 
@@ -43,7 +46,7 @@ def dmonitoringd_thread():
     if sm['driverStateV2'].frameId % 40 == 1:
       DM.always_on = params.get_bool("AlwaysOnDM")
       demo_mode = params.get_bool("IsDriverViewEnabled")
-      DM.distraction_detection_level = int(params.get("DistractionDetectionLevel") or 0)
+      DM.distraction_detection_level = int(params.get("DistractionDetectionLevel") or 1)
 
     # save rhd virtual toggle every 5 mins
     if (sm['driverStateV2'].frameId % 6000 == 0 and not demo_mode and
