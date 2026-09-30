@@ -206,7 +206,9 @@ class FakeGuiApp:
   def fallback_font(self, text: str = ""):
     return self._font_cache.setdefault("__fallback__", Font(999))
 
-  def texture(self, path, w=0, h=0):
+  def texture(self, asset_path, width=None, height=None, alpha_premultiply=False,
+              keep_aspect_ratio=True, flip_x=False):
+    # Signature mirrors GuiApplication.texture; layouts pass keep_aspect_ratio.
     return Texture()
 
   def big_ui(self):

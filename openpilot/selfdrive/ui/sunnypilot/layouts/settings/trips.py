@@ -20,6 +20,8 @@ from openpilot.system.ui.widgets import Widget
 
 class TripsLayout(Widget):
   PARAM_KEY = "LocalDriveStats"
+  DATA_SOURCE_PARAM = "TripsDataSource"
+  LOCAL_KEY = "LocalDriveStats"
   UPDATE_INTERVAL = 30  # seconds
 
   TOGGLE_HEIGHT = 80
@@ -29,6 +31,11 @@ class TripsLayout(Widget):
   def __init__(self):
     super().__init__()
     self._params = Params()
+    self._data_source = self._get_data_source()
+    if self._params.get(self.DATA_SOURCE_PARAM) != self._data_source:
+      # migrate devices still carrying upstream's "cloud" value; the cloud backend
+      # does not exist in this fork, so leaving it there only misleads the toggle
+      self._params.put(self.DATA_SOURCE_PARAM, self._data_source)
     self._stats = self._get_stats()
 
     self._icon_distance = gui_app.texture("icons/road.png", 100, 100, keep_aspect_ratio=True)
@@ -55,17 +62,29 @@ class TripsLayout(Widget):
     except Exception:
       pass
 
+  def _get_stats(self):
+    # NOTE: this fork ships local-only drive stats (lib/drive_stats.py has no cloud API),
+    # so the upstream cloud branch was dropped in the merge; always serve local stats.
+    return self._get_local_stats()
+
   def _get_data_source(self):
-    return self._params.get(self.DATA_SOURCE_PARAM) or "local"
+    # only "local" is backed by an implementation in this fork; coerce stale param values
+    # (e.g. a leftover "cloud" in TripsDataSource) so the toggle can never pick a dead path
+    return "local"
 
   def _set_data_source(self, source: str):
-    self._data_source = source
-    self._params.put(self.DATA_SOURCE_PARAM, source)
+    # "cloud" has no implementation in this fork (lib/drive_stats.py is on-device
+    # only), so clamp instead of switching to a dead source that would render
+    # empty cards forever.
+    if source != "local":
+      return
+    self._data_source = "local"
+    self._params.put(self.DATA_SOURCE_PARAM, "local")
     threading.Thread(target=self._refresh_drive_stats, daemon=True).start()
 
   def _get_local_stats(self):
     stats = self._params.get(self.LOCAL_KEY)
-    if not stats:
+    if not isinstance(stats, dict):
       return {}
     return stats
 
@@ -79,10 +98,9 @@ class TripsLayout(Widget):
       time.sleep(self.UPDATE_INTERVAL)
 
   def _handle_mouse_release(self, mouse_pos):
+    # only the Local half of the toggle is backed; the Cloud rect is drawn but inert
     if rl.check_collision_point_rec(mouse_pos, self._local_btn_rect) and self._data_source != "local":
       self._set_data_source("local")
-    elif rl.check_collision_point_rec(mouse_pos, self._cloud_btn_rect) and self._data_source != "cloud":
-      self._set_data_source("cloud")
 
   def _render_stat_group(self, x, y, width, height, title, data, is_metric):
     # Card Background
