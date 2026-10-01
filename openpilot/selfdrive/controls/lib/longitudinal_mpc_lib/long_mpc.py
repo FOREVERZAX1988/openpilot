@@ -244,7 +244,6 @@ class LongitudinalMpc:
     # values baked at import, so stock behavior is unchanged unless explicitly
     # overridden. NOTE: these do NOT change PARAM_DIM or rebuild the solver.
     self.comfort_brake = COMFORT_BRAKE
-    self.stop_distance = STOP_DISTANCE
     self.reset()
     self.source = LongitudinalPlanSource.cruise
 
@@ -362,7 +361,7 @@ class LongitudinalMpc:
     return lead_xv
 
   def update(self, radarstate, personality=log.LongitudinalPersonality.standard, *, t_follow=None, jerk_factor=None,
-              comfort_brake=None, stop_distance=None, stop_obstacle_distance=0.0, lane_change_credit=None):
+              comfort_brake=None, stop_obstacle_distance=0.0, lane_change_credit=None):
     # Tuning is read once in __init__, never here. Params.get() is a filesystem read that
     # measures 111 us/key on a tizi, and its tail latency is unbounded when loggerd or the
     # uploader are busy -- not something to put in the planning loop. plannerd only runs
@@ -375,7 +374,6 @@ class LongitudinalMpc:
     # (comfort_brake / stop_distance margin). These only change the runtime
     # obstacle-distance math; they do NOT touch PARAM_DIM or rebuild the solver.
     self.comfort_brake = float(comfort_brake) if comfort_brake is not None else COMFORT_BRAKE
-    self.stop_distance = float(stop_distance) if stop_distance is not None else STOP_DISTANCE
 
     lead_xv_0 = self.process_lead(radarstate.leadOne)
     lead_xv_1 = self.process_lead(radarstate.leadTwo)

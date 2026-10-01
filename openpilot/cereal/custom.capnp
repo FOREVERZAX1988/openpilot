@@ -549,6 +549,55 @@ struct CarStateSP @0xb86e6369214c01c8 {
   carrotLaneValid @1 :Bool;
   carrotLeftLineBlocked @2 :Bool;
   carrotRightLineBlocked @3 :Bool;
+
+  # Carrot blind-spot hints from the direct Amap LiDAR/camera UDP path (port 4211).
+  #
+  # These exist so carrot stops writing the subscription's carState reader.
+  # SubMaster.__getitem__ returns a capnp _DynamicStructReader
+  # (cereal/messaging/__init__.py:226,229-230 via as_reader(), and :259), whose
+  # attributes cannot be assigned - doing so raises AttributeError. carrot_man used
+  # to assign sm['carState'].leftBlindspot inside tick(), so whenever the LiDAR
+  # reported a blind spot the exception aborted the rest of tick(), and _publish()
+  # never ran: carrotManSP stopped being published entirely (SLA, TMC congestion and
+  # lane-guide blocking all lose their input), with only one swaglog line to show for
+  # it. carrot now offers the hint here and card.py merges it into the real
+  # carState.leftBlindspot, which is the same single-writer pattern already used for
+  # the 7714 lane hints above.
+  carrotLeftBlindHint @4 :Bool;
+  carrotRightBlindHint @5 :Bool;
+
+  # VW two-stage stalk swipe latch (GRA_Tip_Stufe_2).
+  #
+  # VCruiseCarrot reads this in _prepare_buttons to distinguish a short press from
+  # a stage-2 swipe, which maps to an immediate +/-10 on release. It previously read
+  # it off carState, where the field does not exist in opendbc's CarState schema, so
+  # the first button press crashed card.py with
+  # `AttributeError: capnp ... struct has no such member; name = cruiseSpeedBigStep`.
+  # It lives here (fork-only CarStateSP) rather than in opendbc because it is a
+  # cp/Carrot behaviour bit, not a safety-relevant stock signal.
+  #
+  # No publisher fills it yet: mqbcan.create_acc_buttons_control currently only
+  # echoes GRA_Tip_Stufe_2 back to the car without decoding it. Until a VW
+  # CarState decodes it, this stays false and VCruiseCarrot treats every press as
+  # a short press, which is the pre-existing behaviour.
+  carrotCruiseSpeedBigStep @6 :Bool;
+
+  # Xiaoge ONNX lane inference results (customReservedRawData0 → card.py → here).
+  # -1: unknown, 0: dashed, 1: solid, +10: white, +20: yellow, +30: blue, e.g. 21=solid yellow.
+  # Merged by apply_xiaoge_vision_result() which preserves color codes from other sources.
+  xiaogeLeftLaneLine @7 :Int16;
+  xiaogeRightLaneLine @8 :Int16;
+
+  # Hybrid engine state (toyota HYBRID flag). Written by the brand's carstate_ext and
+  # read by longitudinal_planner.get_max_accel_override so an engine-off hybrid is not
+  # asked for acceleration it cannot deliver.
+  #
+  # Appended at @9/@10 rather than the @1/@2 this branch originally used: the other
+  # side of the merge had already taken @1-@8 for the Carrot/Xiaoge fields above.
+  # Ordinals are the wire contract, so renumbering here is the only safe resolution -
+  # reusing @1/@2 would silently alias engineOff onto carrotLaneValid.
+  engineOff @9 :Bool;
+  engineRpm @10 :Float32;
 }
 
 
@@ -695,6 +744,69 @@ struct CarrotManSP @0xcd96dafb67a082d0 {
   vehicleNaviSpeed @51 :Int32 = 0;
   vehicleNaviSectionActive @52 :Bool = false;
   vehicleNaviAvailable @53 :Bool = false;
+  # Service area / toll gate hints (App §2.3 SAPA_* group, KEY_TYPE 10001).
+  sapaName @54 :Text = "";
+  sapaDist @55 :Int32 = 0;      # meters; -1 = invalid
+  sapaType @56 :Int32 = 0;      # 0=service/parking area, 1=toll gate, 2=checkpoint
+  sapaCnt @57 :Int32 = 0;       # SAPA_NUM raw (semantics TBD, observed constant 2)
+  # TMC live traffic congestion (App §2.5, KEY_TYPE 13011).
+  tmcTotalDistance @58 :Int32 = 0;
+  tmcResidualDistance @59 :Int32 = 0;
+  tmcSegmentCount @60 :Int32 = 0;
+  tmcOverallStatus @61 :Int32 = 0;  # 0=unknown,1=free,2=slow,3=congested,4=severe,5=very-free,10=current
+  # Lane guidance arrow codes (App §2.2 navLaneGuide / navLaneGuideCnt).
+  navLaneGuide @62 :Text = "";
+  # Per-segment TMC arrays, packed as compact JSON strings so the lists survive
+  # pycapnp without per-element List management (same convention as
+  # naviPaths). Consumers json.loads() them.
+  #   tmcSegmentStatuses : int[]  1=free,2=slow,3=congested,4=severe,5=very-free,0/10=unknown
+  #   tmcSegmentDistances: int[]  metres, index-aligned with the statuses
+  tmcSegmentStatuses @63 :Text = "";
+  tmcSegmentDistances @64 :Text = "";
+  # Number of entries the app declared for navLaneGuide; lets consumers detect a
+  # truncated / malformed guidance array (length mismatch => discard).
+  navLaneGuideCnt @65 :Int32 = 0;
+
+  # Blind-spot hint from the direct Amap LiDAR/camera UDP path (port 4211).
+  # carrot offers it; card.py merges it into the real carState.leftBlindspot,
+  # which keeps carState single-writer. carrot_man must never assign the
+  # subscription itself: SubMaster hands out a capnp _DynamicStructReader
+  # (cereal/messaging/__init__.py:226,229-230,:259) whose attributes cannot be
+  # set, so doing so raised and aborted the rest of tick() - including
+  # _publish(), which silently stopped carrotManSP altogether.
+  amapLeftBlind @66 :Bool = false;
+  amapRightBlind @67 :Bool = false;
+
+  # ATC (auto turn control) speed target for the upcoming turn, in m/s.
+  # 250 kph-equivalent sentinel (V_CRUISE_UNSET-ish) means "no ATC limit".
+  # carrot computes this in update_auto_turn as a deceleration-aware target for
+  # the turn at xDistToTurn; it previously went only into the display-only
+  # desiredSpeed, so the vehicle never acted on it.
+  #
+  # ATC and the curve/route speeds below are the map-deceleration family: they all
+  # describe "a lower speed that applies at a point x metres ahead", which is exactly
+  # what SmartCruiseControlMap already models with its jerk/accel-limited lookahead.
+  # They are folded into that controller (see _update_carrot_map_decel), not into SLA,
+  # because SLA owns speed-limit signs - absolute constraints - while SCC-M owns
+  # navigation-driven deceleration. That mirrors the existing TMC congestion path.
+  atcSpeed @68 :Float32 = 0;
+  atcDist @69 :Float32 = 0;
+
+  # Curve speed from the turn table (v_turn_speed, already @11 as Int32 kph) and the
+  # route-curvature speed. Both in m/s; 0 means "no value". vTurnSpeed is paired with
+  # xDistToTurn, so no separate distance is needed for it.
+  vTurnSpeedMs @70 :Float32 = 0;
+  routeSpeed @71 :Float32 = 0;
+  routeDist @72 :Float32 = 0;
+
+  # Readable form of `desiredSource` plus its colour class, so every consumer shows
+  # the same thing instead of re-deriving a mapping. `desiredSource` is the internal
+  # token ("atc", "hda_section", ...); `desiredSourceLabel` is the driver-facing
+  # reason ("turn", "section") and `desiredSourceColor` is the HUD colour mode
+  # (2 = normal deceleration, 3 = vehicle CAN navigation, 4 = external navigation).
+  # Mapping lives in openpilot/sunnypilot/carrot/deceleration_source.py.
+  desiredSourceLabel @73 :Text = "";
+  desiredSourceColor @74 :Int32 = 0;
 }
 
 struct ImuCalibrationSP @0xb057204d7deadf3f {

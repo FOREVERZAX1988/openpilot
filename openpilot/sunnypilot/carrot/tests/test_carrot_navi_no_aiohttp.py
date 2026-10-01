@@ -13,10 +13,7 @@ class TestCarrotNaviWithoutAiohttp(unittest.TestCase):
 
   def _run_in_subprocess(self, code: str) -> subprocess.CompletedProcess:
     env = os.environ.copy()
-    # derive the import root from this file instead of a hardcoded Windows path;
-    # the old value made these two tests fail on every non-dev-machine host
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
-    env["PYTHONPATH"] = os.pathsep.join(p for p in (root, env.get("PYTHONPATH", "")) if p)
+    env["PYTHONPATH"] = "E:/sp/openpilot"
     # Make sure we use the same interpreter as the test runner.
     python = sys.executable
     return subprocess.run(

@@ -6,7 +6,15 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-"""Unit tests for CarrotControls lat-suspend behavior."""
+"""Unit tests for CarrotControls lat-suspend behaviour.
+
+`lat_suspend_control(CS, latActive)` was replaced by `wants_suspend(CS)`. The old API
+returned a possibly-cleared `latActive`, which is how carrot ended up overriding
+CC.latActive from controlsd.py *after* the sunnypilot lateral-enable arbitration - a
+second, independent gate on the actuator that also ignored CarrotEnabled. The
+predicate form forces the decision through ControlsExt.get_lat_active instead, so
+these tests exercise the predicate and the master switch.
+"""
 
 import sys
 import types
@@ -15,51 +23,29 @@ from unittest.mock import MagicMock
 
 # Minimal mocks so the module imports without a compiled capnp runtime.
 _common_pkg = types.ModuleType("openpilot.common")
-
-# --- sys.modules stubs are import shims for hosts without a compiled capnp
-# runtime. Two things matter for test isolation:
-#   1. install them through _install_stub() so tearDownModule() can put the real
-#      modules back into sys.modules;
-#   2. keep the *package* stubs resolvable: give them the real package __path__,
-#      otherwise "import openpilot.common.test" / "opendbc.car.car_helpers" fail
-#      with "'x' is not a package" for every test module imported afterwards in
-#      the same process (that was the collection error in the combined run).
-_LEAKED_SYS_MODULES: dict[str, object] = {}
-
-
-def _install_stub(name: str, module) -> None:
-  # NOTE: these stubs deliberately have no __path__/__spec__. Giving them the real package
-  # path makes deeper real imports (e.g. openpilot.common.hardware.base -> openpilot.cereal.log)
-  # resolve while the stub is installed, which fails in a different way. Keep the fake a leaf
-  # object and just guarantee it is removed again (see tearDownModule) so it cannot leak into
-  # other test modules.
-  _LEAKED_SYS_MODULES.setdefault(name, sys.modules.get(name))
-  sys.modules[name] = module
-
-
-def _drop_stubs() -> None:
-  for _name, _original in _LEAKED_SYS_MODULES.items():
-    if _original is None:
-      sys.modules.pop(_name, None)
-    else:
-      sys.modules[_name] = _original
-  _LEAKED_SYS_MODULES.clear()
-
-
-def tearDownModule() -> None:
-  _drop_stubs()
-
-
 _common_pkg.realtime = types.ModuleType("openpilot.common.realtime")
 _common_pkg.realtime.DT_CTRL = 0.01
 _common_pkg.params = MagicMock()
 _common_pkg.swaglog = MagicMock(cloudlog=MagicMock())
-_install_stub("openpilot.common", _common_pkg)
-_install_stub("openpilot.common.realtime", _common_pkg.realtime)
-_install_stub("openpilot.common.params", _common_pkg.params)
-_install_stub("openpilot.common.swaglog", _common_pkg.swaglog)
+# Saved and restored around the import below: a stub left in sys.modules replaces
+# "openpilot.common" with a non-package object and breaks every later test module in the
+# same process (see the same guard in test_carrot_man.py).
+_SAVED_MODULES = {name: sys.modules.get(name) for name in (
+  "openpilot.common", "openpilot.common.realtime", "openpilot.common.params", "openpilot.common.swaglog",
+)}
+sys.modules["openpilot.common"] = _common_pkg
+sys.modules["openpilot.common.realtime"] = _common_pkg.realtime
+sys.modules["openpilot.common.params"] = _common_pkg.params
+sys.modules["openpilot.common.swaglog"] = _common_pkg.swaglog
 
 from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
+
+for _name, _module in _SAVED_MODULES.items():
+  if _module is None:
+    sys.modules.pop(_name, None)
+  else:
+    sys.modules[_name] = _module
+del _name, _module
 
 
 class _FakeCS:
@@ -68,78 +54,110 @@ class _FakeCS:
     self.steeringAngleDeg = steering_angle_deg
 
 
-# The shims above only exist to let this module import the code under test. Drop them as soon
-# as that import is done so they cannot leak into any other test module (a fake
-# 'openpilot.common' module breaks 'import openpilot.common.test' elsewhere).
-_drop_stubs()
-
-
 class TestCarrotControlsLatSuspend(unittest.TestCase):
   def setUp(self):
     self.ctrl = CarrotControls(MagicMock())
     self.ctrl.params = MagicMock()
     self.ctrl.params.get = lambda key: 300  # LatSuspendAngleDeg = 300 degrees
+    self.ctrl.enabled = True
 
   def test_no_suspend_when_steering_small(self):
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=10.0)
     for _ in range(200):
-      active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertTrue(active)
+      suspended = self.ctrl.wants_suspend(cs)
+    self.assertFalse(suspended)
     self.assertFalse(self.ctrl.lat_suspend_active)
+
+  def test_no_suspend_at_the_default_angle(self):
+    """LatSuspendAngleDeg defaults to 300, which no real steering angle reaches.
+
+    This is why folding the check into get_lat_active is behaviour-preserving by
+    default: the predicate can only ever return False unless the user lowers it.
+    """
+    self.ctrl.params.get = lambda key: 300
+    cs = _FakeCS(steering_pressed=True, steering_angle_deg=180.0)
+    for _ in range(1000):
+      self.assertFalse(self.ctrl.wants_suspend(cs))
 
   def test_suspend_after_delay_at_large_angle(self):
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=350.0)
-    active = True
     for _ in range(99):
-      active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertTrue(active)
-    active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertFalse(active)
+      self.assertFalse(self.ctrl.wants_suspend(cs))
+    self.assertTrue(self.ctrl.wants_suspend(cs))
     self.assertTrue(self.ctrl.lat_suspend_active)
 
   def test_suspend_holds_and_resumes(self):
-    # Enter suspend.
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=350.0)
     for _ in range(110):
-      self.ctrl.lat_suspend_control(cs, True)
+      self.ctrl.wants_suspend(cs)
     self.assertTrue(self.ctrl.lat_suspend_active)
 
-    # Stay suspended while still steering hard.
-    active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertFalse(active)
+    # Still steering hard -> stays suspended.
+    self.assertTrue(self.ctrl.wants_suspend(cs))
 
-    # Release steering but stay at large angle -> still suspended (exit angle not met).
+    # Released but angle still large -> exit angle not met, stays suspended.
     cs = _FakeCS(steering_pressed=False, steering_angle_deg=350.0)
     for _ in range(60):
-      active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertFalse(active)
+      self.assertTrue(self.ctrl.wants_suspend(cs))
     self.assertTrue(self.ctrl.lat_suspend_active)
 
-    # Move to small angle and wait for hold time.
+    # Small angle, past hold time -> resumes.
     cs = _FakeCS(steering_pressed=False, steering_angle_deg=10.0)
     for _ in range(60):
-      active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertTrue(active)
+      self.assertFalse(self.ctrl.wants_suspend(cs))
     self.assertFalse(self.ctrl.lat_suspend_active)
 
   def test_timer_resets_when_condition_lost(self):
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=350.0)
     for _ in range(50):
-      self.ctrl.lat_suspend_control(cs, True)
+      self.ctrl.wants_suspend(cs)
     self.assertFalse(self.ctrl.lat_suspend_active)
 
     # Briefly lose the condition.
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=10.0)
-    self.ctrl.lat_suspend_control(cs, True)
+    self.ctrl.wants_suspend(cs)
 
-    # Re-enter must wait full delay again.
+    # Re-entering must wait the full delay again.
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=350.0)
-    active = True
     for _ in range(99):
-      active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertTrue(active)
-    active = self.ctrl.lat_suspend_control(cs, True)
-    self.assertFalse(active)
+      self.assertFalse(self.ctrl.wants_suspend(cs))
+    self.assertTrue(self.ctrl.wants_suspend(cs))
+
+  def test_master_switch_off_never_suspends(self):
+    """CarrotEnabled off must disable this entirely.
+
+    Previously nothing consulted that switch, so carrot kept overriding CC.latActive
+    even with carrot turned off.
+    """
+    self.ctrl.enabled = False
+    cs = _FakeCS(steering_pressed=True, steering_angle_deg=350.0)
+    for _ in range(1000):
+      self.assertFalse(self.ctrl.wants_suspend(cs))
+    self.assertFalse(self.ctrl.lat_suspend_active)
+
+  def test_update_params_reads_carrot_enabled(self):
+    self.ctrl.params.get_bool = lambda key, *a: key == "CarrotEnabled"
+    self.ctrl.update_params()
+    self.assertTrue(self.ctrl.enabled)
+
+    self.ctrl.params.get_bool = lambda key, *a: False
+    self.ctrl.update_params()
+    self.assertFalse(self.ctrl.enabled)
+
+  def test_predicate_never_takes_latActive(self):
+    """The point of the rewrite: no in-place latActive fiddling.
+
+    Checked on the signature rather than the source text, because the docstring
+    legitimately mentions the name it deliberately no longer touches.
+    """
+    import inspect
+
+    sig = inspect.signature(CarrotControls.wants_suspend)
+    self.assertEqual(list(sig.parameters), ["self", "CS"],
+                     f"wants_suspend must only take the car state, got {list(sig.parameters)}")
+    # `from __future__ import annotations` keeps annotations as strings.
+    self.assertIn(sig.return_annotation, (bool, "bool"),
+                  f"wants_suspend must return bool, got {sig.return_annotation!r}")
 
 
 if __name__ == "__main__":

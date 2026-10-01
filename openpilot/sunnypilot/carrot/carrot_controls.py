@@ -20,14 +20,32 @@ from openpilot.common.params import Params
 
 
 class CarrotControls:
+  """Carrot lat-suspend: pause lateral actuation while the driver steers hard.
+
+  This used to be applied by controlsd.py *after* the sunnypilot lateral-enable
+  arbitration, which made it a second, independent gate on CC.latActive. It is now a
+  pure predicate consulted from inside ControlsExt.get_lat_active, so there is one
+  place that decides whether lateral is active.
+  """
+
   def __init__(self, CP):
     self.CP = CP
     self.params = Params()
     self.lat_suspend_active = False
     self.lat_suspend_enter_t = 0.0
     self.lat_suspend_hold_t = 0.0
+    self.enabled = False
+    self._param_update_t = 0.0
 
-  def lat_suspend_control(self, CS, latActive):
+  def update_params(self):
+    """Refresh the master switch. Called from get_params_sp at PARAMS_UPDATE_PERIOD."""
+    self.enabled = self.params.get_bool("CarrotEnabled")
+
+  def wants_suspend(self, CS) -> bool:
+    """True when carrot wants lateral paused right now. Never touches latActive."""
+    if not self.enabled:
+      return False
+
     suspend_angle = float(self.params.get("LatSuspendAngleDeg"))
     resume_angle = 15.0
     delay_sec = 1.0
@@ -53,6 +71,4 @@ class CarrotControls:
         self.lat_suspend_active = False
         self.lat_suspend_enter_t = 0.0
 
-    if self.lat_suspend_active:
-      latActive = False
-    return latActive
+    return self.lat_suspend_active

@@ -356,6 +356,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // Parse 7706 UDP blind-spot / LiDAR / extBlinker fields (AmapNaviServ).
     {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // Read by the upstream Carrot implementation (carrot_controls lead-response tuning and
+    // the navi rear-camera hold distance). Registered with upstream's own defaults so the
+    // adopted carrot code cannot raise UnknownKeyName / silently fall back to 0.
+    {"AutoNaviRearCameraHoldDistance", {PERSISTENT | BACKUP, INT, "100"}},
+    {"LeadAccelResponseTF1", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"LeadAccelResponseTF2", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"LeadAccelResponseTF3", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"LeadAccelResponseTF4", {PERSISTENT | BACKUP, INT, "-1"}},
     // 7714 WebSocket v2 navi link killswitch. Default off so the new
     // carrotNavi process never starts unless explicitly enabled. Requires
     // CarrotEnabled as the master switch (see process_config.py).

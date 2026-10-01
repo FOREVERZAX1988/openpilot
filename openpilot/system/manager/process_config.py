@@ -16,6 +16,9 @@ from openpilot.sunnypilot.sunnylink.utils import sunnylink_need_register, sunnyl
 
 WEBCAM = os.getenv("USE_WEBCAM") is not None
 LITE = os.getenv("LITE") is not None
+# Lets an external launcher own the carrot API/web stack, matching CarrotPilot's
+# `enabled=not CARROT_WEB_EXTERNAL` gate on carrot_server.
+CARROT_WEB_EXTERNAL = os.getenv("CARROT_WEB_EXTERNAL") == "1"
 
 def driverview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started or params.get_bool("IsDriverViewEnabled")
@@ -116,13 +119,6 @@ def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
   # carrot_man gates its own behaviour with the IsOnroad param
   return params.get_bool("CarrotEnabled")
 
-def carrot_navi_v2_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
-  # 7714 WebSocket v2 navi link. Gated by the master CarrotEnabled switch AND
-  # the dedicated killswitch CarrotNaviV2Enabled (default off). The WebSocket
-  # receiver depends on the phone app, so it auto-restarts on crash rather
-  # than taking down the 7706 carrot_man path.
-  return params.get_bool("CarrotEnabled") and params.get_bool("CarrotNaviV2Enabled")
-
 def or_(*fns):
   return lambda *args: operator.or_(*(fn(*args) for fn in fns))
 
@@ -211,12 +207,59 @@ procs += [
   # Carrot
   # amapNaviSP and AmapMapData (Web API) removed: carrot_man now only produces
   # carrotManSP / navInstructionCarrotSP. OSM remains the map-data provider.
-  # restart_if_crash: PythonProcess.start() returns early while self.proc is
-  # not None, so without this flag a crashed carrot_man (UDP 7706 listener +
-  # 7705 discovery beacon) stays dead until a manager restart -- the phone app
-  # then simply cannot find the device.  (Regression we hit on tizi.)
-  PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", carrot_enabled, restart_if_crash=True),
-  PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", carrot_navi_v2_enabled, restart_if_crash=True),
+  #
+  # always_run, NOT carrot_enabled: carrot_man is the UDP 7705 discovery
+  # advertiser and the 7706 listener on this fork, and the phone app must find
+  # the unit on 7705 before it can enable anything. CarrotEnabled defaults to
+  # "0", so gating the process on it made every default device invisible to the
+  # app ("7705 未激活"). CarrotPilot runs every carrot_* process with
+  # always_run for the same reason; carrot_man still gates its own rich navi /
+  # publish / web work on CarrotEnabled inside tick(), so only the listener and
+  # the beacon stay live on a device with the feature switched off.
+  #
+  # restart_if_crash=True for both: they are the discovery + navi backbone.
+  # Without it a crash leaves the unit unfindable until a manual reboot; the
+  # manager must auto-relaunch them (mirrors CarrotPilot).
+  #
+  # carrot_navi (TCP 7714 v2) is always_run exactly like CarrotPilot: it owns
+  # 7714 for the lifetime of the unit and only speaks when the app connects.
+  # Whether the data it produces reaches the driving stack is a *behaviour*
+  # switch (`CarrotNaviV2Enabled`, read by card.py), not a process gate - a
+  # gated process cannot come up on demand, because the manager only re-evaluates
+  # its gates on its own cycle, so the link would stay dead until a manager pass.
+  PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", always_run, restart_if_crash=True),
+  PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", always_run, restart_if_crash=True),
+  # CarrotPilot-compatible API server on port 7000: the parameter REST API plus, as they
+  # are ported, the /ws raw and camera streams. The companion app (navipilot / CP 搭子)
+  # treats 7000 as its main channel, so without it the app reports "设备未连接" and its
+  # conditional-experiment mode cannot switch. always_run like CarrotPilot's; the gate only
+  # exists so an external launcher can take the stack over.
+  # restart_if_crash: the app's main channel must come back on its own. Without it the
+  # manager leaves the port dead until the next ignition cycle, which the app reports as
+  # "设备未连接" with nothing on the device to explain why.
+  PythonProcess("carrot_server", "openpilot.sunnypilot.carrot.carrot_server", always_run,
+                enabled=not CARROT_WEB_EXTERNAL, restart_if_crash=True),
+
+  # Xiaoge ONNX BSD/Lane detection
+  # Reads VisionIPC camera buffers, runs ONNX inference, publishes to customReservedRawData0.
+  # card.py merges results into carState (blindspot) and carStateSP (lane lines).
+  # restart_if_crash=True: xiaoge_data can crash on startup if cameras are temporarily
+  # unavailable (e.g. camera stream not yet stable when entering the car). Without this
+  # flag the manager waits for the next ensure_running cycle before restarting, causing a
+  # spurious "进程未运行" alert to appear briefly.
+  PythonProcess("xiaoge_data", "openpilot.sunnypilot.carrot.xiaoge_data", carrot_enabled, restart_if_crash=True),
+
+  # Bluetooth HID remote daemon
+  # Reads evdev input events from paired Bluetooth HID remotes (e.g. Yiser J6).
+  # Publishes cruise/lane commands to /dev/shm/carrot-bluetooth/{cruise,lane}.json.
+  # CommandReader in cruise.py / desire_helper.py consumes these commands.
+  #
+  # always_run + enabled=COMMA_HARDWARE mirrors CarrotPilot's
+  # `always_run, enabled=TICI`: Bluetooth HID remotes only exist on comma
+  # hardware (AGNOS exposes the evdev nodes), and the old gate on CarrotEnabled
+  # meant a unit with the master switch off could not pair its remote. This fork
+  # has no `TICI` symbol - `COMMA_HARDWARE` (AGNOS present) is its equivalent.
+  PythonProcess("carrot_bluetooth", "openpilot.sunnypilot.carrot.bluetooth.daemon", always_run, enabled=COMMA_HARDWARE, restart_if_crash=True),
 
   # locationd
   NativeProcess("locationd_llk", "openpilot/sunnypilot/selfdrive/locationd", ["./locationd"], only_onroad),
