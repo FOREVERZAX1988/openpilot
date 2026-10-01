@@ -65,7 +65,9 @@ class TogglesLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
 
-    self._personality_toggle = BigMultiParamToggle(tr("driving personality"), "LongitudinalPersonality", ["aggressive", "standard", "relaxed"])
+    self._personality_toggle = BigMultiParamToggle(tr("driving personality"), "LongitudinalPersonality", [tr("aggressive"), tr("standard"), tr("relaxed")])
+    self._accel_controller_enabled = BigParamControl(tr("enable accel controller"), "AccelPersonalityEnabled")
+    self._accel_personality_toggle = BigMultiParamToggle(tr("acceleration profile"), "AccelPersonality", [tr("eco"), tr("normal"), tr("sport")])
     self._experimental_btn = BigToggle(tr("experimental mode"), initial_state=ui_state.params.get_bool("ExperimentalMode"),
                                        toggle_callback=self._on_experimental_mode)
     is_metric_toggle = BigParamControl(tr("use metric units"), "IsMetric")
@@ -74,7 +76,7 @@ class TogglesLayoutMici(NavScroller):
     distraction_level_toggle = BigMultiParamToggle(
       tr("distraction detection level"),
       "DistractionDetectionLevel",
-      ["strict", "moderate", "lenient"],
+      [tr("strict"), tr("moderate"), tr("lenient")],
     )
     record_front = BigParamControl(tr("record & upload driver camera"), "RecordFront", toggle_callback=restart_needed_callback)
     record_mic = BigParamControl(tr("record & upload mic audio"), "RecordAudio", toggle_callback=restart_needed_callback)
@@ -90,6 +92,8 @@ class TogglesLayoutMici(NavScroller):
 
     self._scroller.add_widgets([
       self._personality_toggle,
+      self._accel_controller_enabled,
+      self._accel_personality_toggle,
       self._experimental_btn,
       is_metric_toggle,
       ldw_toggle,
@@ -122,6 +126,7 @@ class TogglesLayoutMici(NavScroller):
     # Toggle lists
     self._refresh_toggles = (
       ("ExperimentalMode", self._experimental_btn),
+      ("AccelPersonalityEnabled", self._accel_controller_enabled),
       ("IsMetric", is_metric_toggle),
       ("IsLdwEnabled", ldw_toggle),
       ("AlwaysOnDM", always_on_dm_toggle),
@@ -172,11 +177,15 @@ class TogglesLayoutMici(NavScroller):
       if ui_state.has_longitudinal_control:
         self._experimental_btn.set_visible(True)
         self._personality_toggle.set_visible(True)
+        self._accel_controller_enabled.set_visible(True)
+        self._accel_personality_toggle.set_visible(True)
       else:
         # no long for now
         self._experimental_btn.set_visible(False)
         self._experimental_btn.set_checked(False)
         self._personality_toggle.set_visible(False)
+        self._accel_controller_enabled.set_visible(False)
+        self._accel_personality_toggle.set_visible(False)
         ui_state.params.remove("ExperimentalMode")
 
     # Macan Stop and Go / Slope Comp / Steering Params: only shown for Macan (MLB)
@@ -212,6 +221,8 @@ class TogglesLayoutMici(NavScroller):
     self._distraction_level_toggle.set_visible(dm_on)
     if dm_on:
       self._distraction_level_toggle._load_value()
+
+    self._accel_personality_toggle.refresh()
 
   def _on_experimental_mode(self, state: bool):
     if state and not ui_state.params.get_bool("ExperimentalModeConfirmed"):
