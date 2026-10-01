@@ -188,15 +188,6 @@ msgstr "ATC 转弯控制"
 msgid "Abnormal tire stiffness"
 msgstr "轮胎刚度异常"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Accel Jerk Limit (Macan)"
-msgstr "加速度变化率限制 (Macan)"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Accel Jerk Limit Value (m/s^3)"
-msgstr "加速度变化率限值（m/s³）"
-
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/longitudinal_mpc_tuning.py
 msgid "Acceleration Change Cost"
 msgstr "加速度变化成本"
@@ -1156,10 +1147,6 @@ msgstr "控制设备启动/休眠后的状态。"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
 msgid "Cooperative Steering (Beta)"
 msgstr "协作转向 (Beta)"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Corner Accel Limit (Macan)"
-msgstr "弯道加速限制（Macan）"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "Countdown Mode"
@@ -3336,67 +3323,6 @@ msgstr "MB"
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
 msgid "MPH"
 msgstr "MPH"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone (m/s^2)"
-msgstr "Macan加速度死区（m/s^2）"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone Enable"
-msgstr "Macan加速度死区开关"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored)."
-msgstr "Macan加速度死区总开关：关=死区完全不生效（数值保留但被忽略）。"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off."
-msgstr "Macan加速度死区：aTarget在±该值内归零以滤除MPC抖动（m/s^2）。0=关闭。"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-msgid "Macan Accel Jerk Limit"
-msgstr "加速度变化率限制"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Jerk Limit: limits how fast the acceleration request can change (m/s^3). Lower = smoother (gentler transitions, less surge); higher = more responsive. 0 = off (no limit). Decel (braking) is allowed 2.2x faster for safety. Takes effect within 1s."
-msgstr "Macan加速度变化率限制：限制加速度请求的变化速率（m/s^3）。越小=越平顺（过渡更柔和，不冲）；越大=响应更快。0=关闭（不限）。刹车（减速）为安全允许2.2倍更快。1秒内生效。"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Limit (m/s^2)"
-msgstr "Macan加速度上限（m/s^2）"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Limit: clamps the acceleration request magnitude (m/s^2). 0 = factory curve."
-msgstr "Macan加速度上限：限制加速度请求幅度（m/s^2）。0=原厂曲线。"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-msgid "Macan Corner Accel Limit"
-msgstr "Macan 弯道加速限制"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Corner Accel Limit: when enabled, the steering angle (>5 deg) linearly reduces the longitudinal acceleration cap (down to 0.3x at 30+ deg) - prevents \"accelerating before the wheel is straight\". Field data: 62% of accel events happen with |angle|>8 deg. Takes effect immediately, no restart needed."
-msgstr "Macan 弯道加速限制：启用后，方向盘转角大于5°时线性压低纵向加速度上限（30°以上压至0.3倍），防止“车头未回正就加速”。实测数据：62%的加速事件发生在|转角|>8°时。即时生效，无需重启。"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Band (m/s)"
-msgstr "Macan 巡航滑行带宽度（m/s）"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Band (m/s): coasting zone width around the set speed. 0.4 (~1.4 km/h) recommended. Larger = more gliding but slower speed recovery after hills. 0 = off."
-msgstr "Macan 巡航滑行带宽度（m/s）：设定车速周围的滑行区宽度。推荐 0.4（约 1.4km/h）。越大=滑行感越强，但坡道后速度恢复越慢。0=关闭。"
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Enable"
-msgstr "Macan 巡航滑行带"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Enable: when ON, within +/-band of the set speed the acceleration request is 0 (coast/glide), so the car naturally settles instead of oscillating accelerate-brake (fixes surge/rocking: the accel request was non-zero 81% of the time in field data, vEgo swung +/-8 km/h around the set speed). Outside the band, deadband control applies (smoother corrections). Takes effect immediately."
-msgstr "Macan 巡航滑行带：启用后，在设定车速 ±带宽 范围内加速度请求归零（滑行），车辆自然收敛，不再加速-刹车来回振荡（修复“喘息式摇晃前进”：实测加速度请求 81% 时间非零、车速围绕设定值摆动 ±8km/h）。带外采用死区控制（修正更柔和）。即时生效。"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py

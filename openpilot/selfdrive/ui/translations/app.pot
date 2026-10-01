@@ -1360,19 +1360,6 @@ msgid "Startup Safe Distance (Macan)"
 msgstr ""
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-msgid "Macan Accel Jerk Limit"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Accel Jerk Limit Value (m/s^3)"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-msgid "Macan Corner Accel Limit"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "Macan Slope Compensation"
 msgstr ""
 
@@ -1387,37 +1374,12 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Limit (m/s^2)"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone (m/s^2)"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone Enable"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
 msgid "Radar Fusion (Macan)"
 msgstr ""
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
 msgid "Macan Distance Sync Direction"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Enable"
-msgstr ""
-
-#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Band (m/s)"
 msgstr ""
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
@@ -3908,10 +3870,6 @@ msgid "Enable drive mode btn link"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Jerk Limit: limits how fast the acceleration request can change (m/s^3). Lower = smoother (gentler transitions, less surge); higher = more responsive. 0 = off (no limit). Decel (braking) is allowed 2.2x faster for safety. Takes effect within 1s."
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
 msgid "Startup Safe Distance (Macan): when ON, auto-resume from a stop requires the stock radar distance (>0) or vision lead (>5m) - prevents phantom starts. When OFF, resumes on vision intent alone (V1 behavior) - use in heavy traffic to keep tight gaps and prevent cut-ins. Only effective when Stop and Go (Macan) is enabled."
 msgstr ""
 
@@ -3928,30 +3886,6 @@ msgid "Macan Slope Comp Unlimited (sub-option): when Slope Compensation is ON, t
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Corner Accel Limit: when enabled, the steering angle (>5 deg) linearly reduces the longitudinal acceleration cap (down to 0.3x at 30+ deg) - prevents \"accelerating before the wheel is straight\". Field data: 62% of accel events happen with |angle|>8 deg. Takes effect immediately, no restart needed."
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Limit: clamps the acceleration request magnitude (m/s^2). 0 = factory curve."
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off."
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored)."
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Enable: when ON, within +/-band of the set speed the acceleration request is 0 (coast/glide), so the car naturally settles instead of oscillating accelerate-brake (fixes surge/rocking: the accel request was non-zero 81% of the time in field data, vEgo swung +/-8 km/h around the set speed). Outside the band, deadband control applies (smoother corrections). Takes effect immediately."
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Macan Cruise Coast Band (m/s): coasting zone width around the set speed. 0.4 (~1.4 km/h) recommended. Larger = more gliding but slower speed recovery after hills. 0 = off."
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
 msgid "Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter."
 msgstr ""
 
@@ -3961,14 +3895,6 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
 msgid "Stop and Go (Macan)"
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Accel Jerk Limit (Macan)"
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Corner Accel Limit (Macan)"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
