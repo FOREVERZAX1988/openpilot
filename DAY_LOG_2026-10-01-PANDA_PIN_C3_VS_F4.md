@@ -1,8 +1,9 @@
 # DAY_LOG 2026-10-01 — panda pin 口径：`7d703710`（适配C3）vs `4643ee2c`（适配F4）
 
-> 状态：**存档 + 待拍板**。本轮**未改任何文件、未推送**；panda 子模块只执行过
-> `git fetch --unshallow`（补历史，不动工作区）。
-> 主仓 HEAD `7476f3fa37`（`sp-macan-re`），工作区干净；panda gitlink = `7d703710a`，webui gitlink = `92e86674c`。
+> 状态：**已落地并推送**（分析轮见 §0–§6 / 落地见 §7 / 推送与核查见 §8）。
+> 分析轮当时**未改任何文件、未推送**；panda 子模块只执行过 `git fetch --unshallow`（补历史，不动工作区）。
+> 分析轮主仓 HEAD `7476f3fa37`，panda gitlink `7d703710a`，webui gitlink `92e86674c`。
+> 落地后主仓 HEAD = `51d1bfe3a9`（=`origin/sp-macan-re`），panda gitlink = `4643ee2c6`。
 
 ## 结论（一句话）
 
@@ -152,5 +153,54 @@ lowmemorykiller: Killing 'clang++' ... to free 1343920kB
 本轮 `pandad.o` 的编译成功足以证明改动本身可编译；整链链接交由 CI。
 
 ### 待办
-1. 推送 `2356011191` 并让 CI 出整链构建结果（**等你确认再推**）。
+1. ~~推送 `2356011191` 并让 CI 出整链构建结果（等你确认再推）。~~ → **已推送**：
+   `origin/sp-macan-re` = `51d1bfe3a9`（含 `2356011191`）。CI 结论见 §8.2（本分支**没有**自动 run）。
 2. `pandad` 侧字段命名未变（cereal `PandaState` schema 无改动），下游 consumer 无需改。
+
+---
+
+## 8. 推送与核查记录（2026-10-01 续）
+
+### 8.1 推送状态（已核实）
+| 项 | 值 |
+|---|---|
+| 本地 HEAD | `51d1bfe3a9`（`sp-macan-re`） |
+| `git ls-remote origin refs/heads/sp-macan-re` | `51d1bfe3a9` |
+| ahead / behind | **0 / 0**；工作区干净 |
+
+### 8.2 CI（"整链构建"）核查 —— **本分支没有构建可看**
+- `GET /repos/FOREVERZAX1988/openpilot/actions/runs?branch=sp-macan-re` → **total_count = 0**：
+  `sp-macan-re` 上**从未跑过任何 workflow**。
+- `build.yaml`（"编译并发布预构建包"）的触发面：
+  `on.push.branches = [master-c3-prebuild, tn-c3-prebuild]`、`on.push.tags = release/*`、
+  `workflow_run: ["打包预编译分支"]`、`pull_request_target(labeled)`、`workflow_dispatch`。
+  ⇒ **push 到 `sp-macan-re` 天然不会触发它**。该 workflow 近期在 `sp-macan-long-dev` 上的 run
+  结论全是 **skipped**（被 `prepare_strategy` 的 `workflow_run.conclusion == 'success'` 门挡住）。
+- 结论：**想拿本分支整链构建，必须手动触发** —— 要么 UI 里 `workflow_dispatch`（`branch=sp-macan-re`），
+  要么 `git push origin sp-macan-re:master-c3-prebuild` 走预构建分支。**"盯 CI"自动等待没有意义**。
+
+### 8.3 fork 子模块「`.gitmodules` branch ↔ gitlink(pin)」对齐账本
+| 子模块 | `.gitmodules` branch | gitlink(pin) | fork 远端该分支 tip | 结论 |
+|---|---|---|---|---|
+| panda | `sp-macan-re` | `4643ee2c6` | `7d703710a` | ❌ **不一致** |
+| opendbc | `sp-macan-re` | `b5ee1ecb7` | `b5ee1ecb7` | ✅ |
+| webui | `sp-macan-re` | `92e86674c` | `92e86674c` | ✅ |
+| ai | `sp-macan-re` | `ffa096fbd` | `ffa096fbd` | ✅ |
+
+**唯一待对齐 = panda**：gitlink 已换成上游 `4643ee2c6`，但 fork 的 `sp-macan-re`
+（`.gitmodules` 记录要跟踪的分支）仍指向旧线 `7d703710a`。
+⇒ 任何人跑 `git submodule update --remote panda` 都会把 panda **退回旧 pin**，把 §7 的对齐回滚。
+
+对齐命令（换 pin 属**分叉历史**，必须 force；`7d703710a` 仍由 `master-c3` / `macan-long-0926` 保底，不会丢）：
+```bash
+cd panda
+git push --force-with-lease=refs/heads/sp-macan-re:7d703710a85bdabdd85145d257c397a3d824097d \
+  origin 4643ee2c6:refs/heads/sp-macan-re
+```
+`4643ee2c6` 已是 fork 的既有对象（可从 `macan-long-0925` 到达）→ push 只移动 ref，不传新对象。
+
+### 8.4 ⚠️ 本会话环境无推送凭据（约束，需外部机器执行）
+- `ssh -T git@github.com`（默认无 key；`/persist/comma/id_rsa` 也不行）→ `Permission denied (publickey)`；
+- `~/.ssh` 不存在、无 ssh-agent、无 credential helper、无 PAT；
+- 全局 `url.git@github.com:.pushinsteadof=https://github.com/` 把 https 推送也改写成 SSH。
+⇒ 8.3 的对齐**需在具备凭据的机器上执行**；本文件只做账本记录，未在实机上做任何远端写操作。
