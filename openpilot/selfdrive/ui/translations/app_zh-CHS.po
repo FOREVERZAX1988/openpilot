@@ -1916,10 +1916,6 @@ msgstr "启用始终非行车模式"
 
 
 
-#: openpilot\selfdrive\ui\layouts\settings\toggles.py
-msgid "Enable Amap Navigation"
-msgstr "启用高德导航"
-
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Enable Bluetooth"
 msgstr "启用蓝牙"
@@ -2444,10 +2440,6 @@ msgstr "测试"
 msgid "TESTING..."
 msgstr "测试中..."
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Ask the Amap road name and speed limit services with the stored key and report which ones work."
-msgstr "用已保存的密钥请求高德的道路名称与限速服务，并报告哪些服务可用。"
-
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Tap a cell to cycle actions, then Save."
 msgstr "点击格子循环切换动作，然后保存。"
@@ -2459,14 +2451,6 @@ msgstr "键位学习 / 试验"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Test could not run: {}"
 msgstr "测试无法执行：{}"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Amap API key is valid"
-msgstr "高德API密钥有效"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Amap API key has a problem"
-msgstr "高德API密钥存在问题"
 
 
 #: openpilot/system/ui/widgets/network.py
@@ -7317,3 +7301,31 @@ msgstr "启用 OSM 离线地图数据"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
 msgstr "使用离线 OSM 地图数据获取限速和路名。关闭后完全忽略离线地图——当你更信任导航数据时很有用，因为离线数据可能已过时。"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Enable Accel Controller"
+msgstr "启用加速控制器"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Lets you choose how sunnypilot starts, catches up, and settles at the cruise speed. Emergency braking and stopping are unchanged."
+msgstr "让您选择 sunnypilot 如何起步、追赶并稳定到巡航速度。紧急制动和停车不受影响。"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Acceleration Profile"
+msgstr "加速风格"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Eco is gentlest, Normal balances a prompt start with smooth catch-up, and Sport is more responsive."
+msgstr "经济最柔和，标准兼顾迅速起步与平顺追赶，运动则更灵敏。"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Eco"
+msgstr "经济"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Normal"
+msgstr "标准"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Sport"
+msgstr "运动"

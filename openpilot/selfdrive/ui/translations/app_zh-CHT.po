@@ -2047,10 +2047,6 @@ msgstr "測試"
 msgid "TESTING..."
 msgstr "測試中..."
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Ask the Amap road name and speed limit services with the stored key and report which ones work."
-msgstr "用已保存的密鑰請求高德的道路名稱與限速服務，並報告哪些服務可用。"
-
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Tap a cell to cycle actions, then Save."
 msgstr "點擊格子循環切換動作，然後儲存。"
@@ -2062,14 +2058,6 @@ msgstr "鍵位學習 / 試驗"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Test could not run: {}"
 msgstr "測試無法執行：{}"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Amap API key is valid"
-msgstr "高德API密鑰有效"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Amap API key has a problem"
-msgstr "高德API密鑰存在問題"
 
 
 #: openpilot/system/ui/widgets/network.py
@@ -2761,7 +2749,7 @@ msgstr "允許手機 App 的車道引導箭頭封鎖往非引導車道的變道�
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Lets you choose how sunnypilot starts, catches up, and settles at the cruise speed. Emergency braking and stopping are unchanged."
-msgstr ""
+msgstr "讓您選擇 sunnypilot 如何起步、追趕並穩定至巡航速度。緊急煞車與停車不受影響。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Light"
@@ -6138,3 +6126,27 @@ msgstr "啟用 Carrot 盲區資料"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Enable OSM Map Data"
 msgstr "啟用 OSM 離線地圖資料"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Enable Accel Controller"
+msgstr "啟用加速控制器"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Acceleration Profile"
+msgstr "加速風格"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Eco is gentlest, Normal balances a prompt start with smooth catch-up, and Sport is more responsive."
+msgstr "經濟最柔和，標準兼顧迅速起步與平順追趕，運動則更靈敏。"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Eco"
+msgstr "經濟"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Normal"
+msgstr "標準"
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "Sport"
+msgstr "運動"
