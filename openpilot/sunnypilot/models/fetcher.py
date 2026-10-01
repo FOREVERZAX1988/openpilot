@@ -135,6 +135,14 @@ class ModelCache:
     self.params.put(self._CACHE_KEY, data, block=True)
     self.params.put(self._LAST_SYNC_KEY, int(time.monotonic() * 1e9), block=True)
 
+  def fingerprint(self) -> tuple[int, int] | None:
+    """(mtime_ns, size) of the backing parameter file, cheap enough to poll every tick"""
+    try:
+      st = os.stat(self.params.get_param_path(self._CACHE_KEY))
+    except Exception:
+      return None
+    return st.st_mtime_ns, st.st_size
+
 
 class ModelFetcher:
   """Handles fetching and caching of model data from remote source"""
@@ -154,6 +162,7 @@ class ModelFetcher:
       for source, (_, suffix) in self.MODEL_SOURCES.items()
     }
     self._refetched: set[str] = set()
+    self._parsed_cache: dict[str, tuple[tuple[int, int] | None, list[custom.ModelManagerSP.ModelBundle]]] = {}
     self.params.put("ModelManager_ActiveJson", {
       "qcom": self.MODEL_URL,
       "chestnut": self.MODEL_URL_CHESTNUT,
@@ -197,6 +206,22 @@ class ModelFetcher:
 
     return None
 
+  def _parse_manifest(self, source: str, cached_data: dict) -> list[custom.ModelManagerSP.ModelBundle]:
+    """Parse a cached manifest, reusing the previous parse while the cache is unchanged.
+
+    The model manager asks for the bundles of every source once per second, and parsing the
+    full catalog costs ~100 ms per source. Keep the result until the cached manifest (or the
+    file backing it) actually changes instead of re-parsing on every tick.
+    """
+    fingerprint = self.model_caches[source].fingerprint()
+    cached_parse = self._parsed_cache.get(source)
+    if fingerprint is not None and cached_parse is not None and cached_parse[0] == fingerprint:
+      return cached_parse[1]
+
+    parsed = self.model_parser.parse_models(cached_data)
+    self._parsed_cache[source] = (fingerprint, parsed)
+    return parsed
+
   @staticmethod
   def _cache_matches_source(source: str, cached_data: dict) -> bool:
     bundles = cached_data.get("bundles", [])
@@ -216,7 +241,7 @@ class ModelFetcher:
       # manifest still mismatches, the URL is authoritative and the cache is trusted
       if self._cache_matches_source(source, cached_data) or source in self._refetched:
         try:
-          parsed = self.model_parser.parse_models(cached_data)
+          parsed = self._parse_manifest(source, cached_data)
         except Exception:
           cloudlog.warning(f"Failed to parse cached models for {source}; refetching", exc_info=True)
         else:
@@ -239,7 +264,7 @@ class ModelFetcher:
 
     cloudlog.warning("Failed to fetch fresh data. Using expired cache as fallback")
     try:
-      return self.model_parser.parse_models(cached_data)
+      return self._parse_manifest(source, cached_data)
     except Exception:
       return []
 
