@@ -627,10 +627,13 @@ class HardwareComma(HardwareBase):
 
   def booted(self):
     # this normally boots within 8s, but on rare occasions takes 30+s
+    # once the boot window is over the answer can only be True, and sudo_read() spawns a
+    # sudo subprocess per call while this is polled from hot loops (hardwared, WebUI state
+    # hub at 10 Hz), so don't shell out for the rest of the uptime
+    if time.monotonic() >= 60*2:
+      return True
     encoder_state = sudo_read("/sys/kernel/debug/msm_vidc/core0/info")
-    if "Core state: 0" in encoder_state and (time.monotonic() < 60*2):
-      return False
-    return True
+    return "Core state: 0" not in encoder_state
 
 if __name__ == "__main__":
   t = HardwareComma()
