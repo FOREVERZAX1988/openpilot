@@ -19,6 +19,7 @@ bin/
 .workbuddy/
 .codebuddy/
 artifacts/
+tool_results/
 .edge-headless-profile/
 
 # created at launch for comma hardware PYTHONPATH (PC uses editable installs via pyproject.toml)
