@@ -171,10 +171,8 @@ class TogglesLayout(Widget):
       if param == "DisengageOnAccelerator":
         self._toggles["LongitudinalPersonality"] = self._long_personality_setting
 
-      if param == "AlwaysOnDM":
-        self._toggles["DistractionDetectionLevel"] = self._distraction_detection_level
-        self._update_distraction_detection_visibility()
-
+      # Distraction Detection Level only means something with AlwaysOnDM on, so it is
+      # inserted right after it (and re-evaluated on every toggle change below).
       if param == "AlwaysOnDM":
         self._toggles["DistractionDetectionLevel"] = self._distraction_detection_level
         self._update_distraction_detection_visibility()
@@ -255,7 +253,13 @@ class TogglesLayout(Widget):
     self._scroller.render(rect)
 
   def _update_distraction_detection_visibility(self):
-    always_on_dm_enabled = self._params.get_bool("AlwaysOnDM")
+    # With driver monitoring switched off entirely, every DM row is meaningless, so hide
+    # the group instead of leaving AlwaysOnDM / RecordFront on screen doing nothing.
+    dm_disabled = self._params.get_bool("DisableDM")
+    always_on_dm_enabled = self._params.get_bool("AlwaysOnDM") and not dm_disabled
+    for key in ("AlwaysOnDM", "RecordFront", "DistractionDetectionLevel"):
+      if key in self._toggles:
+        self._toggles[key].set_visible(not dm_disabled)
     if "DistractionDetectionLevel" in self._toggles:
       self._toggles["DistractionDetectionLevel"].set_visible(always_on_dm_enabled)
 
