@@ -5,22 +5,15 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import json
-from enum import IntEnum
 
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.selfdrive.ui.sunnypilot.layouts.settings.carrot_tuning import CarrotTuningLayout
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr
-from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, button_item_sp, option_item_sp, simple_button_item_sp
+from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, button_item_sp, option_item_sp, multiple_button_item_sp
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller_tici import Scroller
-
-
-class PanelType(IntEnum):
-  NAVIGATION = 0
-  CARROT_TUNING = 1
 
 
 class NavigationLayout(Widget):
@@ -28,8 +21,6 @@ class NavigationLayout(Widget):
     super().__init__()
 
     self._params = Params()
-    self._current_panel = PanelType.NAVIGATION
-    self._carrot_tuning_layout = CarrotTuningLayout(lambda: self._set_current_panel(PanelType.NAVIGATION))
     items = self._initialize_items()
     self._scroller = Scroller(items, line_separator=True, spacing=0)
 
@@ -93,12 +84,6 @@ class NavigationLayout(Widget):
       callback=self._on_carrot_navi_debug,
     )
 
-    self._carrot_tuning_button = simple_button_item_sp(
-      button_text=lambda: tr("Carrot Tuning"),
-      button_width=800,
-      callback=lambda: self._set_current_panel(PanelType.CARROT_TUNING),
-    )
-
     items = [
       self._osm_map_data_enabled,
       self._carrot_enabled,
@@ -108,7 +93,6 @@ class NavigationLayout(Widget):
       self._haptic_speed_camera,
       self._carrot_amap_blind_spot_enabled,
       self._carrot_navi_debug,
-      self._carrot_tuning_button,
     ]
     return items
 
@@ -175,16 +159,7 @@ class NavigationLayout(Widget):
     gui_app.push_widget(ConfirmDialog(message, tr("OK"), cancel_text="", rich=True))
 
   def _render(self, rect):
-    if self._current_panel == PanelType.CARROT_TUNING:
-      self._carrot_tuning_layout.render(rect)
-    else:
-      self._scroller.render(rect)
-
-  def _set_current_panel(self, panel: PanelType):
-    self._current_panel = panel
-    if panel == PanelType.CARROT_TUNING:
-      self._carrot_tuning_layout.show_event()
+    self._scroller.render(rect)
 
   def show_event(self):
-    self._set_current_panel(PanelType.NAVIGATION)
     self._scroller.show_event()

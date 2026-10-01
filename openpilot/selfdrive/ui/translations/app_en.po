@@ -928,6 +928,10 @@ msgstr ""
 msgid "Current Model"
 msgstr "Current Model"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Current State"
+msgstr "Current State"
+
 #: openpilot/selfdrive/ui/layouts/settings/software.py
 msgid "Current Version"
 msgstr "Current Version"
@@ -1037,6 +1041,10 @@ msgstr "Default: Device will boot/wake-up normally & will be ready to engage."
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering.py
 msgid "Delay before lateral control resumes after the turn signal ends."
 msgstr "Delay before lateral control resumes after the turn signal ends."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Description"
+msgstr "Description"
 
 #: openpilot/selfdrive/ui/layouts/settings/settings.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
@@ -2588,6 +2596,10 @@ msgstr "No custom software found at this URL."
 msgid "No custom software found at this URL: "
 msgstr "No custom software found at this URL: "
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "No eGPU (big model) is selected. The default model is running."
+msgstr "No eGPU (big model) is selected. The default model is running."
+
 #: openpilot/selfdrive/ui/layouts/settings/imu_calibration.py
 msgid "No quality data"
 msgstr ""
@@ -3683,6 +3695,10 @@ msgstr "State"
 msgid "Status"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "Status Details"
+msgstr "Status Details"
+
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "Steer Actuator Delay"
 msgstr ""
@@ -4528,6 +4544,42 @@ msgstr ""
 #: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "driving personality"
 msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
+msgstr "eGPU (Chestnut) not detected. Connect your eGPU hardware to enable."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Active"
+msgstr "eGPU Active"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Available"
+msgstr "eGPU Available"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Failed"
+msgstr "eGPU Failed"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Loading..."
+msgstr "eGPU Loading..."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU Not Active"
+msgstr "eGPU Not Active"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU big model is being loaded. This may take a moment."
+msgstr "eGPU big model is being loaded. This may take a moment."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU big model is running and healthy."
+msgstr "eGPU big model is running and healthy."
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_egpu.py
+msgid "eGPU was selected but failed to start. Check device connection and model files."
+msgstr "eGPU was selected but failed to start. Check device connection and model files."
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/network/network_layout.py
 msgid "edit"
@@ -5430,4 +5482,3 @@ msgstr ""
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
 msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
 msgstr ""
-
