@@ -65,7 +65,7 @@ class VCruiseHelper(VCruiseHelperSP):
     # 该模式下 OP 不再自行管理步进设定（UI 中自定义 ACC 增量被禁用）。
     # 2026-09-20 重新锁定为恒开：纯 OP 纵向未通过路试，不再读 MacanFusionMode（恒走融合控制）。
     # 解禁方式：改回 `... and self.params.get_bool("MacanFusionMode")`。
-    self.macan_fusion = (self.CP.carFingerprint == "PORSCHE_MACAN_MK1")
+    self.macan_fusion = (getattr(self.CP, "carFingerprint", None) == "PORSCHE_MACAN_MK1")
 
   @property
   def v_cruise_initialized(self):
