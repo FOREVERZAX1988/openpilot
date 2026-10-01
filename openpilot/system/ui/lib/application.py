@@ -100,15 +100,60 @@ FALLBACK_FONT_SCALE = 1.25
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
 EXTRA_FONT_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
+# fallback_font_key() 的哨兵值：不换字体，保留调用方自己的字体。
+PRIMARY_FONT = ""
+
 # 注意：openpilot assets 里的 NotoSansCJK*.otf 是子集字体（仅含 po 出现字形，~460 字形），
 # 合并新翻译后新字缺字形会渲染为 "?"。AGNOS 系统字体为完整版（~2万 CJK 字形），优先使用。
+
 NOTO_FONTS = {
-  "ja": "NotoSansCJKjp-Regular.otf",
-  "ko": "NotoSansCJKkr-Regular.otf",
+  # ja/ko 原先指向 assets 里的 NotoSansCJKjp/kr：那是只含 po 出现字形的子集字体
+  # （~460 字形），新增翻译一旦用到子集外的字就渲染成 "?"。AGNOS 系统字体是完整版，
+  # 与下面的 zh-CHS/zh-CHT 一致优先使用；文件不存在时加载逻辑自动回退 assets。
+  "ja": "/usr/share/fonts/NotoSansJP-Regular.otf",
+  "ko": "/usr/share/fonts/NotoSansKR-Regular.otf",
   "th": "NotoSansThai-Regular.ttf",
   "zh-CHS": "/usr/share/fonts/NotoSansSC-Regular.otf",
   "zh-CHT": "/usr/share/fonts/NotoSansTC-Regular.otf",
 }
+
+# 语言菜单里会同时列出多种脚本的语言名（"한국어" / "ไทย" …）。当前 UI 语言的 CJK
+# fallback 字体（zh-CHS 用 NotoSansSC、ja 用 NotoSansJP）都不含 Hangul/Thai 字形，
+# raylib 找不到字形就退回默认字符，菜单里就显示成 "???"。所以按文本实际脚本挑字体。
+SCRIPT_FALLBACK_FONTS = (
+  (re.compile(r"[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]"), "ko"),  # Hangul
+  (re.compile(r"[\u0e00-\u0e7f]"), "th"),  # Thai
+  # 拉丁/西里尔（含 Inter 覆盖的标点、货币符）：本地 CJK 字体都有 у 但都没有 ї，
+  # "Українська" 就缺字；主字体 Inter 有完整西里尔，所以这类文本原样留在 Inter 上。
+  (re.compile(r"^[\u0020-\u007e\u00a0-\u024f\u0400-\u04ff\u2000-\u206f\u20a0-\u20bf\s]*$"), PRIMARY_FONT),
+)
+
+# 界面语言本身就带 CJK 字体的这几种：汉字/假名交给它自己的字体（日语需要日文字形）。
+_CJK_FONT_LANGUAGES = frozenset({"ja", "ko", "zh-CHS", "zh-CHT"})
+_HAN_KANA_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff]")
+
+
+def fallback_font_key(language: str, text: str | None = None) -> str:
+  """Which fallback font to use for ``text``.
+
+  Normally the UI ``language``; ``ko``/``th`` when the text is written in a
+  script that language's font does not cover, ``PRIMARY_FONT`` when it must
+  stay on the caller's own font (Latin/Cyrillic), and the simplified-Chinese
+  font for Han text in a UI language that has no CJK font at all (the language
+  picker lists 日本語 / 中文（简体）whatever the current language is, and
+  NotoSansSC carries Han + kana + full-width punctuation).
+  """
+  if text:
+    for pattern, key in SCRIPT_FALLBACK_FONTS:
+      if key == language or not pattern.search(text):
+        continue
+      if key == PRIMARY_FONT:
+        return PRIMARY_FONT
+      if key in NOTO_FONTS:
+        return key
+    if _HAN_KANA_RE.search(text) and language not in _CJK_FONT_LANGUAGES:
+      return "zh-CHS"
+  return language
 
 
 def _translation_codepoints(language: str) -> list[int]:
@@ -153,10 +198,19 @@ def font_fallback(font: rl.Font, text: str | None = None) -> rl.Font:
   cheaper than swapping the font unconditionally for every CJK-language label.
   The 1-arg call form (text omitted) is preserved for existing callers.
   """
+  key = fallback_font_key(multilang.language, text) if text is not None else multilang.language
+  if key == PRIMARY_FONT:
+    # 拉丁/西里尔文本：调用方的字体（Inter）本身就有字形，换成 CJK fallback 反而缺字。
+    return font
+  if key != multilang.language:
+    # 文本用的是当前语言字体覆盖不到的脚本：语言菜单里的 "한국어"/"ไทย" 在中文界面
+    # 要 ko/th 字体，在英文界面同样要（英文界面原先 requires_font_fallback() 为
+    # False，这些语言名会直接掉回 Inter 渲染成 "?"）。
+    return gui_app.fallback_font(text)
   if not multilang.requires_font_fallback():
     return font
   if text is None or _text_requires_font_fallback(text):
-    return gui_app.fallback_font()
+    return gui_app.fallback_font(text)
   return font
 
 
@@ -738,9 +792,15 @@ class GuiApplication(GuiApplicationExt):
   def font(self, font_weight: FontWeight = FontWeight.NORMAL) -> rl.Font:
     return self._fonts[font_weight]
 
-  def fallback_font(self) -> rl.Font:
+  def fallback_font(self, text: str | None = None) -> rl.Font:
     language = multilang.language
-    if language not in self._fallback_fonts:
+    # 缓存键用「字体所属 locale」而不是 UI 语言本身：同一次渲染里中文界面也要画
+    # 한국어 / ไทย，那两串必须走 ko / th 字体（见 fallback_font_key）。
+    font_key = fallback_font_key(language, text)
+    if font_key == PRIMARY_FONT:
+      # 不改字体（西里尔等由 Inter 覆盖）；GUI 路径需要一个具体字体，给主字体。
+      return self.font()
+    if font_key not in self._fallback_fonts:
       chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
       chars.update(TRANSLATIONS_DIR.joinpath(f"app_{language}.po").read_text(encoding="utf-8"))
       # 补充 UI 硬编码中文（tr_noop 标记的静态字符串、品牌菜单描述等不在 po 里的字符，
@@ -762,7 +822,7 @@ class GuiApplication(GuiApplicationExt):
         pass
       codepoints = sorted(map(ord, chars))
       codepoint_buffer = rl.ffi.new("int[]", codepoints)
-      font_name = NOTO_FONTS[language]
+      font_name = NOTO_FONTS[font_key]
       if os.path.isabs(font_name) and os.path.exists(font_name):
         # 系统完整字体（AGNOS 自带 NotoSansSC/TC，~2万 CJK 字形，解决子集字体缺字乱码）
         font_path = font_name
@@ -774,8 +834,8 @@ class GuiApplication(GuiApplicationExt):
                              rl.ffi.cast("int *", codepoint_buffer), len(codepoints))
       rl.gen_texture_mipmaps(font.texture)
       rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
-      self._fallback_fonts[language] = font
-    return self._fallback_fonts[language]
+      self._fallback_fonts[font_key] = font
+    return self._fallback_fonts[font_key]
 
   @property
   def width(self):
@@ -809,7 +869,7 @@ class GuiApplication(GuiApplicationExt):
     rl.gui_set_font(self._fonts[FontWeight.NORMAL])
 
   def on_language_changed(self, lang_code: str):
-    old_fonts = list(self._fonts.values())
+    old_fonts = list(self._fonts.values()) + list(self._fallback_fonts.values())
     self._fonts = {}
     self._fallback_fonts = {}
     self._load_fonts()
@@ -832,8 +892,16 @@ class GuiApplication(GuiApplicationExt):
       rl._orig_draw_text_ex = rl.draw_text_ex
 
     def _draw_text_ex_scaled(font, text, position, font_size, spacing, tint):
-      font = font_fallback(font)
-      scale = FONT_SCALE * (FALLBACK_FONT_SCALE if multilang.requires_font_fallback() else 1.0)
+      # 这一层以前无条件把字体换成当前语言的 fallback 字体，于是 (a) 调用方按文本
+      # 选好的 ko/th 字体被覆盖回缺字形的 CJK 字体，(b) 西里尔文本被换成没有 ї 的
+      # CJK 字体。改成按文本脚本决定：跨脚本换对应字体，拉丁/西里尔保持原字体。
+      key = fallback_font_key(multilang.language, text) if isinstance(text, str) else multilang.language
+      if key != PRIMARY_FONT:
+        font = font_fallback(font)
+        if key != multilang.language:
+          font = gui_app.fallback_font(text)
+      needs_fallback_scale = multilang.requires_font_fallback() and key != PRIMARY_FONT
+      scale = FONT_SCALE * (FALLBACK_FONT_SCALE if needs_fallback_scale else 1.0)
       return rl._orig_draw_text_ex(font, text, position, font_size * scale, spacing, tint)
 
     rl.draw_text_ex = _draw_text_ex_scaled

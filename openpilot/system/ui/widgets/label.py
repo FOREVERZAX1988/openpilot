@@ -102,7 +102,9 @@ def gui_text_box(
     (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_WRAP_MODE, rl.GuiTextWrapMode.TEXT_WRAP_WORD)
   ]
   if fallback:
-    rl.gui_set_font(gui_app.fallback_font())
+    # 传 text：语言菜单里 "한국어"/"ไทย" 这类外脚本串要选 ko/th 字体，
+    # 否则用当前语言的 CJK 字体会因缺字形画成 "???"（见 fallback_font_key）。
+    rl.gui_set_font(gui_app.fallback_font(text))
   elif font_weight != FontWeight.NORMAL:
     rl.gui_set_font(gui_app.font(font_weight))
 
