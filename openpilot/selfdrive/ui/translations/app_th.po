@@ -153,9 +153,6 @@ msgstr "ตลอดเวลา"
 msgid "ALT."
 msgstr "อัลที"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "API key for Amap services. Tap EDIT to enter or update the key."
-msgstr ""
 
 #: openpilot/system/ui/widgets/network.py
 msgid "APN Setting"
@@ -234,9 +231,6 @@ msgstr "เปิดอยู่เสมอ"
 msgid "Always-On Driver Monitoring"
 msgstr "การตรวจสอบไดรเวอร์ตลอดเวลา"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Amap API Key"
-msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "An alpha version of sunnypilot longitudinal control can be tested, along with Experimental mode, on non-release branches."
@@ -1338,13 +1332,7 @@ msgstr "เปิดใช้งาน ADB"
 msgid "Enable Always Offroad"
 msgstr "เปิดใช้งานออฟโรดเสมอ"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enable Amap Blind Spot Data"
-msgstr ""
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enable Amap Map Data"
-msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Enable Carrot Navigation"
@@ -1498,9 +1486,6 @@ msgstr "ตรวจสอบให้แน่ใจว่า URL ที่ป�
 msgid "Enter APN"
 msgstr "ป้อน APN"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enter Amap API Key"
-msgstr ""
 
 #: openpilot/system/ui/widgets/network.py
 msgid "Enter SSID"
@@ -4046,9 +4031,6 @@ msgstr "อัพเกรดทันที"
 msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 msgstr "อัปโหลดข้อมูลจากกล้องที่หันเข้าหาคนขับและช่วยปรับปรุงอัลกอริธึมการตรวจสอบผู้ขับขี่"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Use Amap (Gaode) online map data for speed limits and road names in China."
-msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Use Carrot navigation data for map-based features."
@@ -5415,4 +5397,16 @@ msgstr "✓ สมัครแล้ว"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable Carrot Blind Spot Data"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable OSM Map Data"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
+msgstr ""
 

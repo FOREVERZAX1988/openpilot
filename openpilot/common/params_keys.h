@@ -347,13 +347,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LongitudinalMpcTuningLeadDangerFactor", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
 
     // Amap / Carrot (phone projection & navigation)
-    // AmapEnabled is deprecated: it historically controlled both Amap Web map
-    // data and the 7706 blind-spot parser. It is kept here only for one-time
-    // migration to AmapMapDataEnabled / CarrotAmapBlindSpotEnabled.
-    {"AmapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"AmapApiKey", {PERSISTENT | DONT_LOG, STRING}},
-    // Use Amap (Gaode) online Web API for speed limits / road names.
-    {"AmapMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // CarrotAmapBlindSpotEnabled controls 7706 UDP blind-spot / LiDAR / extBlinker
+    // fields and is unrelated to the removed Amap Web map-data provider.
+    // OSM offline map data. Off means "do not use the offline map for speed limits
+    // or road names", so a user who relies on carrot can silence the offline
+    // fallback. Default 1 keeps existing behaviour.
+    {"OsmMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     // Parse 7706 UDP blind-spot / LiDAR / extBlinker fields (AmapNaviServ).
     {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -379,6 +378,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TFollowGap2", {PERSISTENT | BACKUP, INT, "120"}},
     {"TFollowGap3", {PERSISTENT | BACKUP, INT, "140"}},
     {"TFollowGap4", {PERSISTENT | BACKUP, INT, "160"}},
+    // cp tuning alignment: params present in CarrotPilot settings but newly
+    // registered here so webui read/reset works and defaults match cp.
+    {"CruiseGapLevels", {PERSISTENT | BACKUP, INT, "4"}},
+    // How many follow-gap levels the vehicle exposes (3 or 4). Read by
+    // sunnypilot CruiseHelper when the distance button cycles the gap; spans the
+    // cluster personality range. Same default as cp.
+    {"LongitudinalPersonalityMax", {PERSISTENT | BACKUP, INT, "3"}},
     {"CruiseMaxVals0", {PERSISTENT | BACKUP, INT, "160"}},
     {"CruiseMaxVals1", {PERSISTENT | BACKUP, INT, "160"}},
     {"CruiseMaxVals2", {PERSISTENT | BACKUP, INT, "120"}},
@@ -414,11 +420,20 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ATCMaxSpeedKph", {PERSISTENT | BACKUP, FLOAT, "35.0"}},               // auto-turn-control speed floor cap
     {"CarrotSourceTimeoutMs", {PERSISTENT | BACKUP, INT, "2000"}},          // carrot packet timeout [ms]
-    {"AmapCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // use Amap Web polyline for curve speed
-    {"AmapTrafficLightHintEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},      // use Amap Web traffic-light hints
+    {"CarrotTrafficCongestionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // fold phone TMC congestion into SmartCruiseControlMap (only lowers the target)
+    // Carrot navigation deceleration for a point ahead: ATC turn speed, the curve
+    // speed table, and the route-curvature speed. Folds into SmartCruiseControlMap
+    // (which must ALSO be on for it to actuate, same as the congestion cap).
+    {"CarrotMapDecelEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // One-shot: the first time Carrot navigation is enabled, its map-deceleration
+    // sub-features (congestion / map-decel / Amap curve) are seeded ON so the user
+    // does not have to find three more switches. Each stays independently offable
+    // afterwards - they are killswitches, not prerequisites.
+    {"CarrotNavFeaturesSeeded", {PERSISTENT, BOOL, "0"}},
     {"CarrotSectionSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},        // section/avg-SDI speed enforcement
     {"CarrotRoadWidthTurnEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},       // use nTBTNextRoadWidth for fork turn logic
     {"CarrotTimeSyncEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // sync device clock to carrot epochTime
+    {"CarrotNavLaneGuideBlockEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // let 7706 navLaneGuide block non-guided adjacent lanes
     // Carrot speed/turn/navi tuning surface. Defaults mirror cp/fp behavior where applicable;
     // keys are registered so UnifiedParams writes land in the cross-process Params store.
     {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},
@@ -493,6 +508,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoEnTurnNewLaneTime", {PERSISTENT | BACKUP, INT, "0"}},
     {"NewLaneWidthDiff", {PERSISTENT | BACKUP, INT, "8"}},
     {"StopDistanceCarrot", {PERSISTENT | BACKUP, INT, "600"}},
+    // One-shot marker for the StopDistanceCarrot -> LongitudinalMpcTuningStopDistance
+    // merge. It must be registered: reading an unregistered key raises
+    // UnknownKeyName, which the migration's except-block swallows, so the merge
+    // would silently never run and the marker would be re-evaluated forever.
+    {"CarrotStopDistanceMigrated", {PERSISTENT, STRING}},
+    {"CarrotUdpPortMigrated", {PERSISTENT, STRING}},
     {"AutoNaviSpeedCtrlMode", {PERSISTENT | BACKUP, INT, "2"}},
     {"AutoNaviSpeedDecelRate", {PERSISTENT | BACKUP, INT, "200"}},
     {"AutoNaviSpeedSafetyFactor", {PERSISTENT | BACKUP, INT, "105"}},
@@ -532,6 +553,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SpeedFromPCM", {PERSISTENT | BACKUP, INT, "0"}},
     // Carrot traffic stop / lights tuning surface.
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT | BACKUP, INT, "0"}},
+    // Published by networkd; the Carrot web dialog reads it for the QR link.
+    {"NetworkAddress", {CLEAR_ON_MANAGER_START, STRING}},
     {"TrafficStopDistanceAdjust", {PERSISTENT | BACKUP, INT, "-150"}},
     // Carrot lane change / blinker / lane-line tuning surface.
     {"LaneChangeBsd", {PERSISTENT | BACKUP, INT, "0"}},
@@ -543,6 +566,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"OnnxBsdThreshold", {PERSISTENT | BACKUP, INT, "45"}},
     {"UseLaneLineCurveSpeed", {PERSISTENT | BACKUP, INT, "0"}},
     {"UseLaneLineSpeed", {PERSISTENT | BACKUP, INT, "0"}},
+    // New with L7.
+    {"ActivateCruiseAfterBrake", {CLEAR_ON_MANAGER_START, INT, "0"}},
     // Carrot steering / lateral tuning surface.
     {"AlwaysLateral", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CustomSR", {PERSISTENT | BACKUP, INT, "0"}},

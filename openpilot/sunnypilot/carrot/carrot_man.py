@@ -597,7 +597,6 @@ class CarrotManager:
     self.params = Params()
     self.params_memory = Params("/dev/shm/params")
     self._unified = UnifiedParams()
-    self._migrate_amap_enabled()
     self.sm = messaging.SubMaster(['deviceState', 'carState', 'controlsState', 'modelV2', 'carParams',
                                    'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP'])
     self.pm = messaging.PubMaster(['carrotManSP', 'navInstructionCarrotSP', 'navRoute'])
@@ -614,7 +613,6 @@ class CarrotManager:
         cloudlog.error(f"carrot_man: failed to start AmapNavi direct comm: {e}")
     self._web: Any = None  # Lazy import: only used when ``--web`` flag is set.
 
-    # Runtime state (was accidentally living in _migrate_amap_enabled()).
     self._enabled = False
     self._port = 0
     self._start_web = False
@@ -677,27 +675,9 @@ class CarrotManager:
     self._navi_debug_last: dict[str, Any] | None = None
 
 
-  def _migrate_amap_enabled(self) -> None:
-    """One-time migration from the legacy AmapEnabled switch.
-
-    ``AmapEnabled`` used to control both Amap Web map data and the 7706
-    blind-spot parser. Split it into the two semantically-correct params.
-    """
-    if self.params.get_bool("AmapEnabled"):
-      if not self.params.get_bool("AmapMapDataEnabled"):
-        self.params.put_bool("AmapMapDataEnabled", True)
-      if not self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-        self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-
   def _carrot_amap_blind_spot_enabled(self) -> bool:
     """Return True when the 7706 blind-spot/LiDAR parser should run."""
-    if self.params.get_bool("CarrotAmapBlindSpotEnabled"):
-      return True
-    # Legacy fallback: if only the old param is set, migrate and enable.
-    if self.params.get_bool("AmapEnabled"):
-      self.params.put_bool("CarrotAmapBlindSpotEnabled", True)
-      return True
-    return False
+    return self.params.get_bool("CarrotAmapBlindSpotEnabled")
 
   # ---- socket plumbing -------------------------------------------------- #
 

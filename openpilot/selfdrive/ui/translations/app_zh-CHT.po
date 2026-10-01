@@ -153,9 +153,6 @@ msgstr "累計"
 msgid "ALT."
 msgstr "ALT。"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "API key for Amap services. Tap EDIT to enter or update the key."
-msgstr ""
 
 #: openpilot/system/ui/widgets/network.py
 msgid "APN Setting"
@@ -234,9 +231,6 @@ msgstr "永遠在線"
 msgid "Always-On Driver Monitoring"
 msgstr "持續啟用駕駛監控"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Amap API Key"
-msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "An alpha version of sunnypilot longitudinal control can be tested, along with Experimental mode, on non-release branches."
@@ -1350,13 +1344,7 @@ msgstr "啟用 ADB"
 msgid "Enable Always Offroad"
 msgstr "啟用始終離路"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enable Amap Blind Spot Data"
-msgstr ""
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enable Amap Map Data"
-msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Enable Carrot Navigation"
@@ -1506,12 +1494,6 @@ msgstr "確保輸入的 URL 有效，且裝置的網路連線良好。"
 msgid "Enter APN"
 msgstr "輸入 APN"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enter Amap API Key"
-msgstr ""
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Test Amap API Key"
-msgstr "測試高德API密鑰"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "TEST"
@@ -4101,9 +4083,6 @@ msgstr "立即升級"
 msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 msgstr "上傳車內鏡頭資料，協助改善駕駛監控演演算法。"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Use Amap (Gaode) online map data for speed limits and road names in China."
-msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Use Carrot navigation data for map-based features."
@@ -5548,3 +5527,11 @@ msgstr "Carrot ATC 方向燈"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Let the Carrot app's turn instruction act as a turn signal. This reaches the car's real turn signal, so it is off by default."
 msgstr "讓 Carrot App 的轉彎指令充當方向燈。該信號會到達車輛真實方向燈，因此預設關閉。"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable Carrot Blind Spot Data"
+msgstr "啟用 Carrot 盲區資料"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable OSM Map Data"
+msgstr "啟用 OSM 離線地圖資料"
+

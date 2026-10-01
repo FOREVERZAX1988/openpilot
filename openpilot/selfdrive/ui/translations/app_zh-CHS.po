@@ -160,9 +160,6 @@ msgstr "全部时间"
 msgid "ALT."
 msgstr "海拔"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "API key for Amap services. Tap EDIT to enter or update the key."
-msgstr "高德服务API密钥。点击编辑以输入或更新密钥。"
 
 #: openpilot/system/ui/widgets/network.py
 msgid "APN Setting"
@@ -257,9 +254,6 @@ msgstr "请始终将手放在方向盘上，眼睛注视道路"
 msgid "Always-On Driver Monitoring"
 msgstr "始终启用驾驶员监控"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Amap API Key"
-msgstr "高德API密钥"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "An alpha version of sunnypilot longitudinal control can be tested, along with Experimental mode, on non-release branches."
@@ -1676,13 +1670,7 @@ msgstr "启用自适应巡航以接合"
 msgid "Enable Always Offroad"
 msgstr "启用始终非行车模式"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enable Amap Blind Spot Data"
-msgstr "启用高德盲区数据"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enable Amap Map Data"
-msgstr "启用高德地图数据"
 
 #: openpilot\selfdrive\ui\layouts\settings\toggles.py
 msgid "Enable Amap Navigation"
@@ -1887,12 +1875,6 @@ msgstr "确保前方道路畅通"
 msgid "Enter APN"
 msgstr "输入 APN"
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Enter Amap API Key"
-msgstr "输入高德API密钥"
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Test Amap API Key"
-msgstr "测试高德API密钥"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "TEST"
@@ -4918,13 +4900,6 @@ msgstr "立即升级"
 msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 msgstr "上传车内摄像头数据，帮助改进驾驶员监控算法。"
 
-#: openpilot\selfdrive\ui\layouts\settings\developer.py
-msgid "Use Amap (Gaode) navigation data for map-based features."
-msgstr "使用高德导航数据，用于地图相关功能。"
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid "Use Amap (Gaode) online map data for speed limits and road names in China."
-msgstr "在中国使用高德在线地图数据获取限速和道路名称。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Use Carrot navigation data for map-based features."
@@ -6663,3 +6638,15 @@ msgstr "纵向操作模式"
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 msgid "Wi-Fi"
 msgstr "Wi‑Fi"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable Carrot Blind Spot Data"
+msgstr "启用 Carrot 盲区数据"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Enable OSM Map Data"
+msgstr "启用 OSM 离线地图数据"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\navigation.py
+msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
+msgstr "使用离线 OSM 地图数据获取限速和路名。关闭后完全忽略离线地图——当你更信任导航数据时很有用，因为离线数据可能已过时。"
+

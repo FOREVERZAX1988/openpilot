@@ -6,12 +6,11 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 """
-Three-source traffic-light fusion.
+Two-source traffic-light fusion.
 
 Fuses the carrot phone navigation signal (``carrotManSP`` 7706 /
-``carrotNaviSP`` 7714), the Amap Web navigation hint (legacy ``amapNaviSP``,
-now removed), and the openpilot vision stop-line detection (``modelV2``) into
-a single fused state.
+``carrotNaviSP`` 7714) and the openpilot vision stop-line detection (``modelV2``)
+into a single fused state.
 
 Safety model (see traffic_fusion_safety_design_2026-09-11.md and the safety
 review):
@@ -38,7 +37,7 @@ class RawLight(Enum):
   OFF = 0
   RED = 1
   GREEN = 2
-  LEFT = 3   # left-turn green (carrot / amap only; vision cannot confirm)
+  LEFT = 3   # left-turn green (carrot only; vision cannot confirm)
 
 
 class FusedState(Enum):
@@ -51,7 +50,11 @@ class FusedState(Enum):
 
 
 class FusedSource(Enum):
-  """Source attribution for the fused state."""
+  """Source attribution for the fused state.
+
+  ``AMAP`` is kept at ordinal 2 for cereal / log compatibility; no live Amap
+  Web source exists any more.
+  """
   NONE = 0
   CARROT = 1
   AMAP = 2
@@ -68,7 +71,7 @@ _VISION_GREEN_CONFIRM_FRAMES = 5
 
 
 class TrafficLightFusion:
-  """Fuse carrot / Amap / vision traffic lights into a single ``FusedState``."""
+  """Fuse carrot / vision traffic lights into a single ``FusedState``."""
 
   def __init__(self) -> None:
     self._params = UnifiedParams()
@@ -79,8 +82,6 @@ class TrafficLightFusion:
     # Per-source sustained-frame counters.
     self._carrot_red = 0
     self._carrot_green = 0
-    self._amap_red = 0
-    self._amap_green = 0
     self._vision_red = 0
     self._vision_green = 0
     # Killswitch state (refreshed in update(); overridable for unit tests).
@@ -107,9 +108,20 @@ class TrafficLightFusion:
       ts = int(getattr(carrot, "trafficState", 0) or 0)
       if ts in (1, 2, 3):
         state = RawLight(ts)
-      cd = int(getattr(carrot, "trafficCountdown", 0) or 0)
-      if cd > 0:
-        distance = max(distance, float(cd))
+      # `trafficCountdown` is SECONDS until the lamp changes (it is fed from
+      # redLightRemainTime and friends in carrot_man._handle_navi_traffic, and from the
+      # map traffic countdown in carrot_serv.update_map_traffic). It was being folded
+      # into `distance`, which this method documents as metres - so a 25 s countdown
+      # became "25 m away", about 16x short at 60 km/h.
+      #
+      # It is deliberately NOT used here any more. The 7706 channel carries no distance
+      # for the light, and inventing one from a countdown is not a conservative
+      # approximation in either direction. The 7714 channel does carry a real
+      # distanceM, and it already overwrites `distance` below when present.
+      #
+      # No control surface changes: `fused.distance` is written to
+      # longitudinalPlanSP.trafficLight.distance (longitudinal_planner.py:281) and read
+      # by nothing, so this only corrects the reported value.
     # 7714 v2 channel (richer, preferred when present).
     try:
       navi = sm["carrotNaviSP"]
@@ -128,16 +140,6 @@ class TrafficLightFusion:
         elif getattr(sig, "leftValid", False) and getattr(sig, "leftOn", False):
           state = RawLight.LEFT
     return state, distance
-
-  def _read_amap(self, sm: Any) -> tuple[RawLight, float]:
-    """Return (raw_state, distance_m) from the Amap Web navi.
-
-    The ``amapNaviSP`` cereal service has been removed.  Map-based traffic-light
-    hints now flow through ``carrotManSP`` (``trafficState`` / ``trafficCountdown``
-    from the 7706 packet) or ``liveMapDataSP``.  This integration point is kept
-    for symmetry but currently always returns OFF.
-    """
-    return RawLight.OFF, 0.0
 
   def _detect_vision(self, sm: Any, v_ego: float) -> tuple[bool, bool, float]:
     """Lightweight vision stop-line detection from ``modelV2``.
@@ -172,17 +174,15 @@ class TrafficLightFusion:
 
   # -- core fusion ------------------------------------------------------- #
 
-  def fuse(self, carrot_state: RawLight, amap_state: RawLight, vision_red: bool,
-           vision_green: bool, distance: float, v_ego: float = 0.0) -> None:
-    """Combine the three raw sources into ``self.state`` / ``source`` / etc.
+  def fuse(self, carrot_state: RawLight, vision_red: bool, vision_green: bool,
+           distance: float, v_ego: float = 0.0) -> None:
+    """Combine the two raw sources into ``self.state`` / ``source`` / etc.
 
     Pure and testable: takes primitive inputs, no cereal / SubMaster dependency.
     """
     # Sustain-frame counters (reset to 0 on a non-matching frame).
     self._carrot_red = self._carrot_red + 1 if carrot_state == RawLight.RED else 0
     self._carrot_green = self._carrot_green + 1 if carrot_state in (RawLight.GREEN, RawLight.LEFT) else 0
-    self._amap_red = self._amap_red + 1 if amap_state == RawLight.RED else 0
-    self._amap_green = self._amap_green + 1 if amap_state in (RawLight.GREEN, RawLight.LEFT) else 0
     self._vision_red = self._vision_red + 1 if vision_red else 0
     self._vision_green = self._vision_green + 1 if vision_green else 0
 
@@ -190,11 +190,9 @@ class TrafficLightFusion:
     vision_green_c = self._vision_green >= _VISION_GREEN_CONFIRM_FRAMES
     carrot_red_c = self._carrot_red >= _NAV_RED_CONFIRM_FRAMES
     carrot_green_c = self._carrot_green >= _NAV_GREEN_CONFIRM_FRAMES
-    amap_red_c = self._amap_red >= _NAV_RED_CONFIRM_FRAMES
-    amap_green_c = self._amap_green >= _NAV_GREEN_CONFIRM_FRAMES
 
-    nav_red = carrot_red_c or amap_red_c
-    nav_green = carrot_green_c or amap_green_c
+    nav_red = carrot_red_c
+    nav_green = carrot_green_c
 
     # Conflict rule: vision green + nav red (no vision red) is ambiguous -> we
     # must not auto-start nor command a stop; downgrade to a caution.
@@ -229,13 +227,13 @@ class TrafficLightFusion:
         self.confidence = 0.6
       else:
         self.state = FusedState.RED
-        self.source = FusedSource.CARROT if carrot_red_c else FusedSource.AMAP
+        self.source = FusedSource.CARROT
         self.confidence = 0.5
       self.distance = distance
       return
     if nav_green:
       self.state = FusedState.GREEN
-      self.source = FusedSource.CARROT if carrot_green_c else FusedSource.AMAP
+      self.source = FusedSource.CARROT
       self.confidence = 0.5
       self.distance = distance
       return
@@ -251,7 +249,6 @@ class TrafficLightFusion:
     """Pull raw states from a SubMaster snapshot and fuse them."""
     self._refresh_params()
     carrot_state, carrot_dist = self._read_carrot(sm)
-    amap_state, amap_dist = self._read_amap(sm)
     vision_red, vision_green, vision_dist = self._detect_vision(sm, v_ego)
-    distance = max(carrot_dist, amap_dist, vision_dist)
-    self.fuse(carrot_state, amap_state, vision_red, vision_green, distance, v_ego)
+    distance = max(carrot_dist, vision_dist)
+    self.fuse(carrot_state, vision_red, vision_green, distance, v_ego)

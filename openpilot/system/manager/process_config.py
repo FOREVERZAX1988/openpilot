@@ -208,10 +208,9 @@ procs += [
   NativeProcess("mapd", Paths.mapd_root(), ["bash", "-c", f"{MAPD_PATH} > /dev/null 2>&1"], mapd_ready),
   PythonProcess("mapd_manager", "openpilot.sunnypilot.mapd.mapd_manager", always_run),
 
-  # Amap / Carrot
-  # amapNaviSP removed: carrot_man now only produces carrotManSP /
-  # navInstructionCarrotSP. AmapApiKey is still used by AmapMapData (Web API
-  # fallback for speed limits / road names).
+  # Carrot
+  # amapNaviSP and AmapMapData (Web API) removed: carrot_man now only produces
+  # carrotManSP / navInstructionCarrotSP. OSM remains the map-data provider.
   # restart_if_crash: PythonProcess.start() returns early while self.proc is
   # not None, so without this flag a crashed carrot_man (UDP 7706 listener +
   # 7705 discovery beacon) stays dead until a manager restart -- the phone app
