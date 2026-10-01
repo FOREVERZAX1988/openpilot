@@ -6,7 +6,6 @@ from openpilot.cereal import log
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, FONT_SCALE, FALLBACK_FONT_SCALE
 from openpilot.system.ui.lib.multilang import tr, tr_noop, multilang
-from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 

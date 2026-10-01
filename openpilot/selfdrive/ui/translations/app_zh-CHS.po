@@ -6612,3 +6612,54 @@ msgstr "🔥 Firehose 模式 🔥"
 msgid "🚀 sunnylink 🚀"
 msgstr "★ SunnyLink ★"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Carrot Navi Debug"
+msgstr "Carrot 导航调试"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Enable Carrot Navi v2 (7714)"
+msgstr "启用 Carrot 导航 v2（7714）"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Haptic Feedback (Speed Camera)"
+msgstr "测速相机触觉反馈"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Navigation Cruise Speed"
+msgstr "导航巡航速度"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "No navigation event received yet."
+msgstr "尚未收到导航事件。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Steering-wheel nudge when carrot decelerates for a speed camera."
+msgstr "carrot 因测速相机减速时轻振方向盘。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Use navigation desired speed to limit cruise speed."
+msgstr "使用导航建议速度限制巡航速度。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
+msgstr "使用 7714 WebSocket v2 富导航数据流（红绿灯、车道、路口图像）。7714 链接始终运行，此处只决定是否使用其数据。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "View the last navigation event summary handled by CarrotManager."
+msgstr "查看 CarrotManager 处理的最后一次导航事件摘要。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Carrot ATC Turn Signal"
+msgstr "Carrot ATC 转向灯"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Let the Carrot app's turn instruction act as a turn signal. This reaches the car's real turn signal, so it is off by default."
+msgstr "让 Carrot App 的转弯指令充当转向灯。该信号会到达车辆真实转向灯，因此默认关闭。"
+
+#: openpilot/selfdrive/ui/layouts/settings/developer.py
+msgid "Longitudinal Maneuver Mode"
+msgstr "纵向操作模式"
+
+#: openpilot/selfdrive/ui/layouts/sidebar.py
+msgid "Wi-Fi"
+msgstr "Wi‑Fi"

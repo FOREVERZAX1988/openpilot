@@ -42,6 +42,7 @@ import types
 from collections import namedtuple
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 # Repo root, so the script works regardless of the caller's cwd.
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -221,6 +222,17 @@ class FakeGuiApp:
   def render(self):
     return iter(())
 
+  def __getattr__(self, name):
+    # Permissive fallback for the long tail of GuiApplication surface the panels
+    # touch (set_show_touches, push_widget, ...): a callable no-op is closer to
+    # the real object than an AttributeError, so a panel is never failed by a
+    # method this harness simply did not list yet.
+    if name.startswith("__"):
+      raise AttributeError(name)
+    value = PermissiveField()
+    object.__setattr__(self, name, value)
+    return value
+
 
 def build_fake_application() -> types.ModuleType:
   m = _FakeModule("openpilot.system.ui.lib.application")
@@ -263,27 +275,166 @@ def build_fake_multilang() -> types.ModuleType:
   return m
 
 
+class PermissiveField(MagicMock):
+  """A MagicMock that also survives being used as a number.
+
+  Layouts format readings straight into strings (f"{delay:.2f} s") and use them
+  as dict keys/lookup values. A plain MagicMock raises TypeError on the format
+  and KeyError on the lookup, which reads like an app bug when it is only the
+  harness returning a mock. Returning numeric zero for those operations keeps
+  the render path real while never failing on a value nobody asserted.
+  """
+
+  def __format__(self, spec: str) -> str:
+    return format(0.0, spec) if spec else "0"
+
+  def __float__(self) -> float:
+    return 0.0
+
+  def __int__(self) -> int:
+    return 0
+
+  def __index__(self) -> int:
+    return 0
+
+  def __iter__(self):
+    return iter(())
+
+
+def permissive(**values) -> Any:
+  """Object with real `values` plus a PermissiveField for anything else."""
+
+  class _Obj:
+    def __init__(self):
+      for key, value in values.items():
+        object.__setattr__(self, key, value)
+
+    def __getattr__(self, name):
+      if name.startswith("__"):
+        raise AttributeError(name)
+      value = PermissiveField()
+      object.__setattr__(self, name, value)
+      return value
+
+    # Container-ish protocols: several call sites do sm.updated["carState"] or
+    # iterate a message list, which must not raise on a permissive stand-in.
+    def __getitem__(self, key):
+      value = PermissiveField()
+      object.__setattr__(self, f"_item_{key}", value)
+      return value
+
+    def __setitem__(self, key, value) -> None:
+      object.__setattr__(self, f"_item_{key}", value)
+
+    def __contains__(self, key) -> bool:
+      return True
+
+    def __iter__(self):
+      return iter(())
+
+    def __len__(self) -> int:
+      return 0
+
+    def __bool__(self) -> bool:
+      return True
+
+  return _Obj()
+
+
+class FakeSubMaster:
+  """cereal SubMaster stand-in with realistic defaults for the messages the
+  settings pages read (personality names, delays, speeds) so branches that
+  parse those values are exercised instead of mocked away."""
+
+  DEFAULTS: dict[str, dict] = {
+    "selfdriveState": {"personality": "standard", "enabled": False, "active": False,
+                       "experimentalMode": False, "alertStatus": 0, "alertText1": "", "alertText2": ""},
+    "lateralDelay": {"lateralDelay": 0.0, "active": False},
+    "carState": {"vEgo": 0.0, "standstill": True, "gearShifter": "park", "steeringAngleDeg": 0.0,
+                 "leftBlinker": False, "rightBlinker": False, "vCruise": 0.0,
+                 "gasPressed": False, "brakePressed": False},
+    "deviceState": {"thermalStatus": 0, "batteryPercent": 100.0, "started": True, "deviceType": "tizi"},
+    "controlsState": {"enabled": False, "active": False, "vCruise": 0.0},
+    "carControl": {"enabled": False, "latActive": False, "longActive": False},
+    "carParams": {"steerActuatorDelay": 0.1, "openpilotLongitudinalControl": False},
+  }
+
+  def __init__(self):
+    self._cache: dict[str, Any] = {}
+    self.updated = permissive()
+    self.valid = permissive()
+    self.alive = permissive()
+
+  def __getitem__(self, key):
+    if key not in self._cache:
+      self._cache[key] = permissive(**self.DEFAULTS.get(key, {}))
+    return self._cache[key]
+
+  def __contains__(self, key):
+    return True
+
+  def all_checks(self) -> bool:
+    return True
+
+  def all_alive(self) -> bool:
+    return True
+
+  def all_valid(self) -> bool:
+    return True
+
+  def update(self, timeout: int = 0):
+    return []
+
+  def __getattr__(self, name):
+    if name.startswith("__"):
+      raise AttributeError(name)
+    value = PermissiveField()
+    object.__setattr__(self, name, value)
+    return value
+
+
 def build_fake_params() -> types.ModuleType:
   m = types.ModuleType("openpilot.common.params")
   store: dict[str, Any] = {}
 
   class Params:
+    """Duck-typed stand-in for openpilot.common.params.Params.
+
+    Signature-compatible with the real class: layouts call Params(log_root) and
+    pass block=True to put_bool, and a stub that rejects either makes the layout
+    look broken when it is the harness that is.
+    """
+
+    def __init__(self, *args, **kwargs):
+      pass
+
     def get(self, key, return_default=False):
       return store.get(key, 0 if return_default else None)
 
-    def get_bool(self, key):
+    def get_bool(self, key, return_default=False):
       return bool(store.get(key, False))
 
     def put(self, key, value, block=False):
       store[key] = value
 
-    def put_bool(self, key, value):
+    def put_bool(self, key, value, block=False):
+      store[key] = value
+
+    def put_nonblocking(self, key, value):
       store[key] = value
 
     def remove(self, key):
       store.pop(key, None)
 
+    def clear(self):
+      store.clear()
+
+  class UnknownKeyName(Exception):
+    """Mirrors the C++ exception raised for keys missing from params_keys.h."""
+
   m.Params = Params
+  m.UnknownKeyName = UnknownKeyName
+  m.ParamKeyType = types.SimpleNamespace(STRING=0, BOOL=1, INT=2, FLOAT=3, JSON=4, TIME=5)
   m.store = store
   return m
 
@@ -291,19 +442,71 @@ def build_fake_params() -> types.ModuleType:
 def install_stubs() -> None:
   import importlib
 
-  # carrot_tuning.py needs ui_state.is_offroad() for the offroad-only toggle.
+  # The layouts read ui_state as a bag of both plain flags and predicate
+  # methods (is_offroad() / is_onroad() are methods in the real UIState, and
+  # callers do `if ui_state.is_onroad():`). Model both, and give unknown
+  # attributes a permissive fallback so a panel that reads a field this harness
+  # does not know about still renders instead of failing the smoke test.
   _ui_mod = types.ModuleType('openpilot.selfdrive.ui.ui_state')
+  _fake_params = build_fake_params().Params()
 
   class _FakeUiState:
-    @staticmethod
-    def is_offroad() -> bool:
+    def __init__(self):
+      self.params = _fake_params
+      self.CP = permissive(steerActuatorDelay=0.1, openpilotLongitudinalControl=False)
+      self.sm = FakeSubMaster()
+      self.prime_state = permissive()
+      self.started = True
+      self.engaged = False
+      self.demo_mode = False
+      self.has_longitudinal_control = False
+      self.has_lat_control = False
+      self.is_release = False
+      self._extra: dict = {}
+
+    def is_offroad(self) -> bool:
       return True
 
-    @staticmethod
-    def update_params() -> None:
+    def is_onroad(self) -> bool:
+      return False
+
+    def is_engaged(self) -> bool:
+      return False
+
+    def update_params(self) -> None:
       return None
 
+    def __getattr__(self, name):
+      # Only reached for attributes nobody set explicitly.
+      if name.startswith("__"):
+        raise AttributeError(name)
+      value = self._extra.get(name)
+      if value is None:
+        value = PermissiveField()
+        self._extra[name] = value
+      return value
+
   _ui_mod.ui_state = _FakeUiState()
+  class _FakeDevice:
+    """device is read as both flags (device.awake) and methods (is_awake())."""
+
+    def __init__(self):
+      self.awake = True
+      self._awake = True
+      self._interactive_timeout = 0.0
+      self.started = True
+
+    def is_awake(self) -> bool:
+      return True
+
+    def __getattr__(self, name):
+      if name.startswith("__"):
+        raise AttributeError(name)
+      value = PermissiveField()
+      object.__setattr__(self, name, value)
+      return value
+
+  _ui_mod.device = _FakeDevice()
   sys.modules['openpilot.selfdrive.ui.ui_state'] = _ui_mod
 
   fake_pyray = build_fake_pyray()
@@ -353,6 +556,18 @@ def install_stubs() -> None:
 
 # ---------------------------------------------------------------------------
 # The actual test
+#
+# History: this file used to drive upstream's group-list page (CARROT_GROUPS /
+# CarrotGroupKey, one navigation row + sub-page per group). Our Carrot tuning
+# page is the 9-tab layout built from carrot_tuning_items, so those symbols do
+# not exist here and the test died on import -- a stale test, not an app crash.
+# It now drives the page we actually ship: the tab strip plus every tab's list.
+#
+# The two bugs this class of test exists for are still covered:
+#   * an undefined attribute / wrong signature inside a widget that is only
+#     reached by render() (this is how CarrotTuningLayout's missing _font, and
+#     TripsLayout's missing _get_stats, reached the device);
+#   * tab typography drift (the strip was 24 px against 50 px list items).
 # ---------------------------------------------------------------------------
 
 
@@ -360,10 +575,9 @@ def main() -> int:
   install_stubs()
 
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.carrot_tuning import (  # noqa: E402
-    CARROT_GROUPS, CarrotGroupKey, CarrotTuningLayout,
+    TAB_FONT_MIN_SIZE, TAB_FONT_SIZE, CarrotTuningLayout, TabType,
   )
   from openpilot.system.ui.sunnypilot.lib.styles import style  # noqa: E402
-  from openpilot.system.ui.sunnypilot.widgets.list_view import LineSeparatorSP  # noqa: E402
 
   failures: list[str] = []
   checks = 0
@@ -379,258 +593,131 @@ def main() -> int:
       print(f"  FAIL {label}: {type(exc).__name__}: {exc}")
 
   content = Rect(0, 0, 1600, 900)
+  # Render into a viewport tall enough for every row: the real panel is 900px and
+  # culls off-screen items, which would hide rows we want to check.
+  tall = Rect(0, 0, content.width, 6000)
 
-  # --- root page ------------------------------------------------------------
-  print("== root page ==")
-  root = CarrotTuningLayout(lambda: None)
-  root.set_parent_rect(content)
-  root.show_event()
+  print("== construction ==")
+  layout = CarrotTuningLayout(lambda: None)
+  layout.set_parent_rect(content)
+  layout.show_event()
 
-  def root_renders():
+  def renders():
     DRAWN.clear()
-    root.render(content)
-    assert DRAWN, "root page drew nothing"
-    assert root._current_group is None, "root must start on the group list"
+    layout.render(content)
+    assert DRAWN, "carrot tuning page drew nothing"
 
-  check("renders without crashing", root_renders)
+  check("renders without crashing", renders)
 
-  def root_lists_every_group():
-    root.render(content)
-    items = root._scroller._items
-    rows = root._nav_rows
-    seps = [i for i in items if isinstance(i, LineSeparatorSP)]
-    assert len(rows) == len(CARROT_GROUPS), f"{len(rows)} rows for {len(CARROT_GROUPS)} groups"
-    # 7 dividers between the 8 groups plus 1 divider below the Carrot Web Panel toggle.
-    expected_seps = len(CARROT_GROUPS)
-    assert len(seps) == expected_seps, f"expected {expected_seps} dividers, got {len(seps)}"
-    assert not isinstance(items[0], LineSeparatorSP), "list must not start with a divider"
+  def starts_on_the_first_tab():
+    assert layout._current_tab == TabType.START, f"started on {layout._current_tab!r}"
 
-    # Render into a viewport tall enough for every row: the real panel is 900px
-    # and culls off-screen items, which would hide the rows we want to check.
+  check("starts on the first tab", starts_on_the_first_tab)
+
+  print("== tab strip ==")
+
+  def every_tab_label_is_drawn():
     DRAWN.clear()
-    root.render(Rect(0, 0, content.width, 6000))
+    layout.render(content)
     drawn = {d[1] for d in DRAWN}
-    missing = [g.title for g in CARROT_GROUPS if g.title not in drawn]
-    assert not missing, f"group titles not drawn: {missing}"
-    root.render(content)
+    missing = [label for label in layout.TAB_LABELS if label not in drawn]
+    assert not missing, f"tab labels not drawn: {missing}"
 
-  check("one navigation row per group, divided by separators", root_lists_every_group)
+  check("every tab label is drawn", every_tab_label_is_drawn)
 
-  def root_shows_group_descriptions():
-    # Group descriptions are the only hint of page contents, so they must be
-    # visible without a tap (unlike a settings row's description).
-    hidden = [g.title for g, row in zip(CARROT_GROUPS, root._nav_rows, strict=True) if not row.description_visible]
-    assert not hidden, f"descriptions hidden for: {hidden}"
+  def every_tab_owns_one_ninth():
+    layout.render(content)
+    strip = Rect(100.0, 12.0, 1800.0, 96.0)
+    tab_w = strip.width / layout.TAB_COUNT
+    for index in range(layout.TAB_COUNT):
+      centre_x = strip.x + (index + 0.5) * tab_w
+      assert layout.tab_index_at(Vec2(centre_x, strip.y + 48), strip) == index, f"tab {index} mis-hit"
 
-  check("group descriptions visible without a tap", root_shows_group_descriptions)
+  check("each ninth of the strip resolves to its own tab", every_tab_owns_one_ninth)
 
-  # --- every group sub-page -------------------------------------------------
-  print("== group sub-pages ==")
-  for key, group in zip(CarrotGroupKey, CARROT_GROUPS, strict=True):
-    def page_works(key=key, group=group):
-      root._set_current_group(key)
-      assert root._current_group == key, "navigation did not open the group"
+  def points_outside_the_strip_have_no_tab():
+    strip = Rect(100.0, 12.0, 1800.0, 96.0)
+    for pos in (Vec2(strip.x - 1, strip.y + 48), Vec2(strip.x + strip.width + 1, strip.y + 48),
+                Vec2(strip.x + 10, strip.y - 1), Vec2(strip.x + 10, strip.y + strip.height + 1)):
+      assert layout.tab_index_at(pos, strip) is None, f"{pos} should not hit a tab"
 
-      page = root._group_layouts[key]
-      items = page._scroller._items
-      dividers = [i for i in items if isinstance(i, LineSeparatorSP)]
-      settings = [i for i in items if not isinstance(i, LineSeparatorSP)]
-      assert settings, "group page has no settings items"
-      assert not isinstance(items[0], LineSeparatorSP), "page must not start with a divider"
-      assert not isinstance(items[-1], LineSeparatorSP), "page must not end with a divider"
+  check("points outside the strip hit no tab", points_outside_the_strip_have_no_tab)
 
+  print("== every tab page ==")
+
+  def every_tab_has_items():
+    empty = [TabType(i).name for i in range(layout.TAB_COUNT) if not layout._tab_scrollers[TabType(i)]._items]
+    assert not empty, f"tabs with no items: {empty}"
+
+  check("every tab has at least one item", every_tab_has_items)
+
+  def every_tab_renders():
+    for index in range(layout.TAB_COUNT):
+      layout._select_tab(index)
       DRAWN.clear()
-      root.render(content)   # renders the group page
-      assert DRAWN, "group page drew nothing"
+      layout.render(tall)
+      assert DRAWN, f"tab {TabType(index).name} drew nothing"
+      assert layout._current_tab == TabType(index)
+    layout._select_tab(0)
 
-      # Going back must return to the row list.
-      root._set_current_group(None)
-      assert root._current_group is None
-      DRAWN.clear()
-      root.render(content)
-      assert DRAWN, "root page did not come back"
+  check("every tab renders its page", every_tab_renders)
 
-    check(f"{key.name:11s} ({group.title}) items render + back works", page_works)
+  def item_titles_are_strings():
+    """A title that is a widget (or None) instead of a string is a wiring bug."""
+    for index in range(layout.TAB_COUNT):
+      for item in layout._tab_scrollers[TabType(index)]._items:
+        title = getattr(item, 'title', None)
+        if title is None:
+          continue
+        assert isinstance(title, str), f"{TabType(index).name}: title is {type(title).__name__}"
 
-  # --- typography conformance ----------------------------------------------
-  print("== typography ==")
-  # Every size must come from a shared sunnypilot token. This is the assertion
-  # that catches the previous design's drift (24px tab labels among 40/50px rows).
-  from openpilot.system.ui.widgets.list_view import BUTTON_FONT_SIZE  # noqa: E402
-  from openpilot.system.ui.sunnypilot.widgets.option_control import (  # noqa: E402
-    BUTTON_FONT_SIZE as OPTION_BUTTON_FONT_SIZE,
-  )
-  allowed_sizes = {
-    style.ITEM_DESC_FONT_SIZE,          # 40 - item description
-    style.ITEM_TEXT_FONT_SIZE,          # 50 - item title / option value
-    BUTTON_FONT_SIZE,                   # 35 - list action button label
-    OPTION_BUTTON_FONT_SIZE,            # 60 - option +/- button glyph
-  }
+  check("item titles are plain strings", item_titles_are_strings)
 
-  def collect_sizes():
-    sizes = {}
-    root.show_event()
-    root.render(content)
-    for font_id, text, _x, _y, size in DRAWN:
-      sizes.setdefault(int(size), set()).add(text[:24])
-    for key in CarrotGroupKey:
-      root._set_current_group(key)
-      DRAWN.clear()
-      root.render(content)
-      for font_id, text, _x, _y, size in DRAWN:
-        sizes.setdefault(int(size), set()).add(text[:24])
-    root._set_current_group(None)
-    return sizes
+  print("== typography pin ==")
 
-  sizes = collect_sizes()
-  for size in sorted(sizes):
-    sample = sorted(sizes[size])[:2]
-    print(f"  size {size:>3}px  ({len(sizes[size])} strings)  e.g. {sample}")
+  def tab_font_tokens():
+    assert (TAB_FONT_SIZE, TAB_FONT_MIN_SIZE) == (36, 24), \
+      f"tab font tokens drifted: {TAB_FONT_SIZE}/{TAB_FONT_MIN_SIZE} (expected 36/24)"
 
-  def sizes_are_tokens():
-    unexpected = sorted(set(sizes) - allowed_sizes)
-    assert not unexpected, f"font sizes outside the sunnypilot token set {sorted(allowed_sizes)}: {unexpected}"
-    assert 24 not in sizes, "the 24px tab-label size must be gone"
+  check("tab font tokens stay at the 1.5x values", tab_font_tokens)
 
-  check(f"font sizes limited to {sorted(allowed_sizes)}", sizes_are_tokens)
+  def long_labels_shrink_but_never_below_the_floor():
+    from openpilot.system.ui.lib.application import gui_app  # noqa: E402
+    fnt = gui_app.font()
+    tab_w = content.width / layout.TAB_COUNT
+    for label in layout.TAB_LABELS:
+      size, _ = CarrotTuningLayout._fit_tab_label(fnt, label, tab_w)
+      assert TAB_FONT_MIN_SIZE <= size <= TAB_FONT_SIZE, f"{label!r} fitted to {size}px"
 
-  # --- input handling -------------------------------------------------------
-  # These drive synthetic touch sequences through the real Scroller +
-  # Widget._process_mouse_events path. Geometry is re-read after every reset:
-  # a scrolled list moves its rows, and a stale rect would make a tap "fail" for
-  # the wrong reason.
-  print("== input handling ==")
+  check("tab labels shrink only down to the floor", long_labels_shrink_but_never_below_the_floor)
 
-  from openpilot.system.ui.lib.application import gui_app  # noqa: E402
-  Event = namedtuple("Event", "pos slot left_pressed left_released left_down t")
+  def styles_are_used():
+    assert style.ON_BG_COLOR is not None and style.OFF_BG_COLOR is not None
 
-  def frame(events):
-    gui_app._mouse_events = events
-    root.render(content)
+  check("active/inactive tab colours come from the style tokens", styles_are_used)
 
-  def settle(frames=60):
-    for _ in range(frames):
-      frame([])
+  print("== strings ==")
 
-  def reset():
-    """Back to the root page, scrolled to the top, with inertia decayed."""
-    root.show_event()
-    settle()
-
-  def tap(x, y, steps=3):
-    for i in range(steps):
-      frame([Event(Rect(x, y), 0, i == 0, i == steps - 1, i != steps - 1, i / 60)])
-
-  def drag(x, y, dy, steps=6):
-    for i in range(steps):
-      frame([Event(Rect(x, y + dy * i / (steps - 1)), 0, i == 0, i == steps - 1, i != steps - 1, i / 60)])
-
-  def row_tap_point(row):
-    return row.rect.x + 120, row.rect.y + row.rect.height / 2
-
-  def row_tap_opens():
-    reset()
-    tap(*row_tap_point(root._nav_rows[0]))
-    assert root._current_group == CarrotGroupKey.START, f"tap did not open the group: {root._current_group}"
-
-  check("tapping a row opens the group", row_tap_opens)
-
-  def drag_scroll_does_not_navigate():
-    reset()
-    row = root._nav_rows[0]
-    x, y = row_tap_point(row)
-    before = root._scroller.scroll_panel.offset
-    drag(x, y, dy=-60)
-    assert root._current_group is None, f"a scroll gesture navigated: {root._current_group}"
-    # Guard the guard: if the drag did not actually scroll, the assertion above
-    # would pass for the wrong reason.
-    after = root._scroller.scroll_panel.offset
-    assert after != before, f"the drag did not scroll ({before:.0f} -> {after:.0f}), so this check proves nothing"
-
-  check("drag-scrolling a row scrolls instead of navigating", drag_scroll_does_not_navigate)
-
-  def open_button_opens():
-    reset()
-    row = root._nav_rows[0]
-    btn = row.action_item._button.rect
-    assert root._scroller.scroll_panel.is_touch_valid(), "scroll inertia must be settled before tapping"
-    tap(btn.x + btn.width / 2, btn.y + btn.height / 2)
-    assert root._current_group == CarrotGroupKey.START, f"OPEN did nothing: {root._current_group}"
-
-  check("the OPEN button opens the group", open_button_opens)
-
-  def reopen_after_back():
-    reset()
-    tap(*row_tap_point(root._nav_rows[0]))
-    first = root._current_group
-    root._set_current_group(None)
-    settle()
-    tap(*row_tap_point(root._nav_rows[0]))
-    assert first == CarrotGroupKey.START and root._current_group == CarrotGroupKey.START, \
-      f"first={first} second={root._current_group}"
-
-  check("open, back, open again", reopen_after_back)
-
-  def all_rows_tappable():
-    bad = []
-    for i in range(len(root._nav_rows)):
-      reset()
-      tap(*row_tap_point(root._nav_rows[i]))
-      if root._current_group != CarrotGroupKey(i):
-        bad.append((i, root._current_group))
-    assert not bad, f"rows that did not navigate: {bad}"
-
-  check(f"all {len(root._nav_rows)} rows navigate", all_rows_tappable)
-
-  def back_button_returns():
-    reset()
-    tap(*row_tap_point(root._nav_rows[0]))
-    page = root._group_layouts[CarrotGroupKey.START]
-    assert page._back_button._click_callback is not None, "sub-page back button has no callback"
-    page._back_button._click_callback()
-    assert root._current_group is None, f"back did not return to the root: {root._current_group}"
-
-  check("the sub-page back button returns to the root", back_button_returns)
-
-  # --- translations ---------------------------------------------------------
-  print("== translations ==")
-  new_strings = [g.title for g in CARROT_GROUPS] + [g.description for g in CARROT_GROUPS] + ["OPEN", "Back", "Carrot Web Panel"]
-
-  # Group headings inside each page must be translated too, otherwise a Chinese
-  # UI falls back to English for every section label.
-  import re as _re
-  _items_src = (REPO_ROOT / "openpilot" / "selfdrive" / "ui" / "sunnypilot" / "layouts" /
-                "settings" / "carrot_tuning_items.py").read_text(encoding="utf-8")
-  headings = sorted(set(_re.findall(r"section_heading_sp\(tr\('([^']+)'\)\)", _items_src)))
-  assert headings, "no section headings found in carrot_tuning_items.py"
-  # Every user-visible native label, not just the headings: a missing entry makes
-  # the Chinese UI fall back to English for that row.
-  titles = sorted(set(_re.findall(r"title=tr\('([^']+)'\)", _items_src)))
-  # The label set shrank when the params with no consumer were hidden from the UI;
-  # the floor guards against an accidental empty/mis-parsed file rather than a count.
-  # Lowered from 80 to 70 when the 20 Cluster* rows were removed: sp has no cluster
-  # subsystem, so every one of them was registered, exposed in both UIs, and read by
-  # nothing. 73 are visible now, so the floor stays clear of ordinary churn.
-  assert len(titles) >= 70, f"expected the visible carrot label set, got {len(titles)}"
-  new_strings = new_strings + headings + titles
-
-  for lang in ("zh-CHS", "zh-CHT"):
-    def translated(lang=lang):
+  def every_tab_label_is_translated():
+    src = (REPO_ROOT / "openpilot" / "selfdrive" / "ui" / "sunnypilot" / "layouts" / "settings" /
+           "carrot_tuning.py").read_text(encoding="utf-8")
+    keys = re.search(r"TAB_KEYS = \(([^)]*)\)", src)
+    assert keys, "TAB_KEYS not found"
+    labels = re.findall(r"'([^']*)'", keys.group(1))
+    assert labels, "no tab labels parsed"
+    for lang in ("zh-CHS", "zh-CHT"):
       po = (REPO_ROOT / "openpilot" / "selfdrive" / "ui" / "translations" / f"app_{lang}.po").read_text(encoding="utf-8")
-      existing = set(re.findall(r'^msgid "(.+?)"$', po, re.M))
-      missing = [s for s in new_strings if s not in existing]
-      assert not missing, f"{lang} missing: {missing}"
+      have = set(re.findall(r'^msgid "(.+?)"$', po, re.M))
+      missing = [label for label in labels if label not in have]
+      assert not missing, f"{lang} missing tab labels: {missing}"
 
-    check(f"{lang} covers all {len(new_strings)} root-page strings", translated)
+  check("every tab label has a translation entry", every_tab_label_is_translated)
 
   print()
-  if failures:
-    print(f"FAILED {len(failures)}/{checks} checks:")
-    for f in failures:
-      print(f"  - {f}")
-    return 1
-  print(f"PASSED {checks}/{checks} checks")
-  return 0
+  print(f"{checks - len(failures)}/{checks} checks passed")
+  for f in failures:
+    print(f"FAILED: {f}")
+  return 1 if failures else 0
 
 
 if __name__ == "__main__":

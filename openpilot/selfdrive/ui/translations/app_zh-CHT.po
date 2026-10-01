@@ -2257,7 +2257,7 @@ msgstr "載入中..."
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\trips.py
 msgid "Local"
-msgstr ""
+msgstr "本機"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
 msgid "Long Press Increment"
@@ -5509,3 +5509,42 @@ msgstr "✓ 已訂閱"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Carrot Navi Debug"
+msgstr "Carrot 導航偵錯"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Enable Carrot Navi v2 (7714)"
+msgstr "啟用 Carrot 導航 v2（7714）"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Haptic Feedback (Speed Camera)"
+msgstr "測速相機觸覺反饋"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Navigation Cruise Speed"
+msgstr "導航巡航速度"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "No navigation event received yet."
+msgstr "尚未收到導航事件。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Steering-wheel nudge when carrot decelerates for a speed camera."
+msgstr "carrot 因測速相機減速時輕振方向盤。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "View the last navigation event summary handled by CarrotManager."
+msgstr "檢視 CarrotManager 處理的最後一次導航事件摘要。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Cloud"
+msgstr "雲端"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Carrot ATC Turn Signal"
+msgstr "Carrot ATC 方向燈"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Let the Carrot app's turn instruction act as a turn signal. This reaches the car's real turn signal, so it is off by default."
+msgstr "讓 Carrot App 的轉彎指令充當方向燈。該信號會到達車輛真實方向燈，因此預設關閉。"
