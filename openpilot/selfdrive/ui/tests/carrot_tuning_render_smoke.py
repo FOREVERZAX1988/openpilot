@@ -206,7 +206,10 @@ class FakeGuiApp:
   def fallback_font(self, text: str = ""):
     return self._font_cache.setdefault("__fallback__", Font(999))
 
-  def texture(self, path, w=0, h=0):
+  def texture(self, path, w=0, h=0, alpha_premultiply=False, keep_aspect_ratio=True, flip_x=False):
+    # Mirror GuiApplication.texture's full signature: the settings panels call it with
+    # keep_aspect_ratio=, and a fake missing that kwarg makes the panel raise instead of
+    # render, which silently drops the panel from the smoke suite entirely.
     return Texture()
 
   def big_ui(self):
@@ -510,6 +513,21 @@ def main() -> int:
     for _ in range(frames):
       frame([])
 
+  # A viewport tall enough to hold every row. The real panel is 900px and culls the
+  # rows below the fold; a tap aimed at one of those lands outside the panel rect
+  # entirely, so a check that taps "every row" against the 900px viewport can only
+  # ever exercise the first two. The root-page checks above render into the same
+  # tall rect for the same reason.
+  tall = Rect(0, 0, content.width, 6000)
+
+  def frame_tall(events):
+    gui_app._mouse_events = events
+    root.render(tall)
+
+  def settle_tall(frames=60):
+    for _ in range(frames):
+      frame_tall([])
+
   def reset():
     """Back to the root page, scrolled to the top, with inertia decayed."""
     root.show_event()
@@ -572,8 +590,12 @@ def main() -> int:
   def all_rows_tappable():
     bad = []
     for i in range(len(root._nav_rows)):
-      reset()
-      tap(*row_tap_point(root._nav_rows[i]))
+      root.show_event()
+      settle_tall()
+      r = root._nav_rows[i].rect
+      x, y = r.x + 120, r.y + r.height / 2
+      for step in range(3):
+        frame_tall([Event(Rect(x, y), 0, step == 0, step == 2, step != 2, step / 60)])
       if root._current_group != CarrotGroupKey(i):
         bad.append((i, root._current_group))
     assert not bad, f"rows that did not navigate: {bad}"
