@@ -45,7 +45,12 @@ class CruiseHelper:
     self.CP = CP
     self.params = Params()
 
-    self.button_frame_counts = {ButtonType.altButton2: 0}
+    # altButton2 = VW/MLB 的 Dist+1（zeitluecke 加一格），长按切 experimental；
+    # gapAdjustCruise = Dist-1，update() 里仍会读它的计数（保持 < DISTANCE_LONG_PRESS
+    # 才走 gap 分支）。两个键都得先建好：字典里缺 gapAdjustCruise 时 update() 会直接
+    # KeyError(11) 抛在每帧的 CruiseHelper.update 上（openpilotLongitudinalControl +
+    # cruiseState.available 一成立就触发）。
+    self.button_frame_counts = {ButtonType.altButton2: 0, ButtonType.gapAdjustCruise: 0}
     self._experimental_mode = False
     self.experimental_mode_switched = False
     # Set on a fresh distance-button press, consumed once, so holding the button does

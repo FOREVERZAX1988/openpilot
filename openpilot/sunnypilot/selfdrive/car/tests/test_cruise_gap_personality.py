@@ -46,7 +46,7 @@ class TestGapHelpers(unittest.TestCase):
 
   def test_all_outputs_are_valid_enum_indices(self):
     """Whatever the cycle does, the result must be a value the MPC accepts."""
-    import openpilot.cereal.log as log
+    from openpilot.cereal import log
     enum = log.LongitudinalPersonality.schema.enumerants
     for levels in (2, 3, 4):
       for current in range(0, 5):
@@ -65,12 +65,12 @@ class TestPcmGapMapping(unittest.TestCase):
 
   def test_personality_levels_matches_the_cereal_enum(self):
     """Hard-coded 3 must track cereal; if a level is added this fails loudly."""
-    import openpilot.cereal.log as log
+    from openpilot.cereal import log
     self.assertEqual(PERSONALITY_LEVELS, len(log.LongitudinalPersonality.schema.enumerants),
                      'PERSONALITY_LEVELS drifted from the cereal enum')
 
   def test_every_cluster_gap_maps_into_the_enum(self):
-    import openpilot.cereal.log as log
+    from openpilot.cereal import log
     valid = set(log.LongitudinalPersonality.schema.enumerants.values())
     for pcm_gap in range(0, 8):
       self.assertIn(self._clamp(pcm_gap), valid,
