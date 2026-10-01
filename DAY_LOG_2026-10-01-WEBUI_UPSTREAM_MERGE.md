@@ -63,3 +63,47 @@ GIT_CONFIG_GLOBAL=<empty-file> git -c credential.helper=/data/ai/bin/gh_credenti
 
 ## 下一步（步骤3）
 openpilot 主仓 vs 上游 `master-c3` 仍差 205 文件（见 `DAY_LOG_2026-10-01-OPENDBC_UPSTREAM_MERGE.md` 末尾盘点）。
+
+---
+
+## 追加（步骤1b）— 回退非 bug 自研差异，webui 严格跟随上游 main
+
+### 结论
+- 回退前：`sp-macan-re` = `upstream/main` + 11 提交，相对上游残留 **7 文件 / +141 / -14**
+- 回退后：**4 文件 / +102 / -14**，且 4 个全部是 bug 修复
+- 子模块 tip：`d153170 → 92e8667`
+
+### 回退（`git checkout upstream/main -- <file>`）
+| 文件 | 内容 | 回退代价 |
+|---|---|---|
+| `server/bridge/webui_i18n.py` | Carrot ATC Turn Signal 的 zh-CHS/zh-CHT 翻译 | 中文下该行回退英文（上游有面板行、漏翻译） |
+| `web/static/js/i18n.js` | Enable OSM Map Data / ATC 行翻译（ATC 的 zh 值本就等于英文） | 同上 |
+| `web/static/css/opui.css` | `.opui-int-input` 样式 | 无 —— 全仓 grep 已无任何引用（死 CSS） |
+
+### 保留（上游 main 至今未修，且只在我们这套嵌套布局/本机设备触发）
+- `server/bridge/agnos_api.py`：上游 `_openpilot_dir()` 返回 `Path(BASEDIR)` = **仓库根**（`basedir.py`
+  在 `<repo>/openpilot/common/`，`../..` 即 `<repo>`）；但调用处是
+  `_openpilot_dir()/"common"/"hardware"/"comma"/"agnos.py"`，要的是 **`<repo>/openpilot`**（agnos.py 包目录）。
+  嵌套布局下永久指错 → WebUI 里 AGNOS 更新/校验失效。另加 `_cached_verify()`（避免页面轮询对目标分区
+  重复 sha256 数 GB）+ 安装进行中不校验。
+- `install/integrate_openpilot.py`：开机 aiohttp 探针漏 `PYTHONPATH` → 探针永远失败 → **每次开机联网 pip**，
+  UI 卡在 comma logo 数分钟；给 curl/pip 加超时。并改用 `BOOTSTRAP_MARKER` 判断是否需要重打补丁。
+- `server/bridge/tests/test_panel_catalog.py`：去掉硬编码 `E:\sp\...` Windows 路径，改为从仓库定位。
+- `.gitignore`：忽略 `osm_api.py:64` 运行期写出的 `server/bridge/data/cache/`（纯卫生，否则 submodule 运行期变脏）。
+
+### 更正一个判断
+**「我们修的 bug 上游已经修好，补丁可以不要了」不成立。** HEAD 相对 `upstream/main` 是 **0 behind**，
+即已站在上游 tip（406cd29）上；这 7 处差异在上游 main 里**至今原样存在**。上游不会修，因为其中多数
+（嵌套布局路径解析、Windows 硬编码、开机联网 pip）是我们这份 fork / 设备的特有条件，上游环境碰不到。
+
+### 验证（与基线同口径对跑）
+命令必须带 `webui/` 这一条 PYTHONPATH：
+```sh
+cd /data/openpilot && PYTHONPATH=/data/openpilot:/data/openpilot/webui:/data/pytest_deps \
+  /data/pytest_deps/bin/pytest webui -q --continue-on-collection-errors
+```
+结果 **3 failed / 90 passed / 1 error** —— 与 `b15ac32` 合并后基线**逐项一致，零新增失败**。
+- 3 failed = 上游自身缺陷（`carrot__egpu` 空子面板、group 行 8→9 未同步测试、子面板 target 校验），按「严格对齐上游」不本地修。
+- 1 error = `webui/tests/test_run_server.py` 缺 aiohttp（本机环境）。
+- 坑：漏掉 `<repo>/webui` 时 `test_carrot_tuning_api.py`（7 例）以 `No module named 'server'` 收集失败，
+  看起来像回归，实际只是 PYTHONPATH 少一条。
