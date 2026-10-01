@@ -39,7 +39,6 @@ from __future__ import annotations
 import re
 import sys
 import types
-from collections import namedtuple
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock

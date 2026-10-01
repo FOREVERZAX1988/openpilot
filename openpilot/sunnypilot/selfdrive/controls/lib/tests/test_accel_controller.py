@@ -2,6 +2,8 @@
 """Unit tests for the acceleration controller stub."""
 from __future__ import annotations
 
+import unittest
+
 from openpilot.common.params import Params
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import AccelController

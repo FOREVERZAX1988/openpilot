@@ -10,6 +10,7 @@ NOTE: importing cruise_helpers needs opendbc, so on a PC without the built opend
 package this module cannot be collected. The same assertions were run standalone against
 the extracted helpers while developing; run this on the device or a built tree.
 """
+import os
 import unittest
 
 from openpilot.sunnypilot.selfdrive.car.cruise_helpers import (

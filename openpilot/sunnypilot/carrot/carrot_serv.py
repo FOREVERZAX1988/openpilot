@@ -24,7 +24,6 @@ without a live cereal stream.
 """
 
 import math
-import os
 import subprocess
 import time
 from collections import deque
@@ -1770,10 +1769,6 @@ class CarrotServ:
     d_lon = b[0] - a[0]
     d_lat = b[1] - a[1]
     self._bearing = math.degrees(math.atan2(d_lon, d_lat))
-
-  @property
-  def bearing(self) -> float:
-    return self._bearing
 
   def curvature_at(self, distance_m: float) -> float:
     """Approximate 1/r curvature from the last few GPS points."""
