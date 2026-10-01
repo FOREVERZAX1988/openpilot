@@ -37,8 +37,62 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO_ROOT))
 
 from openpilot.selfdrive.ui.tests.carrot_tuning_render_smoke import (  # noqa: E402
-  Rect, install_stubs,
+  Rect, _AnyCall, _FakeSm, install_stubs,
 )
+
+
+class _FakeCarParams(_AnyCall):
+  """CarParams for a device that has not been fingerprinted yet.
+
+  The Vehicle page labels itself from ``CP.carFingerprint``. A bare ``_AnyCall``
+  there is not a string, so the "label" it produces is not a string either, and
+  the text measurer dies on ``len(None)`` -- a stub artefact, not a panel bug
+  (``MOCK`` is what the real field reads before fingerprinting).
+  """
+
+  carFingerprint = "MOCK"
+  brand = ""
+
+
+class _FakeBundle(_AnyCall):
+  """capnp struct double: the struct exists, but its lists are empty.
+
+  ``models``/``overrides`` must be real (empty) sequences: ``_AnyCall`` falls
+  back to the legacy ``__getitem__`` iteration protocol, and since every
+  subscription returns a new double, iterating one never terminates.
+  """
+
+  ref = ""
+  internalName = ""
+  displayName = ""
+  generation = 0
+  index = -1
+  status = 0
+  models: list = []
+  overrides: list = []
+
+
+class _FakeModelManager(_AnyCall):
+  """modelManagerSP double: an (empty) active bundle, nothing downloading."""
+
+  activeBundle = _FakeBundle()
+  selectedBundle = None
+  availableBundles: list = []
+
+
+class _FakeSmWithModelManager(_FakeSm):
+  """SubMaster double that answers the one service models.py reads deeply.
+
+  Subscripting is looked up on the type, so this has to be a subclass rather
+  than an instance-level patch.
+  """
+
+  def __getitem__(self, key):
+    # models.py reads modelManagerSP.activeBundle.ref; _FakeMsg answers every
+    # field with 0, so `.ref` raised AttributeError on an int.
+    if key == "modelManagerSP":
+      return _FakeModelManager()
+    return super().__getitem__(key)
 
 
 def install_panel_stubs() -> None:
@@ -49,6 +103,14 @@ def install_panel_stubs() -> None:
 
   from openpilot.common.params import store as param_store
   param_store.clear()
+
+  # Two panels read *structured* values through the generic doubles, which is
+  # what kept them out of the render check even after the other panels were
+  # fixed. Both are stub artefacts (the real values always have the right
+  # shape), so give them their real shape instead of weakening the panels.
+  from openpilot.selfdrive.ui.ui_state import ui_state
+  ui_state.CP = _FakeCarParams()
+  ui_state.sm = _FakeSmWithModelManager()
 
 
 def panel_factories():

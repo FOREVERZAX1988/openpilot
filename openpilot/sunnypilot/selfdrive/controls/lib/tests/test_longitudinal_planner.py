@@ -17,7 +17,7 @@ appear in ``planner.targets``.
 from unittest.mock import MagicMock
 
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.cereal import custom
+from openpilot.cereal import custom, log
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
@@ -32,12 +32,39 @@ class _StubSource:
     pass
 
 
+class _StubSccTarget(_StubSource):
+  """Vision / Map half of SmartCruiseControl.
+
+  After the upstream alignment the v/a targets live on the halves, so the stub
+  has to expose them there; reading them off the parent raises AttributeError.
+  """
+
+  def __init__(self, v_target: float = 0.0, a_target: float = 0.0) -> None:
+    super().__init__(v_target, a_target)
+    self.state = 0
+    self.is_enabled = False
+    self.is_active = False
+    self.current_lat_acc = 0.0
+    self.max_pred_lat_acc = 0.0
+
+
+class _StubScc:
+  """SmartCruiseControl double: .vision / .map own the targets, not the parent."""
+
+  def __init__(self, v_target: float = 0.0, a_target: float = 0.0) -> None:
+    self.vision = _StubSccTarget(v_target, a_target)
+    self.map = _StubSccTarget(v_target, a_target)
+
+  def update(self, *args, **kwargs) -> None:
+    pass
+
+
 class TestCarrotTargetUnification(OpenpilotTestCase):
   def _make_planner(self):
     planner = LongitudinalPlannerSP(MagicMock(), MagicMock(), MagicMock())
     # Stub the heavy collaborators so the test depends only on the planner's
     # target-arbitration logic, not on SLA/SCC/dec internals or a live stream.
-    planner.scc = _StubSource(v_target=100.0, a_target=0.0)
+    planner.scc = _StubScc(v_target=100.0, a_target=0.0)
     planner.sla = _StubSource(v_target=10.0, a_target=0.0)  # lowest -> wins
     planner.resolver = MagicMock()
     planner.resolver.speed_limit = 10.0
@@ -63,12 +90,32 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
     sm.__getitem__.side_effect = lambda k: {"carState": car_state, "carControl": car_control}[k]
     return sm
 
+  @staticmethod
+  def _carrot_is_a_competing_target() -> bool:
+    """Is carrot one of the candidate speed targets?
+
+    ``targets`` is a local in ``update_targets`` now and only the winner is kept
+    (``self.source`` / ``self.output_v_target``), so the call site is what has to
+    be inspected: a carrot key there is exactly the regression this guards.
+    """
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[6]
+    src = (root / "openpilot" / "sunnypilot" / "selfdrive" / "controls" / "lib" /
+           "longitudinal_planner.py").read_text(encoding="utf-8")
+    block = re.search(r"^\s*targets = \{(.*?)^\s*\}", src, re.S | re.M)
+    assert block is not None, "the candidate-targets dict moved; update this test"
+    return "LongitudinalPlanSource.carrot" in block.group(1)
+
   def test_no_carrot_target_injected(self) -> None:
     planner = self._make_planner()
     sm = self._sm()
     planner.update_targets(sm, v_ego=10.0, a_ego=0.0, v_cruise=30.0)
-    # The competing carrot speed target is gone.
-    assert LongitudinalPlanSource.carrot not in planner.targets
+    # The competing carrot speed target is gone from both the arbitrated
+    # outcome and the candidate list that could reintroduce it.
+    assert planner.source != LongitudinalPlanSource.carrot
+    assert not self._carrot_is_a_competing_target(), "carrot is competing for the speed target again"
     # SLA (lowest stubbed v_target) is the sole speed-limit executor.
     assert planner.source == LongitudinalPlanSource.speedLimitAssist
 
@@ -80,7 +127,9 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
     planner.carrot_source.active = True
     sm = self._sm()
     planner.update_targets(sm, v_ego=10.0, a_ego=0.0, v_cruise=30.0)
-    assert LongitudinalPlanSource.carrot not in planner.targets
+    assert planner.source != LongitudinalPlanSource.carrot
+    assert planner.source == LongitudinalPlanSource.speedLimitAssist
+    assert not self._carrot_is_a_competing_target(), "carrot is competing for the speed target again"
 
 
 class TestTFollowUserScale(OpenpilotTestCase):
@@ -128,9 +177,9 @@ class TestTFollowUserScale(OpenpilotTestCase):
     # the ratio of a default to itself is 1.0 by construction; assert the shape the
     # planner relies on rather than re-deriving the division
     assert set(T_FOLLOW_DEFAULTS) == {
-      __import__("openpilot.cereal.log", fromlist=["log"]).LongitudinalPersonality.relaxed,
-      __import__("openpilot.cereal.log", fromlist=["log"]).LongitudinalPersonality.standard,
-      __import__("openpilot.cereal.log", fromlist=["log"]).LongitudinalPersonality.aggressive,
+      log.LongitudinalPersonality.relaxed,
+      log.LongitudinalPersonality.standard,
+      log.LongitudinalPersonality.aggressive,
     }, "T_FOLLOW_DEFAULTS must be keyed by the cereal personality enum"
 
   def test_planner_multiplies_and_never_replaces(self) -> None:
