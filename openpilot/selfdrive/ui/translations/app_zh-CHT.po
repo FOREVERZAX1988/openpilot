@@ -52,6 +52,10 @@ msgstr "0=關閉，1=限制到導航限速，2=提前減速並限制到導航限
 msgid "0=Off, 1=Speed only, 2=Speed + steering."
 msgstr "0=關閉，1=僅控制速度，2=控制速度+轉向。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "1"
+msgstr "1"
+
 #: openpilot/selfdrive/ui/widgets/prime.py
 msgid "1 year of drive storage"
 msgstr "1 年行駛資料儲存"
@@ -59,6 +63,10 @@ msgstr "1 年行駛資料儲存"
 #: openpilot/selfdrive/ui/mici/layouts/onboarding.py
 msgid "1. sunnypilot is a driver assistance system."
 msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "2"
+msgstr "2"
 
 #: openpilot/selfdrive/ui/mici/layouts/onboarding.py
 msgid "2. You must pay attention at all times."
@@ -230,6 +238,10 @@ msgstr "全部"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/osm.py
 msgid "All states (~6.0 GB)"
 msgstr "所有狀態 (~6.0 GB)"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Allow other devices to find this device."
+msgstr "允許其他裝置發現本裝置。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
 msgid "Allows the driver to provide limited steering input while openpilot is engaged."
@@ -428,6 +440,10 @@ msgstr ""
 msgid "Automatic turn, fork / merge and curve speed control."
 msgstr "自動轉向、岔路/匯入與彎道速度控制。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Available devices"
+msgstr "可用裝置"
+
 #: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
 msgid "B.D."
 msgstr "B.D."
@@ -468,6 +484,10 @@ msgstr "備份設定"
 msgid "Basic Cruise Preset Speed Unit"
 msgstr ""
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Battery"
+msgstr "電量"
+
 #: openpilot/selfdrive/ui/widgets/prime.py
 msgid "Become a comma prime member at connect.comma.ai"
 msgstr "前往 connect.comma.ai 成為 comma prime 會員"
@@ -500,6 +520,38 @@ msgstr "變道阻止：道路邊緣偵測"
 msgid "Blocks the lane change if the model sees a road edge on your signaled side."
 msgstr "當模型在打燈一側偵測到道路邊緣時，阻止變道。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth"
+msgstr "藍牙"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth UART not available"
+msgstr "藍牙 UART 無法使用"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth UART not exposed by this AGNOS kernel"
+msgstr "目前 AGNOS 核心未暴露藍牙 UART"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth disabled"
+msgstr "藍牙已關閉"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth is not installed"
+msgstr "藍牙未安裝"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth power node not detected"
+msgstr "未偵測到藍牙電源節點"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth radio hardware not detected"
+msgstr "未偵測到藍牙射頻硬體"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Bluetooth service is stopped"
+msgstr "藍牙服務已停止"
+
 #: openpilot/selfdrive/ui/widgets/pairing_dialog.py
 msgid "Bookmark connect.comma.ai to your home screen to use it like an app"
 msgstr "將 connect.comma.ai 加到主畫面，像 App 一樣使用"
@@ -507,6 +559,10 @@ msgstr "將 connect.comma.ai 加到主畫面，像 App 一樣使用"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "Bottom"
 msgstr "底部"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Button Mapping"
+msgstr "按鈕映射"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "C3x Lite Hardware"
@@ -586,6 +642,10 @@ msgstr ""
 msgid "Cancel Download"
 msgstr "取消下載"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Cancel Long"
+msgstr "取消長按"
+
 #: openpilot/selfdrive/ui/mici/layouts/settings/imu_calibration.py
 msgid "Cancelled"
 msgstr ""
@@ -637,6 +697,10 @@ msgstr ""
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "Carrot YouTube Timestamp"
 msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "CarrotCruise"
+msgstr "CarrotCruise"
 
 #: openpilot/system/ui/widgets/network.py
 msgid "Cellular Metered"
@@ -845,6 +909,14 @@ msgstr ""
 msgid "Confirm"
 msgstr "確認"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Confirm pairing with \"{}\"?"
+msgstr "確認與「{}」配對？"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Connect"
+msgstr "連線"
+
 #: openpilot/system/ui/tici_setup.py
 #: openpilot/system/ui/tici_updater.py
 msgid "Connect to Wi-Fi"
@@ -853,6 +925,10 @@ msgstr "連接到 Wi-Fi"
 #: openpilot/selfdrive/ui/widgets/offroad_alerts.py
 msgid "Connect to internet to check for updates. sunnypilot won't automatically start until it connects to internet to check for updates."
 msgstr "請連線網際網路以檢查更新。sunnypilot 在連線網際網路檢查更新之前不會自動啟動。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Connected"
+msgstr "已連線"
 
 #: openpilot/system/ui/tici_setup.py
 msgid "Continue"
@@ -902,6 +978,14 @@ msgstr "巡航控制"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 msgid "Cruise & Following"
 msgstr "巡航與跟車"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Cruise +"
+msgstr "巡航 +"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Cruise + Long"
+msgstr "巡航 + 長按"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cruise Button Long Delay"
@@ -1018,6 +1102,14 @@ msgstr "巡航速度步進"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Cruise Speed Unit (Basic)"
 msgstr "巡航速度步進（基礎）"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Cruise −"
+msgstr "巡航 −"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Cruise − Long"
+msgstr "巡航 − 長按"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/device.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -1165,6 +1257,10 @@ msgstr "裝置"
 msgid "Device must be registered with the comma.ai backend to pair."
 msgstr ""
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Device name"
+msgstr "裝置名稱"
+
 #: openpilot/selfdrive/ui/widgets/offroad_alerts.py
 msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
 msgstr "設備溫度過高。系統正在降溫，完成後才能啟動。當前內部組件溫度：%1"
@@ -1200,6 +1296,14 @@ msgstr "停用更新"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
 msgid "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
 msgstr "停用 sunnypilot 縱向控制 (alpha) 切換以允許智慧巡航按鈕管理。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Disconnect"
+msgstr "中斷連線"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Discoverable"
+msgstr "可被發現"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
 msgid "Disengage"
@@ -1322,6 +1426,10 @@ msgstr ""
 msgid "Dongle ID"
 msgstr "裝置 ID"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Double"
+msgstr "雙擊"
+
 #: openpilot\selfdrive\ui\layouts\settings\software.py
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "Download"
@@ -1443,6 +1551,10 @@ msgstr "搶先體驗：成為 sunnypilot 贊助商"
 msgid "Eco Cruise Control"
 msgstr ""
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Edit"
+msgstr "編輯"
+
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/onboarding.py
@@ -1469,6 +1581,10 @@ msgid "Enable Always Offroad"
 msgstr "啟用始終離路"
 
 
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Enable Bluetooth"
+msgstr "啟用藍牙"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Enable Carrot Navigation"
@@ -1622,9 +1738,21 @@ msgstr "確保輸入的 URL 有效，且裝置的網路連線良好。"
 msgid "Enter APN"
 msgstr "輸入 APN"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Enter PIN"
+msgstr "輸入 PIN"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Enter passkey"
+msgstr "輸入配對碼"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fine-tune stop distance for traffic lights (cm)."
 msgstr "紅綠燈停車距離微調（公分）。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Flash an AGNOS with Bluetooth support or plug in a USB Bluetooth dongle."
+msgstr "刷入支援藍牙的 AGNOS 系統，或插入 USB 藍牙適配器。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fold the phone app traffic congestion report into map-based cruise control. Only ever lowers the target speed. Needs Smart Cruise Control - Map to be on as well."
@@ -1638,9 +1766,21 @@ msgstr "跟車距離"
 msgid "Following distance, longitudinal gains, acceleration limits and cruise behavior."
 msgstr "跟車距離、縱向增益、加速度限制和巡航行為。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Forget \"{}\"?"
+msgstr "是否忘記「{}」？"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Fork Control"
 msgstr "匝道控制"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Gap"
+msgstr "間距"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Generic keyboard / HID"
+msgstr "通用鍵盤 / HID"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Hardware / Tests"
@@ -1670,13 +1810,57 @@ msgstr "80 km/h 以下允許的橫向加速度，單位為百分比。數值越�
 msgid "How openpilot engages cruise and which steering wheel buttons control it."
 msgstr "openpilot 如何啟用巡航，以及方向盤上哪些按鈕控制它。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Install BlueZ to enable Bluetooth HID remotes and device management."
+msgstr "安裝 BlueZ 以啟用藍牙 HID 遙控器與裝置管理。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Install Bluetooth"
+msgstr "安裝藍牙"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Installing..."
+msgstr "安裝中..."
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "LFA"
+msgstr "LFA"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "LFA Long"
+msgstr "LFA 長按"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Lane Guide Blocking"
 msgstr "車道引導封鎖"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Lane Left"
+msgstr "向左變換車道"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Lane Right"
+msgstr "向右變換車道"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 msgid "Lateral Tuning"
 msgstr "橫向調校"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Long"
+msgstr "長按"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Mapping off"
+msgstr "映射關閉"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Mapping on"
+msgstr "映射開啟"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Name shown to other Bluetooth devices."
+msgstr "其他藍牙裝置看到的名稱。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Navi"
@@ -1694,13 +1878,45 @@ msgstr "導航限速控制"
 msgid "Navigation-based speed control, speed cameras, road limits and speed bumps."
 msgstr "基於導航的限速控制、測速相機、道路限速和減速帶。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "No Bluetooth adapter found"
+msgstr "未找到藍牙適配器"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "No devices found"
+msgstr "未找到裝置"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Normal Road Curve Aggressiveness"
 msgstr "普通道路彎道積極程度"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "ON"
+msgstr "開"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 msgid "OPEN"
 msgstr "開啟"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Paddle −"
+msgstr "撥片 −"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Pair"
+msgstr "配對"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Pair with \"{}\"?"
+msgstr "是否與「{}」配對？"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Paired devices"
+msgstr "已配對裝置"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Pairing code: {}"
+msgstr "配對碼：{}"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Percent of nav speed to use as target (100 = exact limit)."
@@ -1710,9 +1926,33 @@ msgstr "以導航限速為基準的目標速度百分比（100=嚴格照限速�
 msgid "Percent of the nav-recommended turn speed to use."
 msgstr "使用導航建議過彎速度的百分比。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Profile"
+msgstr "輸入類型"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Radar / Tracks"
 msgstr "雷達 / 目標"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Ready"
+msgstr "就緒"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Receiving input"
+msgstr "接收輸入中"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Remove all pairings and restart the Bluetooth service."
+msgstr "移除所有配對並重新啟動藍牙服務。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Reset Bluetooth"
+msgstr "重置藍牙"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Retry"
+msgstr "重試"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Road Limit Raising"
@@ -1721,6 +1961,10 @@ msgstr "限速上調"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Road Speed Limits"
 msgstr "道路限速"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Save"
+msgstr "儲存"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Scale every alert sound, in percent. 100 keeps the current loudness."
@@ -1742,6 +1986,10 @@ msgstr "在 8088 連接埠提供 Carrot 調參頁面（/nav_params）與四角�
 msgid "Shift the auto turn trigger point earlier or later."
 msgstr "讓自動過彎觸發點提前或延後。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Short"
+msgstr "短按"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Shrink the follow distance as speed rises. Off disables it; the three profiles differ in how far up the speed range the gap keeps tightening."
 msgstr "車速升高時縮短跟車距離。關閉則不啟用；三個設定的差別在於跟車距離持續收緊到多高的車速。"
@@ -1762,6 +2010,10 @@ msgstr "隨速度變化跟車時間"
 msgid "Start / Engage"
 msgstr "啟動 / 接管"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Start the Bluetooth service to scan and pair devices."
+msgstr "啟動藍牙服務以搜尋並配對裝置。"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Steering Suspend"
 msgstr "轉向暫停"
@@ -1774,9 +2026,17 @@ msgstr "轉向角超過該值時，橫向控制會在你轉向期間暫停。300
 msgid "Steering geometry, MPC costs, torque tuning, lane change and blind spot."
 msgstr "轉向幾何、MPC 代價、扭矩調校、變道與盲區。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Stop"
+msgstr "停止"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Stop / Speed Camera"
 msgstr "停止線 / 測速照相"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Stop Test"
+msgstr "停止試驗"
 
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
@@ -1790,6 +2050,14 @@ msgstr "測試中..."
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Ask the Amap road name and speed limit services with the stored key and report which ones work."
 msgstr "用已保存的密鑰請求高德的道路名稱與限速服務，並報告哪些服務可用。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Tap a cell to cycle actions, then Save."
+msgstr "點擊格子循環切換動作，然後儲存。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Test / Learn"
+msgstr "鍵位學習 / 試驗"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Test could not run: {}"
@@ -2930,9 +3198,9 @@ msgstr "無需輕推"
 msgid "N·dm"
 msgstr "N·m"
 
-#: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "OFF"
-msgstr "離開"
+msgstr "關"
 
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/sidebar.py
@@ -3133,7 +3401,7 @@ msgstr "將裝置與 comma connect（connect.comma.ai）配對，領取您的 co
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "Paired"
-msgstr "配對"
+msgstr "已配對"
 
 #: openpilot/selfdrive/ui/layouts/settings/imu_calibration.py
 msgid "Park on level ground, then drive straight to calibrate the device orientation."
@@ -4067,6 +4335,10 @@ msgstr "正在拍攝攝影機快照。完成前系統將不會啟動。"
 msgid "Target Branch"
 msgstr "目標分支"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Testing..."
+msgstr "測試中..."
+
 #: openpilot/system/ui/widgets/network.py
 msgid "Tethering Password"
 msgstr "網路共享密碼"
@@ -4087,6 +4359,10 @@ msgstr "重置無法撤銷。你已被警告過。"
 msgid "The set speed will only act as an upper bound."
 msgstr ""
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
+msgstr "目前 AGNOS 核心未暴露 /dev/ttyHS1，請重刷支援藍牙的 AGNOS 版本。"
+
 #: openpilot/selfdrive/ui/widgets/offroad_alerts.py
 msgid "This alert will be cleared when new maps are downloaded."
 msgstr "下載新地圖後此警報將清除。"
@@ -4094,6 +4370,14 @@ msgstr "下載新地圖後此警報將清除。"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
 msgid "This allows the use of full MADS functionality when enabled."
 msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "This device or AGNOS build lacks /dev/btpower."
+msgstr "目前裝置或 AGNOS 版本缺少 /dev/btpower。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
+msgstr "目前裝置或 AGNOS 版本缺少所需的藍牙 UART 和電源節點。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
 msgid "This feature can only be used with sunnypilot longitudinal control enabled."
@@ -4371,6 +4655,10 @@ msgstr "立即升級"
 msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 msgstr "上傳車內鏡頭資料，協助改善駕駛監控演演算法。"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Use Carrot mapping"
+msgstr "使用 Carrot 映射（阻斷原始 HID 輸入）"
+
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid "Use Carrot navigation data for map-based features."
@@ -4636,6 +4924,10 @@ msgstr "是的，刪除所有地圖"
 msgid "Yes, only upstream openpilot (and particular forks) are able to be used for training."
 msgstr ""
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "Yiser-J6"
+msgstr "Yiser-J6"
+
 #: openpilot/selfdrive/ui/layouts/onboarding.py
 msgid "You must accept the Terms of Service in order to use sunnypilot."
 msgstr "您必須接受服務條款才能使用 sunnypilot。"
@@ -4741,6 +5033,10 @@ msgstr ""
 #: openpilot/selfdrive/ui/mici/layouts/settings/network/network_layout.py
 msgid "cellular metered"
 msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
+msgid "center"
+msgstr "中"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/software.py
 msgid "check for update"
