@@ -277,7 +277,7 @@ class VCruiseCarrot(VCruiseHelper):
     self._cruise_available = False
     self._hold_interlock_active = False
     self._steering_interlock_active = False
-    self._lat_enabled = self.params.get("AutoEngage") > 0
+    self._lat_enabled = self.params.get("AutoEngage", return_default=True) > 0
     self._v_cruise_kph_at_brake = 0
     self.cruise_state_available_last = False
 
@@ -314,7 +314,7 @@ class VCruiseCarrot(VCruiseHelper):
     self.AutoSpeedUptoRoadSpeedLimit = 0.0
     self.autoGasCancelSpeed = 30
 
-    self.useLaneLineSpeed = self.params.get("UseLaneLineSpeed")
+    self.useLaneLineSpeed = self.params.get("UseLaneLineSpeed", return_default=True)
     self.useLaneLineSpeedApply = self.useLaneLineSpeed
 
 
@@ -339,37 +339,37 @@ class VCruiseCarrot(VCruiseHelper):
   def update_params(self, is_metric):
     unit_factor = 1.0 if is_metric else CV.MPH_TO_KPH
     if self.frame % 10 == 0:
-      self.autoCruiseControl = self.params.get("AutoCruiseControl") * unit_factor
+      self.autoCruiseControl = self.params.get("AutoCruiseControl", return_default=True) * unit_factor
       self.soft_hold_on_cancel = self.params.get_bool("SoftHoldOnCancel")
-      self.autoGasTokSpeed = self.params.get("AutoGasTokSpeed") * unit_factor
-      self.autoGasCancelSpeed = self.params.get("AutoGasCancelSpeed") * unit_factor
-      self.autoGasSyncSpeed = self.params.get("AutoGasSyncSpeed")
-      self.applyModelSpeed = self.params.get("ApplyModelSpeed") * 0.01
-      self.autoSpeedUptoRoadSpeedLimit = self.params.get("AutoSpeedUptoRoadSpeedLimit") * 0.01
-      self.autoRoadSpeedAdjust = self.params.get("AutoRoadSpeedAdjust") * 0.01
+      self.autoGasTokSpeed = self.params.get("AutoGasTokSpeed", return_default=True) * unit_factor
+      self.autoGasCancelSpeed = self.params.get("AutoGasCancelSpeed", return_default=True) * unit_factor
+      self.autoGasSyncSpeed = self.params.get("AutoGasSyncSpeed", return_default=True)
+      self.applyModelSpeed = self.params.get("ApplyModelSpeed", return_default=True) * 0.01
+      self.autoSpeedUptoRoadSpeedLimit = self.params.get("AutoSpeedUptoRoadSpeedLimit", return_default=True) * 0.01
+      self.autoRoadSpeedAdjust = self.params.get("AutoRoadSpeedAdjust", return_default=True) * 0.01
 
-      useLaneLineSpeed = self.params.get("UseLaneLineSpeed") * unit_factor
+      useLaneLineSpeed = self.params.get("UseLaneLineSpeed", return_default=True) * unit_factor
       if self.useLaneLineSpeed != useLaneLineSpeed:
         self.useLaneLineSpeedApply = useLaneLineSpeed
       self.useLaneLineSpeed = useLaneLineSpeed
 
-      self.speed_from_pcm = self.params.get("SpeedFromPCM")
-      self._cruise_speed_unit = self.params.get("CruiseSpeedUnit")
-      self._cruise_button_long_delay = self.params.get("CruiseButtonLongDelay")
-      self._cruise_speed_unit_basic = self.params.get("CruiseSpeedUnitBasic")
-      self._paddle_mode = self.params.get("PaddleMode")
-      self._cruise_button_mode = self.params.get("CruiseButtonMode")
-      self._cancel_button_mode = self.params.get("CancelButtonMode")
-      self._lfa_button_mode = self.params.get("LfaButtonMode")
+      self.speed_from_pcm = self.params.get("SpeedFromPCM", return_default=True)
+      self._cruise_speed_unit = self.params.get("CruiseSpeedUnit", return_default=True)
+      self._cruise_button_long_delay = self.params.get("CruiseButtonLongDelay", return_default=True)
+      self._cruise_speed_unit_basic = self.params.get("CruiseSpeedUnitBasic", return_default=True)
+      self._paddle_mode = self.params.get("PaddleMode", return_default=True)
+      self._cruise_button_mode = self.params.get("CruiseButtonMode", return_default=True)
+      self._cancel_button_mode = self.params.get("CancelButtonMode", return_default=True)
+      self._lfa_button_mode = self.params.get("LfaButtonMode", return_default=True)
       self.disengage_on_accelerator = self.params.get_bool("DisengageOnAccelerator")
-      self.autoRoadSpeedLimitOffset = self.params.get("AutoRoadSpeedLimitOffset")
-      self.autoNaviSpeedSafetyFactor = self.params.get("AutoNaviSpeedSafetyFactor") * 0.01
-      self.cruiseOnDist = self.params.get("CruiseOnDist") * 0.01
-      cruiseSpeed1 = self.params.get("CruiseSpeed1") * unit_factor
-      cruiseSpeed2 = self.params.get("CruiseSpeed2") * unit_factor
-      cruiseSpeed3 = self.params.get("CruiseSpeed3") * unit_factor
-      cruiseSpeed4 = self.params.get("CruiseSpeed4") * unit_factor
-      cruiseSpeed5 = self.params.get("CruiseSpeed5") * unit_factor
+      self.autoRoadSpeedLimitOffset = self.params.get("AutoRoadSpeedLimitOffset", return_default=True)
+      self.autoNaviSpeedSafetyFactor = self.params.get("AutoNaviSpeedSafetyFactor", return_default=True) * 0.01
+      self.cruiseOnDist = self.params.get("CruiseOnDist", return_default=True) * 0.01
+      cruiseSpeed1 = self.params.get("CruiseSpeed1", return_default=True) * unit_factor
+      cruiseSpeed2 = self.params.get("CruiseSpeed2", return_default=True) * unit_factor
+      cruiseSpeed3 = self.params.get("CruiseSpeed3", return_default=True) * unit_factor
+      cruiseSpeed4 = self.params.get("CruiseSpeed4", return_default=True) * unit_factor
+      cruiseSpeed5 = self.params.get("CruiseSpeed5", return_default=True) * unit_factor
       if cruiseSpeed1 <= 0:
         if self.autoRoadSpeedLimitOffset < 0:
           cruiseSpeed1 = self.nRoadLimitSpeed * self.autoNaviSpeedSafetyFactor
