@@ -2694,43 +2694,6 @@
           ]
         },
         {
-          "key": "MacanAccelLimit",
-          "widget": "multiple_button",
-          "title": "Macan Accel Limit (m/s^2)",
-          "description": "Clamps the acceleration request magnitude. 0 = factory curve.",
-          "options": [
-            {
-              "value": 0,
-              "label": "Off"
-            },
-            {
-              "value": 0.8,
-              "label": "0.8"
-            },
-            {
-              "value": 1.0,
-              "label": "1.0"
-            },
-            {
-              "value": 1.2,
-              "label": "1.2"
-            },
-            {
-              "value": 1.5,
-              "label": "1.5"
-            },
-            {
-              "value": 2.0,
-              "label": "2.0"
-            }
-          ],
-          "enablement": [
-            {
-              "type": "offroad_only"
-            }
-          ]
-        },
-        {
           "key": "MacanAccelDeadzoneEnable",
           "widget": "toggle",
           "title": "Macan Accel Deadzone Enable",

@@ -54,9 +54,6 @@ DESCRIPTIONS = {
     'Field data: 62% of accel events happen with |angle|>8 deg. Takes '
     'effect immediately, no restart needed.'
   ),
-  'accel_limit': tr_noop(
-    'Macan Accel Limit: clamps the acceleration request magnitude (m/s^2). 0 = factory curve.'
-  ),
   'accel_deadzone': tr_noop(
     'Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off.'
   ),
@@ -155,17 +152,6 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
-    self.accel_limit = option_item_sp(
-      lambda: tr("Macan Accel Limit (m/s^2)"),
-      "MacanAccelLimit",
-      min_value=0, max_value=200,
-      description=lambda: tr(DESCRIPTIONS["accel_limit"]),
-      value_change_step=10,
-      use_float_scaling=True,
-      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.1f} m/s^2",
-      enabled=lambda: not ui_state.engaged,
-    )
-
     self.accel_deadzone_enable = toggle_item_sp(
       lambda: tr("Macan Accel Deadzone Enable"),
       description=lambda: tr(DESCRIPTIONS["accel_deadzone_enable"]),
@@ -246,7 +232,6 @@ class VolkswagenSettings(BrandSettings):
       self.corner_limit,
       self.slope_comp,
       self.slope_comp_unlimited,
-      self.accel_limit,
       self.accel_deadzone_enable,
       self.accel_deadzone,
       self.cruise_coast_enable,
@@ -349,8 +334,6 @@ class VolkswagenSettings(BrandSettings):
       # 子选项（放开限制）：仅坡度补偿开启时显示（联动，整行隐藏）
       self.slope_comp_unlimited.action_item.set_enabled(is_macan and not ui_state.engaged and slope_comp_on)
       self.slope_comp_unlimited.set_visible(is_macan and slope_comp_on)
-      self.accel_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.accel_limit.set_visible(is_macan)
       self.accel_deadzone_enable.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.accel_deadzone_enable.set_visible(is_macan)
       deadzone_on = ui_state.params.get_bool("MacanAccelDeadzoneEnable")

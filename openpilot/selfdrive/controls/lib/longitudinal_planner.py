@@ -59,22 +59,6 @@ _A_TOTAL_MAX_BP = [20., 40.]
 def get_max_accel(v_ego):
   return np.interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
-# Macan 加速度限制（MacanAccelLimit 参数，m/s²；0=关闭用原厂曲线）
-# 数据依据（0000004f）：激活时间 20.2% 在 aTarget>1.0、14.7% 在 >1.2（低速曲线允许1.6）
-# ——起步/跟车加速顶到 1.4-1.6 即"忽然加速"体感来源；限到 1.0-1.2 舒适
-_macan_accel_limit = 0.0
-_macan_accel_limit_t = 0.0
-def _get_macan_accel_limit():
-  global _macan_accel_limit, _macan_accel_limit_t
-  now = time.monotonic()
-  if now - _macan_accel_limit_t > 1.0:  # 每1秒刷新（不阻塞）
-    try:
-      _macan_accel_limit = float(Params().get("MacanAccelLimit") or 0.0)  # FLOAT 参数 get() 返回 float
-    except Exception:
-      _macan_accel_limit = 0.0
-    _macan_accel_limit_t = now
-  return _macan_accel_limit
-
 # Macan 弯道系数开关（MacanCornerLimit，BOOL；开=启用，强度下限硬编码 0.3）
 # 数据依据（0000004f）：62%加速事件发生在 |angle|>8°；回放验证 0.36-0.85 压限
 # 强度参数化待后续（FLOAT 开关需 params 库重编译，暂用常量）
@@ -92,20 +76,6 @@ def _get_macan_corner_on():
       _macan_corner_on = False
     _macan_corner_on_t = now
   return _macan_corner_on
-
-def _macan_accel_limited(max_accel: float, CP) -> float:
-  """对 Macan 应用自定义加速度上限（其他车不受影响）"""
-  try:
-    fp = CP.carFingerprint.upper()
-  except Exception:
-    return max_accel
-  if "MACAN" not in fp:
-    return max_accel
-  lim = _get_macan_accel_limit()
-  if lim > 0:
-    return min(max_accel, lim)
-  return max_accel
-
 
 # Macan aTarget 死区（MacanAccelDeadzone，m/s²；0=关闭）
 # 机制实锤（0000004f 段7 帧97000-97700）：MPC 在 0 附近微抖动（+0.04→-0.06 来回过零），
@@ -136,7 +106,6 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
     max_accel = max_accel_override
   else:
     max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
-  max_accel = _macan_accel_limited(max_accel, CP)
   # Macan 弯道系数：方向盘角 >5° 线性压低纵向上限（解决"头没转正就加速"——4f 实测62%加速在弯道）
   # 独立开关：MacanCornerLimit（BOOL）——UI 启停下方按钮；基于当前上限（限幅后）缩放，直道 factor=1 不变
   try:

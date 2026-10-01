@@ -36,28 +36,6 @@ class MacanJerkControl(BigMultiToggle):
     self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
 
 
-class MacanAccelLimitControl(BigMultiToggle):
-  # 2026-08-22 用户反馈：档位太多点击会重启 UI 不跳数值 → 改三档
-  OPTIONS = ["1.0", "1.2", "1.6"]
-
-  def __init__(self, text: str, param: str):
-    super().__init__(text, self.OPTIONS)
-    self._param = param
-    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
-    self._load()
-
-  def _load(self):
-    cur = self._params.get(self._param)
-    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤：
-    # 类型不匹配会永远 idx=0 显示第一档，即"内容不变"）
-    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 0
-    self.set_value(self.OPTIONS[idx])
-
-  def _handle_mouse_release(self, mouse_pos):
-    super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
-
-
 class MacanStartStopDistControl(BigMultiToggle):
   """Macan 起步安全距离（米）：3/5/10 三档（tizi 为 0/3-10 每1米，mici 简化三档）"""
   OPTIONS = ["3", "5", "10"]
@@ -175,7 +153,6 @@ class TogglesLayoutMici(NavScroller):
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_verz_bridge = BigParamControl(tr("Macan Verz Bridge"), "MacanVerzBridge")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
-    macan_accel_limit = MacanAccelLimitControl(tr("Macan Accel Limit (m/s^2)"), "MacanAccelLimit")
     macan_accel_deadzone = MacanAccelDeadzoneControl(tr("Macan Accel Deadzone (m/s^2)"), "MacanAccelDeadzone")
     macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
     macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
@@ -204,7 +181,6 @@ class TogglesLayoutMici(NavScroller):
       macan_slope_comp,
       macan_verz_bridge,
       macan_slope_comp_unlimited,
-      macan_accel_limit,
       macan_deadzone_enable,
       macan_accel_deadzone,
       macan_radar_fusion,
@@ -222,7 +198,6 @@ class TogglesLayoutMici(NavScroller):
     self._macan_slope_comp = macan_slope_comp
     self._macan_verz_bridge = macan_verz_bridge
     self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
-    self._macan_accel_limit = macan_accel_limit
     self._macan_accel_deadzone = macan_accel_deadzone
     self._macan_deadzone_enable = macan_deadzone_enable
     self._macan_radar_fusion = macan_radar_fusion
@@ -248,7 +223,6 @@ class TogglesLayoutMici(NavScroller):
       ("MacanSlopeComp", macan_slope_comp),
       ("MacanVerzBridge", macan_verz_bridge),
       ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
-      ("MacanAccelLimit", macan_accel_limit),
       ("MacanAccelDeadzone", macan_accel_deadzone),
       ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
       ("MacanRadarFusion", macan_radar_fusion),
@@ -316,7 +290,6 @@ class TogglesLayoutMici(NavScroller):
       self._macan_slope_comp.set_visible(True)
       self._macan_verz_bridge.set_visible(True)
       self._macan_slope_comp_unlimited.set_visible(slope_comp_on)
-      self._macan_accel_limit.set_visible(True)
       self._macan_deadzone_enable.set_visible(True)
       self._macan_accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))
       self._macan_radar_fusion.set_visible(True)
@@ -336,7 +309,6 @@ class TogglesLayoutMici(NavScroller):
       self._macan_slope_comp.set_visible(False)
       self._macan_verz_bridge.set_visible(False)
       self._macan_slope_comp_unlimited.set_visible(False)
-      self._macan_accel_limit.set_visible(False)
       self._macan_deadzone_enable.set_visible(False)
       self._macan_accel_deadzone.set_visible(False)
       self._macan_radar_fusion.set_visible(False)
