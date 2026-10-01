@@ -1,3 +1,0 @@
-{"id": "art_1787744984423_ae350a", "kind": "file", "title": "read_file", "payload": {"path": "/data/openpilot/ai/server/deps.py", "filePath": "/data/openpilot/ai/server/deps.py"}, "sourceTool": "read_file", "createdAt": 1787744984}
-{"id": "art_1787745133835_577d37", "kind": "file", "title": "read_file", "payload": {"path": "/data/openpilot/ai/system/paths.py", "filePath": "/data/openpilot/ai/system/paths.py"}, "sourceTool": "read_file", "createdAt": 1787745133}
-{"id": "art_1787745266767_e1d28c", "kind": "file", "title": "read_file", "payload": {"path": "/data/openpilot/ai/aid.py", "filePath": "/data/openpilot/ai/aid.py"}, "sourceTool": "read_file", "createdAt": 1787745266}
