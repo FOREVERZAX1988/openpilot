@@ -77,22 +77,25 @@ def startup_master_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
   return StartupAlert("WARNING: This branch is untested", branch, alert_status=AlertStatus.userPrompt)
 
 def below_engage_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  return NoEntryAlert(f"Drive above {get_display_speed(CP.minEnableSpeed, metric)} to engage")
+  return NoEntryAlert(tr("Drive above {speed} to engage").format(speed=get_display_speed(CP.minEnableSpeed, metric)))
 
 
 def below_steer_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   return Alert(
-    f"Steering unavailable below {get_display_speed(CP.minSteerSpeed, metric)}",
+    tr("Steering unavailable below {speed}").format(speed=get_display_speed(CP.minSteerSpeed, metric)),
     "",
     AlertStatus.userPrompt, AlertSize.small,
     Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.4)
 
 
 def calibration_incomplete_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  first_word = 'Recalibrating' if sm['extrinsicsCalibration'].calStatus == log.ExtrinsicsCalibration.Status.recalibrating else 'Calibration'
+  cal = sm['extrinsicsCalibration']
+  recalibrating = cal.calStatus == log.ExtrinsicsCalibration.Status.recalibrating
+  # 校准进度条的数值必须留在串里 → 在源侧 tr()，msgid 才能是静态模板（f-string 提不出 msgid）
+  progress_text = tr("Recalibrating in progress: {progress}%") if recalibrating else tr("Calibration in progress: {progress}%")
   return Alert(
-    f"{first_word} in progress: {sm['extrinsicsCalibration'].calPerc:.0f}%",
-    f"Drive above {get_display_speed(MIN_SPEED_FILTER, metric)} to calibrate",
+    progress_text.format(progress=f"{cal.calPerc:.0f}"),
+    tr("Drive above {speed} to calibrate").format(speed=get_display_speed(MIN_SPEED_FILTER, metric)),
     AlertStatus.normal, AlertSize.mid,
     Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2)
 
@@ -102,20 +105,20 @@ def too_distracted_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
     return NoEntryAlert("", priority=Priority.LOWEST)
   if sm['driverMonitoringState'].lockout:
     mins_left = sm['driverMonitoringState'].lockoutMinutesRemaining
-    subtitle = f"{mins_left} min remaining"
+    subtitle = tr("{mins} min remaining").format(mins=mins_left)
     return NoEntryAlert("Driver Distracted", subtitle, priority=Priority.HIGH)
   return NoEntryAlert("Pay Attention to Engage", priority=Priority.HIGH)
 
 
 def out_of_space_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   full_perc = round(100. - sm['deviceState'].freeSpacePercent)
-  return NormalPermanentAlert("Out of Storage", f"Used {full_perc}%")
+  return NormalPermanentAlert("Out of Storage", tr("Used {percent}%").format(percent=full_perc))
 
 
 def posenet_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   mdl = sm['modelV2'].velocity.x[0] if len(sm['modelV2'].velocity.x) else math.nan
   err = CS.vEgo - mdl
-  msg = f"Speed Error: {err:.1f} m/s"
+  msg = tr("Speed Error: {error} m/s").format(error=f"{err:.1f}")
   return NoEntryAlert(msg, alert_text_1="Posenet Speed Invalid")
 
 
@@ -141,7 +144,7 @@ def calibration_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
   rpy = sm['extrinsicsCalibration'].rpyCalib
   yaw = math.degrees(rpy[2] if len(rpy) == 3 else math.nan)
   pitch = math.degrees(rpy[1] if len(rpy) == 3 else math.nan)
-  angles = f"Please remount device (Pitch: {pitch:.1f}°, Yaw: {yaw:.1f}°)"
+  angles = tr("Please remount device (Pitch: {pitch}°, Yaw: {yaw}°)").format(pitch=f"{pitch:.1f}", yaw=f"{yaw:.1f}")
   return NormalPermanentAlert("Calibration Invalid", angles)
 
 
@@ -149,15 +152,15 @@ def paramsd_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.Sub
   if not sm['vehicleParameters'].angleOffsetValid:
     angle_offset_deg = sm['vehicleParameters'].angleOffsetDeg
     title = "Steering Not Aligned"
-    text = f"Angle offset too high (Offset: {angle_offset_deg:.1f}°)"
+    text = tr("Angle offset too high (Offset: {offset}°)").format(offset=f"{angle_offset_deg:.1f}")
   elif not sm['vehicleParameters'].steerRatioValid:
     steer_ratio = sm['vehicleParameters'].steerRatio
     title = "Steering Ratio Mismatch"
-    text = f"Steering rack geometry may be off (Ratio: {steer_ratio:.1f})"
+    text = tr("Steering rack geometry may be off (Ratio: {ratio})").format(ratio=f"{steer_ratio:.1f}")
   elif not sm['vehicleParameters'].stiffnessFactorValid:
     stiffness_factor = sm['vehicleParameters'].stiffnessFactor
     title = "Tire Stiffness Abnormal"
-    text = f"Check tires, pressure or alignment (Factor: {stiffness_factor:.1f})"
+    text = tr("Check tires, pressure or alignment (Factor: {factor})").format(factor=f"{stiffness_factor:.1f}")
   else:
     return NoEntryAlert("paramsd Temporary Error")
 
@@ -167,26 +170,26 @@ def overheat_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster,
   cpu = max(sm['deviceState'].cpuTempC, default=0.)
   gpu = max(sm['deviceState'].gpuTempC, default=0.)
   temp = max((cpu, gpu, sm['deviceState'].memoryTempC))
-  return NormalPermanentAlert("System Overheated", f"{temp:.0f} C")
+  return NormalPermanentAlert("System Overheated", tr("{temp} C").format(temp=f"{temp:.0f}"))
 
 
 def low_memory_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  return NormalPermanentAlert("Out of Memory", f"Used {sm['deviceState'].memoryUsagePercent}%")
+  return NormalPermanentAlert("Out of Memory", tr("Used {percent}%").format(percent=sm['deviceState'].memoryUsagePercent))
 
 
 def high_cpu_usage_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   x = max(sm['deviceState'].cpuUsagePercent, default=0.)
-  return NormalPermanentAlert("CPU Usage Too High", f"Used {x}%")
+  return NormalPermanentAlert("CPU Usage Too High", tr("Used {percent}%").format(percent=x))
 
 
 def modeld_lagging_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  return NormalPermanentAlert("Driving Model Lagging", f"Dropped {sm['modelV2'].frameDropPerc:.1f}% of frames")
+  return NormalPermanentAlert("Driving Model Lagging", tr("Dropped {percent}% of frames").format(percent=f"{sm['modelV2'].frameDropPerc:.1f}"))
 
 
 def joystick_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   gb = sm['carControl'].actuators.accel / 4.
   steer = sm['carControl'].actuators.torque
-  vals = f"Throttle: {round(gb * 100.)}%, Steering: {round(steer * 100.)}%"
+  vals = tr("Throttle: {throttle}%, Steering: {steering}%").format(throttle=round(gb * 100.), steering=round(steer * 100.))
   return NormalPermanentAlert("Joystick Mode", vals)
 
 

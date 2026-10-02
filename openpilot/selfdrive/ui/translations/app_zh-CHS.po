@@ -222,9 +222,6 @@ msgstr "调整软件延迟"
 msgid "Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay value is 0.2"
 msgstr "当实时学习转向延迟关闭时调整软件延迟。默认软件延迟值为 0.2。"
 
-msgid "Adjusting to Speed Limit {speed} {\"km/h\" if metric else \"mph\"}"
-msgstr "正在调整至限速 {speed} {\"km/h\" if metric else \"mph\"}"
-
 #: openpilot/system/ui/widgets/network.py
 msgid "Advanced"
 msgstr "高级"
@@ -285,9 +282,6 @@ msgstr "需要更新操作系统。请连接 Wi-Fi 以获得最快的更新体�
 #: openpilot/selfdrive/ui/widgets/offroad_alerts.py
 msgid "An update to your device's operating system is downloading in the background. You will be prompted to update when it's ready to install."
 msgstr "设备操作系统更新正在后台下载。准备就绪后将提示您安装。"
-
-msgid "Angle offset too high (Offset: {angle_offset_deg:.1f}°)"
-msgstr "角度偏移过大 (偏移量: {angle_offset_deg:.1f}度)"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/firehose.py
 msgid "Any fast phone or laptop charger should be fine."
@@ -877,9 +871,6 @@ msgstr "车辆通电时更改此设置将重启 sunnypilot。"
 
 msgid "Check Hardware"
 msgstr "请检查硬件"
-
-msgid "Check tires, pressure or alignment (Factor: {stiffness_factor:.1f})"
-msgstr "请检查轮胎、胎压或定位 (系数: {stiffness_factor:.1f})"
 
 #: openpilot/system/ui/tici_setup.py
 msgid "Choose Software to Use"
@@ -1722,12 +1713,6 @@ msgstr "正在下载地图..."
 msgid "Downloading..."
 msgstr "正在下载..."
 
-msgid "Drive above {get_display_speed(CP.minEnableSpeed, metric)} to engage"
-msgstr "请将时速提高至 {get_display_speed(CP.minEnableSpeed, metric)} 来启用"
-
-msgid "Drive above {get_display_speed(MIN_SPEED_FILTER, metric)} to calibrate"
-msgstr "请将时速提高至 {get_display_speed(MIN_SPEED_FILTER, metric)} 进行校准"
-
 #: openpilot/selfdrive/ui/mici/layouts/settings/imu_calibration.py
 msgid "Drive straight"
 msgstr "直线行驶"
@@ -1784,9 +1769,6 @@ msgstr "驾驶风格: 从容"
 #: selfdrived
 msgid "Driving style: Standard"
 msgstr "驾驶风格: 标准"
-
-msgid "Dropped {sm['modelV2'].frameDropPerc:.1f}% of frames"
-msgstr "已丢帧 {sm['modelV2'].frameDropPerc:.1f}%"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py
 msgid "Dynamic"
@@ -2785,9 +2767,6 @@ msgid ""
 "GREEN\n"
 "LIGHT"
 msgstr "绿灯"
-
-msgid "Gas: {round(gb * 100.)}%, Steer: {round(steer * 100.)}%"
-msgstr "油门: {round(gb * 100.)}%, 转向: {round(steer * 100.)}%"
 
 msgid "Gear not D"
 msgstr "挡位未在D挡"
@@ -3984,9 +3963,6 @@ msgstr "请启用“始终非行车”模式或熄火后再调整这些开关。
 msgid "Please reboot and try again."
 msgstr "请重启后重试。"
 
-msgid "Please remount device (Pitch: {pitch:.1f}°, Yaw: {yaw:.1f}°)"
-msgstr "请重新安装设备 (俯仰角: {pitch:.1f}度, 偏航角: {yaw:.1f}度)"
-
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Policy Model"
 msgstr "策略模型"
@@ -4782,9 +4758,6 @@ msgstr "测速相机控制模式"
 msgid "Speed Camera Haptic Alert"
 msgstr "测速相机震动提醒"
 
-msgid "Speed Error: {err:.1f} m/s"
-msgstr "速度误差: {err:.1f} 米/秒"
-
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Speed Limit"
@@ -4792,9 +4765,6 @@ msgstr "限速"
 
 msgid "Speed Limit Assist: Activation Required"
 msgstr "限速辅助：需激活"
-
-msgid "Speed Limit Assist: adjust set speed to {pcm_long_required_max_set_speed_conv} {\"km/h\" if metric else \"mph\"} to engage"
-msgstr "限速辅助：请将设定速度调至 {pcm_long_required_max_set_speed_conv} {\"km/h\" if metric else \"mph\"} 以启用"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Speed Limit Offset"
@@ -4958,12 +4928,6 @@ msgstr "方向盘被转动"
 
 msgid "Steering misalignment detected"
 msgstr "检测到转向系统偏移"
-
-msgid "Steering rack geometry may be off (Ratio: {steer_ratio:.1f})"
-msgstr "转向齿条几何可能不正确 (传动比: {steer_ratio:.1f})"
-
-msgid "Steering unavailable below {get_display_speed(CP.minSteerSpeed, metric)}"
-msgstr "转向在 {get_display_speed(CP.minSteerSpeed, metric)} 以下不可用"
 
 msgid "Stock AEB: Risk of Collision"
 msgstr "原厂AEB：碰撞风险"
@@ -5470,15 +5434,6 @@ msgstr "在受支持的 TSS2 混动丰田车型上使用车辆的自动驻车功
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
 msgid "Use vision path predictions to estimate the appropriate speed to drive through turns ahead."
 msgstr "使用视觉路径预测估算通过前方弯道的合适速度。"
-
-msgid "Used {full_perc}%"
-msgstr "已用 {full_perc}%"
-
-msgid "Used {sm['deviceState'].memoryUsagePercent}%"
-msgstr "已用 {sm['deviceState'].memoryUsagePercent}%"
-
-msgid "Used {x}%"
-msgstr "已用 {x}%"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
 msgid "Using Experimental mode is recommended with openpilot longitudinal control alpha."
@@ -7041,18 +6996,6 @@ msgstr "广角"
 msgid "wrong password"
 msgstr "密码错误"
 
-msgid "{first_word} in progress: {sm['extrinsicsCalibration'].calPerc:.0f}%"
-msgstr "{first_word}进行中：{sm['extrinsicsCalibration'].calPerc:.0f}%"
-
-msgid "{mins_left} min remaining"
-msgstr "剩余 {mins_left} 分钟"
-
-msgid "{round(duration)} s remaining. Press again to save early."
-msgstr "剩余 {round(duration)} 秒。再次按下可提前保存。"
-
-msgid "{temp:.0f} C"
-msgstr "{temp:.0f} 摄氏度"
-
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/display.py
 msgid "{} %"
 msgstr "{} %"
@@ -7510,3 +7453,54 @@ msgstr "正在调整至上一限速"
 
 msgid "Restart the car to retry,\nnow driving on small model"
 msgstr "重启车辆以重试，\n现改用小模型行驶"
+
+msgid "Drive above {speed} to engage"
+msgstr "请将时速提高至 {speed} 来启用"
+
+msgid "Drive above {speed} to calibrate"
+msgstr "请将时速提高至 {speed} 进行校准"
+
+msgid "Steering unavailable below {speed}"
+msgstr "转向在 {speed} 以下不可用"
+
+msgid "Calibration in progress: {progress}%"
+msgstr "校准进行中：{progress}%"
+
+msgid "Recalibrating in progress: {progress}%"
+msgstr "重新校准进行中：{progress}%"
+
+msgid "{mins} min remaining"
+msgstr "剩余 {mins} 分钟"
+
+msgid "Used {percent}%"
+msgstr "已用 {percent}%"
+
+msgid "Speed Error: {error} m/s"
+msgstr "速度误差：{error} 米/秒"
+
+msgid "Please remount device (Pitch: {pitch}°, Yaw: {yaw}°)"
+msgstr "请重新安装设备 (俯仰角: {pitch}°, 偏航角: {yaw}°)"
+
+msgid "Angle offset too high (Offset: {offset}°)"
+msgstr "角度偏移过大 (偏移量: {offset}°)"
+
+msgid "Steering rack geometry may be off (Ratio: {ratio})"
+msgstr "转向齿条几何可能不正确 (传动比: {ratio})"
+
+msgid "Check tires, pressure or alignment (Factor: {factor})"
+msgstr "请检查轮胎、胎压或定位 (系数: {factor})"
+
+msgid "{temp} C"
+msgstr "{temp} 摄氏度"
+
+msgid "Dropped {percent}% of frames"
+msgstr "已丢帧 {percent}%"
+
+msgid "Throttle: {throttle}%, Steering: {steering}%"
+msgstr "油门: {throttle}%, 转向: {steering}%"
+
+msgid "Adjusting to Speed Limit {speed} {unit}"
+msgstr "正在调整至限速 {speed} {unit}"
+
+msgid "Speed Limit Assist: adjust set speed to {speed} {unit} to engage"
+msgstr "限速辅助：请将设定速度调至 {speed} {unit} 以启用"

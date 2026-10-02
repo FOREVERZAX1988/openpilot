@@ -6558,3 +6558,54 @@ msgstr "正在調整至上一限速"
 
 msgid "Restart the car to retry,\nnow driving on small model"
 msgstr "重啟車輛以重試，\n現改用小模型行駛"
+
+msgid "Drive above {speed} to engage"
+msgstr "請將時速提高至 {speed} 來啟用"
+
+msgid "Drive above {speed} to calibrate"
+msgstr "請將時速提高至 {speed} 進行校正"
+
+msgid "Steering unavailable below {speed}"
+msgstr "轉向在 {speed} 以下無法使用"
+
+msgid "Calibration in progress: {progress}%"
+msgstr "校正進行中：{progress}%"
+
+msgid "Recalibrating in progress: {progress}%"
+msgstr "重新校正進行中：{progress}%"
+
+msgid "{mins} min remaining"
+msgstr "剩餘 {mins} 分鐘"
+
+msgid "Used {percent}%"
+msgstr "已用 {percent}%"
+
+msgid "Speed Error: {error} m/s"
+msgstr "速度誤差：{error} 公尺/秒"
+
+msgid "Please remount device (Pitch: {pitch}°, Yaw: {yaw}°)"
+msgstr "請重新安裝裝置 (俯仰角: {pitch}°, 偏航角: {yaw}°)"
+
+msgid "Angle offset too high (Offset: {offset}°)"
+msgstr "角度偏移過大 (偏移量: {offset}°)"
+
+msgid "Steering rack geometry may be off (Ratio: {ratio})"
+msgstr "轉向齒條幾何可能不正確 (傳動比: {ratio})"
+
+msgid "Check tires, pressure or alignment (Factor: {factor})"
+msgstr "請檢查輪胎、胎壓或定位 (係數: {factor})"
+
+msgid "{temp} C"
+msgstr "{temp} 攝氏度"
+
+msgid "Dropped {percent}% of frames"
+msgstr "已丟幀 {percent}%"
+
+msgid "Throttle: {throttle}%, Steering: {steering}%"
+msgstr "油門: {throttle}%, 轉向: {steering}%"
+
+msgid "Adjusting to Speed Limit {speed} {unit}"
+msgstr "正在調整至限速 {speed} {unit}"
+
+msgid "Speed Limit Assist: adjust set speed to {speed} {unit} to engage"
+msgstr "限速輔助：請將設定速度調至 {speed} {unit} 以啟用"

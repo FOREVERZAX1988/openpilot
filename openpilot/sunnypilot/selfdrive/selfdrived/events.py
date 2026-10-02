@@ -31,7 +31,7 @@ IS_MICI = HARDWARE.get_device_type() == 'mici'
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   speedLimit = sm['longitudinalPlanSP'].speedLimit.resolver.speedLimit
   speed = round(speedLimit * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH))
-  message = f'Adjusting to Speed Limit {speed} {"km/h" if metric else "mph"}'
+  message = tr("Adjusting to Speed Limit {speed} {unit}").format(speed=speed, unit="km/h" if metric else "mph")
   return Alert(
     message,
     "",
@@ -57,7 +57,7 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     pcm_long_required_max_set_speed_conv = round(pcm_long_required_max * speed_conv)
     
 
-    alert_1_str = f"Speed Limit Assist: adjust set speed to {pcm_long_required_max_set_speed_conv} {"km/h" if metric else "mph"} to engage"
+    alert_1_str = tr("Speed Limit Assist: adjust set speed to {speed} {unit} to engage").format(speed=pcm_long_required_max_set_speed_conv, unit="km/h" if metric else "mph")
   else:
     if IS_MICI:
       if set_speed_conv < speed_limit_final_last_conv:
