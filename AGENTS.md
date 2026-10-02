@@ -177,3 +177,19 @@ openpilot/selfdrive/test/process_replay/test_processes.py -j$(nproc)
 - **Safety message lag = automatic disengage**: any monitored CAN msg lagging >1s causes `controls_allowed=false`. Affects feature additions reading new messages.
 - **Submodule URLs are FORKED** for panda + opendbc + tinygrad. `git submodule update --remote` will pull from sunnypilot/conversun forks, not commaai upstream.
 - Pre-existing branch `mazda-port` is in-progress car port work - see [docs/migration/](file:///Users/cyonsun/Documents/Code/sunnypilot/docs/migration).
+
+## 推送约定（强制 · 勿再向用户确认）
+
+- **统一走 op助手推送**：`git_push` / `git_publish_pull_request` / `publish_changes`。凭据已在 op助手内配置好，**不要**再向用户索要 token。
+- **绕开 LFS**：`GIT_LFS_SKIP_PUSH=1`（上述工具已自动加）。
+- **带 `--no-verify`**：跳过 pre-push hook。
+- **本机实测（2026-10-02）**：`git_push` 会因本机无 SSH key 而失败（全局 `pushInsteadOf` 把 `https://github.com/` 改写成 SSH，报 `git@github.com: Permission denied (publickey)`）。此时直接用 PAT-helper 命令推送（token 不进 argv）：
+
+  ```bash
+  GIT_LFS_SKIP_PUSH=1 GIT_TERMINAL_PROMPT=0 git \
+    -c credential.helper=/data/ai/bin/gh_credential.sh \
+    push --no-verify https://FOREVERZAX1988@github.com/FOREVERZAX1988/openpilot.git HEAD:<branch>
+  git fetch origin <branch>   # 显式 URL 推送不会自动更新 remote-tracking
+  ```
+
+- 详见 `ai/docs/GIT_LFS.md`（含实测补记）与技能 `ai/skills/git-lfs-fork`。
