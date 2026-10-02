@@ -477,21 +477,29 @@ def hardware_thread(end_event, hw_queue) -> None:
     rising_edge_started = should_start and not should_start_prev
     status_packet_interval = 1. if show_alert else 600.
     if rising_edge_started or (count % int(status_packet_interval / DT_HW)) == 0:
-      dat = {
-        'count': count,
-        'pandaStates': [strip_deprecated_keys(p.to_dict()) for p in pandaStates],
-        'peripheralState': strip_deprecated_keys(peripheralState.to_dict()),
-        'location': (strip_deprecated_keys(sm["gpsLocationExternal"].to_dict()) if sm.alive["gpsLocationExternal"] else None),
-        'deviceState': strip_deprecated_keys(msg.to_dict())
-      }
-      cloudlog.event("STATUS_PACKET", **dat)
+      # This packet is only for reporting. capnp raises RuntimeError("Member was null.")
+      # from to_dict() when a nested enum carries an ordinal the local schema does not
+      # know (schema/firmware skew). That must never kill hardware_thread: this thread is
+      # the only deviceState publisher, so losing it freezes networkType/thermal for the
+      # whole UI (shows up as "no network" while Wi-Fi is up).
+      try:
+        dat = {
+          'count': count,
+          'pandaStates': [strip_deprecated_keys(p.to_dict()) for p in pandaStates],
+          'peripheralState': strip_deprecated_keys(peripheralState.to_dict()),
+          'location': (strip_deprecated_keys(sm["gpsLocationExternal"].to_dict()) if sm.alive["gpsLocationExternal"] else None),
+          'deviceState': strip_deprecated_keys(msg.to_dict())
+        }
+        cloudlog.event("STATUS_PACKET", **dat)
 
-      # save last one before going onroad
-      if rising_edge_started:
-        try:
-          params.put("LastOffroadStatusPacket", dat, block=True)
-        except Exception:
-          cloudlog.exception("failed to save offroad status")
+        # save last one before going onroad
+        if rising_edge_started:
+          try:
+            params.put("LastOffroadStatusPacket", dat, block=True)
+          except Exception:
+            cloudlog.exception("failed to save offroad status")
+      except Exception:
+        cloudlog.exception("failed to build STATUS_PACKET (enum/schema skew); keeping deviceState alive")
 
     params.put_bool("NetworkMetered", msg.deviceState.networkMetered)
 
