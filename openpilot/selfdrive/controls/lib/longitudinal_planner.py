@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+import time
 import numpy as np
 
 import openpilot.cereal.messaging as messaging
@@ -14,6 +15,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDX
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan, should_stop
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.params import Params
 
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 from openpilot.sunnypilot.carrot.traffic_stop import (
@@ -24,6 +26,28 @@ A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 J_CRUISE_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MIN = -1.2
+# Macan 巡航滑行带（2026-08-26 根因修复：005f/0060 喘息振荡）
+# 原链路：target_accel=clip(v_cruise-v_ego, -1.2, max)——P=1 无限幅带，0.7s 执行滞后+惯性
+# → vEgo 过冲 → 反向全力(±1.2) → 极限环(±1.3m/s, ~10s 周期)=“忽快忽慢、无滑行感”
+# 带内(±0.4m/s)输出 0 = 滑行，车自然收敛；带外 deadband 控制（边界连续无跳变）
+_MACAN_CRUISE_COAST_BAND = 0.4  # m/s ≈ ±1.4km/h
+_macan_cruise_coast = 0.0
+_macan_cruise_coast_t = 0.0
+def _get_macan_cruise_coast():
+  """Macan 巡航滑行带（MacanCruiseCoastEnable/Band 参数）：总开关关或 band<=0 → 0（回退原行为）"""
+  global _macan_cruise_coast, _macan_cruise_coast_t
+  now = time.monotonic()
+  if now - _macan_cruise_coast_t > 1.0:  # 每1秒刷新（不阻塞）
+    try:
+      if Params().get_bool("MacanCruiseCoastEnable"):
+        # return_default=True：参数未写入时用默认 0.4（避免 None→0 导致"开了开关但带宽=0 不生效"）
+        _macan_cruise_coast = float(Params().get("MacanCruiseCoastBand", return_default=True) or 0.0)
+      else:
+        _macan_cruise_coast = 0.0
+    except Exception:
+      _macan_cruise_coast = 0.0
+    _macan_cruise_coast_t = now
+  return _macan_cruise_coast or 0.0
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
@@ -35,6 +59,44 @@ _A_TOTAL_MAX_BP = [20., 40.]
 def get_max_accel(v_ego):
   return np.interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
+# Macan 弯道系数开关（MacanCornerLimit，BOOL；开=启用，强度下限硬编码 0.3）
+# 数据依据（0000004f）：62%加速事件发生在 |angle|>8°；回放验证 0.36-0.85 压限
+# 强度参数化待后续（FLOAT 开关需 params 库重编译，暂用常量）
+_MACAN_CORNER_MIN = 0.3
+_macan_corner_on = False
+_macan_corner_on_t = 0.0
+def _get_macan_corner_on():
+  global _macan_corner_on, _macan_corner_on_t
+  now = time.monotonic()
+  if now - _macan_corner_on_t > 1.0:  # 每1秒刷新（不阻塞）
+    try:
+      # BOOL 参数：get() 返回 python bool，必须用 get_bool()（== "1" 会永远 False）
+      _macan_corner_on = Params().get_bool("MacanCornerLimit")
+    except Exception:
+      _macan_corner_on = False
+    _macan_corner_on_t = now
+  return _macan_corner_on
+
+# Macan aTarget 死区（MacanAccelDeadzone，m/s²；0=关闭）
+# 机制实锤（0000004f 段7 帧97000-97700）：MPC 在 0 附近微抖动（+0.04→-0.06 来回过零），
+# aTarget 过零时 mom 在巡航维持(~95)与滑行(0)之间跳变 = "喘气/一冲一冲"体感
+_macan_deadzone = 0.0
+_macan_deadzone_t = 0.0
+def _get_macan_deadzone():
+  global _macan_deadzone, _macan_deadzone_t
+  now = time.monotonic()
+  if now - _macan_deadzone_t > 1.0:  # 每1秒刷新
+    try:
+      # 总开关：MacanAccelDeadzoneEnable=false 时强制 0（数值保留但不生效，杜绝"关了还生效"）
+      if Params().get_bool("MacanAccelDeadzoneEnable"):
+        _macan_deadzone = float(Params().get("MacanAccelDeadzone") or 0.0)
+      else:
+        _macan_deadzone = 0.0
+    except Exception:
+      _macan_deadzone = 0.0
+    _macan_deadzone_t = now
+  return _macan_deadzone
+
 def get_coast_accel(pitch):
   return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
@@ -44,6 +106,15 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
     max_accel = max_accel_override
   else:
     max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
+  # Macan 弯道系数：方向盘角 >5° 线性压低纵向上限（解决"头没转正就加速"——4f 实测62%加速在弯道）
+  # 独立开关：MacanCornerLimit（BOOL）——UI 启停下方按钮；基于当前上限（限幅后）缩放，直道 factor=1 不变
+  try:
+    if "MACAN" in (getattr(CP, "carFingerprint", "") or "").upper() and _get_macan_corner_on():
+      factor = float(np.clip(1.0 - (abs(angle_steers) - 5.0) / 25.0, _MACAN_CORNER_MIN, 1.0))
+      max_accel = min(max_accel, max_accel * factor)
+  except Exception:
+    pass
+
   if not e2e:
     a_total_max = np.interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V)
     a_y = v_ego ** 2 * angle_steers * CV.DEG_TO_RAD / (CP.steerRatio * CP.wheelbase)
@@ -54,7 +125,25 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
       coast_limit = np.interp(v_ego, [MIN_ALLOW_THROTTLE_SPEED, MIN_ALLOW_THROTTLE_SPEED*2], [max_accel, clipped_accel_coast])
       max_accel = min(max_accel, coast_limit)
 
-  target_accel = np.clip(v_cruise - v_ego, A_CRUISE_MIN, max_accel)
+  dv = v_cruise - v_ego
+  try:
+    _macan_coast = "MACAN" in (getattr(CP, "carFingerprint", "") or "").upper()
+  except Exception:
+    _macan_coast = False
+  if _macan_coast:
+    # Macan 巡航滑行带：带内滑行(0)，带外 deadband 控制（连续，无死区跳变）
+    band = _get_macan_cruise_coast()
+    if band > 0.0:
+      if dv > band:
+        target_accel = np.clip(dv - band, A_CRUISE_MIN, max_accel)
+      elif dv < -band:
+        target_accel = np.clip(dv + band, A_CRUISE_MIN, max_accel)
+      else:
+        target_accel = 0.0
+    else:  # band<=0：回退原行为
+      target_accel = np.clip(dv, A_CRUISE_MIN, max_accel)
+  else:
+    target_accel = np.clip(dv, A_CRUISE_MIN, max_accel)
   j_cruise = np.interp(v_ego, A_CRUISE_MAX_BP, J_CRUISE_VALS)
   target_accel = float(np.clip(target_accel, a_cruise_prev - j_cruise * dt, a_cruise_prev + j_cruise * dt))
 
@@ -216,6 +305,11 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
     self.accel_controller_active = self.is_accel_controller_active(force_decel)
+    # Macan aTarget 死区：|aTarget|<dz 归零（滤 MPC 0附近抖动，防 mom 开合喘气；其他车不受影响）
+    if "MACAN" in (self.CP.carFingerprint or "").upper():
+      dz = _get_macan_deadzone()
+      if dz > 0 and abs(self.output_a_target) < dz:
+        self.output_a_target = 0.0
 
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.output_a_target + a_prev) / 2.0
 

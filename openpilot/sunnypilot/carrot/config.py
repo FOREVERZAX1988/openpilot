@@ -50,6 +50,7 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "AutoKeepForkSpeed": 5,
   "ShowDebugLog": 0,
   "AutoCurveSpeedFactorH": 100,
+  "AutoCurveSpeedAggressiveness": 100,
   "AutoCurveSpeedAggressivenessH": 100,
   "SameSpiCamFilter": 1,
   "StockBlinkerCtrl": 0,

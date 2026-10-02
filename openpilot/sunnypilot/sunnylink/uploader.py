@@ -148,7 +148,9 @@ class Uploader:
       path=key,
       access_token=self.api.get_token(),
     )
-    if url_resp.status_code == 412:
+    if url_resp.status_code != 200:
+      # Non-200 (403 sponsor-only / 401 / 429 ...) has no 'url' key; return the raw
+      # response so upload() logs the real status/body instead of KeyError('url').
       return url_resp
 
     url_resp_json = json.loads(url_resp.text)
@@ -170,6 +172,7 @@ class Uploader:
         stream.close()
 
   def upload(self, name: str, key: str, fn: str, network_type: int, metered: bool) -> bool:
+    self.last_status_code = None
     try:
       sz = os.path.getsize(fn)
     except OSError:
@@ -194,6 +197,7 @@ class Uploader:
       except Exception as e:
         last_exc = (e, traceback.format_exc())
 
+      self.last_status_code = stat.status_code if stat is not None else None
       if stat is not None and stat.status_code in (200, 201, 412):
         self.last_filename = fn
         dt = time.monotonic() - start_time
@@ -274,8 +278,11 @@ def main(exit_event: threading.Event | None = None) -> None:
     elif success:
       backoff = 0.1
     else:
-      cloudlog.info("upload backoff %r", backoff)
-      backoff = min(backoff*2, 120)
+      if uploader.last_status_code in (401, 403, 404):
+        backoff = 3600  # auth/permission/not-found: permanent-ish, don't hammer
+      else:
+        backoff = min(backoff*2, 120)
+      cloudlog.info("upload backoff %r (status %r)", backoff, uploader.last_status_code)
     if allow_sleep:
       time.sleep(backoff + random.uniform(0, backoff))
 

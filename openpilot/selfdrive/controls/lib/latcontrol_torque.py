@@ -1,4 +1,5 @@
 import math
+import os
 import numpy as np
 from collections import deque
 
@@ -49,6 +50,17 @@ class LatControlTorque(LatControl):
     self.jerk_filter = FirstOrderFilter(0.0, 1 / (2 * np.pi * LP_FILTER_CUTOFF_HZ), self.dt)
 
     self.extension = LatControlTorqueExt(self, CP, CP_SP, CI)
+    # DpEpsAssistComp：EPS 助力曲线补偿开关，默认开。
+    # 注意：pyx get_bool 第二参是 block（非 default），且 get() 对 BOOL key 返回 bool，
+    # 无法区分"文件不存在"与"文件=0"——故用文件存在性判断实现"默认开"。
+    self._eps_comp_enabled = True
+    if os.path.exists("/data/params/d/DpEpsAssistComp"):
+      self._eps_comp_enabled = Params().get_bool("DpEpsAssistComp", block=False)
+    # 补偿幅度缩放（默认 1.0=全量；return_default=True 文件不存在返回默认"1"）
+    try:
+      self._eps_comp_scale = float(Params().get("DpEpsAssistCompScale", block=False, return_default=True))
+    except Exception:
+      self._eps_comp_scale = 1.1
 
   def update_torque_parameters(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor

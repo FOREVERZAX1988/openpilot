@@ -22,6 +22,7 @@
   "AutoKeepForkSpeed": 5,
   "ShowDebugLog": 0,
   "AutoCurveSpeedFactorH": 100,
+  "AutoCurveSpeedAggressiveness": 100,
   "AutoCurveSpeedAggressivenessH": 100,
   "AutoCurveSpeedAggressiveness": 100,
   "SameSpiCamFilter": 1,
