@@ -46,6 +46,10 @@ class TestLogmessaged(OpenpilotTestCase):
   def test_big_log(self):
     n = 10
     msg = "a"*3*1024*1024
+    # /data/log already holds hundreds of MB of swaglogs on a real device, so an
+    # absolute-size assertion is environment-dependent (fails on COMMA_HARDWARE for
+    # the wrong reason). Count only the bytes this test appends.
+    before = {f: os.path.getsize(f) for f in self._get_log_files()}
     for _ in range(n):
       cloudlog.info(msg)
     time.sleep(0.5)
@@ -53,7 +57,7 @@ class TestLogmessaged(OpenpilotTestCase):
     msgs = messaging.drain_sock(self.sock)
     assert len(msgs) == 0
 
-    logsize = sum([os.path.getsize(f) for f in self._get_log_files()])
+    logsize = sum(max(0, os.path.getsize(f) - before.get(f, 0)) for f in self._get_log_files())
     assert (n*len(msg)) < logsize < (n*(len(msg)+1024))
 
 
