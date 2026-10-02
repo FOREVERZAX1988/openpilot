@@ -6531,3 +6531,30 @@ msgstr ""
 #: openpilot\system\ui\tici_setup.py
 msgid "If you'd like to proceed, use https://flash.comma.ai to restore your device to a factory state later."
 msgstr ""
+
+msgid "Lane Change Unavailable: At Road Edge"
+msgstr "變道不可用：道路邊緣"
+
+msgid "Press Resume to Release Brake Hold"
+msgstr "按恢復鍵以解除剎車保持"
+
+msgid "Collision Possible"
+msgstr "可能發生碰撞"
+
+msgid "Emergency Braking: collision possible"
+msgstr "緊急煞車：可能發生碰撞"
+
+msgid "Monitoring Lane Departure"
+msgstr "正在監測車道偏離"
+
+msgid "Drive Manually"
+msgstr "手動駕駛"
+
+msgid "Set Speed Changed"
+msgstr "設定速度已變更"
+
+msgid "Adjusting to Last Speed Limit"
+msgstr "正在調整至上一限速"
+
+msgid "Restart the car to retry,\nnow driving on small model"
+msgstr "重啟車輛以重試，\n現改用小模型行駛"

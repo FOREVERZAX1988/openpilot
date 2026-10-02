@@ -7483,3 +7483,30 @@ msgstr "等待 App 连接…"
 #: openpilot\system\ui\mici_reset.py
 msgid "this may take up to\na minute{dots}"
 msgstr "可能需要\n一分钟{dots}"
+
+msgid "Lane Change Unavailable: At Road Edge"
+msgstr "变道不可用：道路边缘"
+
+msgid "Press Resume to Release Brake Hold"
+msgstr "按恢复键以解除制动保持"
+
+msgid "Collision Possible"
+msgstr "可能发生碰撞"
+
+msgid "Emergency Braking: collision possible"
+msgstr "紧急制动：可能发生碰撞"
+
+msgid "Monitoring Lane Departure"
+msgstr "正在监测车道偏离"
+
+msgid "Drive Manually"
+msgstr "手动驾驶"
+
+msgid "Set Speed Changed"
+msgstr "设定速度已更改"
+
+msgid "Adjusting to Last Speed Limit"
+msgstr "正在调整至上一限速"
+
+msgid "Restart the car to retry,\nnow driving on small model"
+msgstr "重启车辆以重试，\n现改用小模型行驶"
