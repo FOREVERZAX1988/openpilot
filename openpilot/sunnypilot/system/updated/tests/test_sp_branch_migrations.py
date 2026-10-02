@@ -12,18 +12,21 @@ from openpilot.system.updated.updated import Updater
 
 
 class TestBranchMigrations(OpenpilotTestCase):
+  # This fork only publishes release-tizi / release-mici (see the inline map in
+  # system/updated/updated.py, which mirrors upstream `mouxangithub/openpilot@master-c3`
+  # and deliberately dropped the `*-c3-new` -> tici/staging/chestnut migrations that
+  # upstream sunnypilot's SP_BRANCH_MIGRATIONS still carries. The `*-c3-new` names are
+  # therefore passed through untouched.
   @parameterized.expand([
-    ("tici", "staging-c3-new", "staging-tici"),
-    ("tici", "dev-c3-new", "staging-tici"),
-    ("tici", "master", "master-tici"),
-    ("tici", "master-dev-c3-new", "master-tici"),
-    ("tizi", "staging-c3-new", "staging"),
-    ("tizi", "dev-c3-new", "dev"),
-    ("tizi", "master-dev-c3-new", "master-dev"),
     ("tizi", "release3", "release-tizi"),
     ("tizi", "release3-staging", "release-tizi-staging"),
     ("mici", "release3", "release-mici"),
     ("mici", "release3-staging", "release-mici-staging"),
+    ("tici", "staging-c3-new", "staging-c3-new"),
+    ("tici", "dev-c3-new", "dev-c3-new"),
+    ("tici", "master-dev-c3-new", "master-dev-c3-new"),
+    ("tizi", "staging-c3-new", "staging-c3-new"),
+    ("tizi", "master-dev-c3-new", "master-dev-c3-new"),
   ], names=["device_type", "branch", "expected"])
   def test_sp_branch_migrations_from_current_branch(self, mocker, device_type, branch, expected):
     params = Params()
@@ -35,18 +38,21 @@ class TestBranchMigrations(OpenpilotTestCase):
     assert Updater().target_branch == expected
 
 
+  # This fork only publishes release-tizi / release-mici (see the inline map in
+  # system/updated/updated.py, which mirrors upstream `mouxangithub/openpilot@master-c3`
+  # and deliberately dropped the `*-c3-new` -> tici/staging/chestnut migrations that
+  # upstream sunnypilot's SP_BRANCH_MIGRATIONS still carries. The `*-c3-new` names are
+  # therefore passed through untouched.
   @parameterized.expand([
-    ("tici", "staging-c3-new", "staging-tici"),
-    ("tici", "dev-c3-new", "staging-tici"),
-    ("tici", "master", "master-tici"),
-    ("tici", "master-dev-c3-new", "master-tici"),
-    ("tizi", "staging-c3-new", "staging"),
-    ("tizi", "dev-c3-new", "dev"),
-    ("tizi", "master-dev-c3-new", "master-dev"),
     ("tizi", "release3", "release-tizi"),
     ("tizi", "release3-staging", "release-tizi-staging"),
     ("mici", "release3", "release-mici"),
     ("mici", "release3-staging", "release-mici-staging"),
+    ("tici", "staging-c3-new", "staging-c3-new"),
+    ("tici", "dev-c3-new", "dev-c3-new"),
+    ("tici", "master-dev-c3-new", "master-dev-c3-new"),
+    ("tizi", "staging-c3-new", "staging-c3-new"),
+    ("tizi", "master-dev-c3-new", "master-dev-c3-new"),
   ], names=["device_type", "branch", "expected"])
   def test_sp_branch_migrations_from_param(self, mocker, device_type, branch, expected):
     params = Params()
