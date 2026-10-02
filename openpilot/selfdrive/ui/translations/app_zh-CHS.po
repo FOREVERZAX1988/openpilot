@@ -5641,7 +5641,7 @@ msgstr "雷达融合（Macan）：使用原厂 ACC 雷达（bus2 距离 + 前车
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
 msgid "Macan Verz Bridge: when ON, the bridge applies a percentage-based ramp to smooth the requested deceleration (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills the breath/pulse. When OFF, the verz request passes through un-smoothed (one-frame, no ramp). Deep braking (<= -1.5) and OEM brake requests still pass through either way for safety."
-msgstr "Macan Verz 桥：开启后，桥接逻辑按百分比斜坡平滑减速请求（步进 = 1.25% × |verz|）——缓和 OP 发起的急减速，消除喘息/脉冲。关闭时 verz 请求原样直通（单帧到位，无斜坡）。出于安全，深度刹车（≤ -1.5）与原厂刹车请求无论开关都直通。"
+msgstr "Macan Verz 桥：开启后，桥接逻辑按百分比斜坡平滑减速请求（步进 = 1.25% × |verz|）——缓和 OP 发起的急减速，消除喘息/脉冲。关闭时 verz 请求原样直通（一步到位，无斜坡）。出于安全，深度刹车（<= -1.5）与原厂刹车请求无论开关都直通。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
 msgid "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
