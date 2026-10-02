@@ -47,31 +47,11 @@ DESCRIPTIONS = {
     'giving small slopes room to act. When OFF, the stock cap applies '
     '(option 1: min(stock_mom)).'
   ),
-  'corner_limit': tr_noop(
-    'Macan Corner Accel Limit: when enabled, the steering angle (>5 deg) '
-    'linearly reduces the longitudinal acceleration cap (down to 0.3x at '
-    '30+ deg) - prevents "accelerating before the wheel is straight". '
-    'Field data: 62% of accel events happen with |angle|>8 deg. Takes '
-    'effect immediately, no restart needed.'
-  ),
   'accel_deadzone': tr_noop(
     'Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off.'
   ),
   'accel_deadzone_enable': tr_noop(
     'Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored).'
-  ),
-  'cruise_coast_enable': tr_noop(
-    'Macan Cruise Coast Enable: when ON, within +/-band of the set speed the '
-    'acceleration request is 0 (coast/glide), so the car naturally settles '
-    'instead of oscillating accelerate-brake (fixes surge/rocking: the accel '
-    'request was non-zero 81% of the time in field data, vEgo swung +/-8 km/h '
-    'around the set speed). Outside the band, deadband control applies '
-    '(smoother corrections). Takes effect immediately.'
-  ),
-  'cruise_coast_band': tr_noop(
-    'Macan Cruise Coast Band (m/s): coasting zone width around the set speed. '
-    '0.4 (~1.4 km/h) recommended. Larger = more gliding but slower speed '
-    'recovery after hills. 0 = off.'
   ),
   'radar_fusion': tr_noop(
     'Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter.'
@@ -128,14 +108,6 @@ class VolkswagenSettings(BrandSettings):
     )
     self.jerk_limit.set_visible(ui_state.params.get_bool("MacanJerkLimitEnable"))  # 初始状态按开关参数
 
-    self.corner_limit = toggle_item_sp(
-      lambda: tr("Corner Accel Limit (Macan)"),
-      description=lambda: tr(DESCRIPTIONS["corner_limit"]),
-      initial_state=ui_state.params.get_bool("MacanCornerLimit"),
-      callback=self._on_enable_corner_limit,
-      enabled=lambda: not ui_state.engaged,
-    )
-
     self.slope_comp = toggle_item_sp(
       lambda: tr("Slope Compensation (Macan)"),
       description=lambda: tr(DESCRIPTIONS["slope_comp"]),
@@ -171,26 +143,6 @@ class VolkswagenSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
     self.accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))  # 初始状态按开关参数
-
-    self.cruise_coast_enable = toggle_item_sp(
-      lambda: tr("Macan Cruise Coast Enable"),
-      description=lambda: tr(DESCRIPTIONS["cruise_coast_enable"]),
-      initial_state=ui_state.params.get_bool("MacanCruiseCoastEnable"),
-      callback=self._on_enable_cruise_coast,
-      enabled=lambda: not ui_state.engaged,
-    )
-
-    self.cruise_coast_band = option_item_sp(
-      lambda: tr("Macan Cruise Coast Band (m/s)"),
-      "MacanCruiseCoastBand",
-      min_value=0, max_value=60,
-      description=lambda: tr(DESCRIPTIONS["cruise_coast_band"]),
-      value_change_step=5,
-      use_float_scaling=True,
-      label_callback=lambda v: tr("Off") if v == 0 else f"{v / 100.0:.2f} m/s",
-      enabled=lambda: not ui_state.engaged,
-    )
-    self.cruise_coast_band.set_visible(ui_state.params.get_bool("MacanCruiseCoastEnable"))  # 初始状态按开关参数
 
     self.radar_fusion = toggle_item_sp(
       lambda: tr("Radar Fusion (Macan)"),
@@ -229,13 +181,10 @@ class VolkswagenSettings(BrandSettings):
       self.start_stop_distance,
       self.jerk_limit_enable,
       self.jerk_limit,
-      self.corner_limit,
       self.slope_comp,
       self.slope_comp_unlimited,
       self.accel_deadzone_enable,
       self.accel_deadzone,
-      self.cruise_coast_enable,
-      self.cruise_coast_band,
       self.radar_fusion,
       self.verz_bridge,
       self.gap_sync,
@@ -251,10 +200,6 @@ class VolkswagenSettings(BrandSettings):
   def _on_enable_accel_deadzone(self, state: bool):
     ui_state.params.put_bool("MacanAccelDeadzoneEnable", state)
     self.accel_deadzone.set_visible(state)  # 立即显示/隐藏数值项
-
-  def _on_enable_cruise_coast(self, state: bool):
-    ui_state.params.put_bool("MacanCruiseCoastEnable", state)
-    self.cruise_coast_band.set_visible(state)  # 立即显示/隐藏数值项
 
   def _on_enable_radar_fusion(self, state: bool):
     ui_state.params.put_bool("MacanRadarFusion", state)
@@ -297,10 +242,6 @@ class VolkswagenSettings(BrandSettings):
       ui_state.params.put_bool("OnroadCycleRequested", True)
       self.start_stop_distance.set_visible(False)  # SnG 关 → 隐藏距离子开关
 
-  def _on_enable_corner_limit(self, state: bool):
-    # planner 每 1s 刷新参数，即时生效，无需 onroad cycle 重启
-    ui_state.params.put_bool("MacanCornerLimit", state)
-
   def _on_enable_slope_comp(self, state: bool):
     ui_state.params.put_bool("MacanSlopeComp", state)
     if not state:
@@ -327,8 +268,6 @@ class VolkswagenSettings(BrandSettings):
       jerk_limit_on = ui_state.params.get_bool("MacanJerkLimitEnable")
       self.jerk_limit.action_item.set_enabled(is_macan and not ui_state.engaged and jerk_limit_on)
       self.jerk_limit.set_visible(is_macan and jerk_limit_on)
-      self.corner_limit.action_item.set_enabled(is_macan and not ui_state.engaged)
-      self.corner_limit.set_visible(is_macan)
       self.slope_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
       self.slope_comp.set_visible(is_macan)
       # 子选项（放开限制）：仅坡度补偿开启时显示（联动，整行隐藏）

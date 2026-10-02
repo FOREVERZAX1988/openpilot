@@ -79,27 +79,6 @@ class MacanAccelDeadzoneControl(BigMultiToggle):
     self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
 
 
-class MacanCruiseCoastControl(BigMultiToggle):
-  """Macan 巡航滑行带宽度（m/s）：0=Off / 0.3 / 0.4 / 0.5 / 0.6（005f/0060 喘息振荡修复）"""
-  OPTIONS = ["0", "0.3", "0.4", "0.5", "0.6"]
-
-  def __init__(self, text: str, param: str):
-    super().__init__(text, self.OPTIONS)
-    self._param = param
-    self._params = Params()  # 对齐驾驶风格(BigMultiParamToggle)：独立实例，避免 ui_state 单例竞争
-    self._load()
-
-  def _load(self):
-    cur = self._params.get(self._param)
-    # get() 按参数类型返回 float/int，OPTIONS 是 str → str(cur) 转换比较（2026-08-22 实锤）
-    idx = self.OPTIONS.index(str(cur)) if str(cur) in self.OPTIONS else 1
-    self.set_value(self.OPTIONS[idx])
-
-  def _handle_mouse_release(self, mouse_pos):
-    super()._handle_mouse_release(mouse_pos)
-    self._params.put(self._param, float(self.value), block=True)  # FLOAT 参数需 float（str 会 TypeError 崩 UI）
-
-
 class ExperimentalModeConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
     super().__init__()
@@ -149,7 +128,6 @@ class TogglesLayoutMici(NavScroller):
     macan_start_stop_distance = MacanStartStopDistControl(tr("Startup Safe Distance (Macan)"), "MacanStartStopDistance")
     macan_jerk_enable = BigParamControl(tr("Macan Accel Jerk Limit"), "MacanJerkLimitEnable")
     macan_jerk_limit = MacanJerkControl(tr("Accel Jerk Limit Value (m/s³)"), "MacanJerkLimit")
-    macan_corner_limit = BigParamControl(tr("Macan Corner Accel Limit"), "MacanCornerLimit")
     macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
     macan_verz_bridge = BigParamControl(tr("Macan Verz Bridge"), "MacanVerzBridge")
     macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
@@ -157,8 +135,6 @@ class TogglesLayoutMici(NavScroller):
     macan_deadzone_enable = BigParamControl(tr("Macan Accel Deadzone Enable"), "MacanAccelDeadzoneEnable")
     macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
     macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
-    macan_coast_enable = BigParamControl(tr("Macan Cruise Coast Enable"), "MacanCruiseCoastEnable")
-    macan_coast_band = MacanCruiseCoastControl(tr("Macan Cruise Coast Band (m/s)"), "MacanCruiseCoastBand")
     macan_fusion_mode = BigParamControl(tr("Fusion Control Mode (Macan)"), "MacanFusionMode")
 
     self._scroller.add_widgets([
@@ -177,7 +153,6 @@ class TogglesLayoutMici(NavScroller):
       macan_start_stop_distance,
       macan_jerk_enable,
       macan_jerk_limit,
-      macan_corner_limit,
       macan_slope_comp,
       macan_verz_bridge,
       macan_slope_comp_unlimited,
@@ -185,8 +160,6 @@ class TogglesLayoutMici(NavScroller):
       macan_accel_deadzone,
       macan_radar_fusion,
       macan_startup_gap_sync,
-      macan_coast_enable,
-      macan_coast_band,
       macan_fusion_mode,
     ])
 
@@ -194,7 +167,6 @@ class TogglesLayoutMici(NavScroller):
     self._macan_start_stop_distance = macan_start_stop_distance
     self._macan_jerk_enable = macan_jerk_enable
     self._macan_jerk_limit = macan_jerk_limit
-    self._macan_corner_limit = macan_corner_limit
     self._macan_slope_comp = macan_slope_comp
     self._macan_verz_bridge = macan_verz_bridge
     self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
@@ -202,8 +174,6 @@ class TogglesLayoutMici(NavScroller):
     self._macan_deadzone_enable = macan_deadzone_enable
     self._macan_radar_fusion = macan_radar_fusion
     self._macan_startup_gap_sync = macan_startup_gap_sync
-    self._macan_coast_enable = macan_coast_enable
-    self._macan_coast_band = macan_coast_band
     self._macan_fusion_mode = macan_fusion_mode
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
@@ -219,7 +189,6 @@ class TogglesLayoutMici(NavScroller):
       ("MacanStartStop", macan_start_stop),
       ("MacanStartStopDistance", macan_start_stop_distance),
       ("MacanJerkLimitEnable", macan_jerk_enable),
-      ("MacanCornerLimit", macan_corner_limit),
       ("MacanSlopeComp", macan_slope_comp),
       ("MacanVerzBridge", macan_verz_bridge),
       ("MacanSlopeCompUnlimited", macan_slope_comp_unlimited),
@@ -227,8 +196,6 @@ class TogglesLayoutMici(NavScroller):
       ("MacanAccelDeadzoneEnable", macan_deadzone_enable),
       ("MacanRadarFusion", macan_radar_fusion),
       ("MacanStartupGapSync", macan_startup_gap_sync),
-      ("MacanCruiseCoastEnable", macan_coast_enable),
-      ("MacanCruiseCoastBand", macan_coast_band),
       ("MacanFusionMode", macan_fusion_mode),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
@@ -293,8 +260,6 @@ class TogglesLayoutMici(NavScroller):
       self._macan_deadzone_enable.set_visible(True)
       self._macan_accel_deadzone.set_visible(ui_state.params.get_bool("MacanAccelDeadzoneEnable"))
       self._macan_radar_fusion.set_visible(True)
-      self._macan_coast_enable.set_visible(True)
-      self._macan_coast_band.set_visible(ui_state.params.get_bool("MacanCruiseCoastEnable"))
       # 融合控制模式：仅 Macan 且 OP 纵向控制开启时可见。
       # 2026-09-20 重新锁定：纯 OP 纵向未通过路试 → 开关恒定开、锁定不可切（只能看）。
       op_long_on = ui_state.has_longitudinal_control
@@ -312,8 +277,6 @@ class TogglesLayoutMici(NavScroller):
       self._macan_deadzone_enable.set_visible(False)
       self._macan_accel_deadzone.set_visible(False)
       self._macan_radar_fusion.set_visible(False)
-      self._macan_coast_enable.set_visible(False)
-      self._macan_coast_band.set_visible(False)
       self._macan_fusion_mode.set_visible(False)
 
     # Refresh toggles from params to mirror external changes

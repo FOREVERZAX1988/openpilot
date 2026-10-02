@@ -263,9 +263,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanJerkLimitEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 加速度变化率限制总开关（0=关，功能不生效）        // Macan 加速度变化率限幅（m/s³，0=关闭；削 aTarget 过冲→减猛，0051 vs 原厂 0.48 vs 0.35）
     {"MacanAccelDeadzone", {PERSISTENT | BACKUP, FLOAT, "0"}},     // Macan aTarget死区（m/s²，0=关；±0.1内归零滤MPC抖动，防mom开合喘气）
     {"MacanAccelDeadzoneEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan aTarget死区总开关（0=关，数值保留但不生效）
-    {"MacanCornerLimit", {PERSISTENT | BACKUP, BOOL, "0"}},        // Macan 弯道纵向限制开关
-    {"MacanCruiseCoastEnable", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 巡航滑行带总开关（0=关；005f/0060 喘息振荡根因修复，默认关）
-    {"MacanCruiseCoastBand", {PERSISTENT | BACKUP, FLOAT, "0.4"}}, // Macan 巡航滑行带宽度（m/s，±带内滑行输出0；0.4≈1.4km/h）
     {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"MacanVerzBridge", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan verz桥主闸（开=1.25%百分比渐进缓冲缓急刹/治喘息；关=verz直通一帧到位。深刹<=-1.5与原厂刹车请求无论开关直通保安全）
     {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）

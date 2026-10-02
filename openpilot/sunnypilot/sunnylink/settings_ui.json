@@ -2743,17 +2743,6 @@
           ]
         },
         {
-          "key": "MacanCornerLimit",
-          "widget": "toggle",
-          "title": "Macan Corner Limit",
-          "description": "Lowers the longitudinal limit in corners (wheel angle > 5 deg).",
-          "enablement": [
-            {
-              "type": "offroad_only"
-            }
-          ]
-        },
-        {
           "key": "MacanSlopeComp",
           "widget": "toggle",
           "title": "Macan Slope Compensation",

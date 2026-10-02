@@ -5416,3 +5416,155 @@ msgstr ""
 msgid "Select"
 msgstr ""
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "起步跟停（Stop and Go）"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Stop and Go"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Startup Safe Distance (Macan)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Accel Jerk Limit"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Accel Jerk Limit (Macan)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Accel Jerk Limit Value (m/s³)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Slope Compensation"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Slope Compensation (Macan)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Slope Comp Unlimited"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Slope Comp Unlimited (Macan)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Accel Deadzone Enable"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Accel Deadzone (m/s^2)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Radar Fusion (Macan)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Verz Bridge"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Macan Distance Sync Direction"
+msgstr ""
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Fusion Control Mode (Macan)"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\eps_settings.py
+msgid "EPS Assist Compensation"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\eps_settings.py
+msgid "EPS Compensation Scale"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
+msgid "Customize EPS Compensation"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Generic keyboard / HID"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Tap a cell to cycle actions, then Save."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Testing..."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
+msgid "hours"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
+msgid "min"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Macan Stop and Go: when enabled, the vision model decides when to start, and openpilot sends the RESUME signal to release the stock parking hold (with a chime). When disabled, gently press the gas or SET/RESUME to resume (stock behavior)."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Startup Safe Distance (Macan): when ON, auto-resume from a stop requires the stock radar distance (>0) or vision lead (>5m) - prevents phantom starts. When OFF, resumes on vision intent alone (V1 behavior) - use in heavy traffic to keep tight gaps and prevent cut-ins. Only effective when Stop and Go (Macan) is enabled."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Macan Accel Jerk Limit: limits how fast the acceleration request can change (m/s³). Lower = smoother (gentler transitions, less surge); higher = more responsive. 0 = off (no limit). Decel (braking) is allowed 2.2x faster for safety. Takes effect within 1s."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), a brief positive Verz ramp (+1.285 over 180ms) when overriding a deceleration with the gas pedal, and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Macan Slope Comp Unlimited (sub-option): when Slope Compensation is ON, this removes the stock torque cap (option 2: min(max(stock_mom, 200))), giving small slopes room to act. When OFF, the stock cap applies (option 1: min(stock_mom))."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Macan Accel Deadzone Enable: master switch. Off = deadzone fully disabled (value kept but ignored)."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Macan Accel Deadzone: zeroes aTarget inside +/- this value to filter MPC jitter (m/s^2). 0 = off."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "Macan Verz Bridge: when ON, the bridge applies a percentage-based ramp to smooth the requested deceleration (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills the breath/pulse. When OFF, the verz request passes through un-smoothed (one-frame, no ramp). Deep braking (<= -1.5) and OEM brake requests still pass through either way for safety."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\volkswagen.py
+msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking. OFF: pure OP longitudinal - the stock ACC radar is deactivated (LS_01 bus2 stays standby) and OP self-generates ACC02/04/05 entirely."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\eps_settings.py
+msgid "Compensate for the EPS speed-dependent assist curve (the EPS absorbs part of the steering command at low speed). Disable to compare with stock steering feel."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\eps_settings.py
+msgid "Compensation amount: 1.00 = full MQB curve (low speed x1.6), 0.50 = half. WARNING: 0.00 zeroes steering output — use the toggle above to disable instead."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
+msgid "Yiser-J6"
+msgstr ""
+
