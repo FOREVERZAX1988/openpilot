@@ -2430,6 +2430,10 @@ msgstr "输入 SSID"
 msgid "Enter URL"
 msgstr "输入网址"
 
+#: openpilot/system/ui/sunnypilot/widgets/option_control.py
+msgid "Enter value"
+msgstr "输入数值"
+
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py
 msgid "Enter model year (e.g., 2021) and model (Toyota Corolla):"
 msgstr "输入车型年份（如 2021）和型号（Toyota Corolla）："
@@ -6999,6 +7003,10 @@ msgstr "密码错误"
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/display.py
 msgid "{} %"
 msgstr "{} %"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
+msgid "{}%"
+msgstr "{}%"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
