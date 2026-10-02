@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from openpilot.common.params import Params
 from openpilot.common.hardware import HARDWARE
 from openpilot.system.ui.lib.application import gui_app, FontWeight, FONT_SCALE
-from openpilot.system.ui.lib.multilang import multilang, tr, tr_noop
+from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.lib.scroll_panel import GuiScrollPanel
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.lib.wrap_text import wrap_text
@@ -70,17 +70,16 @@ def _localize_offroad_extra(alert_key: str, extra: str) -> str:
     if extra == _OFFROAD_EXTRA_LATERAL:
       return tr("lateral")
 
+  # the number has to stay in the string and only the unit is translatable, so these are
+  # tr() templates with a {} placeholder instead of a unit suffix selected in code
   if alert_key == "Offroad_TemperatureTooHigh" and extra.endswith("C"):
-    temp = extra[:-1]
-    if multilang.language.startswith("zh"):
-      return f"{temp}度"
-    return extra
+    return tr("{}C").format(extra[:-1])
 
   if alert_key == "Offroad_ConnectivityNeededPrompt":
     match = re.match(r"^(\d+(?:\.\d+)?) hours?\.$", extra)
-    if match and multilang.language.startswith("zh"):
-      unit = "小時" if multilang.language == "zh-CHT" else "小时"
-      return f"{match.group(1)} {unit}"
+    if match:
+      hours = match.group(1)
+      return (tr("{} hour.") if hours == "1" else tr("{} hours.")).format(hours)
 
   if alert_key == "Offroad_OSMUpdateRequired" and extra == _OFFROAD_OSM_EXTRA:
     return tr(_OFFROAD_OSM_EXTRA)

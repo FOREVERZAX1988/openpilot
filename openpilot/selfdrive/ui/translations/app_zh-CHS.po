@@ -3257,7 +3257,7 @@ msgstr "纵向 MPC 调校"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Linear"
-msgstr ""
+msgstr "线性"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "Longitudinal Proportional Velocity"
@@ -7205,131 +7205,131 @@ msgstr "Wi-Fi"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed at which cruise set speed is re-synchronized. Tesla BYD only."
-msgstr ""
+msgstr "巡航设定速度重新同步时的车速。仅限特斯拉/比亚迪。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "1 = take the ACC set speed from the car (PCM). Required on Toyota: its PCM consumes the +/- buttons itself, so openpilot would otherwise keep its own set speed while the cluster moves."
-msgstr ""
+msgstr "1 = 使用车辆（PCM）的 ACC 设定速度。丰田车型必需：其 PCM 会自行处理 +/- 按键，否则 openpilot 会保持自己的设定速度、而仪表上的设定值却在变化。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Synthesises a camera distance when the car sends only an enforcement speed. 0.1 s units; 60 = 6.0 s."
-msgstr ""
+msgstr "当车辆仅发送限速值时，合成与测速摄像头之间的距离。单位为 0.1 秒，60 = 6.0 秒。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Refresh rate of the external cluster map, in frames per second."
-msgstr ""
+msgstr "外接仪表地图的刷新率（帧/秒）。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Enable the cluster map HUD profile overlay."
-msgstr ""
+msgstr "启用仪表地图 HUD 配置叠加层。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Master switch for the external cluster HUD renderer."
-msgstr ""
+msgstr "外接仪表 HUD 渲染器总开关。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Show debug overlays on the external cluster."
-msgstr ""
+msgstr "在外接仪表上显示调试叠加层。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Mirror the external cluster display horizontally."
-msgstr ""
+msgstr "水平镜像外接仪表的显示画面。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Draw radar tracks on the external cluster."
-msgstr ""
+msgstr "在外接仪表上绘制雷达航迹。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Color radar tracks by their detection source."
-msgstr ""
+msgstr "按探测来源为雷达航迹着色。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "BYD only: feed corner-radar tracks into the radar interface."
-msgstr ""
+msgstr "仅限比亚迪：将角雷达航迹送入雷达接口。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto"
-msgstr ""
+msgstr "自动"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Dark"
-msgstr ""
+msgstr "深色"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Light"
-msgstr ""
+msgstr "浅色"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Ego Bottom"
-msgstr ""
+msgstr "本车底部"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Road Camera"
-msgstr ""
+msgstr "前视摄像头"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Wide Camera"
-msgstr ""
+msgstr "广角摄像头"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Auto Camera"
-msgstr ""
+msgstr "自动摄像头"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "JPEG"
-msgstr ""
+msgstr "JPEG"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Hardware H.264"
-msgstr ""
+msgstr "硬件 H.264"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Software H.264"
-msgstr ""
+msgstr "软件 H.264"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Driving Left"
-msgstr ""
+msgstr "左舵行驶"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Driving Right"
-msgstr ""
+msgstr "右舵行驶"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Vehicle Speed"
-msgstr ""
+msgstr "车速"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Speed + Distance"
-msgstr ""
+msgstr "速度 + 距离"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "All Speeds"
-msgstr ""
+msgstr "所有速度"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "All Speeds + Distance"
-msgstr ""
+msgstr "所有速度 + 距离"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Debug"
-msgstr ""
+msgstr "调试"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Debug System"
-msgstr ""
+msgstr "调试系统"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Debug Graph"
-msgstr ""
+msgstr "调试图表"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Debug Graph Right"
-msgstr ""
+msgstr "调试图表（右）"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Trip Report"
-msgstr ""
+msgstr "行程报告"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "CLEARING..."
@@ -7504,3 +7504,79 @@ msgstr "正在调整至限速 {speed} {unit}"
 
 msgid "Speed Limit Assist: adjust set speed to {speed} {unit} to engage"
 msgstr "限速辅助：请将设定速度调至 {speed} {unit} 以启用"
+
+#: openpilot/selfdrive/ui/widgets/offroad_alerts.py
+msgid "{}C"
+msgstr "{}度"
+
+#: openpilot/selfdrive/ui/widgets/offroad_alerts.py
+msgid "{} hour."
+msgstr "{} 小时"
+
+#: openpilot/selfdrive/ui/widgets/offroad_alerts.py
+msgid "{} hours."
+msgstr "{} 小时"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Chestnut Status"
+msgstr "Chestnut 状态"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "USB Link"
+msgstr "USB 链路"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Temperature"
+msgstr "温度"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Memory Temp"
+msgstr "内存温度"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Power Draw"
+msgstr "当前功耗"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Power Limit"
+msgstr "功耗上限"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "GPU Usage"
+msgstr "GPU 占用率"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "GPU Clock"
+msgstr "GPU 频率"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Fan Speed"
+msgstr "风扇转速"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "PCIe LTSSM"
+msgstr "PCIe LTSSM"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Supply Voltage"
+msgstr "供电电压"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Supply Current"
+msgstr "供电电流"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Supply Fault"
+msgstr "供电故障"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Connection Check"
+msgstr "连接检查"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Check Chestnut"
+msgstr "检查 Chestnut"
+
+#: openpilot/selfdrive/ui/layouts/settings/chestnut.py
+msgid "Checks USB 5 Gbps, firmware, 12V/PCIe, and GPU execution."
+msgstr "检查 USB 5 Gbps、固件、12V/PCIe 以及 GPU 运行情况。"
