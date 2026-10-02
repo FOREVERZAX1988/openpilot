@@ -10,9 +10,19 @@ from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.lib.utils import GuiStyleContext
 from openpilot.system.ui.lib.wrap_text import wrap_text
-from openpilot.system.ui.lib.emoji import find_emoji, emoji_tex
+from openpilot.system.ui.lib.emoji import find_emoji, emoji_tex, emoji_is_renderable
 
 ICON_PADDING = 15
+
+
+def _emoji_runs(line: str) -> list[tuple[int, int, str]]:
+  """`find_emoji` 的结果，滤掉彩色字体其实画不出来的"假 emoji"。
+
+  EMOJI_REGEX 覆盖 U+2600-U+2B55 等一大片符号，但 NotoColorEmoji 只含真正的 emoji：
+  ★ / ✕ / → 命中区间却会画成空白（等于把字符吃掉）。这些字形文本字体（Inter、
+  Noto CJK）反而有，所以只让"真能画"的走图集，其余留给 draw_text_ex。
+  """
+  return [(start, end, emoji) for start, end, emoji in find_emoji(line) if emoji_is_renderable(emoji)]
 
 
 # TODO: make this common
@@ -678,10 +688,35 @@ class UnifiedLabel(Widget):
       self._render_line_normal(line, line_x, current_y)
 
   def _render_line_normal(self, line, line_x, current_y):
-    line_pos = rl.Vector2(line_x, current_y)
-    rl.draw_text_ex(font_fallback(self._font, line), line, line_pos, self._font_size, self._spacing_pixels, self._text_color)
+    emojis = _emoji_runs(line)
+    if not emojis:
+      line_pos = rl.Vector2(line_x, current_y)
+      rl.draw_text_ex(font_fallback(self._font, line), line, line_pos, self._font_size, self._spacing_pixels, self._text_color)
+      return
+
+    # 含 emoji：emoji 字形不在文本字体里（Inter / Noto CJK 都没有），整行 draw_text_ex
+    # 只会把它画成 "?"（见 emoji_is_renderable）。按段拆分，emoji 走彩色图集，其余照旧。
+    font = font_fallback(self._font, line)
+    cursor_x = line_x
+    prev_index = 0
+    for start, end, emoji in emojis:
+      text_before = line[prev_index:start]
+      if text_before:
+        rl.draw_text_ex(font, text_before, rl.Vector2(cursor_x, current_y), self._font_size, self._spacing_pixels, self._text_color)
+        cursor_x += measure_text_cached(self._font, text_before, self._font_size, self._spacing_pixels).x + self._spacing_pixels
+
+      tex = emoji_tex(emoji)
+      emoji_scale = self._font_size / tex.height * FONT_SCALE
+      rl.draw_texture_ex(tex, rl.Vector2(cursor_x, current_y), 0.0, emoji_scale, self._text_color)
+      cursor_x += self._font_size * FONT_SCALE
+      prev_index = end
+
+    text_after = line[prev_index:]
+    if text_after:
+      rl.draw_text_ex(font, text_after, rl.Vector2(cursor_x, current_y), self._font_size, self._spacing_pixels, self._text_color)
 
   def _render_line_shimmer(self, line, emojis, line_x, current_y):
+    emojis = _emoji_runs(line)
     # Shimmer range based on widest line so sweep is even across all lines
     max_width = self.text_width
     if self._alignment == TextAlignment.RIGHT:

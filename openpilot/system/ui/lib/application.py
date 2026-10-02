@@ -800,6 +800,11 @@ class GuiApplication(GuiApplicationExt):
     if font_key == PRIMARY_FONT:
       # 不改字体（西里尔等由 Inter 覆盖）；GUI 路径需要一个具体字体，给主字体。
       return self.font()
+    if font_key not in NOTO_FONTS:
+      # 该语言压根没有 Noto fallback（en/de/fr/es…）。text=None 时 fallback_font_key
+      # 直接返回语言本身，于是这里会拿到 "en" —— 之前会 NOTO_FONTS["en"] KeyError
+      # 直接打死 UI 线程。没有"另一种字体"可用就交回主字体。
+      return self.font()
     if font_key not in self._fallback_fonts:
       chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
       chars.update(TRANSLATIONS_DIR.joinpath(f"app_{language}.po").read_text(encoding="utf-8"))

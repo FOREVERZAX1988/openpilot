@@ -55,6 +55,20 @@ def emoji_tex(emoji):
   return _cache[emoji]
 
 
+@functools.cache
+def emoji_is_renderable(emoji: str) -> bool:
+  """NotoColorEmoji 里是否真有这个码位的字形。
+
+  EMOJI_REGEX 的区间开得很宽（\u2600-\u2B55 之类），但彩色 emoji 字体并不覆盖
+  全部：★ / ✕ / → 这类"符号"命中区间，画出来却是**空白**。空白会把字符直接吃掉，
+  比画成 "?" 更难排查，而这些字形文本字体（Inter / Noto CJK）反而有，所以渲染前
+  先问一句：能画的才走 emoji 图集，画不出来的留给文本字体。
+  """
+  img = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
+  ImageDraw.Draw(img).text((0, 0), emoji, font=_load_emoji_font(), embedded_color=True)
+  return img.getbbox() is not None
+
+
 def draw_text_with_emojis(font: rl.Font, text: str, pos: rl.Vector2, font_size: int,
                           spacing: float, color: rl.Color) -> None:
   """Draw text that may contain emoji characters.
