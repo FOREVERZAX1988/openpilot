@@ -80,6 +80,11 @@ class VCruiseHelper(VCruiseHelperSP):
 
     if CS.cruiseState.available:
       if self.macan_fusion:
+        # ⚠️【勿在此处改】本函数（VCruiseHelper.update_v_cruise）在车上永远不执行：
+        # card.py 装的是子类 VCruiseCarrot，它重写了 update_v_cruise 且从不回调 super()。
+        # 生效的融合分支在 VCruiseCarrot.update_v_cruise（本文件 499 行附近，同一份代码）。
+        # 2026-10-03：此处曾误导一次"干净重建"（改这里无任何效果，导致 5km/h 幽灵速度
+        # + 纵向双源争夺复发）。保留以对齐上游结构，改动前请确认改的是子类那份。
         # Macan(MLB) 融合控制模式：OP 巡航速度直接读原厂 ACC 巡航速度（ACC_02.Wunschgeschw）。
         # 即使 pcmCruise=False（OP 纵向接管），也强制走"跟随原厂设定"路径，保证 OP 与原厂
         # ACC 巡航速度恒定一致，避免自定义步进导致的分裂。OP 按键只影响原厂（经 OP 转发到
