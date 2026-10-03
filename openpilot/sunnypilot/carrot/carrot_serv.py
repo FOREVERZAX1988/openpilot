@@ -1704,7 +1704,10 @@ class CarrotServ:
     # suppresses it. Both come from the same subscriptions cp uses
     # (carrot_serv.py:1332-1334 for distance, :1088 for off_route).
     if sm.alive.get("selfdriveState", False):
-      distance_traveled = float(sm["selfdriveState"].distanceTraveled)
+      # cereal's SelfdriveState has no `distanceTraveled` in this fork: the raw read raised
+      # capnp AttributeError on every call and aborted all of update_navi() (nav source,
+      # navi instructions, rear-camera hold) inside carrot_man's broadcast loop.
+      distance_traveled = float(getattr(sm["selfdriveState"], "distanceTraveled", self.total_distance))
       delta_dist = distance_traveled - self.total_distance
       self.total_distance = distance_traveled
     else:
