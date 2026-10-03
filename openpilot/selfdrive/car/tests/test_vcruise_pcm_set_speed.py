@@ -28,7 +28,7 @@ import unittest
 from types import SimpleNamespace
 
 from openpilot.common.constants import CV
-from openpilot.selfdrive.car.cruise import GearShifter, VCruiseCarrot
+from openpilot.selfdrive.car.cruise import GearShifter, VCruiseCarrot, V_CRUISE_UNSET
 
 
 class _CruiseState:
@@ -137,6 +137,58 @@ class TestPcmOwnedSetSpeed(unittest.TestCase):
     helper.update_v_cruise(cs, True, True, _make_sm(), SimpleNamespace())
     self.assertEqual(helper.v_cruise_kph, before,
                      "a PCM that has not reported a set speed yet must not zero the planner target")
+
+
+def _make_macan_helper(carrot_own_kph=40.0):
+  """A Macan in fusion mode: stock ACC owns the setpoint, OP only mirrors it.
+
+  `macan_fusion` is keyed off carFingerprint, so the stand-in CP needs that field
+  (plus `flags` for is_volkswagen_meb) and CarParamsSP.pcmCruiseSpeed=False, matching
+  the real PORSCHE_MACAN_MK1 CarParams.
+  """
+  cp = SimpleNamespace(brand='volkswagen', carFingerprint='PORSCHE_MACAN_MK1', flags=0,
+                       pcmCruise=False, openpilotLongitudinalControl=True)
+  cp_sp = SimpleNamespace(pcmCruiseSpeed=False)
+  helper = VCruiseCarrot(cp, cp_sp)
+  helper._update_cruise_buttons = lambda *a, **k: carrot_own_kph
+  helper._cruise_control = lambda *a, **k: None
+  return helper
+
+
+class TestMacanFusionSetSpeed(unittest.TestCase):
+  """Macan fusion control: OP's vCruise must mirror ACC_02.Wunschgeschw, always.
+
+  Route 0000008f (2026-10-03, sp-macan-re) showed OP transmitting ACC_02 with a
+  constant 5.12 kph while the stock ACC was at 29.8-53.8 kph: `VCruiseCarrot.
+  update_v_cruise` overrode `VCruiseHelper.update_v_cruise`, so the fusion branch
+  never ran and carrot's own state machine (clamped to `_cruise_speed_min` = 5)
+  stayed authoritative. The cluster showed a phantom 5 km/h, SET appeared to do
+  nothing, and the planner fought the stock ACC (the "sudden accel/decel" report).
+  """
+
+  def test_parked_with_no_stock_setpoint_shows_nothing(self):
+    helper = _make_macan_helper()
+    cs = _CarState(speed_kph=0.0)
+    for _ in range(3):
+      helper.update_v_cruise(cs, False, True, _make_sm(), SimpleNamespace())
+    self.assertEqual(helper.v_cruise_kph, V_CRUISE_UNSET,
+                     "no stock setpoint must map to V_CRUISE_UNSET, not carrot's 5 kph minimum")
+    self.assertGreaterEqual(helper.v_cruise_cluster_kph, 250,
+                            "cluster must be >= 250 so create_acc_hud_control sends the MLB keine-Anzeige sentinel")
+
+  def test_mirrors_stock_setpoint(self):
+    helper = _make_macan_helper()
+    cs = _CarState(speed_kph=30.0)
+    helper.update_v_cruise(cs, True, True, _make_sm(), SimpleNamespace())
+    self.assertAlmostEqual(helper.v_cruise_kph, 30.0, places=1,
+                           msg="the stock ACC's 30 kph initial setpoint must reach OP")
+    # The driver presses SET/speed+ and the stock ACC answers with a new setpoint.
+    cs.cruiseState.speed = 53.76 * CV.KPH_TO_MS
+    cs.cruiseState.speedCluster = cs.cruiseState.speed
+    helper.update_v_cruise(cs, True, True, _make_sm(), SimpleNamespace())
+    self.assertAlmostEqual(helper.v_cruise_kph, 53.8, places=1,
+                           msg="OP must keep tracking the stock ACC, or the two controllers fight")
+    self.assertAlmostEqual(helper.v_cruise_cluster_kph, 53.8, places=1)
 
 
 if __name__ == '__main__':

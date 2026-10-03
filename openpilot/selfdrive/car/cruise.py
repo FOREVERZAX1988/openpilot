@@ -496,7 +496,20 @@ class VCruiseCarrot(VCruiseHelper):
       #self.events.append(EventName.buttonCancel)
       self._cruise_ready = True if self._activate_cruise == -2 else False
 
-    if CS.cruiseState.available:
+    if CS.cruiseState.available and self.macan_fusion:
+      # Macan(MLB) 融合控制：OP 巡航速度直接镜像原厂 ACC 设定速度（ACC_02.Wunschgeschw），
+      # 与 0924 工作版保持一致。该模式下 OP 纵向经 ACC_05 代发执行，但巡航设定必须跟随
+      # 原厂 ACC，否则 OP(VCruiseCarrot 自算 v_cruise) 与原厂 ACC 双控制器竞争 →
+      # 突然加速/减速反复喘息。全程跳过下方 pcmCruise 通用分支，避免被低价剪裁覆盖。
+      self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+      self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+      if CS.cruiseState.speed == 0:
+        self.v_cruise_kph = V_CRUISE_UNSET
+        self.v_cruise_cluster_kph = V_CRUISE_UNSET
+      elif CS.cruiseState.speed == -1:
+        self.v_cruise_kph = -1
+        self.v_cruise_cluster_kph = -1
+    elif CS.cruiseState.available:
       if not self.cruise_state_available_last:
         self._lat_enabled = True
         v_cruise_kph = self.v_ego_kph_set
