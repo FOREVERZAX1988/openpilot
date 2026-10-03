@@ -46,7 +46,7 @@ class CarrotControls:
     if not self.enabled:
       return False
 
-    suspend_angle = float(self.params.get("LatSuspendAngleDeg"))
+    suspend_angle = float(self.params.get("LatSuspendAngleDeg", return_default=True))
     resume_angle = 15.0
     delay_sec = 1.0
     hold_sec = 0.5

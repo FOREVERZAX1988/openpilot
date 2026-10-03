@@ -379,7 +379,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotPanelSide", {PERSISTENT | BACKUP, INT, "0"}},  // carrot nav HUD panel side: 0=left, 1=right
     {"CarrotPanelOpacity", {PERSISTENT | BACKUP, INT, "100"}},  // carrot nav HUD panel opacity percent 0-100
     {"LiDARUdpPort", {PERSISTENT | BACKUP, INT, "4211"}},  // LiDAR/camera direct-UDP listen port; dormant until start_navi_comm() is wired (C3 decision)
-    {"MyDrivingMode", {PERSISTENT | BACKUP, INT, "1"}},  // 0=eco,1=normal,2=sport,3=safe
+    {"MyDrivingMode", {PERSISTENT | BACKUP, INT, "3"}},  // DrivingMode enum: 1=eco,2=safe,3=normal,4=high
     // TFollowGap/CruiseMaxVals use the CarrotPilot int*100 representation so
     // that carrot_functions.py can keep dividing by 100.0 (matching cp).
     {"TFollowGap1", {PERSISTENT | BACKUP, INT, "110"}},
@@ -408,7 +408,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotNaviAppStatus", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 app foreground/focus/map/capture status
     {"CarrotNaviCameraState", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 camera mode/level/tilt/bearing
     {"CarrotNaviCompositionState", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 UI composition active panels
-    {"TrafficLightDetectMode", {PERSISTENT | BACKUP, INT, "1"}},  // 0=off,1=red stop,2=red stop + green go
+    {"TrafficLightDetectMode", {PERSISTENT | BACKUP, INT, "2"}},  // 0=off,1=red stop,2=red stop + green go
     {"CarrotCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"CarrotNavCruiseSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"CarrotHudInfoEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
@@ -523,7 +523,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotStopDistanceMigrated", {PERSISTENT, STRING}},
     {"CarrotUdpPortMigrated", {PERSISTENT, STRING}},
     {"AutoNaviSpeedCtrlMode", {PERSISTENT | BACKUP, INT, "2"}},
-    {"AutoNaviSpeedDecelRate", {PERSISTENT | BACKUP, INT, "200"}},
+    {"AutoNaviSpeedDecelRate", {PERSISTENT | BACKUP, INT, "120"}},
     {"AutoNaviSpeedSafetyFactor", {PERSISTENT | BACKUP, INT, "105"}},
     {"SoundVolumeAdjust", {PERSISTENT | BACKUP, INT, "0"}},
     {"SoundVolumeAdjustEngage", {PERSISTENT | BACKUP, INT, "0"}},
@@ -556,7 +556,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CruiseSpeedUnit", {PERSISTENT | BACKUP, INT, "10"}},
     {"CruiseSpeedUnitBasic", {PERSISTENT | BACKUP, INT, "10"}},
     // Carrot speed limits / road speed tuning surface.
-    {"AutoRoadSpeedAdjust", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoRoadSpeedAdjust", {PERSISTENT | BACKUP, INT, "50"}},
     {"AutoSpeedUptoRoadSpeedLimit", {PERSISTENT | BACKUP, INT, "0"}},
     {"SpeedFromPCM", {PERSISTENT | BACKUP, INT, "0"}},
     // Carrot traffic stop / lights tuning surface.
@@ -604,7 +604,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoGasTokSpeed", {PERSISTENT | BACKUP, INT, "0"}},
     {"CancelButtonMode", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"LfaButtonMode", {PERSISTENT | BACKUP, INT, "0"}},
-    {"PaddleMode", {PERSISTENT | BACKUP, INT, "1"}},
+    {"PaddleMode", {PERSISTENT | BACKUP, INT, "0"}},
     // Carrot misc driving tuning surface.
     {"ApplyModelSpeed", {PERSISTENT | BACKUP, INT, "0"}},
     {"AutoEngage", {PERSISTENT | BACKUP, INT, "0"}},
