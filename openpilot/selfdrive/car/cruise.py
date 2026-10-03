@@ -762,12 +762,12 @@ class VCruiseCarrot(VCruiseHelper):
         self._cruise_speed_initialized = True
 
       elif button_type == ButtonType.gapAdjustCruise:
-        longitudinalPersonalityMax = supported_gap_levels(self.params.get("LongitudinalPersonalityMax"))
-        gap_levels = cruise_gap_levels(self.params.get("CruiseGapLevels"), longitudinalPersonalityMax)
+        longitudinalPersonalityMax = supported_gap_levels(self.params.get("LongitudinalPersonalityMax", return_default=True))
+        gap_levels = cruise_gap_levels(self.params.get("CruiseGapLevels", return_default=True), longitudinalPersonalityMax)
         if not self.CP.openpilotLongitudinalControl:
           gap_levels = longitudinalPersonalityMax
         if CS.pcmCruiseGap == 0 or gap_levels < longitudinalPersonalityMax:
-          personality = next_gap_personality(self.params.get('LongitudinalPersonality'), gap_levels)
+          personality = next_gap_personality(self.params.get('LongitudinalPersonality', return_default=True), gap_levels)
         else:
           personality = int(np.clip(CS.pcmCruiseGap - 1, 0, longitudinalPersonalityMax - 1))
         self.params.put_nonblocking('LongitudinalPersonality', personality)
@@ -799,7 +799,7 @@ class VCruiseCarrot(VCruiseHelper):
         v_cruise_kph = button_kph
         self._v_cruise_kph_at_brake = 0
       elif button_type == ButtonType.gapAdjustCruise:
-        self.params.put_nonblocking("MyDrivingMode", self.params.get("MyDrivingMode") % 4 + 1) # 1,2,3,4 (1:eco, 2:safe, 3:normal, 4:high speed)
+        self.params.put_nonblocking("MyDrivingMode", self.params.get("MyDrivingMode", return_default=True) % 4 + 1) # 1,2,3,4 (1:eco, 2:safe, 3:normal, 4:high speed)
       elif button_type == ButtonType.lfaButton:
         useLaneLineSpeed = max(1, self.useLaneLineSpeed)
         self.useLaneLineSpeedApply = useLaneLineSpeed if self.useLaneLineSpeedApply == 0 else 0
