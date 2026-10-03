@@ -9,6 +9,7 @@ results via customReservedRawData0. A standalone HTTP server on port 8082 serves
 status, config, and JPEG snapshots for debugging.
 """
 import argparse
+import errno
 import json
 import sys
 import threading
@@ -748,6 +749,23 @@ def main() -> None:
     service.running = False
 
 
+def bind_http_server(host: str = HOST, port: int = PORT, timeout: float = 30.0, delay: float = 0.5) -> ThreadingHTTPServer:
+  """绑定 8082，容忍「上一个 xiaoge_data 实例仍占着端口」的 manager 重启竞态。
+
+  SO_REUSEADDR（HTTPServer 默认开启）只在没有进程处于 LISTEN 时生效；重启瞬间
+  旧进程还没退干净时 bind 会直接 EADDRINUSE，原来会让 vision 线程当场死掉、
+  8082 从此不再监听（V-ASM 页面 502）。这里改为在 timeout 内重试，其余错误照旧抛出。
+  """
+  deadline = time.monotonic() + timeout
+  while True:
+    try:
+      return ThreadingHTTPServer((host, port), Handler)
+    except OSError as e:
+      if e.errno != errno.EADDRINUSE or time.monotonic() >= deadline:
+        raise
+      time.sleep(delay)
+
+
 def create_server(host: str = HOST, port: int = PORT, model_path: Path = DEFAULT_MODEL_PATH) -> tuple[VASMService, ThreadingHTTPServer]:
   # Camera wakeups can leave receivers on camerad's isolated CPU, where realtime
   # driving tasks take precedence. Set affinity before OpenCV creates workers so
@@ -758,7 +776,7 @@ def create_server(host: str = HOST, port: int = PORT, model_path: Path = DEFAULT
   cv2.setNumThreads(2)
   service = VASMService(model_path)
   Handler.service = service
-  server = ThreadingHTTPServer((host, port), Handler)
+  server = bind_http_server(host, port)
   threading.Thread(target=service.run_camera, daemon=True).start()
   threading.Thread(target=service.run_road_camera, daemon=True).start()
   return service, server
