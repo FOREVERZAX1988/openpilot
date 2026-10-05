@@ -1212,8 +1212,8 @@ msgid "Disable driver monitoring (no cabin camera required). Similar to LITE mod
 msgstr "禁用驾驶员监控（无需舱内摄像头），效果类似 LITE 模式。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
-msgstr "关闭 sunnypilot 纵向控制（alpha）开关，以启用智能巡航按钮管理。"
+msgid "Disable the Alpha Longitudinal toggle to allow Intelligent Cruise Button Management."
+msgstr "关闭 Alpha 纵向控制开关，以启用智能巡航按钮管理。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Disconnect"
@@ -3543,12 +3543,12 @@ msgid "Small Model"
 msgstr "小模型"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid "Smart Cruise Control - Map"
-msgstr "智能巡航控制 - 地图"
+msgid "Slow for Curves: Map"
+msgstr "弯道减速：地图"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid "Smart Cruise Control - Vision"
-msgstr "智能巡航控制 - 视觉"
+msgid "Slow for Curves: Vision"
+msgstr "弯道减速：视觉"
 
 #: openpilot\selfdrive\ui\widgets\offroad_alerts.py
 msgid "Snooze Update"

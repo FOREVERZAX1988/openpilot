@@ -2684,7 +2684,7 @@ msgid "Intelligent Cruise Button Management is currently unavailable on this pla
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
+msgid "Disable the Alpha Longitudinal toggle to allow Intelligent Cruise Button Management."
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
@@ -2715,7 +2715,7 @@ msgid "Intelligent Cruise Button Management (ICBM) (Alpha)"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid "Smart Cruise Control - Vision"
+msgid "Slow for Curves: Vision"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
@@ -2723,7 +2723,7 @@ msgid "Use vision path predictions to estimate the appropriate speed to drive th
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid "Smart Cruise Control - Map"
+msgid "Slow for Curves: Map"
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py

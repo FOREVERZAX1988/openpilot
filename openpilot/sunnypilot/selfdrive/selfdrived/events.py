@@ -8,6 +8,7 @@ import openpilot.cereal.messaging as messaging
 from openpilot.cereal import log, custom
 from opendbc.car.structs import car
 from openpilot.common.constants import CV
+from openpilot.selfdrive.selfdrived.events import get_display_speed
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Priority, ET, Alert, \
   NoEntryAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, AlertCallbackType, wrong_car_mode_alert
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import PCM_LONG_REQUIRED_MAX_SET_SPEED, CONFIRM_SPEED_THRESHOLD
@@ -28,15 +29,26 @@ EVENT_NAME_SP = {v: k for k, v in EventNameSP.schema.enumerants.items()}
 IS_MICI = HARDWARE.get_device_type() == 'mici'
 
 
+def _set_speed_ms(CS: car.CarState, sm: messaging.SubMaster) -> float:
+  v_cruise_cluster = CS.vCruiseCluster
+  set_speed = sm['controlsState'].deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
+  # vCruise/vCruiseCluster are kph; the resolver speeds are m/s
+  return set_speed * CV.KPH_TO_MS
+
+
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  speedLimit = sm['longitudinalPlanSP'].speedLimit.resolver.speedLimit
-  speed = round(speedLimit * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH))
-  message = f'正在调整至限速 {speed} {"公里/时" if metric else "英里/时"}'
+  speed = sm['longitudinalPlanSP'].speedLimit.assist.vTarget  # the cap that moved, in this event's message
+  # the plan never runs above the set speed, so a limit over it settles there
+  set_speed = _set_speed_ms(CS, sm)
+  if set_speed > 0:
+    speed = min(speed, set_speed)
+  # mici wraps the unit off its number; break before the speed instead
+  sep = "\n" if IS_MICI else " "
   return Alert(
-    message,
+    f'正在调整至限速{sep}{get_display_speed(speed, metric)}',
     "",
     AlertStatus.normal, AlertSize.small,
-    Priority.LOW, VisualAlert.none, AudibleAlert.none, 4.)
+    Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.)
 
 
 def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -50,9 +62,8 @@ def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.Sub
 
 def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   speed_conv = CV.MS_TO_KPH if metric else CV.MS_TO_MPH
-  v_cruise_cluster = CS.vCruiseCluster
-  set_speed = sm['controlsState'].deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
-  set_speed_conv = round(set_speed * speed_conv)
+  # vCruise/vCruiseCluster are kph; the resolver speeds below are m/s
+  set_speed_conv = round(_set_speed_ms(CS, sm) * speed_conv)
 
   speed_limit_final_last = sm['longitudinalPlanSP'].speedLimit.resolver.speedLimitFinalLast
   speed_limit_final_last_conv = round(speed_limit_final_last * speed_conv)
@@ -68,10 +79,11 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     alert_1_str = f"限速辅助：请将设定速度调至 {pcm_long_required_max_set_speed_conv} {"公里/时" if metric else "英里/时"} 以启用"
   else:
     if IS_MICI:
+      # the target is the limit plus any offset; the break keeps the unit with its number
       if set_speed_conv < speed_limit_final_last_conv:
-        alert_1_str = "按 + 确认限速"
+        alert_1_str = f"按 + 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
       elif set_speed_conv > speed_limit_final_last_conv:
-        alert_1_str = "按 - 确认限速"
+        alert_1_str = f"按 - 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
     else:
       alert_size = AlertSize.none
 
@@ -219,19 +231,11 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventNameSP.speedLimitActive: {
-    ET.WARNING: Alert(
-      "正在自动调整至限速",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.),
+    ET.WARNING: speed_limit_adjust_alert,
   },
 
   EventNameSP.speedLimitChanged: {
-    ET.WARNING: Alert(
-      "设定速度已更改",
-      "",
-      AlertStatus.normal, AlertSize.small,
-      Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.),
+    ET.WARNING: speed_limit_adjust_alert,
   },
 
   EventNameSP.speedLimitPreActive: {
