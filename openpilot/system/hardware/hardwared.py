@@ -328,9 +328,9 @@ def hardware_thread(end_event, hw_queue) -> None:
     chestnut_status.update(started_ts is None, branch, last_hw_state.usb_state, chestnut.failed,
                            params.get_bool("ChestnutLoading"), params.get("ChestnutActive"),
                            chestnut_state if chestnut_valid else None, set_offroad_alert_if_changed)
-    # an enabled accelerator that cannot come up is otherwise silently absent
+    # an enabled jetlink that cannot come up is otherwise silently absent
     accelerator_error = jetlink_adapter.reason()
-    set_offroad_alert_if_changed("Offroad_AcceleratorUnavailable", accelerator_error is not None,
+    set_offroad_alert_if_changed("Offroad_JetlinkUnavailable", accelerator_error is not None,
                                  extra_text=accelerator_error)
     # this subset is only used for offroad
     temp_sources = [

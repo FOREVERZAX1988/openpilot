@@ -34,7 +34,7 @@ class AcceleratorLinkToggle(BigMultiToggle):
   the model buttons beside it: jetlink switches the link only parked."""
 
   def __init__(self):
-    super().__init__(tr("accelerator link"), [tr(LINK_MODE_LABELS[m]) for m in LINK_MODES])
+    super().__init__(tr("jetlink"), [tr(LINK_MODE_LABELS[m]) for m in LINK_MODES])
     self._mode = link_mode()
     self._show()
     self.set_enabled(lambda: ui_state.is_offroad())

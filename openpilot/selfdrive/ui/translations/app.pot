@@ -3210,6 +3210,22 @@ msgid "{} will drive when the chestnut is ready."
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
+msgid "Jetlink"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
+msgid "Run big models over a connected device running Jetlink. Turns off ADB."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
+msgid "{} will drive when Jetlink is ready."
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "jetlink"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 #: openpilot\system\ui\mici_setup.py
 msgid "download failed"

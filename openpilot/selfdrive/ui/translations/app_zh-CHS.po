@@ -5506,11 +5506,11 @@ msgstr "🚀 SunnyLink 🚀"
 
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "Accelerator Link"
+msgid "Jetlink"
 msgstr "外接算力连接"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "Run the big driving model on an attached accelerator: USB for a Jetson, a Linux PC, a Mac or an Android phone; iOS for an iPhone."
+msgid "Run big models over a connected device running Jetlink. Turns off ADB."
 msgstr "在已连接的外接算力上运行大模型：USB 支持 Jetson、Linux 电脑、Mac 或安卓手机；iOS 支持 iPhone。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
@@ -5530,8 +5530,12 @@ msgid "{} is ready. Disengage fully, then re-engage to switch."
 msgstr "{} 已就绪。完全松开控制后重新接合即可切换。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "{} will drive when the accelerator is ready."
+msgid "{} will drive when Jetlink is ready."
 msgstr "外接算力就绪后 {} 将参与驾驶。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
+msgid "jetlink"
+msgstr "外接算力连接"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 msgid "accelerator link"
