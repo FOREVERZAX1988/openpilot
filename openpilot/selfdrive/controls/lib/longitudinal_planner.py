@@ -193,6 +193,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
     is_e2e = self.is_e2e(sm)
+    output_a_target_e2e = LongitudinalPlannerSP.update_e2e_target(self, sm, output_a_target_e2e, reset_state, accel_coast)
 
     max_accel_override = self.get_max_accel_override(v_ego, sm['carStateSP'].engineOff)
     v_cruise = self.get_cruise_target_override(v_ego, v_cruise, force_decel, accel_coast if accel_coast < 0.0 else None)

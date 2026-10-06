@@ -268,6 +268,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
     // the model's lead forecast as the long MPC's obstacle; on by default, a hidden off switch
     {"LeadForecast", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ExperimentalModeSetSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ExperimentalModeLeadGap", {PERSISTENT | BACKUP, BOOL, "0"}},
 
     // Accel Controller profiles (Eco / Normal / Sport)
     {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},

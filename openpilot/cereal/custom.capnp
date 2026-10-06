@@ -417,9 +417,78 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
     }
   }
 
+  # Experimental mode's set-speed floor (sunnypilot/selfdrive/controls/lib/e2e_set_speed):
+  # what it added to the model's acceleration and, when nothing, why.
+  struct E2ESetSpeed {
+    authority @0 :Float32;     # 0..1, rate-limited
+    gain @1 :Float32;          # 0..1 from the model's own acceleration
+    floor @2 :Float32;         # m/s^2 the boost pulls toward
+    boost @3 :Float32;         # m/s^2 added to the model's acceleration
+    inhibit @4 :Inhibit;
+
+    enum Inhibit {
+      disabled @0;      # the ExperimentalModeSetSpeed toggle is off (and logs from before it)
+      none @1;
+      inactive @2;      # not e2e, or long control reset
+      decActive @3;
+      invalid @4;
+      hold @5;          # a trip cleared less than the hold time ago
+      fcw @6;
+      hardBrake @7;
+      forceDecel @8;
+      stop @9;
+      lead @10;
+      driver @11;       # gas or brake pressed
+      modelBraking @12;
+      planSlowing @13;
+      lateral @14;
+      coast @15;        # allow_throttle false
+      laneChange @16;
+      lowSpeed @17;
+    }
+  }
+
+  # Experimental mode's follow-distance assist (sunnypilot/selfdrive/controls/lib/e2e_lead_gap):
+  # what it added to the model's acceleration behind a lead and, when nothing, why.
+  struct E2ELeadGap {
+    authority @0 :Float32;     # 0..1, rate-limited
+    gain @1 :Float32;          # 0..1 from the model's own acceleration
+    weight @2 :Float32;        # 0..1 from the gap excess and ego speed
+    gapExcess @3 :Float32;     # m beyond long_mpc's gap for this personality
+    boost @4 :Float32;         # m/s^2 added to the model's acceleration
+    inhibit @5 :Inhibit;
+
+    enum Inhibit {
+      disabled @0;      # the ExperimentalModeLeadGap toggle is off (and logs from before it)
+      none @1;
+      inactive @2;      # not e2e, or long control reset
+      decActive @3;
+      invalid @4;
+      hold @5;          # a trip cleared less than the hold time ago
+      fcw @6;
+      hardBrake @7;
+      forceDecel @8;
+      stop @9;
+      driver @10;       # gas or brake pressed
+      modelBraking @11;
+      planSlowing @12;
+      lateral @13;
+      coast @14;        # allow_throttle false
+      laneChange @15;
+      lowSpeed @16;
+      noLead @17;
+      leadUncertain @18;
+      leadSlow @19;
+      leadBraking @20;  # braking now, or its forecast slows
+      leadChanged @21;  # the lead jumped: cut-in, swap, new car
+    }
+  }
+
   trafficLight @9 :TrafficLightState;
   carrot @10 :CarrotPlan;
   leadForecast @11 :LeadForecast;
+  e2eSetSpeed @12 :E2ESetSpeed;
+  e2eLeadGap @13 :E2ELeadGap;
 }
 
 struct OnroadEventSP @0xda96579883444c35 {
