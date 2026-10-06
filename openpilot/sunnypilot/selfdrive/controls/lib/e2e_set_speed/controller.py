@@ -28,7 +28,7 @@ import numpy as np
 
 import openpilot.cereal.messaging as messaging
 from openpilot.cereal import custom, log
-from openpilot.common.params import Params
+from openpilot.common.params import Params, UnknownKeyName
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
@@ -102,7 +102,11 @@ class E2ESetSpeedController:
 
   def _update_params(self) -> None:
     if self.frame % self.params_frames == 0:
-      self.enabled = self.params.get_bool(PARAM)
+      # a build whose params binary predates the key: off, and no crash
+      try:
+        self.enabled = self.params.get_bool(PARAM)
+      except UnknownKeyName:
+        self.enabled = False
 
   @staticmethod
   def _trip(sm: messaging.SubMaster, a_model: float, v_ego: float, plan_drop: float, plan_min_v: float,

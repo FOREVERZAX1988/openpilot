@@ -29,7 +29,7 @@ import numpy as np
 
 import openpilot.cereal.messaging as messaging
 from openpilot.cereal import custom, log
-from openpilot.common.params import Params
+from openpilot.common.params import Params, UnknownKeyName
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import COMFORT_BRAKE, STOP_DISTANCE, get_T_FOLLOW
 from openpilot.selfdrive.modeld.constants import ModelConstants
@@ -98,7 +98,11 @@ class E2ELeadGapController:
 
   def _update_params(self) -> None:
     if self.frame % self.params_frames == 0:
-      self.enabled = self.params.get_bool(PARAM)
+      # a build whose params binary predates the key: off, and no crash
+      try:
+        self.enabled = self.params.get_bool(PARAM)
+      except UnknownKeyName:
+        self.enabled = False
 
   def _lead_trip(self, sm: messaging.SubMaster):
     rs, md = sm['radarState'], sm['modelV2']
