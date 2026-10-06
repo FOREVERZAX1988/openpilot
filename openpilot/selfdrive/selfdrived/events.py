@@ -255,7 +255,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.bigModelLoading: {
-    ET.NO_ENTRY: NoEntryAlert("Big Model Loading"),
+    ET.NO_ENTRY: NoEntryAlert("Driving Model Loading"),
   },
 
   EventName.bigModelFailed: {
