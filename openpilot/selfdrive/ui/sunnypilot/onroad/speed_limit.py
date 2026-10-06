@@ -11,7 +11,7 @@ import pyray as rl
 
 from openpilot.cereal import custom
 from openpilot.common.constants import CV
-from openpilot.selfdrive.ui.onroad.hud_renderer import UI_CONFIG
+from openpilot.selfdrive.ui.onroad.hud_renderer import hud_left_row_rects
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Mode as SpeedLimitMode
 from openpilot.common.hardware import HARDWARE
@@ -120,9 +120,8 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
     self.font_demi = gui_app.font(FontWeight.SEMI_BOLD)
     self.font_norm = gui_app.font(FontWeight.NORMAL)
 
-    # CarrotPanelOpacity (0-100, default 100) + CarrotPanelSide (0=right, 1=left).
+    # CarrotPanelOpacity (0-100, default 100) scales this renderer's fade alpha.
     self._panel_opacity = 100
-    self._panel_side = 0
 
   @property
   def speed_conv(self):
@@ -131,15 +130,11 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
   def update(self):
     SpeedLimitAlertRenderer.update(self)
     sm = ui_state.sm
-    # Read CarrotPanelOpacity (0-100) and CarrotPanelSide (0=right, 1=left).
+    # Read CarrotPanelOpacity (0-100).
     try:
       self._panel_opacity = max(10, min(100, int(ui_state.params.get("CarrotPanelOpacity", 100))))
     except Exception:
       self._panel_opacity = 100
-    try:
-      self._panel_side = max(0, min(1, int(ui_state.params.get("CarrotPanelSide", 0))))
-    except Exception:
-      self._panel_side = 0
     if sm.recv_frame["carState"] < ui_state.started_frame:
       self.set_speed = SET_SPEED_NA
       self.speed = 0.0
@@ -195,16 +190,9 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
     rl.draw_text_ex(font, text, rl.Vector2(pos_center.x - sz.x / 2, pos_center.y - sz.y / 2), size, 0, color)
 
   def _render(self, rect: rl.Rectangle):
-    width = UI_CONFIG.set_speed_width_metric if ui_state.is_metric else UI_CONFIG.set_speed_width_imperial
-
-    # CarrotPanelSide: 0=left (left edge), 1=right (next to speed display, default).
-    if self._panel_side == 0:
-      x = rect.x + 60
-    else:
-      x = rect.x + 60 + width + 30 - 6
-    y = rect.y + 45 - 6
-
-    sign_rect = rl.Rectangle(x, y, width, UI_CONFIG.set_speed_height + 6 * 2)
+    # 限速标志 = 顶部左侧一行中「设定速度胶囊」右侧的固定矩形（几何与胶囊同源，
+    # 见 hud_left_row_rects）：两者并排，永不重叠。
+    _, sign_rect = hud_left_row_rects(rect, ui_state.is_metric)
 
     # CarrotPanelOpacity (10-100) scales the animation fade alpha.
     alpha = self._pre_active_fade.alpha * (self._panel_opacity / 100.0)

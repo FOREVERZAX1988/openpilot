@@ -56,6 +56,35 @@ FONT_SIZES = FontSizes()
 COLORS = Colors()
 
 
+def hud_left_row_rects(rect: rl.Rectangle, metric: bool) -> tuple[rl.Rectangle, rl.Rectangle]:
+  """顶部左侧同一行上的两个 HUD 框：(设定速度胶囊, 限速标志)。
+
+  两者左右并排、互不重叠 —— 胶囊永远占「左槽」，限速标志紧贴左槽右缘。
+  几何在本函数里唯一确定，供 HudRendererSP._draw_set_speed 与
+  SpeedLimitRenderer._render 共用（此前两处各自手写 x 公式）。
+
+  【2026-10-04 重叠修复】限速标志曾按 CarrotPanelSide==0（"左"）画在
+  rect.x + 60，即设定速度胶囊自己的槽位（胶囊 x = rect.x + 46、宽 200），
+  实车表现为限速圆圈压在 MAX/设定速度胶囊上。左侧没有第二个槽位可放，
+  故标志恒置于胶囊行的右侧（= 上游 sunnypilot 原式，也与本 fork WebUI
+  opui.css `.opui-hud-sla { left: 60px + w + 24px }` 同口径）。
+  """
+  width = UI_CONFIG.set_speed_width_metric if metric else UI_CONFIG.set_speed_width_imperial
+  set_speed_rect = rl.Rectangle(
+    rect.x + 60 + (UI_CONFIG.set_speed_width_imperial - width) // 2,
+    rect.y + 45,
+    width,
+    UI_CONFIG.set_speed_height,
+  )
+  speed_limit_sign_rect = rl.Rectangle(
+    rect.x + 60 + width + 30 - 6,
+    rect.y + 45 - 6,
+    width,
+    UI_CONFIG.set_speed_height + 6 * 2,
+  )
+  return set_speed_rect, speed_limit_sign_rect
+
+
 class HudRenderer(Widget):
   def __init__(self):
     super().__init__()
@@ -126,11 +155,12 @@ class HudRenderer(Widget):
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
     """Draw the MAX speed indicator box."""
-    set_speed_width = UI_CONFIG.set_speed_width_metric if ui_state.is_metric else UI_CONFIG.set_speed_width_imperial
-    x = rect.x + 60 + (UI_CONFIG.set_speed_width_imperial - set_speed_width) // 2
-    y = rect.y + 45
+    # 左槽几何唯一来源：hud_left_row_rects（限速标志占其右侧，见该函数说明）。
+    set_speed_rect, _ = hud_left_row_rects(rect, ui_state.is_metric)
+    x = set_speed_rect.x
+    set_speed_width = set_speed_rect.width
+    y = set_speed_rect.y
 
-    set_speed_rect = rl.Rectangle(x, y, set_speed_width, UI_CONFIG.set_speed_height)
     rl.draw_rectangle_rounded(set_speed_rect, 0.35, 10, COLORS.BLACK_TRANSLUCENT)
     rl.draw_rectangle_rounded_lines_ex(set_speed_rect, 0.35, 10, 6, COLORS.BORDER_TRANSLUCENT)
 
