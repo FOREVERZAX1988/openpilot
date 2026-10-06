@@ -70,6 +70,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"JetlinkLink", {PERSISTENT | BACKUP, INT, "0"}},
     {"JetlinkSpec", {PERSISTENT, JSON}},
     {"JetlinkModelPointers", {PERSISTENT, JSON}},
+    // an iPhone on a direct cable charges from the comma; off by default, some
+    // lose the link once the comma powers them
+    {"JetlinkChargePhone", {PERSISTENT, BOOL, "0"}},
     {"IsRhdDetected", {PERSISTENT, BOOL}},
     {"IsReleaseBranch", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsTestedBranch", {CLEAR_ON_MANAGER_START, BOOL}},
