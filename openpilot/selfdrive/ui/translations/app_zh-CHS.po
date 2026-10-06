@@ -702,6 +702,10 @@ msgid "Debug and diagnostic toggles. Use with caution."
 msgstr "调试与诊断开关，请谨慎使用。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "eGPU"
+msgstr "外接算力"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 msgid "eGPU / big model status and configuration."
 msgstr "eGPU / 大模型状态与配置。"
 

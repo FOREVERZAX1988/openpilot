@@ -1838,6 +1838,10 @@ msgid "Debug and diagnostic toggles. Use with caution."
 msgstr ""
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
+msgid "eGPU"
+msgstr ""
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning.py
 msgid "eGPU / big model status and configuration."
 msgstr ""
 
