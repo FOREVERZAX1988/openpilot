@@ -14,6 +14,7 @@ from openpilot.selfdrive.car.cruise import V_CRUISE_MAX
 from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import AccelController
 from openpilot.sunnypilot.selfdrive.controls.lib.dec.dec import DynamicExperimentalController
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_alerts_helper import E2EAlertsHelper
+from openpilot.sunnypilot.selfdrive.controls.lib.lead_forecast.forecast import LeadForecast
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.smart_cruise_control import SmartCruiseControl
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist import SpeedLimitAssist
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitResolver
@@ -63,6 +64,9 @@ class LongitudinalPlannerSP:
     self.generation = int(model_bundle.generation) if (model_bundle := get_active_bundle()) else None
     self.source = LongitudinalPlanSource.cruise
     self.e2e_alerts_helper = E2EAlertsHelper()
+    # wraps mpc.process_lead so the long MPC sees the model's lead forecast; long_mpc.py is untouched
+    self.lead_forecast = LeadForecast()
+    self.lead_forecast.install(mpc)
 
     self.output_v_target = 0.
     self.output_a_target = 0.
@@ -202,6 +206,7 @@ class LongitudinalPlannerSP:
     self.accel_controller.update()
     self.events_sp.clear()
     self.e2e_alerts_helper.update(sm, self.events_sp)
+    self.lead_forecast.update(sm)
 
   def update_dec(self, sm: messaging.SubMaster) -> None:
     self.dec.update(sm)
@@ -231,6 +236,17 @@ class LongitudinalPlannerSP:
     accel_controller.enabled = bool(self.accel_controller.is_enabled())
     accel_controller.active = bool(self.accel_controller_active)
     accel_controller.profile = int(self.accel_controller.profile)
+
+    # Lead forecast: how much of each lead the MPC took from the model's forecast, and the
+    # trajectory it got (sunnypilot/selfdrive/controls/lib/lead_forecast)
+    leadForecast = longitudinalPlanSP.leadForecast
+    for report, weight, inhibit, lead_xv in zip((leadForecast.leadOne, leadForecast.leadTwo), self.lead_forecast.weights,
+                                                self.lead_forecast.inhibits, self.lead_forecast.lead_xv, strict=True):
+      report.weight = float(weight)
+      report.inhibit = inhibit
+      if lead_xv is not None:
+        report.x = lead_xv[:, 0].tolist()
+        report.v = lead_xv[:, 1].tolist()
 
     # Smart Cruise Control
     smartCruiseControl = longitudinalPlanSP.smartCruiseControl

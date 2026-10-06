@@ -393,8 +393,33 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
     }
   }
 
+  # The model's lead forecast as the long MPC obstacle
+  # (sunnypilot/selfdrive/controls/lib/lead_forecast): how much of each lead
+  # the MPC took from the forecast, and the trajectory it got.
+  struct LeadForecast {
+    leadOne @0 :Lead;
+    leadTwo @1 :Lead;
+
+    struct Lead {
+      weight @0 :Float32;      # 0 upstream extrapolation .. 1 forecast, rate-limited
+      inhibit @1 :Inhibit;
+      x @2 :List(Float32);     # m, the MPC's lead position at its T_IDXS
+      v @3 :List(Float32);     # m/s
+    }
+
+    enum Inhibit {
+      disabled @0;      # the LeadForecast toggle is off (and logs from before it)
+      none @1;
+      noLead @2;
+      radar @3;         # a radar track: measured, keeps upstream's extrapolation
+      invalid @4;
+      mismatch @5;      # radarState's lead is not the model's lead
+    }
+  }
+
   trafficLight @9 :TrafficLightState;
   carrot @10 :CarrotPlan;
+  leadForecast @11 :LeadForecast;
 }
 
 struct OnroadEventSP @0xda96579883444c35 {
