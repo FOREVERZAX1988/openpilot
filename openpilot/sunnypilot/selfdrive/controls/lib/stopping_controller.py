@@ -29,6 +29,14 @@ class StoppingController:
   STANDSTILL_HOLD_DELAY_NO_LEAD = 1.0  # s
   STOPPING_FREEZE_MAX = 2.0  # s
   STOPPING_EXIT_DEBOUNCE = 0.2  # s
+  # Engaging at a standstill (driver 2026-10-06, route 0000010a 23:58:49: "pulling away with no lead, just before the car
+  # really moves there is a very short hard brake, then it goes"). The car stood in the auto hold (1360 N); engaging
+  # dropped the hold to 0 N, the plan's first frame still said stop, so the stopping state started the standstill hold
+  # ramp at once (it had stood long past the hold delay) - -0.21 m/s^2 within 0.2 s, which the PCM turned into a
+  # 1600 N brake pulse (IMU +0.6 m/s^2 jolt) before the launch 0.4 s later. For ENGAGE_STANDSTILL_GRACE after engaging
+  # at a standstill with no lead the request stays at zero instead: the launch follows straight away; if the plan
+  # really wants to stay stopped, the hold ramp starts after the grace.
+  ENGAGE_STANDSTILL_GRACE = 0.6  # s
   STOPPING_FOLLOW_MIN = -0.10  # m/s^2
   STOPPING_FOLLOW_RATE = 2.0  # m/s^3
   CREEP_V_MIN = 0.03  # m/s
@@ -56,15 +64,22 @@ class StoppingController:
   # now piecewise linear through (BLEND_V, a_entry) -> (END_V_HI, END_HI) -> (0, END_LO); a_entry is at least END_HI.
   BLEND_V = 10.0 / 3.6  # m/s: the line starts here, at the request the car had at that moment
   END_V_HI = 5.0 / 3.6  # m/s
-  END_HI = -0.50  # m/s^2 at END_V_HI (~1080 N)
-  END_LO = -0.25  # m/s^2 at 0 km/h (~780 N); driver 2026-10-04: -0.30 "closer to perfect", -0.25 = the threshold
+  END_HI = -0.60  # m/s^2 at END_V_HI (~1200 N)
+  END_LO = -0.30  # m/s^2 at 0-1 km/h; driver 2026-10-04: -0.30 "closer to perfect", -0.25 the threshold; 2026-10-06 back to -0.30
   # Driver 2026-10-04 (route 000000f2): "between 5 and 0 km/h not linear but parabolic: steeper from 5 to 2, flat from
   # 2 to 0" -> x^2 parabola -0.50/-0.41/-0.34/-0.29/-0.26/-0.25 ("closer to perfect"). An S-shaped table
   # (-0.50/-0.47/-0.40/-0.29/-0.25/-0.24) was "not better" and reverted. Then the driver gave his own points, close to
   # the parabola but a touch lighter in the middle: 4 km/h -0.40, 3 -0.33, 2 -0.27, 1 -0.25, 0 -0.25. Held as a table,
   # linearly interpolated at the actual speed every 10 ms (continuous curve).
   END_CURVE_V = [0.0, 1.0 / 3.6, 2.0 / 3.6, 3.0 / 3.6, 4.0 / 3.6, 5.0 / 3.6]  # m/s
-  END_CURVE_A = [END_LO, -0.25, -0.27, -0.33, -0.40, END_HI]  # m/s^2
+  # Driver 2026-10-06 (route 00000100, seven manual stops 19:45-19:59, averages 5->2 km/h 0.83, 2->0.3 km/h 0.45 m/s^2;
+  # the lightest steady one, 19:56:19, 0.56 / 0.37): "the manual stops are still a touch heavy; give 5-2 km/h a little
+  # more, but already be light at 1 km/h, or reaching -0.25 only at 0 km/h may still nod; keep 1-0 as it was". So a
+  # parabola with its flat top at 5 km/h (END_HI) that bends down to END_LO by 1 km/h, then flat END_LO to the stop:
+  # a = END_LO + (END_HI - END_LO) * (1 - ((5 - v) / 4)^2) -> -0.60/-0.58/-0.51/-0.40/-0.25/-0.25 at 5..0 km/h.
+  # Driver 2026-10-06 night: "the end of the stop is not ideal, make 1-0 -0.3": END_LO -0.30, same parabola above it
+  # -> -0.60/-0.58/-0.53/-0.43/-0.30/-0.30.
+  END_CURVE_A = [END_LO, END_LO, -0.43, -0.53, -0.58, END_HI]  # m/s^2
   END_PLAN_MIN = -0.25  # m/s^2: the plan must be braking this much at BLEND_V to count as stopping (a crawl-follow hovers near 0)
   END_RATE = 2.0  # m/s^3: how fast the request may move toward the line
 
@@ -85,6 +100,7 @@ class StoppingController:
     self.standstill_t = 0.0
     self.stopping_t = 0.0
     self.go_t = 0.0
+    self.engaged_t = 0.0
     self.stopped_once = False
     self.creep_t = 0.0
     self.end_active = False
@@ -110,6 +126,7 @@ class StoppingController:
       self.go_t = 0.0
 
     self.standstill_t = self.standstill_t + DT_CTRL if CS.standstill else 0.0
+    self.engaged_t = 0.0 if state == LongCtrlState.off else self.engaged_t + DT_CTRL
     self.stopping_t = self.stopping_t + DT_CTRL if state == LongCtrlState.stopping else 0.0
     if state != LongCtrlState.stopping:
       self.stopped_once = False
@@ -151,7 +168,9 @@ class StoppingController:
         output_accel = self._end_request(a_target, prev_accel, CS.vEgo)
 
       hold_delay = self.STANDSTILL_HOLD_DELAY_LEAD if has_lead else self.STANDSTILL_HOLD_DELAY_NO_LEAD
-      if self.standstill_t >= hold_delay:
+      if CS.standstill and not has_lead and self.engaged_t < self.ENGAGE_STANDSTILL_GRACE:
+        rate = 0.0  # just engaged at a standstill: no brake pulse before the launch
+      elif self.standstill_t >= hold_delay:
         rate = self.STANDSTILL_HOLD_RATE
       elif creeping:
         rate = min(self.STOPPING_DECEL_RATE + self.CREEP_RATE_GROWTH * self.creep_t, self.CREEP_RATE_MAX)
