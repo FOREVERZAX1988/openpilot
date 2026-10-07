@@ -10,6 +10,7 @@ from openpilot.cereal import log, custom
 from opendbc.car import structs
 from opendbc.car.hyundai.values import HyundaiFlags
 from openpilot.common.params import Params
+from openpilot.selfdrive.selfdrived.events import ET
 from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake, read_steering_mode_param, MADS_NO_ACC_MAIN_BUTTON
 from openpilot.sunnypilot.mads.state import StateMachine, GEARS_ALLOW_PAUSED_SILENT
 
@@ -36,6 +37,7 @@ class ModularAssistiveDrivingSystem:
     self.lateral_mismatch_counter = 0
     self.allow_always = False
     self.no_main_cruise = False
+    self.lateral_held = False
     self.selfdrive = selfdrive
     self.selfdrive.enabled_prev = False
     self.state_machine = StateMachine(self)
@@ -100,6 +102,16 @@ class ModularAssistiveDrivingSystem:
   def transition_paused_state(self):
     if self.state_machine.state != State.paused:
       self.events_sp.add(EventNameSP.silentLkasDisable)
+
+  def update_stock_lkas(self) -> None:
+    # The car's own lane keep switched off (stockLkasOff) pauses lateral rather than disabling
+    # it, cruise engaged or not: MADS stays enabled, so the panda keeps lateral allowed through
+    # the MADS heartbeat, and switching it back on resumes through the paused state's silent
+    # enable with no cruise cycle. A request for lateral while it is off enters paused the same
+    # way (GEARS_ALLOW_PAUSED_SILENT). A disable on the same frame (the MADS button, main off,
+    # the brake under disengage) wins: the pause would otherwise mask it.
+    if self.events_sp.has(EventNameSP.stockLkasOff) and self.enabled and not self.events_sp.contains(ET.USER_DISABLE):
+      self.transition_paused_state()
 
   def replace_event(self, old_event: int, new_event: int):
     self.events.remove(old_event)
@@ -195,6 +207,8 @@ class ModularAssistiveDrivingSystem:
             self.events_sp.remove(EventNameSP.lkasEnable)
             self.events_sp.add(EventNameSP.pedalPressedAlertOnly)
 
+    self.update_stock_lkas()
+
     if self.should_silent_lkas_enable(CS):
       if self.state_machine.state == State.paused:
         self.events_sp.add(EventNameSP.silentLkasEnable)
@@ -217,6 +231,9 @@ class ModularAssistiveDrivingSystem:
 
     if not self.CP.passive and self.selfdrive.initialized:
       self.enabled, self.active = self.state_machine.update()
+
+    self.lateral_held = ((self.state_machine.state == State.paused and self.events_sp.has(EventNameSP.stockLkasOff)) or
+                         (self.enabled and self.events_sp.has(EventNameSP.stockLkasArming)))
 
     # Copy of previous SelfdriveD states for MADS events handling
     self.selfdrive.enabled_prev = self.selfdrive.enabled

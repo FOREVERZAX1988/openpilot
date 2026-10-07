@@ -15,6 +15,9 @@ struct ModularAssistiveDrivingSystem {
   enabled @1 :Bool;
   active @2 :Bool;
   available @3 :Bool;
+  # Enabled but held off by the car's own lane keep (switched off, or the EPS re-arming after it
+  # came back on): the UI shows lateral as off rather than paused or active.
+  lateralHeld @4 :Bool;
 
   enum ModularAssistiveDrivingSystemState {
     disabled @0;
@@ -540,6 +543,17 @@ struct OnroadEventSP @0xda96579883444c35 {
     bigModelAvailable @29;
     bigModelLinkLost @30;
 
+    # mads: pedal pressed silent event
+    silentPedalPressed @31;
+    # mads: LKAS switched off holds lateral paused (mads.py update_stock_lkas)
+    stockLkasOff @32;
+    # mads: LKAS back on but EPS has not re-armed yet
+    stockLkasArming @33;
+    # chime when longitudinal control becomes available
+    longitudinalEnableChime @34;
+    # chime when longitudinal control becomes unavailable
+    longitudinalDisableChime @35;
+
     # carrot (phone projection & navigation)
     trafficSignGreen @26;
     trafficSignChanged @27;
@@ -693,6 +707,21 @@ struct CarStateSP @0xb86e6369214c01c8 {
   # reusing @1/@2 would silently alias engineOff onto carrotLaneValid.
   engineOff @9 :Bool;
   engineRpm @10 :Float32;
+
+  # zoompilot-specific fields (CarStateZP): lkasArming, distanceFarther.
+  # Added at @11 to avoid wire conflicts with sunnypilot fields @0-@10.
+  zoompilot @11 :CarStateZP;
+}
+
+# Mazda-only CarState extension: fields derived from the car's stock systems that are
+# relevant to sunnypilot / zoompilot MADS behaviour.
+struct CarStateZP @0xc879af11c43cb400 {
+  # The wheel's "farther" distance button, level. Upstream's one gapAdjustCruise button type
+  # cycles the personality one way; selfdrived steps it the other way on this release.
+  distanceFarther @2 :Bool;
+  # The car's own lane keep is back on after the driver switched it off, and the EPS has not
+  # applied torque since. MADS keeps the driver told lateral is disabled until it does.
+  lkasArming @3 :Bool;
 }
 
 

@@ -214,6 +214,23 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.WARNING: NoEntryAlert("踏板被按下")
   },
 
+  # Mazda: invalidLkasSetting is swapped for this when MADS is on (CarSpecificEventsSP);
+  # MADS holds lateral paused on it (mads.py update_stock_lkas). mici gets a standing alert,
+  # tizi only its border.
+  EventNameSP.stockLkasOff: {
+    ET.NO_ENTRY: Alert(
+      "Lateral Disabled",
+      "LKAS is off",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.refuse, 3.),
+    **({ET.PERMANENT: NormalPermanentAlert("Lateral Disabled", "LKAS is off", priority=Priority.LOW)} if IS_MICI else {}),
+  },
+
+  # LKA back on with lateral resuming, the EPS not delivering yet: still disabled to the driver.
+  EventNameSP.stockLkasArming: {
+    ET.PERMANENT: NormalPermanentAlert("Lateral Disabled", "Waiting for steering", priority=Priority.LOW),
+  } if IS_MICI else {},
+
   EventNameSP.laneTurnLeft: {
     ET.WARNING: Alert(
       "正在左转",
