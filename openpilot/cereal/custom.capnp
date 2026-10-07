@@ -45,6 +45,11 @@ struct IntelligentCruiseButtonManagement {
     none @0;
     increase @1;
     decrease @2;
+    # sustained button stream at the message's native rate: the fast walk for large
+    # moves (interleaved with the wheel's own frames it registers as paced presses,
+    # never as a held button)
+    increaseHold @3;
+    decreaseHold @4;
   }
 }
 
