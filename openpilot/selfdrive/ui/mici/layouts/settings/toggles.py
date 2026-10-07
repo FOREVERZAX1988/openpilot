@@ -15,8 +15,8 @@ PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
 
 class MacanStartStopDistControl(BigMultiToggle):
-  """Macan 起步安全距离（米）：3/5/10 三档（tizi 为 0/3-10 每1米，mici 简化三档）"""
-  OPTIONS = ["3", "5", "10"]
+  """Macan 起步安全距离（米）：3/6/10 三档（tizi 为 3-10 每 1 米，mici 简化三档；Off 已取消）"""
+  OPTIONS = ["3", "6", "10"]
 
   def __init__(self, text: str, param: str):
     super().__init__(text, self.OPTIONS)

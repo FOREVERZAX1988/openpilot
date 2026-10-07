@@ -698,7 +698,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ModelManager_LastSyncTime_USBGPU", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
     {"ModelManager_ModelsCache_USBGPU", {PERSISTENT | BACKUP, JSON}},
     {"MacanStartStop", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 起步跟停（视觉决定起步，OP 代发 RESUME）
-    {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "5"}},  // Macan 起步安全距离（米；0=Off/V1纯意图起步，3~10=需雷达ab或视觉>阈值，拥堵防加塞）
+    {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "6"}},  // Macan 起步安全距离（米；3~10，默认6，前保险杠到前车；需雷达ab或视觉>阈值才自动起步，防误起步。2026-10-07 取消 0=Off 语义）
     {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）
     {"MacanSlopeCompUnlimited", {PERSISTENT | BACKUP, BOOL, "0"}}, // 坡度补偿-放开原厂力矩限制（选项2）
     {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},

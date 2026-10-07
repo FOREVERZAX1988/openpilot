@@ -4844,8 +4844,8 @@ msgid "Startup Safe Distance (Macan)"
 msgstr "起步安全距离（Macan）"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid "Startup Safe Distance (Macan): when ON, auto-resume from a stop requires the stock radar distance (>0) or vision lead (>5m) - prevents phantom starts. When OFF, resumes on vision intent alone (V1 behavior) - use in heavy traffic to keep tight gaps and prevent cut-ins. Only effective when Stop and Go (Macan) is enabled."
-msgstr "Macan 起步安全距离：自动起步的前车距离阈值（米）可调。0=关闭：仅凭视觉起步意图即起步（V1行为）——适合拥堵路段保持紧凑跟车、防加塞；3~10米：需原厂雷达距离(ab)或视觉前车超过该阈值才起步——防误起步。仅在开启“起步跟停（Macan）”时生效。"
+msgid "Startup Safe Distance (Macan): minimum bumper-to-lead distance (3-10 m, default 6 m) required before openpilot auto-resumes from a stop - the stock radar distance or the vision lead must exceed this value, which prevents phantom starts. Only effective when Stop and Go (Macan) is enabled."
+msgstr "Macan 起步安全距离：自动起步所需的车头（前保险杠）到前车的最小距离（3~10 米，默认 6 米）。需原厂雷达距离(ab) 或视觉前车距离超过该阈值才自动起步——防误起步。仅在开启“起步跟停（Macan）”时生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/osm.py
 msgid "State"

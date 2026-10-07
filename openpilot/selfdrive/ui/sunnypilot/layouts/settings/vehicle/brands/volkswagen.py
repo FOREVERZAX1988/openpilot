@@ -14,11 +14,11 @@ from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, opt
 
 DESCRIPTIONS = {
   'start_stop_distance': tr_noop(
-    'Startup Safe Distance (Macan): when ON, auto-resume from a stop requires '
-    'the stock radar distance (>0) or vision lead (>5m) - prevents phantom '
-    'starts. When OFF, resumes on vision intent alone (V1 behavior) - use in '
-    'heavy traffic to keep tight gaps and prevent cut-ins. Only effective '
-    'when Stop and Go (Macan) is enabled.'
+    'Startup Safe Distance (Macan): minimum bumper-to-lead distance (3-10 m, '
+    'default 6 m) required before openpilot auto-resumes from a stop - the '
+    'stock radar distance or the vision lead must exceed this value, which '
+    'prevents phantom starts. Only effective when Stop and Go (Macan) is '
+    'enabled.'
   ),
   'start_stop': tr_noop(
     'Macan Stop and Go: when enabled, the vision model decides when to start, '
@@ -68,11 +68,11 @@ class VolkswagenSettings(BrandSettings):
     self.start_stop_distance = option_item_sp(
       lambda: tr("Startup Safe Distance (Macan)"),
       "MacanStartStopDistance",
-      min_value=0, max_value=8,
+      min_value=0, max_value=7,
       description=lambda: tr(DESCRIPTIONS["start_stop_distance"]),
       value_change_step=1,
-      value_map={0: 0, 1: 3, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8, 7: 9, 8: 10},  # 显示档→存储米（0=Off, 3~10米每1米）
-      label_callback=lambda v: tr("Off") if v == 0 else f"{v} m",  # v 是存储值(3-10)，直接显示米
+      value_map={0: 3, 1: 4, 2: 5, 3: 6, 4: 7, 5: 8, 6: 9, 7: 10},  # 显示档→存储米（3~10 米每 1 米；Off 已取消）
+      label_callback=lambda v: f"{v} m",  # v 是存储值(3-10)，直接显示米
       enabled=lambda: not ui_state.engaged,
     )
     self.start_stop_distance.set_visible(ui_state.params.get_bool("MacanStartStop"))  # 仅 SnG 开启时可见
