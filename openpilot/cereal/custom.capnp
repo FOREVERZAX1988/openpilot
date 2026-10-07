@@ -716,6 +716,9 @@ struct CarStateSP @0xb86e6369214c01c8 {
 # Mazda-only CarState extension: fields derived from the car's stock systems that are
 # relevant to sunnypilot / zoompilot MADS behaviour.
 struct CarStateZP @0xc879af11c43cb400 {
+  # Reserved for future expansion; must not be removed or renumbered.
+  rsvd0 @0 :Void;
+  rsvd1 @1 :Void;
   # The wheel's "farther" distance button, level. Upstream's one gapAdjustCruise button type
   # cycles the personality one way; selfdrived steps it the other way on this release.
   distanceFarther @2 :Bool;
