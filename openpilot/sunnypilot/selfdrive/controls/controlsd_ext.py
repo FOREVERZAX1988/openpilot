@@ -19,6 +19,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
 from openpilot.sunnypilot.livedelay.helpers import get_lat_delay
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
+from openpilot.sunnypilot.selfdrive.locationd.torqued_ext import LIVE_TORQUE_PARAMETERS_SP_SERVICE
 from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
 from openpilot.sunnypilot.selfdrive.controls.lib.blinker_pause_lateral import BlinkerPauseLateral
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_smoothing import LaneChangeSmoothing
@@ -62,7 +63,7 @@ class ControlsExt(ModelStateBase):
     self.CP_SP = messaging.log_from_bytes(params.get("CarParamsSP", block=True), custom.CarParamsSP)
     cloudlog.info("controlsd_ext got CarParamsSP")
 
-    self.sm_services_ext = ['radarState', 'selfdriveStateSP']
+    self.sm_services_ext = ['radarState', 'selfdriveStateSP', LIVE_TORQUE_PARAMETERS_SP_SERVICE]
     self.pm_services_ext = ['carControlSP']
 
   def initialize_lateral_control(self, lac, CI, dt):
@@ -233,5 +234,18 @@ class ControlsExt(ModelStateBase):
     CC_SP = self.state_control_ext(sm)
     self.publish_ext(CC_SP, sm, pm)
     self.reclassify_steer_limit(sm)
+
+    # Speed-dependent torque: apply per-bin learned values to the lateral controller
+    if (self.CP.lateralTuning.which() == 'torque'
+        and sm.updated.get('lateralTorqueParameters', False)
+        and sm.all_checks(['lateralTorqueParameters'])):
+      tp = sm['lateralTorqueParameters']
+      # torqued_ext publishes the bins beside every upstream message on the fork service;
+      # one that has not checked out counts as no bins
+      tp_sp = sm[LIVE_TORQUE_PARAMETERS_SP_SERVICE] if sm.all_checks([LIVE_TORQUE_PARAMETERS_SP_SERVICE]) else None
+      # both sizes' controllers, so the idle one holds current bins when it takes over.
+      # handles activation AND deactivation: useParams off or empty bins de-assert
+      for lac in self._lacs:
+        lac.extension.update_speed_dep_torque(tp, tp_sp)
 
     self.select_lateral_control(sm)

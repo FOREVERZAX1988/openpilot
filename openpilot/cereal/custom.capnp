@@ -1183,4 +1183,15 @@ struct CustomReserved18 @0xc86a3d38d13eb3ef {
 }
 
 struct CustomReserved19 @0xa4f1eb3323f5f582 {
+  # liveTorqueParametersSP (torqued_ext), on the last of sunnypilot's reserved slots so
+  # log.capnp's Event union stays untouched. The service is customReserved19.
+  version @0 :Int32;               # torqued VERSION, keys the cache restore with CarParamsPrevRoute
+  speedBinCenters @1 :List(Float32);
+  speedBinLatAccelFactors @2 :List(Float32);
+  speedBinFrictions @3 :List(Float32);
+  speedBinValid @4 :List(Bool);
+  # cache-only: empty on the published message; the per-bin buckets are thousands of
+  # points and only the restore path reads them (LiveTorqueParametersSP param)
+  speedBinPoints @5 :List(List(List(Float32)));
+  seedVersion @6 :Int32;           # speed_dependent.toml seed_version the bins were learned under; 0 before the field existed
 }
