@@ -1626,11 +1626,14 @@ class TestCarrotManager(unittest.TestCase):
     `sm.alive` briefly lapses. carState is alive for only 10/freq = 0.1 s in the real
     SubMaster, shorter than a GC/Ratekeeper stall, so the old code flashed the HUD to 0
     while the dashboard stayed at 80. The broadcast must hold the last fresh value for
-    BROADCAST_HOLD_SEC and only emit a real 0 after a genuine stop."""
+    BROADCAST_HOLD_SEC and only emit a real 0 after a genuine stop.
+
+    The read is keyed on `sm.valid` (carState.valid = CAN health), not `sm.alive`, so a normal
+    alive lapse never reaches this path at all; a valid lapse inside the grace holds."""
     self.mgr.sm["carState"] = MagicMock(vEgoCluster=22.22, vCruise=80, logCarrot="", cruiseState=MagicMock(speed=22.22))
     self.mgr.sm["selfdriveState"] = MagicMock(active=True)
-    self.mgr.sm.alive["carState"] = True
-    self.mgr.sm.alive["selfdriveState"] = True
+    self.mgr.sm.valid["carState"] = True
+    self.mgr.sm.valid["selfdriveState"] = True
 
     # First message: fresh values, car moving at 80 km/h (22.22 m/s).
     msg = json.loads(self.mgr.make_send_message())
@@ -1638,32 +1641,36 @@ class TestCarrotManager(unittest.TestCase):
     assert msg["v_cruise_kph"] == 80, msg
     assert msg["active"] is True, msg
 
-    # A transient cereal lapse: alive goes False but stays within the hold grace.
-    self.mgr.sm.alive["carState"] = False
-    self.mgr.sm.alive["selfdriveState"] = False
+    # A transient cereal lapse: valid goes False but stays within the hold grace.
+    self.mgr.sm.valid["carState"] = False
+    self.mgr.sm.valid["selfdriveState"] = False
     self.mgr._bcast_fresh_ts = self.mgr._mono_now()  # still fresh (0 elapsed)
     msg = json.loads(self.mgr.make_send_message())
     assert msg["v_ego_kph"] == 80, f"lapse must hold the last speed, not dump to 0: {msg}"
     assert msg["v_cruise_kph"] == 80, msg
     assert msg["active"] is True, msg
 
-    # A genuine stop still reports 0: carState alive with vEgoCluster -> 0.
-    self.mgr.sm.alive["carState"] = True
+    # A genuine stop still reports 0: carState valid with vEgoCluster -> 0.
+    self.mgr.sm.valid["carState"] = True
     self.mgr.sm["carState"] = MagicMock(vEgoCluster=0.0, vCruise=80, logCarrot="", cruiseState=MagicMock(speed=0.0))
     msg = json.loads(self.mgr.make_send_message())
     assert msg["v_ego_kph"] == 0, f"a real stop must show 0, not a held speed: {msg}"
 
   def test_broadcast_emits_real_zeros_after_the_hold_grace_expires(self):
     """Holding is bounded: after BROADCAST_HOLD_SEC with nothing fresh, the broadcast goes
-    back to zeros instead of pinning a stale value forever (device off / disconnect)."""
+    back to zeros instead of pinning a stale value forever (device off / disconnect).
+
+    The hold is keyed on `sm.valid` (carState.valid = CAN health), not `sm.alive`: alive is a
+    10/freq = 0.1 s window that lapses on every normal GC/Ratekeeper stall, which is exactly
+    what the hold exists to cover."""
     import openpilot.sunnypilot.carrot.carrot_man as cm_mod
 
     self.mgr.sm["carState"] = MagicMock(vEgoCluster=22.22, vCruise=80, logCarrot="", cruiseState=MagicMock(speed=22.22))
-    self.mgr.sm.alive["carState"] = True
+    self.mgr.sm.valid["carState"] = True
     json.loads(self.mgr.make_send_message())  # seeds 80
 
-    self.mgr.sm.alive["carState"] = False
-    self.mgr.sm.alive["selfdriveState"] = False
+    self.mgr.sm.valid["carState"] = False
+    self.mgr.sm.valid["selfdriveState"] = False
     # Age the fresh-timestamp beyond the grace.
     self.mgr._bcast_fresh_ts = self.mgr._mono_now() - (cm_mod.BROADCAST_HOLD_SEC + 0.1)
     msg = json.loads(self.mgr.make_send_message())
