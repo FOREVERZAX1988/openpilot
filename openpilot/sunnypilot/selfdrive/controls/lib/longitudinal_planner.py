@@ -20,7 +20,7 @@ from openpilot.sunnypilot.selfdrive.controls.lib.e2e_alerts_helper import E2EAle
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_lead_gap.controller import E2ELeadGapController
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.controller import E2ESetSpeedController
 from openpilot.sunnypilot.selfdrive.controls.lib.lead_forecast.forecast import LeadForecast
-from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.smart_cruise_control import SmartCruiseControl
+from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.zoompilot import make_smart_cruise_control
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist import SpeedLimitAssist
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitResolver
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
@@ -64,7 +64,8 @@ class LongitudinalPlannerSP:
     self.accel_controller_active = False
     self.events_sp = EventsSP()
     self.dec = DynamicExperimentalController(CP, mpc)
-    self.scc = SmartCruiseControl()
+    self.scc = make_smart_cruise_control(CP)
+    self.scc_actionable = CP.openpilotLongitudinalControl or not CP_SP.pcmCruiseSpeed
     self.resolver = SpeedLimitResolver()
     self.sla = SpeedLimitAssist(CP, CP_SP)
     self.generation = int(model_bundle.generation) if (model_bundle := get_active_bundle()) else None
@@ -149,7 +150,7 @@ class LongitudinalPlannerSP:
       self._fusion_enabled = self._params.get_bool("CarrotTrafficLightFusionEnabled")
 
     # Smart Cruise Control
-    self.scc.update(sm, long_enabled, long_override, v_ego, a_ego, v_cruise)
+    self.scc.update(sm, long_enabled and self.scc_actionable, long_override, v_ego, a_ego, v_cruise)
 
     # Speed Limit Resolver
     self.resolver.update(v_ego, sm)
