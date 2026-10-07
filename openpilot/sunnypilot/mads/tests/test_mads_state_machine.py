@@ -42,6 +42,7 @@ class MockMADS:
     self.selfdrive.events_sp = EventsSP()
     self.selfdrive.model_startup.starting = False
     self.selfdrive.big_model_loading = False
+    self.button_owns_lateral = False
     self.lateral_held = False
 
 
