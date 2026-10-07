@@ -124,6 +124,11 @@ class DeveloperLayoutMici(NavScroller):
     for item in engaged_blocked_toggles:
       item.set_enabled(lambda: not ui_state.engaged)
 
+    # Grey pill: long maneuver is meaningless without longitudinal control, so grey
+    # the pill while keeping the stored value so it applies again once the car gains it
+    self._long_maneuver_toggle.set_superseded(
+        lambda: ui_state.CP is not None and not ui_state.has_longitudinal_control)
+
     # Set initial state
     if ui_state.params.get_bool("ShowDebugInfo"):
       gui_app.set_show_touches(True)

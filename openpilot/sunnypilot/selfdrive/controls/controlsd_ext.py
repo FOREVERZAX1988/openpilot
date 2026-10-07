@@ -11,6 +11,7 @@ from openpilot.cereal import log, custom
 
 from opendbc.car import structs
 from openpilot.common.params import Params
+from openpilot.common.realtime import DT_CTRL
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
 from openpilot.sunnypilot.livedelay.helpers import get_lat_delay
@@ -18,6 +19,13 @@ from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
 from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
 from openpilot.sunnypilot.selfdrive.controls.lib.blinker_pause_lateral import BlinkerPauseLateral
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
+
+# how long lateral control has to be inactive, continuously, before a torque tune swap
+# could safely follow a model change: a one-frame drop (a steer fault flicker) would
+# otherwise swap and resume on a controller no inactive frame had primed.
+# sp does not have dynamic V0/V1/V2 lateral switching, so the swap itself is a no-op,
+# but the counter is tracked so a future dynamic switcher can use it.
+TUNE_SWAP_INACTIVE_FRAMES = round(0.5 / DT_CTRL)
 
 
 class ControlsExt(ModelStateBase):
@@ -32,6 +40,10 @@ class ControlsExt(ModelStateBase):
     # a second, independent gate on CC.latActive and also meant it kept working with
     # CarrotEnabled off, since nothing consulted that switch.
     self.carrot_controls = CarrotControls(CP)
+
+    # frames in a row with lateral inactive (note_lat_active); the counter is the
+    # building block for a future tune swap that requires inactive frames to elapse.
+    self._inactive_frames = 0
 
     cloudlog.info("controlsd_ext is waiting for CarParamsSP")
     self.CP_SP = messaging.log_from_bytes(params.get("CarParamsSP", block=True), custom.CarParamsSP)
@@ -65,6 +77,7 @@ class ControlsExt(ModelStateBase):
 
   def get_lat_active(self, sm: messaging.SubMaster) -> bool:
     if self.blinker_pause_lateral.update(sm['carState']):
+      self.note_lat_active(False)
       return False
 
     # Carrot's "driver is steering hard" pause. Same exit point as above, so a single
@@ -72,14 +85,22 @@ class ControlsExt(ModelStateBase):
     # wants_suspend, and LatSuspendAngleDeg defaults to 300 deg - beyond reachable
     # steering angles - so this changes nothing unless the user lowers it.
     if self.carrot_controls.wants_suspend(sm['carState']):
+      self.note_lat_active(False)
       return False
 
     ss_sp = sm['selfdriveStateSP']
     if ss_sp.mads.available:
-      return bool(ss_sp.mads.active)
+      result = bool(ss_sp.mads.active)
+    else:
+      result = bool(sm['selfdriveState'].active)
 
-    # MADS not available, use stock state to engage
-    return bool(sm['selfdriveState'].active)
+    self.note_lat_active(result)
+    return result
+
+  def note_lat_active(self, lat_active: bool) -> None:
+    """Track consecutive frames of lateral inactivity. Call once per control step
+    with the computed lat_active before fault gates are applied."""
+    self._inactive_frames = 0 if lat_active else self._inactive_frames + 1
 
   @staticmethod
   def get_lead_data(_lead, src: log.RadarState.LeadData) -> None:

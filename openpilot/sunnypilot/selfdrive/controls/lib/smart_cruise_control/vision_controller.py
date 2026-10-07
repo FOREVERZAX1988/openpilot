@@ -30,7 +30,22 @@ _URGENT_PRED_LAT_ACC_TH = 3.  # Predicted Lat Acc threshold that requires an imm
 _LEAVING_LAT_ACC_TH = 1.3  # Lat Acc threshold to trigger leaving turn state.
 _FINISH_LAT_ACC_TH = 1.1  # Lat Acc threshold to trigger the end of the turn cycle.
 
-_A_LAT_REG_MAX = 2.  # Maximum lateral acceleration
+# Maximum lateral acceleration. 1.8 m/s² matches zoompilot's Mazda curve planning
+# (vs 2.0 in sunnypilot); tighter ceiling means slower through curves but
+# safer lateral g on unfamiliar roads.
+_A_LAT_REG_MAX = 1.8
+
+# Minimum smooth deceleration during the ENTERING state: the car starts slowing
+# for the upcoming curve before the tightest part. Lookup by predicted lat acc.
+_ENTERING_SMOOTH_DECEL_V = [-0.2, -1.]  # min decel value allowed on ENTERING
+_ENTERING_SMOOTH_DECEL_BP = [1.3, 3.]   # absolute value of lat acc ahead
+
+# Acceleration for the TURNING state: comfortable decel based on current lateral g.
+_TURNING_ACC_V = [0.5, 0., -0.4]   # acc value
+_TURNING_ACC_BP = [1.5, 2.3, 3.]     # absolute value of current lat acc
+
+# Comfortable acceleration to regain speed while leaving a turn.
+_LEAVING_ACC = 0.5
 
 # Speed above which the "highway" curve tuning applies.
 _HIGHWAY_SPEED_KPH = 80.0
@@ -310,7 +325,20 @@ class SmartCruiseControlVision:
     self._update_calculations(sm)
 
     self.is_enabled, self.is_active = self._update_state_machine()
-    self.a_target = self.a_ego
+
+    # Set a_target based on current curve state (adapts from zoompilot c69620737).
+    # When not overshooting, target smooth deceleration in ENTERING, comfortable accel
+    # in TURNING, and a gentle acceleration in LEAVING to regain speed.
+    if self.state not in ACTIVE_STATES:
+      self.a_target = self.a_ego
+    elif self.state == VisionState.entering:
+      self.a_target = float(np.interp(self.max_pred_lat_acc, _ENTERING_SMOOTH_DECEL_BP, _ENTERING_SMOOTH_DECEL_V))
+    elif self.state == VisionState.turning:
+      self.a_target = float(np.interp(self.current_lat_acc, _TURNING_ACC_BP, _TURNING_ACC_V))
+    elif self.state == VisionState.leaving:
+      self.a_target = _LEAVING_ACC
+    else:
+      self.a_target = self.a_ego
 
     self.output_v_target = self.get_v_target_from_control()
     self.output_a_target = self.get_a_target_from_control()
