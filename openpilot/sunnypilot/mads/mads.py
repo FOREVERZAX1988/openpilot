@@ -11,7 +11,8 @@ from opendbc.car import structs
 from opendbc.car.hyundai.values import HyundaiFlags
 from openpilot.common.params import Params
 from openpilot.selfdrive.selfdrived.events import ET
-from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake, read_steering_mode_param, MADS_NO_ACC_MAIN_BUTTON
+from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake, read_steering_mode_param, MADS_NO_ACC_MAIN_BUTTON, \
+  mads_button_owns_lateral
 from openpilot.sunnypilot.mads.state import StateMachine, GEARS_ALLOW_PAUSED_SILENT
 
 State = custom.ModularAssistiveDrivingSystem.ModularAssistiveDrivingSystemState
@@ -23,6 +24,12 @@ SafetyModel = structs.CarParams.SafetyModel
 
 SET_SPEED_BUTTONS = (ButtonType.accelCruise, ButtonType.resumeCruise, ButtonType.decelCruise, ButtonType.setCruise)
 IGNORED_SAFETY_MODES = (SafetyModel.silent, SafetyModel.noOutput)
+
+# Frames of MADS steering with the panda reporting lateral not allowed. pandaStates arrives at
+# 10 Hz on its own socket, so a fresh engagement can read stale for up to ~10 frames; the
+# warning waits twice that, the disable the same 200 frames as upstream's controlsMismatch.
+LATERAL_MISMATCH_WARN_FRAMES = 20
+LATERAL_MISMATCH_DISABLE_FRAMES = 200
 
 
 class ModularAssistiveDrivingSystem:
@@ -51,6 +58,13 @@ class ModularAssistiveDrivingSystem:
       self.allow_always = True
 
     if self.CP.brand in MADS_NO_ACC_MAIN_BUTTON:
+      self.no_main_cruise = True
+
+    # A declared button is the only lateral switch: engage regardless of ACC main, and keep
+    # ACC main from enabling or disabling. Mirrors the panda-side safety param.
+    self.button_owns_lateral = mads_button_owns_lateral(self.CP, self.CP_SP)
+    if self.button_owns_lateral:
+      self.allow_always = True
       self.no_main_cruise = True
 
     # read params on init
@@ -82,6 +96,10 @@ class ModularAssistiveDrivingSystem:
   def block_unified_engagement_mode(self) -> bool:
     # UEM disabled
     if not self.unified_engagement_mode:
+      return True
+
+    # Longitudinal engagement must not re-enable lateral behind the button's back.
+    if self.button_owns_lateral:
       return True
 
     if self.enabled:
@@ -175,7 +193,7 @@ class ModularAssistiveDrivingSystem:
         self.events.remove(EventName.pcmEnable)
         self.events.remove(EventName.buttonEnable)
     else:
-      if self.main_enabled_toggle:
+      if self.main_enabled_toggle and not self.no_main_cruise:
         if CS.cruiseState.available and not self.selfdrive.CS_prev.cruiseState.available:
           self.events_sp.add(EventNameSP.lkasEnable)
 
@@ -194,7 +212,9 @@ class ModularAssistiveDrivingSystem:
 
     if not CS.cruiseState.available and not self.no_main_cruise:
       self.events.remove(EventName.buttonEnable)
-      if self.selfdrive.CS_prev.cruiseState.available:
+      # Where ACC main is the only MADS off-switch, enforce its level as well as its falling
+      # edge. Platforms with a separate MADS button keep edge-only behavior.
+      if self.selfdrive.CS_prev.cruiseState.available or (self.enabled and not self.allow_always):
         self.events_sp.add(EventNameSP.lkasDisable)
 
     if self.steering_mode_on_brake == MadsSteeringModeOnBrake.DISENGAGE:
@@ -207,19 +227,39 @@ class ModularAssistiveDrivingSystem:
             self.events_sp.remove(EventNameSP.lkasEnable)
             self.events_sp.add(EventNameSP.pedalPressedAlertOnly)
 
+    elif self.steering_mode_on_brake == MadsSteeringModeOnBrake.PAUSE:
+      # the panda holds a lateral request while the brake is down and arms on release; a brake
+      # already held at standstill raises no pedalPressed, so engage into paused on the brake level
+      if (CS.brakePressed or CS.regenBraking) and self.events_sp.has(EventNameSP.lkasEnable):
+        self.events_sp.add(EventNameSP.silentPedalPressed)
+
     self.update_stock_lkas()
 
     if self.should_silent_lkas_enable(CS):
       if self.state_machine.state == State.paused:
         self.events_sp.add(EventNameSP.silentLkasEnable)
 
-    if self.lateral_mismatch_counter >= 200:
+    # every rejected frame is an unsteered frame (the camera's own steering is relay-blocked
+    # while we control), so the driver hears about it well before the disable
+    if self.lateral_mismatch_counter >= LATERAL_MISMATCH_WARN_FRAMES:
+      self.events_sp.add(EventNameSP.controlsMismatchLateralWarning)
+    if self.lateral_mismatch_counter >= LATERAL_MISMATCH_DISABLE_FRAMES:
       self.events_sp.add(EventNameSP.controlsMismatchLateral)
 
     self.events.remove(EventName.pcmDisable)
     self.events.remove(EventName.buttonCancel)
     self.events.remove(EventName.pedalPressed)
     self.events.remove(EventName.wrongCruiseMode)
+
+    # The strips above land after the standard machine's transition but before alert
+    # creation, so a declared MADS button silences the longitudinal engage and disable
+    # chimes with them. Mirror the already-computed selfdrive transition as a PERMANENT
+    # SP event: sound-only, and no state machine reads PERMANENT.
+    if self.button_owns_lateral:
+      if self.selfdrive.enabled and not self.selfdrive.enabled_prev:
+        self.events_sp.add(EventNameSP.longitudinalEnableChime)
+      elif not self.selfdrive.enabled and self.selfdrive.enabled_prev:
+        self.events_sp.add(EventNameSP.longitudinalDisableChime)
 
   def update(self, CS: structs.CarState):
     if not self.enabled_toggle:

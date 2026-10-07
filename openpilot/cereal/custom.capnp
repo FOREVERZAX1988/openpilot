@@ -542,6 +542,8 @@ struct OnroadEventSP @0xda96579883444c35 {
     bigModelReady @25;
     bigModelAvailable @29;
     bigModelLinkLost @30;
+    # mads: panda reports lateral not allowed for 20 frames while engaged (warning before disable)
+    controlsMismatchLateralWarning @36;
 
     # mads: pedal pressed silent event
     silentPedalPressed @31;
@@ -587,6 +589,7 @@ struct CarControlSP @0xa5cd762cd951a455 {
   leadOne @2 :LeadData;
   leadTwo @3 :LeadData;
   intelligentCruiseButtonManagement @4 :IntelligentCruiseButtonManagement;
+  zoompilot @5 :CarControlZP;
 
   struct Param {
     key @0 :Text;
@@ -604,6 +607,15 @@ struct CarControlSP @0xa5cd762cd951a455 {
     time @4;
     json @5;
     bytes @6;
+  }
+}
+
+# zoompilot-only CarControl extension: telemetry for offline validation.
+struct CarControlZP @0xaadf9bc39b7bd41e {
+  laneChangeSmoothing @0 :LaneChangeSmoothing;
+
+  struct LaneChangeSmoothing {
+    jerkFactor @0 :Float32;
   }
 }
 

@@ -143,6 +143,16 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.none),
   },
 
+  # button owns lateral. PERMANENT carries no state-machine meaning, so the chime cannot
+  # enable or disable anything.
+  EventNameSP.longitudinalEnableChime: {
+    ET.PERMANENT: EngagementAlert(AudibleAlert.engage),
+  },
+
+  EventNameSP.longitudinalDisableChime: {
+    ET.PERMANENT: EngagementAlert(AudibleAlert.disengage),
+  },
+
   EventNameSP.silentBrakeHold: {
     ET.WARNING: EngagementAlert(AudibleAlert.none),
     ET.NO_ENTRY: NoEntryAlert("制动保持已激活"),
@@ -197,9 +207,29 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("停车制动已启用"),
   },
 
+  # a brake already held at standstill raises no pedalPressed, so engage into paused on the
+  # brake level; this event mirrors it silently
+  EventNameSP.silentPedalPressed: {
+    ET.NO_ENTRY: Alert(
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
+  },
+
   EventNameSP.controlsMismatchLateral: {
     ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("控制不匹配：横向"),
     ET.NO_ENTRY: NoEntryAlert("控制不匹配：横向"),
+  },
+
+  # unsteered from the first rejected frame, not from the disable 2 s later (Mazda routes
+  # 00000116/117: 2 s of rejected 0x243 with the camera relay-blocked latched the EPS fault)
+  EventNameSP.controlsMismatchLateralWarning: {
+    ET.WARNING: Alert(
+      "请接管",
+      "转向被 panda 安全机制阻止",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, .5),
   },
 
   EventNameSP.experimentalModeSwitched: {
