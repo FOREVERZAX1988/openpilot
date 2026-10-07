@@ -16,6 +16,7 @@ from openpilot.common.simple_kalman import KF1D
 from opendbc.car import structs
 from opendbc.car.hyundai.values import HyundaiFlags
 from opendbc.sunnypilot.car.hyundai.values import HyundaiFlagsSP
+from opendbc.sunnypilot.car.volkswagen import macan_calib as _macan_calib
 
 
 # Default lead acceleration decay set to 50% at 1s
@@ -34,8 +35,9 @@ RADAR_TO_CAMERA = 1.52  # RADAR is ~ 1.5m ahead from center of mesh frame
 # 中位绝对差 1.90 m、82.0% 帧 <=5 m、A2 原厂替换率 6.3%（旧 0909 新线性 0.008718/+1.0178
 # 为 -7.10 m / 35.3%）。注意：opendbc radar_interface.py 的 A3 使用同一组系数，必须同源修改。
 # 详见 ai/docs/MLB_MACAN_PLANB_FIT_0910.md
-MACAN_B1_T_A = 0.008969
-MACAN_B1_T_B = 0.332
+# 【同源收敛 2026-10-09】标定改为从 macan_calib 单一源取（与 A3 / 仪表 / SnG 门同源）。
+MACAN_B1_T_A = _macan_calib.MACAN_B1_T_A
+MACAN_B1_T_B = _macan_calib.MACAN_B1_T_B
 
 # ---- A2 判据物理化（2026-09-10）：相对偏差定义在【距离域】，不再用 idx 域 ----
 # 旧: ratio = |vis_idx - stock_idx| / stock_idx
@@ -344,12 +346,11 @@ class RadarD:
     无人工分段：旧 idx<100 锚 0.8 s / idx>560 截顶 6.0 s 已删除（前者在 idx=100 处
     会造成 0.8 -> 1.89 s 突跳，且与 A3 的直线不一致）。
     """
-    return MACAN_B1_T_A * idx + MACAN_B1_T_B
+    return _macan_calib.t_from_idx(idx)
 
   def _macan_idx_to_drel(self, idx: float, v_ego: float) -> float:
     """Abstandsindex -> 时距 t -> 距离（B1 逆映射，低速用等效 t*max(v,5)，与 A3 一致）"""
-    t = self._macan_t_from_idx(idx)
-    return t * (v_ego if v_ego > 5.0 else 5.0)
+    return _macan_calib.idx_to_drel(idx, v_ego)
 
   def _macan_drel_to_idx(self, drel: float, v_ego: float) -> float:
     """距离 -> 时距 t -> Abstandsindex（B1 直线反解，与 A3 同源）。
@@ -357,8 +358,7 @@ class RadarD:
     去掉 100/561 硬锚（旧代码 t<=0.8 -> 100、t>=6.0 -> 561 会在两端制造与 A3
     不一致的阶梯），改为钳到信号有效域 1..1020（A3 里 0 与 >=1021 视为无目标）。
     """
-    t = drel / v_ego if v_ego > 5.0 else drel / 5.0
-    return float(np.clip((t - MACAN_B1_T_B) / MACAN_B1_T_A, 1.0, 1020.0))
+    return float(_macan_calib.drel_to_idx(drel, v_ego))
 
 
 
