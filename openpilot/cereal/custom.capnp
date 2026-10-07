@@ -273,6 +273,9 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
       maxPredictedLateralAccel @4 :Float32;
       enabled @5 :Bool;
       active @6 :Bool;
+      # lowest planned speed on the model horizon, m/s; 0 = no lookahead (feature off,
+      # long disabled, or no model), 255 caps "nothing binding ahead"
+      vAheadMin @7 :Float32;
     }
 
     struct Map {
