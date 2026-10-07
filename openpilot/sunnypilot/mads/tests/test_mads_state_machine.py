@@ -9,7 +9,7 @@ See the LICENSE.md file in the root directory for more details.
 from openpilot.cereal import custom
 from openpilot.common.realtime import DT_CTRL
 from openpilot.sunnypilot.mads.state import StateMachine, SOFT_DISABLE_TIME
-from openpilot.selfdrive.selfdrived.events import ET, NormalPermanentAlert, Events
+from openpilot.selfdrive.selfdrived.events import ET, EventName, NormalPermanentAlert, Events
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP, EVENTS_SP
 from openpilot.common.test import OpenpilotTestCase
 
@@ -38,6 +38,8 @@ class MockMADS:
     self.selfdrive.state_machine = mocker.MagicMock()
     self.selfdrive.events = Events()
     self.selfdrive.events_sp = EventsSP()
+    self.selfdrive.model_startup.starting = False
+    self.selfdrive.big_model_loading = False
 
 
 class TestMADSStateMachine(OpenpilotTestCase):
@@ -141,3 +143,17 @@ class TestMADSStateMachine(OpenpilotTestCase):
         self.state_machine.update()
         assert self.state_machine.state == state
         self.clear_events()
+
+  def test_big_model_loading_pauses_except_for_modelds_first_load(self):
+    # a chestnut's load or a jetlink swap waits in paused; modeld's first load on every boot is refused,
+    # as the commIssue it stands in for was
+    for starting, chestnut_loading, expected in ((False, False, State.paused), (True, False, State.disabled),
+                                                 (True, True, State.paused)):
+      self.mads.selfdrive.model_startup.starting = starting
+      self.mads.selfdrive.big_model_loading = chestnut_loading
+      self.state_machine.state = State.disabled
+      self.events.add(EventName.bigModelLoading)
+      self.events_sp.add(make_event([ET.ENABLE]))
+      self.state_machine.update()
+      assert self.state_machine.state == expected
+      self.clear_events()
