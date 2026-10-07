@@ -130,6 +130,32 @@ class ControlsExt(ModelStateBase):
     except Exception:
       pass
 
+    # Macan SnG 视觉源（2026-10-07）：把 modelV2 的**原始**前车（leadsV3[0]）送到
+    # carcontroller。SnG 的距离门/前车运动门不能用 CS.op_lead_dRel——那是 radard 融合
+    # 后的值，原厂 idx 冻结时会被钉成常数（00000091 seg9 钉在 10.09 m），拿它做门等于
+    # 门失效。leadsV3 是雷达坐标系（RADAR_TO_CAMERA=1.52 m 前置），与雷达 dRel/保险杠
+    # 口径对齐需减去 1.52。
+    #
+    # ⚠️ 传参机制（2026-10-07 实测修正）：pycapnp 2.1.0 的 _DynamicListBuilder **没有
+    # append()**（只有 adopt/disown/init），`CC_SP.params.append()` 会抛 AttributeError
+    # 并被 except 吞掉 → 参数根本出不去。route 00000049 实测 carControlSP.params 恒为 []。
+    # 因此这里改为**整表赋值**（capnp 允许对 List 字段整体赋值 dict 列表）。
+    # 同因受损的历史通道：aTarget / slopePct（下面两段仍是 append 写法，依旧无效）——
+    # 复活它们会改变 ①SnG 触发源（planner aTarget 而非 CC.actuators.accel）②坡度补偿
+    # （纯OP 直接用它、融合模式做 IMU 复核），属需单独路试验证的行为变更 → 未夹带本轮，
+    # 已登记待办。将来若一并复活，请改为统一收集到一个 list 后一次赋值，勿再用 append。
+    try:
+      _leads = sm['modelV2'].leadsV3
+      if len(_leads) > 0 and float(_leads[0].prob) >= 0.5:
+        _vis_x = float(_leads[0].x[0]) - 1.52
+        if 0.0 < _vis_x < 150.0:
+          CC_SP.params = [
+            {"key": "visLeadDist", "value": f"{_vis_x:.2f}".encode()},
+            {"key": "visLeadVLead", "value": f"{float(_leads[0].v[0]):.2f}".encode()},
+          ]
+    except Exception:
+      pass
+
     # Macan IMU 坡度（重力投影，2026-08-18 标定于 00000002/00000049 本机 C3X）：
     # 加速度计含重力分量，车辆前向 n·acc 的静态分量随坡度变化。
     # 坡度% = (n·acc - s_ref)/9.81×100；n=[0.4571,-0.0079,-0.7667]、s_ref≈4.0412m/s²
