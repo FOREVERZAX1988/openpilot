@@ -160,7 +160,7 @@ class LongitudinalPlannerSP:
     self.sla.update(long_enabled, long_override, v_ego, a_ego, v_cruise_cluster, self.resolver.speed_limit,
                     self.resolver.speed_limit_final_last, has_speed_limit, self.resolver.distance, self.events_sp)
 
-    targets = {
+    self.targets = {
       LongitudinalPlanSource.cruise: (v_cruise, a_ego),
       LongitudinalPlanSource.sccVision: (self.scc.vision.output_v_target, self.scc.vision.output_a_target),
       LongitudinalPlanSource.sccMap: (self.scc.map.output_v_target, self.scc.map.output_a_target),
@@ -183,8 +183,8 @@ class LongitudinalPlannerSP:
       mpc_mode = self.dec.mode() if self.dec.active() else "acc"
       self.carrot_source.update(sm, v_cruise * CV.MS_TO_KPH, mpc_mode)
 
-    self.source = min(targets, key=lambda k: targets[k][0])
-    self.output_v_target, self.output_a_target = targets[self.source]
+    self.source = min(self.targets, key=lambda k: self.targets[k][0])
+    self.output_v_target, self.output_a_target = self.targets[self.source]
 
     # When the carrot source is active and commanding a stop, flag it for MPC
     # stop-line handling (consumed downstream / by the subclass). Carrot no

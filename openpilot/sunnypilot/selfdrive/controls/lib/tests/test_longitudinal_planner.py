@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.cereal import custom
+from openpilot.cereal import log as cereal_log
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
@@ -27,6 +28,10 @@ class _StubSource:
   def __init__(self, v_target: float = 0.0, a_target: float = 0.0) -> None:
     self.output_v_target = v_target
     self.output_a_target = a_target
+    # update_targets reads scc.vision / scc.map output_* for the SCC sources; point them
+    # back at this stub so a single instance stands in for the whole controller.
+    self.vision = self
+    self.map = self
 
   def update(self, *args, **kwargs) -> None:
     pass
@@ -128,9 +133,9 @@ class TestTFollowUserScale(OpenpilotTestCase):
     # the ratio of a default to itself is 1.0 by construction; assert the shape the
     # planner relies on rather than re-deriving the division
     assert set(T_FOLLOW_DEFAULTS) == {
-      __import__("openpilot.cereal.log", fromlist=["log"]).LongitudinalPersonality.relaxed,
-      __import__("openpilot.cereal.log", fromlist=["log"]).LongitudinalPersonality.standard,
-      __import__("openpilot.cereal.log", fromlist=["log"]).LongitudinalPersonality.aggressive,
+      cereal_log.LongitudinalPersonality.relaxed,
+      cereal_log.LongitudinalPersonality.standard,
+      cereal_log.LongitudinalPersonality.aggressive,
     }, "T_FOLLOW_DEFAULTS must be keyed by the cereal personality enum"
 
   def test_planner_multiplies_and_never_replaces(self) -> None:
