@@ -18,6 +18,7 @@ os.environ.setdefault("SCALE", "1")
 
 from openpilot.common.prefix import OpenpilotPrefix
 from openpilot.common.test import OpenpilotTestCase
+from openpilot.system.ui.lib.multilang import tr
 
 # the window's own params, for whatever it reads while it comes up; every test
 # then runs under its own prefix
@@ -274,7 +275,7 @@ class TestTiciModelsPanel(UITest):
   def test_the_toggle_says_what_is_on_the_port(self):
     with jetlink(port='empty'):
       layout = self._layout()
-      assert layout.accelerator_link_item.description.endswith("Nothing on the USB port.")
+      assert layout.accelerator_link_item.description.endswith(tr("Nothing on the USB port."))
     with jetlink(port='host'):
       layout._refresh_accelerator_items()
       assert layout.accelerator_link_item.description.endswith("A device is on the USB port.")
@@ -284,23 +285,23 @@ class TestTiciModelsPanel(UITest):
     # a kernel without the CC pin in sysfs claims nothing rather than an empty port
     with jetlink(port=None):
       layout._refresh_accelerator_items()
-      assert layout.accelerator_link_item.description.endswith("USB and iOS turn off ADB.")
+      assert layout.accelerator_link_item.description.endswith(tr("USB and iOS turn off ADB."))
 
   def test_the_status_names_the_transport(self):
     # the setting names the host: USB for a Jetson, a Linux PC or a Mac, iOS for
     # a phone dialed in over the gadget's network interface. jetlink says which
     from openpilot.selfdrive.ui.sunnypilot.accelerator_link import link_status
     with jetlink(present=True, transport='iOS over USB (192.168.60.3)'):
-      assert link_status() == "Jetlink connected: iOS over USB (192.168.60.3)."
+      assert link_status() == tr("Jetlink connected:") + " iOS over USB (192.168.60.3)."
     with jetlink(installed=False):
       assert link_status() == ""
 
   def test_over_wifi_the_status_is_the_hotspot_not_the_port(self):
     from openpilot.selfdrive.ui.sunnypilot.accelerator_link import link_status
     with jetlink(present=True, mode='wifi', transport='Wi-Fi (172.20.10.1)'):
-      assert link_status() == "Jetlink connected: Wi-Fi (172.20.10.1)."
+      assert link_status() == tr("Jetlink connected:") + " Wi-Fi (172.20.10.1)."
     with jetlink(present=False, mode='wifi', port='host'):
-      assert link_status() == "Join the device's hotspot and open Jetlink there."
+      assert link_status() == tr("Join the device's hotspot and open Jetlink there.")
 
   def test_the_buttons_are_bound_to_the_one_param(self):
     # the small model is the model manager's: the link does not decide which modeld runs
