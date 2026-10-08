@@ -1,7 +1,9 @@
+from types import SimpleNamespace
+
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.cereal import custom
 from openpilot.selfdrive.controls.lib.drive_helpers import STOPPING_SPEED, should_stop
-from openpilot.selfdrive.controls.lib.longcontrol import LongControl, LongCtrlState, long_control_state_trans
+from openpilot.selfdrive.controls.lib.longcontrol import LongControl, STOPPING_DECEL_RATE, LongCtrlState, long_control_state_trans
 from openpilot.sunnypilot.selfdrive.controls.lib.stopping_controller import StoppingController
 
 
@@ -69,18 +71,48 @@ class TestStoppingController(OpenpilotTestCase):
     assert type(stock) is LongControl
     assert not isinstance(tuned, LongControl)
 
+class TestStoppingHold:
+  def test_weak_brake_does_not_hold_stopping(self):
+    control = SimpleNamespace(last_output_accel=-0.109)
+    car_state = SimpleNamespace(vEgo=0.277, aEgo=-0.406)
+    assert not LongControlSP.should_hold_stopping(control, car_state, -0.072)
+
+  def test_sufficient_brake_holds_stopping(self):
+    control = SimpleNamespace(last_output_accel=-0.543)
+    car_state = SimpleNamespace(vEgo=0.209, aEgo=-0.534)
+    assert LongControlSP.should_hold_stopping(control, car_state, -0.469)
+
+  def test_stopping_decel_rate_is_smooth_while_rolling(self):
+    assert LongControlSP.stopping_decel_rate(0.1) == 0.3
+
+  def test_stopping_decel_rate_remains_gentle_at_stop(self):
+    assert LongControlSP.stopping_decel_rate(0.0) == 0.05
+
+  def test_stop_exit_waits_for_real_start_request(self):
+    assert not LongControlSP.should_exit_stopping(True, True, 0.1)
+    assert LongControlSP.should_exit_stopping(True, True, 0.101)
+
+  def test_stop_release_is_rate_limited(self):
+    last_accel = -0.67
+    output_accel = LongControlSP.limit_stop_release(last_accel, 0.31)
+    assert abs(output_accel - (-0.667)) < 1e-9
+
+  def test_stop_release_does_not_limit_stronger_braking(self):
+    assert LongControlSP.limit_stop_release(-0.67, -0.8) == -0.8
+
+class TestTerminalStop(OpenpilotTestCase):
   def test_stopping_tune_is_gentler_than_upstream_default(self):
     # Upstream #38394 hardcoded a 1.0 m/s^2/s ramp and a 0.3 m/s latch. comma's own one-stopping-tune uses
     # 0.3 / 0.25, and every stop recorded on this car was driven with that pair. Both must stay on the less
     # braking side, or a future edit re-deepens the terminal brake unnoticed - which already happened once.
-    assert 0.0 < StoppingController.STOPPING_DECEL_RATE <= 1.0
+    assert 0.0 < STOPPING_DECEL_RATE <= 1.0
     assert 0.0 < STOPPING_SPEED <= 0.3
     assert should_stop(STOPPING_SPEED - 0.01, 0.0)
     assert not should_stop(0.29, 0.0)  # the band upstream would latch in and we do not
 
   def test_standstill_hold_firms_faster_than_the_stopping_ramp(self):
     # The faster standstill ramp builds the hold without changing the approach-to-stop ramp.
-    assert StoppingController.STANDSTILL_HOLD_RATE >= StoppingController.STOPPING_DECEL_RATE
+    assert StoppingController.STANDSTILL_HOLD_RATE >= STOPPING_DECEL_RATE
     assert 0.5 <= StoppingController.STANDSTILL_HOLD_RATE <= 2.0
 
   def test_standstill_hold_waits_after_the_standstill_flag(self):
@@ -127,7 +159,7 @@ class TestStoppingController(OpenpilotTestCase):
     assert a == -0.1                                           # frozen for the whole grace period
     for _ in range(int(1.0 / DT_CTRL)):
       a = float(update_long_control(LoC, StopC, True, creeping, 0.0, True, (-3.5, 1.5)))
-    assert abs((-0.1 - a) - StoppingController.STOPPING_DECEL_RATE) < 0.02  # then the upstream ramp
+    assert abs((-0.1 - a) - STOPPING_DECEL_RATE) < 0.02  # then the upstream ramp
 
   def test_standstill_hold_timer_resets_when_the_car_moves(self):
     from opendbc.car.structs import car

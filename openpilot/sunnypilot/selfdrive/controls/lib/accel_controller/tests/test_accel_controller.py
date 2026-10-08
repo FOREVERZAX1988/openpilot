@@ -12,7 +12,7 @@ from openpilot.common.params import Params
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import (
   AccelController, AccelProfile, CRUISE_DECEL_ACCEL, CRUISE_DECEL_RESPONSE_TIME, ECO_CRUISE_DECEL_BP,
-  ECO_CRUISE_DECEL_V, ECO_ENGINE_OFF_MAX_ACCEL, MAX_ACCEL_BREAKPOINTS, MAX_ACCEL_PROFILES,
+  ECO_CRUISE_DECEL_V, ECO_ENGINE_OFF_BP, ECO_ENGINE_OFF_MAX_ACCEL, MAX_ACCEL_BREAKPOINTS, MAX_ACCEL_PROFILES,
 )
 
 
@@ -51,7 +51,7 @@ class TestAccelController(OpenpilotTestCase):
     eco = self.set_profile(AccelProfile.eco)
     for speed in speeds:
       assert eco.get_max_accel(speed, engine_off=True) <= eco.get_max_accel(speed) + 1e-12
-    for speed, expected in zip(MAX_ACCEL_BREAKPOINTS, ECO_ENGINE_OFF_MAX_ACCEL, strict=True):
+    for speed, expected in zip(ECO_ENGINE_OFF_BP, ECO_ENGINE_OFF_MAX_ACCEL, strict=True):
       assert eco.get_max_accel(speed, engine_off=True) == expected
 
     for profile in (AccelProfile.normal, AccelProfile.sport):
@@ -67,13 +67,9 @@ class TestAccelController(OpenpilotTestCase):
       wheel_power = 1500 * controller.get_max_accel(speed, engine_off=True) * speed + road_load
       assert wheel_power <= budget_kw * 1e3, kph
 
-  def test_eco_without_lead_reduces_throttle_after_launch(self):
-    eco = self.set_profile(AccelProfile.eco)
-    assert eco.get_max_accel(1.0, has_lead=False) == eco.get_max_accel(1.0, has_lead=True)
-    assert np.isclose(eco.get_max_accel(20.0, has_lead=False), 0.85 * eco.get_max_accel(20.0, has_lead=True))
-
-    normal = self.set_profile(AccelProfile.normal)
-    assert normal.get_max_accel(20.0, has_lead=False) == normal.get_max_accel(20.0, has_lead=True)
+  # test_eco_without_lead_reduces_throttle_after_launch was removed with the has_lead
+  # argument: commit a36863ded ("tuning") dropped the ECO_NO_LEAD_FACTOR scaling and the
+  # engine-off line now comes from ECO_ENGINE_OFF_BP/ECO_ENGINE_OFF_MAX_ACCEL instead.
 
   def test_sport_uses_openpilot_accel_max_at_launch(self):
     controller = self.set_profile(AccelProfile.sport)
