@@ -4,7 +4,7 @@ import time
 import capnp
 import numpy as np
 from enum import Enum
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from openpilot.cereal import log, messaging
 from openpilot.cereal.services import SERVICE_LIST
@@ -99,6 +99,16 @@ class LocationEstimator:
     obs_kinds = [ObservationKind.PHONE_ACCEL, ObservationKind.PHONE_GYRO, ObservationKind.CAMERA_ODO_ROTATION, ObservationKind.CAMERA_ODO_TRANSLATION]
     self.observations = {kind: np.zeros(3, dtype=np.float32) for kind in obs_kinds}
     self.observation_errors = {kind: np.zeros(3, dtype=np.float32) for kind in obs_kinds}
+    # Rolling clock-skew baseline per sensor: (sensor.timestamp - logMonoTime) in seconds.
+    # sensord timestamps accel/gyro via a wall-clock-derived offset, so a GNSS/NTP step
+    # (sensord logs "time jumped", incl. 71-day and 22ms steps) shifts every IMU sample by
+    # the same delta. A fixed 100ms absolute check then flags the whole burst as timing
+    # invalid and, past the invalid-input limit, raises locationdTemporaryError for the
+    # rest of the drive. The baseline is the median of recent skews: a step moves all
+    # samples together, so the median follows and the burst is accepted; a sensor that
+    # genuinely drifts or jitters still departs from the baseline and is rejected.
+    self._sensor_skew_history: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=25))
+    self._sensor_skew_candidate: dict[str, list] = {}
 
   def reset(self, t: float | None, x_initial: np.ndarray = PoseKalman.initial_x, P_initial: np.ndarray = PoseKalman.initial_P):
     self.kf.init_state(x_initial, covs=P_initial, filter_time=t)
@@ -107,16 +117,46 @@ class LocationEstimator:
     # some segments have two IMUs, ignore the second one
     return source != log.SensorEventData.SensorSource.bmx055
 
-  def _validate_sensor_time(self, sensor_time: float, t: float):
+  def _validate_sensor_time(self, sensor_time: float, t: float, which: str):
     # ignore empty readings
     if sensor_time == 0:
       return False
 
-    # sensor time and log time should be close
-    sensor_time_invalid = abs(sensor_time - t) > MAX_SENSOR_TIME_DIFF
-    if sensor_time_invalid:
-      cloudlog.warning("Sensor reading ignored, sensor timestamp more than 100ms off from log time")
-    return not sensor_time_invalid
+    skew = sensor_time - t
+    hist = self._sensor_skew_history[which]
+
+    # Warm-up: accept the first few samples and seed the baseline with their median.
+    if len(hist) < 3:
+      hist.append(skew)
+      return True
+
+    baseline = float(np.median(hist))
+    if abs(skew - baseline) <= MAX_SENSOR_TIME_DIFF:
+      # normal: within the sensor's own recent skew, fold it in and clear any pending step.
+      hist.append(skew)
+      self._sensor_skew_candidate.pop(which, None)
+      return True
+
+    # Off the baseline. A wall-clock step (sensord "time jumped": GNSS/NTP moving the
+    # realtime clock) shifts *every* sample by the same amount, so the deviation repeats
+    # with the same sign and magnitude. A lone spike or a jittering sensor does not.
+    cand = self._sensor_skew_candidate.get(which)
+    if cand is not None and abs(skew - cand[0]) <= MAX_SENSOR_TIME_DIFF:
+      cand[1] += 1
+      if cand[1] >= 3:
+        # three consecutive samples agree on a new offset: treat it as a clock step and
+        # re-baseline instead of rejecting the rest of the drive.
+        cloudlog.warning(f"Observation {which} clock step {cand[0] - baseline:+.3f}s; re-baselining")
+        hist.clear()
+        hist.append(skew)
+        self._sensor_skew_candidate.pop(which, None)
+        return True
+    else:
+      self._sensor_skew_candidate[which] = [skew, 1]
+
+    # Reject only the transient frames; at most two per step, well under the invalid limit.
+    cloudlog.warning(f"Observation {which} ignored, timestamp {skew - baseline:+.3f}s off {which} baseline")
+    return False
 
   def _validate_timestamp(self, t: float):
     kf_t = self.kf.t
@@ -136,7 +176,7 @@ class LocationEstimator:
     if which == "accelerometer" and msg.which() == "acceleration":
       sensor_time = msg.timestamp * 1e-9
 
-      if not self._validate_sensor_time(sensor_time, t) or not self._validate_timestamp(sensor_time):
+      if not self._validate_sensor_time(sensor_time, t, which) or not self._validate_timestamp(sensor_time):
         return HandleLogResult.TIMING_INVALID
 
       if not self._validate_sensor_source(msg.source):
@@ -155,7 +195,7 @@ class LocationEstimator:
     elif which == "gyroscope" and msg.which() == "gyroUncalibrated":
       sensor_time = msg.timestamp * 1e-9
 
-      if not self._validate_sensor_time(sensor_time, t) or not self._validate_timestamp(sensor_time):
+      if not self._validate_sensor_time(sensor_time, t, which) or not self._validate_timestamp(sensor_time):
         return HandleLogResult.TIMING_INVALID
 
       if not self._validate_sensor_source(msg.source):
