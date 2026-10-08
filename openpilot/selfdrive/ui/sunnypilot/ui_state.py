@@ -286,8 +286,9 @@ class UIStateSP:
     AGNOS's ADB gadget (g1) holds the device controller while AdbEnabled is set,
     and jetlink-root.sh refuses to take the controller from it, so the link stays
     "unavailable" until this lands. jetlink's owner retries the port every few
-    seconds, so clearing the param is enough."""
-    self.adb_blocked = self.jetlink is not None and self.jetlink.enabled
+    seconds, so clearing the param is enough. Over Wi-Fi the link leaves the port
+    alone, and ADB with it."""
+    self.adb_blocked = self.jetlink is not None and self.jetlink.enabled and self.jetlink.mode != "wifi"
     if self.adb_blocked and self.params.get_bool("AdbEnabled"):
       self.params.put_bool("AdbEnabled", False, block=True)
 

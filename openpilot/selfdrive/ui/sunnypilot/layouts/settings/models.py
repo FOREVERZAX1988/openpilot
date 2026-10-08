@@ -147,7 +147,7 @@ class ModelsLayout(Widget):
     # An Android phone rides the USB mode exactly like a Jetson or a Mac
     # (jetlink docs/android-app.md: "Jetlink on USB"), so the USB
     # option covers it; iOS keeps its own mode.
-    what = tr("Run big models over a connected device running Jetlink. Turns off ADB.")
+    what = tr("Run big models over a connected device running Jetlink. USB and iOS turn off ADB.")
     return f"{what} {status}".strip()
 
   def _refresh_accelerator_items(self):

@@ -70,10 +70,10 @@ class TestTheUsbPort(OpenpilotTestCase):
     ui_state.jetlink = self.saved
     super().tearDown()
 
-  def set(self, adb, link):
+  def set(self, adb, link, mode='usb'):
     """link is jetlink's snapshot: None (a chestnut, or no jetlink), or enabled or not."""
     self.params.put_bool("AdbEnabled", adb, block=True)
-    ui_state.jetlink = None if link is None else snapshot(enabled=link)
+    ui_state.jetlink = None if link is None else snapshot(enabled=link, mode=mode)
     ui_state._enforce_usb_port()
     return self.params.get_bool("AdbEnabled"), ui_state.adb_blocked
 
@@ -87,6 +87,37 @@ class TestTheUsbPort(OpenpilotTestCase):
   def test_no_jetlink_snapshot_leaves_adb_alone(self):
     # a fitted chestnut, or no jetlink on this device
     self.assertEqual(self.set(adb=True, link=None), (True, False))
+
+  def test_the_wifi_link_leaves_the_port_alone(self):
+    # over Wi-Fi the comma joins a hotspot and builds no gadget, so ADB stays
+    self.assertEqual(self.set(adb=True, link=True, mode='wifi'), (True, False))
+    self.assertEqual(self.set(adb=False, link=True, mode='wifi'), (False, False))
+
+
+class TestTheWifiMode(OpenpilotTestCase):
+  """Wi-Fi is the fourth Jetlink mode: the setting's index must match jetlink's
+  MODES, and every panel that names a mode must name this one."""
+
+  def test_the_adapter_agrees_with_jetlink_on_the_modes(self):
+    import jetlink
+    from openpilot.sunnypilot import jetlink_adapter
+    self.assertEqual(jetlink_adapter.MODES, jetlink.openpilot.MODES)
+    self.assertIn('wifi', jetlink_adapter.MODES)
+
+  def test_every_mode_has_a_title_and_a_label(self):
+    from openpilot.selfdrive.ui.sunnypilot.accelerator_link import LINK_MODE_TITLES, LINK_MODES
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.models import LINK_MODE_LABELS
+    for mode in LINK_MODES:
+      self.assertIn(mode, LINK_MODE_TITLES, f"{mode} has no tici title")
+      self.assertIn(mode, LINK_MODE_LABELS, f"{mode} has no mici label")
+
+  def test_the_status_asks_for_the_hotspot_instead_of_the_port(self):
+    from openpilot.selfdrive.ui.sunnypilot.accelerator_link import link_status
+    with mock.patch.object(ui_state, 'jetlink', snapshot(enabled=True, mode='wifi', port='empty')):
+      # nothing is on the USB-C port in this mode, and saying so would mislead
+      self.assertEqual(link_status(), "Join the device's hotspot and open Jetlink there.")
+    with mock.patch.object(ui_state, 'jetlink', snapshot(enabled=True, mode='usb', port='empty')):
+      self.assertEqual(link_status(), "Nothing on the USB port.")
 
   def test_both_developer_panels_grey_adb_out(self):
     from openpilot.selfdrive.ui.layouts.settings.developer import DeveloperLayout
