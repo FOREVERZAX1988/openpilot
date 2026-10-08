@@ -93,6 +93,16 @@ class TestTheUsbPort(OpenpilotTestCase):
     self.assertEqual(self.set(adb=True, link=True, mode='wifi'), (True, False))
     self.assertEqual(self.set(adb=False, link=True, mode='wifi'), (False, False))
 
+  def test_both_developer_panels_grey_adb_out(self):
+    from openpilot.selfdrive.ui.layouts.settings.developer import DeveloperLayout
+    from openpilot.selfdrive.ui.mici.layouts.settings.developer import DeveloperLayoutMici
+    tici, mici = DeveloperLayout(), DeveloperLayoutMici()
+    with mock.patch.object(ui_state, 'is_offroad', return_value=True):
+      for link, enabled in ((False, True), (True, False)):
+        self.set(adb=False, link=link)
+        self.assertEqual(tici._adb_toggle.action_item.enabled, enabled)
+        self.assertEqual(mici._adb_toggle.enabled, enabled)
+
 
 class TestTheWifiMode(OpenpilotTestCase):
   """Wi-Fi is the fourth Jetlink mode: the setting's index must match jetlink's
@@ -112,19 +122,12 @@ class TestTheWifiMode(OpenpilotTestCase):
       self.assertIn(mode, LINK_MODE_LABELS, f"{mode} has no mici label")
 
   def test_the_status_asks_for_the_hotspot_instead_of_the_port(self):
+    # through tr: the device runs the translated UI, so an English literal would
+    # only pass on a machine with no catalog
     from openpilot.selfdrive.ui.sunnypilot.accelerator_link import link_status
+    from openpilot.system.ui.lib.multilang import tr
     with mock.patch.object(ui_state, 'jetlink', snapshot(enabled=True, mode='wifi', port='empty')):
       # nothing is on the USB-C port in this mode, and saying so would mislead
-      self.assertEqual(link_status(), "Join the device's hotspot and open Jetlink there.")
+      self.assertEqual(link_status(), tr("Join the device's hotspot and open Jetlink there."))
     with mock.patch.object(ui_state, 'jetlink', snapshot(enabled=True, mode='usb', port='empty')):
-      self.assertEqual(link_status(), "Nothing on the USB port.")
-
-  def test_both_developer_panels_grey_adb_out(self):
-    from openpilot.selfdrive.ui.layouts.settings.developer import DeveloperLayout
-    from openpilot.selfdrive.ui.mici.layouts.settings.developer import DeveloperLayoutMici
-    tici, mici = DeveloperLayout(), DeveloperLayoutMici()
-    with mock.patch.object(ui_state, 'is_offroad', return_value=True):
-      for link, enabled in ((False, True), (True, False)):
-        self.set(adb=False, link=link)
-        self.assertEqual(tici._adb_toggle.action_item.enabled, enabled)
-        self.assertEqual(mici._adb_toggle.enabled, enabled)
+      self.assertEqual(link_status(), tr("Nothing on the USB port."))
