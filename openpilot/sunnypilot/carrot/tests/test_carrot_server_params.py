@@ -57,7 +57,13 @@ class _FakeParams:
 
   def check_key(self, key):
     if key not in self.types:
-      raise UnknownKeyName(key)
+      # the module-level name can be a stand-in from another test module that
+      # swapped sys.modules["openpilot.common.params"] while this one imported
+      # (test_carrot_man does); the store's own class is what check_key raises
+      unknown = UnknownKeyName
+      if not (isinstance(unknown, type) and issubclass(unknown, BaseException)):
+        from openpilot.common.params import UnknownKeyName as unknown
+      raise unknown(key)
 
   def get_type(self, key):
     return _KeyType(self.types[key])

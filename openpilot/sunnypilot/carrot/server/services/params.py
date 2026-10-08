@@ -30,6 +30,26 @@ class ParamWriteError(Exception):
   """A rejected write: unknown key, unsupported type, or an unparseable value."""
 
 
+def _unknown_key() -> tuple[type[BaseException], ...]:
+  """The exception the store raises for a key it does not have, looked up when a
+  write fails rather than captured at import.
+
+  `except <a non-exception>` never matches, so binding this at import makes the
+  API's 400-for-an-unknown-key promise depend on import order: a test module that
+  stands in for openpilot.common.params in sys.modules (test_carrot_man does)
+  leaves whatever was imported in that window holding its stub. The native store
+  is asked again per failure, and its class is the only one worth catching.
+  """
+  try:
+    from openpilot.common.params import UnknownKeyName as real
+  except Exception:
+    real = None
+  for candidate in (real, UnknownKeyName):
+    if isinstance(candidate, type) and issubclass(candidate, BaseException):
+      return (candidate,)
+  return ()
+
+
 # Keys that must never be writable over HTTP. Both are produced by the device itself and
 # changing them over the network would either be a no-op or break identification.
 _READ_ONLY_KEYS = frozenset((
@@ -191,7 +211,7 @@ def set_param_value(params, name: str, value: Any) -> Any:
 
   try:
     params.check_key(name)
-  except UnknownKeyName as exc:
+  except _unknown_key() as exc:
     raise ParamWriteError(f"unknown parameter {name}") from exc
 
   key_type = params.get_type(name)
@@ -204,7 +224,7 @@ def set_param_value(params, name: str, value: Any) -> Any:
 
   try:
     params.put(name, coerced)
-  except UnknownKeyName as exc:
+  except _unknown_key() as exc:
     raise ParamWriteError(f"unknown parameter {name}") from exc
   except TypeError as exc:
     raise ParamWriteError(f"type mismatch writing {name}: {exc}") from exc
