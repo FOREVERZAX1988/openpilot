@@ -215,18 +215,21 @@ def set_param_value(params, name: str, value: Any) -> Any:
   return coerced
 
 
-def _enforce_usb_port(params) -> None:
+def _enforce_usb_port(params=None) -> None:
   """ADB and Jetlink both need the comma's USB port. AGNOS's ADB gadget (g1) holds
   the only device controller while AdbEnabled is set, and jetlink refuses to take
   it, so the link reads as unavailable until ADB is off.
 
   `UIStateSP._enforce_usb_port` does this in the native UI's params pass, but that
-  pass only runs where a builtin display does, and this server is the other place
-  either key can be written from. Best-effort: a failure here must not turn a good
-  write into a 400."""
+  pass only runs where a builtin display does, and the carrot servers are the other
+  places either key can be written from. Best-effort: a failure here must not turn
+  a good write into a 400."""
   try:
     from openpilot.sunnypilot import jetlink_adapter
 
+    if params is None:
+      from openpilot.common.params import Params
+      params = Params()
     status = jetlink_adapter.status()
     if status is not None and getattr(status, "enabled", False) and params.get_bool("AdbEnabled"):
       params.put_bool("AdbEnabled", False)
