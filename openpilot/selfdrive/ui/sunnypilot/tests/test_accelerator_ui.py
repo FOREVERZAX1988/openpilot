@@ -278,10 +278,10 @@ class TestTiciModelsPanel(UITest):
       assert layout.accelerator_link_item.description.endswith(tr("Nothing on the USB port."))
     with jetlink(port='host'):
       layout._refresh_accelerator_items()
-      assert layout.accelerator_link_item.description.endswith("A device is on the USB port.")
+      assert layout.accelerator_link_item.description.endswith(tr("A device is on the USB port."))
     with jetlink(present=True, port='host'):
       layout._refresh_accelerator_items()
-      assert layout.accelerator_link_item.description.endswith("Jetlink connected: USB.")
+      assert layout.accelerator_link_item.description.endswith(tr("Jetlink connected:") + " USB.")
     # a kernel without the CC pin in sysfs claims nothing rather than an empty port
     with jetlink(port=None):
       layout._refresh_accelerator_items()
@@ -333,10 +333,10 @@ class TestTiciModelsPanel(UITest):
         layout = self._layout()
         note = layout._status_note()
         assert "chestnut" not in note
-        assert "Cinque Terre will drive when Jetlink is ready." == note
+        assert note == tr("{} will drive when Jetlink is ready.").format("Cinque Terre")
         ui_state.jetlink = snapshot(present=True, ready=True, enabled=True, model='Cinque Terre')
         # no "until the next drive": the link rejoins all drive
-        assert layout._status_note() == "Cinque Terre will drive."
+        assert layout._status_note() == tr("{} will drive.").format("Cinque Terre")
     finally:
       ui_state.jetlink, ui_state.chestnut_present = saved
 
@@ -345,7 +345,7 @@ class TestTiciModelsPanel(UITest):
     self.ui_state.chestnut_present = False
     with jetlink(present=True, enabled=True, model='ResAction Preview', standin='Cinque Terre V3'), \
          mock.patch("openpilot.selfdrive.ui.sunnypilot.layouts.settings.models.big_model_state", return_value=None):
-      assert self._layout()._status_note() == "Cinque Terre V3 drives until ResAction Preview is ready."
+      assert self._layout()._status_note() == tr("{} drives until {} is ready.").format("Cinque Terre V3", "ResAction Preview")
 
   def test_a_big_model_line_says_whether_it_is_built_or_here(self):
     from openpilot.sunnypilot import jetlink_adapter
@@ -353,7 +353,7 @@ class TestTiciModelsPanel(UITest):
     self.ui_state.chestnut_present = False
     with jetlink(present=True, enabled=True), mock.patch.object(jetlink_adapter, 'model_state', return_value='ready'):
       layout = self._layout()
-      assert layout._bundle_to_node(bundle, noted=True).data['display_name'] == "Cinque Terre V3 · ready on Jetson"
+      assert layout._bundle_to_node(bundle, noted=True).data['display_name'] == "Cinque Terre V3 · " + tr("ready on Jetson")
       assert layout._bundle_to_node(bundle).data['display_name'] == "Cinque Terre V3"
 
   def test_the_note_says_what_the_switch_is_waiting_for(self):
@@ -364,7 +364,7 @@ class TestTiciModelsPanel(UITest):
       with jetlink(present=True, ready=True, enabled=True, model='Cinque Terre'), \
            mock.patch("openpilot.selfdrive.ui.sunnypilot.layouts.settings.models.big_model_state", return_value='ready'):
         layout = self._layout()
-        assert layout._status_note() == "Cinque Terre is ready. Disengage fully, then re-engage to switch."
+        assert layout._status_note() == tr("{} is ready. Disengage fully, then re-engage to switch.").format("Cinque Terre")
     finally:
       ui_state.jetlink, ui_state.chestnut_present = saved
 
