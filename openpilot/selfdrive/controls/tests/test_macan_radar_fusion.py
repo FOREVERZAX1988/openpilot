@@ -7,7 +7,9 @@ from types import SimpleNamespace
 
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.cereal import log
-from openpilot.selfdrive.controls.radard import RadarD, RADAR_TO_CAMERA, MACAN_B1_T_A, MACAN_B1_T_B
+from openpilot.common.realtime import DT_MDL
+from openpilot.selfdrive.controls.radard import (RadarD, RADAR_TO_CAMERA, MACAN_B1_T_A, MACAN_B1_T_B,
+                                                 MACAN_SMOOTH_RC, MACAN_RATE_MIN_STEP)
 
 
 def _idx_to_drel(idx, v_ego=0.0):
@@ -116,3 +118,50 @@ class TestMacanRadarFusion(OpenpilotTestCase):
     d = _make(radar_drel=6.15)
     lead = _run(d, _can(idx=0), [_vision(6.15), _vision(0.0, prob=0.0)])
     assert abs(lead.dRel - 6.15) < 1e-6, lead.dRel
+
+
+  # ---- 状态复位 / 换人重播种 (2026-10-10) ----
+  # 病灶：lead 丢失后不复位，重捕获的新目标沿用旧目标的平滑器与限幅基准 ->
+  # 「新目标 3 m，融合值还在旧目标的 10 m」持续 ~0.5 s -> 纵向少刹车（二次起步险些追尾）。
+
+  def test_lead_lost_resets_state_no_stale_carryover(self):
+    d = _make(radar_drel=10.0)
+    lead = _run(d, _can(idx=0), [_vision(10.0), _vision(0.0, prob=0.0)])
+    assert abs(lead.dRel - 10.0) < 1e-6, lead.dRel
+    assert d._macan_last_fused and d._macan_smooth
+
+    # 目标丢失（视觉无目标 + lead 不 present）-> 状态必须清空
+    d.radar_state.leadOne.present = False
+    _run(d, _can(idx=0), [_vision(0.0, prob=0.0), _vision(0.0, prob=0.0)])
+    assert not d._macan_smooth and not d._macan_last_fused and not d._macan_smooth_v,       "目标丢失必须复位融合状态"
+
+    # 重捕获 3 m 处的新目标：第一帧就必须是 3 m，不得从 10 m 斜坡下来
+    d.radar_state.leadOne.present = True
+    lead = _run(d, _can(idx=0), [_vision(3.0), _vision(0.0, prob=0.0)])
+    assert abs(lead.dRel - 3.0) < 1e-6, lead.dRel
+
+  def test_relock_closer_jump_reseeds_instead_of_slewing(self):
+    """present 一直为真但目标换人且明显更近 -> 重新播种，不沿用旧基准。"""
+    d = _make(radar_drel=20.0)
+    lead = _run(d, _can(idx=0), [_vision(20.0), _vision(0.0, prob=0.0)])
+    assert abs(lead.dRel - 20.0) < 1e-6, lead.dRel
+    lead = _run(d, _can(idx=0), [_vision(6.0), _vision(0.0, prob=0.0)])
+    assert abs(lead.dRel - 6.0) < 1e-6, lead.dRel
+
+  def test_relock_farther_jump_stays_rate_limited(self):
+    """反向（突然更远）维持限幅+takes平滑：保守方向不得被重播种打开。"""
+    d = _make(radar_drel=6.0)
+    lead = _run(d, _can(idx=0), [_vision(6.0), _vision(0.0, prob=0.0)])
+    assert abs(lead.dRel - 6.0) < 1e-6, lead.dRel
+    lead = _run(d, _can(idx=0), [_vision(25.0), _vision(0.0, prob=0.0)])
+    smoothed = 6.0 + (DT_MDL / (MACAN_SMOOTH_RC + DT_MDL)) * (25.0 - 6.0)
+    expected = min(smoothed, 6.0 + MACAN_RATE_MIN_STEP)
+    assert abs(lead.dRel - expected) < 1e-6, (lead.dRel, expected)
+
+  def test_fusion_disabled_resets_state(self):
+    d = _make(radar_drel=10.0)
+    _run(d, _can(idx=0), [_vision(10.0), _vision(0.0, prob=0.0)])
+    assert d._macan_last_fused
+    d._macan_fusion_enabled = lambda: False
+    _run(d, _can(idx=0), [_vision(10.0), _vision(0.0, prob=0.0)])
+    assert not d._macan_last_fused, "融合关闭期间也要复位，避免下次开启沿用旧基准"

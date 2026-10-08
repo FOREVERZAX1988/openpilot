@@ -66,6 +66,16 @@ MACAN_SMOOTH_RC = 0.5       # 视觉平滑一阶低通时间常数(s)
 MACAN_RATE_MIN_STEP = 1.0   # 单帧最小可容忍变化(m)
 MACAN_RATE_VFACTOR = 1.2    # v_ego 缩放系数(倍 DT_MDL)
 
+# ---- 状态复位 / 换人重播种 (2026-10-10) ----
+# 病灶：lead 消失时 _macan_smooth / _macan_last_fused 不复位，重捕获后 (1) 一阶低通从旧目标
+# 的 dRel 指数爬升，tau≈0.5 s；(2) 变化率限幅以旧目标的 dRel 为基准做 clip（低速域
+# max_step 仅 1 m/帧）。两者叠加 =>「新目标已经 3 m，融合值还停在旧目标的 10 m」持续
+# ~0.5 s，纵向控制据此少刹车——二次起步险些追尾的直接成像。
+# 修复：目标丢失/融合关闭 -> 立即复位该 lead 的状态；目标仍在但明显换人（视觉重新锁定、
+# 遮挡后重捕）-> 复位并重新播种。只对「更近」方向判换人：「更远」方向维持限幅是保守的。
+MACAN_RESEED_MIN_JUMP = 4.0     # 换人判据(m)：原始融合值比上一帧基准突然更近超过此值，
+MACAN_RESEED_STEP_FACTOR = 4.0  # 且同时超过 4x 单帧允许步长，才判为「换了目标」
+
 
 class KalmanParams:
   def __init__(self, dt: float):
@@ -362,6 +372,20 @@ class RadarD:
 
 
 
+  def _macan_reset_lead(self, lead_name: str | None = None) -> None:
+    """复位某个 lead（lead_name=None 时为全部）的融合状态：视觉平滑器 + 变化率基准 + vLead 平滑。
+
+    必须在【目标丢失】(present=False)、【融合关闭】、【目标换人】三处调用。不复位就会出现
+    「重捕获的新目标沿用上一个目标的距离」：低通与限幅基准都还停在旧目标上，融合 dRel 需要
+    ~0.5 s 才爬回新目标的真实距离，正好覆盖低速起步那段最需要真实车距的时间窗。
+    """
+    names = (set(self._macan_smooth) | set(self._macan_smooth_v) | set(self._macan_last_fused)) \
+        if lead_name is None else {lead_name}
+    for name in names:
+      self._macan_smooth.pop(name, None)
+      self._macan_smooth_v.pop(name, None)
+      self._macan_last_fused.pop(name, None)
+
   def _macan_fuse_leads(self, sm: messaging.SubMaster, leads_v3) -> None:
     """Macan 原厂雷达融合（2026-10-09 语义反转：视觉主导，雷达只能改近）。
 
@@ -385,6 +409,7 @@ class RadarD:
     这样随着上游视觉模型变准，融合值自动收敛到视觉，不会再被冻结的 idx 拖累。
     """
     if not self._macan_fusion_enabled():
+      self._macan_reset_lead()   # 关闭期间同样复位，避免下次开启沿用旧目标基准
       return
     r = self._macan_radar
     r['idx'] = r['obj'] = 0
@@ -428,6 +453,8 @@ class RadarD:
     for lead_name, li in (('leadOne', 0), ('leadTwo', 1)):
       lead = getattr(self.radar_state, lead_name)
       if not lead.present:
+        # 目标丢失 -> 立即复位该 lead 的融合状态，禁止下一个目标继承旧基准
+        self._macan_reset_lead(lead_name)
         continue
 
       # ---- 视觉基准：modelV2 原始前车（雷达坐标系 -> 减 RADAR_TO_CAMERA 对齐保险杠口径）----
@@ -450,11 +477,16 @@ class RadarD:
         if 0.0 < stock_drel < d_vis and (d_vis - stock_drel) <= gate:
           d_used = stock_drel          # 原厂更近且过门 -> 采纳（安全方向）
         # 落点2 保持：视觉平滑 + 变化率限幅，压制 25<->40m 原生 cv 噪声与源切换瞬跳
+        max_step = MACAN_RATE_MIN_STEP + MACAN_RATE_VFACTOR * max(self.v_ego, 0.0) * DT_MDL
+        prev = self._macan_last_fused.get(lead_name)
+        # 换人检测（present 一直为真，但目标已不是同一个）：原始融合值相对上一帧基准突然更近，
+        # 且幅度超过物理单帧上限（4x max_step 且 >=4 m）-> 平滑器/限幅基准作废，用新目标重新播种。
+        if prev is not None and (prev - d_used) > max(MACAN_RESEED_MIN_JUMP, MACAN_RESEED_STEP_FACTOR * max_step):
+          self._macan_reset_lead(lead_name)
+          prev = None
         if lead_name not in self._macan_smooth:
           self._macan_smooth[lead_name] = FirstOrderFilter(d_used, MACAN_SMOOTH_RC, DT_MDL)
         d_used = self._macan_smooth[lead_name].update(d_used)
-        max_step = MACAN_RATE_MIN_STEP + MACAN_RATE_VFACTOR * max(self.v_ego, 0.0) * DT_MDL
-        prev = self._macan_last_fused.get(lead_name)
         if prev is not None:
           d_used = float(np.clip(d_used, prev - max_step, prev + max_step))
         self._macan_last_fused[lead_name] = d_used
