@@ -84,6 +84,11 @@ class FakeSM:
       return type("DS", (), {"chestnutPresent": self.board})()
     if name == "modelDataV2SP":
       return type("SP", (), {"acceleratorState": self.state})()
+    # the torque bar's input: the params pass reads it on every tick
+    if name == "carOutput":
+      return type("CO", (), {"actuatorsOutput": type("AO", (), {"torque": 0.0})()})()
+    if name == "carState":
+      return type("CS", (), {"vEgo": 0.0})()
     assert name == "modelV2"
     return type("M", (), {"big": self.big})()
 
