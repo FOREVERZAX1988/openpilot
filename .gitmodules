@@ -30,3 +30,4 @@
 [submodule "jetlink"]
   path = jetlink_repo
   url = https://github.com/mouxangithub/jetlink.git
+	branch = cn
