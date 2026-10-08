@@ -95,7 +95,12 @@ class UIStateSP:
     torque bar and lane lines: a torque tune saturates at the rail, below the
     carcontroller's full scale, so the bar would only reach the top after the
     car has already given all it has."""
-    torque = self.sm['carOutput'].actuatorsOutput.torque
+    try:
+      torque = self.sm['carOutput'].actuatorsOutput.torque
+    except Exception:
+      # before card's first message, or a build without carOutput
+      self.torque_utilization = 0.0
+      return
     if self._steer_rail_schedule is not None:
       rail = float(np.interp(self.sm['carState'].vEgo, self._steer_rail_schedule[0], self._steer_rail_schedule[1]))
       torque = min(1.0, max(-1.0, torque / rail))
