@@ -520,6 +520,7 @@ msgid "Firehose"
 msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/settings.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
 msgid "Developer"
 msgstr ""
@@ -1807,6 +1808,77 @@ msgstr ""
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 #: openpilot/system/ui/widgets/network.py
 msgid "for \"{}\""
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Start / Engage"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "How openpilot engages cruise and which steering wheel buttons control it."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise & Following"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Following distance, longitudinal gains, acceleration limits and cruise behavior."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
+msgid "Navigation"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Navigation-based speed control, speed cameras, road limits and speed bumps."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Turns & Curves"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Automatic turn, fork / merge and curve speed control."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Tuning"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Steering geometry, MPC costs, torque tuning, lane change and blind spot."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Display & Sound"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cluster HUD, on-screen overlays, sound, YouTube and map style."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py
+msgid "Vehicle"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Vehicle-specific overrides and convenience options."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Debug and diagnostic toggles. Use with caution."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "eGPU"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "eGPU / big model status and configuration."
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
@@ -3308,6 +3380,10 @@ msgid "{} will drive when Jetlink is ready."
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "{} will drive."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "{} will drive. If it fails during a drive, {} takes over until the next drive."
 msgstr ""
 
@@ -3338,6 +3414,10 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "{} drives until the big model is ready."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "{} drives until {} is ready."
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -3549,20 +3629,11 @@ msgid "OSM"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
-msgid "Navigation"
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
 msgid "Carrot"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
 msgid "Trips"
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py
-msgid "Vehicle"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/software.py
