@@ -143,8 +143,12 @@ class TestTheCommandBuilds(OpenpilotTestCase):
     CPU device, since this runs off the comma."""
     import jetlink
     checkout = Path(jetlink.__file__).resolve().parents[1]
-    # the path the build has, less anywhere this runner finds jetlink
-    base = os.pathsep.join(p for p in sys.path if p and not (Path(p) / 'jetlink').exists())
+    # the path the build has, less anywhere this runner finds jetlink. The
+    # build's own root stays even though it carries one on a comma, where
+    # `jetlink` is a symlink into the submodule: dropping it would take
+    # openpilot off the child's path and the compile would fail on the import
+    base = os.pathsep.join(p for p in sys.path
+                           if p and (Path(p) == Path(BASEDIR) or not (Path(p) / 'jetlink').exists()))
     with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as out:
       commands = run_sconscript(CAMERAS[:1], jetlink=checkout, pythonpath=base, root=root)
       [(cmd, env)] = [command for target, command in commands.items() if '_lossless_' not in target]
