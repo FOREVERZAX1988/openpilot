@@ -2209,6 +2209,10 @@ msgstr ""
 msgid "Join our Community Forum at https://community.sunnypilot.ai and reach out to a moderator if you have issues"
 msgstr "https://community.sunnypilot.ai でコミュニティ フォーラムに参加し、問題がある場合はモデレーターに問い合わせてください。"
 
+#: openpilot/selfdrive/ui/sunnypilot/accelerator_link.py
+msgid "Join the device's hotspot and open Jetlink there."
+msgstr ""
+
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 msgid "Joystick Debug Mode"
 msgstr "ジョイスティックデバッグモード"
@@ -3300,7 +3304,7 @@ msgid "Road Type"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Run big models over a connected device running Jetlink. Turns off ADB."
+msgid "Run big models over a connected device running Jetlink. USB and iOS turn off ADB."
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
@@ -4503,6 +4507,10 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/network/network_layout.py
 msgid "cellular metered"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/model_info.py
+msgid "check Wi-Fi or app"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/model_info.py

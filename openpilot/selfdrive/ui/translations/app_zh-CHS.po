@@ -2226,6 +2226,10 @@ msgstr "Jetlink 已连接："
 msgid "Join our Community Forum at https://community.sunnypilot.ai and reach out to a moderator if you have issues"
 msgstr "如有问题，请前往社区论坛 https://community.sunnypilot.ai 联系版主。"
 
+#: openpilot/selfdrive/ui/sunnypilot/accelerator_link.py
+msgid "Join the device's hotspot and open Jetlink there."
+msgstr "请接入手机热点，并在手机上打开 Jetlink。"
+
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 msgid "Joystick Debug Mode"
 msgstr "摇杆调试模式"
@@ -3320,8 +3324,8 @@ msgid "Road Type"
 msgstr "道路类型"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Run big models over a connected device running Jetlink. Turns off ADB."
-msgstr "在已连接的外接算力上运行大模型：USB 支持 Jetson、Linux 电脑、Mac 或安卓手机；iOS 支持 iPhone。"
+msgid "Run big models over a connected device running Jetlink. USB and iOS turn off ADB."
+msgstr "在已连接的外接算力上运行大模型。USB 与 iOS 模式会关闭 ADB。"
 
 #: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
 msgid "S"
@@ -4528,6 +4532,10 @@ msgstr ""
 #: openpilot/selfdrive/ui/mici/layouts/settings/network/network_layout.py
 msgid "cellular metered"
 msgstr "蜂窝计费"
+
+#: openpilot/selfdrive/ui/sunnypilot/model_info.py
+msgid "check Wi-Fi or app"
+msgstr "请检查 Wi-Fi 或手机 App"
 
 #: openpilot/selfdrive/ui/sunnypilot/model_info.py
 msgid "check cable"

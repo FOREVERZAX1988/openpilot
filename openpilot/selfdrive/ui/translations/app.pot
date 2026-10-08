@@ -1441,6 +1441,10 @@ msgid "Reboot Device"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/accelerator_link.py
+msgid "Join the device's hotspot and open Jetlink there."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/accelerator_link.py
 msgid "Nothing on the USB port."
 msgstr ""
 
@@ -3167,7 +3171,7 @@ msgid "{} m"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Run big models over a connected device running Jetlink. Turns off ADB."
+msgid "Run big models over a connected device running Jetlink. USB and iOS turn off ADB."
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -4775,10 +4779,6 @@ msgid "pair with sunnylink"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/model_info.py
-msgid "check cable or app"
-msgstr ""
-
-#: openpilot/selfdrive/ui/sunnypilot/model_info.py
 msgid "check cable"
 msgstr ""
 
@@ -4788,6 +4788,14 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/model_info.py
 msgid "ready on Jetson"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/model_info.py
+msgid "check cable or app"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/model_info.py
+msgid "check Wi-Fi or app"
 msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/onroad/chevron_metrics.py
