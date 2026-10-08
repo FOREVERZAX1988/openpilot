@@ -14,8 +14,9 @@ from openpilot.sunnypilot.models.mirror import (GITHUB_PROXY_PARAM, HF_MIRROR_PA
                                                 describe_hf_mirror, normalize_base_url)
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import device, ui_state
-from openpilot.selfdrive.ui.sunnypilot.model_info import (big_model_state, bundles_for_source, carrying_model, default_model_name,
-                                                           model_cache_size_mb, queued_name, refresh_in_progress, refresh_model_list)
+from openpilot.selfdrive.ui.sunnypilot.model_info import (big_model_note, big_model_state, bundles_for_source, carrying_model,
+                                                           default_model_name, model_cache_size_mb, queued_name,
+                                                           refresh_in_progress, refresh_model_list, standin_model)
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import DialogResult, Widget
