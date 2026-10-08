@@ -242,8 +242,9 @@ def _enforce_usb_port(params=None) -> None:
 
   `UIStateSP._enforce_usb_port` does this in the native UI's params pass, but that
   pass only runs where a builtin display does, and the carrot servers are the other
-  places either key can be written from. Best-effort: a failure here must not turn
-  a good write into a 400."""
+  places either key can be written from. Over Wi-Fi the link leaves the port
+  alone, and ADB with it. Best-effort: a failure here must not turn a good write
+  into a 400."""
   try:
     from openpilot.sunnypilot import jetlink_adapter
 
@@ -251,7 +252,8 @@ def _enforce_usb_port(params=None) -> None:
       from openpilot.common.params import Params
       params = Params()
     status = jetlink_adapter.status()
-    if status is not None and getattr(status, "enabled", False) and params.get_bool("AdbEnabled"):
+    if status is not None and getattr(status, "enabled", False) and getattr(status, "mode", None) != "wifi" \
+        and params.get_bool("AdbEnabled"):
       params.put_bool("AdbEnabled", False)
   except Exception:
     pass
