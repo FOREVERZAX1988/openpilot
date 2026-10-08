@@ -49,6 +49,9 @@ class UIStateSP:
     # jetlink's snapshot (jetlink.openpilot.Status) from the params pass; None
     # with a chestnut fitted or no jetlink on this device
     self.jetlink = None
+    # the link is on and holds the USB port ADB needs; the developer panels grey
+    # the ADB toggle on it (_enforce_usb_port)
+    self.adb_blocked: bool = False
     self._accelerator_state_name: str = 'none'
     self.blindspot: bool = False
     self.chevron_metrics = None
@@ -186,6 +189,7 @@ class UIStateSP:
     self.chestnut_compiled = self.chestnut_compiled or self.model_runner_tinygrad
     # on the 5 Hz params pass, not per frame in a layout; a fitted chestnut owns chestnut_state
     self.jetlink = None if self.sm['deviceState'].chestnutPresent else jetlink_adapter.status()
+    self._enforce_usb_port()
     # the Jetson configures the gadget ~25 s after a cold boot, after the one-shot
     # usb_unknown decision; recognising it late still clears "unknown"
     if (view := self.jetlink_view) is not None and view.present and self.usb_unknown:
@@ -273,6 +277,19 @@ class UIStateSP:
       self.params.remove("CustomAccIncrementsEnabled")
       self.params.remove("SmartCruiseControlVision")
       self.params.remove("SmartCruiseControlMap")
+
+  def _enforce_usb_port(self) -> None:
+    """ADB and Jetlink both need the comma's USB port: the link on turns ADB off,
+    and the developer panels grey its toggle out. Here, not in the panels, so a
+    link set from sunnylink or the web panel counts too.
+
+    AGNOS's ADB gadget (g1) holds the device controller while AdbEnabled is set,
+    and jetlink-root.sh refuses to take the controller from it, so the link stays
+    "unavailable" until this lands. jetlink's owner retries the port every few
+    seconds, so clearing the param is enough."""
+    self.adb_blocked = self.jetlink is not None and self.jetlink.enabled
+    if self.adb_blocked and self.params.get_bool("AdbEnabled"):
+      self.params.put_bool("AdbEnabled", False, block=True)
 
 
 class DeviceSP:

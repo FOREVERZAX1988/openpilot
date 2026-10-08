@@ -41,6 +41,9 @@ _READ_ONLY_KEYS = frozenset((
   "CarParamsSPPersistent",
 ))
 
+# A write to either can take the USB port out from under the other (see _enforce_usb_port).
+_USB_PORT_KEYS = frozenset(("AdbEnabled", "JetlinkLink"))
+
 
 def _as_bool(value: Any) -> bool:
   if isinstance(value, bool):
@@ -206,7 +209,29 @@ def set_param_value(params, name: str, value: Any) -> Any:
   except TypeError as exc:
     raise ParamWriteError(f"type mismatch writing {name}: {exc}") from exc
 
+  if name in _USB_PORT_KEYS:
+    _enforce_usb_port(params)
+
   return coerced
+
+
+def _enforce_usb_port(params) -> None:
+  """ADB and Jetlink both need the comma's USB port. AGNOS's ADB gadget (g1) holds
+  the only device controller while AdbEnabled is set, and jetlink refuses to take
+  it, so the link reads as unavailable until ADB is off.
+
+  `UIStateSP._enforce_usb_port` does this in the native UI's params pass, but that
+  pass only runs where a builtin display does, and this server is the other place
+  either key can be written from. Best-effort: a failure here must not turn a good
+  write into a 400."""
+  try:
+    from openpilot.sunnypilot import jetlink_adapter
+
+    status = jetlink_adapter.status()
+    if status is not None and getattr(status, "enabled", False) and params.get_bool("AdbEnabled"):
+      params.put_bool("AdbEnabled", False)
+  except Exception:
+    pass
 
 
 def get_param_values(params, names: list[str], defaults: dict[str, Any] | None = None) -> dict[str, Any]:
