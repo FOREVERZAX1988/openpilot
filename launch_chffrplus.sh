@@ -728,11 +728,24 @@ bootstrap_deps_retry() {
 ensure_params_build() {
   local so="$DIR/openpilot/common/libparams_c.so"
   [ -f "$so" ] && return 0
-  local jobs=$(nproc 2>/dev/null || echo 2)
-  echo "[ensure_params_build] building libparams_c.so ($jobs jobs)..."
-  if ! (cd "$DIR" && PYTHONPATH="$PY_PATH" scons -j"$jobs" openpilot/common/libparams_c.so >> /tmp/params_build.log 2>&1); then
-    echo "[warn] ensure_params_build failed, webui may fall back to dev/mock mode"
-  fi
+  # params.cc builds a large static hash table; at -O2 on a C3 the clang++
+  # compile of params.o can exceed available memory and is SIGKILLed (Error -9),
+  # which leaves libparams_c.so missing and takes down manager + the native UI
+  # (openpilot.selfdrive.ui crashes on import) - i.e. a "boot stuck on logo".
+  # Build single-threaded and at -O0 (same flags that have proven to link) so
+  # peak memory stays low and the UI can actually start.
+  local jobs=1
+  echo "[ensure_params_build] building libparams_c.so (-O0, single job, low-mem)..."
+  local tries=0
+  while [ $tries -lt 3 ]; do
+    if (cd "$DIR" && PYTHONPATH="$PY_PATH" scons --ccflags="-O0" -j"$jobs" openpilot/common/libparams_c.so >> /tmp/params_build.log 2>&1); then
+      [ -f "$so" ] && echo "[ensure_params_build] OK: libparams_c.so built" && return 0
+    fi
+    tries=$((tries+1))
+    echo "[ensure_params_build] attempt $tries failed; retrying..." >> /tmp/params_build.log
+    sleep 2
+  done
+  echo "[warn] ensure_params_build failed after 3 attempts, webui may fall back to dev/mock mode"
 }
 
 # BlueZ is not shipped on C3, but the Carrot Bluetooth HID remote feature needs
