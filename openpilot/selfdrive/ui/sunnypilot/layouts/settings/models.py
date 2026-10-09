@@ -131,8 +131,19 @@ class ModelsLayout(Widget):
                                         1, None, True, "", style.BUTTON_ACTION_WIDTH, None, True,
                                         lambda v: f"{v / 100:.2f} m")
 
-    self.items = [self.current_model_item, self.cancel_download_item, self.supercombo_label, self.vision_label,
-                  self.policy_label, self.off_policy_label, self.on_policy_label, self.refresh_item, self.clear_cache_item,
+    self.accelerator_link_item = multiple_button_item_sp(
+      tr("Jetlink"),
+      lambda: self._link_description(self._link_status or ""),
+      [LINK_MODE_TITLES[m] for m in LINK_MODES],
+      param=LINK_PARAM, button_width=300, inline=False)
+
+    # 上游这批新增的行（Jetlink 链接模式 / 下载镜像 / 模型列表源）在本树已有定义，
+    # 一并挂进列表，否则定义了却不显示。上游的 small/big_model_item 与 download_item
+    # 本 fork 已用 current_model_item + 各进度标签替代，本树无定义，故不纳入。
+    self.items = [self.current_model_item, self.accelerator_link_item, self.cancel_download_item,
+                  self.supercombo_label, self.vision_label,
+                  self.policy_label, self.off_policy_label, self.on_policy_label, self.refresh_item,
+                  self.hf_mirror_item, self.catalog_source_item, self.clear_cache_item,
                   self.lane_turn_desire_toggle, self.lane_turn_value_control, self.lagd_toggle, self.delay_control, self.camera_offset]
 
     # initial visibility/selection for the param-bound accelerator row (the
