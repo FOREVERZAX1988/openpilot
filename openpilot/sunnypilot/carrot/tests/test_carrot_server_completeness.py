@@ -16,6 +16,7 @@ payload actually decoding back to what was encoded, and a refusal being 501 rath
 """
 import base64
 import unittest
+from unittest import mock
 
 from openpilot.sunnypilot.carrot.server.services import param_changes as pc
 from openpilot.sunnypilot.carrot.server.services import params_backup as pb
@@ -312,10 +313,21 @@ class TestRouteCompleteness(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(body["favorites"], ["IsMetric"])
 
   async def test_intro_hides_by_default_and_lists_presets(self):
-    resp = await self.client.get("/api/intro/state")
-    body = await resp.json()
+    # no state file is "done", and a comma that ran the wizard has one with
+    # done=False: pin the read so the test means the same on a PC and a device
+    with mock.patch("openpilot.sunnypilot.carrot.server.features.intro._read_state", return_value={}):
+      resp = await self.client.get("/api/intro/state")
+      body = await resp.json()
     self.assertFalse(body["should_show"])
     self.assertIn("radar_long", body["presets"])
+
+  async def test_intro_shows_again_after_a_reset(self):
+    # the wizard returns for a device whose state says it was reset
+    with mock.patch("openpilot.sunnypilot.carrot.server.features.intro._read_state",
+                    return_value={"done": False}):
+      resp = await self.client.get("/api/intro/state")
+      body = await resp.json()
+    self.assertTrue(body["should_show"])
 
   async def test_an_unknown_preset_is_a_400(self):
     resp = await self.client.post("/api/intro/apply_preset", json={"name": "nope"})

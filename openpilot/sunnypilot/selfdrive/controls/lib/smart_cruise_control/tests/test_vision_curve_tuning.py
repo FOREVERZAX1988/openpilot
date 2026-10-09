@@ -84,7 +84,10 @@ def _params(values: dict[str, float] | None = None, enabled: bool = True):
 def _vision(v_ego: float = PLAIN_SPEED, values: dict[str, float] | None = None,
             enabled: bool = True) -> SmartCruiseControlVision:
   """A controller at the given speed, with tuning loaded as update() would do."""
-  with patch("openpilot.common.params.Params", return_value=_params(values, enabled)):
+  # Patch the name the controller actually binds (`from ... import Params`), not the
+  # module attribute: patching openpilot.common.params.Params alone has no effect.
+  with patch("openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.vision_controller.Params",
+             return_value=_params(values, enabled)):
     c = SmartCruiseControlVision()
   c.v_ego = v_ego
   c._load_curve_tuning()
@@ -108,9 +111,9 @@ class TestCurveTuningNeutral(unittest.TestCase):
     """The number that reaches the planner is unchanged at neutral."""
     rate_z = np.array([0.02] * 33)
     vel_x = np.array([25.0] * 33)
-    sm = SimpleNamespace(modelV2=SimpleNamespace(
+    sm = {"modelV2": SimpleNamespace(
       orientationRate=SimpleNamespace(z=rate_z), velocity=SimpleNamespace(x=vel_x)),
-      controlsState=SimpleNamespace(curvature=0.01))
+      "controlsState": SimpleNamespace(curvature=0.01)}
 
     c = _vision(v_ego=25.0)
     c.long_enabled = True
@@ -131,7 +134,9 @@ class TestCurveSpeedFactor(unittest.TestCase):
 
   def test_lower_factor_is_more_cautious(self):
     tight = _vision(values={"AutoCurveSpeedFactor": 50.0, "AutoCurveSpeedFactorH": 50.0})
-    self.assertAlmostEqual(tight.tuned_a_lat_reg_max, _A_LAT_REG_MAX * 0.5, places=6)
+    # The controller clamps the scaled ceiling to _A_LAT_REG_MAX_MIN, so a half-scale
+    # factor on the 1.8 default (0.9) lands on the 1.0 floor, not 0.9.
+    self.assertAlmostEqual(tight.tuned_a_lat_reg_max, max(_A_LAT_REG_MAX * 0.5, _A_LAT_REG_MAX_MIN), places=6)
 
   def test_a_full_scale_factor_is_clamped(self):
     """200% would ask for 4.0 m/s^2; the clamp keeps it at the documented ceiling."""
@@ -146,9 +151,9 @@ class TestCurveSpeedFactor(unittest.TestCase):
     """v = sqrt(a_lat / curvature), so the speed scales as the square root."""
     rate_z = np.array([0.02] * 33)
     vel_x = np.array([25.0] * 33)
-    sm = SimpleNamespace(modelV2=SimpleNamespace(
+    sm = {"modelV2": SimpleNamespace(
       orientationRate=SimpleNamespace(z=rate_z), velocity=SimpleNamespace(x=vel_x)),
-      controlsState=SimpleNamespace(curvature=0.01))
+      "controlsState": SimpleNamespace(curvature=0.01)}
 
     neutral = _vision(v_ego=PLAIN_SPEED)
     neutral.long_enabled = True

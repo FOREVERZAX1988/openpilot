@@ -6,23 +6,21 @@ import unittest
 
 from openpilot.common.params import Params
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import AccelController
+from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import AccelController, AccelProfile
 
 
 class TestAccelController(OpenpilotTestCase):
   def test_stub_is_disabled(self) -> None:
-    # NOTE: this used to be a bare unittest.TestCase reading the *real* params store, so the
-    # result depended on whatever AccelPersonality happened to be on the host (the registered
-    # default is 1/normal, so the old assertion `profile == 0` failed everywhere). Use the
-    # harness (isolated Params) and make the expected state explicit instead.
+    # Isolate the params so the assertion does not depend on whatever the device
+    # happens to have set: the stub is disabled when AccelPersonalityEnabled is off,
+    # and the profile falls back to eco (0).
     params = Params()
-    params.put("AccelPersonality", 0, block=True)
     params.put_bool("AccelPersonalityEnabled", False, block=True)
-
+    params.put("AccelPersonality", AccelProfile.eco, block=True)
     controller = AccelController()
     controller.update()
     self.assertFalse(controller.is_enabled())
-    self.assertEqual(controller.profile, 0)
+    self.assertEqual(controller.profile, AccelProfile.eco)
 
 
 if __name__ == "__main__":

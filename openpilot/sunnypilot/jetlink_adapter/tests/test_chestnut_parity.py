@@ -42,7 +42,10 @@ class TestLinkStaysOff(OpenpilotTestCase):
   def setUp(self):
     super().setUp()
     Params().put(jetlink_adapter.KEYS.link, jetlink_adapter.MODES.index('usb'), block=True)
+    # no owner record as well: a real jetlinkd's files, when the suite runs on a
+    # device, take precedence over gadget_error() and the reason would be None
     for p in (mock.patch.object(gadget, 'gadget_error', return_value='not set up'),
+              mock.patch.object(gadget, 'owner_status', return_value=None),
               mock.patch.object(jetlink_adapter, '_bound', None)):
       p.start()
       self.addCleanup(p.stop)

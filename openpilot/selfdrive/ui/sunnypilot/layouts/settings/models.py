@@ -11,8 +11,14 @@ import pyray as rl
 
 from openpilot.cereal import custom
 from openpilot.sunnypilot.models.default_model import DEFAULT_MODEL
+from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_selected_bundle, resolve_bundle_by_ref
+from openpilot.sunnypilot.models.mirror import (GITHUB_PROXY_PARAM, HF_MIRROR_PARAM, describe_github_proxy,
+                                                describe_hf_mirror, normalize_base_url)
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import device, ui_state
+from openpilot.selfdrive.ui.sunnypilot.model_info import (big_model_note, big_model_state, bundles_for_source, carrying_model,
+                                                           default_model_name, model_cache_size_mb, queued_name,
+                                                           refresh_in_progress, refresh_model_list, standin_model)
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import DialogResult, Widget
@@ -22,8 +28,10 @@ from openpilot.system.ui.widgets.toggle import ON_COLOR
 
 from openpilot.sunnypilot.models.runners.constants import CUSTOM_MODEL_PATH
 from openpilot.system.ui.sunnypilot.lib.styles import style
-from openpilot.system.ui.sunnypilot.lib.utils import NoElideButtonAction
-from openpilot.system.ui.sunnypilot.widgets.list_view import ListItemSP, toggle_item_sp, option_item_sp
+from openpilot.system.ui.sunnypilot.lib.utils import NoElideButtonAction, ScrollingButtonAction
+from openpilot.system.ui.sunnypilot.widgets.list_view import ListItemSP, toggle_item_sp, option_item_sp, multiple_button_item_sp
+from openpilot.system.ui.sunnypilot.widgets.download_status import download_status_item
+from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
 from openpilot.system.ui.sunnypilot.widgets.progress_bar import progress_item
 from openpilot.system.ui.sunnypilot.widgets.tree_dialog import TreeOptionDialog, TreeNode, TreeFolder
 
@@ -41,6 +49,15 @@ class ModelsLayout(Widget):
     self.download_status = None
     self.prev_download_status = None
     self.model_dialog = None
+    self._selection_source = None
+    self._downloading = False
+    self._verifying = False
+    self._clearing = False
+    self._refreshing = False
+    self._refresh_start: float | None = None
+    self._last_note = None
+    self._last_mirror_desc = None
+    self._last_catalog_desc = None
     self.last_cache_calc_time = 0
     self._link_status: str | None = None
 
@@ -69,6 +86,18 @@ class ModelsLayout(Widget):
     self.refresh_item = button_item(tr("Refresh Model List"), tr("REFRESH"), "",
                                     lambda: (ui_state.params.put("ModelManager_LastSyncTime", 0),
                                              gui_app.push_widget(alert_dialog(tr("Fetching Latest Models")))))
+
+    self.hf_mirror_item = multiple_button_item_sp(
+      tr("Model Download Mirror"),
+      tr("huggingface.co is unreachable on many networks. Mirror sends model downloads to a mirror site instead; ") +
+      tr("Direct uses huggingface.co as-is; Custom lets you enter your own mirror. Applies to the next download."),
+      [tr("Mirror"), tr("Direct"), tr("Custom")], callback=self._on_hf_mirror_mode, button_width=245)
+
+    self.catalog_source_item = multiple_button_item_sp(
+      tr("Model List Source"),
+      tr("The model list lives on GitHub raw. Auto tries direct first and falls back to a CDN mirror when it fails; ") +
+      tr("Direct never falls back; Proxy always fetches through your own prefix. Press Refresh Model List to apply."),
+      [tr("Auto"), tr("Direct"), tr("Proxy")], callback=self._on_catalog_source_mode, button_width=245)
 
     self.clear_cache_item = ListItemSP(
       title=tr("Clear Model Cache"),
@@ -113,9 +142,9 @@ class ModelsLayout(Widget):
   @staticmethod
   def _link_description(status: str) -> str:
     # An Android phone rides the USB mode exactly like a Jetson or a Mac
-    # (jetlink docs/android-app.md: "Accelerator Link on USB"), so the USB
+    # (jetlink docs/android-app.md: "Jetlink on USB"), so the USB
     # option covers it; iOS keeps its own mode.
-    what = tr("Run the big driving model on an attached accelerator: USB for a Jetson, a Linux PC, a Mac or an Android phone; iOS for an iPhone.")
+    what = tr("Run big models over a connected device running Jetlink. USB and iOS turn off ADB.")
     return f"{what} {status}".strip()
 
   def _refresh_accelerator_items(self):
@@ -159,6 +188,94 @@ class ModelsLayout(Widget):
     dialog = ConfirmDialog(tr("This will delete ALL downloaded models from the cache except the currently active model. Are you sure?"),
                            tr("Clear Cache"), callback=_callback)
     gui_app.push_widget(dialog)
+
+  def _refresh_models(self):
+    refresh_model_list()
+    self._refresh_start = time.monotonic()
+
+  # ---- download mirror ------------------------------------------------- #
+
+  @staticmethod
+  def _mirror_button_index() -> int:
+    raw = (ui_state.params.get(HF_MIRROR_PARAM) or "").strip()
+    if raw == "off":
+      return 1
+    if normalize_base_url(raw):
+      return 2
+    return 0  # unset -> built-in default mirror
+
+  @staticmethod
+  def _catalog_button_index() -> int:
+    raw = (ui_state.params.get(GITHUB_PROXY_PARAM) or "").strip()
+    if raw == "direct":
+      return 1
+    if normalize_base_url(raw):
+      return 2
+    return 0  # unset -> auto (direct first, CDN fallback)
+
+  def _on_hf_mirror_mode(self, index: int):
+    if index == 0:
+      ui_state.params.put(HF_MIRROR_PARAM, "")
+    elif index == 1:
+      ui_state.params.put(HF_MIRROR_PARAM, "off")
+    else:
+      current = ui_state.params.get(HF_MIRROR_PARAM) or ""
+      dialog = InputDialogSP(
+        tr("Custom Mirror"),
+        tr("Base URL replacing https://huggingface.co, e.g. https://hf-mirror.com"),
+        current_text="" if current == "off" else current,
+        callback=lambda result, text: self._on_custom_url_result(result, text, HF_MIRROR_PARAM,
+                                                                 tr("The mirror must be an http(s) URL without spaces, e.g. https://hf-mirror.com")))
+      dialog.show()
+
+  def _on_catalog_source_mode(self, index: int):
+    if index == 0:
+      ui_state.params.put(GITHUB_PROXY_PARAM, "")
+    elif index == 1:
+      ui_state.params.put(GITHUB_PROXY_PARAM, "direct")
+    else:
+      current = ui_state.params.get(GITHUB_PROXY_PARAM) or ""
+      dialog = InputDialogSP(
+        tr("Catalog Proxy Prefix"),
+        tr("Prefix prepended to the catalog URL, e.g. https://gh-proxy.com"),
+        current_text="" if current == "direct" else current,
+        callback=lambda result, text: self._on_custom_url_result(result, text, GITHUB_PROXY_PARAM,
+                                                                 tr("The proxy must be an http(s) URL without spaces, e.g. https://gh-proxy.com")))
+      dialog.show()
+
+  def _on_custom_url_result(self, result, text: str, param: str, error_message: str):
+    if result != DialogResult.CONFIRM:
+      return
+    base = normalize_base_url(text)
+    if base is None:
+      gui_app.push_widget(alert_dialog(error_message))
+      return
+    ui_state.params.put(param, base)
+
+  def _refresh_mirror_items(self):
+    for item, index in ((self.hf_mirror_item, self._mirror_button_index()), (self.catalog_source_item, self._catalog_button_index())):
+      if item.action_item.selected_button != index:
+        item.action_item.set_selected_button(index)
+
+    descs = (
+      (self.hf_mirror_item,
+       tr("huggingface.co is unreachable on many networks. Mirror sends model downloads to a mirror site instead; ") +
+       tr("Direct uses huggingface.co as-is; Custom lets you enter your own mirror. Applies to the next download."),
+       describe_hf_mirror(ui_state.params), self._last_mirror_desc),
+      (self.catalog_source_item,
+       tr("The model list lives on GitHub raw. Auto tries direct first and falls back to a CDN mirror when it fails; ") +
+       tr("Direct never falls back; Proxy always fetches through your own prefix. Press Refresh Model List to apply."),
+       describe_github_proxy(ui_state.params), self._last_catalog_desc),
+    )
+    for item, base_desc, effective, last in descs:
+      desc = f"{base_desc}<br>{tr('Current')}: {effective}"
+      if desc != last:
+        item.set_description(desc)
+      # return the newest cache value for each row
+      if item is self.hf_mirror_item:
+        self._last_mirror_desc = desc
+      else:
+        self._last_catalog_desc = desc
 
   def _handle_bundle_download_progress(self):
     labels = {custom.ModelManagerSP.Model.Type.supercombo: self.supercombo_label,
@@ -215,6 +332,83 @@ class ModelsLayout(Widget):
     msg = tr("Model download has started in the background. We suggest resetting calibration. Would you like to do that now?")
     dialog = ConfirmDialog(msg, tr("Reset Calibration"), callback=_callback)
     gui_app.push_widget(dialog)
+  def _set_item_note(item, text):
+    # a description renders only while shown; hide before clearing or the
+    # empty description keeps its visible state
+    if text:
+      item.set_description(text)
+      item.show_description(True)
+    else:
+      item.show_description(False)
+      item.set_description("")
+
+  def _status_note(self) -> str:
+    """The failover story for the Model Status row. A chestnut's is one-way big ->
+    small and runner-matched: a Default big can only fall back to the Default
+    small (stock modeld), a custom big has no automatic fallback yet.
+    Jetlink's goes both ways, all drive."""
+    view = ui_state.jetlink_view
+    accelerator = view is not None
+    if not (ui_state.chestnut_present or accelerator):
+      return ""
+    fallback_name = default_model_name("qcom")
+    state = big_model_state()
+    if accelerator:
+      # named by jetlink: the slot's pick, or its default, which can be
+      # newer than the chestnut's. The small model the user picked drives in
+      # its place, so it reads like a Default big
+      big_name = view.model or tr("The big model")
+      big_is_default = True
+      if small := get_selected_bundle(ui_state.params, "qcom"):
+        fallback_name = small.internalName
+    else:
+      big_bundle = get_selected_bundle(ui_state.params, "chestnut")
+      big_name = big_bundle.internalName if big_bundle else default_model_name("chestnut")
+      big_is_default = big_bundle is None
+    if state == 'failed':
+      if big_is_default:
+        return tr("Big model unavailable, {} is driving until the next drive.").format(fallback_name)
+      return tr("Big model unavailable until the next drive.")
+    if state == 'loading':
+      if big_is_default:
+        return tr("{} drives until the big model is ready.").format(fallback_name)
+      return tr("Getting the big model ready.")
+    if state == 'ready':
+      # the swap window, not the model, is what is missing now: it opens when
+      # nothing is in control
+      return tr("{} is ready. Disengage fully, then re-engage to switch.").format(big_name)
+    if accelerator and not view.ready:
+      if standin := standin_model():
+        # the last model the Jetson built drives until the pick is downloaded and built
+        return tr("{} drives until {} is ready.").format(standin, big_name)
+      return tr("{} will drive when Jetlink is ready.").format(big_name)
+    if accelerator:
+      # it rejoins all drive and a drop is announced as it happens, so there is
+      # no "until the next drive" to warn of
+      return tr("{} will drive.").format(big_name)
+    if big_is_default:
+      return tr("{} will drive. If it fails during a drive, {} takes over until the next drive.").format(big_name, fallback_name)
+    return tr("{} will drive when the chestnut is ready.").format(big_name)
+
+  @staticmethod
+  def _download_row_state(progresses, name: str) -> dict:
+    """Maps a bundle's artifact progress to DownloadStatusAction.update kwargs."""
+    # .raw: _DynamicEnum equals its int but does not hash like it
+    statuses = {getattr(p.status, 'raw', p.status) for p in progresses}
+    progress = sum(p.progress for p in progresses) / len(progresses)
+    ds = custom.ModelManagerSP.DownloadStatus
+
+    if ds.failed in statuses:
+      # close.png is authored black and a tint cannot lift it, hence close2
+      return {"name": name, "status_text": tr("download failed"), "text_color": rl.RED, "icon": "icons/close2.png"}
+    if ds.verifying in statuses:
+      return {"name": name, "downloading": True, "progress": progress, "status_text": tr("verifying")}
+    if ds.downloading in statuses:
+      return {"name": name, "downloading": True, "progress": progress}
+    if statuses <= {ds.downloaded, ds.cached}:
+      return {"name": name, "text_color": ON_COLOR, "icon": "icons/checkmark.png"}
+    # circled_slash is authored grey; tinting it again only darkens it
+    return {"name": name, "text_color": rl.GRAY, "icon": "icons/circled_slash.png", "icon_color": rl.WHITE}
 
   def _on_model_selected(self, result):
     if result != DialogResult.CONFIRM:
@@ -230,11 +424,15 @@ class ModelsLayout(Widget):
     self.model_dialog = None
 
   @staticmethod
-  def _bundle_to_node(bundle):
-    return TreeNode(bundle.ref, {'display_name': bundle.displayName, 'short_name': bundle.internalName})
+  def _bundle_to_node(bundle, noted: bool = False):
+    # a big model's line says whether the Jetson has built it or the comma has it
+    note = big_model_note(bundle.ref) if noted else None
+    name = f"{bundle.displayName} · {note}" if note else bundle.displayName
+    return TreeNode(bundle.ref, {'display_name': name, 'short_name': bundle.internalName})
 
-  def _get_folders(self, favorites):
-    bundles = self.model_manager.availableBundles
+  def _get_folders(self, favorites, bundles=None, noted: bool = False):
+    # 上游新签名带 bundles/noted；本 fork 的 _handle_current_model_clicked 仍按 1 参调用，故补默认值
+    bundles = self.model_manager.availableBundles if bundles is None else bundles
     folders = {}
     for bundle in bundles:
       folders.setdefault(next((ov_ride.value for ov_ride in bundle.overrides if ov_ride.key == "folder"), ""), []).append(bundle)
@@ -243,10 +441,10 @@ class ModelsLayout(Widget):
     for folder, folder_bundles in sorted(folders.items(), key=lambda x: max((bundle.index for bundle in x[1]), default=-1), reverse=True):
       folder_bundles.sort(key=lambda bundle: bundle.index, reverse=True)
       name = folder + (f" - (Updated: {m.group(1)})" if folder_bundles and (m := re.search(r'\(([^)]*)\)[^(]*$', folder_bundles[0].displayName)) else "")
-      folders_list.append(TreeFolder(name, [self._bundle_to_node(bundle) for bundle in folder_bundles]))
+      folders_list.append(TreeFolder(name, [self._bundle_to_node(bundle, noted) for bundle in folder_bundles]))
 
     if favorites and (fav_bundles := [bundle for bundle in bundles if bundle.ref in favorites]):
-      folders_list.insert(1, TreeFolder(tr("Favorites"), [self._bundle_to_node(bundle) for bundle in fav_bundles]))
+      folders_list.insert(0, TreeFolder(tr("Favorites"), [self._bundle_to_node(bundle, noted) for bundle in fav_bundles]))
     return folders_list
 
   def _handle_current_model_clicked(self):
@@ -258,6 +456,19 @@ class ModelsLayout(Widget):
     self.model_dialog = TreeOptionDialog(tr("Select a Model"), folders_list, active_ref, "ModelManager_Favs",
                                          get_folders_fn=self._get_folders, on_exit=self._on_model_selected)
     gui_app.push_widget(self.model_dialog)
+
+  def _source_folders(self, favorites, source):
+    bundles = bundles_for_source(source)
+    if not bundles:
+      return []
+    folders_list = [TreeFolder("", [TreeNode("Default", {'display_name': default_model_name(source)})])]
+    folders_list.extend(self._get_folders(favorites, bundles, noted=source == "chestnut"))
+    return folders_list
+
+  @staticmethod
+  def _slot_active_ref(source: str) -> str:
+    bundle = get_selected_bundle(ui_state.params, source)
+    return bundle.ref if bundle else "Default"
 
   def _update_state(self):
     advanced_controls: bool = ui_state.params.get_bool("ShowAdvancedControls")
@@ -273,6 +484,8 @@ class ModelsLayout(Widget):
     if self.lane_turn_value_control.action_item is not None and self.lane_turn_value_control.action_item.value_change_step != new_step:
       self.lane_turn_value_control.action_item.value_change_step = new_step
     self.camera_offset.set_visible(camera_offset)
+
+    self._refresh_mirror_items()
 
     self._update_lagd_description(live_delay)
     self.model_manager = ui_state.sm["modelManagerSP"]

@@ -68,6 +68,30 @@ class HandleLogResult(Enum):
   SENSOR_SOURCE_INVALID = 3
 
 
+def update_observation_invalid(res, which, observation_input_invalid, timing_run,
+                               input_invalid_decay, timing_invalid_grace):
+  """How one handle_log result moves the per-service invalid counter.
+
+  A wrong sample (INPUT_INVALID: accel/gyro out of range, camodo std implausible)
+  is a fault and counts at once. A frame that only arrived late
+  (TIMING_INVALID: its stamp is off logMonoTime) is a transport hiccup and counts
+  only once the run of them is long enough to mean the timebase itself is wrong.
+  Isolated stalls -- a loaded C3, a poll-thread hiccup -- are dropped without
+  pulling inputsOK down, while a genuinely broken timebase still crosses the
+  limit. Without the grace a handful of late frames per drive latched
+  locationdTemporaryError for the rest of it.
+  """
+  if res == HandleLogResult.TIMING_INVALID:
+    timing_run[which] += 1
+    if timing_run[which] >= timing_invalid_grace[which]:
+      observation_input_invalid[which] += 1
+  elif res == HandleLogResult.INPUT_INVALID:
+    observation_input_invalid[which] += 1
+  elif res == HandleLogResult.SUCCESS:
+    observation_input_invalid[which] *= input_invalid_decay[which]
+    timing_run[which] = 0
+
+
 class LocationEstimator:
   def __init__(self, debug: bool, params: Params | None = None):
     self.kf = PoseKalman(GENERATED_DIR, MAX_FILTER_REWIND_TIME)
@@ -108,6 +132,13 @@ class LocationEstimator:
     return source != log.SensorEventData.SensorSource.bmx055
 
   def _validate_sensor_time(self, sensor_time: float, t: float):
+    """Is this sample usable now: its event stamp close to the publish time.
+
+    A frame that arrives late (poll-thread stall, a wall-clock guard gap) fails
+    here and is dropped. That is a transport hiccup, not a broken sensor, so it
+    does not by itself mean the timebase is wrong -- update_observation_invalid
+    is what tells the two apart before anything counts toward inputsOK.
+    """
     # ignore empty readings
     if sensor_time == 0:
       return False
@@ -334,6 +365,10 @@ def main():
   input_invalid_threshold = {s: input_invalid_limit[s] - 0.5 for s in critcal_services}
   input_invalid_decay = {s: calculate_invalid_input_decay(input_invalid_limit[s], INPUT_INVALID_RECOVERY, SERVICE_LIST[s].frequency) for s in critcal_services}
 
+  # Half a second of *continuous* late frames is a timebase fault; fewer is a hiccup.
+  timing_run = defaultdict(int)
+  timing_invalid_grace = {s: max(1, round(0.5 * SERVICE_LIST[s].frequency)) for s in critcal_services}
+
   initial_pose_data = params.get("LocationFilterInitialState")
   if initial_pose_data is not None:
     with log.Event.from_bytes(initial_pose_data) as lp_msg:
@@ -365,14 +400,10 @@ def main():
           if which not in critcal_services:
             continue
 
-          if res == HandleLogResult.TIMING_INVALID:
-            cloudlog.warning(f"Observation {which} ignored due to failed timing check")
-            observation_input_invalid[which] += 1
-          elif res == HandleLogResult.INPUT_INVALID:
-            cloudlog.warning(f"Observation {which} ignored due to failed sanity check")
-            observation_input_invalid[which] += 1
-          elif res == HandleLogResult.SUCCESS:
-            observation_input_invalid[which] *= input_invalid_decay[which]
+          if res != HandleLogResult.SUCCESS:
+            cloudlog.warning(f"Observation {which} ignored ({res.name.lower()})")
+          update_observation_invalid(res, which, observation_input_invalid, timing_run,
+                                     input_invalid_decay, timing_invalid_grace)
     else:
       filter_initialized = sm.all_checks() and sensor_all_checks(acc_msgs, gyro_msgs, sensor_valid, sensor_recv_time, sensor_alive, SIMULATION)
 

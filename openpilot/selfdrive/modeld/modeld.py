@@ -334,7 +334,8 @@ def main(demo=False):
   pub_socks = ["modelV2", "drivingModelData", "cameraOdometry", "modelDataV2SP"] + (["chestnutState"] if CHESTNUT else [])
   pm = PubMaster(pub_socks)
   sm = SubMaster(["deviceState", "carState", "narrowRoadCameraState", "extrinsicsCalibration",
-                  "driverMonitoringState", "carControl", "lateralDelay", "carStateSP", "carrotManSP"])
+                  "driverMonitoringState", "carControl", "carControlSP",
+                  "lateralDelay", "carStateSP", "carrotManSP"])
 
   publish_state = PublishState()
   params = Params()
@@ -448,7 +449,11 @@ def main(demo=False):
 
     # a model can change which model drives inside run() (jetlink's joining
     # model counts its handovers); the stall of one is not lag, as for the
-    # fallback below
+    # fallback below, and nor are the drops of the frame it happens on. The
+    # joining model hands a large model back on this share of dropped frames,
+    # and swaps one in only while nothing is in control
+    model.in_control = jetlink_adapter.in_control(sm)
+    model.frame_drop_ratio = frame_drop_ratio
     handovers = getattr(model, 'handovers', 0)
     mt1 = time.perf_counter()
     try:
@@ -472,6 +477,7 @@ def main(demo=False):
     model_execution_time = mt2 - mt1
     if getattr(model, 'handovers', 0) != handovers:
       run_count = 0
+      frame_drop_ratio = 0.
 
     if model_output is not None:
       modelv2_send = messaging.new_message('modelV2')

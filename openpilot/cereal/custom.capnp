@@ -15,6 +15,9 @@ struct ModularAssistiveDrivingSystem {
   enabled @1 :Bool;
   active @2 :Bool;
   available @3 :Bool;
+  # Enabled but held off by the car's own lane keep (switched off, or the EPS re-arming after it
+  # came back on): the UI shows lateral as off rather than paused or active.
+  lateralHeld @4 :Bool;
 
   enum ModularAssistiveDrivingSystemState {
     disabled @0;
@@ -42,6 +45,11 @@ struct IntelligentCruiseButtonManagement {
     none @0;
     increase @1;
     decrease @2;
+    # sustained button stream at the message's native rate: the fast walk for large
+    # moves (interleaved with the wheel's own frames it registers as paced presses,
+    # never as a held button)
+    increaseHold @3;
+    decreaseHold @4;
   }
 }
 
@@ -270,6 +278,9 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
       maxPredictedLateralAccel @4 :Float32;
       enabled @5 :Bool;
       active @6 :Bool;
+      # lowest planned speed on the model horizon, m/s; 0 = no lookahead (feature off,
+      # long disabled, or no model), 255 caps "nothing binding ahead"
+      vAheadMin @7 :Float32;
     }
 
     struct Map {
@@ -393,8 +404,102 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
     }
   }
 
+  # The model's lead forecast as the long MPC obstacle
+  # (sunnypilot/selfdrive/controls/lib/lead_forecast): how much of each lead
+  # the MPC took from the forecast, and the trajectory it got.
+  struct LeadForecast {
+    leadOne @0 :Lead;
+    leadTwo @1 :Lead;
+
+    struct Lead {
+      weight @0 :Float32;      # 0 upstream extrapolation .. 1 forecast, rate-limited
+      inhibit @1 :Inhibit;
+      x @2 :List(Float32);     # m, the MPC's lead position at its T_IDXS
+      v @3 :List(Float32);     # m/s
+    }
+
+    enum Inhibit {
+      disabled @0;      # the LeadForecast toggle is off (and logs from before it)
+      none @1;
+      noLead @2;
+      radar @3;         # a radar track: measured, keeps upstream's extrapolation
+      invalid @4;
+      mismatch @5;      # radarState's lead is not the model's lead
+    }
+  }
+
+  # Experimental mode's set-speed floor (sunnypilot/selfdrive/controls/lib/e2e_set_speed):
+  # what it added to the model's acceleration and, when nothing, why.
+  struct E2ESetSpeed {
+    authority @0 :Float32;     # 0..1, rate-limited
+    gain @1 :Float32;          # 0..1 from the model's own acceleration
+    floor @2 :Float32;         # m/s^2 the boost pulls toward
+    boost @3 :Float32;         # m/s^2 added to the model's acceleration
+    inhibit @4 :Inhibit;
+
+    enum Inhibit {
+      disabled @0;      # the ExperimentalModeSetSpeed toggle is off (and logs from before it)
+      none @1;
+      inactive @2;      # not e2e, or long control reset
+      decActive @3;
+      invalid @4;
+      hold @5;          # a trip cleared less than the hold time ago
+      fcw @6;
+      hardBrake @7;
+      forceDecel @8;
+      stop @9;
+      lead @10;
+      driver @11;       # gas or brake pressed
+      modelBraking @12;
+      planSlowing @13;
+      lateral @14;
+      coast @15;        # allow_throttle false
+      laneChange @16;
+      lowSpeed @17;
+    }
+  }
+
+  # Experimental mode's follow-distance assist (sunnypilot/selfdrive/controls/lib/e2e_lead_gap):
+  # what it added to the model's acceleration behind a lead and, when nothing, why.
+  struct E2ELeadGap {
+    authority @0 :Float32;     # 0..1, rate-limited
+    gain @1 :Float32;          # 0..1 from the model's own acceleration
+    weight @2 :Float32;        # 0..1 from the gap excess and ego speed
+    gapExcess @3 :Float32;     # m beyond long_mpc's gap for this personality
+    boost @4 :Float32;         # m/s^2 added to the model's acceleration
+    inhibit @5 :Inhibit;
+
+    enum Inhibit {
+      disabled @0;      # the ExperimentalModeLeadGap toggle is off (and logs from before it)
+      none @1;
+      inactive @2;      # not e2e, or long control reset
+      decActive @3;
+      invalid @4;
+      hold @5;          # a trip cleared less than the hold time ago
+      fcw @6;
+      hardBrake @7;
+      forceDecel @8;
+      stop @9;
+      driver @10;       # gas or brake pressed
+      modelBraking @11;
+      planSlowing @12;
+      lateral @13;
+      coast @14;        # allow_throttle false
+      laneChange @15;
+      lowSpeed @16;
+      noLead @17;
+      leadUncertain @18;
+      leadSlow @19;
+      leadBraking @20;  # braking now, or its forecast slows
+      leadChanged @21;  # the lead jumped: cut-in, swap, new car
+    }
+  }
+
   trafficLight @9 :TrafficLightState;
   carrot @10 :CarrotPlan;
+  leadForecast @11 :LeadForecast;
+  e2eSetSpeed @12 :E2ESetSpeed;
+  e2eLeadGap @13 :E2ELeadGap;
 }
 
 struct OnroadEventSP @0xda96579883444c35 {
@@ -445,12 +550,25 @@ struct OnroadEventSP @0xda96579883444c35 {
     bigModelReady @25;
     bigModelAvailable @29;
     bigModelLinkLost @30;
+    # mads: panda reports lateral not allowed for 20 frames while engaged (warning before disable)
+    controlsMismatchLateralWarning @36;
+
+    # mads: pedal pressed silent event
+    silentPedalPressed @31;
+    # mads: LKAS switched off holds lateral paused (mads.py update_stock_lkas)
+    stockLkasOff @32;
+    # mads: LKAS back on but EPS has not re-armed yet
+    stockLkasArming @33;
+    # chime when longitudinal control becomes available
+    longitudinalEnableChime @34;
+    # chime when longitudinal control becomes unavailable
+    longitudinalDisableChime @35;
 
     # carrot (phone projection & navigation)
     trafficSignGreen @26;
     trafficSignChanged @27;
     trafficStopping @28;
-    macanAutoResume @31;  # Macan 起步跟停：OP 代发 RESUME（fork-only；@29 已归上游 bigModelAvailable，故改 @31）
+    macanAutoResume @37;  # Macan 起步跟停：OP 代发 RESUME（fork-only；@29 归上游 bigModelAvailable、@31 本批又归上游 silentPedalPressed，故改 @37）
   }
 }
 
@@ -480,6 +598,7 @@ struct CarControlSP @0xa5cd762cd951a455 {
   leadOne @2 :LeadData;
   leadTwo @3 :LeadData;
   intelligentCruiseButtonManagement @4 :IntelligentCruiseButtonManagement;
+  zoompilot @5 :CarControlZP;
 
   struct Param {
     key @0 :Text;
@@ -497,6 +616,15 @@ struct CarControlSP @0xa5cd762cd951a455 {
     time @4;
     json @5;
     bytes @6;
+  }
+}
+
+# zoompilot-only CarControl extension: telemetry for offline validation.
+struct CarControlZP @0xaadf9bc39b7bd41e {
+  laneChangeSmoothing @0 :LaneChangeSmoothing;
+
+  struct LaneChangeSmoothing {
+    jerkFactor @0 :Float32;
   }
 }
 
@@ -600,6 +728,24 @@ struct CarStateSP @0xb86e6369214c01c8 {
   # reusing @1/@2 would silently alias engineOff onto carrotLaneValid.
   engineOff @9 :Bool;
   engineRpm @10 :Float32;
+
+  # zoompilot-specific fields (CarStateZP): lkasArming, distanceFarther.
+  # Added at @11 to avoid wire conflicts with sunnypilot fields @0-@10.
+  zoompilot @11 :CarStateZP;
+}
+
+# Mazda-only CarState extension: fields derived from the car's stock systems that are
+# relevant to sunnypilot / zoompilot MADS behaviour.
+struct CarStateZP @0xc879af11c43cb400 {
+  # Reserved for future expansion; must not be removed or renumbered.
+  rsvd0 @0 :Void;
+  rsvd1 @1 :Void;
+  # The wheel's "farther" distance button, level. Upstream's one gapAdjustCruise button type
+  # cycles the personality one way; selfdrived steps it the other way on this release.
+  distanceFarther @2 :Bool;
+  # The car's own lane keep is back on after the driver switched it off, and the EPS has not
+  # applied torque since. MADS keeps the driver told lateral is disabled until it does.
+  lkasArming @3 :Bool;
 }
 
 
@@ -1038,4 +1184,15 @@ struct CustomReserved18 @0xc86a3d38d13eb3ef {
 }
 
 struct CustomReserved19 @0xa4f1eb3323f5f582 {
+  # liveTorqueParametersSP (torqued_ext), on the last of sunnypilot's reserved slots so
+  # log.capnp's Event union stays untouched. The service is customReserved19.
+  version @0 :Int32;               # torqued VERSION, keys the cache restore with CarParamsPrevRoute
+  speedBinCenters @1 :List(Float32);
+  speedBinLatAccelFactors @2 :List(Float32);
+  speedBinFrictions @3 :List(Float32);
+  speedBinValid @4 :List(Bool);
+  # cache-only: empty on the published message; the per-bin buckets are thousands of
+  # points and only the restore path reads them (LiveTorqueParametersSP param)
+  speedBinPoints @5 :List(List(List(Float32)));
+  seedVersion @6 :Int32;           # speed_dependent.toml seed_version the bins were learned under; 0 before the field existed
 }

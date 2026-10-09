@@ -32,3 +32,4 @@
 [submodule "jetlink"]
   path = jetlink_repo
   url = https://github.com/FOREVERZAX1988/jetlink.git
+  branch = cn

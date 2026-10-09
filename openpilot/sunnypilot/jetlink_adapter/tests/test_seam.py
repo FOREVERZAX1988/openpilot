@@ -20,6 +20,7 @@ model it runs: a read the joining model cannot answer, or a write it would
 keep to itself, is found here rather than on the frame thread of a drive.
 """
 import ast
+import functools
 import subprocess
 import textwrap
 import threading
@@ -47,8 +48,9 @@ BASELINE = 'develop'
 
 # everything modeld may call on the adapter: prepare() before the process goes
 # realtime, attach() once the camera is up. A name added here without a plan
-# entry is a widened seam
-HOOKS = {'prepare', 'attach'}
+# entry is a widened seam.
+# in_control is called from the frame loop, as frame_drop_ratio is.
+HOOKS = {'prepare', 'attach', 'in_control'}
 ADAPTER = 'jetlink_adapter'
 
 
@@ -102,6 +104,13 @@ def _run(src: str, stmts: list[ast.stmt]) -> str:
 def _frame_loop(body: list[ast.stmt]) -> list[ast.stmt]:
   """main()'s last loop, the one that runs the model on every frame."""
   return [s for s in body if isinstance(s, ast.While)][-1].body
+
+
+def _lagging_line() -> float:
+  """The frameDropPerc past which selfdrived raises modeldLagging."""
+  tree = ast.parse((OPENPILOT / 'selfdrive' / 'selfdrived' / 'selfdrived.py').read_text())
+  return next(n.comparators[0].value for n in ast.walk(tree) if isinstance(n, ast.Compare) and isinstance(n.ops[0], ast.Gt)
+              and isinstance(n.left, ast.Attribute) and n.left.attr == 'frameDropPerc')
 
 
 def _git_show(ref: str, path: str) -> str | None:
@@ -348,14 +357,24 @@ class Footprint:
     cls.tree = ast.parse(cls.src)
     cls.body = _main(cls.src).body
 
-  def test_the_adapter_is_reachable_from_two_calls_in_two_hunks(self):
+  def test_the_adapter_is_reachable_from_three_calls_in_three_hunks(self):
     lines = self.src.splitlines()
     calls = sorted(_calls(self.tree))
     detail = '\n'.join(f"  {self.PATH.name}:{lineno} {lines[lineno - 1].strip()}" for lineno, _ in calls)
-    self.assertEqual({attr for _, attr in calls}, HOOKS, f"the seam widened:\n{detail}")
-    self.assertEqual(len(calls), 2, f"expected prepare and attach and nothing else:\n{detail}")
+    self.assertEqual([attr for _, attr in calls], ['prepare', 'attach', 'in_control'],
+                     f"expected prepare, attach and in_control and nothing else:\n{detail}")
     # the decision and the load; the acceleratorState line reads the model
     self.assertGreater(calls[1][0] - calls[0][0], 8, f"one hunk where two were expected:\n{detail}")
+    # and in_control once a frame, onto the model, as frame_drop_ratio is
+    loop = _frame_loop(self.body)
+    self.assertEqual(sorted(attr for s in loop for _, attr in _calls(s)), ['in_control'])
+
+  def test_modeld_reads_everything_in_control_does(self):
+    # a service missing from modeld's SubMaster reads as in control forever:
+    # the large model would wait for a window that never opens, and say nothing
+    submaster = next(n for n in ast.walk(self.tree) if isinstance(n, ast.Call) and getattr(n.func, 'id', None) == 'SubMaster')
+    services = {e.value for e in submaster.args[0].elts}
+    self.assertLessEqual(set(jetlink_adapter.IN_CONTROL), services)
 
   def test_the_link_is_decided_after_chestnut_and_before_realtime(self):
     decide = _index(self.body, _prepares, 'the jetlink_adapter.prepare() call')
@@ -383,48 +402,57 @@ class Footprint:
   def test_the_ui_field_is_published(self):
     self.assertIn("modelDataV2SP.acceleratorState = getattr(model, 'big_model_state', 'none')", self.src)
 
-  def _frames(self, handover: bool, stall_at: int = 20, gap: int = 3) -> list[float]:
-    """The loop's dropped-frame filter and its handover reset, verbatim, over
-    40 frames with run() in between. Frame `stall_at` takes `gap` camera
-    frames too long; with `handover` that run() is a swap whose first large
-    frame fails and demotes, as jetlink's joining model does: modelV2.big is
-    the same before and after, and only the handover count moves. Every
-    frame's frame_drop_ratio (frameDropPerc / 100)."""
+  def _loop(self, frames: int, skipped, run) -> list[float]:
+    """The loop's dropped-frame filter, its write of the share onto the model
+    and its handover reset, verbatim, with `run(model, i)` as frame i's
+    model.run() and `skipped(i)` camera frames dropped before frame i. Every
+    frame's published frame_drop_ratio (frameDropPerc / 100)."""
     from openpilot.common.filter_simple import FirstOrderFilter
     loop = _frame_loop(self.body)
     first = _index(loop, lambda s: _assigns(s, 'vipc_dropped_frames'), 'the dropped-frame count')
     ratio = _index(loop, lambda s: _assigns(s, 'frame_drop_ratio'), 'frame_drop_ratio')
+    write = _index(loop, lambda s: isinstance(s, ast.Assign) and any(isinstance(t, ast.Attribute) and t.attr == 'frame_drop_ratio'
+                                                                       for t in s.targets), 'the write of the share onto the model')
     was = _index(loop, lambda s: _assigns(s, 'handovers'), 'the handover count read before run()')
-    run = _index(loop, lambda s: isinstance(s, ast.Try) and 'run' in {n.attr for n in ast.walk(s) if isinstance(n, ast.Attribute)},
-                 'the try around model.run')
+    run_at = _index(loop, lambda s: isinstance(s, ast.Try) and 'run' in {n.attr for n in ast.walk(s) if isinstance(n, ast.Attribute)},
+                    'the try around model.run')
     reset = _index(loop, lambda s: isinstance(s, ast.If) and 'handovers' in ast.dump(s.test), 'the handover reset')
-    self.assertLess(ratio, was)
-    self.assertEqual(run, was + 2, "more than the timer between reading the model and running it")
-    self.assertLess(run, reset)
+    self.assertEqual((ratio < write, write), (True, was - 1), "the share is written onto the model just before run()")
+    self.assertEqual(run_at, was + 2, "more than the timer between reading the model and running it")
+    self.assertLess(run_at, reset)
     lines = self.src.splitlines()
 
     def src(a, b):
       return lines[loop[a].lineno - 1:loop[b].end_lineno]
-    body = src(first, ratio) + src(was, was) + ['    model.run()'] + src(reset, reset)
+    body = src(first, ratio) + src(write, was) + ['    model.run()'] + src(reset, reset)
     frame = compile(textwrap.dedent('\n'.join(body)), str(self.PATH), 'exec')
     model = SimpleNamespace(chestnut=False, handovers=0)
     scope = {'frame_dropped_filter': FirstOrderFilter(0., 10., 0.05), 'run_count': 0, 'last_vipc_frame_id': 0,
              'model': model, 'max': max, 'min': min}
     ratios, frame_id = [], 0
-    for i in range(40):
-      frame_id += 1
+    for i in range(frames):
+      frame_id += 1 + skipped(i)
       scope['meta_main'] = SimpleNamespace(frame_id=frame_id)
-
-      def run(both=handover and i == stall_at):
-        if both:
-          model.handovers += 2   # swapped in and demoted: chestnut stays False
-      model.run = run
+      model.run = functools.partial(run, model, i)
       exec(frame, scope)
       ratios.append(scope['frame_drop_ratio'])
       scope['last_vipc_frame_id'] = frame_id
-      if i == stall_at:
-        frame_id += gap
     return ratios
+
+  def _frames(self, handover: bool, stall_at: int = 20, gap: int = 3, on_the_drops: bool = False) -> list[float]:
+    """40 frames, frame `stall_at` taking `gap` camera frames too long. With
+    `handover` that run() is a swap whose first large frame fails and
+    demotes, as jetlink's joining model does: modelV2.big is the same before
+    and after, and only the handover count moves. With `on_the_drops` the
+    handover is in the next frame's run() instead, the one that counts the
+    dropped frames: the joining model handing back on them."""
+    at = stall_at + 1 if on_the_drops else stall_at
+
+    def run(model, i):
+      if handover and i == at:
+        # swapped in and demoted, chestnut stays False; or demoted alone
+        model.handovers += 1 if on_the_drops else 2
+    return self._loop(40, lambda i: gap if i == stall_at + 1 else 0, run)
 
   def test_a_handover_inside_run_is_not_lag(self):
     # upstream forgives the stall of a chestnut's fallback (run_count = 0);
@@ -434,7 +462,29 @@ class Footprint:
     self.assertEqual(max(self._frames(handover=True, gap=10)), 0.)
     # the same stall with no handover is lag, as upstream counts it: over the
     # 1 % selfdrived raises modeldLagging at
-    self.assertGreater(max(self._frames(handover=False)) * 100, 1.)
+    self.assertGreater(max(self._frames(handover=False)) * 100, _lagging_line())
+
+  def test_a_hand_back_on_dropped_frames_is_not_lag(self):
+    # the frame whose run() hands back counted the drops; published as they
+    # were, they were the frameDropPerc it went out with
+    for gap in (2, 3):
+      self.assertEqual(max(self._frames(handover=True, gap=gap, on_the_drops=True)), 0.)
+
+  def test_a_large_model_behind_modeld_hands_back_short_of_lagging(self):
+    # jetlink's rule against this loop's own share: whatever the pattern of
+    # dropped frames, nothing the loop publishes reaches selfdrived's line,
+    # the frame that hands back included
+    from jetlink.openpilot.joining import DROP_LIMIT
+
+    def run(model, i):
+      if model.frame_drop_ratio > DROP_LIMIT:
+        model.handovers += 1
+    patterns = [(f'every {n}', lambda i, n=n: 1 if i % n == 0 else 0) for n in (1, 2, 5, 20, 60, 136, 200)]
+    # a forgiven drop, then two at once
+    patterns.append(('a double on a single', lambda i: {100: 1, 101: 2}.get(i, 0)))
+    for name, skipped in patterns:
+      with self.subTest(name):
+        self.assertLess(max(self._loop(2000, skipped, run)) * 100, _lagging_line())
 
   def test_the_joining_model_answers_every_read_and_keeps_every_write(self):
     # read out of main() rather than kept by hand. A read the joining model
@@ -457,10 +507,7 @@ class Footprint:
       stop.wait(5)
       raise ConnectionError("no link in this test")
 
-    def engagement():
-      return lambda timeout_ms: stop.wait(timeout_ms / 1000) or True
-
-    joining = JoiningModelState(small, connect, build=None, progress=mock.MagicMock(), engagement=engagement,
+    joining = JoiningModelState(small, connect, build=None, progress=mock.MagicMock(),
                                 log=mock.MagicMock())
     try:
       missing = []
@@ -484,14 +531,17 @@ class Footprint:
 # had left seconds before. Nor for the blocking shutdown(): deviceState would
 # stop for up to 25 s
 SEAM = {
-  'selfdrive/modeld/modeld.py': {'prepare', 'attach'},
-  'sunnypilot/modeld_v2/modeld.py': {'prepare', 'attach'},
+  'selfdrive/modeld/modeld.py': HOOKS,
+  'sunnypilot/modeld_v2/modeld.py': HOOKS,
   'system/manager/process_config.py': {'OWNER', '__name__', 'should_run'},
   'sunnypilot/selfdrive/selfdrived/accelerator_events.py': {'OWNER'},
   'system/hardware/hardwared.py': {'reason', 'request_shutdown', 'shutdown_pending'},
   'sunnypilot/models/fetcher.py': {'should_extend_catalog', 'extend_catalog'},
   'selfdrive/ui/sunnypilot/ui_state.py': {'status'},
+  'selfdrive/ui/sunnypilot/model_info.py': {'model_state'},
   'selfdrive/ui/sunnypilot/accelerator_link.py': {'KEYS', 'MODES'},
+  # this fork's 7000 API, which mirrors _enforce_usb_port for the USB port
+  'sunnypilot/carrot/server/services/params.py': {'status'},
 }
 
 

@@ -81,8 +81,7 @@ class DummyCarState:
     self.steeringPressed = steeringPressed
     self.steeringTorque = steeringTorque
     self.brakePressed = brakePressed
-    # desire_helper gates the Bluetooth remote lane commands on canValid, which
-    # a real CarState always carries (opendbc car.capnp @26).
+    # desire_helper's Bluetooth HID remote gate reads carState.canValid (CAN health).
     self.canValid = canValid
 
 

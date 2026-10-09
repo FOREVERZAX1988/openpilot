@@ -9,6 +9,13 @@ See the LICENSE.md file in the root directory for more details.
 from collections.abc import Callable
 import os
 os.environ['GMMU'] = '0'
+from openpilot.common.hardware import COMMA_HARDWARE
+from openpilot.selfdrive.modeld.helpers import check_camera_jit, chestnut_present
+CHESTNUT_PRESENT = chestnut_present()
+# tinygrad picks its default device by opening every backend until one works, 2.6 s of every start
+# on a comma 4. Without a chestnut that is QCOM, so name it; tinygrad reads DEV once, at import
+if COMMA_HARDWARE and not CHESTNUT_PRESENT:
+  os.environ.setdefault('DEV', 'QCOM')
 import numpy as np
 import threading
 import time
@@ -16,15 +23,12 @@ from setproctitle import setproctitle
 from tinygrad.tensor import Tensor
 
 import openpilot.cereal.messaging as messaging
-from openpilot.common.hardware import COMMA_HARDWARE
-from openpilot.selfdrive.modeld.helpers import check_camera_jit, chestnut_present
 from openpilot.cereal import log
 from opendbc.car.structs import car
 from openpilot.cereal.services import SERVICE_LIST
 from openpilot.cereal.messaging import PubMaster, SubMaster
 from openpilot.cereal.visionipc import VisionStreamType
 from msgq.visionipc import VisionIpcClient, VisionBuf
-from opendbc.car.car_helpers import get_demo_car_params
 from openpilot.common.file_chunker import open_file_chunked
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
@@ -37,7 +41,6 @@ from openpilot.system import sentry
 from openpilot.system.camerad.cameras.nv12_info import get_nv12_info
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, smooth_value
-from openpilot.selfdrive.modeld.modeld import ChestnutState
 from openpilot.sunnypilot import jetlink_adapter
 
 from openpilot.selfdrive.modeld.compile_modeld import (
@@ -328,7 +331,7 @@ def main(demo=False):
   cloudlog.bind(daemon=PROCESS_NAME)
   setproctitle(PROCESS_NAME)
 
-  CHESTNUT = chestnut_present()
+  CHESTNUT = CHESTNUT_PRESENT
   if CHESTNUT:
     os.environ['HCQDEV_WAIT_TIMEOUT_MS'] = '3000'
   # before going realtime: prepare() starts tinygrad's device thread, which would inherit FIFO 54 on core 7
@@ -401,10 +404,15 @@ def main(demo=False):
   pub_socks = ["modelV2", "drivingModelData", "cameraOdometry", "modelDataV2SP"] + (["chestnutState"] if CHESTNUT else [])
   pm = PubMaster(pub_socks)
   sm = SubMaster(["deviceState", "carState", "narrowRoadCameraState", "extrinsicsCalibration",
-                  "driverMonitoringState", "carControl", "lateralDelay", "carStateSP", "carrotManSP"])
+                  "driverMonitoringState", "carControl", "carControlSP",
+                  "lateralDelay", "carStateSP", "carrotManSP"])
 
   publish_state = PublishState()
-  chestnut_state = ChestnutState(pm, model.chestnut) if CHESTNUT else None
+  chestnut_state = None
+  if CHESTNUT:
+    # upstream modeld's module imports every car interface (1.7 s on a comma 4), so only for a chestnut
+    from openpilot.selfdrive.modeld.modeld import ChestnutState
+    chestnut_state = ChestnutState(pm, model.chestnut)
 
   # setup filter to track dropped frames
   frame_dropped_filter = FirstOrderFilter(0., 10., 1. / model.constants.MODEL_FREQ)
@@ -422,6 +430,7 @@ def main(demo=False):
 
 
   if demo:
+    from opendbc.car.car_helpers import get_demo_car_params
     CP = get_demo_car_params()
   else:
     CP = messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams)
@@ -512,20 +521,24 @@ def main(demo=False):
     lat_action_t = lat_delay + frame_delay + action_delay
     long_action_t = long_delay + frame_delay + action_delay
 
+    # action_t for every model: run() takes what it has a slot for, and a large
+    # model joining mid-drive reads it from a frame built for the small one
     inputs:dict[str, np.ndarray] = {
       model.desire_key: vec_desire,
       'traffic_convention': traffic_convention,
+      'action_t': np.array([lat_action_t, long_action_t], dtype=np.float32),
     }
 
     if 'lateral_control_params' in model.numpy_inputs:
       inputs['lateral_control_params'] = np.array([v_ego, lat_delay], dtype=np.float32)
 
-    if 'action_t' in model.numpy_inputs:
-      inputs['action_t'] = np.array([lat_action_t, long_action_t], dtype=np.float32)
-
     # a model can change which model drives inside run() (jetlink's joining
     # model counts its handovers); the stall of one is not lag, as for the
-    # fallback below
+    # fallback below, and nor are the drops of the frame it happens on. The
+    # joining model hands a large model back on this share of dropped frames,
+    # and swaps one in only while nothing is in control
+    model.in_control = jetlink_adapter.in_control(sm)
+    model.frame_drop_ratio = frame_drop_ratio
     handovers = getattr(model, 'handovers', 0)
     mt1 = time.perf_counter()
     try:
@@ -548,6 +561,7 @@ def main(demo=False):
     model_execution_time = mt2 - mt1
     if getattr(model, 'handovers', 0) != handovers:
       run_count = 0
+      frame_drop_ratio = 0.
 
     if model_output is not None:
       modelv2_send = messaging.new_message('modelV2')

@@ -150,6 +150,13 @@ class TogglesLayoutMici(NavScroller):
     record_front.set_enabled(False if ui_state.params.get_bool("RecordFrontLock") else (lambda: not ui_state.engaged))
     record_mic.set_enabled(lambda: not ui_state.engaged)
 
+    # Grey pill: a toggle that another setting overrides shows the grey pill.
+    # Recording is meaningless without sunnypilot enabled, so grey the pill
+    # while keeping the stored value so it applies again once enabled.
+    sunnypilot_enabled = ui_state.params.get_bool("OpenpilotEnabledToggle")
+    record_front.set_superseded(lambda: not ui_state.params.get_bool("OpenpilotEnabledToggle"))
+    record_mic.set_superseded(lambda: not ui_state.params.get_bool("OpenpilotEnabledToggle"))
+
     if ui_state.params.get_bool("ShowDebugInfo"):
       gui_app.set_show_touches(True)
       gui_app.set_show_fps(True)

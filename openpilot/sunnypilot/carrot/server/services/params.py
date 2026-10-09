@@ -30,6 +30,26 @@ class ParamWriteError(Exception):
   """A rejected write: unknown key, unsupported type, or an unparseable value."""
 
 
+def _unknown_key() -> tuple[type[BaseException], ...]:
+  """The exception the store raises for a key it does not have, looked up when a
+  write fails rather than captured at import.
+
+  `except <a non-exception>` never matches, so binding this at import makes the
+  API's 400-for-an-unknown-key promise depend on import order: a test module that
+  stands in for openpilot.common.params in sys.modules (test_carrot_man does)
+  leaves whatever was imported in that window holding its stub. The native store
+  is asked again per failure, and its class is the only one worth catching.
+  """
+  try:
+    from openpilot.common.params import UnknownKeyName as real
+  except Exception:
+    real = None
+  for candidate in (real, UnknownKeyName):
+    if isinstance(candidate, type) and issubclass(candidate, BaseException):
+      return (candidate,)
+  return ()
+
+
 # Keys that must never be writable over HTTP. Both are produced by the device itself and
 # changing them over the network would either be a no-op or break identification.
 _READ_ONLY_KEYS = frozenset((
@@ -40,6 +60,9 @@ _READ_ONLY_KEYS = frozenset((
   "CarParamsSPCache",
   "CarParamsSPPersistent",
 ))
+
+# A write to either can take the USB port out from under the other (see _enforce_usb_port).
+_USB_PORT_KEYS = frozenset(("AdbEnabled", "JetlinkLink"))
 
 
 def _as_bool(value: Any) -> bool:
@@ -188,7 +211,7 @@ def set_param_value(params, name: str, value: Any) -> Any:
 
   try:
     params.check_key(name)
-  except UnknownKeyName as exc:
+  except _unknown_key() as exc:
     raise ParamWriteError(f"unknown parameter {name}") from exc
 
   key_type = params.get_type(name)
@@ -201,12 +224,39 @@ def set_param_value(params, name: str, value: Any) -> Any:
 
   try:
     params.put(name, coerced)
-  except UnknownKeyName as exc:
+  except _unknown_key() as exc:
     raise ParamWriteError(f"unknown parameter {name}") from exc
   except TypeError as exc:
     raise ParamWriteError(f"type mismatch writing {name}: {exc}") from exc
 
+  if name in _USB_PORT_KEYS:
+    _enforce_usb_port(params)
+
   return coerced
+
+
+def _enforce_usb_port(params=None) -> None:
+  """ADB and Jetlink both need the comma's USB port. AGNOS's ADB gadget (g1) holds
+  the only device controller while AdbEnabled is set, and jetlink refuses to take
+  it, so the link reads as unavailable until ADB is off.
+
+  `UIStateSP._enforce_usb_port` does this in the native UI's params pass, but that
+  pass only runs where a builtin display does, and the carrot servers are the other
+  places either key can be written from. Over Wi-Fi the link leaves the port
+  alone, and ADB with it. Best-effort: a failure here must not turn a good write
+  into a 400."""
+  try:
+    from openpilot.sunnypilot import jetlink_adapter
+
+    if params is None:
+      from openpilot.common.params import Params
+      params = Params()
+    status = jetlink_adapter.status()
+    if status is not None and getattr(status, "enabled", False) and getattr(status, "mode", None) != "wifi" \
+        and params.get_bool("AdbEnabled"):
+      params.put_bool("AdbEnabled", False)
+  except Exception:
+    pass
 
 
 def get_param_values(params, names: list[str], defaults: dict[str, Any] | None = None) -> dict[str, Any]:

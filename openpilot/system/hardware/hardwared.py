@@ -29,6 +29,8 @@ from openpilot.sunnypilot.system.statsd import statlog
 from openpilot.system.hardware.power_monitoring import PowerMonitoring
 from openpilot.system.hardware.fan_controller import FanController
 from openpilot.common.version import terms_version, training_version, terms_version_sp
+from openpilot.common.git import get_short_branch
+from openpilot.system.hardware.chestnut.status import ChestnutStatus
 
 
 ThermalStatus = log.DeviceState.ThermalStatus
@@ -249,8 +251,8 @@ def hardware_thread(end_event, hw_queue) -> None:
 
   fan_controller = FanController(int(1./DT_HW))
   chestnut = Chestnut()
-  big_model_available = os.path.isfile(os.path.join(BASEDIR, "openpilot/selfdrive/modeld/models/big_driving_supercombo.onnx")) or \
-                        os.path.isfile(os.path.join(BASEDIR, "openpilot/selfdrive/modeld/models/big_driving_tinygrad.pkl.chunkmanifest"))
+  chestnut_status = ChestnutStatus()
+  branch = get_short_branch()
 
   # set when we start asking an attached accelerator to power off with us; cleared
   # by the next ignition. An accelerator on its own supply outlives the comma, so
@@ -317,11 +319,14 @@ def hardware_thread(end_event, hw_queue) -> None:
 
     set_usb_state(msg.deviceState, last_hw_state.usb_state)
     chestnut.update(started_ts is None, last_hw_state.usb_state)
-    set_offroad_alert_if_changed("Offroad_ChestnutBranch", msg.deviceState.chestnutPresent and not big_model_available)
-
-    # an enabled accelerator that cannot come up is otherwise silently absent
+    chestnut_state = sm["chestnutState"]
+    chestnut_valid = sm.alive["chestnutState"] and sm.valid["chestnutState"]
+    chestnut_status.update(started_ts is None, branch, last_hw_state.usb_state, chestnut.failed,
+                           params.get_bool("ChestnutLoading"), params.get("ChestnutActive"),
+                           chestnut_state if chestnut_valid else None, set_offroad_alert_if_changed)
+    # an enabled jetlink that cannot come up is otherwise silently absent
     accelerator_error = jetlink_adapter.reason()
-    set_offroad_alert_if_changed("Offroad_AcceleratorUnavailable", accelerator_error is not None,
+    set_offroad_alert_if_changed("Offroad_JetlinkUnavailable", accelerator_error is not None,
                                  extra_text=accelerator_error)
     # this subset is only used for offroad
     temp_sources = [

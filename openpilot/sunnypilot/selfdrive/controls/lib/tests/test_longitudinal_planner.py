@@ -17,7 +17,9 @@ appear in ``planner.targets``.
 from unittest.mock import MagicMock
 
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.cereal import custom, log
+from openpilot.cereal import custom
+from openpilot.cereal import log
+from openpilot.cereal import log as cereal_log
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
@@ -27,6 +29,10 @@ class _StubSource:
   def __init__(self, v_target: float = 0.0, a_target: float = 0.0) -> None:
     self.output_v_target = v_target
     self.output_a_target = a_target
+    # update_targets reads scc.vision / scc.map output_* for the SCC sources; point them
+    # back at this stub so a single instance stands in for the whole controller.
+    self.vision = self
+    self.map = self
 
   def update(self, *args, **kwargs) -> None:
     pass
@@ -104,7 +110,9 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
     root = Path(__file__).resolve().parents[6]
     src = (root / "openpilot" / "sunnypilot" / "selfdrive" / "controls" / "lib" /
            "longitudinal_planner.py").read_text(encoding="utf-8")
-    block = re.search(r"^\s*targets = \{(.*?)^\s*\}", src, re.S | re.M)
+    # 上游把候选表从本地 `targets` 改成实例属性 `self.targets`（long MPC 对齐），锚点两种写法都接受；
+    # 断言的性质不变：carrot 不得出现在候选速度目标里。
+    block = re.search(r"^\s*(?:self\.)?targets = \{(.*?)^\s*\}", src, re.S | re.M)
     assert block is not None, "the candidate-targets dict moved; update this test"
     return "LongitudinalPlanSource.carrot" in block.group(1)
 
@@ -177,9 +185,9 @@ class TestTFollowUserScale(OpenpilotTestCase):
     # the ratio of a default to itself is 1.0 by construction; assert the shape the
     # planner relies on rather than re-deriving the division
     assert set(T_FOLLOW_DEFAULTS) == {
-      log.LongitudinalPersonality.relaxed,
-      log.LongitudinalPersonality.standard,
-      log.LongitudinalPersonality.aggressive,
+      cereal_log.LongitudinalPersonality.relaxed,
+      cereal_log.LongitudinalPersonality.standard,
+      cereal_log.LongitudinalPersonality.aggressive,
     }, "T_FOLLOW_DEFAULTS must be keyed by the cereal personality enum"
 
   def test_planner_multiplies_and_never_replaces(self) -> None:

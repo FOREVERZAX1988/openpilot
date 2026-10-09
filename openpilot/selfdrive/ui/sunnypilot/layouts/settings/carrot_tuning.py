@@ -22,7 +22,7 @@ import pyray as rl
 
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings import carrot_tuning_items as carrot_items
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.ui.lib.multilang import tr
+from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.sunnypilot.widgets.list_view import ButtonActionSP, LineSeparatorSP, ListItemSP, toggle_item_sp
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.network import NavButton
@@ -69,48 +69,48 @@ class CarrotGroup:
 # Order here drives the order of the rows on the root page.
 CARROT_GROUPS: tuple[CarrotGroup, ...] = (
   CarrotGroup(
-    title='Start / Engage',
-    description='How openpilot engages cruise and which steering wheel buttons control it.',
+    title=tr_noop('Start / Engage'),
+    description=tr_noop('How openpilot engages cruise and which steering wheel buttons control it.'),
     build_items=carrot_items.build_start_items,
   ),
   CarrotGroup(
-    title='Cruise & Following',
-    description='Following distance, longitudinal gains, acceleration limits and cruise behavior.',
+    title=tr_noop('Cruise & Following'),
+    description=tr_noop('Following distance, longitudinal gains, acceleration limits and cruise behavior.'),
     build_items=carrot_items.build_cruise_items,
   ),
   CarrotGroup(
-    title='Navigation',
-    description='Navigation-based speed control, speed cameras, road limits and speed bumps.',
+    title=tr_noop('Navigation'),
+    description=tr_noop('Navigation-based speed control, speed cameras, road limits and speed bumps.'),
     build_items=carrot_items.build_navi_items,
   ),
   CarrotGroup(
-    title='Turns & Curves',
-    description='Automatic turn, fork / merge and curve speed control.',
+    title=tr_noop('Turns & Curves'),
+    description=tr_noop('Automatic turn, fork / merge and curve speed control.'),
     build_items=carrot_items.build_speed_items,
   ),
   CarrotGroup(
-    title='Lateral Tuning',
-    description='Steering geometry, MPC costs, torque tuning, lane change and blind spot.',
+    title=tr_noop('Lateral Tuning'),
+    description=tr_noop('Steering geometry, MPC costs, torque tuning, lane change and blind spot.'),
     build_items=carrot_items.build_tuning_items,
   ),
   CarrotGroup(
-    title='Display & Sound',
-    description='Cluster HUD, on-screen overlays, sound, YouTube and map style.',
+    title=tr_noop('Display & Sound'),
+    description=tr_noop('Cluster HUD, on-screen overlays, sound, YouTube and map style.'),
     build_items=carrot_items.build_display_items,
   ),
   CarrotGroup(
-    title='Vehicle',
-    description='Vehicle-specific overrides and convenience options.',
+    title=tr_noop('Vehicle'),
+    description=tr_noop('Vehicle-specific overrides and convenience options.'),
     build_items=carrot_items.build_vehicle_items,
   ),
   CarrotGroup(
-    title='Developer',
-    description='Debug and diagnostic toggles. Use with caution.',
+    title=tr_noop('Developer'),
+    description=tr_noop('Debug and diagnostic toggles. Use with caution.'),
     build_items=carrot_items.build_dev_items,
   ),
   CarrotGroup(
-    title='eGPU',
-    description='eGPU / big model status and configuration.',
+    title=tr_noop('eGPU'),
+    description=tr_noop('eGPU / big model status and configuration.'),
     build_items=carrot_items.build_egpu_items,
   ),
 )

@@ -62,14 +62,17 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsLiveStreaming", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, BOOL}},
     {"IsMetric", {PERSISTENT | BACKUP, BOOL}},
     {"IsOffroad", {CLEAR_ON_MANAGER_START, BOOL}},
-    // Accelerator link (jetlink): what runs the large model off the device.
+    // Jetlink (accelerator link): what runs the large model off the device.
     // JetlinkSpec carries whether the engine is built, which must survive a reboot
     // or every ignition cycle would rebuild a multi-minute engine.
     {"AcceleratorProgress", {CLEAR_ON_MANAGER_START, JSON}},
-    {"Offroad_AcceleratorUnavailable", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_JetlinkUnavailable", {CLEAR_ON_MANAGER_START, JSON}},
     {"JetlinkLink", {PERSISTENT | BACKUP, INT, "0"}},
     {"JetlinkSpec", {PERSISTENT, JSON}},
     {"JetlinkModelPointers", {PERSISTENT, JSON}},
+    // an iPhone on a direct cable charges from the comma; off by default, some
+    // lose the link once the comma powers them
+    {"JetlinkChargePhone", {PERSISTENT, BOOL, "0"}},
     {"IsRhdDetected", {PERSISTENT, BOOL}},
     {"IsReleaseBranch", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsTestedBranch", {CLEAR_ON_MANAGER_START, BOOL}},
@@ -91,6 +94,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LivestreamEncoderBitrate", {CLEAR_ON_MANAGER_START | DONT_LOG, INT}},
     {"LivestreamRequestKeyframe", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
     {"LiveTorqueParameters", {PERSISTENT | DONT_LOG, BYTES}},
+    {"LiveTorqueParametersSP", {PERSISTENT | DONT_LOG, BYTES}},
     {"LocationFilterInitialState", {PERSISTENT, BYTES}},
     {"LateralManeuverMode", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"LongitudinalManeuverMode", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
@@ -224,9 +228,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ModelManager_ClearCache", {CLEAR_ON_MANAGER_START, BOOL}},
     {"ModelManager_DownloadRef", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, STRING}},
     {"ModelManager_Favs", {PERSISTENT | BACKUP, STRING}},
+    {"ModelManager_GithubProxy", {PERSISTENT, STRING}},
     {"ModelManager_LastSyncTime", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
     {"ModelManager_LastSyncTime_Chestnut", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
+    {"ModelManager_MirrorUrl", {PERSISTENT, STRING}},
     {"ModelManager_ModelsCache", {PERSISTENT | BACKUP, JSON}},
+    // one-time marker so the Firehose Model is applied as the default exactly once (see models/default_bootstrap.py)
+    {"DefaultModelApplied", {PERSISTENT | BACKUP, BOOL}},
     {"ModelManager_ModelsCache_Chestnut", {PERSISTENT | BACKUP, JSON}},
 
     // Neural Network Lateral Control
@@ -263,6 +271,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // the model's lead forecast as the long MPC's obstacle; on by default, a hidden off switch
+    {"LeadForecast", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ExperimentalModeSetSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ExperimentalModeLeadGap", {PERSISTENT | BACKUP, BOOL, "0"}},
 
     // Accel Controller profiles (Eco / Normal / Sport)
     {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -318,9 +330,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomTorqueParams", {PERSISTENT | BACKUP , BOOL}},
     {"EnforceTorqueControl", {PERSISTENT | BACKUP, BOOL}},
     {"LateralJerkTorqueController", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"LateralCurveCuttingCorrection", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"LateralLaneCentering", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"LiveTorqueParamsToggle", {PERSISTENT | BACKUP , BOOL}},
     {"LiveTorqueParamsRelaxedToggle", {PERSISTENT | BACKUP , BOOL}},
     {"TorqueControlTune", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
+    {"TorqueControlTuneBig", {PERSISTENT | BACKUP, FLOAT, "1.0"}},  // big-model tune
     {"TorqueParamsOverrideEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TorqueParamsOverrideFriction", {PERSISTENT | BACKUP, FLOAT, "0.1"}},
     {"TorqueParamsOverrideLatAccelFactor", {PERSISTENT | BACKUP, FLOAT, "2.5"}},
@@ -576,6 +591,30 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LaneChangeBsd", {PERSISTENT | BACKUP, INT, "0"}},
     {"LaneChangeDelay", {PERSISTENT | BACKUP, INT, "0"}},
     {"LaneChangeNeedTorque", {PERSISTENT | BACKUP, INT, "0"}},
+    {"LaneChangeSmoothing", {PERSISTENT | BACKUP, INT, "0"}},
+
+    // ---- 上游 test 分支新增（本 fork 合并时并集补入；opendbc BYD 端口读取）----
+    {"BydBsdType2", {PERSISTENT, BOOL, "0"}},
+    {"BydLatUseSiglin", {PERSISTENT, BOOL, "0"}},
+    {"BydLowSpdLong", {PERSISTENT, BOOL, "0"}},
+    {"BydModifiedStockLong", {PERSISTENT, BOOL, "0"}},
+    {"BydMpcTsr", {PERSISTENT, BOOL, "0"}},
+    {"EnableExtRadar", {PERSISTENT, BOOL, "0"}},
+    {"UseRedPanda", {PERSISTENT, BOOL, "0"}},
+    {"LateralAngleSpdBp1", {PERSISTENT, INT, "0"}},
+    {"LateralAngleSpdBp2", {PERSISTENT, INT, "0"}},
+    {"LateralAngleSpdDn0", {PERSISTENT, INT, "0"}},
+    {"LateralAngleSpdDn1", {PERSISTENT, INT, "0"}},
+    {"LateralAngleSpdDn2", {PERSISTENT, INT, "0"}},
+    {"LateralAngleSpdUp0", {PERSISTENT, INT, "0"}},
+    {"LateralAngleSpdUp1", {PERSISTENT, INT, "0"}},
+    {"LateralAngleSpdUp2", {PERSISTENT, INT, "0"}},
+    {"LateralAngleTorqCut", {PERSISTENT, INT, "0"}},
+    {"LateralAngleTorqMax", {PERSISTENT, INT, "0"}},
+    {"SpeedCorrect120", {PERSISTENT, INT, "0"}},
+    {"SpeedCorrect30", {PERSISTENT, INT, "0"}},
+    {"SpeedCorrect60", {PERSISTENT, INT, "0"}},
+    {"SpeedCorrect90", {PERSISTENT, INT, "0"}},
     {"LaneLineCheck", {PERSISTENT | BACKUP, INT, "0"}},
     {"OnnxBsdIntervalMs", {PERSISTENT | BACKUP, INT, "250"}},
     {"OnnxBsdSmoothingMs", {PERSISTENT | BACKUP, INT, "200"}},
