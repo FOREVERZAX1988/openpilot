@@ -56,6 +56,8 @@ class ModelsLayoutMici(NavScroller):
     self._download_frame = 0
     self._was_downloading = False
 
+    self.link_toggle = AcceleratorLinkToggle()
+
     self.select_model_btn = BigButton(tr("select model"))
     self.select_model_btn.set_click_callback(self._show_folders)
 
@@ -154,6 +156,9 @@ class ModelsLayoutMici(NavScroller):
     should_update = self._download_frame % (gui_app.target_fps / 2) == 0
     if should_update:
       self._download_progress = self._download_progress + "." if len(self._download_progress) < 3 else ""
+      # present() and unavailable_reason() read sysfs, so they ride this half-second tick
+      self.link_toggle.refresh()
+      self.link_toggle.set_visible(link_toggle_meaningful())
 
     is_downloading = (manager.selectedBundle
                       and manager.selectedBundle.status == custom.ModelManagerSP.DownloadStatus.downloading)

@@ -39,6 +39,15 @@ def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.
     Priority.LOW, VisualAlert.none, AudibleAlert.none, 4.)
 
 
+def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+  # an accelerator's comes a second after its swap, when the driver can engage;
+  # its offer to switch is the one titled "Big Model Ready"
+  accelerator = sm['modelDataV2SP'].acceleratorState != custom.ModelDataV2SP.AcceleratorState.none
+  return Alert("大模型已接管" if accelerator else "大模型已就绪", "",
+               AlertStatus.normal, AlertSize.small,
+               Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 2.)
+
+
 def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   speed_conv = CV.MS_TO_KPH if metric else CV.MS_TO_MPH
   v_cruise_cluster = CS.vCruiseCluster
@@ -256,5 +265,58 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.userPrompt, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.1),
+  },
+
+  EventNameSP.bigModelReady: {
+    ET.PERMANENT: big_model_ready_alert,
+  },
+
+  # an accelerator (jetlink) ready while something is in control: it swaps in only when
+  # nothing is, so an offer is raised for a few seconds (accelerator_events) telling the
+  # driver to re-engage to switch. Not as loud as the native ready.
+  EventNameSP.bigModelAvailable: {
+    ET.PERMANENT: Alert(
+      "大模型已就绪",
+      "重新接管以切换",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .2),
+  },
+
+  # an accelerator lost or too slow while engaged: the small model drives on
+  # from a reset history and nothing disengages, so the warning is as loud as a
+  # soft disable. Raised for 5 s (accelerator_events); a disengage ends it.
+  EventNameSP.bigModelLinkLost: {
+    ET.WARNING: Alert(
+      "立即接管",
+      "大模型已丢失，小模型接管",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.warningSoft, .2),
+  },
+
+  # Carrot / Amap traffic-light advisories.  Only the SP enum has
+  # trafficSignGreen/trafficSignChanged/trafficStopping; surface them in
+  # the same place the model-based detection would so the HUD can show
+  # a single, consistent prompt regardless of where the signal came
+  # from.  Kept as small / non-blocking so the planner can still react.
+  EventNameSP.trafficSignGreen: {
+    ET.WARNING: Alert(
+      "Carrot：识别到绿灯",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.5),
+  },
+  EventNameSP.trafficSignChanged: {
+    ET.WARNING: Alert(
+      "Carrot：信号灯状态变化",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
+  EventNameSP.trafficStopping: {
+    ET.WARNING: Alert(
+      "Carrot：准备停车",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
   },
 }

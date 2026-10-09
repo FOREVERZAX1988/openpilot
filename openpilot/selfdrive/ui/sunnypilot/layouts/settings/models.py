@@ -27,6 +27,9 @@ from openpilot.system.ui.sunnypilot.widgets.list_view import ListItemSP, toggle_
 from openpilot.system.ui.sunnypilot.widgets.progress_bar import progress_item
 from openpilot.system.ui.sunnypilot.widgets.tree_dialog import TreeOptionDialog, TreeNode, TreeFolder
 
+from openpilot.selfdrive.ui.sunnypilot.accelerator_link import LINK_MODES, LINK_MODE_TITLES, LINK_PARAM, link_mode, \
+  link_status, link_toggle_meaningful
+
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp as button_item
 
@@ -39,6 +42,7 @@ class ModelsLayout(Widget):
     self.prev_download_status = None
     self.model_dialog = None
     self.last_cache_calc_time = 0
+    self._link_status: str | None = None
 
     self._initialize_items()
 
@@ -101,6 +105,28 @@ class ModelsLayout(Widget):
     self.items = [self.current_model_item, self.cancel_download_item, self.supercombo_label, self.vision_label,
                   self.policy_label, self.off_policy_label, self.on_policy_label, self.refresh_item, self.clear_cache_item,
                   self.lane_turn_desire_toggle, self.lane_turn_value_control, self.lagd_toggle, self.delay_control, self.camera_offset]
+
+    # initial visibility/selection for the param-bound accelerator row (the
+    # periodic _update_state tick also refreshes this, but late)
+    self._refresh_accelerator_items()
+
+  @staticmethod
+  def _link_description(status: str) -> str:
+    # An Android phone rides the USB mode exactly like a Jetson or a Mac
+    # (jetlink docs/android-app.md: "Accelerator Link on USB"), so the USB
+    # option covers it; iOS keeps its own mode.
+    what = tr("Run the big driving model on an attached accelerator: USB for a Jetson, a Linux PC, a Mac or an Android phone; iOS for an iPhone.")
+    return f"{what} {status}".strip()
+
+  def _refresh_accelerator_items(self):
+    # the setting is a param read, so this rides the half-second tick
+    self.accelerator_link_item.set_visible(link_toggle_meaningful())
+    self.accelerator_link_item.action_item.set_selected_button(LINK_MODES.index(link_mode()))
+    self.accelerator_link_item.action_item.set_enabled(ui_state.is_offroad())
+    status = link_status()
+    if status != self._link_status:
+      self._link_status = status
+      self.accelerator_link_item.set_description(self._link_description(status))
 
   def _update_lagd_description(self, lagd_toggle: bool):
     desc = tr("Enable this for the car to learn and adapt its steering response time. Disable to use a fixed steering response time. "
@@ -260,6 +286,8 @@ class ModelsLayout(Widget):
     else:
       self.current_model_item.action_item.set_enabled(True)
       self.current_model_item.set_description("")
+
+    self._refresh_accelerator_items()
 
   def _render(self, rect):
     self._scroller.render(rect)

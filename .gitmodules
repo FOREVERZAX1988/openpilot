@@ -29,3 +29,6 @@
   path = webui
   url = https://github.com/FOREVERZAX1988/webui.git
   branch = sp-macan-re
+[submodule "jetlink"]
+  path = jetlink_repo
+  url = https://github.com/FOREVERZAX1988/jetlink.git
