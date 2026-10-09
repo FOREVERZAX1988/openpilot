@@ -1,11 +1,11 @@
 [submodule "panda"]
   path = panda
   url = https://github.com/FOREVERZAX1988/panda.git
-  branch = sp-macan-re
+  branch = sp-macanlong-test
 [submodule "opendbc"]
   path = opendbc_repo
   url = https://github.com/FOREVERZAX1988/opendbc.git
-  branch = sp-macan-re
+  branch = sp-macanlong-test
 [submodule "msgq"]
   path = msgq_repo
   url = https://github.com/sunnypilot/msgq.git
@@ -24,11 +24,11 @@
 [submodule "ai"]
   path = ai
   url = https://github.com/FOREVERZAX1988/ai.git
-	branch = sp-macan-re
+	branch = sp-macanlong-test
 [submodule "webui"]
   path = webui
   url = https://github.com/FOREVERZAX1988/webui.git
-  branch = sp-macan-re
+  branch = sp-macanlong-test
 [submodule "jetlink"]
   path = jetlink_repo
   url = https://github.com/FOREVERZAX1988/jetlink.git
