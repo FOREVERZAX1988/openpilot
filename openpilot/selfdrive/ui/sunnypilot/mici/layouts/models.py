@@ -8,7 +8,7 @@ import pyray as rl
 
 from openpilot.cereal import custom
 from openpilot.sunnypilot.models.default_model import DEFAULT_MODEL
-from openpilot.sunnypilot.models.helpers import get_selected_bundle
+from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_selected_bundle
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigMultiToggle
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.models import ModelsLayout
 from openpilot.selfdrive.ui.ui_state import ui_state, device
@@ -125,6 +125,7 @@ class ModelsLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
     self.focused_widget = None
+    self._selection_source = None
 
     self.current_model_info = CurrentModelInfo()
     self._download_progress = "."
@@ -137,7 +138,7 @@ class ModelsLayoutMici(NavScroller):
     self.select_model_btn.set_click_callback(self._show_folders)
 
     self.cancel_download_btn = BigButton(tr("cancel download"))
-    self.cancel_download_btn.set_click_callback(lambda: ui_state.params.remove("ModelManager_DownloadIndex"))
+    self.cancel_download_btn.set_click_callback(lambda: ui_state.params.remove("ModelManager_DownloadRef"))
 
     self.main_items = [self.current_model_info, self.select_model_btn, self.cancel_download_btn]
     self._scroller.add_widgets(self.main_items)
@@ -166,6 +167,7 @@ class ModelsLayoutMici(NavScroller):
 
   def _show_folders(self):
     self.focused_widget = self.select_model_btn
+    self._selection_source = active_source()
 
     favs = ui_state.params.get("ModelManager_Favs")
     favorites = set(favs.split(';')) if favs else set()
@@ -190,11 +192,13 @@ class ModelsLayoutMici(NavScroller):
     gui_app.pop_widgets_to(self)
 
   def _select_model(self, bundle):
-    ui_state.params.put("ModelManager_DownloadIndex", bundle.index)
+    ui_state.params.put("ModelManager_DownloadRef", bundle.ref)
     self._pop_to_main()
 
   def _select_default(self):
-    ui_state.params.remove("ModelManager_ActiveBundle")
+    source = self._selection_source or active_source()
+    if source in ACTIVE_BUNDLE_KEYS:
+      ui_state.params.remove(ACTIVE_BUNDLE_KEYS[source])
     self._pop_to_main()
 
   def _select_folder(self, folder_name):

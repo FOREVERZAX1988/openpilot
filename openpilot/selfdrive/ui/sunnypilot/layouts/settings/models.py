@@ -16,8 +16,8 @@ from openpilot.sunnypilot.models.mirror import (GITHUB_PROXY_PARAM, HF_MIRROR_PA
                                                 describe_hf_mirror, normalize_base_url)
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import device, ui_state
-from openpilot.selfdrive.ui.sunnypilot.model_info import (big_model_note, big_model_state, bundles_for_source, carrying_model,
-                                                           default_model_name, model_cache_size_mb, queued_name,
+from openpilot.selfdrive.ui.sunnypilot.model_info import (active_source, big_model_note, big_model_state, bundles_for_source,
+                                                           carrying_model, default_model_name, model_cache_size_mb, queued_name,
                                                            refresh_in_progress, refresh_model_list, standin_model)
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.application import gui_app
@@ -106,7 +106,7 @@ class ModelsLayout(Widget):
       callback=self._clear_cache
     )
 
-    self.cancel_download_item = button_item(tr("Cancel Download"), tr("Cancel"), "", lambda: ui_state.params.remove("ModelManager_DownloadIndex"))
+    self.cancel_download_item = button_item(tr("Cancel Download"), tr("Cancel"), "", lambda: ui_state.params.remove("ModelManager_DownloadRef"))
 
     self.lane_turn_value_control = option_item_sp(tr("Adjust Lane Turn Speed"), "LaneTurnValue", 500, 2000,
                                                   tr("Set the maximum speed for lane turn desires. Default is 19 mph."),
@@ -311,7 +311,7 @@ class ModelsLayout(Widget):
     status_changed = self.prev_download_status != self.download_status
     self.prev_download_status = self.download_status
 
-    self.cancel_download_item.set_visible(bool(self.model_manager.selectedBundle) and ui_state.params.get("ModelManager_DownloadIndex") is not None)
+    self.cancel_download_item.set_visible(ui_state.params.get("ModelManager_DownloadRef") is not None)
 
     if (current_time := time.monotonic()) - self.last_cache_calc_time > 0.5:
       self.last_cache_calc_time = current_time
@@ -425,11 +425,13 @@ class ModelsLayout(Widget):
     if result != DialogResult.CONFIRM:
       return
     selected_ref = self.model_dialog.selection_ref
+    source = self._selection_source or active_source()
     if selected_ref == "Default":
-      ui_state.params.remove("ModelManager_ActiveBundle")
+      if source in ACTIVE_BUNDLE_KEYS:
+        ui_state.params.remove(ACTIVE_BUNDLE_KEYS[source])
       self._show_reset_params_dialog()
     elif selected_bundle := next((bundle for bundle in self.model_manager.availableBundles if bundle.ref == selected_ref), None):
-      ui_state.params.put("ModelManager_DownloadIndex", selected_bundle.index)
+      ui_state.params.put("ModelManager_DownloadRef", selected_bundle.ref)
       if self.model_manager.activeBundle and selected_bundle.generation != self.model_manager.activeBundle.generation:
         self._show_reset_params_dialog()
     self.model_dialog = None
@@ -459,6 +461,7 @@ class ModelsLayout(Widget):
     return folders_list
 
   def _handle_current_model_clicked(self):
+    self._selection_source = active_source()
     favs = ui_state.params.get("ModelManager_Favs")
     favorites = set(favs.split(';')) if favs else set()
     folders_list = self._get_folders(favorites)
