@@ -727,7 +727,10 @@ bootstrap_deps_retry() {
 # webui falling back to dev/mock mode.
 ensure_params_build() {
   local so="$DIR/openpilot/common/libparams_c.so"
-  [ -f "$so" ] && return 0
+  # Rebuild when the .so is missing OR older than params_keys.h: a merge can add new
+  # keys (e.g. ToyotaBrakeOnset) that the stale .so does not know -> card crashes with
+  # UnknownKeyName and the UI shows "sunnypilot Unavailable / Waiting to start".
+  if [ -f "$so" ] && [ "$so" -nt "$DIR/openpilot/common/params_keys.h" ]; then return 0; fi
   # params.cc builds a large static hash table; at -O2 on a C3 the clang++
   # compile of params.o can exceed available memory and is SIGKILLed (Error -9),
   # which leaves libparams_c.so missing and takes down manager + the native UI
