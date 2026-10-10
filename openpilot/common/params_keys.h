@@ -737,10 +737,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // NOTE: the Macan accel-shaping knobs (JerkLimit / AccelDeadzone / CornerLimit /
     // CruiseCoast / AccelLimit) were removed - that domain is owned by upstream
     // "Acceleration Profile" (AccelPersonality[Enabled]) + AccelController.
+    // Same for EPS assist-curve compensation (DpEpsAssistComp[Scale]): dropped
+    // 2026-10-10 - the MQB curve it inverted was never calibrated for Macan(MLB),
+    // upstream has no equivalent, so it is gone rather than carried as a knob.
     // ---------------------------------------------------------------------
     {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
-    {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1.1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
     {"UsbGpuActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"UsbGpuLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"ModelManager_DownloadIndex", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, INT}},
