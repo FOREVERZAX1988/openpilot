@@ -30,6 +30,7 @@ must not collect this into a shared session.
 from __future__ import annotations
 
 import sys
+from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -39,6 +40,23 @@ sys.path.insert(0, str(REPO_ROOT))
 from openpilot.selfdrive.ui.tests.carrot_tuning_render_smoke import (  # noqa: E402
   Rect, _AnyCall, _FakeSm, install_stubs,
 )
+
+
+class _FakeChestnutState(Enum):
+  """ui_state's ChestnutState, which model_info imports at module scope.
+
+  The stub ui_state has no such name, so `from ...ui_state import ui_state,
+  ChestnutState` raised and the Models panel was silently excluded from this
+  suite - which is how a row-keyed download status went unnoticed.
+  """
+
+  DISCONNECTED = "disconnected"
+  UNCOMPILED = "uncompiled"
+  READY = "ready"
+  LOADING = "loading"
+  ACTIVE = "active"
+  FAILED = "failed"
+  WAITING = "waiting"
 
 
 class _FakeCarParams(_AnyCall):
@@ -111,6 +129,14 @@ def install_panel_stubs() -> None:
   from openpilot.selfdrive.ui.ui_state import ui_state
   ui_state.CP = _FakeCarParams()
   ui_state.sm = _FakeSmWithModelManager()
+
+  # the chestnut/jetlink snapshot the Models panel and its status note read
+  sys.modules["openpilot.selfdrive.ui.ui_state"].ChestnutState = _FakeChestnutState
+  ui_state.chestnut_present = False
+  ui_state.chestnut_state = _FakeChestnutState.DISCONNECTED
+  ui_state.jetlink = None
+  ui_state.jetlink_view = None
+  ui_state.adb_blocked = False
 
 
 def panel_factories():
@@ -198,6 +224,44 @@ def main() -> int:
     assert not empty, f"these pages build no items: {empty}"
     print(f"        ({len(builders)} Carrot tuning pages build)")
 
+  def check_models_download_progress():
+    """A download must draw a row with a percentage bar.
+
+    The catalog serves one `chunked` artifact per bundle and the panel keys its
+    rows on Model.Type. A type with no row matched showed no download at all -
+    no bar, no status - which is the regression this pins.
+    """
+    from openpilot.cereal import custom
+    from openpilot.selfdrive.ui.sunnypilot.layouts.settings.models import ModelsLayout
+    ds = custom.ModelManagerSP.DownloadStatus
+
+    class _Progress:
+      status, progress, eta = ds.downloading, 42.0, 5
+
+    class _Artifact:
+      fileName, downloadProgress = "sd.pkl", _Progress()
+
+    class _Model:
+      type, artifact = custom.ModelManagerSP.Model.Type.chunked, _Artifact()
+
+    class _Bundle:
+      ref, internalName, displayName = "ref", "M", "Firehose"
+      generation, index, status, models, overrides = 1, 1, ds.downloading, [_Model()], []
+
+    class _Manager:
+      selectedBundle, activeBundle, availableBundles = _Bundle(), None, []
+
+    layout = ModelsLayout()
+    layout.model_manager = _Manager()
+    layout._handle_bundle_download_progress()
+
+    showing = [item for item in layout.items
+               if item.is_visible and getattr(item.action_item, "show_progress", False)]
+    assert showing, "a chunked download draws no progress row"
+    text = showing[0].action_item.text
+    assert text.startswith("42% - "), f"unexpected download row text: {text!r}"
+
+  extra_check("Models draws a percentage bar for a chunked download", check_models_download_progress)
   extra_check("SectionHeadingSP constructs + renders", check_section_heading)
   extra_check("carrot_tuning_items imports + every page builds", check_carrot_tuning_items)
 

@@ -289,11 +289,18 @@ class ModelsLayout(Widget):
         self._last_catalog_desc = desc
 
   def _handle_bundle_download_progress(self):
+    # every Model.Type the schema can carry needs a row: deep models ship one
+    # `chunked` artifact for the whole bundle (upstream "Support Deep Models"),
+    # and every bundle the catalog serves today is chunked. Without the chunked
+    # entry no row matched, so a download showed neither a percentage bar nor a
+    # status text at all.
     labels = {custom.ModelManagerSP.Model.Type.supercombo: self.supercombo_label,
               custom.ModelManagerSP.Model.Type.vision: self.vision_label,
               custom.ModelManagerSP.Model.Type.policy: self.policy_label,
               custom.ModelManagerSP.Model.Type.offPolicy: self.off_policy_label,
-              custom.ModelManagerSP.Model.Type.onPolicy: self.on_policy_label}
+              custom.ModelManagerSP.Model.Type.onPolicy: self.on_policy_label,
+              custom.ModelManagerSP.Model.Type.navigation: self.supercombo_label,
+              custom.ModelManagerSP.Model.Type.chunked: self.supercombo_label}
     for label in labels.values():
       label.set_visible(False)
     self.cancel_download_item.set_visible(False)
@@ -321,18 +328,20 @@ class ModelsLayout(Widget):
       device._reset_interactive_timeout()
 
     for model in bundle.models:
-      if label := labels.get(getattr(model.type, 'raw', model.type)):
-        label.set_visible(True)
-        p = model.artifact.downloadProgress
-        text, show, color = tr("pending - {}").format(bundle.displayName), False, rl.GRAY
-        if p.status == custom.ModelManagerSP.DownloadStatus.downloading:
-          text, show = f"{int(p.progress)}% - {bundle.displayName}", True
-        elif p.status in (custom.ModelManagerSP.DownloadStatus.downloaded, custom.ModelManagerSP.DownloadStatus.cached):
-          status_text = tr("from cache" if p.status == custom.ModelManagerSP.DownloadStatus.cached else "downloaded")
-          text, color = f"{bundle.displayName} - {status_text if status_changed else tr('ready')}", ON_COLOR
-        elif p.status == custom.ModelManagerSP.DownloadStatus.failed:
-          text, color = tr("download failed - {}").format(bundle.displayName), rl.RED
-        label.action_item.update(p.progress, text, show, color)
+      # an unknown type (a future Model.Type) still gets the driving-model row:
+      # dropping the row is how the chunked catalogs lost their download status
+      label = labels.get(getattr(model.type, 'raw', model.type), self.supercombo_label)
+      label.set_visible(True)
+      p = model.artifact.downloadProgress
+      text, show, color = tr("pending - {}").format(bundle.displayName), False, rl.GRAY
+      if p.status == custom.ModelManagerSP.DownloadStatus.downloading:
+        text, show = f"{int(p.progress)}% - {bundle.displayName}", True
+      elif p.status in (custom.ModelManagerSP.DownloadStatus.downloaded, custom.ModelManagerSP.DownloadStatus.cached):
+        status_text = tr("from cache" if p.status == custom.ModelManagerSP.DownloadStatus.cached else "downloaded")
+        text, color = f"{bundle.displayName} - {status_text if status_changed else tr('ready')}", ON_COLOR
+      elif p.status == custom.ModelManagerSP.DownloadStatus.failed:
+        text, color = tr("download failed - {}").format(bundle.displayName), rl.RED
+      label.action_item.update(p.progress, text, show, color)
 
   @staticmethod
   def _show_reset_params_dialog():
