@@ -341,6 +341,22 @@ class VCruiseCarrot(VCruiseHelper):
   def _current_speed_for_initial_resume(self):
     return max(self.v_ego_kph_set, self._cruise_speed_min)
 
+  def _clamp_set_speed(self, v_cruise_kph: float, min_kph: float | None = None) -> float:
+    """Clamp a candidate set speed while preserving the "unset" sentinel.
+
+    V_CRUISE_UNSET (255) means "no set speed", not "drive 255": clipping it into
+    [_cruise_speed_min, _cruise_speed_max] silently yields the max (161), which is how the
+    cluster ended up showing 161 km/h with ACC off (drive 2026-10-10 20:58, route
+    00000095--254cbbd03a: every segment logged carState.vCruiseCluster == 161 while cruise
+    was unavailable). The base VCruiseHelper maps that state to V_CRUISE_UNSET and the
+    cluster renders it as "--", so pass the sentinel (and NaN) through untouched.
+    """
+    if not np.isfinite(v_cruise_kph) or v_cruise_kph >= V_CRUISE_UNSET:
+      return float(V_CRUISE_UNSET)
+    return float(np.clip(v_cruise_kph, self._cruise_speed_min if min_kph is None else min_kph,
+                         self._cruise_speed_max))
+
+
   def update_params(self, is_metric):
     unit_factor = 1.0 if is_metric else CV.MPH_TO_KPH
     if self.frame % 10 == 0:
@@ -520,7 +536,7 @@ class VCruiseCarrot(VCruiseHelper):
         v_cruise_kph = self.v_ego_kph_set
       if not self.CP.pcmCruise:
         # if stock cruise is completely disabled, then we can use our own set speed logic
-        self.v_cruise_kph = np.clip(v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max)
+        self.v_cruise_kph = self._clamp_set_speed(v_cruise_kph)
         self.v_cruise_cluster_kph = self.v_cruise_kph
       else:
         if self.speed_from_pcm == 1 or self.pcm_owns_set_speed:
@@ -532,10 +548,10 @@ class VCruiseCarrot(VCruiseHelper):
             self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
             self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
         else:
-          self.v_cruise_kph = np.clip(v_cruise_kph, 30, self._cruise_speed_max)
+          self.v_cruise_kph = self._clamp_set_speed(v_cruise_kph, 30)
           self.v_cruise_cluster_kph = self.v_cruise_kph
     else:
-      self.v_cruise_kph = np.clip(v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max) #max(20, self.v_ego_kph_set) #V_CRUISE_UNSET
+      self.v_cruise_kph = self._clamp_set_speed(v_cruise_kph)  # V_CRUISE_UNSET is not clipped into range (was 255 -> 161)
       self.v_cruise_cluster_kph = self.v_cruise_kph #V_CRUISE_UNSET  # noqa: E262
       #if self.cruise_state_available_last: # 최초 한번이라도 cruiseState.available이 True였다면
       #  self._lat_enabled = False
