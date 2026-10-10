@@ -45,7 +45,7 @@ def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.
   # mici wraps the unit off its number; break before the speed instead
   sep = "\n" if IS_MICI else " "
   return Alert(
-    f'正在调整至限速{sep}{get_display_speed(speed, metric)}',
+    tr("Adjusting to Speed Limit{sep}{speed}").format(sep=sep, speed=get_display_speed(speed, metric)),
     "",
     AlertStatus.normal, AlertSize.small,
     Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.)
@@ -55,7 +55,7 @@ def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.Sub
   # an accelerator's comes a second after its swap, when the driver can engage;
   # its offer to switch is the one titled "Big Model Ready"
   accelerator = sm['modelDataV2SP'].acceleratorState != custom.ModelDataV2SP.AcceleratorState.none
-  return Alert("大模型已接管" if accelerator else "大模型已就绪", "",
+  return Alert("Big Model Active" if accelerator else "Big Model Ready", "",
                AlertStatus.normal, AlertSize.small,
                Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 2.)
 
@@ -81,10 +81,11 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
   else:
     if IS_MICI:
       # the target is the limit plus any offset; the break keeps the unit with its number
+      display_speed = get_display_speed(speed_limit_final_last, metric)
       if set_speed_conv < speed_limit_final_last_conv:
-        alert_1_str = f"按 + 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
+        alert_1_str = tr("Press + to adjust to\n{speed}").format(speed=display_speed)
       elif set_speed_conv > speed_limit_final_last_conv:
-        alert_1_str = f"按 - 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
+        alert_1_str = tr("Press - to adjust to\n{speed}").format(speed=display_speed)
     else:
       alert_size = AlertSize.none
 
@@ -231,8 +232,8 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # 00000116/117: 2 s of rejected 0x243 with the camera relay-blocked latched the EPS fault)
   EventNameSP.controlsMismatchLateralWarning: {
     ET.WARNING: Alert(
-      "请接管",
-      "转向被 panda 安全机制阻止",
+      "Take Control",
+      "Steering blocked by panda safety",
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, .5),
   },
@@ -327,8 +328,8 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # driver to re-engage to switch. Not as loud as the native ready.
   EventNameSP.bigModelAvailable: {
     ET.PERMANENT: Alert(
-      "大模型已就绪",
-      "重新接管以切换",
+      "Big Model Ready",
+      "Re-engage to switch",
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .2),
   },
@@ -340,8 +341,8 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # it as a disengage (2026-10-04). A disengage ends it
   EventNameSP.bigModelLinkLost: {
     ET.WARNING: Alert(
-      "大模型已断开",
-      "使用小模型行驶",
+      "Big Model Disconnected",
+      "Driving on small model",
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.MID, VisualAlert.steerRequired, AudibleAlert.warningSoft, .2),
   },
@@ -353,21 +354,21 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # from.  Kept as small / non-blocking so the planner can still react.
   EventNameSP.trafficSignGreen: {
     ET.WARNING: Alert(
-      "Carrot：识别到绿灯",
+      "Carrot: Green Light Detected",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.5),
   },
   EventNameSP.trafficSignChanged: {
     ET.WARNING: Alert(
-      "Carrot：信号灯状态变化",
+      "Carrot: Signal Changed",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
   },
   EventNameSP.trafficStopping: {
     ET.WARNING: Alert(
-      "Carrot：准备停车",
+      "Carrot: Preparing to Stop",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),

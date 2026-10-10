@@ -6806,3 +6806,42 @@ msgstr "正在等待外接算力"
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "ready; re-engage to switch models"
 msgstr "已就緒；重新接合以切換模型"
+
+msgid "Adjusting to Speed Limit{sep}{speed}"
+msgstr "正在調整至限速{sep}{speed}"
+
+msgid "Big Model Active"
+msgstr "大模型已接管"
+
+msgid "Big Model Disconnected"
+msgstr "大模型已斷開"
+
+msgid "Big Model Ready"
+msgstr "大模型已就緒"
+
+msgid "Carrot: Green Light Detected"
+msgstr "Carrot：識別到綠燈"
+
+msgid "Carrot: Preparing to Stop"
+msgstr "Carrot：準備停車"
+
+msgid "Carrot: Signal Changed"
+msgstr "Carrot：信號燈狀態變化"
+
+msgid "Driving on small model"
+msgstr "使用小模型行駛"
+
+msgid "Press + to adjust to\n{speed}"
+msgstr "按 + 鍵調至\n{speed}"
+
+msgid "Press - to adjust to\n{speed}"
+msgstr "按 - 鍵調至\n{speed}"
+
+msgid "Re-engage to switch"
+msgstr "重新接合以切換"
+
+msgid "Steering blocked by panda safety"
+msgstr "轉向被 panda 安全機制阻止"
+
+msgid "Take Control"
+msgstr "接管控制"
