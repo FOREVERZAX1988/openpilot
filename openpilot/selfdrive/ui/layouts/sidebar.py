@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from collections.abc import Callable
 from openpilot.cereal import log
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, FONT_SCALE, FALLBACK_FONT_SCALE
-from openpilot.system.ui.lib.multilang import tr, tr_noop, multilang
+from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
+from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 
@@ -16,6 +16,8 @@ METRIC_HEIGHT = 126
 METRIC_WIDTH = 240
 METRIC_MARGIN = 30
 FONT_SIZE = 35
+METRIC_TEXT_INSET = 22   # left inset of the metric text area (right of the colored bar)
+METRIC_TEXT_GAP = 8      # keep long labels off the bar and off the card border
 
 SETTINGS_BTN = rl.Rectangle(50, 35, 200, 117)
 HOME_BTN = rl.Rectangle(60, 860, 180, 180)
@@ -50,6 +52,21 @@ NETWORK_TYPES = {
   NetworkType.cell4G: tr_noop("LTE"),
   NetworkType.cell5G: tr_noop("5G"),
 }
+
+
+def fit_metric_line_width(text_width: float, text_area_width: float, font_size: float = FONT_SIZE) -> float:
+  """Font size that keeps a ``text_width``-px line inside the metric text area.
+
+  "SUNNYLINK" is wider than the text area at FONT_SIZE. Centering a line that is wider than
+  the area it is centered on pushes it past the area's start edge, so the label slid under the
+  colored left bar and toward the card's left border instead of staying centered. Shrink just
+  the overflowing line enough to leave METRIC_TEXT_GAP on each side; shorter lines keep
+  FONT_SIZE.
+  """
+  fit_width = text_area_width - METRIC_TEXT_GAP
+  if text_width <= fit_width:
+    return font_size
+  return font_size * fit_width / text_width
 
 
 @dataclass(slots=True)
@@ -240,15 +257,24 @@ class Sidebar(Widget, SidebarSP):
     # Draw border
     rl.draw_rectangle_rounded_lines_ex(metric_rect, 0.3, 10, 2, Colors.METRIC_BORDER)
 
-    # Draw label and value
+    # Draw label and value, centered in the area right of the colored bar. "SUNNYLINK" is
+    # wider than that area at FONT_SIZE, so shrink just that line until it fits with a small
+    # gap: a line that does not fit gets centered on a width it does not have and slides under
+    # the bar (toward the left border) instead of staying centered.
     labels = [tr(metric.label), tr(metric.value)]
-    _fs = FONT_SCALE * (FALLBACK_FONT_SCALE if multilang.requires_font_fallback() else 1.0)
-    text_y = metric_rect.y + (metric_rect.height / 2 - len(labels) * FONT_SIZE * _fs)
+    text_area_w = metric_rect.width - METRIC_TEXT_INSET
+    lines = []
     for text in labels:
-      text_size = measure_text_cached(self._font_bold, text, FONT_SIZE)
-      text_y += text_size.y
+      measured = measure_text_cached(self._font_bold, text, FONT_SIZE)
+      font_size = fit_metric_line_width(measured.x, text_area_w)
+      ratio = font_size / FONT_SIZE
+      lines.append((text, font_size, measured.x * ratio, measured.y * ratio))
+
+    text_y = metric_rect.y + (metric_rect.height - sum(line[3] for line in lines)) / 2
+    for text, font_size, line_w, line_h in lines:
       text_pos = rl.Vector2(
-        metric_rect.x + 22 + (metric_rect.width - 22 - text_size.x) / 2,
+        metric_rect.x + METRIC_TEXT_INSET + (text_area_w - line_w) / 2,
         text_y
       )
-      rl.draw_text_ex(self._font_bold, text, text_pos, FONT_SIZE, 0, Colors.WHITE)
+      rl.draw_text_ex(self._font_bold, text, text_pos, font_size, 0, Colors.WHITE)
+      text_y += line_h
