@@ -95,6 +95,7 @@ class SpeedLimitResolver:
     # via CarrotNavCruiseSpeedEnabled; the actual speed control still requires
     # SpeedLimitMode == assist, so this alone never changes vehicle behaviour.
     self.use_carrot_limits = self.params.get_bool("CarrotNavCruiseSpeedEnabled")
+    self._carrot_merge_warned = False  # one-shot: avoid a log flood every frame
 
     self.v_ego = 0.
     self.distance = 0.
@@ -213,8 +214,14 @@ class SpeedLimitResolver:
 
       self.limit_solutions[SpeedLimitSource.map] = limit_ms
       self.distance_solutions[SpeedLimitSource.map] = distance
-    except Exception:
-      return
+    except Exception as e:
+      # Log rather than swallow. This block silently returning is why a broken carrot
+      # limit link went unnoticed: carrot_man published nRoadLimitSpeed from `_raw`
+      # while every producer except KISA wrote the attribute, so the limit simply never
+      # appeared, and there was nothing in swaglog to say why.
+      if not self._carrot_merge_warned:
+        self._carrot_merge_warned = True
+        cloudlog.warning(f"speed_limit_resolver: carrot limit merge failed: {type(e).__name__}: {e}")
 
   def _process_map_data(self, sm: messaging.SubMaster) -> None:
     gps_data = sm[self._gps_location_service]
