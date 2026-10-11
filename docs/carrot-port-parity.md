@@ -288,3 +288,52 @@ WS 侧另有 `/ws/terminal`、`/ws/terminal_pty`、`/ws/compact_state`、`/ws/we
 | `b57fdcc4d6` | CarrotPilot 整棵 server 树 + web 面板 | 已移植（见本文档上文） |
 | `aae89bbea0` | 记录 7000 面板 / 6999 recovery / C 方案 | 由本文档承担 |
 | `0bb80bd992` | 修 `shader_polygon` 的 `Optional[rl.Color]`（`2f5c41653` 的 lint sweep 把注解改成 `rl.Color | None`，而 `rl.Color` 是函数 → 定义期 `TypeError`，UI 进程 import 就崩、manager 反复重启） | **天然一致**：我们没跟那条 lint sweep（见 `DAY_LOG_2026-10-11-UPSTREAM_TEST_ALIGN.md` 第五节），`git diff upstream/test HEAD -- openpilot/system/ui/lib/shader_polygon.py` 为空 |
+
+---
+
+## 上游 `test` 追踪点（2026-10-11 17:40 复核）
+
+| 项 | 值 |
+|---|---|
+| 上游 tip | `d4eeac955b` docs(carrot): record the device-tab sp sections and the three-service QR dialog —— 2026-10-11 16:12:08 +0800 |
+| 本次复核 | `git fetch --no-tags --force https://github.com/mouxangithub/openpilot.git refs/heads/test:refs/remotes/upstream/test` → **无新提交**（仍是 `d4eeac955b`） |
+| 本仓 | 分支 `sp-macanlong-test-f4aead756e`，HEAD `96ed4d547a`「跟随上游 `d4eeac955b`」 |
+| 结论 | **内容级已对齐到上游 tip，港口无缺口**；唯一挂账见文末 |
+
+### 13:37→16:12 这波 13 条的逐条处置
+
+| 上游提交 | 内容 | 本仓 |
+|---|---|---|
+| `b161d88a44` | 6999 recovery 放 opt-in 门后 | 已移植 `d7a8d87590`（`CarrotRecoveryEnabled` 默认 `"0"`） |
+| `b57fdcc4d6` | CarrotPilot 整棵 server 树 + web 面板 | 已移植 `d7a8d87590` |
+| `aae89bbea0` | 记录 7000 面板 / 6999 recovery / C 方案 | 由本档承担 |
+| `0bb80bd992` | 修 `shader_polygon` 的 `Optional[rl.Color]` | **天然一致**（未跟 lint sweep `2f5c41653e`） |
+| `f6cf81de23` | 7000 单目录设置 catalog（按本 fork 重建） | 已移植 `2e73bea7c5` |
+| `933d2230e3` | 7000 里显示 sunnypilot 自己的设置 | 随 `2e73bea7c5` 一并落地 |
+| `2386709298` | 记录设备实测的设置融合结果 | 随 `2e73bea7c5` 一并落地 |
+| `27a028bcf1` | 翻译并补全 7000 的 SP 设置分区 | 随 `2e73bea7c5` 一并落地 |
+| `bf28d5c864` | 补 maps/imu/models 的 cgroup 翻译 | 已移植 `41d8a17abd` |
+| `fd35a16c5b` | 记录 7000 中文标签与 maps/IMU 章节 | 已移植 `138705ac1e` |
+| `ded58d5483` | 三服务二维码弹窗 + Device 页 SP 分区 | 已移植 `41d8a17abd` |
+| `751b641330` | catalog 菜单按 menu id 查表 | 已移植 `ecb9f15fe5` |
+| `d4eeac955b` | 记录 Device 页 SP 分区与三服务二维码 | 已移植 `96ed4d547a` |
+
+复核命令（核到内容级，不只看 commit message）：
+
+```bash
+for c in b161d88a44 b57fdcc4d6 f6cf81de23 933d2230e3 2386709298 27a028bcf1 \
+         bf28d5c864 fd35a16c5b ded58d5483 751b641330 d4eeac955b; do
+  files=$(git show --name-only --format= $c)
+  echo "$c files=$(echo "$files" | grep -c .) differs=$(git diff --name-only upstream/test HEAD -- $files | wc -l)"
+done
+```
+
+实跑只有 4 处**本仓刻意差异**（非缺口）：`carrot_settings_sp.json`（按本 fork 重建）、
+`web_settings.py`（fork 适配）、`pyproject.toml`（per-file-ignores）、`webui` 子模块指针（本仓在前），
+以及 `params_keys.h` / `process_config.py` 的 6999 门控默认值（opt-in 默认关）。
+
+### 唯一挂账
+
+`2f5c41653e style(lint)` 的 ruff 清理（95 文件）—— 仍需独立一轮；上游其后用 `0bb80bd992`
+修掉它引入的 UI import 崩溃（`rl.Color | None` 定义期 `TypeError` → `ui` 进程 import 即崩、
+manager 反复 `Restarting ui`），**若要补这一条，必须连 `0bb80bd992` 一起取**。
