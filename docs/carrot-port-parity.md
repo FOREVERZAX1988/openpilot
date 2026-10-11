@@ -445,3 +445,42 @@ POST `/stream` → `200` 且原样透传假 webrtcd 的响应体；修复前这�
 上游 docs 记档里提到"本 fork Params 无 `put_bool_nonblocking` → 用 `put_nonblocking(key, "1"/"0")`"：
 **mouxan 那份 fork 的 Params 接受字符串，我们这份不接受**（`TypeError: proposed_type=str expected_type=BOOL`）
 → 我们传 `bool`，功能等价。
+
+
+### 追踪点再更新（2026-10-11 18:53，本次会话）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream/test --force`（`git fetch upstream` 走 SSH 不通；`upstream` 的 fetch refspec 只覆盖 master-c3）|
+| 上游 tip | `15d03795bc` `feat(carrot): model manager and sunnypilot vehicle selection on 7000` |
+| 上一个 tip | `a46e35f7e2`（纯 docs）随本次一并落地 |
+
+| 上游 commit | 内容 | 本仓落地 |
+|---|---|---|
+| `a46e35f7e2` | docs：记档本轮 Carrot Vision 对齐 + Carrot 导航结论（`docs/carrot-7000-settings-fusion.md` 新增第 10 节）| `git apply` 原样 |
+| `15d03795bc` | 7000 面板新增 `/api/opui/*` 代理 → 5080 webui daemon；Device 页挂「模型管理」「sunnypilot 车型选择」；`car.js` 车型选择 | 12 文件 `git apply` 全清；`server/config.py` 增 `WEBUI_PROXY_TARGET`（默认 `http://127.0.0.1:5080`，env 可覆盖）|
+
+**设备侧兼容性已实测（本机，不依赖真车）：**
+
+- `create_app()` 冒烟：221 条路由，`/api/opui/{tail}` 已注册；
+- 新面板 JS 只调 5 个 opui 端点 —— `models`、`models/favorite`、`models/select`、`vehicle/platforms`、`vehicle/select`，
+  **本 fork 的 webui（5080，`6d0320e`）这五个全都有** → 无需升级 webui 子模块；
+- 真机 `curl http://127.0.0.1:5080/api/opui/models` → 200 JSON（`active_source: qcom` …），代理目标可用；
+- daemon 不在时 `proxy_opui` 返 502，面板退回通用渲染；`app["http"]` 复用 `f6512bf146` 建好的共享 ClientSession。
+
+**顺手清的坑**：本仓曾有一条误建 ref `refs/heads/refs/remotes/upstream/test`（`a6156bb030`），
+让 `git log refs/remotes/upstream/test` 报 `refname 'refs/remotes/upstream/test' is ambiguous`。已删（本地 ref，不影响远端）。
+
+### 当前设备状态（2026-10-11 18:53，停车）
+
+```
+curl 127.0.0.1:7000/                     -> 200
+curl 127.0.0.1:7000/api/camera/status    -> {"ok":true,"mode":"direct-encode-relay","cameras":{},"idle":true}
+curl 127.0.0.1:7000/api/params_bulk?...  -> {"CarrotVisionEnabled":true,"CarrotVisionActive":null,"IsLiveStreaming":null}
+params: CarrotVisionEnabled=1 / CarrotVisionActive 未设 / IsLiveStreaming 未设 / CarrotNaviV2Enabled=1
+pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点火）
+```
+
+即：**面板侧的「Carrot Vision 不可用 / 等待启动」在停车时本来就该出现**（无编码器在发布帧 + `CarrotVisionActive` 未置位），
+真正要看的是**点火接管后** `carrot_vision_encoderd` + `carrot_webrtcd` 是否被 manager 拉起、`/api/camera/status` 是否有 `cameras.road` 帧龄。
+这一步仍未做（需要真车）。
