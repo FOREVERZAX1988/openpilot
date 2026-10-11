@@ -695,3 +695,31 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 测试 | 设备侧跑 `python -m unittest openpilot.selfdrive.ui.sunnypilot.tests.test_tizi_settings`：**4/5 通过**。唯一失败 `test_experimental_mode_text_matches_upstream` 是**语言环境**导致：断言比的是英文常量，而设备语言为中文，`tr()` 会查 `app_zh-CHS.po` 出中文 msgstr（同一 msgid），非移植缺陷 |
 | 未跟（有意）| `2f5c41653e style(lint)`（95 文件）—— 逐文件核对确认其内容就是 `"..."` → `"..." +` 一类拼接风格；本仓已有自己的 `pyproject.toml` per-file-ignores，跟它只换来 95 文件冲突面，**继续挂账且不建议跟** |
 | 生效方式 | UI 改动要**重启 `ui` 进程**；`carrot_settings_sp.json` 是 7000 面板读的目录，要**重启 `carrot_server`**；未触碰 `.py` 以外的编译产物 |
+
+### 追踪点推进（2026-10-12 08:22）—— 上游 `dfb1dcdbd0` → `95f73ff7ce`（+3 提交，全清）+ 补登记 `CarSelected3`
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream/test`（HTTPS 匿名 fetch 可用；SSH `git@github.com:` 本机无私钥，**别再试**）。`pushInsteadOf` 只改写 push，fetch 不受影响 |
+| 复核手法 | 直查远端；`dfb1dcdbd0..upstream/test` == **3 条**，与用户「又有 3 个更新」一致 |
+| 上游 tip | `dfb1dcdbd0` → **`95f73ff7ce`**（线性 +3）|
+| 新提交（老→新）| `75d6ae2bf2` 可搜索 picker + webui 操作对齐 + 设置去重（24 文件 +1665 −360，含新 feature `lan_services`）；`f76a7da88d` 蓝牙面板改用真实 `/api/bluetooth` 路由（4 文件）；`95f73ff7ce` 从 cp 引入 7000 面板 HUD 资产（7 个二进制 + `.gitattributes` 12 行）|
+| 落地手法 | `git cherry-pick` ×3（非 merge），**零冲突** |
+| 自动合并复核 | 其中 2 文件与「本仓既有补丁」重叠（`device_info.py` / `setting_device_config.js`），git 自动三方合并 → 逐条核对：本仓的 `SP_CAPABILITY_GROUP_IDS` 含 `Trips`、`assigned = set(DEVICE_SETTING_DEFAULTS)` 播种**均保留**，同时并入上游新增 `_BASE_OWNED_PARAMS` / `device_owned_param_names()` / `DEVICE_EXTRAS_BY_GROUP`。两套机制并存（上游在 `_is_device_setting` 过滤基础组，本仓再在 `assigned` 里去重），语义一致、无重复行 |
+| 资产登记（LFS）| 7 个新资产经 `git check-attr filter` 复核 = **unset**（`-filter -diff -merge binary`），`img_spinner_comma.png` 实测为真 PNG（256KB，非 130B LFS 指针）→ 不进 LFS，符合本 fork「只拉不推 LFS」约定 |
+| **本仓同时缺口** | 预检 A3 报 **恰好 1 行**：`carrot/server/features/intro/state.py:118 CarSelected3` —— 7000 面板经 `/api/param_set` 写（`car.js`、`features/intro/api.js`），carrot server 在 `intro/state.py` / `services/popular_values.py` / `features/preferences.py` 读，**本仓与 `upstream/test` 的 `params_keys.h` 都没登记** → 读取即 `UnknownKeyName` |
+| 补登记 | `params_keys.h` 在 `CarName` 之后加 1 行：`{"CarSelected3", {PERSISTENT | BACKUP, STRING, "MOCK"}}`（默认 `"MOCK"` 与 `intro/state.py` 的 `CAR_SELECTED_UNSET` 注释一致）。键数 **637 → 638** |
+| 重建 | `scons --ccflags="-O0" -j2 openpilot/common/libparams_c.so`（与 `launch_chffrplus.sh::ensure_params_build` 同判据：.so 必须比 `params_keys.h` 新）。`libparams_c.so` 被 `.gitignore` 忽略，**不入库**，只在本机重建 |
+| 重跑预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**（A0 638 键、A1 .so 新鲜、A2 native 认识全部 638、A3 **PASS**、C1 进程存活 + manager 单实例、C2 无新崩溃）。A3 已从 FAIL 转 PASS |
+| 未跟（有意）| 无新增「不跟」项；既有挂账 `2f5c41653e style(lint)` 仍继续挂账 |
+| 生效方式 | `carrot_server` 要重启（server .py + 新 feature）；web 面板刷新页面即可（`generated/*` 随提交落地）；UI 未触碰 |
+| 备份 ref | `backup/pre-port-95f73ff7-261012-0818`（= 移植前 `d8d5d9b029`）|
+
+> 结论：上游 `test` tip 的这 3 条新提交已按内容全清；本仓遗留的「唯一 1 行未登记键」`CarSelected3` 一并补齐，预检 **0 失败**。
+
+> **推送说明（2026-10-12）**：本次 3 条新提交已按内容全清，但上游 `95f73ff7ce` 里的
+> `KaiGenGothicKR-Bold.ttf`（11.4 MB）**无法从本机上行推送**：本机到 github 的上行实测
+> ~26 KiB/s，11.7 MB 的 pack 超过 GitHub 单请求超时（三次尝试 —— HTTP/2 单 POST、HTTP/1.1
+> 单 POST、HTTP/1.1 分块 ~6.5 min —— 均 408 / `remote end hung up`）。故该字体单独成一条
+> 提交落在末尾，**暂留本地**；其余 6 个资产 + 补登记 + 文档已推送。字体文件本身在工作树里
+> 且在本地提交中，等换到快网（PC）或上行恢复后再补推即可，HUD 在此之前回退系统字体。
