@@ -513,3 +513,17 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 结论 | **仍无新提交可拉**（用户第二次问「上游好像又多了一个 commit」，这是第二次复核；`sha` 也从 GitHub 侧复核过）|
 
 附：本次同时处理了 App 侧（sp搭子）出包链路，见 `docs/navipilot-integration-gap.md` §6.1。
+
+### 追踪点推进（2026-10-11）—— 上游 +2 提交：`e6e42a548b` → `4a6d3d8fa1`
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch --no-tags https://github.com/mouxangithub/openpilot.git '+refs/heads/test:refs/remotes/upstream/test'`（HTTPS + `/data/ai/bin/gh_credential.sh`；SSH `git@github.com:` 仍 `Permission denied (publickey)`）|
+| 复核手法 | `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` → `4a6d3d8fa1`（直接问远端）|
+| 上游 tip | `e6e42a548b` → **`4a6d3d8fa1`（+2 提交）** |
+| 新提交 1 | `834393b6fb` Device 页把内联列表换成 picker（`setting_device_actions.js` 352 行改动 + 新增 `device_tab.css` 样式 + 三语）|
+| 新提交 2 | `4a6d3d8fa1` 模型面板精确对齐 5080（**两槽位 + 树形弹窗**，`setting_device_actions.js` 412 行）|
+| 落地手法 | `git cherry-pick 834393b6fb 4a6d3d8fa1` —— **全清，零冲突**（共 7 文件 / +646 −257）|
+| 逐文件核对 | 7 个受动文件 `git rev-parse HEAD:<f>` == `git rev-parse upstream/test:<f>` → 与上游 tip **零差异** |
+| 为何能干净落地 | 这 7 个文件在本仓 HEAD 与 `e6e42a548b` **逐字节相同**（无本地改动），所以等价于直接前移 |
+| 生效方式 | 纯 JS/CSS/翻译，7000 面板按目录静态服务 → **不需要重编**，刷新页面即生效 |
