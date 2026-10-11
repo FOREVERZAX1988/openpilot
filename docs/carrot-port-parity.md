@@ -368,3 +368,37 @@ manager 反复 `Restarting ui`），**若要补这一条，必须连 `0bb80bd992
 
 与上游刻意差异（非缺口）：stream 目标仍映射本 fork 的 `livestreamNarrowRoadEncodeData`；state 桥接指向 sunnypilot 的
 `openpilot/sunnypilot/carrot/realtime/compact_state`（`CARROT_STATE_SERVICES` / `encode_carrot_state_frame`）。
+
+### 设备侧生效步骤（2026-10-11 实操）
+
+移植只改源码，C3 上必须重建两处，否则现象照旧：
+
+```bash
+# 1) encoderd: --carrot-vision-road 只在新二进制里（旧二进制会 LOGE "Argument ... is not supported" 后退出）
+cd /data/openpilot
+scons --ccflags="-O0" -j2 openpilot/system/loggerd/encoderd
+
+# 2) libparams_c.so: 新 key 必须在 .so 里，否则参数读/写报 UnknownKeyName
+#    -O0 + 单线程是硬要求：params.cc 在 C3 上 -O2 会被 OOM SIGKILL（见 launch_chffrplus.sh）
+scons --ccflags="-O0" -j1 openpilot/common/libparams_c.so
+```
+
+随后**重启 manager**才能让新 `.so` 生效（面板与 manager 都是启动时加载）：
+
+```bash
+# 手动杀 + start；注意 manager_control(action="restart") 的 pkill 模式是 "manager/manager.py"，
+# 实际 cmdline 是 "python3 ./manager.py"（cwd=openpilot/system/manager）→ 匹配不到，会起第二个 manager！
+pkill -9 -f '^python3? \./manager\.py$'          # 连同 openpilot.* 残留一起收掉，别动 aid/webui
+# 再 manager_control(action="start")
+```
+
+**已知坑：manager 关机挂死。** `kill -TERM/-INT ./manager.py` 会打印 `got CTRL-C, exiting` 后卡在
+shutdown（`do_wait`），只停掉一部分子进程就永久停住（实测残留 `manage_athenad` / `manage_sunnylinkd` /
+`sunnylink.backups.manager` / `carrot.xiaoge_data` 等 5 个），期间 7000/8088 随之下线（面板消失）；
+同时 manager 本身还留着 1:34 起未回收的 `<defunct>` 僵尸。遇到"卡 UI / 面板没了"时先看这个。
+恢复：`kill -9` 掉所有 `./manager.py` 与 `openpilot.*` 残留 → `manager_control(action="start")`。
+手动起的 manager 是 detached（`start_new_session`），不再受 `launch_chffrplus.sh` 监管，方便时重启设备回到正常受管状态。
+
+验证（offroad 即可）：`curl -s http://127.0.0.1:7000/api/params_bulk?names=CarrotVisionEnabled` 返回 `{"CarrotVisionEnabled":true}`
+（预览页的门就是它）。`carrot_webrtcd` / `carrot_vision_encoderd` 的门是 `and_(iscar, enable_webrtc)`，
+offroad 且无车（`CarParams` 空 ⇒ `notCar`）**不会**启动，上车点火后才起 —— 属预期，不是缺口。
