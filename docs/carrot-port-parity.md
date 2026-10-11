@@ -627,3 +627,40 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 逐文件核对 | 7 个受动文件 `git rev-parse HEAD:<f>` == `git rev-parse mouxan/test:<f>` → 与上游 tip **零差异** |
 | 校验 | `py_compile openpilot/sunnypilot/carrot/server/services/device_info.py` 通过；纯 JS/CSS/翻译无编译步骤 |
 | 生效方式 | `web/js/generated/*`、`web/css/generated/*`、`web/src/features/tools/*`、三语翻译 → 7000 面板静态服务，**刷新页面即生效**；`server/services/device_info.py` 在 `carrot_server` 进程里已 import → **必须重启 manager** 才生效 |
+
+
+### 本仓主动偏离（2026-10-11 23:40）—— Device 页「一个 param 只落一个分区」补完到基础分组
+
+**不是上游移植**：收尾上游 `b2ae03287d` / `6a077d7866` 那条规则时发现它没走完，属本仓有意偏离。
+
+| 项 | 结论 |
+|---|---|
+| 上游那两笔的射程 | `_sp_device_setting_groups()` 的 `assigned` 只对**目录驱动的 SP 分区**去重；`Device / Software / Toggles / Developer` 四个**手写基础分组**不在其中 → 合并后的整张表仍有两个 param 出现两次 |
+| 改前实测（live `/api/settings/snapshot`）| `IsMetric` ∈ {Toggles, Trips}；`AlphaLongitudinalEnabled` ∈ {Developer, Vehicle}；重复数 = 2 |
+| 改法 | `assigned` 初值 `set()` → `set(DEVICE_SETTING_DEFAULTS)`：基础分组算「第一个分区」，SP 分区不得复述 |
+| 必须一起改的连带 | `Trips` 唯一目录 param 就是 `IsMetric`，去重后该分区**一条行都没有**；而客户端 `getVisibleDeviceGroups()` 用「有行」判可见 → 侧栏条目会消失。故把 `Trips` 加进 `SP_CAPABILITY_GROUP_IDS`（它本来就只画 trips 管理器块，数据靠 `loadDeviceTripsManager` 填）|
+| 改后实测 | 重复数 2 → 0；`Vehicle` −`AlphaLongitudinalEnabled`；`Trips` 退出 `device_groups`（客户端保留条目）；其余分区零变化 |
+| 测试 | `test_device_setting_groups.py`：改掉「基础 param 可被 SP 分区复述」那句注释，新增 `test_no_parameter_appears_in_two_device_groups` / `test_a_section_never_restates_a_base_param` —— 12/12 通过（设备无 pytest，用等价 harness 直接驱动测试模块）|
+| 生效方式 | 服务端改动要重启 `carrot_server`；`setting_device_config.js` 是静态服务的，刷新页面即生效 |
+| 与上游差异（重要）| 上游 `device_info.py` / `setting_device_config.js` **保持原样**。若上游日后把基础分组也并入去重，内容级对齐时这里会冲突（我们多一句 seed）|
+
+#### 更正：`Software` 分区的 `Updater*` 不是「多余的设置行」，不能删
+
+上一次把它列为遗留缺陷，**该判断是错的**：
+
+| 项 | 值 |
+|---|---|
+| `DEVICE_SETTING_DEFAULTS` 是什么 | **它就是取值清单**：`get_device_setting_values()` 按它读 param 并塞进 snapshot 的 `device_values` |
+| `Software` 分区怎么画 | `js/pages/setting_device.js:572` 是**专用渲染**（Current Version / Download / Install / Target Branch / Uninstall），值取 `data.UpdaterCurrentDescription`、`data.UpdaterState`、`data.UpdaterNewDescription`、`data.UpdaterTargetBranch`、`data.GitBranch` |
+| 所以 | 把名字从分组删掉 = 同时从 `DEVICE_SETTING_DEFAULTS` 删掉 = **snapshot 不再带这些值** → 那几行全变 `-`，更新 UI 坏掉。这不是「去掉重复行」，是把功能删了 |
+| 而且那个现象不存在 | `Software` 分区不逐行渲染分组名单（专用渲染器不吃它），「状态行占着真设置的位置」在 Device 页不成立 |
+| 上游同款 | 我们的 `device_info.py` 与上游 tip **逐字节相同**，基础分组也一样 → 上游自己也没动。上游 commit message 拿 `Updater*` 举例不准确：真正被 `(read-only)` 标记过滤掉的是 22 个**目录项**（`MapdVersion` / `OsmLocationName` / `ImuCalibrationStatus` / `LocalDriveStats` …）|
+
+#### 附带发现（本次未处理）：`carrot_settings_sp.json` 不同步，少了上游的 Toggles 分组
+
+| 项 | 值 |
+|---|---|
+| 现象 | 本仓 `carrot_settings_sp.json` 373 个 param，上游 tip 338 个；**双向差异**：本仓独有 39（fork 参数），**上游独有 4**（`ExperimentalMode` / `ExperimentalModeConfirmed` / `ExperimentalModeLeadGap` / `ExperimentalModeSetSpeed`）+ 2 个菜单节点（`CARROT_SP_UI_TOGGLES` / `CARROT_SP_UI_ALPHA_LONGITUDINAL_TOGGLES`）|
+| 根因 | 该文件由 `carrot/tools/build_settings_catalog.py` 生成，`ui_page_params()` 扫 `openpilot/selfdrive/ui/sunnypilot/layouts/settings/`。上游的 `toggles.py` 与 `alpha_longitudinal_toggles.py` 是 `a6156bb030`（"适配c3"）加的，**该提交不是本仓 HEAD 的祖先**（merge base `20be508f66` 里也没有这两个文件）→ 本仓那份目录没有 toggles 页 → 扫不出 `toggles` 页 → 目录里就没这两个节点 |
+| 影响 | CarrotPilot 设置页少一个 Toggles / Alpha Longitudinal 分组（Device 页的 Toggles 是手写基础分组，不受影响）|
+| 未处理原因 | 属另一条线：要移植 `a6156bb030` 的 UI 文件并重新生成目录 |

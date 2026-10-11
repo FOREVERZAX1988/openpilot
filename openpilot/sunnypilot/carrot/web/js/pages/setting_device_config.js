@@ -39,7 +39,12 @@ const SP_DEVICE_GROUP_IDS = new Set([
 // Sections that carry no catalog params at all: the 5080 webui daemon owns
 // them (bluetooth pairing is daemon state, not Params). They render a manager
 // block and are visible whenever the panel can reach that daemon.
-const SP_CAPABILITY_GROUP_IDS = new Set(["Bluetooth", "Storage", "Sunnylink", "Firehose"]);
+//
+// Trips belongs here for a second reason: its one catalog param was IsMetric,
+// and the server keeps a param in a single section (that one is on Toggles), so
+// the section has no rows left. Listing it here keeps the entry on the sidebar
+// instead of dropping it - the trips manager block is all it ever rendered.
+const SP_CAPABILITY_GROUP_IDS = new Set(["Bluetooth", "Storage", "Sunnylink", "Firehose", "Trips"]);
 
 // Bool params that make a process *do* something the moment they are written
 // (reboot, drop caches, recalibrate). A toggle is fine, but confirm first so a

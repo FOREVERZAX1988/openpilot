@@ -189,11 +189,17 @@ def _sp_device_setting_groups() -> dict[str, list[str]]:
   walk(catalog.get("menu") or [])
 
   # Keep the sidebar order from SP_DEVICE_MENU_GROUPS, drop empty sections, and
-  # show a param in its first section only - a few sit under two menu nodes
+  # show a param in exactly one section - a few sit under two menu nodes
   # (OsmLocal under Osm and Maps, OsmMapDataEnabled under Navigation and Maps,
   # TeslaMadsScreenButton under Vehicle and Steering) and rendering both copies
   # reads as duplicated rows.
-  assigned: set[str] = set()
+  #
+  # The base groups count as the first sections: Device/Software/Toggles and
+  # Developer draw their rows by hand from DEVICE_SETTING_DEFAULTS, so a
+  # sunnypilot section that restates one of those names only adds a second copy
+  # of the same row further down the tab. Seeding the set with them is what
+  # leaves IsMetric on Toggles and AlphaLongitudinalEnabled on Developer.
+  assigned: set[str] = set(DEVICE_SETTING_DEFAULTS)
   ordered: dict[str, list[str]] = {}
   for gid, _menu_id in SP_DEVICE_MENU_GROUPS:
     names = [name for name in out.get(gid, []) if name not in assigned]
