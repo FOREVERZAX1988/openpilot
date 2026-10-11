@@ -430,3 +430,18 @@ offroad 且无车（`CarParams` 空 ⇒ `notCar`）**不会**启动，上车点�
 
 不加这两处，`--carrot-vision-road` 起来后 `webrtcd.py:181` 的惰性 import 会直接 `ModuleNotFoundError`（会话建不起来），
 即便装了 PyAV，`recv()` 也会每帧 `AttributeError` 被 except 吞掉 → 永远发不出帧。**上游同样有这个缺口，值得回报。**
+
+### 追踪点再更新（2026-10-11 18:35）
+
+上游 tip → `a46e35f7e2`（docs：记档本轮 Carrot Vision 对齐 + 导航结论）。新增两条里只有 `f6512bf146` 是代码：
+
+| 上游 commit | 症状 | 本仓落地 |
+|---|---|---|
+| `f6512bf146` | `stream.py` / `ssh_keys` / 热门值 / xiaoge 代理都读 `request.app["http"]`，但 plan-C 移植后**从没有人创建它** → 每次 `/stream` 代理在到达 webrtcd 之前就 `KeyError('http')` 死掉（面板预览必 500） | `app.py` 按 cp 原样补 `_http_session_ctx` cleanup context（startup 建 `ClientSession`，cleanup 关闭） |
+
+设备侧验证（不依赖真车）：起一个假 webrtcd 监听 127.0.0.1:5001，再起临时 `create_app()`（7099），
+POST `/stream` → `200` 且原样透传假 webrtcd 的响应体；修复前这里是 `KeyError('http')`。
+
+上游 docs 记档里提到"本 fork Params 无 `put_bool_nonblocking` → 用 `put_nonblocking(key, "1"/"0")`"：
+**mouxan 那份 fork 的 Params 接受字符串，我们这份不接受**（`TypeError: proposed_type=str expected_type=BOOL`）
+→ 我们传 `bool`，功能等价。
