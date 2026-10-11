@@ -417,3 +417,16 @@ offroad 且无车（`CarParams` 空 ⇒ `notCar`）**不会**启动，上车点�
 |---|---|---|
 | `1a4d454b2e` | 车外摄像头检查 runner 第一次写 `IsTakingSnapshot` 直接抛原始 key 名错误（本 fork 从未声明，但 `vision_test.py` / `vision_diag.py` / `offroad_alerts.py` 早就在用） | `params_keys.h` 补 `IsTakingSnapshot` / `Offroad_IsTakingSnapshot` |
 | `0667496636` | ① `encoderd_thread` 的 `assert(it != end(cameras))`：Carrot Vision 只要 narrow-road 一路而 camerad 给三路 → 一开就 assert 死；② `put_bool_nonblocking` 本 fork 无此别名 → `CarrotVisionActive` 写不进去、编码器永远 idle | `encoderd.cc` 改 skip/`continue`；`webrtcd.py` 改 `put_nonblocking`（**刻意差异**：上游传 `"1"/"0"` 字符串，本 fork 的 Params 会类型校验报 `proposed_type=str expected_type=BOOL`，改传 `bool`） |
+
+### 本 fork 特有：carrot 视频轨的两个硬缺口（`carrot/video.py`）
+
+上游 `carrot/video.py` 直接 `import av`（PyAV）并用 `av.Packet`，还依赖基类里的 `self._dt`。
+本 fork 两者都不成立：
+
+| 缺口 | 证据 | 处理 |
+|---|---|---|
+| 无 PyAV | `import av` 在 `/usr/bin/python3`、`/usr/bin/python3.12`、`/usr/local/venv/bin/python3` 全部 `ModuleNotFoundError`；`third_party/wheels` 也没有 av wheel | 上游 comma 早已在 webrtc 里去掉 av（`3f93b00120 webrtc: remove av (#38369)`），本 fork 的 `system/webrtc/device/video.py` 就是那套替代实现 → carrot 轨改用同一 `EncodedVideoFrame`（`bytes(packet)` + `packet.pts` 正是 teleoprtc `_send_track_loop` 的全部要求） |
+| 基类不存 `dt` | 本 fork `teleoprtc/tracks.py: TiciVideoStreamTrack.__init__` 收 `dt` 却不 `self._dt = dt`（只有 `TiciTrackWrapper` 用 `getattr(track, "_dt", 0.05)` 兜底）；而 carrot 轨 `recv()` 每帧都算 `frame_id * self._dt * self._clock_rate` | carrot 轨自己存 `self._dt = dt` |
+
+不加这两处，`--carrot-vision-road` 起来后 `webrtcd.py:181` 的惰性 import 会直接 `ModuleNotFoundError`（会话建不起来），
+即便装了 PyAV，`recv()` 也会每帧 `AttributeError` 被 except 吞掉 → 永远发不出帧。**上游同样有这个缺口，值得回报。**

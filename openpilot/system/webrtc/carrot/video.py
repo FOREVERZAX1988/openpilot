@@ -1,12 +1,17 @@
 import asyncio
 import time
 
-import av
 from teleoprtc.tracks import TiciVideoStreamTrack
 
 from openpilot.cereal import messaging
 from openpilot.common.realtime import DT_MDL, DT_DMON
 from openpilot.common.swaglog import cloudlog
+
+# This fork has no PyAV: upstream comma removed it for webrtc (#38369) and
+# device/video.py carries the replacement. Carry the encoded bitstream in the
+# fork's own frame type -- teleoprtc's send loop only needs bytes(packet) and
+# packet.pts -- instead of building an av.Packet.
+from openpilot.system.webrtc.device.video import EncodedVideoFrame
 
 
 class LiveStreamVideoStreamTrack(TiciVideoStreamTrack):
@@ -25,6 +30,9 @@ class LiveStreamVideoStreamTrack(TiciVideoStreamTrack):
     dt = DT_DMON if camera_type == "driver" else DT_MDL
     super().__init__(camera_type, dt)
 
+    # This fork's teleoprtc TiciVideoStreamTrack takes dt but never stores it
+    # (teleoprtc/tracks.py), while recv() below needs it for pts math.
+    self._dt = dt
     self._source_name = self.camera_to_sock_mapping[camera_type]
     self._sock = messaging.sub_sock(self._source_name, conflate=True)
     self._pts = 0
@@ -93,17 +101,14 @@ class LiveStreamVideoStreamTrack(TiciVideoStreamTrack):
         waited = 0
         evta = getattr(msg, msg.which())
 
-        packet = av.Packet(evta.header + evta.data)
-        packet.time_base = self._time_base
         frame_id = int(evta.idx.frameId)
         packet_pts = int(frame_id * self._dt * self._clock_rate) if self._use_source_frame_timestamps else self._pts
-        packet.pts = packet_pts
 
         self.log_debug("track sending frame %s source frame %s", packet_pts, frame_id)
         self._pts = packet_pts + self._dt * self._clock_rate
         self._last_source_frame_id = frame_id
 
-        return packet
+        return EncodedVideoFrame(evta.header + evta.data, packet_pts)
       except asyncio.CancelledError:
         raise
       except Exception:
