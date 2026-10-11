@@ -95,3 +95,49 @@ ruff check openpilot  -> 317 findings
 | `FOREVERZAX1988/openpilot` | 见下一条 | webui 指针 `b32d62b → ac6662e` |
 
 未动：`panda`（仍 `d84b110fc`）、`opendbc_repo`（仍 `9b88156a2`）、`jetlink_repo`（仍 `fd0e3e9`）。
+
+## 七、同日再拉一次：上游又动了 3 个提交（carrot 全站移植）
+
+写上面这份评估时本地 `upstream/test` 停在 `2f5c41653e`。当天 13:37 之后上游又推了 3 个提交
+（`git fetch https://github.com/mouxangithub/openpilot.git test`，SSH remote 权限不足，走 https）：
+
+| 上游提交 | 内容 | 体量 |
+|---|---|---|
+| `b161d88a44` feat(carrot) | 6999 恢复终端（`sunnypilot/carrot/recovery/server.py`），**上游改为 `CarrotRecoveryEnabled` 门控、默认关** | 5 文件 / +2728 |
+| `b57fdcc4d6` feat(carrot) | CarrotPilot 的 `server/` 全树 + `web/` 前端整包移植（7000 面板）；新增 `realtime/`（C++/Cython 加速器）、`web_upload.py`、`carrot_settings.json` | 730 文件 / +188577 |
+| `aae89bbea0` docs(carrot) | 记档：7000 面板、6999 恢复、plan-C 移植 | 3 文件 / +320 |
+
+### 能不能 cherry-pick？—— dry run 结果
+
+```
+git worktree add --detach /tmp/cp-test HEAD          # 不动主工作树
+GIT_LFS_SKIP_SMUDGE=1 git cherry-pick -n b161d88a44 # 冲突 1 个
+GIT_LFS_SKIP_SMUDGE=1 git cherry-pick -n b57fdcc4d6 # 冲突 1 个
+GIT_LFS_SKIP_SMUDGE=1 git cherry-pick -n aae89bbea0 # 干净
+```
+
+| 提交 | 冲突文件 | 增/删/改 |
+|---|---|---|
+| `b161d88a44` | `openpilot/system/manager/process_config.py` | 3 A / 1 M / 1 UU |
+| `b57fdcc4d6` | `pyproject.toml` | 698 A / 3 D / 20 M / 1 UU |
+| `aae89bbea0` | 无 | 3 M |
+
+**结论：可以 cherry-pick，两个冲突都好解**，但**不是零代价**：
+
+1. **两个冲突点**
+   - `process_config.py`：只是插入位置相撞，把上游那段 `carrot_recovery_enabled` 门 + 
+     `carrot_recovery` 进程登记塞进去即可。
+   - `pyproject.toml`：上游那次把同一段「vendored from CarrotPilot」注释**重复贴了 10 遍**（上游自身缺陷，
+     别照抄），实际内容是 `[tool.ruff.lint.per-file-ignores]` 给 carrot 树加豁免；
+     解冲突时要**同时保住本仓自己加的三条依赖**（`shapely`、`aiohttp`、`opencv-python-headless`）。
+2. **`b57fdcc4d6` 会删掉本仓 3 个文件**
+   `server/features/{carrot_navi,intro,tools}.py` 被上游改成同名**目录包**；
+   另有 `carrot/tests/test_carrot_web_settings.py`（我们为 `Params.all_keys()` 返回 bytes 那个 500 写的回归测试）
+   上游没有——**要单独保住**，别跟着删。
+3. **产品决策：面板搬到 7000**
+   上游这一版是「CarrotPilot 的整站」落在 7000；本仓 8088 的面板 + `39f2fe1ad0`
+   （移植 `e9b9a24a5a` 的设置页/操作页）会被它**整体取代**。要 7000 还是留 8088，得先定。
+4. **未取的老三样仍然不取**：`b39c7ae56c`（opendbc pin）、`ba84f8fe65`（Mazda）、
+   `2f5c41653e`（ruff 全量）——理由见第三、五节，与这次无关。
+
+> 状态：**评估完成，移植未做**（等 7000/8088 的决定）。
