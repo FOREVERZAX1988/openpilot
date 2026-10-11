@@ -123,6 +123,10 @@ App 端判据没变：`7705.active` 仍是「行车上 + `selfdriveState.active`
 
 ### 5.1 App 摄像头预览（`/ws/camera/road`）什么时候才有画面
 
+> 更正（2026-10-11 21:40）：本节说的是 **App 侧** `/ws/camera/road`。用户在设备上看到的
+> 「行车预览打开摄像头无画面 + sunnypilot 不可用/等待开始」是**设备大 UI** 的另一处真 bug，已修，
+> 详见 `docs/carrot-port-parity.md` 的「更正（2026-10-11 21:40）」一节。
+
 `carrot/server/services/camera_relay.py` 是**纯中继**：只订阅本 fork 已有的 cereal 编码流
 （`livestreamNarrowRoadEncodeData` / `narrowRoadEncodeData`），**自己不起编码器**——"the manager owns that"。
 
