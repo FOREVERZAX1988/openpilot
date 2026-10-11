@@ -337,3 +337,34 @@ done
 `2f5c41653e style(lint)` 的 ruff 清理（95 文件）—— 仍需独立一轮；上游其后用 `0bb80bd992`
 修掉它引入的 UI import 崩溃（`rl.Color | None` 定义期 `TypeError` → `ui` 进程 import 即崩、
 manager 反复 `Restarting ui`），**若要补这一条，必须连 `0bb80bd992` 一起取**。
+
+---
+
+## 上游 `test` 追踪点（2026-10-11 后续复核）
+
+| 项 | 值 |
+|---|---|
+| 上游 tip | `15280cdbfd` feat(carrot): port the Carrot Vision road stream onto this fork —— 2026-10-11 16:42:42 +0800 |
+| 本次复核 | `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` → `15280cdbfd`（较上次复核 `d4eeac955b` **前进 1 条**） |
+| 本仓 | HEAD 追加「跟随上游 `15280cdbfd`」提交 |
+
+### 行车预览 /「Carrot Vision 不可用 · 等待启动」根因与修复
+
+- **现象**：7000 面板 Drive 页点开 Carrot Vision（行车预览）后无画面，提示「Carrot Vision 不可用 / 等待启动」。
+- **根因**（上游 commit message 原文）：Drive 页用 `CarrotVisionEnabled` 门控 Carrot Vision，而**本 fork 从未声明该 param** → 开始按钮永远无法点亮；并且它依赖的 `encoderd --carrot-vision-road` 与 `carrot_webrtcd` 两个进程在本 fork 根本不存在。
+- **结论**：**是缺口（bug），不是"正常就这样"**。上游 `15280cdbfd` 已修复。
+
+### 移植内容（`15280cdbfd` → 本仓）
+
+| 上游改动 | 本仓落地 |
+|---|---|
+| `params_keys.h` 增 `CarrotVisionEnabled` / `CarrotVisionActive` | 原样 |
+| `system/webrtc/carrot/`（session/state/video/webrtcd）+ `system/webrtc/carrot_webrtcd.py` | 原样（self-contained 变体，不动通用 `webrtcd` 的生命周期） |
+| `process_config.py` 增 `carrot_webrtcd` / `carrot_vision_encoderd`（门控 `and_(iscar, enable_webrtc)`，`enable_webrtc` 读 `CarrotVisionEnabled`） | 与本地 `logmessaged restart_if_crash` 补丁合并保留 |
+| `encoderd.cc` `--carrot-vision-road` + on-demand（`encode_on_demand`，仅 `CarrotVisionActive` 时真编码） | 原样 |
+| `encoder.h` / `v4l_encoder.{h,cc}` `set_idle()` 空闲静默 | 原样 |
+| `loggerd.h` `carrot_vision_road_camera_info`（只取 narrow-road 轨，省 C3 两路硬件编码） | 原样 |
+| `carrot_settings_sp.json` 目录项 + `VEH_DM` 菜单挂载 | 已并入；`_generated` 元数据按本 fork 重算（`kept 178`，`CarrotVisionEnabled` 不再列于 `dropped_undeclared`） |
+
+与上游刻意差异（非缺口）：stream 目标仍映射本 fork 的 `livestreamNarrowRoadEncodeData`；state 桥接指向 sunnypilot 的
+`openpilot/sunnypilot/carrot/realtime/compact_state`（`CARROT_STATE_SERVICES` / `encode_carrot_state_frame`）。
