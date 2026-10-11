@@ -105,3 +105,66 @@ navipilot 实际只用 4 个端点，对应 cp 的路由表（`server/features/w
 - App 真正缺的是 **7000 端口的实时数据 + 参数 API**，以及 8082 的
   `/store_toggle_values`。
 - ZMQ 7710、7706、7709、7711、7713、7714 都已具备。
+
+
+## 5. 2026-10-11 复核：第 2 节表格里「缺」的四个端点，现在都齐了
+
+上游（mouxan）把 CarrotPilot 的 7000 服务整体移植进本 fork 后，navipilot 需要的东西全部就位：
+
+| 端点 | 2026-09-27 状态 | 2026-10-11 状态 |
+|---|---|---|
+| WS 7000 `/ws/raw_multiplex?services=` | ❌ 缺 | ✅ `carrot/server/features/ws.py`（另有 `/ws/raw/{service}`、`/ws/compact_state`）|
+| WS 7000 `/ws/camera/road` | ❌ 缺 | ✅ `carrot/server/features/camera.py`（`/ws/camera/{camera}`；`road` → 本 fork 的 `narrowRoad` 做映射，hello/metadata 仍回客户端要的名字）|
+| HTTP 7000 `/api/params_bulk`、`/api/param_set` | ❌ 缺 | ✅ `carrot/server/features/params.py` + `params_extra.py` |
+| HTTP 8082 `/store_toggle_values` | ❌ 缺 | ⏳ 未复核（8082 仍是小鸽 V-ASM 页面）|
+
+结论：App 侧「设备未连接 / 切换失败」（CEM 走 `CarrotParamClient` → 7000）的根因**已消除**。
+App 端判据没变：`7705.active` 仍是「行车上 + `selfdriveState.active`」，停车显示「未激活」是正常。
+
+### 5.1 App 摄像头预览（`/ws/camera/road`）什么时候才有画面
+
+`carrot/server/services/camera_relay.py` 是**纯中继**：只订阅本 fork 已有的 cereal 编码流
+（`livestreamNarrowRoadEncodeData` / `narrowRoadEncodeData`），**自己不起编码器**——"the manager owns that"。
+
+- 行车中：segment 编码器在跑 → 有帧；
+- 停车：只有 `IsLiveStreaming` 为真时 manager 才起 `stream_encoderd` → 否则 `/api/camera/status` 只报
+  `{"cameras":{},"idle":true}`（最后一帧的年龄/原因），App 侧表现就是**点开摄像头没画面**。这是数据源没发布，不是 bug。
+
+## 6. 我们 fork 的「不生成 APK」是怎么来的（已定位）
+
+事实（GitHub API 实测，`FOREVERZAX1988/navipilot`）：
+
+```
+GET /actions/workflows -> total_count 0        # 一个 workflow 都没注册
+GET /actions/runs      -> total_count 0        # 从没跑过
+GET /actions/secrets   -> total_count 0        # 4 个签名 secret 一个都没有
+tags: r260725 / r260726 / r260901；releases: 空
+repo: fork=true, default_branch=master, archived=false, actions permissions enabled=true/all
+对照：FOREVERZAX1988/jetlink 同 token 查 → 4 个 workflow、11 条 run（说明查法/权限没问题）
+```
+
+- 我们的 `Amapauto` **有** CI：`.github/workflows/release.yml`（`assembleRelease` 多 ABI + `bundleRelease` + zip + `gh release create`），
+  且 `master`（默认分支）上也有这个文件；但它的触发器只有 **`r*` tag push** 或 **`workflow_dispatch`**，
+  **普通分支 push 什么都不做**。
+- 所以「分支上推了代码却没 APK」是**设计如此**：要出包必须打 tag 或手动 dispatch。
+- 而现在连 tag 触发也没产物，卡在两处前置：
+  1. GitHub 侧 Actions 在这个 fork 上**从未生效**（workflow 注册数 0）——fork 的 Actions 默认是关的，
+     需要在仓库 Actions 页点一次「I understand my workflows, go ahead and enable them」（或先跑通一次手动 dispatch）再打 tag；
+  2. **4 个 secret 全缺**：`RELEASE_KEYSTORE_BASE64` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_PASSWORD` / `RELEASE_KEY_ALIAS`。
+     第一步 `echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release.keystore` 只会写出空文件 → release 签名必失败。
+     （上游 `Amapauto` 仓库里带 `app/release.keystore`，我们 fork 去掉了；上游的密码只在 Windows 的
+     `deploy_release.bat`/`generate_keystore.bat` 流程里，仓库没有。）
+- **要出包的正确顺序**：① 在 fork 上启用 Actions；② 用 `keytool`（或 `generate_keystore.bat`）生成一把自己的 keystore，
+  把 base64 + 三个密码写进 4 个 secret；③ 打 tag `r<新 versionCode>`（当前 `versionCode = 260724`，最新 tag 是 `r260901`，
+  要 ≥ 260902）或手动 dispatch。
+- ⚠️ 换 keystore = 换签名：旧 APK 无法覆盖安装，`AppUpdater` 的 OTA 也会因签名不符失败，需要卸载重装。
+  想保留旧签名就必须找到原来那把 keystore 和密码。
+- 轻量替代：`assembleDebug` 用内置 debug key，不需要任何 secret，装得上但不是 release 签名（不能作为 OTA 基线）。
+
+## 7. 上游（原作者）那两条侧分支能不能借鉴
+
+| 分支 | 内容 | 判断 |
+|---|---|---|
+| `claude/fix-led-related-bug`（`d732274` 灯带）| 建在**旧代码线**上（包名 `com.example.navipilot`，README 写 v260516）：高德/腾讯/Google 导航桥、`CameraOverlay`、`SshConnectionManager`、`XiaogeDataReceiver`、腾讯 NTRIP/RTK SDK（`TencentNtripSDK`）、`AppAnalytics`、车道图标/转向推断、`PreferenceRepository`/DI 全套 | 与现线（`com.jixiexiaoge.drivingassist`，已「移除导航/评分/投射模块」）差异 601 文件，**不能 merge，只能当零件库**：将来要恢复导航投射、摄像头叠加、RTK 时按文件挑；「灯带」本身只是 1 个 commit |
+| `copilot/research-android-desktop-app`（`f848eb9` AI 改 UI）| 同一条旧线 + `new.png` + UI 试验 | 同上，研究性质 |
+| 上游 `Amapauto` | 我们的 fork **已领先 8 条**（默认投屏+自动发现、可隐藏侧边栏、S 启动页/图标、GitHub Release OTA 镜像轮询、命名统一 sp搭子、多 ABI/AAB + CI/CD、`AppUpdater`、`ScreenMirrorActivity`、`QuickButtons`）| 上游 Amapauto 没有新东西可拉（`compare` = ahead 8 / behind 0），反过来是**我们该往上提** |
