@@ -484,3 +484,22 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 即：**面板侧的「Carrot Vision 不可用 / 等待启动」在停车时本来就该出现**（无编码器在发布帧 + `CarrotVisionActive` 未置位），
 真正要看的是**点火接管后** `carrot_vision_encoderd` + `carrot_webrtcd` 是否被 manager 拉起、`/api/camera/status` 是否有 `cameras.road` 帧龄。
 这一步仍未做（需要真车）。
+
+
+### 追踪点复核（2026-10-11 19:23）——上游 tip 未变
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch --no-tags --force https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream/test` |
+| 复核手法 | `git ls-remote --heads https://github.com/mouxangithub/openpilot.git test`（直接问远端，不依赖本地 ref）|
+| 上游 tip | `e6e42a548b` **未变**（= 上次同步点 `docs(carrot): record the /api/opui channel…`）|
+| 结论 | **无新提交可拉**；本仓与上游 tip 已对齐（对 `e6e42a548b` 唯一改动的 `docs/carrot-7000-settings-fusion.md`，`git diff HEAD:<f> e6e42a548b:<f>` 为空）|
+
+上游其余分支（参考，非本仓追踪线，且**无 `main`**）：`master 3323aafb`、`master-c3 dcde0f2d`、
+`master-c3-prebuild 87059db5`、`dp dc5e1b9e`、`tn 20d17229`、`tn-c3 dcde0f2d`、`tn-c3-prebuild 8b40ee93`。
+
+**「行车预览点开摄像头无画面 + sunnypilot不可用/等待开始」= 停车时预期行为，非 bug**
+（详见 `docs/navipilot-integration-gap.md` §5.1）：`camera_relay.py` 是纯中继、不起编码器，
+停车且 `IsLiveStreaming` 未置位时无发布方 → `/api/camera/status` 报 `{"cameras":{},"idle":true}`；
+`carrot_webrtcd` / `carrot_vision_encoderd` 门控 `and_(iscar, enable_webrtc)`，offroad 不启动。
+**唯一待办（需真车）**：点火接管后确认两进程被 manager 拉起、`cameras.road` 有帧龄。
