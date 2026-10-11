@@ -3788,7 +3788,7 @@ msgstr "carrot 因測速相機減速時輕振方向盤。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Stop"
-msgstr "停車"
+msgstr "停止"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Stop / Speed Camera"
