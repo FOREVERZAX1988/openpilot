@@ -594,3 +594,21 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
   `/dev/shm/msgq_visionipc_camerad_{0,1,2}` 时间戳持续刷新（三路相机在发布帧）；`write_params IsOnroadPreview=true`
   即触发 manager 拉起 camerad（就是预览按按钮时发生的事），swaglog 21:37:20 后 **0 条 ERROR/exception**。
   
+
+### 追踪点推进（本次）—— 上游 `4a6d3d8fa1` → `f2fe2c822f`（+11 提交，全清）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch --no-tags https://github.com/mouxangithub/openpilot.git test:refs/remotes/mouxan/test`（HTTPS；SSH `git@github.com:` 仍 `Permission denied (publickey)`）|
+| 复核手法 | `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` → `f2fe2c822f`（直接问远端）|
+| 上游 tip | `4a6d3d8fa1` → **`f2fe2c822f`（+11 提交，线性）** |
+| 新提交（老→新）| `e1605b8e20` 刷新 web asset manifest hash；`5d6fcf271b` cp↔sp 能力差距 + 7000/5080 路线图文档；`95c0f12c5e` Device 页 OSM/蓝牙/行程/IMU 分区；`11d7809f44` **CarrotPilot radar stack（EnableRadarTracks 门控，~11.6k 行，含 Cython）**；`dd1e3e8ea8` car capnp 类型改从 opendbc 取；`a1e6d06982` **红绿灯观察 trial（`signalcolord` + signal_assist + tools/signal_analysis）**；`b3140559d2`/`8ffd6932d3` signal 测试落到本 fork 布局；`c948c5443f`/`74a79b3857` 文档；`f2fe2c822f` 面板修复（picker 死按钮 / 蓝牙空白 / AR 开关锁死）|
+| 落地手法 | 逐个 `git cherry-pick`（非 merge），**11 个全清 + 2 处冲突手工并集** |
+| 冲突 1 | `openpilot/common/params_keys.h`：并入上游新增 `RadarTrackFlip` / `EnableRadarTracksResult`；把 `EnableCornerRadar`、`EnableSpeedTF` 从本 fork 的 `BOOL` 改成上游的 `INT`（carrot 侧本就是 `get_int()` 读、滑块按 `-3..1` 写 → 原 `BOOL` 声明与消费者不一致）；保留本地的 `HDPuse` / `HardwareC3xLite` |
+| 冲突 2 | `openpilot/system/manager/process_config.py`：`modeld` 采纳上游 `and_(or_(only_onroad, onroad_preview), is_stock_model)`（预览要拉起 modeld，与本次预览修复同向），新增 `signalcolord`；`dmonitoringmodeld` **保留本 fork 的 `driverview`**（上游的 `dm_process` 在本 fork 已被移除，且本 fork 无 `is_dm_disabled`）|
+| 子模块（关键）| 上游 opendbc pin 由 `a378bf0aa` **force-update** 到 `ffd662d88`（tn-c3 +62 提交，主体是 zoompilot Mazda 模块与 Toyota brake onset）→ 在 opendbc 仓做一次合并 `bbdaeae6c`：33 处冲突，mazda/生成物（`docs/CARS.md`、`routes.py`、`car_list.json`）/`safety/tests/common.py` 取上游，`gm`/`hyundai` 四文件保留本 fork（`params_access` 约定 + navi 端口防御门控），`test_models.py`/`test_speed_dep_config.py` 手工并集 |
+| capnp 合并残留 | 自动合并在 `opendbc/car/car.capnp` 把 `pcmCruiseGap @62`/`softHoldActive`/`activateCruise`/stock-navigation 段**插了两遍**，capnp 直接报 `'pcmCruiseGap' is already defined` → 去重；新 pin 唯一非 Mazda 增量 = `RadarData.radarTrackFlipped @4`（radar stack 依赖）|
+| pin 误记更正 | 第一次 merge 提交（`8fc4eb74c`）漏 `git add opendbc/car/car.capnp`（去重发生在暂存之后）→ 已 `--amend` 为 `bbdaeae6c`，超级工程 pin 随后补记 |
+| 校验 | `log.capnp`+`car.capnp` capnp 编译通过；本次新增/改动 39 个 `*.py` 全 `py_compile` 通过；`mazda`/`volkswagen`/`hyundai`/`sunnypilot.car.interfaces` 导入 OK；Macan `PORSCHE_MACAN_MK1` 与 Mazda CX-5 2022 的 `CarParams` 构建 OK |
+| 未做 / 风险 | 设备 venv **无 pytest** → 测试套件未跑；radar stack 含 Cython（`radar_motion/_motion_native.pyx`）+ `SConscript` → **必须重编**才生效；上游那 62 个 opendbc 提交里 Mazda/Toyota 部分本车（Macan）不用，但仍是未上车的代码，建议先在设备上只跑 Macan 回归 |
+| 生效方式 | 重编（scons/make）+ **重启 manager**（新增进程 `signalcolord`、`radarcan`、`radard_dpath`）；纯 JS/CSS/翻译部分刷新页面即生效 |
