@@ -173,6 +173,8 @@ repo: fork=true, default_branch=master, archived=false, actions permissions enab
 | 2 | 任务起跑后 `./gradlew assembleRelease` 立即失败 | 仓库内 `gradle/gradle-daemon-jvm.properties`（`gradle updateDaemonJvm` 生成物）把 daemon JVM 钉在 **Java 18(EOL)**，而 CI 用 JDK 17 → `Cannot find a Java installation … Compatible with Java 18` | **删除该文件**（Gradle 改用启动 JVM：本地 `JAVA_HOME`、CI `setup-java` 均可） |
 | 3 | （潜伏）tag 触发时版本号解析 | `VERSION_CODE = github.ref_name`（形如 `r260902`）→ `toInt()` 抛异常 | workflow 增加 `Resolve version`：剥离前导 `r` + 纯数字校验，`version_name` 缺省回退 `v<code>` |
 | 4 | （潜伏）secret 缺失时失败原因不可读 | `echo "${{ secrets.X }}" \| base64 -d > app/release.keystore` 会写出**空文件**，后续报「签名失败」 | 改为：secret 为空则保留仓库内 keystore，最终 `test -s` 显式报错 |
+| 5 | `:app:packageRelease` 失败：`Failed to read key  from store … Keystore was tampered with, or password was incorrect`（**key 名位置是空的**）| 签名参数当**普通 env** 传（`RELEASE_STORE_PASSWORD`…），而 `build.gradle.kts` 用 `project.findProperty()` 读 —— Gradle 只把 `-P` / `gradle.properties` / `ORG_GRADLE_PROJECT_*` 当 project property，普通 env **读不到** → 三个值全空 | workflow 改用 `ORG_GRADLE_PROJECT_RELEASE_*`（已加注释说明）|
+| 6 | CI 早段失败：`Could not resolve … Received status code 502 from server: Bad Gateway`（maven.aliyun.com）| `settings.gradle.kts` 把阿里云镜像排在最前；GitHub runner 上镜像 502 会让 Gradle **禁用该 repo** 直接失败 | `settings.gradle.kts`：CI（`System.getenv("CI")`）下不注册 aliyun 镜像，直连 `google()/mavenCentral()`；**本机行为不变** |
 
 **签名（自己出一把，密码自持）**
 
@@ -183,6 +185,9 @@ repo: fork=true, default_branch=master, archived=false, actions permissions enab
 | cert SHA-256 | `c67158605571ed61ea0a868d103e6592f2dcda46f3120619df6d00a1367d8bac` |
 | repo secrets | `RELEASE_KEYSTORE_BASE64` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_PASSWORD` / `RELEASE_KEY_ALIAS`（4 个，已写入 `FOREVERZAX1988/navipilot`）|
 
+- **keystore 自检**：workflow 在 decode 之后先 `keytool -importkeystore` 回写一遍 ——
+  ① 验证 store/key 密码 + alias 对 Java 可读（失败从 6 分钟缩到**秒级**）；
+  ② 顺带把免 keytool 生成的 JKS 规范成 Java 原生 JKS。
 - 生成手法（设备无 JDK，全程免 keytool）：`openssl req -x509` → `openssl pkcs12` → `pyjks` 重建为 **JKS**（`PrivateKeyEntry.new(alias, [certDER], pkcs8DER)`），
   因为 AGP 的 `signingConfigs` 未写 `storeType` → 走 `jks` 默认，PKCS12 文件会被判「Invalid keystore format」。
 - ⚠️ **换 keystore = 换签名**：旧 APK 无法覆盖安装，`AppUpdater` 的 OTA 从本包起才有基线，需要卸载重装一次。
@@ -199,6 +204,19 @@ POST /repos/FOREVERZAX1988/navipilot/actions/workflows/release.yml/dispatches
 ```
 
 产物：Release `r260902` = `sunnypilot-dazi-r260902.zip` + 多 ABI APK（arm64-v8a / armeabi-v7a / x86_64）+ AAB。
+
+**结果（2026-10-11 19:55，run `38133390647` → SUCCESS）**：Release **`r260902`**
+<https://github.com/FOREVERZAX1988/navipilot/releases/tag/r260902>
+
+| 产物 | 大小 |
+|---|---|
+| `sunnypilot-dazi-r260902.zip`（APK+AAB 全打包）| 172.54 MB |
+| `app-arm64-v8a-release.apk` | 67.02 MB |
+| `app-armeabi-v7a-release.apk` | 54.91 MB |
+| `app-x86_64-release.apk` | 72.44 MB |
+| `app-release.aab` | 91.97 MB |
+
+从「分支推了代码也不出包」到真出包，共 **6 个真原因**（上表 1–6），**全部是仓库/CI 配置问题，与 App 代码无关**。
 
 **待办**：真机装一次新签名包，确认 OTA（`AppUpdater` → GitHub Release 镜像轮询）能认出 `r260902`；旧包需先卸载。
 
