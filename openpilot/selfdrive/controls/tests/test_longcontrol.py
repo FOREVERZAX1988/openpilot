@@ -4,6 +4,7 @@ from openpilot.common.test import OpenpilotTestCase
 from openpilot.cereal import custom
 from openpilot.selfdrive.controls.lib.drive_helpers import STOPPING_SPEED, should_stop
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl, STOPPING_DECEL_RATE, LongCtrlState, long_control_state_trans
+from openpilot.sunnypilot.selfdrive.controls.lib.longcontrol import LongControlSP
 from openpilot.sunnypilot.selfdrive.controls.lib.stopping_controller import StoppingController
 
 

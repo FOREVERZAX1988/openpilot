@@ -9,7 +9,7 @@ See the LICENSE.md file in the root directory for more details.
 from openpilot.cereal import custom, log
 from openpilot.common.realtime import DT_CTRL
 from openpilot.sunnypilot.mads.state import StateMachine, SOFT_DISABLE_TIME
-from openpilot.selfdrive.selfdrived.events import ET, EventName, NormalPermanentAlert, Events
+from openpilot.selfdrive.selfdrived.events import ET, NormalPermanentAlert, Events
 from openpilot.selfdrive.selfdrived.state import StateMachine as SelfdriveStateMachine
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP, EVENTS_SP
 from openpilot.common.test import OpenpilotTestCase
