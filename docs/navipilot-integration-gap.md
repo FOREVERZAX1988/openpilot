@@ -227,3 +227,50 @@ POST /repos/FOREVERZAX1988/navipilot/actions/workflows/release.yml/dispatches
 | `claude/fix-led-related-bug`（`d732274` 灯带）| 建在**旧代码线**上（包名 `com.example.navipilot`，README 写 v260516）：高德/腾讯/Google 导航桥、`CameraOverlay`、`SshConnectionManager`、`XiaogeDataReceiver`、腾讯 NTRIP/RTK SDK（`TencentNtripSDK`）、`AppAnalytics`、车道图标/转向推断、`PreferenceRepository`/DI 全套 | 与现线（`com.jixiexiaoge.drivingassist`，已「移除导航/评分/投射模块」）差异 601 文件，**不能 merge，只能当零件库**：将来要恢复导航投射、摄像头叠加、RTK 时按文件挑；「灯带」本身只是 1 个 commit |
 | `copilot/research-android-desktop-app`（`f848eb9` AI 改 UI）| 同一条旧线 + `new.png` + UI 试验 | 同上，研究性质 |
 | 上游 `Amapauto` | 我们的 fork **已领先 8 条**（默认投屏+自动发现、可隐藏侧边栏、S 启动页/图标、GitHub Release OTA 镜像轮询、命名统一 sp搭子、多 ABI/AAB + CI/CD、`AppUpdater`、`ScreenMirrorActivity`、`QuickButtons`）| 上游 Amapauto 没有新东西可拉（`compare` = ahead 8 / behind 0），反过来是**我们该往上提** |
+
+## 7. 「上游的上游的特搭子 APK」查清了 = **另一个产品线：特投屏（Map2Tesla）**
+
+用户给的 `jixiexiaoge/openpilot/releases` 里那个 APK，**不是** navipilot 的新版本，是作者的另一条产品线。
+
+实测（2026-10-11，纯 zip 内省，未在手机侧验证）：
+
+| 项 | 值 |
+|---|---|
+| 来源 | `jixiexiaoge/openpilot` release `260901`（notes：车道线 / 高德 腾讯 百度地图投屏）|
+| 资产 | `v26090104.apk.1.1.zip` 25.2 MB → 内含 `特搭子 v26090104.apk.1(1).1` **53.5 MB**，**仅 arm64-v8a**，3 个 dex，101 个 entry（很瘦）|
+| package | **`com.jixiexiaoge.drivingassist`** —— 与我们的 sp搭子**同一个 applicationId** |
+| 类 | `com.navipilot.amap2tesla.projection.Projection*`、`com.navipilot.amap2tesla.network.TeslaV*`、`AmapAutoService`、`CarrotApp` |
+| assets | `amap2tesla_player.html`（`<title>Navipilot Amap Projection</title>`）、**`lane.onnx`**（+ onnxruntime JNI）、`fonts/HZK16C` |
+| 权限 | `moe.shizuku.manager.permission.API_V23`（**Shizuku** 特权，另有 `shizuku` provider）|
+| 真身 | **特投屏 Map2Tesla**（`jixiexiaoge/Map2Tesla`，README：「面向特斯拉及没有地图的车机屏幕的投屏 App」——安卓 App 虚拟屏投屏（需 Shizuku / Stellar）+ CarPlay + AirPlay，投屏服务端口 8080–8099，浏览器可触摸反控）。**该仓库只有 README + images，没有源码** |
+
+版本线对照（「不大一样」的确切含义）：
+
+| 产物 | versionCode 形态 | 签名 | 体积 |
+|---|---|---|---|
+| 我们 sp搭子 `r260902`（本 fork） | 6 位 `260902` | **我们自建 keystore** | 多 ABI release 67 MB（arm64 单包）|
+| 特投屏 `v26090104` → 已到 `v4.0 / v26093008`、`V260913` | 8 位 `YYMMDDNN` | 作者签名 | 27–53 MB（arm64 单包）|
+| 老 `Navipilot-260524.apk` | — | 作者签名 | 241 MB（含离线地图）|
+
+- ⚠️ **同 applicationId ⇒ 两个 App 不能共存**；且 `260902 < 26090104` ⇒ 我们的包**装不进**已装特投屏的手机（降级被系统拒），签名也不同 ⇒ 必须**先卸载**再装。想立刻体验特投屏，直装 Map2Tesla releases 的最新包即可（那是作者签名包，走它自己的更新）。
+
+### 7.1 「可借鉴升级」清单（结论）
+
+| 来源 | 结论 |
+|---|---|
+| `jixiexiaoge/navipilot` 的 `Amapauto`（我们 App 的上游） | **无可借鉴**：`git log origin/Amapauto..up/Amapauto` **为空**，我们严格领先 8 条（默认投屏+自动发现、可隐藏侧边栏、S 启动页/图标、Release OTA 镜像、多 ABI/AAB、CI/CD、签名修复）|
+| `jixiexiaoge/navipilot` 另两支（`claude/fix-led-related-bug`「灯带」、`copilot/research-android-desktop-app`「AI 改 UI」） | **与本 App 无关**：单提交 +50k / +157k 行、`web/templates/admin/{login,users,videos}.html` 之类，看着是另一个视频站项目 |
+| `jixiexiaoge/Map2Tesla`（特投屏） | **最有价值但无源码**（README-only）：Shizuku 虚拟屏投屏、CarPlay/AirPlay/USB-CarPlay、Dock 9 app、安卓 Auto。只能「装机直接用」，**无法直接搬代码**；要搬只能黑盒逆向 |
+| `jixiexiaoge/carrot`（`carrot-wip`，2026-10-09 仍在推，725 MB） | 设备侧 cp 参考：含 `sunnypilot/carrot/xiaoge/assets/lane.onnx`、`carrot_serv.py`、`xiaoge_sentryd.py`、`xiaoge_web.py`、`app功能说明.md`。**我们 fork 已有对应件**（`openpilot/sunnypilot/carrot/xiaoge/xiaoge_vision.py`、`xiaoge_data.py`、`carrot_serv.py`、`server/features/xiaoge.py`、`carrot/xiaoge/assets/lane.onnx`）→ 目前**没有必须搬的东西** |
+
+## 6.2 A1 落地：`release.yml` 改成「Amapauto push 也出 debug APK（立刻能装机）」
+
+| 项 | 落地 |
+|---|---|
+| 触发 | `on.push.branches: [Amapauto]` **新增**（原来只有 `r*` tag / `workflow_dispatch`，所以「分支推了代码没 APK」是设计如此）|
+| 新 job | `debug-apk`（分支 push，或 dispatch 勾 `build_debug`）→ `assembleDebug` 多 ABI（arm64-v8a/armeabi-v7a/x86_64）|
+| 签名 | 4 个 secret 在 → **用 release keystore 签**（`-Pnavipilot.debugSign=release`，`app/build.gradle.kts` 新增该开关）→ 与我们已装的 release 包**同签名，可直接覆盖安装、不用卸载**；secret 缺 → 回退内置 debug key（日志 `::notice::` 提示要先卸载）|
+| 版本号 | versionCode 取 UTC 日期 `yyMMdd`（今天 `261011`）→ 天然大于线上 `260902`，不会被拒装；versionName `v261011-debug-<sha7>` |
+| 产物 | `upload-artifact` + **滚动 prerelease `debug-latest`**（`gh release upload --clobber`）→ 免登录、免 tag、直接下载装机 |
+| 正式 release | 原 `build` job 更名 `release`，加 `if` 与 debug 分流：tag `r*` / dispatch（且未勾 debug）才跑，多 ABI release APK + AAB + GitHub Release 行为不变 |
+| ⚠️ 注意 | 默认分支 `master` 上的 `release.yml` 是旧版；`workflow_dispatch` 的手动入口读的是**默认分支**的 workflow（要让 dispatch 也有 debug 选项，需把该改动并到 master）。**分支 push 触发用的是 Amapauto 自己那份**，所以 A1 立刻生效 |
