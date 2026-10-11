@@ -224,6 +224,27 @@ POST /repos/FOREVERZAX1988/navipilot/actions/workflows/release.yml/dispatches
 
 **待办**：真机装一次新签名包，确认 OTA（`AppUpdater` → GitHub Release 镜像轮询）能认出 `r260902`；旧包需先卸载。
 
+### 6.2 A1 已落地并验证：`Amapauto` push → 自动出 debug APK（2026-10-11 13:35）
+
+`release.yml` 在 `Amapauto` 与默认分支 `master` 两份**完全一致**（11497 B），已含三组触发：
+
+| 触发 | 条件 | 产物 |
+|---|---|---|
+| `push: branches: [Amapauto]` | 往 `Amapauto` 推**任何有文件变更**的提交 | `debug-apk` job → 多 ABI **debug** APK（用 release keystore 签，可直接覆盖安装我们的 release 包）→ 落滚动 prerelease **`debug-latest`**（免登录下载）|
+| `push: tags: ['r*']` / `workflow_dispatch` | 打 `r*` tag 或手动派发 | `release` job → 多 ABI release APK + AAB + GitHub Release |
+| `workflow_dispatch` + `build_debug=true` | 手动 | 只出 debug APK |
+
+**实测证据**（push 事件，非 dispatch）：run#8 `id=38143551620`，`event=push`，`head_branch=Amapauto`，`sha=f36f7fe`
+→ job `debug-apk` **completed/success**，job `release` **skipped**（正确：分支 push 不出正式包）。
+随后 `debug-latest` 三个 ABI 资产于 `13:35:20Z` 刷新，body = `自动构建（Amapauto push）｜commit f36f7fe…｜versionCode 261011｜signed: release`。
+
+> ⚠️ **踩坑：曾误判「push 不触发」** —— **空提交（tree 不变、无文件变更的 push）不会创建任何 workflow run**。
+> 之前用「空提交」验证 push 触发，得到的是**假阴性**，与 workflow 配置无关。
+> 要验证 push 触发，必须推一个**真的改了文件**的提交。
+
+**遗留**：为诊断在 `Amapauto` 上多留了 3 个提交（`aeefece` 空提交、`f36f7fe` 探针、`1b8e071e` 清理探针）；
+内容树已回到 `b0702ea` 的状态（`push-probe.yml` 已删）。要历史干净可 `git reset --hard` 到 `7b6098f9` 后 force-push。
+
 ## 7. 上游（原作者）那两条侧分支能不能借鉴
 
 | 分支 | 内容 | 判断 |
