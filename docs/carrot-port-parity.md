@@ -612,3 +612,18 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 校验 | `log.capnp`+`car.capnp` capnp 编译通过；本次新增/改动 39 个 `*.py` 全 `py_compile` 通过；`mazda`/`volkswagen`/`hyundai`/`sunnypilot.car.interfaces` 导入 OK；Macan `PORSCHE_MACAN_MK1` 与 Mazda CX-5 2022 的 `CarParams` 构建 OK |
 | 未做 / 风险 | 设备 venv **无 pytest** → 测试套件未跑；radar stack 含 Cython（`radar_motion/_motion_native.pyx`）+ `SConscript` → **必须重编**才生效；上游那 62 个 opendbc 提交里 Mazda/Toyota 部分本车（Macan）不用，但仍是未上车的代码，建议先在设备上只跑 Macan 回归 |
 | 生效方式 | 重编（scons/make）+ **重启 manager**（新增进程 `signalcolord`、`radarcan`、`radard_dpath`）；纯 JS/CSS/翻译部分刷新页面即生效 |
+
+### 追踪点推进（本次）—— 上游 `f2fe2c822f` → `6a077d7866`（+2 提交，全清）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch https://github.com/mouxangithub/openpilot.git test:refs/remotes/mouxan/test`（HTTPS；SSH `git@github.com:` 仍 `Connection closed`，不可用）|
+| 复核手法 | `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` → `6a077d7866`（直接问远端，不信本地 ref）|
+| 上游 tip | `f2fe2c822f` → **`6a077d7866`（+2 提交，线性）** |
+| 新提交 1 | `b2ae03287d` Device 页只留真设置：`device_info.py` 按目录描述自身的状态标记过滤掉只读行（Updater* / MapdVersion / OsmLocationName / ImuCalibrationStatus / LocalDriveStats …），再扣掉几个由专属 manager 块负责的动作 → OSM 12→3、Models 11→8、Trips 3→1、Imu 4→1；同时给 web-lab 补上 Experimental 分组（此前只能敲终端命令翻这个 capability，**AR 开关看着永远是死的**）|
+| 新提交 2 | `6a077d7866` 每个 param 只落一个 section：`OsmLocal` / `OsmMapDataEnabled` / `TeslaMadsScreenButton` 同时挂在两个目录节点下 → 渲染成重复行；group builder 改为归给**第一个** section |
+| 落地手法 | `git cherry-pick b2ae03287d 6a077d7866` —— **全清，零冲突**（7 文件 +50 −4；1 文件 +15 −2）|
+| patch-id 核对 | 两个 cherry-pick 与上游 **patch-id 完全一致**（`9c626bc67a` / `df7e729139`），即平移而非改写 |
+| 逐文件核对 | 7 个受动文件 `git rev-parse HEAD:<f>` == `git rev-parse mouxan/test:<f>` → 与上游 tip **零差异** |
+| 校验 | `py_compile openpilot/sunnypilot/carrot/server/services/device_info.py` 通过；纯 JS/CSS/翻译无编译步骤 |
+| 生效方式 | `web/js/generated/*`、`web/css/generated/*`、`web/src/features/tools/*`、三语翻译 → 7000 面板静态服务，**刷新页面即生效**；`server/services/device_info.py` 在 `carrot_server` 进程里已 import → **必须重启 manager** 才生效 |
