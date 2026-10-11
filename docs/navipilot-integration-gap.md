@@ -242,8 +242,10 @@ POST /repos/FOREVERZAX1988/navipilot/actions/workflows/release.yml/dispatches
 > 之前用「空提交」验证 push 触发，得到的是**假阴性**，与 workflow 配置无关。
 > 要验证 push 触发，必须推一个**真的改了文件**的提交。
 
-**遗留**：为诊断在 `Amapauto` 上多留了 3 个提交（`aeefece` 空提交、`f36f7fe` 探针、`1b8e071e` 清理探针）；
-内容树已回到 `b0702ea` 的状态（`push-probe.yml` 已删）。要历史干净可 `git reset --hard` 到 `7b6098f9` 后 force-push。
+**已清（2026-10-11）**：为诊断在 `Amapauto` 上多留的 3 个提交（`aeefece` 空提交、`f36f7fe` 探针、`1b8e071e` 清理探针）**已删除** ——
+`git reset --hard 7b6098f9` 后 force-push 到 `origin/Amapauto`。**复核（直接问远端，不信本地 ref）**：
+`git ls-remote https://github.com/FOREVERZAX1988/navipilot refs/heads/Amapauto` → `7b6098f910904666d54638c3c44651ba2ed2bffc`；
+本地 `HEAD` = `origin/Amapauto` = `7b6098f`（`rev-list --left-right --count` = `0 0`）；`.github/workflows/` 只剩 `release.yml`（`push-probe.yml` 已不在索引、也不在工作树）。
 
 ## 7. 上游（原作者）那两条侧分支能不能借鉴
 

@@ -664,3 +664,19 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 根因 | 该文件由 `carrot/tools/build_settings_catalog.py` 生成，`ui_page_params()` 扫 `openpilot/selfdrive/ui/sunnypilot/layouts/settings/`。上游的 `toggles.py` 与 `alpha_longitudinal_toggles.py` 是 `a6156bb030`（"适配c3"）加的，**该提交不是本仓 HEAD 的祖先**（merge base `20be508f66` 里也没有这两个文件）→ 本仓那份目录没有 toggles 页 → 扫不出 `toggles` 页 → 目录里就没这两个节点 |
 | 影响 | CarrotPilot 设置页少一个 Toggles / Alpha Longitudinal 分组（Device 页的 Toggles 是手写基础分组，不受影响）|
 | 未处理原因 | 属另一条线：要移植 `a6156bb030` 的 UI 文件并重新生成目录 |
+
+### 追踪点推进（2026-10-11 第二批）—— 上游 `6a077d7866` → `dfb1dcdbd0`（+1 提交，全清）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch --no-tags https://github.com/mouxangithub/openpilot.git refs/heads/test:refs/remotes/upstream/test`（HTTPS。SSH `git@github.com:` 仍 `Permission denied (publickey)`，**别再试 SSH**）|
+| 上游 tip | `4a6d3d8fa1` → **`dfb1dcdbd0`**（累计 +14；前 13 条至 `6a077d7866` 已在前一轮全清，本轮 +1）|
+| 本提交 | `dfb1dcdbd0 feat(carrot): vehicle selector in Settings, plus storage clearing and sunnylink actions` —— Device 页三块：① **`Vehicle` 车辆选择器**：新增 `loadDeviceVehicleManager`（`setting_device_actions.js:1519`），品牌→平台两级 picker，读 `GET /api/opui/vehicle/platforms`、写 `POST /api/opui/vehicle/select`（`bundle:""` = 撤销手动选择、回到自动指纹）；② **`storage` 清理按钮**（`POST /api/opui/storage/clear`）；③ **`sunnylink` 配对/备份/恢复**（`GET /api/opui/sunnylink/pair?mode=pair`、`/status`）。`setting_device.js` 只加 1 行（`DEVICE_CAPABILITY_LOADERS.Vehicle`）|
+| 落地手法 | `git cherry-pick dfb1dcdbd0` —— **零冲突**（5 文件 +258 −1，与上游 `--stat` 一致）|
+| 对齐校验 | `git diff HEAD dfb1dcdbd0 -- <这 5 个文件>` **输出为空** → 逐字节等于上游，无需手工并集 |
+| 后端校验（防「死按钮」）| 这些 `/api/opui/*` 由 `carrot/server/features/opui_proxy.py:27` 透传到 5080 webui 守护进程；`webui` 子模块 pin `6d0320e`（工作树干净）**已实现** `vehicle/platforms`(:792) / `vehicle/select`(:794) / `sunnylink/status`(:795) / `sunnylink/pair`(:796) / `storage/clear`(:799)，均在 `webui/server/routes/__init__.py` → 有真后端，不会 404 |
+| 生效方式 | 纯静态 JS + 文案（`en.js` / `ko.js` / `zh.js` 各 +27 条）：**刷新页面即生效，无需重启任何服务**；也不用重编（未触碰 `.py` / capnp / `.so`）|
+| 备份 ref | `backup/pre-port-dfb1dcdb-261012-0018`（= 移植前的 `65a56892d5`）|
+
+> 结论：**至此上游 `test` tip 的全部 14 条新提交已按内容全清**。`git rev-list --count upstream/test ^HEAD` 仍报 45——
+> 那是 SHA 口径（cherry-pick 生成新 SHA，upstream 独有提交永远算「落后」），**不代表内容没对齐**。
