@@ -402,3 +402,18 @@ shutdown（`do_wait`），只停掉一部分子进程就永久停住（实测残
 验证（offroad 即可）：`curl -s http://127.0.0.1:7000/api/params_bulk?names=CarrotVisionEnabled` 返回 `{"CarrotVisionEnabled":true}`
 （预览页的门就是它）。`carrot_webrtcd` / `carrot_vision_encoderd` 的门是 `and_(iscar, enable_webrtc)`，
 offroad 且无车（`CarParams` 空 ⇒ `notCar`）**不会**启动，上车点火后才起 —— 属预期，不是缺口。
+
+### 追踪点更新（2026-10-11 18:20）
+
+| 项 | 值 |
+|---|---|
+| 上游 tip | `0667496636` fix(carrot): carrot vision encoder skips unclaimed streams and uses this fork's Params API |
+| 本次拉取 | `15280cdbfd` → `0667496636`（+2 条），`git fetch https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream/test` |
+| 本仓 | `1a4d454b2e` + `0667496636` 已内容级移植（HEAD 之后那条 fix commit） |
+
+两条都是 Carrot Vision 自己的 bug，且都会让预览「有画面但永远不出图」，必须跟：
+
+| 上游 commit | 症状 | 本仓落地 |
+|---|---|---|
+| `1a4d454b2e` | 车外摄像头检查 runner 第一次写 `IsTakingSnapshot` 直接抛原始 key 名错误（本 fork 从未声明，但 `vision_test.py` / `vision_diag.py` / `offroad_alerts.py` 早就在用） | `params_keys.h` 补 `IsTakingSnapshot` / `Offroad_IsTakingSnapshot` |
+| `0667496636` | ① `encoderd_thread` 的 `assert(it != end(cameras))`：Carrot Vision 只要 narrow-road 一路而 camerad 给三路 → 一开就 assert 死；② `put_bool_nonblocking` 本 fork 无此别名 → `CarrotVisionActive` 写不进去、编码器永远 idle | `encoderd.cc` 改 skip/`continue`；`webrtcd.py` 改 `put_nonblocking`（**刻意差异**：上游传 `"1"/"0"` 字符串，本 fork 的 Params 会类型校验报 `proposed_type=str expected_type=BOOL`，改传 `bool`） |
