@@ -249,6 +249,23 @@ sys.modules["opendbc.car"] = _opendbc_car_pkg
 sys.modules["opendbc.car.common"] = _opendbc_car_common_pkg
 sys.modules["opendbc.car.common.conversions"] = _opendbc_conversions_mod
 
+# `import a.b as x` resolves the submodule through the parent package's *attribute*
+# chain, not only through sys.modules. If an earlier test module already imported the
+# real `openpilot.common` / `openpilot.cereal` / `opendbc`, those attributes keep
+# pointing at the real packages even after the sys.modules swap above, so carrot_man
+# would bind the real SubMaster/Params (e.g. when collected after
+# server/tests/test_carrot_navi_hud_profile.py, which imports openpilot.cereal).
+# Repoint the attributes too; they are restored with the modules at the bottom.
+import openpilot as _openpilot_pkg
+
+_SAVED_ATTRS = {}
+for _pkg, _attr, _stub in ((_openpilot_pkg, "common", _common_pkg),
+                           (_openpilot_pkg, "cereal", _cereal_pkg),
+                           (_openpilot_pkg, "opendbc", _opendbc_pkg)):
+  _SAVED_ATTRS[(_pkg, _attr)] = getattr(_pkg, _attr, None)
+  setattr(_pkg, _attr, _stub)
+del _pkg, _attr, _stub
+
 from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING
 from openpilot.sunnypilot.carrot.web_interface import WebInterface
 
@@ -2274,6 +2291,16 @@ for _name, _module in _SAVED_MODULES.items():
   else:
     sys.modules[_name] = _module
 del _name, _module
+
+# Also undo the parent-package attribute swap made just before the carrot_man import.
+for (_pkg, _attr), _saved in _SAVED_ATTRS.items():
+  if _saved is None:
+    if hasattr(_pkg, _attr):
+      delattr(_pkg, _attr)
+  else:
+    setattr(_pkg, _attr, _saved)
+del _pkg, _attr, _saved
+_SAVED_ATTRS.clear()
 
 
 if __name__ == "__main__":

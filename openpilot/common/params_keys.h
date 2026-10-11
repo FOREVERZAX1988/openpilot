@@ -438,6 +438,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotNavCruiseSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"CarrotHudInfoEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"CarrotWebEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // Opt-in support terminal on 6999 (CarrotPilot's recovery/server.py). It serves an
+    // unauthenticated login shell and git-recovery actions to anyone who can reach the port,
+    // so unlike upstream (always_run) it is off by default. Only the manager gate and the
+    // server's own startup check read it.
+    {"CarrotRecoveryEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // Unified control killswitches (carrot > Amap > OSM arbitration). Default off/safe.
     {"CarrotLongitudinalSourceEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // enable CarrotPlanner as a LongitudinalPlanSP source
     {"CarrotTrafficLightFusionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // fuse carrot / Amap / vision traffic lights

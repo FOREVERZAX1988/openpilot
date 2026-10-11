@@ -141,3 +141,47 @@ GIT_LFS_SKIP_SMUDGE=1 git cherry-pick -n aae89bbea0 # 干净
    `2f5c41653e`（ruff 全量）——理由见第三、五节，与这次无关。
 
 > 状态：**评估完成，移植未做**（等 7000/8088 的决定）。
+
+## 八、落地（用户决定「跟随上游」）
+
+用户拍板：**跟随上游**。据此回答遗留的端口疑问——
+
+- **7000 = 主 API + CarrotPilot 整站面板**（`server/app.py` 末尾 `add_static("/", WEB_DIR)`，`show_index=False`）；
+- **6999 = 独立的 recovery 支持终端**（`carrot/recovery/server.py`），**是新增，不是把 7000 改号**；
+  它是一条无鉴权 shell，上游 `always_run`，本仓改为 **`CarrotRecoveryEnabled` 门控、默认关**。
+
+三个提交按 dry run 预判 cherry-pick 落地（`GIT_LFS_SKIP_SMUDGE=1`，SSH remote 权限不足走 https）：
+
+| 上游提交 | 落地内容 |
+|---|---|
+| `b161d88a44` | 6999 recovery 终端：`params_keys.h` 加 `CarrotRecoveryEnabled`（默认 0）、`process_config.py` 登记 `carrot_recovery` 进程、`recovery/server.py`(2592) + 测试 |
+| `b57fdcc4d6` | CarrotPilot 全站：`server/` 99 文件 + `web/`(566 文件/9.2MB) + `realtime/`(Cython) + `carrot_settings.json` + `.gitattributes` 放行 web assets 不入 LFS |
+| `aae89bbea0` | 文档：`docs/carrot-port-parity.md` / `cp-to-sp-borrow-analysis.md` / `carrot/README.md` |
+
+**两处冲突的解法**
+
+1. `process_config.py`：只补 `carrot_recovery_enabled` + 进程登记。**未**照抄上游那份
+   `imu_calibration_enabled/_disabled`——它们不是这个提交引入的（是上游另一条未移植的
+   per-feature toggles 线），本仓也没有 `imu_calibrationd` 进程，抄进来就是死代码。
+2. `pyproject.toml`：上游把「vendored from CarrotPilot」注释**重复贴了 10 遍**，去重为一份；
+   `[tool.ruff.lint.per-file-ignores]` 条目照单全收。本仓三条依赖（`shapely`/`aiohttp`/
+   `opencv-python-headless`）在 `[project]` 区，未冲突，原样保留。
+
+**保住本仓特有文件**：`carrot/tests/test_carrot_web_settings.py`（上游该提交会删，已保留）。
+
+**修掉一处「继承自上游」的测试隔离缺陷**（本仓自己的测试文件，未改动任何上游文件）：
+`tests/test_carrot_man.py` 的桩只换 `sys.modules`，不换**父包属性**；当
+`server/tests/test_carrot_navi_hud_profile.py` 先 `import openpilot.cereal` 后，
+`import a.b as x` 走属性链会拿到**真** `SubMaster` → 28 例红。
+已让桩同时换掉 `openpilot.{common,cereal,opendbc}` 属性并在文件末尾复原。
+
+**验证**
+
+| 项 | 结果 |
+|---|---|
+| `compileall openpilot/sunnypilot/carrot` | 干净 |
+| `pytest openpilot/sunnypilot/carrot`（全量） | **612 passed / 48 skipped / 0 failed** |
+| `pyproject.toml` | `tomllib` 解析通过 |
+| `process_config.py` | `py_compile` 通过，`carrot_recovery` 已登记 |
+
+未动：`panda`（仍 `d84b110fc`）、`opendbc_repo`（仍 `9b88156a2`）、`jetlink_repo`（仍 `c589643`）。
