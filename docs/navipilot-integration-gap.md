@@ -148,8 +148,9 @@ repo: fork=true, default_branch=master, archived=false, actions permissions enab
   **普通分支 push 什么都不做**。
 - 所以「分支上推了代码却没 APK」是**设计如此**：要出包必须打 tag 或手动 dispatch。
 - 而现在连 tag 触发也没产物，卡在两处前置：
-  1. GitHub 侧 Actions 在这个 fork 上**从未生效**（workflow 注册数 0）——fork 的 Actions 默认是关的，
-     需要在仓库 Actions 页点一次「I understand my workflows, go ahead and enable them」（或先跑通一次手动 dispatch）再打 tag；
+  1. GitHub 侧 Actions 在这个 fork 上**从未注册**（`GET /actions/workflows` → `total_count 0`，dispatch → 404）——
+     需要在仓库 Actions 页点一次「I understand my workflows, go ahead and enable them」再打 tag。
+     **2026-10-11 实测：不必点网页 —— 向默认分支推一次 workflow 文件改动即完成注册**（见 §6.1）。
   2. **4 个 secret 全缺**：`RELEASE_KEYSTORE_BASE64` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_PASSWORD` / `RELEASE_KEY_ALIAS`。
      第一步 `echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release.keystore` 只会写出空文件 → release 签名必失败。
      （上游 `Amapauto` 仓库里带 `app/release.keystore`，我们 fork 去掉了；上游的密码只在 Windows 的
@@ -160,6 +161,46 @@ repo: fork=true, default_branch=master, archived=false, actions permissions enab
 - ⚠️ 换 keystore = 换签名：旧 APK 无法覆盖安装，`AppUpdater` 的 OTA 也会因签名不符失败，需要卸载重装。
   想保留旧签名就必须找到原来那把 keystore 和密码。
 - 轻量替代：`assembleDebug` 用内置 debug key，不需要任何 secret，装得上但不是 release 签名（不能作为 OTA 基线）。
+
+
+### 6.1 2026-10-11 实操：出包链路已打通（A 方案：自建 release 签名 + 云端出包）
+
+**两个真根因（都不是「分支不生成 APK」的设计行为，是 bug）**
+
+| # | 症状 | 根因 | 处置 |
+|---|---|---|---|
+| 1 | Actions 列表 `total_count 0`、`workflow_dispatch` → 404 | workflow 文件只存在于**非默认分支** `Amapauto`；默认分支 `master` 上那份虽然存在但从未被 push 触发注册 | 把 workflow 改动 push 到 `master`（默认分支）→ 立刻 `total_count 1 / state active`，dispatch → **204** |
+| 2 | 任务起跑后 `./gradlew assembleRelease` 立即失败 | 仓库内 `gradle/gradle-daemon-jvm.properties`（`gradle updateDaemonJvm` 生成物）把 daemon JVM 钉在 **Java 18(EOL)**，而 CI 用 JDK 17 → `Cannot find a Java installation … Compatible with Java 18` | **删除该文件**（Gradle 改用启动 JVM：本地 `JAVA_HOME`、CI `setup-java` 均可） |
+| 3 | （潜伏）tag 触发时版本号解析 | `VERSION_CODE = github.ref_name`（形如 `r260902`）→ `toInt()` 抛异常 | workflow 增加 `Resolve version`：剥离前导 `r` + 纯数字校验，`version_name` 缺省回退 `v<code>` |
+| 4 | （潜伏）secret 缺失时失败原因不可读 | `echo "${{ secrets.X }}" \| base64 -d > app/release.keystore` 会写出**空文件**，后续报「签名失败」 | 改为：secret 为空则保留仓库内 keystore，最终 `test -s` 显式报错 |
+
+**签名（自己出一把，密码自持）**
+
+| 项 | 值 |
+|---|---|
+| 文件 | `release.keystore`（**JKS**，RSA 2048，`CN=sp-dazi`，alias `spdazi`），2208 B |
+| 设备侧备份 | `/data/ainav/keys/`（`release.keystore` / `store.password`(600) / `release.keystore.b64` / `key.pem` / `cert.pem`）——**请拷到 PC 另行保存** |
+| cert SHA-256 | `c67158605571ed61ea0a868d103e6592f2dcda46f3120619df6d00a1367d8bac` |
+| repo secrets | `RELEASE_KEYSTORE_BASE64` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_PASSWORD` / `RELEASE_KEY_ALIAS`（4 个，已写入 `FOREVERZAX1988/navipilot`）|
+
+- 生成手法（设备无 JDK，全程免 keytool）：`openssl req -x509` → `openssl pkcs12` → `pyjks` 重建为 **JKS**（`PrivateKeyEntry.new(alias, [certDER], pkcs8DER)`），
+  因为 AGP 的 `signingConfigs` 未写 `storeType` → 走 `jks` 默认，PKCS12 文件会被判「Invalid keystore format」。
+- ⚠️ **换 keystore = 换签名**：旧 APK 无法覆盖安装，`AppUpdater` 的 OTA 从本包起才有基线，需要卸载重装一次。
+  想保留旧签名 → 必须找回上游 `Amapauto:app/release.keystore`（JKS，2774 B，仓库里有）的密码；
+  **密码不在仓库里**（`deploy_release.bat` 只有构建流程、`gradle.properties` 无 `RELEASE_*`，全历史 `git log -S` 也无），只在原作者本机。
+
+**出包方式**（第三次复现：不需要网页操作、不需要本地 Android SDK）
+
+```bash
+# 触发（version_code 必须 > 现网最新 tag r260901）
+POST /repos/FOREVERZAX1988/navipilot/actions/workflows/release.yml/dispatches
+  {"ref":"Amapauto","inputs":{"version_code":"260902","version_name":"v260902","notes":"..."}}
+# 或：push tag r260902（workflow 的 `on.push.tags: r*` 已修好版本号解析）
+```
+
+产物：Release `r260902` = `sunnypilot-dazi-r260902.zip` + 多 ABI APK（arm64-v8a / armeabi-v7a / x86_64）+ AAB。
+
+**待办**：真机装一次新签名包，确认 OTA（`AppUpdater` → GitHub Release 镜像轮询）能认出 `r260902`；旧包需先卸载。
 
 ## 7. 上游（原作者）那两条侧分支能不能借鉴
 

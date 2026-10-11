@@ -503,3 +503,13 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 停车且 `IsLiveStreaming` 未置位时无发布方 → `/api/camera/status` 报 `{"cameras":{},"idle":true}`；
 `carrot_webrtcd` / `carrot_vision_encoderd` 门控 `and_(iscar, enable_webrtc)`，offroad 不启动。
 **唯一待办（需真车）**：点火接管后确认两进程被 manager 拉起、`cameras.road` 有帧龄。
+
+### 追踪点复核（2026-10-11 19:30）—— 换手法复核，上游 tip 仍未变
+
+| 项 | 值 |
+|---|---|
+| 手法 | `git fetch --no-tags https://github.com/mouxangithub/openpilot.git test`（HTTPS 直连，成功；SSH `git@github.com:` 依旧 `Permission denied (publickey)`）|
+| 结果 | `FETCH_HEAD = e6e42a548b`，与 `refs/remotes/upstream/test` 一致；`git log e6e42a548b..FETCH_HEAD` **为空** |
+| 结论 | **仍无新提交可拉**（用户第二次问「上游好像又多了一个 commit」，这是第二次复核；`sha` 也从 GitHub 侧复核过）|
+
+附：本次同时处理了 App 侧（sp搭子）出包链路，见 `docs/navipilot-integration-gap.md` §6.1。
