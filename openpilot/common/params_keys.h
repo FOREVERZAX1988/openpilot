@@ -700,9 +700,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CruiseButtonTest2", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CruiseButtonTest3", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"DisableMinSteerSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"EnableCornerRadar", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"EnableCornerRadar", {PERSISTENT, INT, "0"}},  // corner-radar object groups (Hyundai)
     {"EnableRadarTracks", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"EnableSpeedTF", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"RadarTrackFlip", {PERSISTENT, BOOL, "0"}},  // invert frontRadar yRel/yvRel once per drive
+    {"EnableRadarTracksResult", {PERSISTENT | CLEAR_ON_MANAGER_START, INT}},
+    {"EnableSpeedTF", {PERSISTENT | BACKUP, INT, "0"}},
     {"HDPuse", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"HardwareC3xLite", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"HotspotOnBoot", {PERSISTENT | BACKUP, BOOL, "0"}},
