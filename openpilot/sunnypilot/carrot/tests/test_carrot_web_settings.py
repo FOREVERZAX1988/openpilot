@@ -1,0 +1,100 @@
+"""
+Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
+
+This file is part of sunnypilot and is licensed under the MIT License.
+See the LICENSE.md file in the root directory for more details.
+"""
+"""Tests for the carrot web panel's settings pages (port 8088).
+
+The panel reads the on-device settings sources and the params binary's own key list, and
+never renders a key the binary does not declare. Two things are easy to get quietly wrong
+and are what these tests pin down:
+
+- `Params.all_keys()` hands its keys back as *bytes* (the binary's own buffer), while the
+  page scan produces `str`. Compared as they come, nothing matches and every key falls into
+  the "other" group, whose rows then fail to render at all; the keys are decoded before use.
+- a form can carry any name at all, so a key that is not declared must be dropped rather
+  than written.
+"""
+import unittest
+
+from openpilot.sunnypilot.carrot import web_settings as ws
+
+
+def _as_str(key):
+  return key.decode() if isinstance(key, (bytes, bytearray)) else str(key)
+
+
+class _FakeParams:
+  """Mirrors the slice of `Params` web_settings uses; all_keys() hands back bytes."""
+
+  def __init__(self, keys, types=None, store=None):
+    self.keys = list(keys)
+    self.types = dict(types or {})
+    self.store = dict(store or {})
+
+  def all_keys(self):
+    return [k.encode() for k in self.keys]
+
+  def get_type(self, key):
+    return self.types.get(_as_str(key), ws.T_STRING)
+
+  def get(self, key):
+    return self.store.get(_as_str(key))
+
+
+class TestCollect(unittest.TestCase):
+  def test_bytes_keys_from_the_binary_still_group_by_page(self):
+    scanned = ws.scan_ui_pages(ws.ui_settings_dir())
+    declared = sorted({k for keys in scanned.values() for k in keys} | {"NotOnAnyPage"})
+    grouped, kinds, values = ws.collect(_FakeParams(declared, dict.fromkeys(declared, ws.T_INT)))
+
+    # the regression: keys handed back as bytes must not empty the pages out
+    self.assertIn("cruise", grouped)
+    self.assertIn("other", grouped)
+    # nothing rendered is a bytes literal, and every one of them is declared
+    for key in (k for keys in grouped.values() for k in keys):
+      self.assertIsInstance(key, str)
+      self.assertIn(key, kinds)
+    self.assertTrue(all(isinstance(k, str) for k in kinds))
+
+
+class TestGrouping(unittest.TestCase):
+  def test_undeclared_keys_fall_out_of_the_page_grouping(self):
+    self.assertEqual(ws.group_keys({"cruise": ["Known", "Unknown"]}, ["Known"]), {"cruise": ["Known"]})
+
+  def test_a_page_that_names_nothing_declared_disappears(self):
+    self.assertEqual(ws.group_keys({"pairing": ["Scan", "Retry"]}, ["Known"]), {"other": ["Known"]})
+
+
+class TestOnDeviceScan(unittest.TestCase):
+  def test_the_on_device_pages_are_found(self):
+    pages = ws.scan_ui_pages(ws.ui_settings_dir())
+    self.assertGreater(len(pages), 5)
+    self.assertIn("cruise", pages)
+    self.assertIn("CustomAccShortPressIncrement", pages["cruise"])
+
+
+class TestRender(unittest.TestCase):
+  def test_every_declared_type_renders(self):
+    for kind in (ws.T_STRING, ws.T_BOOL, ws.T_INT, ws.T_FLOAT, ws.T_TIME, ws.T_JSON, ws.T_BYTES):
+      html = ws.render_control("SomeKey", kind, None)
+      self.assertIn("SomeKey", html)
+      self.assertIn('name="p[SomeKey]"', html)
+
+  def test_page_and_index_render(self):
+    grouped = {"cruise": ["SomeKey"]}
+    kinds = {"SomeKey": ws.T_INT}
+    page = ws.render_page("cruise", grouped["cruise"], kinds, {"SomeKey": 3})
+    self.assertIn("SomeKey", page)
+    self.assertIn("cruise", ws.render_index(grouped))
+
+  def test_form_updates_are_limited_to_declared_keys(self):
+    kinds = {"SomeKey": ws.T_INT}
+    self.assertEqual(ws.parse_form_updates({"p[SomeKey]": ["7"]}, kinds), {"SomeKey": "7"})
+    self.assertEqual(ws.parse_form_updates({"p[NotDeclared]": ["7"]}, kinds), {})
+    self.assertEqual(ws.parse_form_updates({"SomeKey": ["7"]}, kinds), {})
+
+
+if __name__ == "__main__":
+  unittest.main()
