@@ -680,3 +680,18 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 
 > 结论：**至此上游 `test` tip 的全部 14 条新提交已按内容全清**。`git rev-list --count upstream/test ^HEAD` 仍报 45——
 > 那是 SHA 口径（cherry-pick 生成新 SHA，upstream 独有提交永远算「落后」），**不代表内容没对齐**。
+
+### 追踪点推进（2026-10-12）—— 补完从未移植的 `a6156bb030`（Toggles / Alpha Longitudinal）
+
+| 项 | 值 |
+|---|---|
+| 复核手法 | `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` → `dfb1dcdbd0`（直接问远端）；再对 `HEAD..upstream/test` 的 45 条逐条做 **patch-id** 比对 —— 20 条与本地 cherry-pick **patch-id 完全一致**，其余 25 条按**内容级 blob diff** 复核（`git diff --name-only <sha> HEAD -- <该提交受动文件>`）|
+| 复核结论 | 25 条里绝大多数是「本仓刻意改写」（fork 适配 / 本仓自己的文档 / opendbc pin / `pyproject.toml`），**唯一真正的功能缺口**是从未移植的 `a6156bb030`「适配c3」那条 UI 线 —— 与本仓 `carrot_settings_sp.json` 少 Toggles / Alpha Longitudinal 分组是同一根因 |
+| 新增（逐字节等于上游 tip）| `selfdrive/ui/sunnypilot/layouts/settings/toggles.py`（`TogglesLayoutSP`，隐藏 Toggles 页的 `ExperimentalMode`，blob `66fbee16`）、同目录 `alpha_longitudinal_toggles.py`（`AlphaLongitudinalToggles`，blob `005cc14f`）、`tests/test_tizi_settings.py` |
+| `settings.py` | `TogglesLayout` → `TogglesLayoutSP`；**保留**本仓的 NavButton 点击修复（「自己接点击、不用会过期的 `button_rect`」）与 `BLUETOOTH` 面板 |
+| `cruise.py` | 并入上游 alpha-long 接线（import / `__init__` 里 `self._alpha_long` / items 前置 `*self._alpha_long.items` / `show_event` 加 `refresh()` / `_update_state` 加 `update_state()` / 判定改 `CP.pcmCruise and CP_SP.pcmCruiseSpeed`），**完整保留 Macan 融合块**（`MacanFusionMode` 时灰掉并自动关闭自定义 ACC 增量）；`dec_toggle` 已随上游移入 `AlphaLongitudinalToggles` |
+| `developer.py` | 只取功能那 2 行（`_scroller._items.remove(self._alpha_long_toggle)`）——上游同文件的其余差异全是 `"..."` → `"..." +` 拼接风格，不跟 |
+| 目录重生成 | `python -m openpilot.sunnypilot.carrot.tools.build_settings_catalog` → params **373 → 378**（+`ExperimentalMode` / `ExperimentalModeConfirmed` / `ExperimentalModeSetSpeed` / `ExperimentalModeLeadGap` / `RadarTrackFlip`；`RadarTrackFlip` 是上次雷达移植后一直没重生成的欠账），新增菜单节点 `CARROT_SP_UI_TOGGLES` / `CARROT_SP_UI_ALPHA_LONGITUDINAL_TOGGLES`，**旧 373 个一个没丢**（新老集合相减验证）|
+| 测试 | 设备侧跑 `python -m unittest openpilot.selfdrive.ui.sunnypilot.tests.test_tizi_settings`：**4/5 通过**。唯一失败 `test_experimental_mode_text_matches_upstream` 是**语言环境**导致：断言比的是英文常量，而设备语言为中文，`tr()` 会查 `app_zh-CHS.po` 出中文 msgstr（同一 msgid），非移植缺陷 |
+| 未跟（有意）| `2f5c41653e style(lint)`（95 文件）—— 逐文件核对确认其内容就是 `"..."` → `"..." +` 一类拼接风格；本仓已有自己的 `pyproject.toml` per-file-ignores，跟它只换来 95 文件冲突面，**继续挂账且不建议跟** |
+| 生效方式 | UI 改动要**重启 `ui` 进程**；`carrot_settings_sp.json` 是 7000 面板读的目录，要**重启 `carrot_server`**；未触碰 `.py` 以外的编译产物 |
