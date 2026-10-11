@@ -42,7 +42,10 @@ def _set_carrot_vision_active(active: bool) -> None:
     return
   _carrot_vision_active = active
   try:
-    _carrot_vision_params.put_bool_nonblocking(CARROT_VISION_ACTIVE_PARAM, active)
+    # upstream 0667496636: this fork's Params has no put_bool_nonblocking alias.
+    # Deviation: upstream writes the strings "1"/"0", but our Params type-checks
+    # (TypeError: proposed_type=str expected_type=BOOL), so pass the bool itself.
+    _carrot_vision_params.put_nonblocking(CARROT_VISION_ACTIVE_PARAM, bool(active))
   except Exception:
     cloudlog.exception("[webrtcd] failed updating %s=%s", CARROT_VISION_ACTIVE_PARAM, active)
 
