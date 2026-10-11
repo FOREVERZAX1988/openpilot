@@ -83,6 +83,12 @@ class AlertRenderer(Widget):
 
   def get_alert(self, sm: messaging.SubMaster) -> Alert | None:
     """Generate the current alert based on selfdrive state."""
+    # Onroad preview draws this view while parked. selfdrived never runs offroad, so
+    # selfdriveState never arrives and the synthesized "startup pending" alert would sit on
+    # top of the very camera the preview exists to show. Skip alerts while previewing.
+    if ui_state.params.get_bool("IsOnroadPreview"):
+      return None
+
     ss = sm['selfdriveState']
 
     # Check if selfdriveState messages have stopped arriving

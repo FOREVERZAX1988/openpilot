@@ -124,6 +124,10 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
 
   def get_alert(self, sm: messaging.SubMaster) -> Alert | None:
     """Generate the current alert based on selfdrive state."""
+    # See the BIG UI renderer: onroad preview is camera-only, don't cover it with alerts.
+    if ui_state.params.get_bool("IsOnroadPreview"):
+      return None
+
     ss = sm['selfdriveState']
 
     # Check if selfdriveState messages have stopped arriving
