@@ -274,3 +274,15 @@ POST /repos/FOREVERZAX1988/navipilot/actions/workflows/release.yml/dispatches
 | 产物 | `upload-artifact` + **滚动 prerelease `debug-latest`**（`gh release upload --clobber`）→ 免登录、免 tag、直接下载装机 |
 | 正式 release | 原 `build` job 更名 `release`，加 `if` 与 debug 分流：tag `r*` / dispatch（且未勾 debug）才跑，多 ABI release APK + AAB + GitHub Release 行为不变 |
 | ⚠️ 注意 | 默认分支 `master` 上的 `release.yml` 是旧版；`workflow_dispatch` 的手动入口读的是**默认分支**的 workflow（要让 dispatch 也有 debug 选项，需把该改动并到 master）。**分支 push 触发用的是 Amapauto 自己那份**，所以 A1 立刻生效 |
+
+### 6.3 A1 实测结果（2026-10-11，全部走 GitHub API 复核）
+
+| 项 | 结果 |
+|---|---|
+| 代码落地 | App 仓 `FOREVERZAX1988/navipilot`：`26df809`（新 workflow + `debugSign` 开关）、`7b6098f`（DEPLOYMENT_GUIDE 记档）|
+| 默认分支同步 | `master` 的 `release.yml` 已用 contents API 同步（提交 `21d2446f`）。**必须做**：`workflow_dispatch` 的输入 schema 读默认分支，不同步则带 `build_debug` 的 dispatch 会 422 |
+| 手动 dispatch 实测 | `ref=Amapauto, inputs.build_debug=true` → run `38136267728` **success**；`debug-apk` job 全绿，`release` job 正确 `skipped` |
+| 产物（已验证存在） | 滚动 prerelease **`debug-latest`**：`app-arm64-v8a-debug.apk` 73.3 MB、`app-armeabi-v7a-debug.apk` 61.2 MB、`app-x86_64-debug.apk` 78.7 MB、`sp-dazi-debug-r261011.zip` 88.6 MB |
+| versionCode / 签名 | `261011`（> 线上 260902，不会被拒装）；keystore secret 齐全 → **release keystore 签名** → 可直接覆盖我们已装的 release 包，**不用卸载** |
+| ⚠️ `on.push` 未触发 | `Amapauto` 连续两次 push（`26df809` 改的是 workflow 本身、`7b6098f` 只改 md）**都没产生 push run**：`GET /actions/runs?event=push` → 0 条；仓库历史 0 条 push run。对照 `FOREVERZAX1988/openpilot` 有 31 条 push run，但**全在默认分支**（`master-c3`）→ 该 fork 的非默认分支 push 触发在当前状态不生效（疑似 fork 的 workflow 注册只认默认分支）|
+| 结论 | **A1 目标达成**（「立刻能装机」的包已能一键产出且已验证）；`on.push` 保留在文件里（无害），下次真实 push 再复核；不依赖它——一键 `Run workflow` + 勾 `build_debug` 就是稳定通道 |
