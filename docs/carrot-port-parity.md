@@ -260,3 +260,31 @@ WS 侧另有 `/ws/terminal`、`/ws/terminal_pty`、`/ws/compact_state`、`/ws/we
 > ⚠️ **安全提示（未变）**：7000 **依旧无鉴权**。C 方案把 cp 的终端、`/api/tools` 写操作、
 > `support_terminal` 全部启用——同网段任何人都能在控车计算机上执行命令。若只要面板不要 shell，
 > 回滚到 6.4 的 B 方案即可（改动集中在 `index.html` 与 3 个 JS 文件）。
+
+---
+
+## 端口与鉴权：与上游逐字一致（2026-10-11 定案：跟随上游）
+
+用户问：「上游的终端 / `/api/tools` 写操作也一并启用，而 7000 依旧无鉴权——同网段任何人可在控车机上执行命令，**这个上游也是这样吗？**」
+
+核验结论：**是，上游一模一样**；本仓这一处**没有做任何加严，也不打算自己加**。
+
+| 核验项 | 命令 | 结果 |
+|---|---|---|
+| 7000 的 tools 面 | `git diff upstream/test HEAD -- openpilot/sunnypilot/carrot/server/features/tools/` | **空 diff** —— 含 `POST /api/tools`、`POST /api/tools/start` 等 7 条写路由，与上游同一份 |
+| `support_terminal` | `git diff upstream/test HEAD -- openpilot/sunnypilot/carrot/server/services/support_terminal.py` | **空 diff** —— `PIN_FAILURE_LIMIT = 5` 那套 PIN 认证是**上游原有的**，不是我们加的 |
+| 上游 7000 自身有无鉴权 | `git grep -i "auth" upstream/test -- 'openpilot/**/carrot/server/*'` | 只命中 `support_terminal` 的 PIN；**7000 上没有任何鉴权中间件** |
+| 6999 门控 | `CarrotRecoveryEnabled` 默认 `"0"`（`openpilot/common/params_keys.h:445`）；`process_config.py:116` 据此决定起不起进程 | 与上游 `b161d88a44`「6999 behind an opt-in gate」一致（默认关） |
+
+**决策（用户拍板：「没事 A 就行，这个跟随上游，等上游开发即可」）**：不自行给 7000 加鉴权，
+跟随上游；上游哪天把鉴权/端口改了，我们再跟。
+理由：自己加一套 guard，上游一改（端口号、中间件位置）就打架，等于白做还带维护债。
+
+### 顺带：上游 2026-10-11 同日新提交的逐条对照
+
+| 上游提交 | 内容 | 本仓状态 |
+|---|---|---|
+| `b161d88a44` | 6999 recovery 终端放到 opt-in 门后面 | 已随 `d7a8d87590` 移植（默认关） |
+| `b57fdcc4d6` | CarrotPilot 整棵 server 树 + web 面板 | 已移植（见本文档上文） |
+| `aae89bbea0` | 记录 7000 面板 / 6999 recovery / C 方案 | 由本文档承担 |
+| `0bb80bd992` | 修 `shader_polygon` 的 `Optional[rl.Color]`（`2f5c41653` 的 lint sweep 把注解改成 `rl.Color | None`，而 `rl.Color` 是函数 → 定义期 `TypeError`，UI 进程 import 就崩、manager 反复重启） | **天然一致**：我们没跟那条 lint sweep（见 `DAY_LOG_2026-10-11-UPSTREAM_TEST_ALIGN.md` 第五节），`git diff upstream/test HEAD -- openpilot/system/ui/lib/shader_polygon.py` 为空 |
