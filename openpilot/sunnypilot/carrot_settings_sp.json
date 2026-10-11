@@ -413,6 +413,7 @@
      "zh": "雷达",
      "params": [
       "EnableRadarTracks",
+      "RadarTrackFlip",
       "EnableCornerRadar"
      ]
     },
@@ -726,6 +727,20 @@
      "zh": "车机设置页",
      "groups": [
       {
+       "id": "CARROT_SP_UI_ALPHA_LONGITUDINAL_TOGGLES",
+       "ko": "알파 롱 토글",
+       "en": "Alpha longitudinal",
+       "zh": "Alpha 纵向控制",
+       "params": [
+        "DynamicExperimentalControl",
+        "ExperimentalModeSetSpeed",
+        "ExperimentalModeLeadGap",
+        "AlphaLongitudinalEnabled",
+        "ExperimentalMode",
+        "ExperimentalModeConfirmed"
+       ]
+      },
+      {
        "id": "CARROT_SP_UI_CARROT_TUNING",
        "ko": "당근 튜닝",
        "en": "Carrot tuning",
@@ -746,8 +761,8 @@
         "CustomAccIncrementsEnabled",
         "CustomAccShortPressIncrement",
         "CustomAccLongPressIncrement",
-        "DynamicExperimentalControl",
         "MacanFusionMode",
+        "DynamicExperimentalControl",
         "LongitudinalMpcTuningComfortBrake",
         "LongitudinalMpcTuningStopDistance",
         "LongitudinalMpcTuningTFollowRelaxed",
@@ -925,6 +940,15 @@
         "BackupManager_CreateBackup",
         "BackupManager_RestoreVersion",
         "CompletedSunnylinkConsentVersion"
+       ]
+      },
+      {
+       "id": "CARROT_SP_UI_TOGGLES",
+       "ko": "토글",
+       "en": "Toggles",
+       "zh": "开关",
+       "params": [
+        "ExperimentalMode"
        ]
       },
       {
@@ -3030,6 +3054,38 @@
   },
   {
    "group": "레이더설정",
+   "name": "RadarTrackFlip",
+   "title": "레이더 좌우 반전",
+   "descr": "전방 레이더 트랙의 좌우 방향을 보정합니다.\n0: 정상(기본값)\n1: 좌우 위치와 횡속도 반전\nSCC·코너레이더·비전에는 적용하지 않습니다. 선행차 선택과 레이더 표시 모두에 적용됩니다. 차종별 자동 반전은 없으며, 실제 좌우 불일치를 확인한 차량에서만 선택하세요. 변경 후 차량을 재시동하거나 기기를 재부팅하세요.",
+   "egroup": "RADAR",
+   "etitle": "Radar Left/Right Inversion",
+   "edescr": "Corrects the lateral orientation of front radar tracks.\n0: Normal (default)\n1: Invert lateral position and velocity\nDoes not apply to SCC, corner radar or vision. Affects both lead selection and radar display. No vehicle is inverted automatically; select only after confirming a left/right mismatch. Restart the vehicle or reboot the device after changing this setting.",
+   "cgroup": "雷达设置",
+   "ctitle": "雷达左右反转",
+   "cdescr": "校正前雷达轨迹的左右方向。\n0：正常（默认）\n1：反转横向位置和横向速度\n不适用于 SCC、角雷达或视觉。同时影响前车选择和雷达显示。不按车型自动反转；仅在确认左右不一致后选择。更改后请重新启动车辆或设备。",
+   "min": 0,
+   "max": 1,
+   "default": 0,
+   "unit": 1,
+   "control": "select",
+   "options": {
+    "ko": [
+     "정상",
+     "좌우 반전"
+    ],
+    "en": [
+     "Normal",
+     "Invert left/right"
+    ],
+    "zh": [
+     "正常",
+     "左右反转"
+    ]
+   },
+   "risk": "high"
+  },
+  {
+   "group": "레이더설정",
    "name": "EnableCornerRadar",
    "title": "코너레이더 사용(0)",
    "descr": "1:코너레이더활성화,2:끼어드는 차량 검출",
@@ -4832,7 +4888,7 @@
    "ctitle": "启用速度跟随时距",
    "cdescr": "启用随速度变化的跟车时距表。",
    "default": 0,
-   "type": "bool"
+   "type": "int"
   },
   {
    "group": "sunnypilot",
@@ -4961,6 +5017,90 @@
    "type": "bool"
   },
   {
+   "group": "alpha_longitudinal_toggles",
+   "name": "DynamicExperimentalControl",
+   "title": "Dynamic Experimental Control",
+   "descr": "Switch between calm and experimental profiles from live driving behavior.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Dynamic experimental control",
+   "edescr": "Switch between calm and experimental profiles from live driving behavior.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "动态实验模式",
+   "cdescr": "根据实时驾驶表现自动切换 静音/实验 模式。",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "ExperimentalModeSetSpeed",
+   "title": "Experimental Mode Set Speed",
+   "descr": "Activate experimental mode below a set speed.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Experimental mode set speed",
+   "edescr": "Activate experimental mode below a set speed.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "实验模式速度条件",
+   "cdescr": "低于设定速度时自动进入实验模式。",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "ExperimentalModeLeadGap",
+   "title": "Experimental Mode Lead Gap",
+   "descr": "Activate experimental mode when following closely.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Experimental mode lead gap",
+   "edescr": "Activate experimental mode when following closely.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "实验模式跟车条件",
+   "cdescr": "近距跟车时自动进入实验模式。",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "AlphaLongitudinalEnabled",
+   "title": "Alpha Longitudinal Enabled",
+   "descr": "End-to-end longitudinal control for supported vehicles.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Alpha longitudinal",
+   "edescr": "End-to-end longitudinal control for supported vehicles.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "Alpha 纵向控制",
+   "cdescr": "受支持车型启用端到端纵向控制。",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "ExperimentalMode",
+   "title": "Experimental Mode",
+   "descr": "Enable the experimental (end-to-end) driving profile.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Experimental mode",
+   "edescr": "Enable the experimental (end-to-end) driving profile.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "实验模式",
+   "cdescr": "启用实验（端到端）驾驶模式。",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "ExperimentalModeConfirmed",
+   "title": "Experimental Mode Confirmed",
+   "descr": "Set once the experimental-mode risk notice has been acknowledged.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Experimental mode confirmed",
+   "edescr": "Set once the experimental-mode risk notice has been acknowledged.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "实验模式已确认",
+   "cdescr": "实验模式风险提示已确认过的标记。",
+   "default": false,
+   "type": "bool"
+  },
+  {
    "group": "carrot_tuning",
    "name": "CarrotWebEnabled",
    "title": "Carrot Web Enabled",
@@ -5057,20 +5197,6 @@
    "cdescr": "ACC 长按一次变化的速度（km/h）。",
    "default": 5,
    "type": "int"
-  },
-  {
-   "group": "cruise",
-   "name": "DynamicExperimentalControl",
-   "title": "Dynamic Experimental Control",
-   "descr": "Switch between calm and experimental profiles from live driving behavior.",
-   "egroup": "CRUISE",
-   "etitle": "Dynamic experimental control",
-   "edescr": "Switch between calm and experimental profiles from live driving behavior.",
-   "cgroup": "巡航",
-   "ctitle": "动态实验模式",
-   "cdescr": "根据实时驾驶表现自动切换 静音/实验 模式。",
-   "default": false,
-   "type": "bool"
   },
   {
    "group": "cruise",
@@ -6642,20 +6768,6 @@
   },
   {
    "group": "vehicle",
-   "name": "AlphaLongitudinalEnabled",
-   "title": "Alpha Longitudinal Enabled",
-   "descr": "End-to-end longitudinal control for supported vehicles.",
-   "egroup": "VEHICLE",
-   "etitle": "Alpha longitudinal",
-   "edescr": "End-to-end longitudinal control for supported vehicles.",
-   "cgroup": "车辆",
-   "ctitle": "Alpha 纵向控制",
-   "cdescr": "受支持车型启用端到端纵向控制。",
-   "default": false,
-   "type": "bool"
-  },
-  {
-   "group": "vehicle",
    "name": "OnroadCycleRequested",
    "title": "Onroad Cycle Requested",
    "descr": "Request the onroad processes to cycle (action).",
@@ -7050,13 +7162,12 @@
  "_generated": {
   "note": "Generated by openpilot/sunnypilot/carrot/tools/build_settings_catalog.py - do not edit by hand.",
   "upstream_params": 184,
-  "kept": 178,
+  "kept": 179,
   "dropped_undeclared": [
    "CruiseCoastingPercent",
    "DriverMonitoringEnabled",
    "DriverMonitoringMode",
    "HyundaiCanfdClusterDirectTx",
-   "RadarTrackFlip",
    "SpeedTFFactor"
   ],
   "added_from_this_fork": [
@@ -7109,6 +7220,7 @@
   ],
   "added_from_on_device_pages": [
    "AlphaLongitudinalEnabled",
+   "AlphaLongitudinalEnabled",
    "AutoLaneChangeBsmDelay",
    "AutoLaneChangeTimer",
    "BackupManager_CreateBackup",
@@ -7143,10 +7255,16 @@
    "DoReboot",
    "DongleId",
    "DynamicExperimentalControl",
+   "DynamicExperimentalControl",
    "EnableCopyparty",
    "EnableGithubRunner",
    "EnableSunnylinkUploader",
    "EnforceTorqueControl",
+   "ExperimentalMode",
+   "ExperimentalMode",
+   "ExperimentalModeConfirmed",
+   "ExperimentalModeLeadGap",
+   "ExperimentalModeSetSpeed",
    "GreenLightAlert",
    "HardwareSerial",
    "HideFirehosePrompt",
@@ -7265,6 +7383,7 @@
    "ImuCalibrationMatrix"
   ],
   "on_device_pages": [
+   "alpha_longitudinal_toggles",
    "carrot_tuning",
    "cruise",
    "developer",
@@ -7276,10 +7395,11 @@
    "software",
    "steering",
    "sunnylink",
+   "toggles",
    "trips",
    "vehicle",
    "visuals"
   ],
-  "labelled_by_sp_param_labels": 202
+  "labelled_by_sp_param_labels": 209
  }
 }

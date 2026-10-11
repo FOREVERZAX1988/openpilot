@@ -6,6 +6,7 @@ See the LICENSE.md file in the root directory for more details.
 """
 from enum import IntEnum
 
+from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import AlphaLongitudinalToggles
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise_sub_layouts.speed_limit_settings import SpeedLimitSettingsLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise_sub_layouts.longitudinal_mpc_tuning import LongitudinalMpcTuningLayout
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -39,6 +40,7 @@ class CruiseLayout(Widget):
     self._current_panel = PanelType.CRUISE
     self._speed_limit_layout = SpeedLimitSettingsLayout(lambda: self._set_current_panel(PanelType.CRUISE))
     self._longitudinal_mpc_tuning_layout = LongitudinalMpcTuningLayout(lambda: self._set_current_panel(PanelType.CRUISE))
+    self._alpha_long = AlphaLongitudinalToggles()
 
     items = self._initialize_items()
     self._scroller = Scroller(items, line_separator=True, spacing=0)
@@ -91,14 +93,9 @@ class CruiseLayout(Widget):
       callback=lambda: self._set_current_panel(PanelType.LONGITUDINAL_MPC_TUNING)
     )
 
-    self.dec_toggle = toggle_item_sp(
-      title=tr("Enable Dynamic Experimental Control"),
-      description=tr("Enable toggle to allow the model to determine when to use sunnypilot ACC or sunnypilot End to End Longitudinal."),
-      param="DynamicExperimentalControl")
-
     items = [
+      *self._alpha_long.items,
       self.icbm_toggle,
-      self.dec_toggle,
       self.scc_v_toggle,
       self.scc_m_toggle,
       self.custom_acc_toggle,
@@ -120,6 +117,7 @@ class CruiseLayout(Widget):
   def show_event(self):
     self._set_current_panel(PanelType.CRUISE)
     self._scroller.show_event()
+    self._alpha_long.refresh()
     self.icbm_toggle.show_description(True)
     self.custom_acc_toggle.show_description(True)
 
@@ -132,6 +130,7 @@ class CruiseLayout(Widget):
 
   def _update_state(self):
     super()._update_state()
+    self._alpha_long.update_state()
 
     if ui_state.CP is not None and ui_state.CP_SP is not None:
       has_icbm = ui_state.has_icbm
@@ -161,15 +160,14 @@ class CruiseLayout(Widget):
         # 步进由原厂 ACC 决定，自定义短按/长按增量与 OP 同步逻辑冲突）。
         macan_fusion_on = (ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1" and
                            ui_state.params.get_bool("MacanFusionMode"))
-        custom_acc_enabled = ((has_long and not ui_state.CP.pcmCruise) or has_icbm) and ui_state.is_offroad() \
-                             and not macan_fusion_on
+        software_cruise_speed = has_long and (not ui_state.CP.pcmCruise or not ui_state.CP_SP.pcmCruiseSpeed)
+        custom_acc_enabled = (software_cruise_speed or has_icbm) and ui_state.is_offroad() and not macan_fusion_on
         self.custom_acc_toggle.action_item.set_enabled(custom_acc_enabled)
         if macan_fusion_on:
           self.custom_acc_toggle.action_item.set_state(False)  # 自动关闭自定义增量
           _on = self.custom_acc_toggle.action_item.get_state()
           self.custom_acc_short_increment.set_visible(_on)
           self.custom_acc_long_increment.set_visible(_on)
-        self.dec_toggle.action_item.set_enabled(has_long)
         self.scc_v_toggle.action_item.set_enabled(True)
         self.scc_m_toggle.action_item.set_enabled(True)
       else:
@@ -178,7 +176,6 @@ class CruiseLayout(Widget):
         ui_state.params.remove("SmartCruiseControlVision")
         ui_state.params.remove("SmartCruiseControlMap")
         self.custom_acc_toggle.action_item.set_enabled(False)
-        self.dec_toggle.action_item.set_enabled(False)
         self.scc_v_toggle.action_item.set_enabled(False)
         self.scc_m_toggle.action_item.set_enabled(False)
 
@@ -194,7 +191,7 @@ class CruiseLayout(Widget):
       show_custom_acc_desc = True
     else:
       if has_long or has_icbm:
-        if has_long and ui_state.CP.pcmCruise:
+        if has_long and ui_state.CP.pcmCruise and ui_state.CP_SP.pcmCruiseSpeed:
           new_custom_acc_desc = tr(ACC_PCMCRUISE_DISABLED_DESCRIPTION)
           show_custom_acc_desc = True
         else:
