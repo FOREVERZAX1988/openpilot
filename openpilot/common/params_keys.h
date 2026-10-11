@@ -355,6 +355,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsOnroadPreview", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsOnroad", {PERSISTENT, BOOL, "0"}},  // onroad state mirror written for carrot phone-app broadcast
     {"CarName", {PERSISTENT, STRING}},  // user-set car name, sent via carrot FTP export
+    // CarrotPilot car-selection key. The 7000 web panel writes it via /api/param_set
+    // (carrot/web/js/pages/car.js, features/intro/api.js) and the carrot server reads it
+    // (intro/state.py, services/popular_values.py, features/preferences.py).
+    // Registered here because *neither* this fork nor upstream/test declares it - without
+    // this line every read raises UnknownKeyName (sim_preflight A3). "MOCK" = nothing chosen.
+    {"CarSelected3", {PERSISTENT | BACKUP, STRING, "MOCK"}},
 
     {"ImuCalibrationEnabled", {PERSISTENT, BOOL}},
     {"ImuCalibrationMatrix", {PERSISTENT, BYTES}},
