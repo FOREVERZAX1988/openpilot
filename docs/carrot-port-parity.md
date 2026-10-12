@@ -885,3 +885,8 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 校验 | `py_compile` OK；**原生库在位 + mock 两条路径**实测新增 6 个方法 + `get_*` 往返取值；未登记键 `put_int` 仍抛 `UnknownKeyName`；审计脚本 `audit_param_consistency.py` **PASSED**（含第 6 项「代码里写字面量键名的写入均已登记」）；`ai/tools/sim_test_macan.py` **全绿**：启动冒烟 63 模块 import，上车前一致性预检 **10 通过 / 3 警告 / 2 跳过 / 0 失败**，6 组用例（1+23+4+6+43）全 OK |
 | 未做 / 风险 | 未清理既有的绕行代码（`openpilot/sunnypilot/carrot/config.py:311` 的注释与包装、`webrtcd.py:45`、`cruise_helpers.py` 的 `hasattr` 探测）——上游这次给了原生方法，**后续可另行收敛**；本轮不动以免扩大面 |
 | 推送状态 | 本轮推 `origin/sp-macanlong-test`（`78095de80c` → `30cc6a6707` 移植提交 + 本文档提交 = 远端新 tip；纯文本，LFS 0 对象；`git ls-remote` 复核远端 tip 一致）|
+
+### 本轮推送落地（2026-10-12 21:05）
+
+`origin/sp-macanlong-test` = **`dc2bbdd1e0`**（`78095de80c` → `30cc6a6707` 移植 + `dc2bbdd1e0` 追踪文档；本记录提交自身为 +1，尚未再复核）。推送手法沿用 AGENTS.md 第三节：本机无 SSH key，`pushInsteadOf` 会把 https 改写成 SSH 而失败 → 走 PAT-helper：
+`GIT_LFS_SKIP_PUSH=1 GIT_TERMINAL_PROMPT=0 git -c credential.helper=/data/ai/bin/gh_credential.sh push --no-verify https://FOREVERZAX1988@github.com/FOREVERZAX1988/openpilot.git sp-macanlong-test:sp-macanlong-test`（token 不进 argv；纯文本 2 提交，LFS 0 对象）。
