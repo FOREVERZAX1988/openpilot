@@ -723,3 +723,29 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 > 单 POST、HTTP/1.1 分块 ~6.5 min —— 均 408 / `remote end hung up`）。故该字体单独成一条
 > 提交落在末尾，**暂留本地**；其余 6 个资产 + 补登记 + 文档已推送。字体文件本身在工作树里
 > 且在本地提交中，等换到快网（PC）或上行恢复后再补推即可，HUD 在此之前回退系统字体。
+
+### 追踪点推进（2026-10-12 09:05）—— 上游 `95f73ff7ce` → `1b2407cc48`（+1 提交，全清）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch --no-tags https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream/test`（HTTPS 匿名可用）。**别再走 `upstream` remote**：本机无私钥，`git fetch upstream test` 直接 `Permission denied (publickey)`；且 `remote.upstream.fetch` 只配了 `master-c3` 一个 refspec，即便有密钥也必须显式给 refspec |
+| 复核手法 | 先直查远端真值 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` → `1b2407cc48`。本机缓存 `upstream/test` 当时还停在 `95f73ff7ce` —— **陈旧 remote-tracking ref 会误报「已最新」，必须先 ls-remote 或 fetch** |
+| 上游 tip | `95f73ff7ce` → **`1b2407cc48`**（线性 +1，与用户「又有更新」一致）|
+| 新提交 | `1b2407cc48` `feat(carrot): sunnypilot onroad HUD overlay for Carrot Vision`：新增 `vision/hud_sp/{index,payload,style}.js`（sunnypilot/webui 风格 onroad HUD，取代 chud 风格集群 HUD 成为 7000 面板默认挂载）；重生成 `web/js/generated/drive.js` + `web/generated/asset-manifest.json`；新增 `tests/hud_sp.test.mjs`、`tests/hud_sp_overlay.test.mjs`。8 文件 `+1270 −194` |
+| 落地手法 | `git cherry-pick 1b2407cc48`，**零冲突**。前提已核对：本仓这 8 个路径此前与上游 tip **逐字节一致**（`git diff --stat 95f73ff7ce HEAD -- <上述路径>` 为空）——这也是本轮能一键干净落地、无需手工并集的原因 |
+| 参数键 | 本提交**不碰 `params_keys.h`**；HUD 的实验模式开关走 `/api/param_set`，用的是**已登记**的 `ExperimentalMode` → **本轮无需补登记、无需重建 `libparams_c.so`**（A1 新鲜度仍 PASS）|
+| 一致性复核 | `git diff --stat upstream/test HEAD -- <8 路径>` = **空**（与上游 tip 逐字节一致）；`installCarrotHudOverlay` **无悬空引用**（集群 HUD 仍在 `./hud/index.js` 可 import，供测试/回退）；契约 `target.CarrotHudOverlay` 未变，`hud_content.js` / `hud/debug.js` 里 `target.CarrotHudOverlay \|\| null` 的读法照旧可用 |
+| 仿真回归 | `sim_test_macan.py` **exit 0（106s）** —— 内含启动冒烟 63 模块 import 无硬错 + A0–A3/C1 全 PASS，结论「Macan 驾驶逻辑无回归」；1 组已知错位用例 SKIP（Toyota 专属 SP 虚拟巡航按钮 API 缺失，与 Macan 无关）。`sim_test_macan_sng.py` **60 通过 / 0 失败**。`sim_test_slope_v2.py` **全通过**。`sim_test_macan_steering.py` **0 弯道帧** —— 本机 route 数据里没有可用弯道片段，转向精度本轮**未被实测**（是「没数据」，不是「通过」）|
+| 预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**（A3 PASS）。3 条 WARN 全是既有项：`MazdaTjaButton` 上游未登记键（非本车路径）、manager fork 子进程未改名、10 处非键名字面量 |
+| node 缺失 | 上游新增的 2 个 `.mjs` 测试**本机执行不了**（`node`/`npm`/`bun` 均未安装）→ 本轮只做静态核对，未跑 JS 单测。后续想在设备上验 HUD 渲染，只能靠**刷新 7000 面板页面**目视 |
+| 生效方式 | 纯 web 资产，**刷新页面即可**，无需重启任何进程（未动 `.py`）|
+| 备份 ref | `backup/pre-port-1b2407cc-1012-0901`（= 移植前 `ab53fa3f97`）|
+| 推送状态 | **未推**。本地 HEAD `569671e6b2`（本轮 hud_sp），其父 `ab53fa3f97` = 那枚 11.4 MB 字体提交；`origin/sp-macanlong-test` 仍停在 `c6eb9b661f` → 想推本轮**必被字体祖先挡住**（本机上行 ~26 KiB/s，单请求超时），详见下节 |
+
+> 结论：上游 `test` tip 这条新提交（onroad HUD overlay）已按内容全清；本轮**无参数键缺口、无需重建**，预检 **0 失败**，Macan 侧仿真回归全绿（转向那条因无弯道数据未测）。
+
+> **推送待办（2026-10-12 09:05）**：现在本地是 `c6eb9b661f → ab53fa3f97(字体 11.4 MB，未推) → 569671e6b2(hud_sp)`。
+> 推 `569671e6b2` 必然连带其祖先字体提交 → 仍会 408。两条出路：
+> - **A（推荐，无需快网）**：**调换顺序**，让 hud_sp 直接落在 `c6eb9b661f` 上（`git rebase --onto c6eb9b661f ab53fa3f97 sp-macanlong-test` 再 `git cherry-pick ab53fa3f97`），
+>   然后只把 hud_sp 那枚提交推到远端分支（相对远端是 fast-forward，**不含字体**），字体继续留在末尾等快网/PC 补推。
+> - **B**：整条一起推，必须换到上行够快的网络（PC），否则字体永远卡住后面所有提交。
