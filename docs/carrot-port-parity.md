@@ -786,3 +786,22 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 生效方式 | 含 `.py`（`modeld` / `selfdrived`）→ 需**重启 modeld / selfdrived**，非纯 web |
 | 备份 ref | `backup/pre-port-4fe71de4-1012-1240`（= 移植前 `c89d510774`）|
 | 推送状态 | 本轮推 `origin/sp-macanlong-test`（`c89d510774` → `be4b3557dd`，纯 `.py`，LFS 0 对象）|
+
+### 追踪点推进（2026-10-12 14:26）—— 上游 `4fe71de403` → `adfa4d806e`（+1 提交，全清）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch https://github.com/mouxangithub/openpilot test:refs/remotes/upstream/test`（HTTPS 匿名可用）；SSH `upstream` remote 仍不可用（本机无 `~/.ssh`，`pushInsteadOf` 只影响推送路径） |
+| 复核手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot refs/heads/test` 查真值 → `adfa4d806e`（不信任陈旧 remote-tracking ref；本仓 `upstream/test` 旧值 `1b2407cc48` 是更早的陈旧残留） |
+| 上游 tip | `4fe71de403` → **`adfa4d806e`**（线性 +1，父提交正是我们的旧追踪点，无其它新提交） |
+| 新提交 | `adfa4d806e` `port cp offline radar validation toolchain (radar/tools + route_replay)` —— 把 CarrotPilot 的离线雷达 cut-in / lead 校验工具链搬进 sunnypilot carrot 树。**开发者专用**：无 manager 注册、无 CAN、永不进入行车路径。`radar/tools`(9) + `radar/route_replay`(6，剥掉 raylib/GLES/USB/H264) + `radar/data`(2，229 KB) + `radar_motion/cutin_{alert,helpers}.py` + `tests/test_cutin_alert.py`(8 unittest) + `pyproject.toml` per-file-ignores。23 文件 `+23013 −0` |
+| 落地手法 | `git cherry-pick adfa4d806e`（不加 `-x`），**零冲突** → `32cfee77f8` |
+| 内容一致性 | **patch-id 逐字节一致**：两边同为 `af922d2239f5e671f39daa1056112ee02fef15f9`；`git show --stat` 两边均 `23 files changed, 23013 insertions(+)` |
+| 参数键 | 本提交**不碰 `params_keys.h`** → **无需补登记、无需重建 `libparams_c.so`** |
+| 一致性复核 | radar 相关路径 `git diff --stat adfa4d806e HEAD -- <radar dirs + test_cutin_alert.py>` = **空**（逐字节一致）；`pyproject.toml` 本提交 hunk **+8 行精确落地**，其余 65 行差异为 fork 既有分歧（移植前 backup 就已差 2 增/73 删，**非本提交引入、非缺口**） |
+| 新增模块 | `sunnypilot.carrot.radar_motion.cutin_alert` / `.cutin_helpers` 本机 import 均 OK |
+| 仿真回归 | `sim_test_macan.py` **全通过**（`test_macan_mlb` 43 tests OK；1 组 Toyota 专属 SKIP，与 Macan 无关）。`sim_test_macan_sng.py` **60 通过 / 0 失败**。`sim_test_slope_v2.py` **全通过**。`sim_test_macan_steering.py` **0 弯道帧** —— 本机 route 无弯道片段，转向精度本轮**未实测**（是「没数据」，不是「通过」） |
+| 预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**（与上轮持平；3 条 WARN 均既有项：`MazdaTjaButton` 上游未登记键、manager fork 子进程未改名、10 处非键名字面量） |
+| 生效方式 | **纯新增离线工具**（无 manager 注册 / 无 CAN / 不在行车路径）→ **无需重启任何进程**；设备/PC 上按 `openpilot/sunnypilot/carrot/radar/tools/README.md` 直接 CLI 调用。route_replay 与 ffmpeg 导出依赖设备运行时（zmq/cereal），留待上车验证 |
+| 备份 ref | `backup/pre-port-adfa4d80-1012-1420`（= 移植前 `64e54fe30b`） |
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`64e54fe30b` → `32cfee77f8` + docs，纯新增，LFS 0 对象） |
