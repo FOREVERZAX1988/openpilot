@@ -749,3 +749,22 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 > - **A（推荐，无需快网）**：**调换顺序**，让 hud_sp 直接落在 `c6eb9b661f` 上（`git rebase --onto c6eb9b661f ab53fa3f97 sp-macanlong-test` 再 `git cherry-pick ab53fa3f97`），
 >   然后只把 hud_sp 那枚提交推到远端分支（相对远端是 fast-forward，**不含字体**），字体继续留在末尾等快网/PC 补推。
 > - **B**：整条一起推，必须换到上行够快的网络（PC），否则字体永远卡住后面所有提交。
+
+### 追踪点推进（2026-10-12 11:58）—— 上游 `1b2407cc48` → `1bc5a6312e`（+1 提交，全清）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch https://github.com/mouxangithub/openpilot test:refs/remotes/mouxan/test`（HTTPS 匿名可用）。SSH `upstream` remote 仍不可用（无私钥） |
+| 复核手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot refs/heads/test` 查真值 → `1bc5a6312e`（不信任陈旧 remote-tracking ref） |
+| 上游 tip | `1b2407cc48` → **`1bc5a6312e`**（线性 +1） |
+| 新提交 | `1bc5a6312e` `fix(carrot): stop the sunnypilot HUD inventing a set speed when cruise is off` —— 修 `hud_sp/payload.js` 两处缺陷：①单位错：`carState.vCruiseCluster` 本就是 kph（openpilot `car/cruise.py` 存 `v_cruise_cluster_kph`），原映射多乘 3.6；②回退错：误用 compact 的 `controlsState.deprecated.vCruiseCluster` 陈旧镜像，巡航未设仍报遗留值（实测 20）。改为只用 `carState.vCruiseCluster` + `is_cruise_set = 0 < set_speed < 255` 门控；`mapSpHudPayload` 不再从 vision_raw 复活幻影；chip 逻辑对齐 webui `onroad.js`（未设时显示 `--`）。5 文件 `+103 −21` |
+| 落地手法 | `git cherry-pick 1bc5a6312e`（不加 `-x`），**零冲突** → `71378742c4`。前提已核对：本仓这 5 个路径与上游 `1b2407cc48` **逐字节一致**（`git diff --stat 1b2407cc48 HEAD -- <5 路径>` 为空）|
+| 参数键 | 本提交**不碰 `params_keys.h`** → **无需补登记、无需重建 `libparams_c.so`** |
+| 一致性复核 | `git diff --stat mouxan/test HEAD -- <5 路径>` = **空**（与上游 tip 逐字节一致）|
+| 仿真回归 | `sim_test_macan.py` **全通过**（含 Macan 纵向帧级回归 `test_macan_mlb` 43 tests OK；1 组 Toyota 专属用例 SKIP，与 Macan 无关）。`sim_test_macan_sng.py` **60 通过 / 0 失败**。`sim_test_slope_v2.py` **全通过**。`sim_test_macan_steering.py` **0 弯道帧** —— 本机 route 无弯道片段，转向精度本轮**未实测**（是「没数据」，不是「通过」）|
+| 预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**（与上轮持平；3 条 WARN 均既有项：`MazdaTjaButton` 上游未登记键、manager fork 子进程未改名、10 处非键名字面量）|
+| node 缺失 | 上游随本提交新增 4 个 `.mjs` 单测，本机 **`node`/`npm`/`bun` 全缺失** → 跑不了，仅静态核对；想验 HUD 渲染只能刷 7000 面板目视 |
+| 生效方式 | 纯 web 资产，**刷新 7000 面板页面即可**，无需重启进程 |
+| 备份 ref | `backup/pre-port-1bc5a631-1012-1158`（= 移植前 `c9cbf10fb2`）|
+| 推送状态 | 本轮随 `71378742c4` 推 `origin/sp-macanlong-test`（上一轮 11.4 MB 字体提交已推成功，不再阻塞）|
+
