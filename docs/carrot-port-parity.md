@@ -768,3 +768,21 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 备份 ref | `backup/pre-port-1bc5a631-1012-1158`（= 移植前 `c9cbf10fb2`）|
 | 推送状态 | 本轮随 `71378742c4` 推 `origin/sp-macanlong-test`（上一轮 11.4 MB 字体提交已推成功，不再阻塞）|
 
+
+### 追踪点推进（2026-10-12 12:40）—— 上游 `1bc5a6312e` → `4fe71de403`（+1 提交，全清）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch https://github.com/mouxangithub/openpilot test:refs/remotes/mouxan/test`（HTTPS 匿名可用）；SSH `upstream` remote 仍不可用（本机无 `~/.ssh`，`pushInsteadOf` 把 HTTPS 重写成 SSH 仅是推送路径） |
+| 复核手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot refs/heads/test` 查真值 → `4fe71de403`（不信任陈旧 remote-tracking ref） |
+| 上游 tip | `1bc5a6312e` → **`4fe71de403`**（线性 +1，无其它新提交） |
+| 新提交 | `4fe71de403` `feat(carrot): complete opt-in neural-signal stop supervision + comparison shadow` —— 接通 CarrotPilot 信号灯功能（本仓此前已有零件但从未接线），两层均默认关闭：①**只读对照影子** `modeld/signal_shadow.py` 独立 CPU worker，仅写 cloudlog `signalModelShadow`；未装 `policy_shadow.onnx`/manifest 时 `ShadowClient.optional()`→None，stock 设备跑原模型逐字节不变；②**停车监督** `SignalAssistRuntime` 仅当 `/data/signal-color-shadow/assist_enabled == "1"` 才非 None，红灯确认→强制 `XState.e2eStopped`（零停车距离 / `v_cruise`），绿灯只解除 hold 不回 GO。6 文件 `+439 −10` |
+| 落地手法 | `git cherry-pick 4fe71de403`（不加 `-x`），**零冲突** → `be4b3557dd` |
+| 内容一致性 | **patch-id 逐字节一致**：`git show <sha> \| git patch-id --stable` 两边同为 `1ede1c08196a…`；`git show --stat` 两边均 `+439 −10`（同 6 文件） |
+| 参数键 | 本提交**不碰 `params_keys.h`** → **无需补登记、无需重建 `libparams_c.so`** |
+| 一致性复核 | `git diff --stat mouxan/test HEAD -- <6 路径>` 仅 `carrot_functions.py` **1 行**差异——本仓刻意保留旧式前向注解 `"DrivingMode \| None"`（上游为裸 `DrivingMode \| None`，PEP 604），属 fork 适配，非缺口 |
+| 仿真回归 | `sim_test_macan.py` **全通过**（`test_macan_mlb` 43 tests OK；1 组 Toyota 专属 SKIP）。`sim_test_macan_sng.py` **60 通过 / 0 失败**。`sim_test_slope_v2.py` **全通过**。`sim_test_macan_steering.py` **0 弯道帧**（本机 route 无弯道片段，转向精度本轮**未实测**，是「没数据」不是「通过」）|
+| 预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**（3 条 WARN 均既有项：`MazdaTjaButton` 上游未登记键、manager fork 子进程未改名、10 处非键名字面量）|
+| 生效方式 | 含 `.py`（`modeld` / `selfdrived`）→ 需**重启 modeld / selfdrived**，非纯 web |
+| 备份 ref | `backup/pre-port-4fe71de4-1012-1240`（= 移植前 `c89d510774`）|
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`c89d510774` → `be4b3557dd`，纯 `.py`，LFS 0 对象）|
