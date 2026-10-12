@@ -867,4 +867,4 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | Macan 回归 | `python3 ai/tools/sim_test_macan.py` → **全部通过**（Macan 纵向帧级回归 43/43 OK；按键/巡航模式 OK；1 组 Toyota 专属已知错位 SKIP）|
 | 落地提交 | `7ed1579f66`（params_keys.h + audit + presets + test + README + borrow-analysis + carrot_tuning_items）+ `c6993df3fa`（7000-5080-fusion 文档）|
 | 备份 ref | `backup/pre-port-30cc8e00-261012-1740`（= 移植前 `3c885c08ab`）|
-| 推送状态 | 本轮**仅落本地**（待确认后再推 `origin/sp-macanlong-test`）|
+| 推送状态 | ✅ 已推送 `origin/sp-macanlong-test`：本轮 5 提交 `ffc34b266a..b08c912ec6` 落地；`git ls-remote` 复核 tip = `b08c912ec6` = 本地 HEAD；子模块指针（ai/opendbc/panda/webui/jetlink_repo）均已各自推送一致 |
