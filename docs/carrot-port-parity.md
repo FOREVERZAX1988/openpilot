@@ -848,3 +848,23 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 落地提交 | `d7e26df9fa`（7 文件 `+1097 −58`）|
 | 备份 ref | `backup/pre-port-53ef2408-1012-1800`（= 移植前 `ffc34b266a`）|
 | 推送状态 | 本轮**仅落本地**（用户本轮要求「拉取到本地」）→ 未推 `origin/sp-macanlong-test` |
+
+### 追踪点推进（2026-10-12 19:15）—— 上游 `53ef240855` → `30cc8e00`（+2 提交：params 登记修复 + 融合路线图）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` 查真值 → `30cc8e00`；SSH `upstream`（`git@github.com:mouxangithub/openpilot.git`）仍 `Permission denied (publickey)`，未用 |
+| 复核手法 | 本地 `mouxan/test` remote-tracking ref = `30cc8e00`，与真值一致（本轮无陈旧残留）；`git merge-base --is-ancestor 53ef240855 30cc8e00` = 真 → 线性 +2，父链 `53ef240855 → 5a231be18a → 30cc8e0064` |
+| 上游 tip | `53ef240855` → **`30cc8e00`** |
+| 新提交 1 | `5a231be18a` `fix(carrot): register params the intro preset writes, audit reader/writer coverage`（7 文件 `+546 −117`）：登记 intro 预设 / SSH keys 流程写入但未声明的键（修 `/api/intro/apply_preset` 500）；`audit_param_consistency` 新增**第 6 节**（write-side 字面量键未登记即失败、解析器修正、一次性建索引）；新增 `test_carrot_intro_presets.py`；修正 `AutoCurveSpeedFactor(_H)` 文案方向（「higher」实际更慢）|
+| 新提交 2 | `30cc8e0064`（subject `1`，2 文件 `+269 −2`）：新增 `docs/7000-5080-fusion.md`；刷 `asset-manifest.json` 两处哈希（`tools.js` / `drive.css`）|
+| **「我们做了没」判定** | **确有缺口**。A2 预检报 `3/641` 键未登记：`DriverMonitoringMode`、`DriverMonitoringEnabled`、`GithubSshKeysUpdatedAt` —— 本仓**未登记**，需补。而 `HyundaiCameraSCC`、`CanfdHDA2` 本仓**已有**（sunnypilot car-specific 段，`PERSISTENT \| BACKUP, BOOL`）→ 上游新增的 2 条 INT 定义**丢弃**，否则 params map 出现重复键（取值实现定义） |
+| 落地手法 | `git cherry-pick 5a231be18a 30cc8e0064`（不加 `-x`）。`params_keys.h` 自动合并后**手工删去 2 行重复键**（改用注释说明），`DriverMonitoringMode`/`DriverMonitoringEnabled`/`GithubSshKeysUpdatedAt` 保留；`carrot_tuning_items.py` 1 处文案冲突 → **取上游新文案「Higher slows more for curves.」+ 保留本仓隐式拼接**；其余文件自动合并 |
+| 内容一致性 | 整取文件与上游 `30cc8e00` **逐字节一致**（`git hash-object` == `git rev-parse 30cc8e00:<path>`）：`presets.py`、`carrot/README.md`、`docs/cp-to-sp-borrow-analysis.md`、`test_carrot_intro_presets.py`、`docs/7000-5080-fusion.md`。`asset-manifest.json` 本仓**已等于**上游 `30cc8e00` 版（哈希由同一 bundle 源内容决定）→ 该 hunk 为 **no-op** |
+| 参数键 | **新增 3 键 → 需重建 `libparams_c.so`**：`scons --ccflags="-O0" -j1 openpilot/common/libparams_c.so` 重建成功（19:12，比头文件新）→ 预检 A1 构建新鲜度 / A2 原生键表 ABI **转 PASS** |
+| 校验 | carrot 套件 **553 passed**（1 条环境性 `cv2` 缺失失败，`test_signal_assist_runtime` 内 `import cv2` 失败，与本移植无关、移植前后一致）；`test_carrot_intro_presets` **4/4**；`audit_param_consistency` **PASSED（6 节全过，含新第 6 节）**。ruff：移植前 **18** / 移植后 **18** → **零新增**（18 条均为既存 fork 分歧：隐式拼接 ISC002、`# noqa: E501` 被早前移除、`glob`/`Params` 等未用 import —— 非本轮引入）|
+| 预检 | `python3 ai/tools/sim_preflight.py` → **7 通过 / 2 警告 / 1 跳过 / 0 失败**（含重建后 A1/A2 转 PASS）|
+| Macan 回归 | `python3 ai/tools/sim_test_macan.py` → **全部通过**（Macan 纵向帧级回归 43/43 OK；按键/巡航模式 OK；1 组 Toyota 专属已知错位 SKIP）|
+| 落地提交 | `7ed1579f66`（params_keys.h + audit + presets + test + README + borrow-analysis + carrot_tuning_items）+ `c6993df3fa`（7000-5080-fusion 文档）|
+| 备份 ref | `backup/pre-port-30cc8e00-261012-1740`（= 移植前 `3c885c08ab`）|
+| 推送状态 | 本轮**仅落本地**（待确认后再推 `origin/sp-macanlong-test`）|
