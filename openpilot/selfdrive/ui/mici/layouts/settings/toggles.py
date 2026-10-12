@@ -45,7 +45,7 @@ class ExperimentalModeConfirmPage(NavScroller):
                                          lambda: self.dismiss(on_confirm))
 
     self._scroller.add_widgets([
-      GreyBigButton(tr("enabling\nexperimental mode"), "scroll to continue",
+      GreyBigButton(tr("enabling\nexperimental mode"), tr("scroll to continue"),
                     gui_app.texture("icons_mici/setup/warning.png", 64, 64)),
       GreyBigButton("", tr("openpilot defaults to driving in chill mode.")),
       GreyBigButton("", tr("Experimental mode enables alpha-level features that aren't ready for chill mode.")),

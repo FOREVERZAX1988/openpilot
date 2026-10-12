@@ -138,7 +138,7 @@ class PairBigButton(BigButton):
       else:
         self.set_value(tr("upgrade to prime"))
     else:
-      self.set_text("pair")
+      self.set_text(tr("pair"))
       self.set_value("connect.comma.ai")
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
@@ -178,7 +178,7 @@ class DeviceLayoutMici(NavScroller):
       params.remove("LiveDelay")
       params.put_bool("OnroadCycleRequested", True, block=True)
 
-    reset_calibration_btn = EngagedConfirmationButton(tr("reset calibration"), "reset", gui_app.texture("icons_mici/settings/device/lkas.png", 122, 64),
+    reset_calibration_btn = EngagedConfirmationButton(tr("reset calibration"), tr("reset"), gui_app.texture("icons_mici/settings/device/lkas.png", 122, 64),
                                                       reset_calibration_callback)
 
     reboot_btn = EngagedConfirmationCircleButton(tr("reboot"), gui_app.texture("icons_mici/settings/device/reboot.png", 64, 70),
