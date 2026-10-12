@@ -219,6 +219,10 @@ class Params:
   def get_str(self, key, default="", block=False):
     return self._get_typed(key, default, str, block)
 
+  # 上游 ef4153c74c 在此处新增 get_int/get_float/get_str；本 fork 早在 ab65c63d49 就为
+  # 同一缺口落地了上面的 mock 感知版本（多一个可选 block 形参，且先解 bytes 再转 int/float），
+  # 语义为上游版的超集 —— 故不再重复定义，避免同名遮蔽（后定义会盖掉 mock 分支）。
+
   def _put_cast(self, key, dat):
     return ensure_bytes(self.python2cpp(type(dat), self.get_type(key), dat, key))
 
@@ -240,6 +244,24 @@ class Params:
     else:
       k = self.check_key(key).decode()
       self._mock_store[k] = bool(val)
+
+  def put_int(self, key, val, block=False):
+    self.put(key, int(val), block=block)
+
+  def put_float(self, key, val, block=False):
+    self.put(key, float(val), block=block)
+
+  def put_str(self, key, val, block=False):
+    self.put(key, str(val), block=block)
+
+  def put_bool_nonblocking(self, key, val):
+    self.put_bool(key, val, block=False)
+
+  def put_int_nonblocking(self, key, val):
+    self.put_int(key, val, block=False)
+
+  def put_float_nonblocking(self, key, val):
+    self.put_float(key, val, block=False)
 
   def remove(self, key):
     k = self.check_key(key)
