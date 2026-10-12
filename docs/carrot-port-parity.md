@@ -868,3 +868,20 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 落地提交 | `7ed1579f66`（params_keys.h + audit + presets + test + README + borrow-analysis + carrot_tuning_items）+ `c6993df3fa`（7000-5080-fusion 文档）|
 | 备份 ref | `backup/pre-port-30cc8e00-261012-1740`（= 移植前 `3c885c08ab`）|
 | 推送状态 | ✅ 已推送 `origin/sp-macanlong-test`：本轮 5 提交 `ffc34b266a..b08c912ec6` 落地；`git ls-remote` 复核 tip = `b08c912ec6` = 本地 HEAD；子模块指针（ai/opendbc/panda/webui/jetlink_repo）均已各自推送一致 |
+
+### 追踪点推进（2026-10-12 20:55）—— 上游 `30cc8e0064` → `ef4153c74c`（+1 提交 params 类型化读写器；**自动合并遮蔽已纠正**）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch --no-tags https://github.com/mouxangithub/openpilot.git test:refs/remotes/mouxan/test`（HTTPS 匿名可用）；SSH `upstream` 仍不可用 |
+| 复核手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` 查真值 → `ef4153c74c`；本地缓存 ref `mouxan/test` 停在 `30cc8e0064`（正好等于我们的追踪点）→ fetch 输出 `30cc8e0064..ef4153c74c`（本轮无陈旧误报）|
+| 上游 tip | `30cc8e0064` → **`ef4153c74c`**（线性 +1；父提交正是我们的旧追踪点）|
+| 新提交 | `ef4153c74c` `fix(params): add get_int/get_float/get_str + put_int/float/str + nonblocking aliases`（1 文件 `+34`）：给基类 `Params` 补 carrot/sunnypilot 大量调用的类型化读写器（上游自陈口径：75 处 `get_int`、21 处 `get_float`）；上游自述 `controlsd` 因 `params.get_int("UseLaneLineCurveSpeed")` 抛 `AttributeError` 而启动即退（`shouldBeRunning=True, running=False` → `processNotRunning`，openpilot 从未入段）|
+| **「我们做了没」判定** | **半重叠、确有缺口**。`get_int`/`get_float`/`get_str` 本 fork 早在 `ab65c63d49` 就为同一缺口落地，且是**超集**（`_get_typed` 带 mock 分支、多一个可选 `block=` 形参、先解 bytes 再 cast）——当时已记为「上游潜在缺陷」；**真缺**的是写入器与别名：`put_int`/`put_float`/`put_str`/`put_bool_nonblocking`/`put_int_nonblocking`/`put_float_nonblocking`。本仓已有真实调用点会炸 `AttributeError`：`openpilot/sunnypilot/selfdrive/car/cruise_helpers.py:107`、`openpilot/selfdrive/car/cruise.py:976`、`openpilot/system/webrtc/carrot/webrtcd.py:45`（注释即该缺口的绕行记录）、`openpilot/sunnypilot/carrot/server/services/params.py:275`（`hasattr` 探测）|
+| 落地手法（**不能照单全收**）| `git cherry-pick ef4153c74c`（不加 `-x`，与历史一致）自动合并「成功」，但把上游的 `get_int`/`get_float`/`get_str` **追加在本仓同名方法之后** → **同名遮蔽**（Python 后定义胜出：会盖掉 mock 分支，并丢掉 `block=` 形参）。已手工删掉上游那 3 个重复定义、原地留注释说明，保留本仓超集版本；本条净 `+22` 行（写入器 18 行 + 注释 4 行）|
+| 与上游差异（有意）| 本 fork `Params` 带 `libparams_c.so` 缺失时的 **mock 降级**（低内存编译产物缺位时不炸 UI，`9def688a8c` 引入），上游无此分支 → `openpilot/common/params.py` **本就不做逐字节对齐**，只保证 API 语义一致（未登记键仍抛 `UnknownKeyName`，已实测）|
+| 生效方式 | 纯 Python；无键表 / 资产 / capnp 变更 → 重启相关进程或下次 onroad 即生效，无需重编 |
+| 备份 ref | `backup/pre-port-ef4153c7-261012-2051`（= 移植前 `78095de80c`）|
+| 校验 | `py_compile` OK；**原生库在位 + mock 两条路径**实测新增 6 个方法 + `get_*` 往返取值；未登记键 `put_int` 仍抛 `UnknownKeyName`；审计脚本 `audit_param_consistency.py` **PASSED**（含第 6 项「代码里写字面量键名的写入均已登记」）；`ai/tools/sim_test_macan.py` **全绿**：启动冒烟 63 模块 import，上车前一致性预检 **10 通过 / 3 警告 / 2 跳过 / 0 失败**，6 组用例（1+23+4+6+43）全 OK |
+| 未做 / 风险 | 未清理既有的绕行代码（`openpilot/sunnypilot/carrot/config.py:311` 的注释与包装、`webrtcd.py:45`、`cruise_helpers.py` 的 `hasattr` 探测）——上游这次给了原生方法，**后续可另行收敛**；本轮不动以免扩大面 |
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`78095de80c` → `30cc6a6707` 移植提交 + 本文档提交 = 远端新 tip；纯文本，LFS 0 对象；`git ls-remote` 复核远端 tip 一致）|
