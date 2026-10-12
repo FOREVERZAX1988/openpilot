@@ -194,6 +194,31 @@ class Params:
       k = self.check_key(key).decode()
       return bool(self._mock_store.get(k, False))
 
+  def _get_typed(self, key, default, cast, block=False):
+    """Coerce a param to `cast`, falling back to `default` for unset/bogus values.
+
+    carrot code ported from cp calls the canonical typed getters
+    (`get_int` / `get_float` / `get_str`); this fork's Params only had `get_bool`.
+    """
+    value = self.get(key, block=block)
+    if value is None:
+      return cast(default)
+    try:
+      if isinstance(value, bytes):
+        value = value.decode()
+      return cast(value)
+    except (TypeError, ValueError, AttributeError):
+      return cast(default)
+
+  def get_int(self, key, default=0, block=False):
+    return self._get_typed(key, default, int, block)
+
+  def get_float(self, key, default=0.0, block=False):
+    return self._get_typed(key, default, float, block)
+
+  def get_str(self, key, default="", block=False):
+    return self._get_typed(key, default, str, block)
+
   def _put_cast(self, key, dat):
     return ensure_bytes(self.python2cpp(type(dat), self.get_type(key), dat, key))
 
