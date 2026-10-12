@@ -890,3 +890,20 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 
 `origin/sp-macanlong-test` = **`dc2bbdd1e0`**（`78095de80c` → `30cc6a6707` 移植 + `dc2bbdd1e0` 追踪文档；本记录提交自身为 +1，尚未再复核）。推送手法沿用 AGENTS.md 第三节：本机无 SSH key，`pushInsteadOf` 会把 https 改写成 SSH 而失败 → 走 PAT-helper：
 `GIT_LFS_SKIP_PUSH=1 GIT_TERMINAL_PROMPT=0 git -c credential.helper=/data/ai/bin/gh_credential.sh push --no-verify https://FOREVERZAX1988@github.com/FOREVERZAX1988/openpilot.git sp-macanlong-test:sp-macanlong-test`（token 不进 argv；纯文本 2 提交，LFS 0 对象）。
+
+### 追踪点推进（2026-10-13 00:40）—— 上游 `ef4153c74c` → `310dc07c26`（+2 提交，全清，仿真零失败）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` 查真值 → `310dc07c26a80eff2cbcbd094cd4fd25351fdb3e`；SSH `upstream`（`git@github.com:mouxangithub/openpilot.git`）仍是 `Permission denied (publickey)`，未用 |
+| 复核手法 | 本地 `mouxan/test` remote-tracking ref = `310dc07c26`，与真值一致（无陈旧残留）；`git merge-base --is-ancestor ef4153c74c 310dc07c26` = 真 → 线性 +2，父链 `ef4153c74c → e79197e7dd → 310dc07c26` |
+| 上游 tip | `ef4153c74c` → **`310dc07c26`** |
+| 新提交 1 | `e79197e7dd` `fix(radarcan): pass CP_SP to RadarInterface (was crashing on startup)`（1 文件 `+4 −2`，`openpilot/sunnypilot/carrot/radar/radarcan.py`）：`RadarInterface` 构造签名要 `CP_SP`，本仓未传 → 启动即崩 |
+| 新提交 2 | `310dc07c26` `fix(ui): stop native HUD showing a phantom MAX set speed when cruise is off`（4 文件 `+15 −19`）：onroad MAX 贴片不再回退 `controlsState.deprecated.vCruise`（该镜像在巡航未开时保留陈旧/初值 20、30），set speed 只取 `carState.vCruiseCluster`，并保留 `0 < set_speed < 255` 的 `is_cruise_set` 判据。覆盖 `selfdrive/ui/onroad/hud_renderer.py`、`selfdrive/ui/mici/onroad/hud_renderer.py`、`sunnypilot/mici/layouts/onroad_info_panel.py`、`sunnypilot/onroad/speed_limit.py`（set speed + SLA 箭头比较）。本仓 `1bc5a6312e` 只修了 webui 侧 `drive.js`/`hud_sp`，这 4 个**原生渲染器**是漏网 |
+| **「我们做了没」判定** | **确有缺口**：两条都未做（本仓 `hud_renderer` 系与 `radarcan` 仍是旧写法）→ 全清落地 |
+| 落地手法 | `git cherry-pick e79197e7dd 310dc07c26`（不加 `-x`），零冲突；落地提交 `a311506288`（radarcan）、`cf32ff8ef8`（HUD，位于其上） |
+| 内容一致性 | 与上游**逐字节等价**：`git show <本地> ｜ git patch-id --stable` 与 `git show <上游> ｜ git patch-id --stable` 相同，两对分别为 `829e6cb0…`（radarcan）与 `1c8f7716…`（HUD）。即移植后补丁内容零漂移，非「重新实现」 |
+| 全仿真回归（`python3 ai/tools/sim_test_macan.py`） | 启动冒烟：63 模块 import 无硬错 + AST 无未定义名（2 个可选进程缺依赖已跳过）；上车前一致性预检：**10 通过 / 3 警告 / 2 跳过 / 0 失败（A1/A2/A3 参数链、B1 模型链、C1/C2 运行时链）**；用例：Macan 车型接口 1/1 OK、`test_cruise_speed` OK、`test_cruise_mode` OK(skipped=2)、`test_button_state_tracker` 6/6 OK、opendbc `test_macan_mlb` **43/43 OK**；1 组已知错位 SKIP（`test_custom_cruise`：opendbc pin 缺 SP 虚拟巡航按钮 API，Toyota 专属）→ **本轮无 bug 需要修复** |
+| 已知 WARN（非本轮引入，照旧逐条列出） | A3「疑似非键名字面量」与 `MazdaTjaButton`（上游 `params_keys.h` 也未登记，非本车路径）；C1「manager fork 子进程未改名」 |
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`2745c9cdf1` → 本提交，即远端新 tip；纯文本，LFS 0 对象；推后 `git ls-remote` 复核一致）|
+| 未做 / 风险 | 未顺手收敛 `1bc5a6312e` 遗留的 webui 侧同类写法（本轮只跟上游口径）；`ai` 子模块工作区有 4 处未提交的测试脚手架改动（见下），本轮不动 |
