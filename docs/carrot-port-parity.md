@@ -907,3 +907,18 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 已知 WARN（非本轮引入，照旧逐条列出） | A3「疑似非键名字面量」与 `MazdaTjaButton`（上游 `params_keys.h` 也未登记，非本车路径）；C1「manager fork 子进程未改名」 |
 | 推送状态 | 本轮推 `origin/sp-macanlong-test`（`2745c9cdf1` → 本提交，即远端新 tip；纯文本，LFS 0 对象；推后 `git ls-remote` 复核一致）|
 | 未做 / 风险 | 未顺手收敛 `1bc5a6312e` 遗留的 webui 侧同类写法（本轮只跟上游口径）；`ai` 子模块工作区有 4 处未提交的测试脚手架改动（见下），本轮不动 |
+
+### 追踪点推进（2026-10-13 01:00）—— 上游 `310dc07c26` → `0b1573e409`（+1 提交：radarInput 发布；全仿真零失败）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` 查真值 → `0b1573e409`；再 `git fetch --no-tags https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream/test`。SSH `upstream` 仍 `Permission denied (publickey)`，未用；fetch 顺带取回 opendbc 子模块 `ddaaf873` |
+| 复核手法 | 本地 `mouxan/test` 停在 `310dc07c26`（=上一追踪点），且是 `upstream/test` 的旧快照（`git merge-base --is-ancestor mouxan/test upstream/test` = 真）；新提交线性 +1，父提交正是旧追踪点 |
+| 上游 tip | `310dc07c26` → **`0b1573e409`** |
+| 新提交 | `0b1573e409` `fix(card): publish carState.radarInput so the ported radarcan has batch bounds`（2 文件）：opendbc 加 `CarState.radarInput @71 :RadarInput{firstCanMonoTime/lastCanMonoTime/canPacketCount/receiveMonoTime}`（子提交 `ddaaf873`，+14）+ `card.py` 用 `CI.update` 已建好的 `can_list` 填该字段（live 用 `time.monotonic_ns()`，replay 用 logged 时间戳）。radarcan 的 `RadarEgoSample.from_car_state` 早已读 `carState.radarInput`，但**发布侧与 opendbc 字段都没跟**，`EnableRadarTracks` 开时 radarcan 启动即崩（`struct has no such member; name = radarInput`） |
+| **「我们做了没」判定** | **确有缺口**：`card.py` 与 opendbc `car.capnp` 均无 `radarInput` → 全清落地 |
+| 落地手法 | opendbc：`git merge --no-ff ddaaf873`（其父 `ffd662d88` 已是本仓祖先 → 零冲突，+14）→ `1c12ca1db`；主仓：`git show 0b1573e409 -- card.py -p | git apply`（逐字节移植那 7 行，零冲突） |
+| 内容一致性 | `card.py` 与上游 `git patch-id --stable` 相同（逐字节等价）；opendbc 走 merge，保留 `ddaaf873` 原始 sha |
+| 全仿真回归 | `python3 ai/tools/sim_test_macan.py` → 启动冒烟 + 一致性预检 **10 通过 / 3 警告 / 2 跳过 / 0 失败**；Macan 车型接口（动态名 `test_car_interfaces_226_PORSCHE_MACAN_MK1`）1/1 OK、`test_cruise_speed` OK(skipped=6)、`test_cruise_mode` OK(skipped=2)、`test_button_state_tracker` 6/6 OK、opendbc `test_macan_mlb` **43/43 OK**；1 组已知错位 SKIP（`test_custom_cruise`）。另：`RadarEgoSample.from_car_state` 直连功能测试 OK；`card.py` py_compile OK；carrot 套件 498 例仅 3 例因设备 venv 无 pytest 报错（环境性，非回归）→ **本轮无 bug 需要修复** |
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`0c882c553c` → 本提交，即远端新 tip；opendbc 子模块 `bbdaeae6c` → `1c12ca1db` 一并推送；推后 `git ls-remote` 复核） |
+| 未做 / 风险 | `ai` 子模块工作区仍有 4 处未提交的测试脚手架改动，本轮不动 |
