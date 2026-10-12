@@ -824,4 +824,4 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**（与上轮持平；3 条 WARN 均既有项）|
 | 生效方式 | 提交 1 含 `.py`（`controlsd` / `LatcontrolTorqueExt` / `carrot_man` 等）+ `custom.capnp` 追加字段（capnp schema 演进安全；C++ 侧无 `curveDist` 消费者 → 无需重建 cereal）→ **重启相关进程 / 下次 onroad 生效**；提交 2 为 web 资产 → 刷新 UI 即可 |
 | 备份 ref | `backup/pre-port-aab674bf-1012-1630`（= 移植前 `a8cf979af1`）|
-| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`a8cf979af1` → `253ac354fa`，纯文本，LFS 0 对象）|
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`a8cf979af1` → **`2b1e7a0374`** = +2 移植 + 2 处缺口修补 + 本文档；纯文本，LFS 0 对象；`git ls-remote` 已核验远端 tip 一致）|
