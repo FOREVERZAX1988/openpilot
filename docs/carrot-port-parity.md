@@ -825,3 +825,26 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 生效方式 | 提交 1 含 `.py`（`controlsd` / `LatcontrolTorqueExt` / `carrot_man` 等）+ `custom.capnp` 追加字段（capnp schema 演进安全；C++ 侧无 `curveDist` 消费者 → 无需重建 cereal）→ **重启相关进程 / 下次 onroad 生效**；提交 2 为 web 资产 → 刷新 UI 即可 |
 | 备份 ref | `backup/pre-port-aab674bf-1012-1630`（= 移植前 `a8cf979af1`）|
 | 推送状态 | 本轮推 `origin/sp-macanlong-test`（`a8cf979af1` → **`2b1e7a0374`** = +2 移植 + 2 处缺口修补 + 本文档；纯文本，LFS 0 对象；`git ls-remote` 已核验远端 tip 一致）|
+
+### 追踪点推进（2026-10-12 18:05）—— 上游 `aab674bf41` → `53ef240855`（+1 提交 i18n；**分流落地**）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch --no-tags https://github.com/mouxangithub/openpilot.git test:refs/remotes/mouxan/test`（HTTPS 匿名可用）；SSH `upstream` 仍不可用 |
+| 复核手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` 查真值 → `53ef240855`。**本地 remote-tracking ref 是陈旧值**：`mouxan/test` 停在 `4fe71de403`（比我们的追踪点还旧 3 个提交），fetch 输出 `4fe71de403..53ef240855` —— 再次印证「先 ls-remote，不信缓存 ref」 |
+| 上游 tip | `aab674bf41` → **`53ef240855`**（线性 +1；`git merge-base --is-ancestor aab674bf41 mouxan/test` = 真，父提交正是我们的旧追踪点）|
+| 新提交 | `53ef240855` `i18n: translate mici settings/onboarding strings for zh-CHS/zh-CHT`（20 文件 `+28944 −19690`）：①7 个 mici `.py` 把裸英文串包进 `tr()`；②重生成 `app.pot` 并 merge 进 13 个 catalog（1325→1490 entries）；③补 166 条 zh-CHS 译文 + s2twp 派生 zh-CHT。纯显示层，无控制路径 |
+| **「我们做了没」判定** | **部分重叠、确有缺口**。逐条比对上游新增的 `tr()` 行在本仓是否已存在：`onboarding.py`(6/6)、`developer.py`(7/7) **已覆盖**（fork 早前自办 i18n 顺带做了）；`imu_calibration.py`(0/3)、`network/__init__.py`(0/6，含缺 `tr` import)、`toggles.py`(11/12)、`augmented_road_view.py`(0/1)、`device.py`(12/15) → **缺 14 行** → 未做，需移植 |
+| 落地手法（**不能整条 cherry-pick**）| 上游这条在 Windows 上重生成 catalog，`#:` 引用行整片变成反斜杠（`openpilot\selfdrive\...`），本仓 catalog 是正斜杠；且本仓 catalog 条目数本就多于上游（zh-CHS 1899 vs 1447），两边是**不同代**的 catalog → 整条 cherry-pick 会在 13 个 catalog 上产生数万行冲突。故**分流**：`.py` 按本仓实际行等价改写；catalog 只取上游**本提交新产生的 zh 译文**，按本仓风格（正斜杠 `#:`、单行 `msgid`、按 msgid 排序插位）写回 |
+| 代码落地 | 5 文件 15 增 14 删：`device.py`（`set_text("pair")`→`tr(...)`；`EngagedConfirmationButton(..., "reset", ...)`→`tr("reset")`）、`imu_calibration.py`（`use/start/reset imu calibration` 三处）、`network/__init__.py`（补 `from ...multilang import tr` + `wi-fi`/`not connected`/`starting`/`connecting...`/`obtaining IP...` 换 tr；fork 的 `normalize_ssid(... or "wi-fi")` 只包 fallback 分支）、`toggles.py`（`"scroll to continue"`）、`augmented_road_view.py`（AR offroad label `"start the car to\nuse sunnypilot"`）|
+| 刻意不取 | `device.py` 的 `_onroad_preview_btn`：上游此提交写成 `tr("onroad\npreview")`，本仓早已 `tr("Onroad Preview")`（fork 文案不同、**已 tr()**）→ 属 fork 适配，**非缺口**，保留本仓文案 |
+| 参数键 | 本提交**不碰 `params_keys.h`** → **无需补登记、无需重建 `libparams_c.so`** |
+| `app.pot` | **不刷**。上游这条重生成 `app.pot` 用的是 Windows 反斜杠引用（1491 条，且不含本仓独有串 1559 条）；本仓历来不把 `app.pot` 纳入逐提交推进（前几轮 i18n 提交也只动 zh catalog）→ 保持现状，避免反向丢串 |
+| catalog 落地 | zh-CHS：`+127` 新增 + `7` 条空 msgstr 回填（另 34 条本仓已有译文，跳过）；zh-CHT：`+131` 新增 + `37` 条回填。占位符逐条校验一致、无 `@x;` 实体、`#:` 无行号；新增条目**零重复**（本仓既有的 2/3 条重复条目 —— `Enable Carrot Blind Spot Data`、`this may take up to\na minute{dots}`、`CLEARING...` —— 非本轮引入，保持原样）|
+| 字形覆盖 | 新增译文用到的全部汉字在 `OpFont-Regular.otf` cmap 中**全命中**（zh-CHS 245 / zh-CHT 355 个唯一字符，唯一「缺失」是 `\n` 转义符，非字形）→ 无「方框」风险 |
+| 校验 | `openpilot.selfdrive.ui.tests.test_translations` **48/48 OK**；`test_raylib_ui` OK；`font_fallback_coverage.py` 248/248 PASSED；5 个 `.py` `py_compile` 通过 |
+| 预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**。首次跑出 1 条 `manager 单实例` FAIL 属**瞬时残影**：扫到 PID 160178，该进程随即自行退出，复跑归零（现状 = 根实例 18311 + 其 fork 子 19995，正常）|
+| 生效方式 | 纯显示层：`.po` 由 UI 运行时读取 → **重启 UI 即生效**，无需重编、无需重启 manager |
+| 落地提交 | `d7e26df9fa`（7 文件 `+1097 −58`）|
+| 备份 ref | `backup/pre-port-53ef2408-1012-1800`（= 移植前 `ffc34b266a`）|
+| 推送状态 | 本轮**仅落本地**（用户本轮要求「拉取到本地」）→ 未推 `origin/sp-macanlong-test` |
