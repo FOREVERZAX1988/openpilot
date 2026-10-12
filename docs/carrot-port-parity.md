@@ -922,3 +922,20 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 全仿真回归 | `python3 ai/tools/sim_test_macan.py` → 启动冒烟 + 一致性预检 **10 通过 / 3 警告 / 2 跳过 / 0 失败**；Macan 车型接口（动态名 `test_car_interfaces_226_PORSCHE_MACAN_MK1`）1/1 OK、`test_cruise_speed` OK(skipped=6)、`test_cruise_mode` OK(skipped=2)、`test_button_state_tracker` 6/6 OK、opendbc `test_macan_mlb` **43/43 OK**；1 组已知错位 SKIP（`test_custom_cruise`）。另：`RadarEgoSample.from_car_state` 直连功能测试 OK；`card.py` py_compile OK；carrot 套件 498 例仅 3 例因设备 venv 无 pytest 报错（环境性，非回归）→ **本轮无 bug 需要修复** |
 | 推送状态 | 本轮推 `origin/sp-macanlong-test`（`0c882c553c` → 本提交，即远端新 tip；opendbc 子模块 `bbdaeae6c` → `1c12ca1db` 一并推送；推后 `git ls-remote` 复核） |
 | 未做 / 风险 | `ai` 子模块工作区仍有 4 处未提交的测试脚手架改动，本轮不动 |
+
+### 追踪点推进（2026-10-13 06:25）—— 上游 `0b1573e409` → `7e75b92e60`（+2 提交：dPath radard 启动即崩两处修复；全仿真零失败）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` 查真值 → `7e75b92e60`；再 `git fetch https://github.com/mouxangithub/openpilot.git test`（HTTPS 匿名可用，落 `FETCH_HEAD`）。SSH `upstream`（`tgit@github.com`）本机仍无 key，未用 |
+| 复核手法 | 本地 `sp-macanlong-test` 停在 `5999821519`（其文档记录的追踪点 = `0b1573e409`），`git merge-base --is-ancestor 0b1573e409 HEAD` 为真；新提交线性 **+2**，首提交 `503eb18dd0` 的父提交正是旧追踪点 `0b1573e409`（`git rev-list --count 0b1573e409..7e75b92e60` = 2）|
+| 上游 tip | `0b1573e409` → **`7e75b92e60`** |
+| 新提交 1 | `503eb18dd0` `fix(radard_dpath): subscribe to deviceMotion, not the nonexistent livePose`（1 文件 `+8 −4`）—— 本 fork 无 `livePose` 服务、也无 `LivePose` capnp 类型，`SubMaster.__init__` 在 `SERVICE_LIST` 查 `livePose` → `KeyError` → daemon 启动即崩（`process not running: radard_dpath`）。本 fork `locationd` 仍以 20Hz 发 `deviceMotion`，其字段（`angularVelocityDevice.z/.valid`、`inputsOK`、`sensorsOK`）正是 `_yaw_rate` 所需，`controlsd/lagd/paramsd` 也都订阅它。改 `SubMaster` 列表、`sm["..."]` 读点、`ignore_alive/ignore_valid` 三处 `livePose`→`deviceMotion`，**无控制逻辑变更** |
+| 新提交 2 | `7e75b92e60` `fix(radard_dpath): write only RadarState/LeadData fields this fork's schema has`（1 文件 `+48 −12`）—— 该 daemon 由更新版上游 cp 移植而来，写了本 fork `log.capnp` 没有的字段：`RadarState.carStateMonoTime`、`leadLeft/leadRight`、`leads{Left,Center,Right,CutIn,Left2,Right2}`、`leadCutInRisk`，以及 `LeadData` 的 `status/jLead/score/cutOutTime/cutOutConfidence`（本 fork 把 `@11 status` 改名为 `present`，且止于 `radarTrackId@15`）。写这些字段在首个 modelV2 帧即抛 `struct has no such member` → 取到 CarParams 后立刻崩。新增 `_assign_lead()`（按目标 builder 的 `schema.fields` 过滤，并做 `status→present` 别名映射），`leadOne/leadTwo` 走它；多引字段与 `carStateMonoTime` 仅在 `hasattr` 时设置；list 每帧 `.init()` |
+| **「我们做了没」判定** | **确有缺口**：本仓 `openpilot/sunnypilot/carrot/radar/radard_dpath.py` 移植前 blob `843d5ad6c0` **与上游 `0b1573e409` 版逐字节一致** —— 同样是 `_yaw_rate(sm["livePose"])`(L131) + `"livePose"` 在 `SubMaster`(L164) + `ignore_alive/valid`(L166/167)，且同样直接写 `carStateMonoTime`/`leadLeft…`/`leadsLeft…` 等不存在的字段 → 两处致命缺陷俱全，**全清落地** |
+| 落地手法 | `git cherry-pick 503eb18dd0 7e75b92e60`（不加 `-x`）→ 本地 `ad5a0c74d8`、`c87f206bf8`，**零冲突**（两提交仅动这一文件，且移植前本仓上下文与上游父版完全一致）|
+| 内容一致性 | 移植后文件 blob `f0cbd2be69` **== 上游 `7e75b92e60` 版**（`git diff FETCH_HEAD -- <file>` 为空）→ 逐字节一致 |
+| 全仿真回归 | 预检 `python3 ai/tools/sim_preflight.py` → **7 通过 / 2 警告 / 1 跳过 / 0 失败**；`python3 ai/tools/sim_test_macan.py` → **全部通过**（Macan 帧级回归 43/43 OK；按键状态跟踪 6/6 OK；巡航模式 OK(skipped=2)、smart-cruise OK(skipped=2)；1 组 Toyota 专属已知错位 SKIP）；carrot 套件 498 例仅 3 例 `ModuleNotFoundError: No module named 'pytest'` 报错（设备 venv 未装 pytest，环境性、与本移植无关），其余 495 例全过；`ruff check` 变更文件 **All checks passed**；变更文件 `py_compile` OK → **本轮无 bug 需要修复** |
+| 生效方式 | `radard_dpath` 是独立 daemon（`EnableRadarTracks` 开启时经 manager 拉起）；本轮为纯 bug 修复、**无新增 Param 键 → 无需重建 `libparams_c`**；上车重启即生效 |
+| 备份 ref | `backup/pre-port-59998215-261013`（= 移植前 `5999821519`）|
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`5999821519` → 本提交，远端新 tip；opendbc 子模块指针不变；推后 `git ls-remote` 复核）|
