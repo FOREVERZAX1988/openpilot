@@ -805,3 +805,23 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 生效方式 | **纯新增离线工具**（无 manager 注册 / 无 CAN / 不在行车路径）→ **无需重启任何进程**；设备/PC 上按 `openpilot/sunnypilot/carrot/radar/tools/README.md` 直接 CLI 调用。route_replay 与 ffmpeg 导出依赖设备运行时（zmq/cereal），留待上车验证 |
 | 备份 ref | `backup/pre-port-adfa4d80-1012-1420`（= 移植前 `64e54fe30b`） |
 | 推送状态 | 本轮推 `origin/sp-macanlong-test`（`64e54fe30b` → `32cfee77f8` + docs，纯新增，LFS 0 对象） |
+
+### 追踪点推进（2026-10-12 16:55）—— 上游 `adfa4d806e` → `aab674bf41`（+2 提交，含 2 处上游潜在缺陷修补）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | `git fetch https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream/test`（HTTPS 匿名可用）；SSH `upstream`（`tgit@github.com`）本轮仍 `Permission denied (publickey)`，本机无 `tgit`、无 `~/.ssh/config` |
+| 复核手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot refs/heads/test` → 真值 `aab674bf41`，再 fetch 落 ref（两者一致，本轮无陈旧残留） |
+| 上游 tip | `adfa4d806e` → **`aab674bf41`**（线性 +2，父提交正是我们的旧追踪点）|
+| 新提交 1 | `742e6a566e` `fix(carrot): pair curve decel with its own distance, wire lane-line curve gate`（13 文件 `+324 −39`）—— 视觉弯道减速不再借用手机的 maneuver 距离：新增 `curveDist`（`custom.capnp` **@75**，追加不复用；本 fork `CarrotManSP` 最大序号 @74 → **无冲突**），沿 carrot_functions → carrot_serv → carrot_man 透传，`SmartCruiseControlMap` 改用之；`UseLaneLineCurveSpeed` 补上读端（`LateralLaneAssist` 慢弯门闸，0 = 常开），`controlsd` 每帧喂 `vTurnSpeed`；两组弯道标签方向修正 + 去掉双控死旋钮 |
+| 新提交 2 | `aab674bf41` `add local China map dock (Tianditu + Leaflet) to 7000 drive page`（18 文件 `+1531 −50`）—— 7000 驱车页内嵌天地图 + Leaflet 地图坞（`web/map/*` 7 个新文件 + 设置页开关 + 三语翻译），纯 web |
+| 落地手法 | `git cherry-pick 742e6a566e aab674bf41` → 本地 `7428f44cf0`、`b6c375cc54`。提交 1 仅 `carrot_settings_sp.json` 的 `_generated` 元数据块冲突（fork `kept=179` / 5 个未登记 vs 上游 154 / 11，**取 fork 侧**），随后跑 `build_settings_catalog.py` 重新生成复核 → **产物零差异**；其余 12 文件自动合并，提交 2 零冲突 |
+| 内容一致性 | 提交 2：18/18 文件与上游**逐字节一致**，patch-id 同为 `54c5f52a2f…`。提交 1：patch-id **不同**，差异全在既存 fork 分歧 —— `_generated` 块 + 6 个文件（`controlsd` 11 行、carrot_man 23 行、test_carrot_man 55 行等），移植前对 `adfa4d806e` 比对即已存在，**非本提交引入、非缺口**；关键语义逐点核对在位（`curveDist @75`、map_controller 读 `curveDist`、lane-line 门闸、`lateral_lane_assist` 与其测试 / `LatcontrolTorqueExt` / `sp_param_labels` 与上游一致）|
+| 参数键 | 两提交**均不碰 `params_keys.h`** → **无需补登记、无需重建 `libparams_c.so`**（键表仍 638；`UseLaneLineCurveSpeed` 早已登记为 INT、默认 `"0"`）；`audit_param_consistency.py` 五段全过 |
+| **缺口 1（本轮关键）** | 上游新码调用 `params.get_int()`，而**本 fork 的 `Params` 只有 `get_bool`/`get`** → `LatcontrolTorqueExt` 用真 `Params()` 构造 `LateralLaneAssist` 时直接 `AttributeError`（Macan 车型接口仿真实测：`test_car_interfaces_226_PORSCHE_MACAN_MK1` FAILED，整轮仿真因此 exit 1）。补法：给本 fork `Params` **新增 `get_int`/`get_float`/`get_str`**（薄封装 `get()`，原生 + mock 两条路径，与 `get_bool` 同风格；未登记键仍抛 `UnknownKeyName`）→ 既修控制链路，又让移植文件保持与上游逐字节一致（`ab65c63d49`）。上游自身同样缺（`upstream/test:openpilot/common/params.py` 无 `get_int`），只是没跑过接口套件 → **记为上游潜在缺陷** |
+| **缺口 2** | 上游提交 2 重写了 `js/generated/tools.js` 与 `css/generated/drive.css`，却没刷 `web/generated/asset-manifest.json`（上游 test 分支至今仍是旧摘要）→ 本 fork 的 `AssetManifestLoader.validate()` 会拒绝服务地图坞。按 loader 同一 `sha256(CRLF→LF)` 规则重生两条摘要（`tools.runtime`、`drive.styles`，`253ac354fa`），**strict validate() 通过** |
+| 仿真回归 | `sim_test_macan.py` **exit 0 / 全通过**（补 `params.get_int` 前为 1 组 FAILED，补齐后 🎉）；`test_macan_mlb` 43 tests OK；1 组 Toyota 专属 SKIP。`sim_test_macan_sng.py` **60 通过 / 0 失败**。`sim_test_slope_v2.py` **全通过**。`sim_test_macan_steering.py` **0 弯道帧** —— 本机 route 无弯道片段，转向精度本轮**未实测**（是「没数据」，不是「通过」）|
+| 预检 | `python3 ai/tools/sim_preflight.py --runtime` → **10 通过 / 3 警告 / 2 跳过 / 0 失败**（与上轮持平；3 条 WARN 均既有项）|
+| 生效方式 | 提交 1 含 `.py`（`controlsd` / `LatcontrolTorqueExt` / `carrot_man` 等）+ `custom.capnp` 追加字段（capnp schema 演进安全；C++ 侧无 `curveDist` 消费者 → 无需重建 cereal）→ **重启相关进程 / 下次 onroad 生效**；提交 2 为 web 资产 → 刷新 UI 即可 |
+| 备份 ref | `backup/pre-port-aab674bf-1012-1630`（= 移植前 `a8cf979af1`）|
+| 推送状态 | 本轮推 `origin/sp-macanlong-test`（`a8cf979af1` → `253ac354fa`，纯文本，LFS 0 对象）|
