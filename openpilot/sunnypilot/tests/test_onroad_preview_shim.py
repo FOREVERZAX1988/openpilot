@@ -11,6 +11,7 @@ Two contracts are pinned here, and both are easy to break from a distance:
     spread write here would damage the calibration the car actually drives with.
 """
 import time
+import warnings
 from unittest import mock
 
 import numpy as np
@@ -22,7 +23,8 @@ from openpilot.selfdrive.locationd.calibrationd import HEIGHT_INIT, INPUTS_NEEDE
 from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.onroad_preview_shim import (CALIBRATION_EVERY, PUBLISH_HZ, SERVICES,
                                                       calibration_message, parked_messages,
-                                                      publish_frame, stored_calibration)
+                                                      publish_frame, stored_calibration,
+                                                      stored_calibration_bytes)
 
 CALIBRATED_BLOCKS = 42
 
@@ -210,3 +212,31 @@ class TestOnTheRealBus(OpenpilotTestCase):
     self.assertTrue(sm['carState'].standstill)
     self.assertFalse(sm['carControl'].enabled)
     self.assertFalse(sm['carControlSP'].mads.enabled)
+
+  def test_the_four_hz_calibration_is_serialized_once_for_the_whole_preview(self):
+    """This process re-sends one calibration for as long as the preview is up. A
+    capnp message is write-once: feeding the builder there writes it again on every
+    4 Hz frame, which capnp warns leaks (in memory and in the serialized data). So
+    what goes on the bus is bytes, serialized once -- and the frame that draws the
+    path keeps arriving."""
+    Params().put("CalibrationParams", calibration_blob(), block=True)
+
+    pm = messaging.PubMaster(list(SERVICES))
+    sm = messaging.SubMaster(list(SERVICES))
+    calibration = stored_calibration_bytes(Params())
+    self.assertIsInstance(calibration, bytes, "serialized once, then sent as bytes")
+
+    with warnings.catch_warnings(record=True) as caught:
+      warnings.simplefilter("always")
+      for frame in range(3 * CALIBRATION_EVERY):
+        publish_frame(pm, calibration, frame)
+
+      deadline = time.monotonic() + 5.0
+      while time.monotonic() < deadline and not sm.seen["extrinsicsCalibration"]:
+        sm.update(100)
+
+    self.assertEqual([str(w.message) for w in caught if "written once" in str(w.message)], [],
+                     "the calibration is serialized once, not written again every frame")
+    self.assertTrue(sm.seen["extrinsicsCalibration"], "the 4 Hz calibration never arrived")
+    self.assertTrue(sm.valid["extrinsicsCalibration"])
+    self.assertTrue(np.allclose(sm["extrinsicsCalibration"].height, [1.234]))

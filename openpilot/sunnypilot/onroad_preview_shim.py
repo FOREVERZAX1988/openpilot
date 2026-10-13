@@ -142,10 +142,21 @@ def parked_messages() -> dict:
   return {'carState': car_state, 'carControl': control, 'carControlSP': control_sp}
 
 
+def stored_calibration_bytes(params: Params) -> bytes:
+  """The calibration this process publishes, read and serialized exactly once, as
+  the bytes the 4 Hz service is fed. A capnp message is write-once, and this one is
+  re-sent on every CALIBRATION_EVERY-th frame for as long as the preview is up: a
+  builder here would be written again on every send, which capnp warns leaks (in
+  memory and in the serialized data). Built from what calibrationd left on disk and
+  never written back, as above."""
+  return calibration_message(*stored_calibration(params)).to_bytes()
+
+
 def publish_frame(pm, calibration, frame: int) -> None:
   """One loop: the parked services every frame, the stored calibration on every
-  CALIBRATION_EVERY-th. Split out so a test can drive a real SubMaster with it
-  and show the swap window actually opens."""
+  CALIBRATION_EVERY-th. `calibration` is the bytes from stored_calibration_bytes,
+  so re-sending it writes nothing twice. Split out so a test can drive a real
+  SubMaster with it and show the swap window actually opens."""
   for service, msg in parked_messages().items():
     pm.send(service, msg)
   if frame % CALIBRATION_EVERY == 0:
@@ -154,9 +165,10 @@ def publish_frame(pm, calibration, frame: int) -> None:
 
 def main() -> NoReturn:
   pm = messaging.PubMaster(list(SERVICES))
-  # read once: nothing that writes CalibrationParams runs while the preview is up
-  # (calibrationd is offroad), and the preview is entered deliberately
-  calibration = calibration_message(*stored_calibration(Params()))
+  # read once -- nothing that writes CalibrationParams runs while the preview is up
+  # (calibrationd is offroad), and the preview is entered deliberately -- and
+  # serialized once: see stored_calibration_bytes.
+  calibration = stored_calibration_bytes(Params())
 
   rk = Ratekeeper(PUBLISH_HZ, None)
   frame = 0
