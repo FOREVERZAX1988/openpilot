@@ -1,6 +1,7 @@
 """The parked preview's stand-in signals, against what they have to serve.
 
-Two contracts are pinned here, and both are easy to break from a distance:
+Three contracts are pinned here, and every one of them is easy to break from a
+distance:
 
   * jetlink is handed the drive only while nothing is in control. The adapter's
     in_control() is False exactly when carState, carControl and carControlSP are
@@ -9,6 +10,10 @@ Two contracts are pinned here, and both are easy to break from a distance:
   * CalibrationParams is read, never written: the whole reason the preview gets a
     stand-in for calibrationd instead of calibrationd itself is that a reset or a
     spread write here would damage the calibration the car actually drives with.
+  * the parked frame claims a live carState and not a healthy CAN. valid is what
+    the preview's own readers need; canValid is what every writer in the tree
+    gates on, so a frame that claimed both would look enough like a driving car
+    to open carrot_bluetooth's command path offroad.
 """
 import time
 import warnings
@@ -240,3 +245,45 @@ class TestOnTheRealBus(OpenpilotTestCase):
     self.assertTrue(sm.seen["extrinsicsCalibration"], "the 4 Hz calibration never arrived")
     self.assertTrue(sm.valid["extrinsicsCalibration"])
     self.assertTrue(np.allclose(sm["extrinsicsCalibration"].height, [1.234]))
+
+
+class TestWhatTheParkedFrameDoesNotClaim(OpenpilotTestCase):
+  """valid, and deliberately not canValid.
+
+  carState.valid is what the preview needs -- a service a reader never heard from
+  counts as dead, and the adapter's in_control() would never open. canValid is a
+  different claim: it is the car's CAN health, and it is what every writer in the
+  tree gates on. card, controlsd and selfdrived each check CS.canValid on their way to a
+  sendcan or a CarParams write, and the one always-running consumer that does read
+  carState offroad -- carrot_bluetooth's car_ok
+  (sunnypilot/carrot/bluetooth/daemon.py:144) -- goes False on it, which is its
+  hold_blocked branch. So the frame says "a car whose CAN is not there", which is
+  the truth while parked offroad, and the preview's readers need nothing more.
+  """
+
+  def test_the_parked_car_is_valid_and_does_not_claim_can(self):
+    car_state = parked_messages()['carState']
+    self.assertTrue(car_state.valid)
+    self.assertFalse(car_state.carState.canValid,
+                     "a parked preview must not claim CAN health: every writer gates on it")
+
+  def test_nothing_a_writer_publishes_is_in_the_frame(self):
+    # the CAN writer, the engagement record, the fingerprint only card writes:
+    # offroad each of them would be a lie, and none of them is published here
+    for writer in ('sendcan', 'controlsState', 'selfdriveState', 'carParams', 'pandaStates'):
+      self.assertNotIn(writer, SERVICES)
+
+  def test_carrot_bluetooths_command_gate_stays_shut(self):
+    """The daemon's own expression, over a real SubMaster fed one shim frame."""
+    pm = RecordingPub()
+    publish_frame(pm, calibration_msg(), 0)
+    frame = dict(pm.sent)
+    sm = messaging.SubMaster(['carState'])
+    sm.update_msgs(time.monotonic(), [frame['carState'].as_reader()])
+
+    # the gate is shut by the CAN claim, not by the service being absent: this is
+    # exactly sunnypilot/carrot/bluetooth/daemon.py:144
+    self.assertTrue(sm.alive['carState'] and sm.valid['carState'])
+    self.assertFalse(sm['carState'].canValid)
+    car_ok = sm.alive['carState'] and sm.valid['carState'] and sm['carState'].canValid
+    self.assertFalse(car_ok, "a parked preview must not look like a car the bluetooth bridge may command")

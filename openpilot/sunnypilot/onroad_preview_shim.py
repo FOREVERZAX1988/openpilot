@@ -36,7 +36,8 @@ preview already assumes: a parked car.
 
 The gate is onroad_preview_shim() in system/manager/process_config.py, over
 `IsOnroadPreview` and `started`. The contract this serves is pinned by
-sunnypilot/tests/test_onroad_preview_shim.py.
+sunnypilot/tests/test_onroad_preview_shim.py, and the offroad consumers of what
+it publishes are audited in ai/docs/PREVIEW_ONROAD_SHIM.md.
 """
 from __future__ import annotations
 
@@ -118,6 +119,15 @@ def parked_messages() -> dict:
   * carState, standstill at vEgo 0. Every reader in the preview (the adapter's
     in_control, the speed on the HUD) got the never-updated default struct for
     this before; the values are the same, the service is simply alive now.
+    valid is True and canValid is deliberately left at its default False. That is
+    the load-bearing part of this frame: canValid is the car's CAN health, and it
+    is what every writer in the tree gates on -- card, controlsd and selfdrived each
+    check CS.canValid on their way to a sendcan or a CarParams write, and all three
+    are only_onroad besides. The one always-running consumer that does read
+    carState offroad is carrot_bluetooth's car_ok
+    (sunnypilot/carrot/bluetooth/daemon.py:144), and it goes False on this, which
+    is its hold_blocked branch. A parked frame that looked more real than this one
+    -- canValid set -- would quietly open that command path offroad.
   * carControl and carControlSP, disengaged. This is the whole point: in_control()
     is False once these are alive and valid, which is the window jetlink's large
     model swaps in on. MADS counts as in control too, so it is disengaged with
