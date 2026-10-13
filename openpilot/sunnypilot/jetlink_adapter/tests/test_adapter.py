@@ -97,7 +97,8 @@ class TestParams(OpenpilotTestCase):
     self.assertNotEqual(settings.marks()[KEYS.big_model], before)
 
   def test_every_key_is_declared_with_its_type(self):
-    types = {'link': ParamKeyType.INT, 'offroad': ParamKeyType.BOOL, 'charge_phone': ParamKeyType.BOOL}
+    types = {'link': ParamKeyType.INT, 'offroad': ParamKeyType.BOOL, 'charge_phone': ParamKeyType.BOOL,
+             'preview': ParamKeyType.BOOL}
     params = Params()
     from openpilot.common.params import UnknownKeyName
     for field, key in KEYS._asdict().items():
