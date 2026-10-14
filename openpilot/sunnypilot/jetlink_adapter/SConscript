@@ -12,7 +12,16 @@ import sys
 
 from SCons.Script import Action
 
-Import('env', 'arch', 'camera_configs')
+Import('env', 'arch')
+# modeld/SConscript exports camera_configs, but SCons only hands an export to the
+# SConscripts read *after* the one that made it: this file has a copy only when
+# modeld's is read first. Derive the same two-camera list it does when it is not,
+# so the build does not silently depend on SConstruct's read order
+try:
+  Import('camera_configs')
+except Exception:
+  from openpilot.common.transformations.camera import _ar_ox_fisheye, _os_fisheye
+  camera_configs = [(c.width, c.height) for c in (_ar_ox_fisheye, _os_fisheye)]
 
 basedir = env.Dir("#").abspath
 jetlink_repo = env.Dir("#jetlink_repo").abspath
