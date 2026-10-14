@@ -939,3 +939,19 @@ pgrep: 无 encoderd / carrot_webrtcd / carrot_vision_encoderd（停车，未点�
 | 生效方式 | `radard_dpath` 是独立 daemon（`EnableRadarTracks` 开启时经 manager 拉起）；本轮为纯 bug 修复、**无新增 Param 键 → 无需重建 `libparams_c`**；上车重启即生效 |
 | 备份 ref | `backup/pre-port-59998215-261013`（= 移植前 `5999821519`）|
 | 推送状态 | 本轮推 `origin/sp-macanlong-test`（`5999821519` → 本提交，远端新 tip；opendbc 子模块指针不变；推后 `git ls-remote` 复核）|
+
+### 追踪点推进（2026-10-14）—— 上游 `7e75b92e60` → `8637b9ef37`（+8 提交：`tn` 合并 + C3 bring-up；本轮仅 2 处落地）
+
+| 项 | 值 |
+|---|---|
+| 取上游手法 | 先 `git ls-remote https://github.com/mouxangithub/openpilot.git refs/heads/test` 查真值 → `8637b9ef37`；再 `git fetch --no-tags https://github.com/mouxangithub/openpilot.git test:refs/remotes/upstream-latest/test`（HTTPS 匿名可用）。SSH `upstream`（`git@github.com`）本机仍无 key，未用 |
+| 复核手法 | 两法判等价：① `git merge-base --is-ancestor 7e75b92e60 HEAD` 为**假**（本仓是 cherry-pick 血统，非祖先）；② `git cherry -v HEAD upstream-latest/test` → 已等价 **30** / 未落地 **177**（177 里绝大多数是上游 openpilot master 的 cabana/imgui、esim、`op.sh` 之类，本 fork 一贯不取）。与上游的共同祖先为 `20be508f66`（2026-09-30）|
+| 上游 tip | `7e75b92e60` → **`8637b9ef37`** |
+| 新提交构成 | 3 个 WIP（`a9f0d6c3ad`/`eb236a1d9e` 仅 opendbc 指针、`e99fa13771` 仅 `.lfsconfig`）＋ `07527081f0` **Merge branch 'tn' into test**（307 文件 `+17176 −10693`：openpilot master 抬升＋`sunnypilot/modeld_v2` 重构＋`chestnutGpuState` 等）＋ `b85c561152` docs＋`9184d8ab81` liveTracks `@153`→`@154`＋`3a0103880c` C3 bring-up＋`a9fac39f16` accel 测试对齐＋`8637b9ef37` accel xfail |
+| **判定①（构建）「确有缺口」** | 本仓 `jetlink_adapter/SConscript` 的 `Import('env','arch','camera_configs')` 依赖 `modeld/SConscript` 的 `Export`。SCons **只把 export 交给其后读入的 SConscript**（已用 `/tmp` 小工程双向复现：导入方先读 → `scons: *** Import of non-existent variable`）。本仓现在能建**只因** `SConstruct` 第 293 行（modeld）先于第 297 行（sunnypilot）；一旦重排、或某配置不读 modeld，全量构建即硬失败（上游 3a0103880c 正是踩到这个）|
+| 落地手法① | **不照抄上游**：上游直接改成「本地推导」，会作废本仓 `test_warp_build.py` 里 2 个依赖「注入 `camera_configs`」接缝的测试（照抄实测 2/9 失败）。改为 `try: Import('camera_configs')` / `except Exception:` 本地推导（SCons 抛的是**可捕获**的 `UserError`，已用小工程验证）：注入接缝保留、顺序依赖消除，**真实行为不变**——推导值与 modeld 导出值同为 `[(1928,1208),(1344,760)]`，而 modeld 本就无条件导出两台相机 |
+| **判定②（告警文案）既有缺口** | 非本轮提交引入：上游 `dcbd66ad81`（#38629）已把 `bigModelFailed` 副文案改为 `small model is still available`，本 fork `d8f44429a8`（「②类扁平化」批量导入）又把它改回旧文案 `now driving on small model`，导致与**逐字节等同上游**的 `test_chestnut_parity.py` 断言冲突（红灯）。按「上游与本地同功能则以上游为主」回改 |
+| 未落地（附理由） | ① `9184d8ab81` liveTracks `@153`→`@154`：本仓**无** `chestnutGpuState`，`@153` 无 ordinal 冲突 → 现在改反而会让既有录像里的 `liveTracks` 按新 ordinal 解不出来（capnp 按 ordinal 上线路；本仓 `radar_validation_replay`/`route_replay` 要读旧记录）→ **留到实际并入 tn/chestnut 时再改**（届时冲突不可避免）。② `a9fac39f16`/`8637b9ef37` accel 测试：本仓测试已用 `ECO_ENGINE_OFF_BP` 与 `lead_forecast` sink，29/29 通过 → 无缺口。③ `3a0103880c` 的 panda→`a4806cea`（仅 STM32F4 固件 build）与 `a9fac39f16` 的 opendbc→`33cae1a9b`（hyundai CarState）：本机 C3、本车 `PORSCHE_MACAN_MK1`(MLB)，都不涉及 → 暂不跟进指针。④ `07527081f0` tn 合并整体：openpilot master 抬升＋`modeld_v2`/warp 重构，**需独立分支 + 上车验证**，本轮不动 |
+| 校验 | `scons -Q -n openpilot/common/libparams_c.so` 解析通过（**改前也通过**——这本身即顺序依赖的证明）；`test_warp_build.py` **9/9**、`test_chestnut_parity.py` 1 failed→**8/8**（两文件合计 17/17）；carrot 套件 **553 passed**（1 例环境性 `cv2` 缺失）；accel 套件 **29 passed**；`test_carrot_man` **144/144**（含 discover 顺序——上游 3a0103880c 修的正是这类隔离问题，本仓 `_SAVED_ATTRS` 机制已覆盖且更强，故无缺口）|
+| 既有红灯（本轮未修，另行分诊） | `test_seam.py::test_every_hook_uses_only_its_part_of_the_adapter`、`test_tinygrad.py::test_the_gpu_comes_up_before_modeld_goes_realtime`：两文件同样逐字节等同上游，失败在本仓接线/文件布局与运行环境，**已在改动前复现**，与本轮无关 |
+| 推送状态 | 本轮推**新分支** `sp-macanlong-test-sync-1014`（**不动** `sp-macanlong-test`，设备侧不受影响）|
