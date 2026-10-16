@@ -92,6 +92,17 @@ def warp_path(cam_w: int, cam_h: int, model_w: int, model_h: int) -> Path:
   return WARP_DIR / f'warp_{cam_w}x{cam_h}_{model_w}x{model_h}_tinygrad.pkl'
 
 
+def lossless_warp_path(cam_w: int, cam_h: int, model_w: int, model_h: int) -> Path:
+  """The same warp with its MED errors beside the frame (warp_build --lossless),
+  where jetlink looks for it (jetlink.openpilot.warp.lossless_path: the plain
+  name with _lossless_ before the suffix). Only the Wi-Fi link loads it
+  (joining.py): it sends the frame packed, about half the bytes
+  (jetlink.lossless), which is what a radio needs. The plain warp is what USB
+  runs, and the two are one build apart."""
+  path = warp_path(cam_w, cam_h, model_w, model_h)
+  return path.with_name(path.name.replace('_tinygrad.pkl', '_lossless_tinygrad.pkl'))
+
+
 def owner_config():
   """What jetlinkd needs: data only, so the owner imports nothing heavy."""
   from jetlink.openpilot.interface import Keys, OwnerConfig

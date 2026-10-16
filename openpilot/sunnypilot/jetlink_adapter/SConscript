@@ -18,6 +18,13 @@
 # and a prebuilt release carries one for every camera it installs on. Nothing
 # compiles a warp at runtime; a device without one stays on the small model and
 # the offroad alert says why.
+#
+# Two per camera, one build apart: the plain warp, which USB runs, and the
+# lossless build beside it (warp_build --lossless, jetlink's own name rule),
+# which carries the frame's MED errors as a second output. Only the Wi-Fi link
+# loads that one: it sends the frame packed instead of raw, about half the
+# bytes, which is what a radio needs (jetlink.lossless). A jetlink without
+# jetlink.openpilot.lossless gets the plain warp alone.
 import glob
 import os
 
@@ -58,17 +65,34 @@ if arch == 'comma_arm64':
     File(jetlink_warp),                                           # the shape jetlink's loader insists on
   ]
 
+  # jetlink's lossless frames (jetlink.openpilot.lossless, jetlink.lossless):
+  # the errors are what the Wi-Fi link packs, so the build makes that warp
+  # wherever the submodule has the module. An empty jetlink_repo, or one from
+  # before it, gets the plain warp alone and the link goes raw
+  jetlink_lossless = File("#jetlink_repo/jetlink/openpilot/lossless.py")
+  # without the submodule there is no link at all, and no warp to build for it
+  build_warps = os.path.isfile(jetlink_warp)
+  build_lossless = build_warps and os.path.isfile(jetlink_lossless.abspath)
+
   for cam_w, cam_h in camera_configs:
-    # the target is the path modeld opens, from the adapter, so the two cannot drift
-    pkl = str(jetlink_adapter.warp_path(cam_w, cam_h, model_w, model_h))
-    # On a source build '-' ignores the exit status: every device builds this,
-    # link on or not, so a failed compile must not fail the build. It leaves no
-    # pickle, modeld stays on the small model, the link's alert says why, and
-    # the next build tries again. A release fails here instead: it installs on
-    # devices that never build
-    cmd = (f'{"-" if not prebuilt else ""}{tg_flags} python3 -m openpilot.sunnypilot.jetlink_adapter.warp_build '
-           f'--camera {cam_w}x{cam_h} --model {model_w}x{model_h} --output {pkl}')
+    # the targets are the paths modeld opens, from the adapter, so the two
+    # cannot drift; the lossless one is where jetlink looks for it beside the plain
+    builds = [(str(jetlink_adapter.warp_path(cam_w, cam_h, model_w, model_h)), '', [])]
+    if build_lossless:
+      builds.append((str(jetlink_adapter.lossless_warp_path(cam_w, cam_h, model_w, model_h)), ' --lossless',
+                     [jetlink_lossless]))
     # the build's own root on the path: the builder imports openpilot and the
-    # tinygrad symlink beside it, and a prebuilt build may not run from the tree
-    lenv = env.Clone(ENV={**env['ENV'], 'PYTHONPATH': os.pathsep.join([env['ENV'].get('PYTHONPATH', ''), basedir])})
-    lenv.Command(pkl, tinygrad_files + script_files, Action(cmd, "  [JETLINK WARP] $TARGET"))
+    # tinygrad symlink beside it, and a prebuilt build may not run from the tree.
+    # The submodule as well, under which jetlink itself imports: the root beside
+    # it carries `jetlink` only as a symlink a prebuilt runner does not make
+    path = [env['ENV'].get('PYTHONPATH', ''), basedir, env.Dir("#jetlink_repo").abspath]
+    lenv = env.Clone(ENV={**env['ENV'], 'PYTHONPATH': os.pathsep.join(path)})
+    for pkl, flag, extra in builds if build_warps else []:
+      # On a source build '-' ignores the exit status: every device builds this,
+      # link on or not, so a failed compile must not fail the build. It leaves no
+      # pickle, modeld stays on the small model, the link's alert says why, and
+      # the next build tries again. A release fails here instead: it installs on
+      # devices that never build
+      cmd = (f'{"-" if not prebuilt else ""}{tg_flags} python3 -m openpilot.sunnypilot.jetlink_adapter.warp_build '
+             f'--camera {cam_w}x{cam_h} --model {model_w}x{model_h} --output {pkl}{flag}')
+      lenv.Command(pkl, tinygrad_files + script_files + extra, Action(cmd, "  [JETLINK WARP] $TARGET"))

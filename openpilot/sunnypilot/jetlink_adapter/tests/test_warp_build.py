@@ -103,13 +103,13 @@ class TestWarpTargets(OpenpilotTestCase):
       # in the fork's tree: a file in the submodule leaves it dirty for the updater
       self.assertEqual(Path(target).parent, Path(BASEDIR) / 'openpilot' / 'sunnypilot' / 'jetlink_adapter' / 'models')
 
-  def test_each_command_runs_jetlinks_build_for_the_camera_its_target_names(self):
+  def test_each_command_runs_the_forks_build_for_the_camera_its_target_names(self):
     for target, (cmd, _) in run_sconscript().items():
       cam = Path(target).name.split('_')[1]
-      self.assertIn(f'-m jetlink.openpilot.warp --adapter {jetlink_adapter.__name__} ', cmd)
+      self.assertIn('-m openpilot.sunnypilot.jetlink_adapter.warp_build ', cmd)
       self.assertIn(f'--camera {cam} ', cmd)
       self.assertIn(f'--model {MODEL[0]}x{MODEL[1]} ', cmd)
-      self.assertTrue(cmd.endswith(f'--output {target}'), cmd)
+      self.assertTrue(cmd.endswith(f'--output {target}') or cmd.endswith(f'--output {target} --lossless'), cmd)
 
   def test_jetlink_is_on_the_commands_path_by_its_checkout(self):
     # the prebuilt runner makes no `jetlink` link at the root, so the path has
@@ -143,21 +143,32 @@ class TestTheCommandBuilds(OpenpilotTestCase):
     CPU device, since this runs off the comma."""
     import jetlink
     checkout = Path(jetlink.__file__).resolve().parents[1]
-    # the path the build has, less anywhere this runner finds jetlink. The
-    # build's own root stays even though it carries one on a comma, where
-    # `jetlink` is a symlink into the submodule: dropping it would take
-    # openpilot off the child's path and the compile would fail on the import
-    base = os.pathsep.join(p for p in sys.path
-                           if p and (Path(p) == Path(BASEDIR) or not (Path(p) / 'jetlink').exists()))
     with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as out:
-      commands = run_sconscript(CAMERAS[:1], jetlink=checkout, pythonpath=base, root=root)
-      [(cmd, env)] = [command for target, command in commands.items() if '_lossless_' not in target]
+      commands = run_sconscript(CAMERAS[:1], jetlink=checkout, pythonpath=child_path(), root=root)
       pkl = Path(out) / 'warp.pkl'
-      cmd = cmd.removeprefix('-').rsplit(' --output ', 1)[0] + f' --output {pkl}'
-      done = subprocess.run(cmd.replace('python3', sys.executable, 1), shell=True, capture_output=True, text=True,
-                            cwd=out, env={**os.environ, **env, 'DEV': 'CPU'}, timeout=600)
+      done = run_build_command(commands, pkl, lossless=False)
       self.assertEqual(done.returncode, 0, done.stderr)
       self.assertTrue(pkl.is_file())
+
+
+def child_path() -> str:
+  """The path the build gives its child: this runner's own, less anywhere it
+  finds jetlink, since the build adds the checkout's. The build's root stays
+  even though this checkout carries a jetlink of its own: on a comma `jetlink`
+  is a symlink beside openpilot, and dropping the root would take openpilot off
+  the child's path."""
+  return os.pathsep.join(p for p in sys.path
+                         if p and (Path(p) == Path(BASEDIR) or not (Path(p) / 'jetlink').exists()))
+
+
+def run_build_command(commands: dict, out: Path, lossless: bool) -> subprocess.CompletedProcess:
+  """Run one of the SConscript's commands for real, on tinygrad's CPU device:
+  the command as written, with its output pointed at `out`."""
+  [(cmd, env)] = [command for target, command in commands.items()
+                  if ('_lossless_' in target) == lossless]
+  cmd = cmd.removeprefix('-').rsplit(' --output ', 1)[0] + f' --output {out}' + (' --lossless' if lossless else '')
+  return subprocess.run(cmd.replace('python3', sys.executable, 1), shell=True, capture_output=True, text=True,
+                        cwd=out.parent, env={**os.environ, **env, 'DEV': 'CPU'}, timeout=900)
 
 
 class TestTheLosslessWarp(OpenpilotTestCase):
@@ -172,6 +183,30 @@ class TestTheLosslessWarp(OpenpilotTestCase):
     self.assertEqual(set(targets), {plain, lossless})
     self.assertTrue(targets[lossless][0].endswith(f'--output {lossless} --lossless'))
     self.assertNotIn('--lossless', targets[plain][0])
+
+  def test_the_lossless_warp_loads_through_jetlinks_own_reader(self):
+    """The --lossless command as the SConscript writes it, run, and the pickle
+    handed to the reader the link loads it with: a capture returning the frame
+    and its MED errors has to pass (Warps.load), which reads the frame's shape
+    out of the capture. On tinygrad's CPU device, since this runs off the comma."""
+    import jetlink
+    from jetlink.openpilot.warp import Warps
+    checkout = Path(jetlink.__file__).resolve().parents[1]
+    w, h = CAMERAS[0]
+    with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as out:
+      commands = run_sconscript(CAMERAS[:1], jetlink=checkout, pythonpath=child_path(), root=root)
+      pkl = Path(out) / 'warp_lossless.pkl'
+      done = run_build_command(commands, pkl, lossless=True)
+      self.assertEqual(done.returncode, 0, done.stderr)
+
+      class Checkout:
+        """Where the warp is, for Warps.load alone: the build's output here
+        rather than the tree's models/ directory."""
+        @staticmethod
+        def warp_path(*geometry):
+          return pkl
+      warp = Warps(Checkout()).load(w, h, *MODEL, lossless=True)
+      self.assertIn('run', warp)
 
 
 class TestOnlyTheBuildCompiles(OpenpilotTestCase):
