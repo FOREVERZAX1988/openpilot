@@ -1,35 +1,45 @@
-# The comma-side warp JIT jetlink's large model runs, as a build product.
+# The comma-side warp jetlink's large model runs, as a build product.
 #
-# jetlink runs `warp` on the comma and `run_policy` on the Jetson, and upstream
-# no longer ships a standalone warp JIT (#38684 fused warp and policy). Built
-# here like dm_warp_*.pkl in modeld/SConscript: launch_chffrplus.sh runs
+# jetlink's frame loop runs openpilot's own warp since "run modeld's own warp,
+# not one jetlink builds" (jetlink 0f87696): a pickle holding {'run': a captured
+# TinyJit, 'input_specs': {...}} whose two inputs are both camera frames as one
+# (2, frame size) uint8 input_frame and their transforms as one (2, 3, 3)
+# float32 M_inv, out the (2, 6, model_h // 2, model_w // 2) frame the link
+# sends. Upstream openpilot compiles that pickle with tinygrad's
+# examples/openpilot/compile_warp.py (--frames 2 --layout yuv420) inside
+# modeld/SConscript; this fork's tinygrad predates that script and this fork's
+# modeld runs no warp of its own, so the same artifact is built here by
+# openpilot/sunnypilot/jetlink_adapter/warp_build.py, over the fork's own graph
+# (compile_modeld.make_frame_prepare, the same perspective warp) and the same
+# nv12 layout a camera hands out.
+#
+# Built like dm_warp_*.pkl in modeld/SConscript: launch_chffrplus.sh runs
 # build.py before manager, so a tinygrad bump has a fresh warp before ignition,
 # and a prebuilt release carries one for every camera it installs on. Nothing
-# compiles one at runtime; a device without a warp runs the small model.
+# compiles a warp at runtime; a device without one stays on the small model and
+# the offroad alert says why.
 import glob
 import os
-import sys
 
 from SCons.Script import Action
 
 Import('env', 'arch', 'camera_configs')
 
 basedir = env.Dir("#").abspath
-jetlink_repo = env.Dir("#jetlink_repo").abspath
-capture = os.path.join(jetlink_repo, 'jetlink', 'openpilot', 'warp.py')
+builder = os.path.join(basedir, 'openpilot', 'sunnypilot', 'jetlink_adapter', 'warp_build.py')
+# jetlink's own loader: what the pickle has to hold to be loaded, so a bent
+# expectation rebuilds the artifact rather than failing on the drive
+jetlink_warp = env.Dir("#jetlink_repo").abspath + '/jetlink/openpilot/warp.py'
 
 # comma GPU only: the pickle is captured against Device.DEFAULT and only modeld
-# on the device loads one. And only with a jetlink checked out that has the
-# capture: an empty jetlink_repo, or an older one, builds nothing here rather
-# than failing the build on a missing source
-if arch == 'comma_arm64' and os.path.isfile(capture):
+# on the device loads one
+if arch == 'comma_arm64':
   from openpilot.common.transformations.model import MEDMODEL_INPUT_SIZE
   from openpilot.sunnypilot import jetlink_adapter
 
-  # jetlink on the build's path by its checkout: the prebuilt runner makes no
-  # `jetlink` link at the root as launch_chffrplus.sh does. Last, so nothing
-  # else in the submodule shadows a module of the build's own
-  lenv = env.Clone(ENV={**env['ENV'], 'PYTHONPATH': os.pathsep.join([env['ENV']['PYTHONPATH'], jetlink_repo])})
+  # the flags modeld/SConscript compiles the models with: what the warp's
+  # inputs are captured on has to be what the running modeld passes
+  tg_flags = 'DEV=QCOM IMAGE=1 FLOAT16=1 NOLOCALS=1 JIT_BATCH_SIZE=0 OPENPILOT_HACKS=1'
 
   # camera_configs is modeld/SConscript's: a source build's own camera, or every
   # one a prebuilt installs on. The comma four runner's release once gave a 3X
@@ -41,37 +51,24 @@ if arch == 'comma_arm64' and os.path.isfile(capture):
                                                recursive=True, root_dir=basedir)
                     if 'pycache' not in x and os.path.isfile(os.path.join(basedir, x))]
   script_files = [
-    File(capture),                                           # the capture, and call_warp, which names the inputs
-    File("#openpilot/sunnypilot/jetlink_adapter/__init__.py"),  # make_warp, and where the warp goes
-    File("#openpilot/selfdrive/modeld/compile_modeld.py"),   # comma's warp graph
-    File("#openpilot/system/camerad/cameras/nv12_info.py"),  # the frame layout the graph indexes
+    File("#openpilot/sunnypilot/jetlink_adapter/warp_build.py"),  # the capture, and the specs it writes
+    File("#openpilot/sunnypilot/jetlink_adapter/__init__.py"),    # where the warp goes, and where modeld looks
+    File("#openpilot/selfdrive/modeld/compile_modeld.py"),        # comma's warp graph
+    File("#openpilot/system/camerad/cameras/nv12_info.py"),       # the frame layout the graph indexes
+    File(jetlink_warp),                                           # the shape jetlink's loader insists on
   ]
-
-  # the lossless warp (Wi-Fi) also makes the frame's MED errors in its graph,
-  # beside the plain one under jetlink's name for it. jetlink last on the path
-  # here too
-  lossless_capture = os.path.join(jetlink_repo, 'jetlink', 'openpilot', 'lossless.py')
-  lossless_path = None
-  if os.path.isfile(lossless_capture):
-    sys.path.append(jetlink_repo)
-    from jetlink.openpilot.warp import lossless_path
-  lossless_files = [File(lossless_capture), File(os.path.join(jetlink_repo, 'jetlink', 'lossless.py'))]
 
   for cam_w, cam_h in camera_configs:
     # the target is the path modeld opens, from the adapter, so the two cannot drift
     pkl = str(jetlink_adapter.warp_path(cam_w, cam_h, model_w, model_h))
-    # no tinygrad flags, unlike dm_warp: the bare-environment warp is what the
-    # parity and timing numbers were measured against. On a source build '-'
-    # ignores the exit status: every device builds this, link on or not, so a
-    # failed compile must not fail the build. It leaves no pickle, modeld stays
-    # on the small model, the link's alert says why, and the next build tries
-    # again. A release fails here instead: it installs on devices that never
-    # build
-    cmd = (f'{"" if prebuilt else "-"}python3 -m jetlink.openpilot.warp --adapter {jetlink_adapter.__name__} '
+    # On a source build '-' ignores the exit status: every device builds this,
+    # link on or not, so a failed compile must not fail the build. It leaves no
+    # pickle, modeld stays on the small model, the link's alert says why, and
+    # the next build tries again. A release fails here instead: it installs on
+    # devices that never build
+    cmd = (f'{"-" if not prebuilt else ""}{tg_flags} python3 -m openpilot.sunnypilot.jetlink_adapter.warp_build '
            f'--camera {cam_w}x{cam_h} --model {model_w}x{model_h} --output {pkl}')
+    # the build's own root on the path: the builder imports openpilot and the
+    # tinygrad symlink beside it, and a prebuilt build may not run from the tree
+    lenv = env.Clone(ENV={**env['ENV'], 'PYTHONPATH': os.pathsep.join([env['ENV'].get('PYTHONPATH', ''), basedir])})
     lenv.Command(pkl, tinygrad_files + script_files, Action(cmd, "  [JETLINK WARP] $TARGET"))
-    if lossless_path is not None:
-      lossless_pkl = str(lossless_path(pkl))
-      cmd = (f'{"" if prebuilt else "-"}python3 -m jetlink.openpilot.warp --adapter {jetlink_adapter.__name__} '
-             f'--camera {cam_w}x{cam_h} --model {model_w}x{model_h} --output {lossless_pkl} --lossless')
-      lenv.Command(lossless_pkl, tinygrad_files + script_files + lossless_files, Action(cmd, "  [JETLINK WARP] $TARGET"))
