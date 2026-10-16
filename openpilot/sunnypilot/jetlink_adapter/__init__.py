@@ -31,8 +31,15 @@ from collections import namedtuple
 from pathlib import Path
 
 # the version of jetlink.openpilot's API this adapter is written to; any other
-# is treated as jetlink being absent, with the reason as the offroad alert
-API = 2
+# is treated as jetlink being absent, with the reason as the offroad alert.
+# 2: modeld wrote in_control onto the joining model before every frame, where
+#    jetlink polled the adapter's engagement() (2026-10-05)
+# 3: the joining model asks Adapter.in_control() before every frame instead
+#    (2026-10-10), so the adapter reads a SubMaster of its own and modeld keeps
+#    one write; an adapter of API 2 has no in_control() at all. Moving the
+#    submodule pin past that commit without this constant leaves the link off
+#    everywhere, with the reason below as the offroad alert
+API = 3
 
 # the gadget owner, as manager names the process and selfdrived lists it
 OWNER = 'jetlinkd'
@@ -123,6 +130,11 @@ class Adapter:
     # 110 us for the read, and the UI reads several five times a second. By
     # store, since a test or a bench runs under its own prefix
     self._stores: dict[Path, object] = {}
+    # jetlink's joining model asks in_control() on modeld's frame thread
+    # (API 3), so the SubMaster that answers it is this process's own, made on
+    # the first ask: modeld is the only caller, and no other process pays for
+    # one
+    self._in_control_sm = None
 
   # -- params ---------------------------------------------------------------
 
@@ -193,6 +205,29 @@ class Adapter:
     return ModelFace(parser=Parser, frame_size=lambda w, h: get_nv12_info(w, h)[3], desire_len=ModelConstants.DESIRE_LEN,
                      constants=V2ModelConstants, lat_smooth_seconds=LAT_SMOOTH_SECONDS,
                      long_smooth_seconds=LONG_SMOOTH_SECONDS, get_action_from_model=get_action_from_model)
+
+  def in_control(self) -> bool:
+    """jetlink's own question, from API 3: the joining model asks it on
+    modeld's frame thread before every frame, where modeld used to write the
+    answer onto it. Off a SubMaster of this process's own over the same three
+    services modeld reads, made on the first ask; the rule itself is the
+    module's in_control(), which never raises. jetlink asks without a guard,
+    so a SubMaster that cannot be made answers "nothing to swap out of", and
+    modeld's frame loop never sees the failure. Logged once per distinct
+    error, as the hooks are."""
+    try:
+      sm = self._in_control_sm
+      if sm is None:
+        from openpilot.cereal.messaging import SubMaster
+        sm = self._in_control_sm = SubMaster(list(IN_CONTROL))
+      sm.update(0)
+    except Exception as e:
+      error = f"{type(e).__name__}: {e}"
+      if _failed_hooks.get('in_control') != error:
+        _failed_hooks['in_control'] = error
+        _log_failure("Adapter.in_control() failed", e)
+      return True
+    return in_control(sm)
 
   def event(self, name: str, **fields) -> None:
     self.log.event(name, **fields)
@@ -365,14 +400,21 @@ def prepare() -> bool:
   return _api().prepare()
 
 
-# what in_control() reads; both modelds subscribe to all three
+# what in_control() reads, off whichever SubMaster holds it: modeld's, which
+# both of the fork's modelds subscribe all three of, or the adapter's own,
+# which subscribes them itself for jetlink's ask (API 3)
 IN_CONTROL = ('carState', 'carControl', 'carControlSP')
 
 
 @_guarded(True)
 def in_control(sm) -> bool:
-  """modeld, before every frame, onto the model: is openpilot or MADS in
-  control? jetlink's large model swaps in only while it is not. selfdrived's
+  """modeld, before every frame, onto the model: what jetlink's joining model
+  asks the adapter for since API 3 (Adapter.in_control), and what the fork's
+  two modelds still write, as frame_drop_ratio is. Both read the same three
+  services, so the write is the ask's own answer.
+
+  Is openpilot or MADS in control? jetlink's large model swaps in only while
+  it is not. selfdrived's
   own answer (enabled or mads.enabled, what accelerator_events is handed),
   as controlsd republishes it, read off modeld's SubMaster. MADS counts with
   its lateral paused (a stop, a blinker, the brake): it steers again on its

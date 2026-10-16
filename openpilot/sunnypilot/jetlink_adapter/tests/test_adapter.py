@@ -198,6 +198,23 @@ class TestModeld(OpenpilotTestCase):
     # a rule that fails on the frame thread holds the swap off, never modeld
     self.assertIs(jetlink_adapter.in_control(None), True)
 
+  def test_jetlinks_ask_never_raises_out_of_the_frame_loop(self):
+    # jetlink calls in_control() unguarded, on modeld's frame thread (joining),
+    # so a failure here would reach modeld's loop and take the process down
+    with mock.patch('openpilot.cereal.messaging.SubMaster', side_effect=OSError('no msgq')):
+      self.assertIs(Adapter().in_control(), True)
+
+  def test_the_ask_keeps_one_submaster_of_its_own(self):
+    # API 3, the joining model's ask: this process's own SubMaster over the
+    # three services modeld reads, made once, on the first ask
+    op = Adapter()
+    with mock.patch('openpilot.cereal.messaging.SubMaster', side_effect=messaging.SubMaster) as made:
+      # nothing is published in a test: a service late counts as in control
+      self.assertIs(op.in_control(), True)
+      self.assertIs(op.in_control(), True)
+    self.assertEqual(made.call_count, 1)
+    self.assertEqual(made.call_args, mock.call(list(jetlink_adapter.IN_CONTROL)))
+
   def test_telemetry_is_a_cloudlog_event(self):
     op = Adapter()
     with mock.patch.object(op.log, 'event') as event:
@@ -450,7 +467,7 @@ assert not a.should_extend_catalog() and a.extend_catalog(c) is c
 
   def test_another_api_turns_the_link_off_and_says_why(self):
     params = Params()
-    for api, name, why in ((1, 'API', "jetlink package API 1, this build expects 2"),
+    for api, name, why in ((1, 'API', "jetlink package API 1, this build expects 3"),
                            (None, 'openpilot', "jetlink package too old for this build")):
       if name == 'API':
         patch = mock.patch.object(jl, 'API', api)
