@@ -26,6 +26,13 @@ gui_app.init_window("settings sim", fps=60)
 
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.settings import SettingsLayoutSP
 
+# 设备上 UI 主循环每帧先跑 ui_state.update_params()，它 set 的属性（always_offroad /
+# screensaver_enabled / ...）在 render 前一定存在；离屏仿真不会自动跑这一步，
+# 缺了会让 DEVICE 面板在 _update_state 里 AttributeError。见
+# openpilot/selfdrive/ui/sunnypilot/conftest.py 的同一条注释。
+from openpilot.selfdrive.ui.ui_state import ui_state
+ui_state.update_params()
+
 W, H = 2160, 1080
 rect = rl.Rectangle(0, 0, W, H)
 
