@@ -93,9 +93,15 @@ DEFAULT_TEXT_COLOR = rl.Color(255, 255, 255, int(255 * 0.9))
 # Qt draws fonts accounting for ascent/descent differently, so compensate to match old styles
 # The real scales for the fonts below range from 1.212 to 1.266
 FONT_SCALE = 1.242 if BIG_UI else 1.16
-# Fallback（CJK）字体显示放大系数：中文/日文/韩文等走 Noto fallback 时额外放大，
-# 解决中文字体偏小问题（fallback_font 的 48/60 只是字模分辨率，不影响显示大小）
+# CJK fallback 的兜底放大系数：**只在测不出字形宽度时使用**（正常走 Application.fallback_scale
+# 的实测值）。历史背景：assets 里的 NotoSansCJK*.otf 是子集字体，字形只有 ~0.68 em
+# （实测 size=60 时 '中' advance=41），当初用固定 1.25 硬补，结果连预烘焙 OpFont 图集
+# （与 Inter 同度量）也被放大 25% → 中文比拉丁文又粗又大又糊。
 FALLBACK_FONT_SCALE = 1.25
+
+# 运行时烘焙的 fallback 字体 → 实测补偿系数（见 Application.fallback_scale）。按 id(font)
+# 缓存，字体卸载时必须一起清（raylib 会回收对象地址，见 _apply_pending_language）。
+_FALLBACK_SCALE_CACHE: dict[int, float] = {}
 
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
@@ -895,6 +901,41 @@ class GuiApplication(GuiApplicationExt):
     """True if ``font`` is a pre-baked CJK atlas for the active language."""
     return id(font) in self._cjk_atlas_ids
 
+  def fallback_scale(self, font: rl.Font) -> float:
+    """Size compensation for a non-primary font, measured from its own metrics.
+
+    A well-formed CJK font renders a full-width ideograph/syllable with advance == font_size
+    (1 em), so no compensation is needed. The stripped `.otf` subsets shipped in
+    `selfdrive/assets/fonts` are only ~0.68 em wide, which is what the old blanket
+    FALLBACK_FONT_SCALE = 1.25 was papering over -- and that constant also hit the pre-baked
+    OpFont atlases, making every CJK string 25% larger (and blurrier) than the Latin text
+    beside it. Measure instead of hardcoding: probe full-width glyphs only, ignore fonts that
+    have none (Thai is narrow by design).
+    """
+    key = id(font)
+    if key in self._cjk_atlas_ids:
+      return 1.0
+    cached = _FALLBACK_SCALE_CACHE.get(key)
+    if cached is not None:
+      return cached
+
+    scale = FALLBACK_FONT_SCALE
+    probe_size = 100.0
+    for probe in ("中", "あ", "한"):
+      try:
+        width = float(rl.measure_text_ex(font, probe, probe_size, 0).x)  # noqa: TID251
+      except Exception:
+        width = 0.0
+      if width > 1.0:
+        scale = min(1.5, max(1.0, probe_size / width))
+        break
+    else:
+      # 没有全宽字形（泰文/拉丁等）：按原样绘制
+      scale = 1.0
+
+    _FALLBACK_SCALE_CACHE[key] = scale
+    return scale
+
   def current_font(self, font: rl.Font) -> rl.Font:
     """Resolve a possibly stale Font (cached by a widget before a language switch) to the
     live font of the same weight. Old atlases are unloaded on switch, so drawing/measuring
@@ -1103,6 +1144,7 @@ class GuiApplication(GuiApplicationExt):
       # Drop the atlas bookkeeping together with the font: raylib recycles texture ids, so a
       # stale id here would make font_fallback() trust an unrelated font that lacks glyphs.
       self._cjk_atlas_ids.discard(id(f))
+      _FALLBACK_SCALE_CACHE.pop(id(f), None)
       rl.unload_font(f)
     rl.gui_set_font(self.font(FontWeight.NORMAL))
     from openpilot.system.ui.lib import text_measure, wrap_text
@@ -1130,8 +1172,11 @@ class GuiApplication(GuiApplicationExt):
         font = font_fallback(font)
         if key != multilang.language:
           font = gui_app.fallback_font(text)
-      needs_fallback_scale = multilang.requires_font_fallback() and key != PRIMARY_FONT
-      scale = FONT_SCALE * (FALLBACK_FONT_SCALE if needs_fallback_scale else 1.0)
+      # 只有真正落到"运行时烘焙的 Noto"才需要按实测 em 宽补偿；预烘焙 OpFont 图集与 Inter
+      # 同一套度量（同为 1 em 盒），再乘系数就是纯副作用：中文比拉丁文大 25% → 又粗又糊。
+      scale = FONT_SCALE
+      if multilang.requires_font_fallback() and key != PRIMARY_FONT:
+        scale *= gui_app.fallback_scale(font)
       return rl._orig_draw_text_ex(font, text, position, font_size * scale, spacing, tint)
 
     rl.draw_text_ex = _draw_text_ex_scaled

@@ -19,6 +19,8 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO_ROOT))
@@ -85,10 +87,19 @@ class TextMeasureScaleTest(OpenpilotTestCase):
     for text in ("SUNNYLINK", "TEMP", "ONLINE", "Українська"):
       self.assertAlmostEqual(text_measure.text_scale(text), FONT_SCALE, msg=text)
 
-  def test_cjk_text_is_still_scaled_by_the_fallback(self):
+  def test_cjk_text_worst_case_scale_when_font_is_unknown(self):
     multilang._language = "zh-CHS"
     text_measure.clear_cache()
+    # 不知道最终字体时按最坏情况（运行时现烤的 Noto 子集）估算
     self.assertAlmostEqual(text_measure.text_scale("温度"), FONT_SCALE * FALLBACK_FONT_SCALE)
+
+  def test_prebaked_opfont_atlas_is_not_scaled_twice(self):
+    # 预烘焙 OpFont-<weight>-<lang>.fnt 与 Inter 同度量 → 只乘 FONT_SCALE（中文不再比拉丁文大 25%）
+    multilang._language = "zh-CHS"
+    text_measure.clear_cache()
+    fake_app = SimpleNamespace(fallback_scale=lambda _font: 1.0)
+    with mock.patch.object(text_measure, "gui_app", fake_app):
+      self.assertAlmostEqual(text_measure.text_scale("温度", object()), FONT_SCALE)
 
   def test_english_ui_is_unaffected(self):
     multilang._language = "en"

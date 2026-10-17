@@ -4,7 +4,8 @@ from collections.abc import Callable
 from typing import Union
 import pyray as rl
 
-from openpilot.system.ui.lib.application import gui_app, FontWeight, DEFAULT_TEXT_SIZE, DEFAULT_TEXT_COLOR, FONT_SCALE, FALLBACK_FONT_SCALE, TextAlignment, TextAlignmentVertical, font_fallback
+from openpilot.system.ui.lib.application import (gui_app, FontWeight, DEFAULT_TEXT_SIZE, DEFAULT_TEXT_COLOR,
+                                                 FONT_SCALE, TextAlignment, TextAlignmentVertical, font_fallback)
 from openpilot.system.ui.lib.multilang import multilang
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -102,7 +103,10 @@ def gui_text_box(
   # rendered as "?". Install the Noto fallback as the GUI font for CJK languages and scale the
   # style text size the same way the draw path does.
   fallback = multilang.requires_font_fallback()
-  text_scale = FONT_SCALE * (FALLBACK_FONT_SCALE if fallback else 1.0)
+  gui_font = gui_app.fallback_font(text) if fallback else gui_app.font(font_weight)
+  # 按实际字体的 em 宽度补偿（预烘焙 OpFont 图集与 Inter 同度量 → 1.0；assets 里的子集
+  # 字体只有 ~0.68 em → ~1.47），不再用固定的 FALLBACK_FONT_SCALE。
+  text_scale = FONT_SCALE * (gui_app.fallback_scale(gui_font) if fallback else 1.0)
   styles = [
     (rl.GuiControl.DEFAULT, rl.GuiControlProperty.TEXT_COLOR_NORMAL, rl.color_to_int(color)),
     (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_SIZE, round(font_size * text_scale)),
@@ -111,12 +115,10 @@ def gui_text_box(
     (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_ALIGNMENT_VERTICAL, alignment_vertical),
     (rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_WRAP_MODE, rl.GuiTextWrapMode.TEXT_WRAP_WORD)
   ]
-  if fallback:
+  if fallback or font_weight != FontWeight.NORMAL:
     # 传 text：语言菜单里 "한국어"/"ไทย" 这类外脚本串要选 ko/th 字体，
     # 否则用当前语言的 CJK 字体会因缺字形画成 "???"（见 fallback_font_key）。
-    rl.gui_set_font(gui_app.fallback_font(text))
-  elif font_weight != FontWeight.NORMAL:
-    rl.gui_set_font(gui_app.font(font_weight))
+    rl.gui_set_font(gui_font)
 
   with GuiStyleContext(styles):
     rl.gui_label(rect, text)
