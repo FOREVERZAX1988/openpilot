@@ -1,5 +1,8 @@
+import os
 import sys
 import json
+import shutil
+import tempfile
 import ctypes
 import weakref
 import builtins
@@ -28,9 +31,41 @@ class ParamKeyType(IntEnum):
   BYTES = 6
 
 _suffix = ".dylib" if sys.platform == "darwin" else ".so"
+
+
+def _params_lib_path() -> Path:
+  """Return a dlopen path that a rebuild of the source tree cannot corrupt.
+
+  Loading libparams_c straight out of the checkout is unsafe on a device that also
+  builds it: scons/SConscript rewrites libparams_c.so *in place*, and the kernel then
+  serves the new bytes to every process that already mmapped the old ones. The
+  symptom is a SIGSEGV inside libparams_c.so -- e.g. 2026-10-17 15:28, when
+  manager.py and athenad died 6 seconds apart, taking the whole stack (and the
+  assistant's websocket, mid-answer) down with them.
+  """
+  src = Path(__file__).with_name(f"libparams_c{_suffix}")
+  try:
+    st = src.stat()
+    cache_root = Path("/data/.cache/params_lib") if Path("/data").is_dir() else Path(tempfile.gettempdir()) / "op_params_lib"
+    dst = cache_root / f"libparams_c-{int(st.st_mtime)}-{st.st_size}{_suffix}"
+    if not dst.is_file():
+      cache_root.mkdir(parents=True, exist_ok=True)
+      tmp = dst.with_name(f"{dst.name}.{os.getpid()}.tmp")
+      shutil.copyfile(src, tmp)
+      os.replace(tmp, dst)  # atomic: concurrent starts cannot see a partial copy
+      for stale in sorted(cache_root.glob(f"libparams_c-*{_suffix}"))[:-3]:
+        try:
+          stale.unlink()
+        except OSError:
+          pass
+    return dst
+  except Exception:
+    return src
+
+
 lib = None
 try:
-  lib = ctypes.CDLL(Path(__file__).with_name(f"libparams_c{_suffix}"))
+  lib = ctypes.CDLL(_params_lib_path())
 except OSError:
   cloudlog.warning("libparams_c.so missing, entering mock params mode, params stored in memory only!")
   lib = None
