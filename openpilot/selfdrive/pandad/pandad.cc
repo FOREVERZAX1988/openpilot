@@ -347,7 +347,7 @@ void process_panda_state(std::vector<Panda *> &pandas, PubMaster *pm, bool engag
         LOGE("Reconnecting, communication to pandas not healthy");
         do_exit = true;
 
-      } else {
+      } else if (!is_onroad) {
         // check for new pandas
         for (std::string &s : Panda::list(true)) {
           if (!std::count(connected_serials.begin(), connected_serials.end(), s)) {
@@ -417,8 +417,8 @@ void process_peripheral_state(Panda *panda, PubMaster *pm, bool no_fan_control, 
       }
     }
 
-    // Disable IR on input timeout
-    if (nanos_since_boot() - last_cabin_camera_t > 1e9) {
+    // Disable IR on input timeout or when requested offroad.
+    if (nanos_since_boot() - last_cabin_camera_t > 1e9 || (!is_onroad && params.getBool("DisableDriverCameraIR"))) {
       ir_pwr = 0;
     }
 

@@ -44,11 +44,21 @@ STATIC_MIN_DURATION = 1.5  # seconds of stationary data required
 STATIC_MAX_GYRO_STD = 0.05  # rad/s, must be nearly still
 STATIC_MAX_SPEED = 0.2  # m/s
 STATIC_MIN_SAMPLES = 100
-STATIC_MAX_SLOPE_ANGLE = math.radians(5.0)  # reject static calibration on steep slopes
+STATIC_MAX_SLOPE_ANGLE = math.radians(45.0)  # reject static calibration when the device is not plausibly vertical
+# Fail the static phase if no still window ever arrives (the car keeps rolling,
+# or the user starts it while driving). Without this the state machine waited
+# forever: only the dynamic phase had a timeout.
+STATIC_TIMEOUT = 300.0
 
 DYNAMIC_MIN_DURATION = 3.0  # seconds of straight driving required
 DYNAMIC_MIN_SPEED = 5.0  # m/s
-DYNAMIC_MAX_YAW_RATE = 0.10  # rad/s, roughly straight
+# 0.10 rad/s (~5.7 deg/s) rejects any curve tighter than v/0.1 metres, i.e. a
+# 167 m radius at 60 km/h - a perfectly ordinary highway bend - which made the
+# dynamic phase unattainable on anything but dead-straight road and pushed the
+# user into the 300 s timeout. The lateral-acceleration gate below is the
+# physically meaningful "not cornering hard" test, so this one only has to
+# reject clearly curved driving: 0.25 rad/s is a 67 m radius at 60 km/h.
+DYNAMIC_MAX_YAW_RATE = 0.25  # rad/s, roughly straight
 DYNAMIC_MAX_STEERING_RATE = 10.0  # deg/s
 DYNAMIC_MAX_LATERAL_ACCEL = 1.0  # m/s^2
 DYNAMIC_MIN_CAMERA_FRAMES = 20
@@ -60,14 +70,26 @@ DYNAMIC_TIMEOUT = 300.0  # fail dynamic phase if no successful calibration after
 CAMERA_ODOM_MAX_ROT_STD = 0.05  # rad/s
 CAMERA_ODOM_MAX_TRANS_STD = 0.5  # m/s
 
-YAW_CONVERGENCE_THRESHOLD = math.radians(2.0)  # stop early when yaw estimate is stable
+# Hard quality gate for the final calibration. A yaw std above this means the
+# camera-vs-gyro agreement never converged (noisy cameraOdometry, bumpy road,
+# bad mount). Saving such a matrix would silently feed a wrong mount to the
+# parameter learner, so a run above the gate keeps collecting instead of
+# finishing at the minimum data count, and DYNAMIC_TIMEOUT catches runs that
+# never converge.
+MAX_YAW_STD = math.radians(10.0)
 OUTLIER_MAD_THRESHOLD = 3.0  # circular median absolute deviation multiplier
-MATRIX_MAX_YAW_DIFF = math.radians(15.0)  # reject final matrix if yaw jumps too far from previous cal
-MATRIX_MAX_ROLL_PITCH_DIFF = math.radians(5.0)
+# A previous matrix only exists on a re-calibration, and re-calibrating usually
+# follows a remount or re-aim, so the new matrix legitimately moves roll/pitch/
+# yaw far more than a re-run on the same mount would. These bounds therefore
+# only screen for gross errors - tight enough to reject a bad fit, loose enough
+# that a remounted device can recalibrate without first clearing the old matrix.
+MATRIX_MAX_YAW_DIFF = math.radians(90.0)  # reject final matrix if yaw jumps too far from previous cal
+MATRIX_MAX_ROLL_PITCH_DIFF = math.radians(45.0)
 
 # Vehicle frame convention used internally:
 #   X = forward, Y = left, Z = up (opposite of gravity)
 VEHICLE_GRAVITY = np.array([0.0, 0.0, -1.0])
+VEHICLE_UP = np.array([0.0, 0.0, 1.0])
 VEHICLE_FORWARD = np.array([1.0, 0.0, 0.0])
 
 
@@ -239,11 +261,28 @@ def compute_static_rotation(acc_samples: list[np.ndarray], gyro_samples: list[np
     raise ValueError("accelerometer samples are near zero")
   up_device = up_device / norm
 
-  # Check that the vehicle is on reasonably level ground.
-  cos_angle = float(np.dot(up_device, VEHICLE_GRAVITY))
+  # Sanity gate on the static sample set.
+  #
+  # A stationary accelerometer measures specific force, i.e. the vehicle *up*
+  # direction expressed in the device frame. That is all the information there
+  # is: with a single stationary IMU reading it is mathematically impossible to
+  # separate "the device is mounted at an angle" from "the car is on a slope",
+  # so this check cannot be a true slope test - it only rejects readings that
+  # are obviously not a mounted-device gravity vector (free fall, heavy shaking,
+  # a device lying on its face), while accepting every plausible installation
+  # angle. Real protection against a bad static estimate comes later, from
+  # MATRIX_MAX_ROLL_PITCH_DIFF in _validate_final_matrix.
+  #
+  # The sign is irrelevant: a windshield C3 may be mounted upright or upside
+  # down and both put the gravity axis parallel to vehicle up, so compare the
+  # absolute value. (A previous version compared against VEHICLE_GRAVITY, which
+  # points DOWN, so the dot product was -1 on level ground, acos returned
+  # 180 deg, and every static phase raised SlopeTooSteepError - the calibration
+  # could never start at all.)
+  cos_angle = abs(float(np.dot(up_device, VEHICLE_UP)))
   slope = math.acos(max(-1.0, min(1.0, cos_angle)))
   if slope > STATIC_MAX_SLOPE_ANGLE:
-    raise SlopeTooSteepError(f"ground slope too steep: {math.degrees(slope):.1f} deg")
+    raise SlopeTooSteepError(f"device is not vertical: {math.degrees(slope):.1f} deg from vertical")
 
   gyro_bias = np.mean(gyro_samples, axis=0)
 
@@ -358,10 +397,32 @@ def compute_yaw_correction(
   # with the temporary vehicle frame defined by R_static (yaw=0). Therefore
   # msg.rot can be treated as a vehicle-frame rotation. We predict the
   # corresponding device-frame rotation with R_static and compare it to the
-  # integrated gyro rotation, both projected onto the plane perpendicular to
-  # vehicle gravity.
+  # integrated gyro rotation.
+  #
+  # Both `cam_rot` and `integrate_gyro` return a *rotation vector* (axis-angle).
+  # The unknown mounting yaw psi is a rotation about the gravity axis, so the
+  # rotation vector's component *along* gravity is invariant to psi
+  # (<Rz(psi)v, z> == <v, z>). What changes with psi is the *azimuth* of the
+  # rotation vector inside the plane perpendicular to gravity. So compare the
+  # in-plane angles of the predicted vs measured rotation vectors.
+  #
+  # The in-plane angle must be taken in a basis that spans that plane. With an
+  # arbitrary mount the gravity axis is not [0, 0, 1], so `atan2(v[1], v[0])`
+  # is meaningless - a basis (u, w) perpendicular to gravity has to be built
+  # first. An earlier version projected the vector (`v - (v·z)z`) and then read
+  # atan2 from the raw x/y components, which collapses whenever the mount tips
+  # the apparent "up" axis, and - for motion purely about gravity - is zero for
+  # every interval, so calibration always died with "insufficient dynamic
+  # samples" after the 300 s timeout.
   z_axis = R_static @ VEHICLE_GRAVITY
   z_axis = z_axis / np.linalg.norm(z_axis)
+
+  # Orthonormal basis (u_axis, w_axis) spanning the plane perpendicular to gravity.
+  u_axis = np.cross(z_axis, np.array([0.0, 0.0, 1.0]))
+  if np.linalg.norm(u_axis) < 1e-6:
+    u_axis = np.cross(z_axis, np.array([0.0, 1.0, 0.0]))
+  u_axis = u_axis / np.linalg.norm(u_axis)
+  w_axis = np.cross(z_axis, u_axis)
 
   diffs: list[float] = []
   weights: list[float] = []
@@ -384,17 +445,17 @@ def compute_yaw_correction(
     # Measured device rotation = integrated gyro minus bias
     meas_rot = integrate_gyro(gyro_ts, gyro_samples, t0, t1, gyro_bias)
 
-    # Project onto x-y plane (perpendicular to gravity)
-    pred_xy = pred_rot - np.dot(pred_rot, z_axis) * z_axis
-    meas_xy = meas_rot - np.dot(meas_rot, z_axis) * z_axis
+    # In-plane azimuth of each rotation vector, measured in the gravity basis.
+    pred_u, pred_w = float(np.dot(pred_rot, u_axis)), float(np.dot(pred_rot, w_axis))
+    meas_u, meas_w = float(np.dot(meas_rot, u_axis)), float(np.dot(meas_rot, w_axis))
 
-    p_norm = np.linalg.norm(pred_xy)
-    m_norm = np.linalg.norm(meas_xy)
-    if p_norm < 1e-6 or m_norm < 1e-6:
+    # An interval with no rotation perpendicular to gravity carries no yaw
+    # information; skip it instead of letting numerical noise set the angle.
+    if math.hypot(pred_u, pred_w) < 1e-6 or math.hypot(meas_u, meas_w) < 1e-6:
       continue
 
-    pred_angle = math.atan2(pred_xy[1], pred_xy[0])
-    meas_angle = math.atan2(meas_xy[1], meas_xy[0])
+    pred_angle = math.atan2(pred_w, pred_u)
+    meas_angle = math.atan2(meas_w, meas_u)
     diffs.append(meas_angle - pred_angle)
     weights.append(dt)
 
@@ -451,8 +512,10 @@ class ImuCalibrator:
     self.last_cam_ts: float | None = None
     self.last_straight_ts: float | None = None
     self.dynamic_start_ts: float | None = None
+    self.static_start_ts: float | None = None
     self._cached_incremental_rotation: np.ndarray | None = None
     self._cached_incremental_dirty = True
+    self._last_quality_check_ts: float = 0.0
     self._last_loaded_matrix: np.ndarray | None = None
     self._last_loaded_matrix_ts: float = 0.0
 
@@ -468,8 +531,10 @@ class ImuCalibrator:
     self.last_cam_ts = None
     self.last_straight_ts = None
     self.dynamic_start_ts = None
+    self.static_start_ts = None
     self._cached_incremental_rotation = None
     self._cached_incremental_dirty = True
+    self._last_quality_check_ts = 0.0
     self._last_loaded_matrix = None
     self._last_loaded_matrix_ts = 0.0
     self.status = CalibrationStatus(state=CalibrationState.IDLE)
@@ -699,6 +764,7 @@ class ImuCalibrator:
     self.reset()
     self._set_state(CalibrationState.STATIC_COLLECTING)
     self.status.progress = 0
+    self.static_start_ts = time.monotonic()
     self._save_status()
 
   def cancel(self) -> None:
@@ -785,7 +851,15 @@ class ImuCalibrator:
       self.fail(f"dynamic phase too short: {total_duration:.2f}s", CalibrationError.NO_STRAIGHT_ROAD)
       return
 
-    assert self.R_static is not None and self.gyro_bias is not None
+    if self.R_static is None or self.gyro_bias is None:
+      self.fail("static calibration missing at dynamic finish", CalibrationError.COMPUTATION_FAILED)
+      return
+
+    # The heavy fit runs synchronously from here; move to the computing state so
+    # the UI shows it instead of staying on "collecting" through the work.
+    self._set_state(CalibrationState.COMPUTING)
+    self._save_status()
+
     gyro_ts, gyro_samples, cam_rot, cam_ts = self._collect_dynamic_samples()
 
     try:
@@ -803,6 +877,13 @@ class ImuCalibrator:
 
     if valid_ratio < 0.5:
       self.fail(f"too many dynamic outliers: {valid_ratio:.1%} inliers", CalibrationError.CAMERA_ODOMETRY_UNRELIABLE)
+      return
+
+    # A poorly converged yaw must not be silently saved as COMPLETED: the
+    # matrix would feed a wrong mount to the parameter learner. Above the gate
+    # the estimate is noise, not a calibration.
+    if yaw_std > MAX_YAW_STD:
+      self.fail(f"yaw estimate too noisy: std={math.degrees(yaw_std):.1f} deg", CalibrationError.CAMERA_ODOMETRY_UNRELIABLE)
       return
 
     # Apply yaw rotation around gravity
@@ -839,6 +920,9 @@ class ImuCalibrator:
 
   def update(self, car_state: car.CarState) -> None:
     if self.state == CalibrationState.STATIC_COLLECTING:
+      if self.static_start_ts is not None and time.monotonic() - self.static_start_ts > STATIC_TIMEOUT:
+        self.fail("static calibration timed out", CalibrationError.TIMEOUT)
+        return
       if not is_stationary(car_state):
         self.static_buffer.clear()
         self.status.static_samples = 0
@@ -875,25 +959,42 @@ class ImuCalibrator:
       progress = min(100, 30 + int(70 * self._total_dynamic_duration() / DYNAMIC_MIN_DURATION))
       self.status.progress = max(self.status.progress, progress)
 
-      # Convergence check: if we already have enough data and yaw is stable, finish early.
+      # Quality-gated finish: once the minimum data is in hand, evaluate the
+      # yaw estimate and finish only when it is within MAX_YAW_STD. Above the
+      # gate the run keeps collecting instead of saving a poorly converged
+      # matrix; DYNAMIC_TIMEOUT catches runs that never converge. The check is
+      # throttled because the incremental fit walks every camera frame.
+      total_cam_frames = sum(len(s.cam_ts) for s in self.dynamic_segments) + len(self.current_segment.cam_ts)
       if (
         self._total_dynamic_duration() >= DYNAMIC_MIN_DURATION
         and self._total_dynamic_samples() >= DYNAMIC_MIN_SAMPLES
+        and total_cam_frames >= DYNAMIC_MIN_CAMERA_FRAMES
       ):
-        R_inc = self.get_incremental_rotation()
-        if R_inc is not None and self.status.yaw_std < YAW_CONVERGENCE_THRESHOLD:
-          self.finish_dynamic()
-          return
-
-      if self._total_dynamic_samples() >= DYNAMIC_MIN_SAMPLES and self._total_dynamic_duration() >= DYNAMIC_MIN_DURATION:
-        self.finish_dynamic()
-        return
+        if time.monotonic() - self._last_quality_check_ts >= 1.0:
+          self._last_quality_check_ts = time.monotonic()
+          R_inc = self.get_incremental_rotation()
+          if R_inc is not None and self.status.yaw_std <= MAX_YAW_STD:
+            self.finish_dynamic()
+            return
 
       self.last_straight_ts = now
       self._save_status()
 
   def check_request(self) -> bool:
     return self.params.get_bool("ImuCalibrationRequested")
+
+
+def calibration_action(state: CalibrationState, requested: bool) -> str | None:
+  """What the main loop does on one tick: start, cancel, or nothing.
+
+  A fresh request (re)starts the calibration even from COMPLETED/FAILED/
+  CANCELLED, so pressing "start" again after a finished run really starts a new
+  one instead of being silently ignored. A collecting run whose request was
+  withdrawn is cancelled.
+  """
+  if state in (CalibrationState.IDLE, CalibrationState.COMPLETED, CalibrationState.FAILED, CalibrationState.CANCELLED):
+    return "start" if requested else None
+  return "cancel" if not requested else None
 
 
 class ImuCalibrationD:
@@ -979,12 +1080,11 @@ class ImuCalibrationD:
       self._drain_sensors()
       self._update_submaster()
 
-      state = self.calibrator.state
-      if state == CalibrationState.IDLE and self.calibrator.check_request():
+      action = calibration_action(self.calibrator.state, self.calibrator.check_request())
+      if action == "start":
         self.calibrator.start()
-      elif state not in (CalibrationState.IDLE, CalibrationState.COMPLETED, CalibrationState.FAILED, CalibrationState.CANCELLED):
-        if not self.calibrator.check_request():
-          self.calibrator.cancel()
+      elif action == "cancel":
+        self.calibrator.cancel()
 
       self._publish()
       self.rk.keep_time()

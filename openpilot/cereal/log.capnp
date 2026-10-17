@@ -734,6 +734,15 @@ struct RadarState @0x9a185389d6fdd05f {
 
   leadOne @3 :LeadData;
   leadTwo @4 :LeadData;
+  leadRight @14 :LeadData;
+  leadLeft @18 :LeadData;
+  leadsLeft @16 :List(LeadData);
+  leadsRight @17 :List(LeadData);
+  leadsCenter @15 :List(LeadData);
+  leadsLeft2 @19 :List(LeadData);
+  leadsRight2 @20 :List(LeadData);
+  leadsCutIn @21 :List(LeadData);
+  leadCutInRisk @22 :LeadData;
 
   struct LeadData {
     dRel @0 :Float32;  # m from the front bumper of the car
@@ -747,6 +756,8 @@ struct RadarState @0x9a185389d6fdd05f {
     modelProb @13 :Float32;  # vision model lead probability
     radar @14 :Bool;  # true if lead is radar-matched (vs vision-only)
     radarTrackId @15 :Int32 = -1;  # for debugging
+    jLead @16 :Float32;  # lead jerk
+    score @17 :Float32;  # radar match/confidence score, 0..1
 
     deprecated :group {
       aRel @3 :Float32;
@@ -2551,7 +2562,7 @@ struct Event {
     peripheralState @80 :PeripheralState;
     radarState @13 :RadarState;
     radarTracks @131 :Car.RadarData;
-    liveTracks @153 :Car.RadarData;  # radarcan: CAN-driven radar tracks (carrot)
+    liveTracks @154 :Car.RadarData;  # radarcan: CAN-driven radar tracks (carrot); moved off @153 to avoid clash with upstream chestnutGpuState
     sendcan @17 :List(CanData);
     extrinsicsCalibration @19 :ExtrinsicsCalibration;
     carState @22 :Car.CarState;
@@ -2601,6 +2612,7 @@ struct Event {
     clocks @35 :Clocks;
     deviceState @6 :DeviceState;
     chestnutState @152 :ChestnutState;
+    chestnutGpuState @153 :ChestnutState;
     logMessage @18 :Text;
     errorLogMessage @85 :Text;
 

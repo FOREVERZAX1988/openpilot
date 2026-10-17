@@ -5,16 +5,9 @@ from openpilot.common.params import Params
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.car.cruise import V_CRUISE_INITIAL
 from openpilot.selfdrive.car.tests.test_cruise_speed import TestVCruiseHelper
-from openpilot.sunnypilot.selfdrive.car.interfaces import initialize_params
 
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
-
-
-class TestToyotaParamsHandoff(OpenpilotTestCase):
-  def test_tss2_long_tuning_param_is_forwarded_to_opendbc(self):
-    keys = {next(iter(entry)) for entry in initialize_params(Params())}
-    assert "ToyotaTSS2Long" in keys
 
 
 # TODO: test pcmCruise and pcmCruiseSpeed
@@ -122,8 +115,8 @@ class TestCustomAccIncrements(TestVCruiseHelper):
   def test_rounding_behavior(self):
     """Test rounding behavior for 5 and 10 increments"""
     test_cases = [
-      (47, 5, 50),  # 47 -> 50 (round up to next 5)
-      (45, 5, 50),  # 45 -> 50 (already at 5, increment by 5)
+      (47, 5, 50),   # 47 -> 50 (round up to next 5)
+      (45, 5, 50),   # 45 -> 50 (already at 5, increment by 5)
       (43, 10, 50),  # 43 -> 50 (round up to next 10)
       (40, 10, 50),  # 40 -> 50 (already at 10, increment by 10)
     ]

@@ -25,6 +25,7 @@ artifacts/
 # created at launch for comma hardware PYTHONPATH (PC uses editable installs via pyproject.toml)
 /msgq
 /opendbc
+/jetlink
 /rednose
 /teleoprtc
 /tinygrad
@@ -58,6 +59,8 @@ st[0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z]
 *.stats
 *.pkl
 *.pkl*
+!openpilot/selfdrive/modeld/models/big_driving_tinygrad.pkl
+!openpilot/sunnypilot/modeld_v2/models/*.pkl
 config.json
 compile_commands.json
 compare_runtime*.html
@@ -129,3 +132,6 @@ sessions/
 tool_results/
 *.apk
 /jetlink_ci/
+
+# Screenshot output stays untracked because PNG files use an LFS remote unavailable to installers.
+openpilot/sunnypilot/selfdrive/ui/tests/screenshots/

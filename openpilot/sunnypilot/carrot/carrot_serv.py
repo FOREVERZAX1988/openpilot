@@ -269,8 +269,8 @@ class CarrotServ:
     # Rear speed-camera hold events: each is {"target": wheel_distance_m, "speed": kph}.
     self.rear_camera_events: list[dict[str, float]] = []
 
-    # Distance travelled (from selfdriveState), used as the wheel-distance clock for
-    # the rear-camera hold. cp carrot_serv.py:1332-1334.
+    # Distance travelled, integrated from vEgo*DT (upstream dropped
+    # selfdriveState.distanceTraveled). Wheel-distance clock for the rear-camera hold.
     self.total_distance: float = 0.0
     # True while an external (phone) navigation source is connected. The rear-camera
     # hold is meaningless without one, since SDI 75/76 can only arrive from it.
@@ -1713,19 +1713,9 @@ class CarrotServ:
     # SCC-M skips any candidate whose distance is not positive.
     self.v_turn_speed_dist = float(vturn_dist) if vturn_dist and vturn_dist > 0.0 else 0.0
 
-    # Distance-travelled clock for the rear-camera hold, and the off-route flag that
-    # suppresses it. Both come from the same subscriptions cp uses
-    # (carrot_serv.py:1332-1334 for distance, :1088 for off_route).
-    if sm.alive.get("selfdriveState", False):
-      # cereal's SelfdriveState has no `distanceTraveled` in this fork: the raw read raised
-      # capnp AttributeError on every call and aborted all of update_navi() (nav source,
-      # navi instructions, rear-camera hold) inside carrot_man's broadcast loop.
-      distance_traveled = float(getattr(sm["selfdriveState"], "distanceTraveled", self.total_distance))
-      delta_dist = distance_traveled - self.total_distance
-      self.total_distance = distance_traveled
-    else:
-      delta_dist = 0.0
-
+    # Distance-travelled clock for the rear-camera hold. upstream removed the
+    # selfdriveState.distanceTraveled field, so integrate it from vEgo*DT below
+    # (the same source selfdrived uses); delta_dist is computed once vEgo is known.
     self.update_navigation_source()
 
     # Stock navd fallback first, so a phone-app packet later in this method still
@@ -1745,6 +1735,7 @@ class CarrotServ:
     road_speed_limit_changed = self.n_road_limit_speed != getattr(self, "_n_road_limit_speed_last", 0)
     self._n_road_limit_speed_last = self.n_road_limit_speed
     delta_dist = v_ego * DT_MDL
+    self.total_distance += max(delta_dist, 0.0)
     self.x_spd_dist = max(self.x_spd_dist - int(delta_dist), -1000)
     self.x_dist_to_turn = int(self.x_dist_to_turn - delta_dist)
     self.x_dist_to_turn_next = int(self.x_dist_to_turn_next - delta_dist)
@@ -1887,7 +1878,9 @@ class CarrotServ:
     if self.turn_speed_control_mode == 2 and -500 < self.x_dist_to_turn < 500:
       speed_n_sources.append((max(route_speed * self.map_turn_speed_factor,
                                   self.auto_curve_speed_lower_limit), "route"))
-    elif self.turn_speed_control_mode == 3:
+    elif self.turn_speed_control_mode in (3, 4):
+      # Parity with CarrotPilot: mode 4 is an internal/legacy alias for "route always"
+      # (same branch as 3); the exposed range stays 0-3, but a stale value 4 still decelerates.
       speed_n_sources.append((max(route_speed * self.map_turn_speed_factor,
                                   self.auto_curve_speed_lower_limit), "route"))
 

@@ -6,9 +6,13 @@ See the LICENSE.md file in the root directory for more details.
 """
 
 import math
+import time
+
+import numpy as np
 
 from openpilot.cereal import messaging, custom, log
 from opendbc.car import structs
+from opendbc.car.interfaces import ACCEL_MAX, ACCEL_MIN
 from openpilot.common.constants import CV
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
@@ -16,13 +20,22 @@ from openpilot.selfdrive.car.cruise import V_CRUISE_MAX
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import AccelController
+from openpilot.sunnypilot.selfdrive.controls.lib.turn_accel import get_future_curvature, limit_accel_in_turns
+from openpilot.sunnypilot.selfdrive.controls.lib.cutin_predecel import get_cutin_predecel_accel_limit
+from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_preview import (
+  apply_preview_target, clip_preview_offset, get_lead_preview_request, rate_limit_preview,
+)
 from openpilot.sunnypilot.selfdrive.controls.lib.dec.dec import DynamicExperimentalController
-from openpilot.sunnypilot.selfdrive.controls.lib.e2e_alerts_helper import E2EAlertsHelper
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_lead_gap.controller import E2ELeadGapController
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.controller import E2ESetSpeedController
+from openpilot.sunnypilot.selfdrive.controls.lib.e2e_alerts_helper import E2EAlertsHelper
 from openpilot.sunnypilot.selfdrive.controls.lib.lead_forecast.forecast import LeadForecast
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.zoompilot import make_smart_cruise_control
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist import SpeedLimitAssist
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.assist_mirror import SpeedLimitAssistMirror
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.helpers import pcm_machine_owns_sla
+from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.icbm_latch import icbm_active
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist_zp import SpeedLimitAssistZP
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitResolver
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 from openpilot.sunnypilot.models.helpers import get_active_bundle
@@ -60,24 +73,42 @@ E2E_BRAKE_HOLD_ACCEL = -0.2  # m/s^2
 
 
 class LongitudinalPlannerSP:
+  # set by the host planner before the e2e candidate is built
+  CP: structs.CarParams
+  allow_throttle: bool
+  fcw: bool
+  a_cruise: float
+  v_desired_trajectory: np.ndarray
+  a_desired_trajectory: np.ndarray
+  # combined lateral budget used by carrot turn-accel (m/s^2)
+  TURN_A_LAT_MAX: float = 3.0
+
   def __init__(self, CP: structs.CarParams, CP_SP: structs.CarParamsSP, mpc):
     self.accel_controller = AccelController()
     self.accel_controller_active = False
     self.lead_one = None
     self.events_sp = EventsSP()
     self.dec = DynamicExperimentalController(CP, mpc)
+    self.e2e_set_speed = E2ESetSpeedController()
+    self.e2e_lead_gap = E2ELeadGapController()
+    self.a_e2e = 0.  # the e2e candidate both lifts produced, for the floor's count of added speed
+    self.lead_forecast = LeadForecast()
+    self.lead_forecast.install(mpc)
     self.scc = make_smart_cruise_control(CP)
-    self.scc_actionable = CP.openpilotLongitudinalControl or not CP_SP.pcmCruiseSpeed
+    self.CP = CP
+    self.CP_SP = CP_SP
     self.resolver = SpeedLimitResolver(CP)
-    self.sla = SpeedLimitAssist(CP, CP_SP)
+    # cars whose setpoint only the driver can move run the SLA machine here; everywhere
+    # else it runs in card (the cruise arbiter, next to the buttons and the setpoint) and
+    # gets mirrored (speed_limit.helpers.pcm_machine_owns_sla). On Mazda alpha long the owner
+    # follows card's ICBM decision, which only moves between engagements.
+    self.sla_machine = SpeedLimitAssistZP(CP, CP_SP) if pcm_machine_owns_sla(CP, icbm_active=False) else None
+    self.sla_mirror = SpeedLimitAssistMirror(CP, CP_SP)
+    self.sla = self._sla_owner(not CP_SP.pcmCruiseSpeed)
+    self.scc_actionable = CP.openpilotLongitudinalControl or not CP_SP.pcmCruiseSpeed
     self.generation = int(model_bundle.generation) if (model_bundle := get_active_bundle()) else None
     self.source = LongitudinalPlanSource.cruise
     self.e2e_alerts_helper = E2EAlertsHelper()
-    # wraps mpc.process_lead so the long MPC sees the model's lead forecast; long_mpc.py is untouched
-    self.lead_forecast = LeadForecast()
-    self.lead_forecast.install(mpc)
-    self.e2e_set_speed = E2ESetSpeedController()
-    self.e2e_lead_gap = E2ELeadGapController()
 
     self.output_v_target = 0.
     self.output_a_target = 0.
@@ -90,8 +121,27 @@ class LongitudinalPlannerSP:
     self.traffic_fusion = TrafficLightFusion()
     self._carrot_enabled = self._params.get_bool("CarrotLongitudinalSourceEnabled")
     self._fusion_enabled = self._params.get_bool("CarrotTrafficLightFusionEnabled")
+    self._turn_accel_enabled = self._params.get_bool("CarrotTurnAccelEnabled")
+    self._cutin_predecel_enabled = self._params.get_bool("CarrotCutinPredecelEnabled")
+    self._lead_preview_enabled = self._params.get_bool("CarrotLeadPreviewEnabled")
+    self._lead_preview = 0.0
+    self._lead_preview_accel = 0.0
     self._param_count = 0
     self.carrot_should_stop = False
+    # Experimental moving-red pipeline. Observation-only until mode 2 is
+    # wired: it reads modeld's tmpfs observations and logs a shadow summary,
+    # never touching v/a targets or should_stop.
+    from openpilot.sunnypilot.carrot.signal_shadow import SignalShadowObserver
+    self.signal_shadow = SignalShadowObserver()
+    self._signal_shadow_last_log = -1.0
+    # Geometric red pre-deceleration execution (experimental). The cap decays
+    # the commanded accel toward a gentle braking target; it is only ever
+    # applied when SignalAssistMode == 2 (see apply_signal_prepare), so at the
+    # default mode this state machine does nothing.
+    from openpilot.sunnypilot.carrot.signal_stop_prepare import PrepareAccel
+    self._signal_prepare_accel = PrepareAccel()
+    self._signal_prepare_time = None
+    self._signal_prepare_previous = None
 
   def is_e2e(self, sm: messaging.SubMaster) -> bool:
     experimental_mode = sm['selfdriveState'].experimentalMode
@@ -112,6 +162,32 @@ class LongitudinalPlannerSP:
 
     # the eco lead pull-away boost needs the lead; the stock planner does not pass it, so update() keeps it
     return self.accel_controller.get_max_accel(v_ego, engine_off, lead if lead is not None else self.lead_one)
+
+  def get_carrot_max_accel(self, sm: messaging.SubMaster, v_ego: float, v_cruise: float) -> float | None:
+    """Optional positive-accel cap from carrot (turn curvature + cut-in risk).
+    Off by default; each contributor only ever lowers the cap. Returns the
+    tightest of the enabled contributors, or None when all are off."""
+    cap = None
+    if self._turn_accel_enabled:
+      try:
+        model = sm['modelV2']
+        controls = sm['controlsState']
+        curvature = get_future_curvature(model, controls.desiredCurvature)
+        capped = limit_accel_in_turns(
+          v_ego, curvature, [ACCEL_MIN, ACCEL_MAX], self.TURN_A_LAT_MAX,
+          model_msg=model, v_cruise=v_cruise, current_curvature=controls.curvature,
+        )
+        cap = float(capped[1])
+      except (AttributeError, KeyError, TypeError, ValueError, IndexError):
+        pass
+    if self._cutin_predecel_enabled:
+      try:
+        limit = get_cutin_predecel_accel_limit(sm['radarState'])
+        if limit is not None:
+          cap = limit if cap is None else min(cap, limit)
+      except (AttributeError, KeyError, TypeError, ValueError):
+        pass
+    return cap
 
   def get_cruise_target_override(self, v_ego: float, v_target: float, force_decel: bool, accel_coast: float | None = None) -> float:
     if not self.accel_controller.is_enabled() or force_decel or self.source != LongitudinalPlanSource.cruise:
@@ -139,6 +215,10 @@ class LongitudinalPlannerSP:
 
     return gated
 
+  def _sla_owner(self, icbm: bool):
+    # the machine exists only on pcm openpilot-long cars, where it owns SLA while ICBM is passive
+    return self.sla_machine if self.sla_machine is not None and not icbm else self.sla_mirror
+
   def update_targets(self, sm: messaging.SubMaster, v_ego: float, a_ego: float, v_cruise: float) -> tuple[float, float]:
     CS = sm['carState']
     v_cruise_cluster_kph = min(CS.vCruiseCluster, V_CRUISE_MAX)
@@ -154,12 +234,21 @@ class LongitudinalPlannerSP:
       self._fusion_enabled = self._params.get_bool("CarrotTrafficLightFusionEnabled")
 
     # Smart Cruise Control
-    self.scc.update(sm, long_enabled and self.scc_actionable, long_override, v_ego, a_ego, v_cruise)
+    # SCC has nothing to act through without openpilot long or ICBM, the same condition
+    # controlsd gates longActive on. Its params outlive that, so gate it here.
+    icbm = icbm_active(sm['carStateSP'], self.CP_SP)
+    scc_actionable = self.CP.openpilotLongitudinalControl or icbm
+    self.scc.update(sm, long_enabled and scc_actionable, long_override, v_ego, a_ego, v_cruise)
 
     # Speed Limit Resolver
     self.resolver.update(v_ego, sm)
 
     # Speed Limit Assist
+    sla = self._sla_owner(icbm)
+    if sla is not self.sla:
+      sla.reset()
+      self.sla = sla
+    self.sla_mirror.session = sm['carStateSP'].zoompilot.cruiseSession
     has_speed_limit = self.resolver.speed_limit_valid or self.resolver.speed_limit_last_valid
     self.sla.update(long_enabled, long_override, v_ego, a_ego, v_cruise_cluster, self.resolver.speed_limit,
                     self.resolver.speed_limit_final_last, has_speed_limit, self.resolver.distance, self.events_sp)
@@ -186,6 +275,13 @@ class LongitudinalPlannerSP:
     if self._carrot_enabled:
       mpc_mode = self.dec.mode() if self.dec.active() else "acc"
       self.carrot_source.update(sm, v_cruise * CV.MS_TO_KPH, mpc_mode)
+      # Carrot as a 5th speed source: its curve-speed / driving-mode target can
+      # only ever slow the car below the user-set cruise, never command more
+      # speed (clamped to v_cruise), and only on a fresh packet (the adapter's
+      # 2 s killswitch). A non-finite value is ignored rather than poisoning min().
+      if self.carrot_source.active and math.isfinite(self.carrot_source.v_target):
+        carrot_v = min(v_cruise, max(0.0, float(self.carrot_source.v_target)))
+        self.targets[LongitudinalPlanSource.carrot] = (carrot_v, a_ego)
 
     self.source = min(self.targets, key=lambda k: self.targets[k][0])
     v_target, a_target = self.targets[self.source]
@@ -229,7 +325,140 @@ class LongitudinalPlannerSP:
     if self._fusion_enabled:
       self.traffic_fusion.update(sm, v_ego)
 
+    # Experimental moving-red shadow: mode 1 observes only (no control effect),
+    # mode 2 reserved for actuation in a later change. Runs independent of the
+    # carrot longitudinal source and only does file reads + throttled logging.
+    # Kept for the publisher below so the HUD ring does not re-read tmpfs.
+    shadow = self._signal_shadow_state = self.signal_shadow.update()
+    if shadow.mode > 0:
+      now_mono = time.monotonic()
+      if now_mono - self._signal_shadow_last_log >= 1.0:
+        self._signal_shadow_last_log = now_mono
+        cloudlog.event("signalShadow", mode=int(shadow.mode),
+                       prepare_seen=bool(shadow.prepare_seen), start_seen=bool(shadow.start_seen),
+                       prepare_count=int(self.signal_shadow.prepare_count),
+                       start_count=int(self.signal_shadow.start_count))
+
     return self.output_v_target, self.output_a_target
+
+  def apply_lead_preview(self, sm: messaging.SubMaster, action_t: float, output_a_target_mpc: float,
+                         reset_state: bool, v_ego: float) -> tuple[float, float]:
+    """Carrot lead-deceleration preview (default OFF behind
+    CarrotLeadPreviewEnabled). Evaluates the MPC plan at a previewed action
+    time while the radar lead is braking, then keeps only a bounded early
+    deceleration (apply_preview_target never raises the target). Returns the
+    effective (action_t, mpc accel)."""
+    if not self._lead_preview_enabled:
+      return action_t, output_a_target_mpc
+    try:
+      cs = sm['carState']
+      preview_enabled = (not self.dec.active() and not reset_state
+                         and not cs.gasPressed and not cs.brakePressed)
+      lead = sm['radarState'].leadOne
+      lead_status = (preview_enabled and bool(getattr(lead, 'present', False))
+                     and bool(lead.radar) and int(getattr(lead, 'radarTrackId', -1)) >= 0)
+      request = get_lead_preview_request(
+        self._driving_mode_value(),
+        lead_status=lead_status, a_lead=float(lead.aLeadK), a_ego=float(cs.aEgo),
+      )
+      if preview_enabled:
+        requested = rate_limit_preview(request.offset_s, self._lead_preview)
+        self._lead_preview = clip_preview_offset(action_t, requested)
+        self._lead_preview_accel = request.lead_accel_signal
+        previewed = get_accel_from_plan(self.v_desired_trajectory, self.a_desired_trajectory,
+                                        CONTROL_N_T_IDX, action_t=action_t + self._lead_preview)
+        output_a_target_mpc = apply_preview_target(output_a_target_mpc, previewed,
+                                                   self._driving_mode_value())
+      else:
+        self._lead_preview = 0.0
+        self._lead_preview_accel = 0.0
+      return action_t + self._lead_preview, output_a_target_mpc
+    except (AttributeError, KeyError, TypeError, ValueError, IndexError):
+      return action_t, output_a_target_mpc
+
+  def get_signal_assist_action(self, sm: messaging.SubMaster) -> int:
+    """Advisory HUD evidence: 0 unknown, 1 red, 2 green, 3 mixed.
+
+    Shadow only. Sourced from modeld's tmpfs observation records (the same
+    ones the start guard / prepare runtime consume), never from a control
+    decision, so the ring can never imply that the car is acting on it.
+    """
+    try:
+      observer = getattr(self, "signal_shadow", None)
+      if observer is None:
+        return 0
+      # Colour codes are bit flags (1 red | 2 green = 3 mixed), so a stream
+      # disagreeing with the other is mixed rather than one winning.
+      state = getattr(self, "_signal_shadow_state", None) or observer.update()
+      if int(state.mode) <= 0:
+        return 0
+      return int(getattr(state, "prepare_color", 0)) | int(getattr(state, "start_color", 0))
+    except (AttributeError, TypeError, ValueError):
+      return 0
+
+  def get_signal_detection_suspended(self) -> bool:
+    """True while the carrot planner has parked signal detection (e.g. motorway).
+
+    Display only: the HUD shows the pause ring so a "no light" reading is not
+    mistaken for a missed detection.
+    """
+    try:
+      return bool(getattr(self.carrot_source.carrot, "signal_detection_suspended", False))
+    except (AttributeError, TypeError, ValueError):
+      return False
+
+  def _driving_mode_value(self) -> int:
+    """Carrot driving mode as the 1..4 value longitudinal_preview expects.
+    Reads the carrot planner when available (it follows the user param),
+    else the param directly; any failure means Normal."""
+    try:
+      mode = getattr(self.carrot_source.carrot, "_my_driving_mode", None)
+      if mode is not None:
+        return int(getattr(mode, "value", 3))
+      return int(self._params.get_int("MyDrivingMode")) or 3
+    except Exception:
+      return 3
+
+  def apply_signal_prepare(self, sm: messaging.SubMaster, now: float | None = None) -> None:
+    """Geometric red-light pre-deceleration cap on the arbitrated accel.
+
+    Experimental and default-OFF: it only ever engages at SignalAssistMode == 2
+    with a fresh, active carrot prepare decision, and it can only ever *lower*
+    the commanded accel (PrepareAccel returns min(target, cap)). It never
+    requests a stop or a departure - the model keeps owning those. At mode < 2
+    this resets the cap and returns, so the default device is byte-for-byte
+    unaffected.
+    """
+    from openpilot.sunnypilot.carrot.signal_mode import signal_mode
+    from openpilot.sunnypilot.carrot.signal_stop_prepare import prepare_lead_blocked
+
+    now = time.monotonic() if now is None else now
+    elapsed = self.dt if self._signal_prepare_time is None else now - self._signal_prepare_time
+    self._signal_prepare_time = now
+
+    carrot = self.carrot_source.carrot
+    decision = getattr(carrot, "prepare_decision", None)
+
+    cs = sm['carState']
+    active = (
+      signal_mode() >= 2
+      and decision is not None and bool(getattr(decision, "active", False))
+      and bool(getattr(carrot, "prepare_control_active", False))
+      and not cs.gasPressed and not cs.brakePressed
+      and 5 / 3.6 < cs.vEgo < 82 / 3.6
+      and getattr(cs, "softHoldActive", 0) == 0
+      and 0 < elapsed <= 0.2
+      and not self.output_should_stop
+      and not self.dec.active()
+      and not prepare_lead_blocked(sm['radarState'])
+    )
+    previous = cs.aEgo if self._signal_prepare_previous is None else self._signal_prepare_previous
+    uncapped = self.output_a_target
+    self.output_a_target = float(self._signal_prepare_accel.apply(self.output_a_target, previous, elapsed, active))
+    self._signal_prepare_previous = self.output_a_target
+    if active and self.output_a_target < uncapped:
+      # keep the speed target consistent with the gentler deceleration
+      self.output_v_target = min(self.output_v_target, max(0.0, cs.vEgo + self.output_a_target * self.dt))
 
   def update_e2e_target(self, sm: messaging.SubMaster, a_model: float, reset_state: bool, accel_coast: float) -> float:
     """The e2e candidate after the set-speed floor and the follow-distance assist. The host
@@ -247,20 +476,28 @@ class LongitudinalPlannerSP:
     a_mpc = get_accel_from_plan(self.v_desired_trajectory, self.a_desired_trajectory, CONTROL_N_T_IDX,
                                 action_t=self.CP.longitudinalActuatorDelay + DT_MDL)
     # a_cruise is last frame's: the host builds this frame's after the e2e candidate
-    return self.e2e_lead_gap.update(sm, a_e2e, float(a_mpc), is_e2e, reset_state, dec_active, self.allow_throttle, self.fcw,
-                                    self.a_cruise, steer_lat_accel)
+    self.a_e2e = self.e2e_lead_gap.update(sm, a_e2e, float(a_mpc), is_e2e, reset_state, dec_active, self.allow_throttle,
+                                          self.fcw, self.a_cruise, steer_lat_accel)
+    return self.a_e2e
 
   def update(self, sm: messaging.SubMaster) -> None:
     self.accel_controller.update()
     self.lead_one = sm['radarState'].leadOne
     self.events_sp.clear()
-    self.e2e_alerts_helper.update(sm, self.events_sp)
+    # DEC is driven separately through update_dec() by the host (stock
+    # LongitudinalPlanner.update calls it), so it is not ticked here - doing
+    # both double-updates it and breaks __new__-based tests that bypass
+    # __init__ (no self.dec).
     self.lead_forecast.update(sm)
+    self.e2e_alerts_helper.update(sm, self.events_sp)
 
   def update_dec(self, sm: messaging.SubMaster) -> None:
     self.dec.update(sm)
 
   def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.PubMaster) -> None:
+    # the host has chosen: tell the set-speed floor how much of the lift reached the car
+    self.e2e_set_speed.delivered(float(self.output_a_target), float(self.a_e2e))
+
     plan_sp_send = messaging.new_message('longitudinalPlanSP')
 
     plan_sp_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
@@ -280,6 +517,9 @@ class LongitudinalPlannerSP:
     dec.curveDetected = bool(self.dec.signals.curve_detected)
     dec.wantBlended = bool(self.dec.want_blended)
     dec.leadVeto = bool(self.dec.lead_veto)
+
+    longitudinalPlanSP.signalAssistAction = int(self.get_signal_assist_action(sm))
+    longitudinalPlanSP.signalDetectionSuspended = bool(self.get_signal_detection_suspended())
 
     accel_controller = longitudinalPlanSP.accelController
     accel_controller.enabled = bool(self.accel_controller.is_enabled())
@@ -377,5 +617,13 @@ class LongitudinalPlannerSP:
       tl.source = _TRAFFIC_LIGHT_SOURCE_MAP[fused.source]
       tl.confidence = float(fused.confidence)
       tl.distance = float(fused.distance)
+
+    # zoompilot: experimental mode's set-speed floor and follow-distance assist, the model's lead forecast
+    zoompilot = longitudinalPlanSP.zoompilot
+    self.e2e_set_speed.fill(zoompilot.e2eSetSpeed)
+    self.e2e_lead_gap.fill(zoompilot.e2eLeadGap)
+    self.lead_forecast.fill(zoompilot.leadForecast)
+    # zoompilot's vision planner only; 0 tells the ICBM servo there is no lookahead
+    zoompilot.sccVAheadMin = float(getattr(self.scc.vision, 'v_ahead_min', 0.))
 
     pm.send('longitudinalPlanSP', plan_sp_send)

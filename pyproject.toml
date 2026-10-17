@@ -21,7 +21,7 @@ dependencies = [
   "tqdm",         # cars (fw_versions.py) on start + many one-off uses
 
   # core
-  "scons==4.10.1",  # 4.11 removed the qt3 tool still used to build Cabana
+  "scons",
   "pycapnp==2.1.0",  # 2.2 introduces a memory leak due to cyclic references
   "numpy >=2.0",
 
@@ -46,7 +46,6 @@ dependencies = [
   "pyzmq",
   "shapely>=2.0",  # carrot navigation path resampling
   "aiohttp>=3.8",  # carrot 7714 v2 WebSocket receiver
-  "sentry-sdk",
   "setproctitle",
   "jeepney",
   "zstandard",  # this can go once we're on Python 3.14+
@@ -118,7 +117,7 @@ allow-direct-references = true
 [tool.codespell]
 quiet-level = 3
 # if you've got a short variable name that's getting flagged, add it here
-ignore-words-list = "bu,ro,te,ue,alo,hda,ois,nam,nams,ned,som,parm,setts,inout,warmup,bumb,nd,sie,preints,whit,indexIn,ws,uint,grey,deque,stdio,amin,BA,LITE,atEnd,UIs,errorString,arange,FocusIn,od,tim,relA,hist,copyable,jupyter,thead,TGE,abl,lite,ser"
+ignore-words-list = "bu,ro,te,ue,alo,hda,ois,nam,nams,ned,som,parm,setts,inout,warmup,bumb,nd,sie,preints,whit,indexIn,ws,uint,grey,deque,stdio,amin,BA,LITE,atEnd,UIs,errorString,arange,FocusIn,od,tim,relA,hist,copyable,jupyter,thead,TGE,abl,lite,ser,laf"
 builtin = "clear,rare,informal,code,names,en-GB_to_en-US"
 skip = "*.po, uv.lock, *.onnx, *.pem, */c_generated_code/*, docs/assets/*, openpilot/tools/plotjuggler/layouts/*, openpilot/selfdrive/assets/offroad/mici_fcc.html, ./openpilot/third_party/*, ./openpilot/cereal/gen/*"
 
@@ -172,6 +171,10 @@ lint.flake8-implicit-str-concat.allow-multiline = false
 "openpilot/sunnypilot/carrot/signal_assist.py" = ["C408", "E702"]
 "openpilot/sunnypilot/carrot/signal_assist_runtime.py" = ["C408", "E702"]
 "openpilot/sunnypilot/carrot/signal_display.py" = ["C408", "E702"]
+"openpilot/sunnypilot/carrot/signal_start_guard.py" = ["C408", "E702"]
+"openpilot/sunnypilot/carrot/signal_stop_prepare.py" = ["C408", "E702"]
+"openpilot/sunnypilot/carrot/signal_stop_prepare_runtime.py" = ["C408", "E702"]
+"openpilot/sunnypilot/carrot/signal_mode.py" = ["C408", "E702"]
 "openpilot/selfdrive/modeld/signal_color_shadow.py" = ["C408", "E702", "RUF100"]
 "openpilot/selfdrive/modeld/signal_tracking_shadow.py" = ["C408", "E702", "RUF100"]
 "openpilot/sunnypilot/carrot/recovery/server.py" = ["E501", "ISC002"]

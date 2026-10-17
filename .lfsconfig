@@ -4,3 +4,6 @@
   # 推送：本 fork 不向 LFS 上传；git push 时请设 GIT_LFS_SKIP_PUSH=1
   pushurl = https://gitlab.com/sunnypilot/public/sunnypilot-new-lfs.git/info/lfs
   locksverify = false
+	# Only a chestnut uses the big driving model. Keep its pointer but exclude the object from
+	# install fetches; a chestnut build fetches it (openpilot/sunnypilot/models/big_model_source.py).
+	fetchexclude = openpilot/selfdrive/modeld/models/big_driving_tinygrad.pkl

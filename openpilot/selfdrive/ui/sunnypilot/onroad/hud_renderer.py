@@ -11,6 +11,7 @@ from openpilot.selfdrive.ui.mici.onroad.torque_bar import TorqueBar
 from openpilot.selfdrive.ui.sunnypilot.onroad.developer_ui import DeveloperUiRenderer, DeveloperUiState, get_bottom_dev_ui_offset
 from openpilot.selfdrive.ui.sunnypilot.onroad.road_name import RoadNameRenderer
 from openpilot.selfdrive.ui.sunnypilot.onroad.rocket_fuel import RocketFuel
+from openpilot.selfdrive.ui.sunnypilot.onroad.signal_hud import SignalHudRenderer
 from openpilot.selfdrive.ui.sunnypilot.onroad.speed_limit import SpeedLimitRenderer
 from openpilot.selfdrive.ui.sunnypilot.onroad.smart_cruise_control import SmartCruiseControlRenderer
 from openpilot.selfdrive.ui.sunnypilot.onroad.turn_signal import TurnSignalController
@@ -38,6 +39,7 @@ class HudRendererSP(HudRenderer):
     self.turn_signal_controller = TurnSignalController()
     self.circular_alerts_renderer = CircularAlertsRenderer()
     self.speed_renderer = SpeedRenderer()
+    self.signal_hud = SignalHudRenderer()
     self._torque_bar = TorqueBar(scale=3.0, always=True)
 
     self.pcm_cruise_speed: bool = True
@@ -51,7 +53,7 @@ class HudRendererSP(HudRenderer):
       return
 
     if ui_state.CP_SP is not None:
-      self.pcm_cruise_speed = ui_state.CP_SP.pcmCruiseSpeed
+      self.pcm_cruise_speed = not ui_state.icbm_running
     self.speed_conv = CV.MS_TO_KPH if ui_state.is_metric else CV.MS_TO_MPH
     self.speed_cluster = ui_state.sm['carState'].cruiseState.speedCluster * self.speed_conv
 
@@ -147,3 +149,4 @@ class HudRendererSP(HudRenderer):
     self.turn_signal_controller.render(rect)
     self.circular_alerts_renderer.render(rect)
     self.rocket_fuel.render(rect, ui_state.sm)
+    self.signal_hud.render(rect, ui_state.sm)

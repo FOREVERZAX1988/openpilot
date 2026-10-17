@@ -10,11 +10,12 @@ import numpy as np
 import pytest
 
 from openpilot.cereal import messaging
+from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC
 from openpilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner, LongitudinalPlanSource
+from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.controls.lib.dec.tests.test_dec_planner_gate import build_planner, build_sm
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.controller import FLOOR_MAX, E2ESetSpeedController, Inhibit
-from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.tests.helpers import MockParams
 
 MODEL_ACCEL = 0.
 
@@ -22,7 +23,7 @@ MODEL_ACCEL = 0.
 def no_lead_mpc(mpc) -> None:
   """The MPC with no lead chases its synthetic fast lead: the logged candidate sits near +2 m/s^2
   (p50 1.98), far above anything the floor asks for. Stub that rather than depend on the solver."""
-  def update(radarstate, personality=None):
+  def update(radarstate, personality=None, **kwargs):
     mpc.v_solution = mpc.x0[1] + 2. * T_IDXS_MPC
     mpc.a_solution = np.full(len(T_IDXS_MPC), 2.)
     mpc.j_solution = np.zeros(len(T_IDXS_MPC) - 1)
@@ -42,7 +43,7 @@ def planner_sm():
 def run_planner(enabled: bool, frames: int = 200) -> LongitudinalPlanner:
   planner = build_planner(dec_active=False, dec_mode='acc')
   no_lead_mpc(planner.mpc)
-  planner.e2e_set_speed = E2ESetSpeedController(params=MockParams(enabled))
+  planner.e2e_set_speed = E2ESetSpeedController(params=FakeParams(ExperimentalModeSetSpeed=enabled))
   sm = planner_sm()
   for _ in range(frames):
     planner.update(sm)
@@ -73,3 +74,18 @@ def test_plan_reports_the_floor():
   assert report.inhibit == Inhibit.none
   assert report.boost == pytest.approx(planner.e2e_set_speed.boost)
   assert report.authority == pytest.approx(1.)
+
+
+def test_publishing_counts_the_speed_that_reached_the_car():
+  # as plannerd runs it: update, then publish. The stubbed MPC resets its source every update, as the
+  # real one does, so the count cannot come from the source enum.
+  planner = run_planner(True, frames=0)
+  pm = messaging.PubMaster(['longitudinalPlanSP'])
+  pm.send = lambda service, msg: None
+  sm = planner_sm()
+  for _ in range(100):
+    planner.update(sm)
+    planner.publish_longitudinal_plan_sp(sm, pm)
+  boost = planner.e2e_set_speed.boost
+  assert boost > 0.
+  assert planner.e2e_set_speed.added > 0.5 * boost * 100 * DT_MDL

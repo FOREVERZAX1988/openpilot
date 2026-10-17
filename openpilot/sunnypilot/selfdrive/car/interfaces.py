@@ -10,12 +10,15 @@ from opendbc.car import structs
 from opendbc.car.interfaces import CarInterfaceBase
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
+from openpilot.sunnypilot.selfdrive.car.mazda_torque_seed import seed_mazda_torque_defaults
 from openpilot.sunnypilot.selfdrive.controls.lib.nnlc.helpers import get_nn_model_path
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.helpers import set_speed_limit_assist_availability
 
-import openpilot.system.sentry as sentry
-
 from openpilot.sunnypilot.sunnylink.statsd import STATSLOGSP
+import openpilot.system.sentry as sentry
+from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.helpers import icbm_applicable
+from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.demand import icbm_demanded
+from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.migration import migrate_icbm_toggle
 
 
 def log_fingerprint(CP: structs.CarParams) -> None:
@@ -59,8 +62,9 @@ def _initialize_intelligent_cruise_button_management(CP: structs.CarParams, CP_S
   if params is None:
     params = Params()
 
-  icbm_enabled = params.get_bool("IntelligentCruiseButtonManagement")
-  if icbm_enabled and CP_SP.intelligentCruiseButtonManagementAvailable and not CP.openpilotLongitudinalControl:
+  migrate_icbm_toggle(CP, CP_SP, params)
+  # the boot decision; card's IcbmLatch moves it on demand while disengaged
+  if icbm_applicable(CP, CP_SP) and icbm_demanded(CP, params):
     CP_SP.pcmCruiseSpeed = False
 
 
@@ -84,16 +88,8 @@ def _cleanup_unsupported_params(CP: structs.CarParams, CP_SP: structs.CarParamsS
     params.remove("EnforceTorqueControl")
     params.remove("LateralJerkTorqueController")
 
-  if not CP_SP.intelligentCruiseButtonManagementAvailable or CP.openpilotLongitudinalControl:
-    cloudlog.warning("ICBM not available or openpilot Longitudinal Control enabled, cleaning up params")
-    params.remove("IntelligentCruiseButtonManagement")
-
-  if not CP.openpilotLongitudinalControl and CP_SP.pcmCruiseSpeed:
-    cloudlog.warning("openpilot Longitudinal Control and ICBM not available, cleaning up params")
-    params.remove("DynamicExperimentalControl")
-    params.remove("CustomAccIncrementsEnabled")
-    params.remove("SmartCruiseControlVision")
-    params.remove("SmartCruiseControlMap")
+  # DEC, custom ACC and SCC stay as the user left them on a car without openpilot long or ICBM: they
+  # are inert then, and come back as set when either returns
 
   set_speed_limit_assist_availability(CP, CP_SP, params)
 
@@ -118,6 +114,11 @@ def initialize_params(params) -> list[dict[str, Any]]:
   # hyundai
   keys.extend([
     "HyundaiLongitudinalTuning",
+  ])
+
+  # mazda
+  keys.extend([
+    "MazdaTjaButton",
   ])
 
   # subaru

@@ -78,6 +78,7 @@ class XState(Enum):
   e2eStop = 3       # Braking to a model stop line / signal.
   e2ePrepare = 4    # Just rolled into a stop, holding it.
   e2eStopped = 5    # Stationary, waiting for green or gas pedal.
+  e2eStopPrepare = 6  # Geometric red-light pre-deceleration (no stop claimed).
 
   def __str__(self) -> str:
     return self.name
@@ -446,6 +447,22 @@ class CarrotPlanner:
       self._signal_runtime = None
       self._signal_assist = None
     self._signal_decision = None
+
+    # Experimental red-light start guard (ported from carrot). Runs only when
+    # SignalAssistMode > 0; mode 1 records the decision for shadow observation,
+    # mode 2 additionally lets a hold feed the stop override. Any failure keeps
+    # it disabled so normal planning is never affected.
+    self._start_runtime = None
+    self.start_guard = None
+    self.start_decision = None
+    self.signal_detection_suspended = False
+    try:
+      from openpilot.sunnypilot.carrot.signal_start_guard import SignalStartRuntime
+      self._start_runtime = SignalStartRuntime()
+      self.start_guard = self._start_runtime.guard
+    except Exception:
+      self._start_runtime = None
+      self.start_guard = None
 
     # Lane-change assist.
     self._desire_state = 0.0
@@ -1224,6 +1241,18 @@ class CarrotPlanner:
     self._check_model_stopping(v_cruise, v, v_ego, a_ego, float(x[-1]), y, d_rel_for_model)
     self._update_x_state(sm, v_ego, v_ego_kph, a_ego, stop_model_x)
 
+    # On a fresh explicit motorway road class the signal path is suspended so a
+    # gantry/red lamp on a high-speed road cannot trigger a phantom stop.
+    suspended = False
+    try:
+      from openpilot.sunnypilot.carrot.signal_road_policy import signal_detection_suspended
+      suspended = bool(signal_detection_suspended(sm))
+    except Exception:
+      suspended = False
+    self.signal_detection_suspended = suspended
+    if suspended and self._x_state in (XState.e2eStop, XState.e2eStopped, XState.e2eStopPrepare):
+      self._x_state = XState.e2eCruise
+
     # ---- Experimental neural-signal stop supervision (strict opt-in) ------ #
     # Disabled on normal devices (_signal_assist stays None), in which case this
     # block is a no-op and the original controller path is untouched. A red
@@ -1239,7 +1268,8 @@ class CarrotPlanner:
         signal_ctx.get("now", time.monotonic()), signal_observation,
         enabled=(bool(signal_ctx.get("enabled", False))
                  and self._my_driving_mode != DrivingMode.High
-                 and self._traffic_light_detect_mode != 0),
+                 and self._traffic_light_detect_mode != 0
+                 and not suspended),
         valid=bool(signal_ctx.get("valid", False)),
         drive=bool(signal_ctx.get("drive", False)),
         gas=bool(cs.gasPressed),
@@ -1257,6 +1287,35 @@ class CarrotPlanner:
         self._traffic_state = TrafficState.red
       if self._signal_runtime is not None:
         self._signal_runtime.record(self._signal_decision, v_ego, stop_model_x)
+
+    # Experimental red-light start guard (ported from carrot). Runs only with
+    # SignalAssistMode > 0. Mode 1 records the decision for shadow observation
+    # but never influences the stop; mode 2 lets a confirmed red hold become a
+    # stop override. Green only releases that override, never grants throttle.
+    if self.start_guard is not None:
+      start_observation = None
+      start_context = None
+      try:
+        if self._start_runtime is not None:
+          start_observation, start_context = self._start_runtime.read(sm)
+      except Exception:
+        start_observation, start_context = None, None
+      from openpilot.sunnypilot.carrot.signal_mode import signal_mode
+      _smode = signal_mode()
+      start_ctx = start_context or {}
+      start_enabled = (bool(start_ctx.get("enabled", False)) and self._traffic_light_detect_mode != 0
+                       and not suspended)
+      self.start_decision = self.start_guard.update(
+        start_ctx.get("now", time.monotonic()), start_observation,
+        enabled=start_enabled, valid=bool(start_ctx.get("valid", False)),
+        drive=bool(start_ctx.get("drive", False)), gas=bool(cs.gasPressed), speed=float(v_ego),
+        departure=(self._traffic_state == TrafficState.green or lead_detected
+                   or self._x_state not in (XState.e2eStop, XState.e2eStopped)),
+      )
+      if self._start_runtime is not None:
+        self._start_runtime.record(self.start_decision, v_ego, stop_model_x)
+      if self.start_decision.hold and _smode >= 2:
+        signal_hold = True
 
     if signal_hold:
       # Hold the stop even if a lead appears or moves. Radar obstacles remain in

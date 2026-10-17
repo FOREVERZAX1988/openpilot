@@ -15,6 +15,7 @@ if gui_app.sunnypilot_ui():
   from openpilot.selfdrive.ui.sunnypilot.mici.layouts.settings import SettingsLayoutSP as SettingsLayout
   from openpilot.selfdrive.ui.sunnypilot.mici.layouts.home import MiciHomeLayoutSP as MiciHomeLayout
   from openpilot.selfdrive.ui.sunnypilot.mici.layouts.onroad import OnroadViewContainerSP as AugmentedRoadView
+  from openpilot.selfdrive.ui.sunnypilot.mici.layouts.offroad_alerts import MiciOffroadAlertsSP as MiciOffroadAlerts
 
 ONROAD_DELAY = 2.5  # seconds
 
@@ -81,7 +82,7 @@ class MiciMainLayout(Scroller):
       on_settings=lambda: gui_app.push_widget(self._settings_layout),
       on_alerts=lambda: self._scroll_to(self._alerts_layout),
       alert_count_callback=self._alerts_layout.active_alerts,
-      max_severity_callback=self._alerts_layout.max_severity,
+      alert_icon_callback=self._alerts_layout.highest_severity_icon,
     )
     self._settings_layout.set_preview_callback(self._enter_onroad_preview)
     for layout in (self._car_onroad_layout, self._body_onroad_layout):

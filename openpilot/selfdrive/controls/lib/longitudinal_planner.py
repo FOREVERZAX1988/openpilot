@@ -40,7 +40,7 @@ def get_coast_accel(pitch):
   return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
 def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, accel_coast, allow_throttle,
-                      max_accel_override=None):
+                      max_accel_override=None, carrot_max_accel=None):
   if max_accel_override is not None:
     max_accel = max_accel_override
   else:
@@ -50,6 +50,11 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
     a_y = v_ego ** 2 * angle_steers * CV.DEG_TO_RAD / (CP.steerRatio * CP.wheelbase)
     a_x_allowed = math.sqrt(max(a_total_max ** 2 - a_y ** 2, 0.))
     max_accel = min(max_accel, a_x_allowed)
+    # Carrot turn-accel / cutin-predecel (optional): tighten further using the
+    # *upcoming* model curvature and corner-radar cut-in risk, not just the
+    # present steering angle. Only ever lowers the cap.
+    if carrot_max_accel is not None and math.isfinite(carrot_max_accel):
+      max_accel = min(max_accel, carrot_max_accel)
     if not allow_throttle:
       clipped_accel_coast = max(accel_coast, ACCEL_MIN)
       coast_limit = np.interp(v_ego, [MIN_ALLOW_THROTTLE_SPEED, MIN_ALLOW_THROTTLE_SPEED*2], [max_accel, clipped_accel_coast])
@@ -190,6 +195,11 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     action_t =  self.CP.longitudinalActuatorDelay + DT_MDL
     output_a_target_mpc = get_accel_from_plan(self.v_desired_trajectory, self.a_desired_trajectory, CONTROL_N_T_IDX,
                                               action_t=action_t)
+    # Carrot lead-deceleration preview (optional, default OFF): evaluate the
+    # same MPC plan at a previewed action time when the lead is braking, then
+    # apply only a bounded early deceleration. Never adds acceleration.
+    action_t, output_a_target_mpc = self.apply_lead_preview(
+      sm, action_t, output_a_target_mpc, reset_state, v_ego)
     output_should_stop_mpc = should_stop(v_ego, output_a_target_mpc)
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
@@ -198,12 +208,13 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     output_a_target_e2e = LongitudinalPlannerSP.update_e2e_target(self, sm, output_a_target_e2e, reset_state, accel_coast)
 
     max_accel_override = self.get_max_accel_override(v_ego, sm['carStateSP'].engineOff)
+    carrot_max_accel = self.get_carrot_max_accel(sm, v_ego, v_cruise)
     v_cruise = self.get_cruise_target_override(v_ego, v_cruise, force_decel, accel_coast if accel_coast < 0.0 else None)
     a_cruise_prev = self.a_cruise
     gated_cruise = get_cruise_accel(is_e2e, v_cruise, v_ego, a_cruise_prev, steer_angle_without_offset,
-                                    self.CP, self.dt, accel_coast, self.allow_throttle, max_accel_override)
+                                    self.CP, self.dt, accel_coast, self.allow_throttle, max_accel_override, carrot_max_accel)
     ungated_cruise = get_cruise_accel(is_e2e, v_cruise, v_ego, a_cruise_prev, steer_angle_without_offset,
-                                      self.CP, self.dt, accel_coast, True, max_accel_override)
+                                      self.CP, self.dt, accel_coast, True, max_accel_override, carrot_max_accel)
     self.a_cruise = self.arbitrate_cruise_candidate(
       sm, gated_cruise, ungated_cruise, output_a_target_mpc, self.mpc.source,
       allow_throttle=self.allow_throttle, e2e=is_e2e, force_decel=force_decel,
@@ -220,6 +231,12 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
     self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
+
+    # sunnypilot: geometric red-light pre-deceleration runs after the final
+    # arbitration so its gentle cap cannot be overwritten. A no-op unless the
+    # SignalAssistMode killswitch is set (the SP subclass owns the gating).
+    if hasattr(self, 'apply_signal_prepare'):
+      self.apply_signal_prepare(sm)
     self.accel_controller_active = self.is_accel_controller_active(force_decel)
 
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.output_a_target + a_prev) / 2.0

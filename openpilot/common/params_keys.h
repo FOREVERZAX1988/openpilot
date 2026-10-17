@@ -28,6 +28,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ControlsReady", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"CurrentBootlog", {PERSISTENT, STRING}},
     {"CurrentRoute", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, STRING}},
+    {"DisableDriverCameraIR", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"DisableLogging", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"DisablePowerDown", {PERSISTENT | BACKUP, BOOL}},
     {"DisableUpdates", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -61,6 +62,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"GsmRoaming", {PERSISTENT | BACKUP, BOOL}},
     {"HardwareSerial", {PERSISTENT, STRING}},
     {"HasAcceptedTerms", {PERSISTENT, STRING, "0"}},
+    {"IcbmDemandMigrated", {PERSISTENT | BACKUP, BOOL}},  // ICBM toggle to ICBM on demand (intelligent_cruise_button_management/migration.py)
     {"InstallDate", {PERSISTENT, TIME}},
     {"IsDriverViewEnabled", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsEngaged", {PERSISTENT, BOOL}},
@@ -69,11 +71,15 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsMetric", {PERSISTENT | BACKUP, BOOL}},
     {"IsOffroad", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsTakingSnapshot", {CLEAR_ON_MANAGER_START, BOOL}},  // offroad camera check (carrot vision runner)
+    {"ModelManager_CarryOver", {PERSISTENT, JSON}},  // model picks waiting to be re-queued after a selector bump (models/default_bootstrap.py)
+    {"OffroadModeRequested", {CLEAR_ON_MANAGER_START, BOOL}},
     {"Offroad_IsTakingSnapshot", {CLEAR_ON_MANAGER_START, JSON}},
     // Jetlink (accelerator link): what runs the large model off the device.
     // JetlinkSpec carries whether the engine is built, which must survive a reboot
     // or every ignition cycle would rebuild a multi-minute engine.
     {"AcceleratorProgress", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_AcceleratorUnavailable", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_CarrotAutoUpdateFailed", {CLEAR_ON_MANAGER_START, JSON}},
     {"Offroad_JetlinkUnavailable", {CLEAR_ON_MANAGER_START, JSON}},
     {"JetlinkLink", {PERSISTENT | BACKUP, INT, "0"}},
     {"JetlinkSpec", {PERSISTENT, JSON}},
@@ -121,6 +127,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"Offroad_ConnectivityNeeded", {CLEAR_ON_MANAGER_START, JSON}},
     {"Offroad_ConnectivityNeededPrompt", {CLEAR_ON_MANAGER_START, JSON}},
     {"Offroad_ExcessiveActuation", {PERSISTENT, JSON}},
+    {"Offroad_NeosUpdate", {CLEAR_ON_MANAGER_START, JSON}},
     {"Offroad_NoFirmware", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, JSON}},
     {"Offroad_Recalibration", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, JSON}},
     {"Offroad_TemperatureTooHigh", {CLEAR_ON_MANAGER_START, JSON}},
@@ -139,6 +146,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"RouteCount", {PERSISTENT, INT, "0"}},
     {"SnoozeUpdate", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"SshEnabled", {PERSISTENT | BACKUP, BOOL}},
+    {"StockEcuHandBackRequest", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
+    {"StockEcuHandBackResult", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"TermsVersion", {PERSISTENT, STRING}},
     {"TimezoneName", {PERSISTENT, STRING}},
     {"TimezoneSource", {PERSISTENT, STRING}},
@@ -160,7 +169,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"UptimeOnroad", {PERSISTENT, FLOAT, "0.0"}},
     {"ChestnutActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"ChestnutLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
-    {"ChestnutModelError", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"Version", {PERSISTENT, STRING}},
 
     // --- sunnypilot params --- //
@@ -285,6 +293,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LeadForecast", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"ExperimentalModeSetSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ExperimentalModeLeadGap", {PERSISTENT | BACKUP, BOOL, "0"}},
+
+    // Accel Controller profiles (Eco / Normal / Sport)
+    {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"AccelPersonality", {PERSISTENT | BACKUP, INT, "1"}},
 
     // Accel Controller profiles (Eco / Normal / Sport)
     {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -460,6 +472,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // Unified control killswitches (carrot > Amap > OSM arbitration). Default off/safe.
     {"CarrotLongitudinalSourceEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // enable CarrotPlanner as a LongitudinalPlanSP source
     {"CarrotTrafficLightFusionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // fuse carrot / Amap / vision traffic lights
+    {"SignalAssistMode", {PERSISTENT, INT, "0"}},  // 0 off, 1 red-light shadow only, 2 prepare/start control (experimental)
+    {"CarrotTurnAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // cap positive accel by future model curvature in turns
+    {"CarrotCutinPredecelEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // bounded pre-decel for strong early corner-radar cut-in risk
+    {"CarrotLeadPreviewEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // early-decel preview from radar lead deceleration
+    // Display-only overlays. Neither one is read anywhere on the control path.
+    {"CarrotRadarPointsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw measured front-radar points in the road view
+    {"CarrotSignalHudEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw the neural signal evidence ring (needs SignalAssistMode > 0)
+    {"CarrotArs510Enabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // opt-in ARS510 receive path for radar-DBC-less Toyota cars (RAV4 TSS2 2022/2023)
     {"TrafficLightNavCautionOnly", {PERSISTENT | BACKUP, BOOL, "1"}},       // fused red light only warns; set 0 to allow stop assist
     {"DesireArbiterEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},             // lateral lane-change/fork desire from nav
     // Let carrot ATC (auto turn control) synthesise a turn signal from the phone's

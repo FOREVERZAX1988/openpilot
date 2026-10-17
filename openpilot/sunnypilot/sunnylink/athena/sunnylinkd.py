@@ -28,7 +28,9 @@ from websocket import (ABNF, WebSocket, WebSocketException, WebSocketTimeoutExce
                        create_connection, WebSocketConnectionClosedException)
 
 import openpilot.cereal.messaging as messaging
-from openpilot.sunnypilot.models.model_name import DEFAULT_MODEL, DEFAULT_BIG_MODEL
+from openpilot.sunnypilot import jetlink_adapter
+from openpilot.selfdrive.modeld.helpers import chestnut_present
+from openpilot.sunnypilot.models.model_name import DEFAULT_MODEL
 from openpilot.sunnypilot.selfdrive.car.sync_sunnylink_params import update_car_list_param
 from openpilot.system.athena import rpc as rpc_module
 from openpilot.sunnypilot.sunnylink.api import SunnylinkApi
@@ -79,6 +81,8 @@ BLOCKED_PARAMS = {
   "HasAcceptedTerms",
   "HasAcceptedTermsSP",
   "OnroadCycleRequested",      # Prevent remote cycle trigger
+  "AlphaLongitudinalEnabled",  # Flips longitudinal mode via an onroad cycle; local UI only
+  "OffroadMode",               # Applied by hardwared alone; remote writes go through OffroadModeRequested
   "ParamsVersion",         # Device-managed version counter
 }
 
@@ -207,7 +211,7 @@ def getParamsMetadata() -> str:
     schema["capabilities"] = generate_capabilities()
     schema["capability_labels"] = CAPABILITY_LABELS
     schema["default_model"] = DEFAULT_MODEL
-    schema["default_big_model"] = DEFAULT_BIG_MODEL
+    schema["default_big_model"] = jetlink_adapter.default_big_model(chestnut_present(), jetlink_adapter.status())
     schema["chestnut_active"] = params.get_bool("ChestnutActive")
     raw = json.dumps(schema, separators=(",", ":")).encode("utf-8")
     return base64.b64encode(gzip.compress(raw)).decode("utf-8")

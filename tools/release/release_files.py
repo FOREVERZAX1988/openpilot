@@ -20,6 +20,10 @@ blacklist = [
   ".gitmodules",
   ".run/",
   ".idea/",
+
+  # jetlink: the comma imports the package and runs scripts/comma/ (jetlink.comma.root);
+  # the rest of the submodule is the Jetson's, the Mac's and the iPhone's
+  "^jetlink_repo/(?!jetlink/|scripts/comma/|LICENSE$)",
 ]
 
 # gets you through the blacklist
@@ -34,7 +38,7 @@ if __name__ == "__main__":
       continue
 
     rf = os.fsdecode(tracked_file)
-    if not os.getenv("INCLUDE_BIG_MODEL") and rf.startswith("openpilot/selfdrive/modeld/models/big_driving_supercombo.onnx"):
+    if not os.getenv("INCLUDE_BIG_MODEL") and rf.startswith("openpilot/selfdrive/modeld/models/big_driving_tinygrad.pkl"):
       continue
     blacklisted = any(re.search(p, rf) for p in blacklist)
     whitelisted = any(re.search(p, rf) for p in whitelist)

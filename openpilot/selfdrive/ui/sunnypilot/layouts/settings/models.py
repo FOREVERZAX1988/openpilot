@@ -16,6 +16,7 @@ from openpilot.sunnypilot.models.mirror import (GITHUB_PROXY_PARAM, HF_MIRROR_PA
                                                 describe_hf_mirror, normalize_base_url)
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import device, ui_state
+from openpilot.selfdrive.ui.sunnypilot.accelerator_link import LINK_MODE_TITLES, LINK_MODES, LINK_PARAM
 from openpilot.selfdrive.ui.sunnypilot.model_info import (active_source, big_model_note, big_model_state, bundles_for_source,
                                                            carrying_model, default_model_name, model_cache_size_mb, queued_name,
                                                            refresh_in_progress, refresh_model_list, standin_model)
@@ -34,9 +35,6 @@ from openpilot.system.ui.sunnypilot.widgets.download_status import download_stat
 from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
 from openpilot.system.ui.sunnypilot.widgets.progress_bar import progress_item
 from openpilot.system.ui.sunnypilot.widgets.tree_dialog import TreeOptionDialog, TreeNode, TreeFolder
-
-from openpilot.selfdrive.ui.sunnypilot.accelerator_link import LINK_MODES, LINK_MODE_TITLES, LINK_PARAM, link_mode, \
-  link_status, link_toggle_meaningful
 
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp as button_item
@@ -145,23 +143,17 @@ class ModelsLayout(Widget):
                   self.policy_label, self.off_policy_label, self.on_policy_label, self.refresh_item,
                   self.hf_mirror_item, self.catalog_source_item, self.clear_cache_item,
                   self.lane_turn_desire_toggle, self.lane_turn_value_control, self.lagd_toggle, self.delay_control, self.camera_offset]
-
-    # initial visibility/selection for the param-bound accelerator row (the
-    # periodic _update_state tick also refreshes this, but late)
     self._refresh_accelerator_items()
 
   @staticmethod
   def _link_description(status: str) -> str:
-    # An Android phone rides the USB mode exactly like a Jetson or a Mac
-    # (jetlink docs/android-app.md: "Jetlink on USB"), so the USB
-    # option covers it; iOS keeps its own mode.
-    what = tr("Run big models over a connected device running Jetlink. USB and iOS turn off ADB.")
+    what = tr("Run big models over a connected device running Jetlink. Turns off ADB.")
     return f"{what} {status}".strip()
 
   def _refresh_accelerator_items(self):
     # the setting is a param read, so this rides the half-second tick
     self.accelerator_link_item.set_visible(link_toggle_meaningful())
-    self.accelerator_link_item.action_item.set_selected_button(LINK_MODES.index(link_mode()))
+    self.accelerator_link_item.action_item.set_selected_button(MODES.index(link_mode()))
     self.accelerator_link_item.action_item.set_enabled(ui_state.is_offroad())
     status = link_status()
     if status != self._link_status:

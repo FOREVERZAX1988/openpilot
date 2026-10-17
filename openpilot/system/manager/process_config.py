@@ -17,6 +17,7 @@ from openpilot.sunnypilot import jetlink_adapter
 
 from openpilot.sunnypilot.models.helpers import get_active_model_runner
 from openpilot.sunnypilot.sunnylink.utils import sunnylink_need_register, sunnylink_ready, use_sunnylink_uploader
+from openpilot.sunnypilot.system.manager.processes import extend_procs
 
 WEBCAM = os.getenv("USE_WEBCAM") is not None
 LITE = os.getenv("LITE") is not None
@@ -407,6 +408,7 @@ procs += [
   # locationd
   NativeProcess("locationd_llk", "openpilot/sunnypilot/selfdrive/locationd", ["./locationd"], only_onroad),
 ]
+procs = extend_procs(procs)
 
 if os.path.exists("./github_runner.sh"):
   procs += [NativeProcess("github_runner_start", "openpilot/system/manager",
