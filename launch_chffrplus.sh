@@ -803,7 +803,18 @@ launch() {
 
   # Start AI and WebUI before the AGNOS OS update so they stay reachable even
   # if the updater loops waiting for user confirmation.
-  keep_alive aid ai/aid.py 5090 &
+  # aid 现在跑在独立 unit op-aid.service (system.slice/op-aid.service) 里, 不再随
+  # `systemctl restart comma` / tmux kill-session 一起被杀 —— 这就是"助手答到一半
+  # 断联"的根因 (aid 与 manager 同属 comma.service cgroup)。
+  # 这里只决定"何时启动", 时序与旧的 keep_alive 完全一致(aid 仍在 webui 旁边、
+  # 在 AGNOS updater 之前), 因此开机行为无变化。
+  # unit 文件在只读根上, AGNOS OTA 换根后可能消失, 故保留 keep_alive 兜底。
+  if sudo -n systemctl start op-aid 2>/dev/null; then
+    echo "[aid] started via op-aid.service (cgroup-isolated from comma.service) $(date)" >> /tmp/aid.log
+  else
+    echo "[aid] op-aid.service unavailable, falling back to comma-cgroup keep_alive $(date)" >> /tmp/aid.log
+    keep_alive aid ai/aid.py 5090 &
+  fi
   keep_alive webui webui/webuid.py 5080 &
 
   # Ensure DRM fd socket is available for the native UI. On devices where the
