@@ -42,6 +42,13 @@ class ModelFetcherZP(ModelFetcher):
     super().__init__(params)
     self.model_caches["chestnut"] = BigCatalogCache(params, self.MODEL_SOURCES["chestnut"][1])
 
+  def _extension_stale(self, cached_data: dict) -> bool:
+    # BigCatalogCache.get() already expires the catalog once per change, on its
+    # own memory: leaving the base class's check in place too meant the second
+    # tick after a chestnut comes or goes refetched a second time, offline for
+    # nothing
+    return False
+
   def _extend_catalog(self, source: str, json_data: dict) -> dict:
     if source != "chestnut":
       return json_data

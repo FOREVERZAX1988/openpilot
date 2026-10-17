@@ -7228,7 +7228,7 @@ msgstr "設定速度已變更"
 msgid "Adjusting to Last Speed Limit"
 msgstr "正在調整至上一限速"
 
-msgid "Restart the car to retry,\nnow driving on small model"
+msgid "Restart the car to retry,\nsmall model is still available"
 msgstr "重啟車輛以重試，\n現改用小模型行駛"
 
 msgid "Drive above {speed} to engage"

@@ -147,16 +147,17 @@ class TestTheDevice(OpenpilotTestCase):
       with mock.patch.object(HARDWARE, 'get_device_type', return_value=device):
         self.assertEqual(Adapter().camera(), (camera.width, camera.height, *MEDMODEL_INPUT_SIZE))
 
-  def test_the_warp_is_modelds_own_in_every_checkout(self):
-    # modeld_tinygrad's, which the checkout carries (LFS) for every camera, so
-    # a device without a build has it too
+  def test_the_warp_is_the_one_the_build_makes(self):
+    # this fork builds its own warp (warp_build.py, jetlink_adapter's
+    # SConscript) into the adapter's models/. Upstream reads modeld_v2's
+    # driving_warp_*, which are LFS blobs: this fork cannot pull LFS, so those
+    # are 131-byte pointers here and the link would load no warp at all
     from openpilot.common.transformations.camera import _ar_ox_fisheye, _os_fisheye
     from openpilot.common.transformations.model import MEDMODEL_INPUT_SIZE
     for camera in (_ar_ox_fisheye, _os_fisheye):
       path = Adapter().warp_path(camera.width, camera.height, *MEDMODEL_INPUT_SIZE)
-      self.assertEqual(path, Path(BASEDIR) / 'openpilot/sunnypilot/modeld_v2/models' /
-                       f'driving_warp_{camera.width}x{camera.height}_tinygrad.pkl')
-      self.assertTrue(path.is_file(), path)
+      self.assertEqual(path, jetlink_adapter.warp_path(camera.width, camera.height, *MEDMODEL_INPUT_SIZE))
+      self.assertEqual(path.parent, Path(jetlink_adapter.__file__).resolve().parent / 'models')
 
 
 class TestModeld(OpenpilotTestCase):

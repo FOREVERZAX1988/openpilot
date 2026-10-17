@@ -109,7 +109,7 @@ class TestWarpTargets(OpenpilotTestCase):
       self.assertIn('-m openpilot.sunnypilot.jetlink_adapter.warp_build ', cmd)
       self.assertIn(f'--camera {cam} ', cmd)
       self.assertIn(f'--model {MODEL[0]}x{MODEL[1]} ', cmd)
-      self.assertTrue(cmd.endswith(f'--output {target}') or cmd.endswith(f'--output {target} --lossless'), cmd)
+      self.assertTrue(cmd.endswith((f'--output {target}', f'--output {target} --lossless')), cmd)
 
   def test_jetlink_is_on_the_commands_path_by_its_checkout(self):
     # the prebuilt runner makes no `jetlink` link at the root, so the path has
@@ -210,20 +210,27 @@ class TestTheLosslessWarp(OpenpilotTestCase):
 
 
 class TestOnlyTheBuildCompiles(OpenpilotTestCase):
-  def test_only_make_warp_imports_the_compiler(self):
-    """compile_modeld is for the build. Imported anywhere else in the adapter it
-    would bring the ~9 s compile back to modeld or a provisioning run, where it
-    was lost to ignition."""
-    tree = ast.parse(Path(jetlink_adapter.__file__).read_text())
+  def _importers(self, path: Path) -> set[str]:
+    """The functions in `path` that import compile_modeld."""
+    tree = ast.parse(path.read_text())
+    top = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+    self.assertFalse([n for n in top if 'compile_modeld' in ast.dump(n)])
     importers = set()
     for fn in ast.walk(tree):
       if isinstance(fn, ast.FunctionDef):
         for node in ast.walk(fn):
           if isinstance(node, ast.ImportFrom) and (node.module or '').endswith('compile_modeld'):
             importers.add(fn.name)
-    top = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
-    self.assertFalse([n for n in top if 'compile_modeld' in ast.dump(n)])
-    self.assertEqual(importers, {'make_warp'})
+    return importers
+
+  def test_only_the_warp_build_imports_the_compiler(self):
+    """compile_modeld is for the build. Imported anywhere else in the adapter it
+    would bring the ~9 s compile back to modeld or a provisioning run, where it
+    was lost to ignition. The build here is warp_build, which the SConscript
+    runs; the adapter itself never imports it."""
+    adapter = Path(jetlink_adapter.__file__)
+    self.assertEqual(self._importers(adapter), set())
+    self.assertEqual(self._importers(adapter.parent / 'warp_build.py'), {'build'})
 
 
 if __name__ == "__main__":

@@ -122,7 +122,7 @@ class TestPolicyQueues(OpenpilotTestCase):
 
           # what the model returned this frame: its hidden state is next frame's prev_feat
           output = rng.standard_normal(spec.output_nelem).astype(np.float32)
-          ours.after_run({'outputs': output}, {})
+          ours.after_run({'outputs': output})
           prev_feat = output[spec.output_slices['hidden_state']].reshape(spec.prev_feat_shape)
 
   def test_reset_returns_to_initial_state(self):

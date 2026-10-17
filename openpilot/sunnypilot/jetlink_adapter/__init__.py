@@ -195,11 +195,12 @@ class Adapter:
     return camera.width, camera.height, *MEDMODEL_INPUT_SIZE
 
   def warp_path(self, cam_w: int, cam_h: int, model_w: int, model_h: int) -> Path:
-    # the warp modeld_tinygrad loads, which every checkout carries (LFS); stock
-    # modeld loads the same compile from its own models dir, which only scons
-    # fills. One per camera, for the one model input size, which jetlink
-    # checks the warp makes
-    return self.basedir / 'openpilot/sunnypilot/modeld_v2/models' / f'driving_warp_{cam_w}x{cam_h}_tinygrad.pkl'
+    # the warp this fork builds itself (warp_build.py, SConscript) into the
+    # tree's models/, never upstream's driving_warp_* in modeld_v2/models: those
+    # are LFS blobs, and this fork cannot pull LFS, so they are pointers here
+    # and jetlink would find no warp at all. One per camera, for the one model
+    # input size, which jetlink checks the warp makes
+    return warp_path(cam_w, cam_h, model_w, model_h)
 
   def model_root(self) -> Path:
     from openpilot.common.hardware.hw import Paths
