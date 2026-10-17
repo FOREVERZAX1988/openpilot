@@ -222,6 +222,9 @@ class RefreshTest(JetlinkTest):
     for patcher in (
       mock.patch('openpilot.sunnypilot.models.fetcher.requests.get', side_effect=self.serve),
       mock.patch('jetlink.registry.catalog.fetch_catalogs', side_effect=self.probe),
+      # readiness is the model records alone: no owner's status record off the device
+      # (a stale one from a link that ran once would read as `service stopped`)
+      mock.patch('jetlink.openpilot.status.owner_record', return_value=(None, None)),
       *chestnut(self.CHESTNUT),
     ):
       patcher.start()

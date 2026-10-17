@@ -23,7 +23,9 @@ def test_default_does_not_enable_control(tmp_path):
 
 @pytest.mark.parametrize('assist,trial', [(False, False), (False, True), (True, False), (True, True)])
 def test_revalidation_requires_both_explicit_flags(tmp_path, assist, trial):
-  flag = tmp_path / 'assist_enabled'
+  # SignalAssistMode is the single user switch; the legacy `assist_enabled` file is
+  # retired, so an offline-test flag must use another name to mean what it says.
+  flag = tmp_path / 'enable'
   flag.write_text('1' if assist else '0')
   (tmp_path / 'revalidated_enabled').write_text('1' if trial else '0')
   runtime = SignalAssistRuntime(flag, tmp_path / 'obs')

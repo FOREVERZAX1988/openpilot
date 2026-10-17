@@ -39,14 +39,14 @@ class _FakeLead:
 
   def __init__(self, *, radarTrackId: int = 0, dRel: float = 30.0, yRel: float = 0.0,
                vRel: float = 0.0, vLead: float = 15.0, aLeadK: float = 0.0,
-               status: bool = True, radar: bool = True) -> None:
+               present: bool = True, radar: bool = True) -> None:
     self.radarTrackId = radarTrackId
     self.dRel = dRel
     self.yRel = yRel
     self.vRel = vRel
     self.vLead = vLead
     self.aLeadK = aLeadK
-    self.status = status
+    self.present = present
     self.radar = radar
 
 
@@ -107,7 +107,7 @@ class _FakeSM:
     model = _FakeModel(_FakeMeta(lane_change_state), _FakePosition(t, x, y))
     radar = SimpleNamespace(
       leadOne=lead_one if lead_one is not None else _FakeLead(),
-      leadTwo=lead_two if lead_two is not None else _FakeLead(status=False, radar=False),
+      leadTwo=lead_two if lead_two is not None else _FakeLead(present=False, radar=False),
     )
     self._data = {
       "carState": car_state,
@@ -136,8 +136,8 @@ class TestGapLeadRead(unittest.TestCase):
   def test_none_returns_none(self) -> None:
     assert GapLead.read(None) is None
 
-  def test_status_false_returns_none(self) -> None:
-    assert GapLead.read(_FakeLead(status=False)) is None
+  def test_not_present_returns_none(self) -> None:
+    assert GapLead.read(_FakeLead(present=False)) is None
 
   def test_radar_false_returns_none(self) -> None:
     assert GapLead.read(_FakeLead(radar=False)) is None
@@ -172,7 +172,7 @@ class TestGapLeadRead(unittest.TestCase):
 
 class TestLaneChangeGapPlanCredit(unittest.TestCase):
   def _valid_lead(self, **kw) -> _FakeLead:
-    return _FakeLead(vLead=18.0, aLeadK=0.0, status=True, radar=True, **kw)
+    return _FakeLead(vLead=18.0, aLeadK=0.0, present=True, radar=True, **kw)
 
   def test_inactive_returns_zeros(self) -> None:
     plan = LaneChangeGapPlan(active=False)

@@ -207,11 +207,11 @@ class FastRadarOverlay:
     lead.dRel = d_rel
     lead.vRel = float(point.vRel)
     if _finite(point.aRel):
-      lead.aRel = float(point.aRel)
+      lead.deprecated.aRel = float(point.aRel)
     lead.vLead = float(v_ego) + float(point.vRel)
     lead.vLeadK = lead.vLead
-    lead.aLead = float(point.aLead)
-    lead.aLeadK = lead.aLead
+    lead.deprecated.aLead = float(point.aLead)
+    lead.aLeadK = lead.deprecated.aLead
     lead.jLead = float(point.jLead)
     lead.aLeadTau = self._update_a_lead_tau(lead, point, track_id, sample_time_s)
     return True, "active"

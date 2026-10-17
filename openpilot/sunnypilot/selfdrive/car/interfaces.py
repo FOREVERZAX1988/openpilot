@@ -15,17 +15,9 @@ from openpilot.sunnypilot.selfdrive.controls.lib.nnlc.helpers import get_nn_mode
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.helpers import set_speed_limit_assist_availability
 
 from openpilot.sunnypilot.sunnylink.statsd import STATSLOGSP
-import openpilot.system.sentry as sentry
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.helpers import icbm_applicable
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.demand import icbm_demanded
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.migration import migrate_icbm_toggle
-
-
-def log_fingerprint(CP: structs.CarParams) -> None:
-  if CP.carFingerprint == "MOCK":
-    sentry.capture_fingerprint_mock()
-  else:
-    sentry.capture_fingerprint(CP.carFingerprint, CP.brand)
 
 
 def _enforce_torque_lateral_control(CP: structs.CarParams, params: Params | None = None, enabled: bool = False) -> bool:

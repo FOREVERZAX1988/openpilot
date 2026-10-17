@@ -39,7 +39,7 @@ class StoppingLeadFilter:
 
   def _hold_lead(self, role: str, lead: Any, v_ego: float, now: float, fresh: bool) -> bool:
     valid = (
-      lead.status and lead.radar and lead.radarTrackId >= 0
+      lead.present and lead.radar and lead.radarTrackId >= 0
       and all(math.isfinite(v) for v in (lead.dRel, lead.vRel, lead.vLead, lead.aLeadK, lead.jLead))
       and lead.dRel > 0.2
     )
@@ -128,6 +128,7 @@ class StoppingLeadFilter:
       if self.held_mask & mask:
         lead = getattr(output, role)
         lead.vLead = lead.vLeadK = 0.0
-        lead.aLead = lead.aLeadK = 0.0
+        lead.deprecated.aLead = 0.0
+        lead.aLeadK = 0.0
         lead.jLead = 0.0
     return output

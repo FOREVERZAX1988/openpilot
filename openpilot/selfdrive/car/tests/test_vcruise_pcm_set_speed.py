@@ -84,7 +84,9 @@ def _make_sm():
 
 def _make_helper(brand, pcm_cruise, op_long, carrot_own_kph=40.0):
   cp = SimpleNamespace(brand=brand, pcmCruise=pcm_cruise, openpilotLongitudinalControl=op_long)
-  cp_sp = SimpleNamespace(pcmCruiseSpeed=True)
+  # ICBM (intelligent cruise button management) is not what these tests cover; it is a
+  # CarInterface-time capability, so pin it off rather than let an unset attribute decide.
+  cp_sp = SimpleNamespace(pcmCruiseSpeed=True, intelligentCruiseButtonManagementAvailable=False)
   helper = VCruiseCarrot(cp, cp_sp)
   # The button state machine is not what these tests cover, and its real implementation
   # writes params (LongitudinalPersonality / MyDrivingMode / ActivateCruiseAfterBrake) -
@@ -148,7 +150,7 @@ def _make_macan_helper(carrot_own_kph=40.0):
   """
   cp = SimpleNamespace(brand='volkswagen', carFingerprint='PORSCHE_MACAN_MK1', flags=0,
                        pcmCruise=False, openpilotLongitudinalControl=True)
-  cp_sp = SimpleNamespace(pcmCruiseSpeed=False)
+  cp_sp = SimpleNamespace(pcmCruiseSpeed=False, intelligentCruiseButtonManagementAvailable=False)
   helper = VCruiseCarrot(cp, cp_sp)
   helper._update_cruise_buttons = lambda *a, **k: carrot_own_kph
   helper._cruise_control = lambda *a, **k: None

@@ -751,7 +751,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # lead. Warning only, with a 30 s refractory in the detector itself.
   EventName.radarStationaryLead: {
     ET.WARNING: Alert(
-      "注意前方物体", "请确认前方并准备减速",
+      "Obstacle ahead", "Confirm the path ahead and prepare to slow down",
       AlertStatus.normal, AlertSize.mid,
       Priority.HIGH, VisualAlert.none, AudibleAlert.prompt, 2.),
   },
