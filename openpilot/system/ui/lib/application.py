@@ -188,6 +188,21 @@ class FontWeight(StrEnum):
   DISPLAY = "Inter-Bold.ttf"
 
 
+_OPFONT_WEIGHT = {
+  "Inter-Light.fnt": "Regular",
+  "Inter-Regular.fnt": "Regular",
+  "Inter-Medium.fnt": "Medium",
+  "Inter-SemiBold.fnt": "SemiBold",
+  "Inter-Bold.fnt": "Bold",
+}
+
+
+def _opfont_filename(inter_filename: str, lang_code: str) -> str:
+  """Map an Inter font filename to the equivalent OpFont filename for a language."""
+  weight_name = _OPFONT_WEIGHT.get(inter_filename, "Regular")
+  return f"OpFont-{weight_name}-{lang_code}.fnt"
+
+
 def font_fallback(font: rl.Font, text: str | None = None) -> rl.Font:
   """Use a Noto fallback for languages not covered by Inter.
 
@@ -198,6 +213,9 @@ def font_fallback(font: rl.Font, text: str | None = None) -> rl.Font:
   cheaper than swapping the font unconditionally for every CJK-language label.
   The 1-arg call form (text omitted) is preserved for existing callers.
   """
+  # A widget may have cached a Font whose atlas was unloaded by a language switch; resolve it
+  # to the live font of the same weight first, otherwise the stale object renders nothing.
+  font = gui_app.current_font(font)
   key = fallback_font_key(multilang.language, text) if text is not None else multilang.language
   if key == PRIMARY_FONT:
     # 拉丁/西里尔文本：调用方的字体（Inter）本身就有字形，换成 CJK fallback 反而缺字。
@@ -215,18 +233,13 @@ def font_fallback(font: rl.Font, text: str | None = None) -> rl.Font:
 
 
 _CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u0e00-\u0e7f]")
+FALLBACK_ATLAS_MAX_CODEPOINTS = 2000
 
 
-def font_fallback(font: rl.Font, text: str = "") -> rl.Font:
-  """Use a Noto fallback for languages not covered by Inter."""
-  # A widget may have cached a Font whose atlas was unloaded by a language switch; resolve it
-  # to the live font of the same weight first, otherwise the stale object renders nothing.
-  font = gui_app.current_font(font)
-  if multilang.requires_font_fallback():
-    if text and not _NON_LATIN_RE.search(text):
-      return font
-    return gui_app.fallback_font()
-  return font
+def _text_requires_font_fallback(text: str) -> bool:
+  """True if ``text`` contains CJK/Thai/Korean characters needing Noto."""
+  return bool(_CJK_RE.search(text))
+
 
 
 class MousePos(NamedTuple):
@@ -929,6 +942,59 @@ class GuiApplication(GuiApplicationExt):
       rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
       self._fallback_fonts[font_key] = font
     return self._fallback_fonts[font_key]
+
+  def _rebake_pending_fallback(self) -> None:
+    # imported here: both modules import font_fallback from this one
+    from openpilot.system.ui.lib import text_measure, wrap_text
+
+    if not self._fallback_pending or not self.allow_font_rebake:
+      # Onroad: leave the queue alone so these glyphs get baked next time we are parked.
+      return
+
+    pending, self._fallback_pending = self._fallback_pending, set()
+    language = multilang.language
+    baked = self._fallback_chars.get(language)
+    if baked is None:
+      return
+
+    # Record every queued codepoint as seen even when it cannot be baked, otherwise a
+    # character the font has no glyph for re-queues itself on every frame.
+    chars = baked | pending
+    self._fallback_chars[language] = chars
+    if len(chars) > FALLBACK_ATLAS_MAX_CODEPOINTS:
+      cloudlog.warning(f"fallback atlas at ceiling ({len(baked)} codepoints), not baking {len(pending)} new ones")
+      return
+
+    old_font = self._fallback_fonts[language]
+    try:
+      font = self._bake_fallback_font(language, chars)
+    except Exception:
+      # Keep drawing with the old atlas; manager does not restart a crashed ui.
+      cloudlog.exception("failed to grow fallback atlas")
+      return
+
+    # load_font_ex hands back the default font instead of raising when it cannot load,
+    # so a bare try/except would swap in that stub and free the atlas that still works.
+    default_id = rl.get_font_default().texture.id
+    if font.texture.id <= 0 or font.texture.id == default_id:
+      cloudlog.error("fallback atlas bake produced an invalid font, keeping the old one")
+      if font.texture.id > 0 and font.texture.id != default_id:
+        rl.unload_font(font)
+      return
+
+    # raygui stores the Font by value, so a copy of old_font outlives the unload below.
+    if rl.gui_get_font().texture.id == old_font.texture.id:
+      rl.gui_set_font(font)
+
+    self._fallback_fonts[language] = font
+    rl.unload_font(old_font)
+
+    # Both caches key on font.texture.id, which raylib recycles: stale entries from a freed
+    # atlas would collide with the new one and hand back widths measured against '?' glyphs.
+    text_measure.clear_cache()
+    wrap_text.clear_cache()
+
+    cloudlog.debug(f"fallback atlas grew to {len(chars)} codepoints (+{len(pending)})")
 
   @property
   def width(self):

@@ -24,6 +24,7 @@ imported where it is used. tests/test_adapter.py holds the line.
 """
 from __future__ import annotations
 
+import functools
 import os
 import threading
 from collections import namedtuple
@@ -84,6 +85,14 @@ def _params_dir() -> Path:
   return Path(root) / os.environ.get('OPENPILOT_PREFIX', 'd')
 
 
+# where the build puts the warp for each camera (SConscript) and modeld loads
+# it from: in the fork's tree, never in the jetlink submodule (a file there
+# leaves it dirty for the updater), and under the *.pkl ignore, which the
+# release scripts add past. Not Paths.comma_home(), which on AGNOS is a tmpfs
+# overlay: the pickle was gone every boot
+WARP_DIR = Path(__file__).resolve().parent / 'models'
+
+
 def warp_path(cam_w: int, cam_h: int, model_w: int, model_h: int) -> Path:
   """The warp for one geometry: the build's target and what modeld opens."""
   return WARP_DIR / f'warp_{cam_w}x{cam_h}_{model_w}x{model_h}_tinygrad.pkl'
@@ -142,7 +151,7 @@ class Adapter:
     # (API 3), so the SubMaster that answers it is this process's own, made on
     # the first ask: modeld is the only caller, and no other process pays for
     # one
-    self._in_control_sm = None
+    self._sm = None
 
   # -- params ---------------------------------------------------------------
 
@@ -228,10 +237,10 @@ class Adapter:
     modeld's frame loop never sees the failure. Logged once per distinct
     error, as the hooks are."""
     try:
-      sm = self._in_control_sm
+      sm = self._sm
       if sm is None:
         from openpilot.cereal.messaging import SubMaster
-        sm = self._in_control_sm = SubMaster(list(IN_CONTROL))
+        sm = self._sm = SubMaster(list(IN_CONTROL))
       sm.update(0)
     except Exception as e:
       error = f"{type(e).__name__}: {e}"
@@ -327,6 +336,24 @@ def _failed(name: str, error: Exception) -> None:
     _log_failure(f"{name}() failed", error)
 
 
+def _guarded(default):
+  def wrap(hook):
+    @functools.wraps(hook)
+    def call(*args, **kwargs):
+      try:
+        result = hook(*args, **kwargs)
+      except Exception as e:
+        error = f"{type(e).__name__}: {e}"
+        if _failed_hooks.get(hook.__name__) != error:
+          _failed_hooks[hook.__name__] = error
+          _log_failure(f"{hook.__name__}() failed", e)
+        return default(*args, **kwargs) if callable(default) else default
+      _failed_hooks.pop(hook.__name__, None)
+      return result
+    return call
+  return wrap
+
+
 def _hook(name: str, *args):
   """Jetlink.<name>(*args), or the link off (_DEFAULTS) when jetlink cannot run
   here or raises."""
@@ -376,6 +403,13 @@ def prepare(chestnut: bool) -> bool:
   return not chestnut and _hook('prepare')
 
 
+def attach(model, small, cam_w: int, cam_h: int):
+  """modeld, once the camera is up and `small` is built: the model to run.
+  The joining model, `small` driving until the link has joined, when
+  prepare() said yes; `model` otherwise."""
+  joined = _hook('attach', small, cam_w, cam_h)
+  return model if joined is None else joined
+
 # what in_control() reads, off whichever SubMaster holds it: modeld's, which
 # both of the fork's modelds subscribe all three of, or the adapter's own,
 # which subscribes them itself for jetlink's ask (API 3)
@@ -399,6 +433,10 @@ def in_control(sm) -> bool:
   if not (sm.all_alive(IN_CONTROL) and sm.all_valid(IN_CONTROL)):
     return True
   return bool(sm['carControl'].enabled or sm['carControlSP'].mads.enabled)
+
+
+# the joining model's handovers as modeld last saw them
+_handovers = 0
 
 
 def handed_over(model) -> bool:

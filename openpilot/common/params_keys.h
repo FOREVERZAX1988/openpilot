@@ -762,6 +762,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LatSmoothSec", {PERSISTENT | BACKUP, INT, "13"}},
     {"LateralTorqueAccelFactor", {PERSISTENT | BACKUP, INT, "2500"}},
     {"MapboxStyle", {PERSISTENT | BACKUP, INT, "0"}},
+    // mazda: TJA button + the seed/one-shot flags the torque-defaults bootstrap writes
+    {"MazdaTjaButton", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MazdaMovingTakeover", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MazdaTorqueDefaultsApplied", {PERSISTENT | BACKUP, BOOL}},
+    {"MazdaTorqueTuneSeeded", {PERSISTENT | BACKUP, FLOAT}},
     {"MaxAngleFrames", {PERSISTENT | BACKUP, INT, "89"}},
     {"MaxTimeOffroadMin", {PERSISTENT | BACKUP, INT, "60"}},
     {"MuteDoor", {PERSISTENT | BACKUP, BOOL, "0"}},

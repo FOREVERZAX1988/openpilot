@@ -16,7 +16,8 @@ from openpilot.sunnypilot.models.mirror import (GITHUB_PROXY_PARAM, HF_MIRROR_PA
                                                 describe_hf_mirror, normalize_base_url)
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import device, ui_state
-from openpilot.selfdrive.ui.sunnypilot.accelerator_link import LINK_MODE_TITLES, LINK_MODES, LINK_PARAM
+from openpilot.selfdrive.ui.sunnypilot.accelerator_link import (LINK_MODE_TITLES, LINK_MODES, LINK_PARAM,
+                                                           link_mode, link_status, link_toggle_meaningful)
 from openpilot.selfdrive.ui.sunnypilot.model_info import (active_source, big_model_note, big_model_state, bundles_for_source,
                                                            carrying_model, default_model_name, model_cache_size_mb, queued_name,
                                                            refresh_in_progress, refresh_model_list, standin_model)
@@ -153,7 +154,7 @@ class ModelsLayout(Widget):
   def _refresh_accelerator_items(self):
     # the setting is a param read, so this rides the half-second tick
     self.accelerator_link_item.set_visible(link_toggle_meaningful())
-    self.accelerator_link_item.action_item.set_selected_button(MODES.index(link_mode()))
+    self.accelerator_link_item.action_item.set_selected_button(LINK_MODES.index(link_mode()))
     self.accelerator_link_item.action_item.set_enabled(ui_state.is_offroad())
     status = link_status()
     if status != self._link_status:
