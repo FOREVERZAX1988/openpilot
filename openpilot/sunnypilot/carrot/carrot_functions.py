@@ -464,6 +464,19 @@ class CarrotPlanner:
       self._start_runtime = None
       self.start_guard = None
 
+    # Experimental geometric red-light pre-deceleration (same shadow family).
+    # SignalAssistMode > 0 computes the decision (shadow observation); mode 2
+    # additionally allows the planner-side accel cap. Failures keep it None so
+    # normal planning is never affected.
+    self._prepare_runtime = None
+    self.prepare_decision = None
+    self.prepare_control_active = False
+    try:
+      from openpilot.sunnypilot.carrot.signal_stop_prepare_runtime import SignalPrepareRuntime
+      self._prepare_runtime = SignalPrepareRuntime()
+    except Exception:
+      self._prepare_runtime = None
+
     # Lane-change assist.
     self._desire_state = 0.0
     self._desire_state_count = 0
@@ -1009,7 +1022,7 @@ class CarrotPlanner:
         self._traffic_state = TrafficState.green
 
   def _update_x_state(self, sm: Any, v_ego: float, v_ego_kph: float,
-                     a_ego: float, x_last: float) -> None:
+                     a_ego: float, x_last: float, lead_in_stop_range: bool) -> None:
     cs = sm["carState"]
     radar = sm["radarState"]
     lead_one = radar.leadOne
@@ -1027,7 +1040,7 @@ class CarrotPlanner:
     if self._x_state == XState.e2eStopped:
       if cs.gasPressed:
         self._x_state = XState.e2eCruise
-      elif lead_detected and (lead_one.dRel - x_last) < 2.0:
+      elif lead_in_stop_range:
         self._x_state = XState.lead
       elif self._stopping_count == 0:
         # Carrot left-turn green (3) is only detectable by the phone navi, so we
@@ -1047,7 +1060,7 @@ class CarrotPlanner:
       if cs.gasPressed:
         self._x_state = XState.e2eCruise
         self._traffic_starting_count = 10.0 / DT_MDL
-      elif lead_detected and (lead_one.dRel - x_last) < 2.0:
+      elif lead_in_stop_range:
         self._x_state = XState.lead
       else:
         can_go = self._traffic_state == TrafficState.green or self._traffic_state_carrot == 3
@@ -1238,8 +1251,15 @@ class CarrotPlanner:
     self._x_stop = float(self._x_stop_filter2.process(self._x_stop_filter.process(float(x[31]), median=True)))
     stop_model_x = self._x_stop
 
+    # Share the existing stop-to-lead boundary with the auxiliary departure
+    # vetoes. This is lead following, not evidence that the light turned green.
+    # The distance is to the filtered model stop point, not an ego-to-lead gap.
+    lead_in_stop_range = (lead_detected and bool(np.isfinite(lead_one.dRel))
+                          and lead_one.dRel > 0 and bool(np.isfinite(stop_model_x))
+                          and (lead_one.dRel - stop_model_x) < 2.0)
+
     self._check_model_stopping(v_cruise, v, v_ego, a_ego, float(x[-1]), y, d_rel_for_model)
-    self._update_x_state(sm, v_ego, v_ego_kph, a_ego, stop_model_x)
+    self._update_x_state(sm, v_ego, v_ego_kph, a_ego, stop_model_x, lead_in_stop_range)
 
     # On a fresh explicit motorway road class the signal path is suspended so a
     # gantry/red lamp on a high-speed road cannot trigger a phantom stop.
@@ -1282,6 +1302,13 @@ class CarrotPlanner:
                        and self._stopping_count == 0),
         turning=bool(cs.leftBlinker or cs.rightBlinker),
       )
+      if lead_in_stop_range and self._signal_decision.hold:
+        from dataclasses import replace
+        # A stopped-then-departing lead inside the boundary clears the red veto
+        # for this cycle. This is not evidence of green and never grants accel;
+        # the underlying red memory is kept, so losing the lead re-applies it.
+        self._signal_decision = replace(self._signal_decision, hold=False, red_sign=False,
+                                        released=False, reason='lead_follow')
       signal_hold = bool(self._signal_decision.hold)
       if self._signal_decision.red_sign:
         self._traffic_state = TrafficState.red
@@ -1314,12 +1341,48 @@ class CarrotPlanner:
       )
       if self._start_runtime is not None:
         self._start_runtime.record(self.start_decision, v_ego, stop_model_x)
+      if lead_in_stop_range and self.start_decision.hold:
+        from dataclasses import replace
+        self.start_guard.warned = False  # no refusal was emitted while following
+        # Preserve the guard's red memory if the lead disappears. Publish the
+        # effective decision so the final longitudinal veto agrees this cycle.
+        self.start_decision = replace(self.start_decision, hold=False, warn=False,
+                                      released=False, green_confirmed=False, reason='lead_follow')
       if self.start_decision.hold and _smode >= 2:
         signal_hold = True
 
+    # Experimental geometric red pre-deceleration. Shadow and control share the
+    # exact controller/arbitrator code path: at mode 1 the decision is computed
+    # and logged, at mode 2 the planner-side accel cap may additionally apply.
+    # The cap only ever lowers accel; it never requests a stop or departure.
+    self.prepare_control_active = False
+    if self._prepare_runtime is not None:
+      try:
+        prepare_observation, prepare_context = self._prepare_runtime.read(sm)
+        self.prepare_decision = self._prepare_runtime.prepare.update(
+          prepare_context.get("now", time.monotonic()), prepare_observation,
+          enabled=(bool(prepare_context.get("enabled", False)) and self._traffic_light_detect_mode != 0
+                   and not suspended),
+          valid=bool(prepare_context.get("valid", False)),
+          drive=bool(prepare_context.get("drive", False)),
+          gas=bool(cs.gasPressed), brake=bool(cs.brakePressed), speed=float(v_ego),
+          lead=lead_detected, turning=bool(prepare_context.get("turning", True)),
+          model_stopping=(self._x_state in (XState.e2eStop, XState.e2eStopped)),
+          entry_allowed=not suspended,
+          geometry=prepare_context["geometry"], alignment=prepare_context.get("alignment"),
+          night_geometry=prepare_context.get("night_geometry"))
+        self._prepare_runtime.record_prepare(self.prepare_decision)
+        # Mode permission only: the planner arbitrator needs dropout decisions
+        # (decision.active False) to apply its evidence-loss grace.
+        from openpilot.sunnypilot.carrot.signal_mode import signal_mode
+        self.prepare_control_active = signal_mode() >= 2
+      except Exception:
+        self.prepare_decision = None
+        self.prepare_control_active = False
+
     if signal_hold:
-      # Hold the stop even if a lead appears or moves. Radar obstacles remain in
-      # MPC. Green only clears this override; it never manufactures a go.
+      # Outside the existing lead-follow boundary, unknown retains the veto.
+      # Radar obstacles remain in MPC, including during the lead exception.
       signal_hold_stop_model_x = 0.0
     else:
       signal_hold_stop_model_x = stop_model_x

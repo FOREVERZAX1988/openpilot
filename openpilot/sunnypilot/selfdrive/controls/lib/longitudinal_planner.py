@@ -126,6 +126,22 @@ class LongitudinalPlannerSP:
     self._lead_preview_enabled = self._params.get_bool("CarrotLeadPreviewEnabled")
     self._lead_preview = 0.0
     self._lead_preview_accel = 0.0
+    # Carrot cruise coasting (default off): a fixed physical m/s reference for
+    # the overspeed band. longcontrol applies the actual brake relief; here we
+    # only decide eligibility and publish the reference for that consumer.
+    from openpilot.sunnypilot.selfdrive.controls.lib.cruise_coasting import CruiseCoastingPlan, coasting_percent, no_coasting_lead
+    self._coasting_enabled = self._params.get_bool("CarrotCruiseCoastingEnabled")
+    self._coasting = CruiseCoastingPlan()
+    self._coasting_percent = 0
+    self._coasting_target = 0.0
+    self._coasting_param_count = 0
+    self._no_coasting_lead = no_coasting_lead
+    self._coasting_percent_fn = coasting_percent
+    # Carrot MPC gap/comfort refinements (each default off; the host update
+    # reads these and only forwards them to the solver when a flag is on).
+    self._gap_recovery_enabled = self._params.get_bool("CarrotGapRecoveryEnabled")
+    self._braking_gap_enabled = self._params.get_bool("CarrotBrakingGapEnabled")
+    self._cutout_relief_enabled = self._params.get_bool("CarrotCutoutReliefEnabled")
     self._param_count = 0
     self.carrot_should_stop = False
     # Experimental moving-red pipeline. Observation-only until mode 2 is
@@ -137,9 +153,11 @@ class LongitudinalPlannerSP:
     # Geometric red pre-deceleration execution (experimental). The cap decays
     # the commanded accel toward a gentle braking target; it is only ever
     # applied when SignalAssistMode == 2 (see apply_signal_prepare), so at the
-    # default mode this state machine does nothing.
-    from openpilot.sunnypilot.carrot.signal_stop_prepare import PrepareAccel
+    # default mode this state machine does nothing. The arbitrator owns the
+    # decision-to-actuation machinery (grace/override/radar/envelope).
+    from openpilot.sunnypilot.carrot.signal_stop_prepare import PrepareAccel, PrepareArbitrator
     self._signal_prepare_accel = PrepareAccel()
+    self._signal_prepare_arbitrator = PrepareArbitrator()
     self._signal_prepare_time = None
     self._signal_prepare_previous = None
 
@@ -282,6 +300,24 @@ class LongitudinalPlannerSP:
       if self.carrot_source.active and math.isfinite(self.carrot_source.v_target):
         carrot_v = min(v_cruise, max(0.0, float(self.carrot_source.v_target)))
         self.targets[LongitudinalPlanSource.carrot] = (carrot_v, a_ego)
+
+    # Carrot cruise coasting (default off). Computes a fixed physical m/s
+    # reference for the overspeed band; longcontrol consumes it to relax the
+    # brake. Only ever releases brake within the band and never changes the
+    # speed target or creates thrust, so the stock target selection is untouched.
+    self._coasting_target = 0.0
+    if self._coasting_enabled:
+      self._coasting_param_count += 1
+      if self._coasting_param_count >= 20:  # ~1 s at 20 Hz
+        self._coasting_param_count = 0
+        self._coasting_percent = self._coasting_percent_fn(self._params.get_int("CarrotCruiseCoastingPercent"))
+      external_limit = min(v for v, _ in self.targets.values())
+      self._coasting_target = self._coasting.update(
+        enabled=True, percent=self._coasting_percent, set_speed=v_cruise * CV.MS_TO_KPH,
+        target=v_cruise, external_limit=external_limit, dt=DT_MDL,
+      ) if self._no_coasting_lead(sm['radarState']) else 0.0
+      if self._coasting_target <= 0.0:
+        self._coasting.reset()
 
     self.source = min(self.targets, key=lambda k: self.targets[k][0])
     v_target, a_target = self.targets[self.source]
@@ -428,6 +464,11 @@ class LongitudinalPlannerSP:
     requests a stop or a departure - the model keeps owning those. At mode < 2
     this resets the cap and returns, so the default device is byte-for-byte
     unaffected.
+
+    The decision-to-actuation machinery lives in PrepareArbitrator (ported from
+    navipilot traffic_control's final-plan arbitration): evidence-loss grace,
+    driver-override cooldown, radar corroboration and the stop-distance
+    envelope. Shadow and control share that code path; only ``actuate`` differs.
     """
     from openpilot.sunnypilot.carrot.signal_mode import signal_mode
     from openpilot.sunnypilot.carrot.signal_stop_prepare import prepare_lead_blocked
@@ -438,13 +479,18 @@ class LongitudinalPlannerSP:
 
     carrot = self.carrot_source.carrot
     decision = getattr(carrot, "prepare_decision", None)
+    # control_active is the *mode permission* (SignalAssistMode == 2), not the
+    # decision state: the arbitrator needs to see dropout decisions to apply
+    # its evidence-loss grace.
+    control_active = bool(getattr(carrot, "prepare_control_active", False))
 
     cs = sm['carState']
+    engaged, cap_target, _ = self._signal_prepare_arbitrator.engage(
+      now, decision, actuate=signal_mode() >= 2 and control_active,
+      radar_state=sm['radarState'], cs=cs, a_ego=float(cs.aEgo),
+      actuator_delay=float(self.CP.longitudinalActuatorDelay))
     active = (
-      signal_mode() >= 2
-      and decision is not None and bool(getattr(decision, "active", False))
-      and bool(getattr(carrot, "prepare_control_active", False))
-      and not cs.gasPressed and not cs.brakePressed
+      engaged
       and 5 / 3.6 < cs.vEgo < 82 / 3.6
       and getattr(cs, "softHoldActive", 0) == 0
       and 0 < elapsed <= 0.2
@@ -454,7 +500,8 @@ class LongitudinalPlannerSP:
     )
     previous = cs.aEgo if self._signal_prepare_previous is None else self._signal_prepare_previous
     uncapped = self.output_a_target
-    self.output_a_target = float(self._signal_prepare_accel.apply(self.output_a_target, previous, elapsed, active))
+    self.output_a_target = float(self._signal_prepare_accel.apply(self.output_a_target, previous, elapsed, active,
+                                                                  target_accel=cap_target))
     self._signal_prepare_previous = self.output_a_target
     if active and self.output_a_target < uncapped:
       # keep the speed target consistent with the gentler deceleration
@@ -520,6 +567,8 @@ class LongitudinalPlannerSP:
 
     longitudinalPlanSP.signalAssistAction = int(self.get_signal_assist_action(sm))
     longitudinalPlanSP.signalDetectionSuspended = bool(self.get_signal_detection_suspended())
+    longitudinalPlanSP.cruiseCoastingTarget = float(self._coasting_target)
+    longitudinalPlanSP.cruiseCoastingPercent = int(self._coasting_percent)
 
     accel_controller = longitudinalPlanSP.accelController
     accel_controller.enabled = bool(self.accel_controller.is_enabled())
