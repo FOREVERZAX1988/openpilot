@@ -197,7 +197,7 @@ class ControlsExt(ModelStateBase, ControlsLateralZP):
     _lead.vLeadK = src.vLeadK
     _lead.aLeadK = src.aLeadK
     _lead.fcw = src.deprecated.fcw
-    _lead.status = src.present
+    _lead.present = src.present
     _lead.aLeadTau = src.aLeadTau
     _lead.modelProb = src.modelProb
     _lead.radar = src.radar
@@ -278,9 +278,6 @@ class ControlsExt(ModelStateBase, ControlsLateralZP):
       _slope_param.value = f"{_slope_pct:.2f}".encode()
     except Exception:
       pass
-    # lane-change pace clamp telemetry, for offline validation
-    CC_SP.zoompilot.laneChangeSmoothing.jerkFactor = float(self.lane_change_smoothing.jerk_factor)
-
     return CC_SP
 
   @staticmethod
