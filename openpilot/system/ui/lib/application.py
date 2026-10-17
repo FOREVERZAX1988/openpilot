@@ -188,18 +188,21 @@ class FontWeight(StrEnum):
   DISPLAY = "Inter-Bold.ttf"
 
 
+# Keyed by font stem (no extension): FontWeight values are .ttf files, but the same
+# weight must resolve for .fnt/.otf names too.
 _OPFONT_WEIGHT = {
-  "Inter-Light.fnt": "Regular",
-  "Inter-Regular.fnt": "Regular",
-  "Inter-Medium.fnt": "Medium",
-  "Inter-SemiBold.fnt": "SemiBold",
-  "Inter-Bold.fnt": "Bold",
+  "Inter-Light": "Regular",
+  "Inter-Regular": "Regular",
+  "Inter-Medium": "Medium",
+  "Inter-SemiBold": "SemiBold",
+  "Inter-Bold": "Bold",
 }
 
 
 def _opfont_filename(inter_filename: str, lang_code: str) -> str:
   """Map an Inter font filename to the equivalent OpFont filename for a language."""
-  weight_name = _OPFONT_WEIGHT.get(inter_filename, "Regular")
+  stem = inter_filename.rsplit(".", 1)[0]
+  weight_name = _OPFONT_WEIGHT.get(stem, "Regular")
   return f"OpFont-{weight_name}-{lang_code}.fnt"
 
 
@@ -228,6 +231,11 @@ def font_fallback(font: rl.Font, text: str | None = None) -> rl.Font:
   if not multilang.requires_font_fallback():
     return font
   if text is None or _text_requires_font_fallback(text):
+    # The caller's font may already be a pre-baked CJK atlas (OpFont-*.fnt) carrying every
+    # glyph of this language: keep it. Swapping to a runtime-baked Noto atlas would cost
+    # 1-2 s and throw away the per-weight face (bold/semibold would render regular).
+    if gui_app.is_prebaked_cjk_font(font):
+      return font
     return gui_app.fallback_font(text)
   return font
 
@@ -332,6 +340,10 @@ class GuiApplication(GuiApplicationExt):
     # stale font back to the *live* font of the same weight via this map.
     self._weight_by_object: dict[int, FontWeight] = {}
     self._fallback_fonts: dict[str, rl.Font] = {}
+    # Fonts loaded from the pre-baked CJK atlases (scons-built OpFont-<weight>-<lang>.fnt).
+    # They already carry every glyph of the active language, so font_fallback() keeps them
+    # instead of baking a Noto atlas at runtime (1-2 s per boot / language switch).
+    self._cjk_atlas_ids: set[int] = set()
     self._fallback_chars: dict[str, set[str]] = {}
     self._fallback_pending: set[str] = set()
     # language switch is requested from a click callback *during* a draw, but swapping
@@ -753,6 +765,17 @@ class GuiApplication(GuiApplicationExt):
           yield False, 0.0, 0.0
           continue
 
+        # 语言只在 multilang import 时读一次参数，而开机那一刻 /data/params 可能还在
+        # swap/copy：get() 会回落到编译期默认值 "en"，之后整场都还是英文（UI 进程又是
+        # 从 manager fork 出来的，重启 UI 也纠正不了）。每秒跟参数对一次账，参数变了
+        # （网页/设置里改语言）或者开机早读，都在这里自动纠回来。
+        if self._frame % 60 == 0:
+          stored_lang = multilang.param_language()
+          if stored_lang and stored_lang != multilang.language:
+            cloudlog.warning(f"UI language resync: {multilang.language!r} -> {stored_lang!r} (LanguageSetting)")
+            multilang.reload(stored_lang)
+            self.on_language_changed(stored_lang)
+
         # Between frames only: swapping the atlas mid-draw would invalidate a bound texture.
         self._apply_pending_language()
         self._rebake_pending_fallback()
@@ -835,6 +858,9 @@ class GuiApplication(GuiApplicationExt):
         filename = _opfont_filename(font_weight.value, active_lang)
       else:
         filename = font_weight.value
+      # Only a successfully decoded OpFont atlas may be registered as pre-baked: a runtime-baked
+      # Noto atlas must keep going through font_fallback() for chars outside the common set.
+      atlas_used = False
       with as_file(FONT_DIR) as fspath:
         fnt_path = fspath / filename
         # Fall back to Regular weight if requested weight doesn't exist
@@ -849,6 +875,8 @@ class GuiApplication(GuiApplicationExt):
             if multilang.requires_font_fallback():
               cloudlog.warning(f"Baking CJK fallback for {active_lang} from {NOTO_FONTS[active_lang]}")
               font = self._load_or_bake_cjk_font(active_lang)
+          else:
+            atlas_used = True
         elif multilang.requires_font_fallback():
           # Pre-baked OpFont atlas is missing (e.g. first install before scons runs).
           # Bake the CJK font on-demand from the source TTF/OTF so the UI remains usable.
@@ -859,7 +887,13 @@ class GuiApplication(GuiApplicationExt):
         rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
         self._fonts[font_weight] = font
         self._weight_by_object[id(font)] = font_weight
+        if atlas_used:
+          self._cjk_atlas_ids.add(id(font))
     return self._fonts[font_weight]
+
+  def is_prebaked_cjk_font(self, font: rl.Font) -> bool:
+    """True if ``font`` is a pre-baked CJK atlas for the active language."""
+    return id(font) in self._cjk_atlas_ids
 
   def current_font(self, font: rl.Font) -> rl.Font:
     """Resolve a possibly stale Font (cached by a widget before a language switch) to the
@@ -1012,9 +1046,26 @@ class GuiApplication(GuiApplicationExt):
       if code not in FONT_FALLBACK_LANGUAGES:
         base_chars.update(TRANSLATIONS_DIR.joinpath(f"app_{code}.po").read_text(encoding="utf-8"))
 
+    cjk_atlas_loaded = False
     for font_weight_file in FontWeight:
       with as_file(FONT_DIR) as fspath:
         unifont = font_weight_file == FontWeight.UNIFONT
+        # Languages needing CJK/Thai/Hangul glyphs have a pre-baked atlas (scons builds
+        # OpFont-<weight>-<lang>.fnt, see selfdrive/ui/SConscript). Decoding that PNG takes
+        # ~10 ms; baking the same glyph set from the full Noto CJK font costs 1-2 s and used
+        # to stall the first frames after boot down to 1-7 FPS.
+        if multilang.requires_font_fallback() and not unifont:
+          atlas_path = fspath / _opfont_filename(font_weight_file.value, multilang.language)
+          if atlas_path.exists():
+            atlas = rl.load_font(atlas_path.as_posix())
+            if atlas.texture.id > 0 and atlas.texture.id != rl.get_font_default().texture.id:
+              rl.set_texture_filter(atlas.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
+              self._fonts[font_weight_file] = atlas
+              self._weight_by_object[id(atlas)] = font_weight_file
+              self._cjk_atlas_ids.add(id(atlas))
+              cjk_atlas_loaded = True
+              continue
+            cloudlog.error(f"Failed to load pre-baked font {atlas_path.name}; texture id={atlas.texture.id}")
         codepoints = sorted(map(ord, unifont_chars if unifont else base_chars))
         codepoint_buffer = rl.ffi.new("int[]", codepoints)
         font = rl.load_font_ex((fspath / font_weight_file).as_posix(), 16 if unifont else 200,
@@ -1023,7 +1074,7 @@ class GuiApplication(GuiApplicationExt):
           rl.gen_texture_mipmaps(font.texture)
           rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
         self._fonts[font_weight_file] = font
-    if multilang.requires_font_fallback():
+    if multilang.requires_font_fallback() and not cjk_atlas_loaded:
       self.fallback_font()
     rl.gui_set_font(self._fonts[FontWeight.NORMAL])
 
@@ -1049,6 +1100,9 @@ class GuiApplication(GuiApplicationExt):
     # Now safe to unload old fonts. Any widget still holding one of these objects is
     # transparently remapped to the new same-weight font via current_font()/font_fallback().
     for f in old_fonts:
+      # Drop the atlas bookkeeping together with the font: raylib recycles texture ids, so a
+      # stale id here would make font_fallback() trust an unrelated font that lacks glyphs.
+      self._cjk_atlas_ids.discard(id(f))
       rl.unload_font(f)
     rl.gui_set_font(self.font(FontWeight.NORMAL))
     from openpilot.system.ui.lib import text_measure, wrap_text
