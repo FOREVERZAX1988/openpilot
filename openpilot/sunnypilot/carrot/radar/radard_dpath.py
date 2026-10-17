@@ -57,8 +57,11 @@ def empty_lead() -> dict[str, Any]:
   return EMPTY_LEAD.copy()
 
 
-# cp calls the LeadData presence flag `status`; this fork renamed the same @11
-# field to `present`. Shared by _assign_lead and _schema_lead.
+# The @11 presence flag has two different names in this tree, and they are NOT
+# interchangeable: log.capnp:RadarState.LeadData calls it `present`, while
+# custom.capnp:LeadData (CarControlSP) keeps upstream carrot's `status`.
+# Everything written here targets RadarState.LeadData, so dPath's `status` key
+# maps to `present`. See controlsd_ext.get_lead_data for the custom struct.
 _LEAD_FIELD_ALIASES = {"status": "present"}
 
 
@@ -70,16 +73,16 @@ def _schema_lead(lead: dict[str, Any] | None, valid: set[str]) -> dict[str, Any]
 
 
 def _assign_lead(builder: Any, lead: dict[str, Any] | None) -> None:
-  """Copy a lead dict into a capnp LeadData builder.
+  """Copy a lead dict into a RadarState.LeadData builder.
 
-  The dPath output is built against the newer-upstream LeadData schema
-  (status/jLead/score/cutOut*), but this fork's log.capnp still ships the
-  # older field set (present, no jLead/score). Assign only fields the target
-  builder actually declares so the daemon works on either schema.
+  The internal dict keeps cp's `status` key, but log.capnp:RadarState.LeadData
+  names that @11 flag `present` (custom.capnp:LeadData keeps `status`). Field
+  sets also drift between upstream revisions, so assign only the fields the
+  target builder actually declares and let the alias table bridge the rename.
   """
   data = lead or EMPTY_LEAD
   valid = set(builder.schema.fields.keys())
-  # cp calls it `status`; this fork's LeadData renamed the same @11 field to `present`.
+  # Only RadarState.LeadData is ever built here, where the flag is `present`.
   aliases = _LEAD_FIELD_ALIASES
   for key, value in data.items():
     target = aliases.get(key, key)
