@@ -76,6 +76,24 @@ class ModelsLayout(Widget):
       callback=self._handle_current_model_clicked
     )
 
+    # 2026-10-17: 上游把模型选择拆成 small(qcom) / big(chestnut) 两个槽位，各选各的
+    # catalog（没装 chestnut 时 big 槽位由 jetlink 的加速器跑）。本树此前只剩
+    # current_model_item（走 active_source()），没有 chestnut 时选择器里就只有小模型列表，
+    # 与上游不一致。这里补回两个槽位行；current_model_item 继续作状态展示。
+    self.small_model_item = ListItemSP(
+      title=tr("Small Model"),
+      description="",
+      action_item=ScrollingButtonAction(tr("SELECT")),
+      callback=lambda: self._open_source_dialog("qcom"),
+    )
+
+    self.big_model_item = ListItemSP(
+      title=tr("Big Model"),
+      description="",
+      action_item=ScrollingButtonAction(tr("SELECT")),
+      callback=lambda: self._open_source_dialog("chestnut"),
+    )
+
     self.supercombo_label = progress_item(tr("Driving Model"))
     self.vision_label = progress_item(tr("Vision Model"))
     self.policy_label = progress_item(tr("Policy Model"))
@@ -137,9 +155,10 @@ class ModelsLayout(Widget):
       param=LINK_PARAM, button_width=300, inline=False)
 
     # 上游这批新增的行（Jetlink 链接模式 / 下载镜像 / 模型列表源）在本树已有定义，
-    # 一并挂进列表，否则定义了却不显示。上游的 small/big_model_item 与 download_item
-    # 本 fork 已用 current_model_item + 各进度标签替代，本树无定义，故不纳入。
-    self.items = [self.current_model_item, self.accelerator_link_item, self.cancel_download_item,
+    # 一并挂进列表，否则定义了却不显示。下载状态仍用本树自己的进度标签行，
+    # 不引入上游的 download_item。
+    self.items = [self.current_model_item, self.small_model_item, self.big_model_item,
+                  self.accelerator_link_item, self.cancel_download_item,
                   self.supercombo_label, self.vision_label,
                   self.policy_label, self.off_policy_label, self.on_policy_label, self.refresh_item,
                   self.hf_mirror_item, self.catalog_source_item, self.clear_cache_item,
@@ -432,11 +451,19 @@ class ModelsLayout(Widget):
       if source in ACTIVE_BUNDLE_KEYS:
         ui_state.params.remove(ACTIVE_BUNDLE_KEYS[source])
       self._show_reset_params_dialog()
-    elif selected_bundle := next((bundle for bundle in self.model_manager.availableBundles if bundle.ref == selected_ref), None):
+    elif selected_bundle := self._resolve_selected_bundle(selected_ref):
       ui_state.params.put("ModelManager_DownloadRef", selected_bundle.ref)
       if self.model_manager.activeBundle and selected_bundle.generation != self.model_manager.activeBundle.generation:
         self._show_reset_params_dialog()
     self.model_dialog = None
+
+  @staticmethod
+  def _resolve_selected_bundle(ref):
+    """The bundle behind `ref`, whichever slot's catalog lists it: a big pick lives in the
+    chestnut catalog, which availableBundles (the active source's) does not carry."""
+    source_bundles = {source: bundles_for_source(source) for source in ("qcom", "chestnut")}
+    resolved = resolve_bundle_by_ref(ref, source_bundles)
+    return resolved[0] if resolved else None
 
   @staticmethod
   def _bundle_to_node(bundle, noted: bool = False):
@@ -471,6 +498,23 @@ class ModelsLayout(Widget):
     active_ref = self.model_manager.activeBundle.ref if self.model_manager.activeBundle else "Default"
     self.model_dialog = TreeOptionDialog(tr("Select a Model"), folders_list, active_ref, "ModelManager_Favs",
                                          get_folders_fn=self._get_folders, on_exit=self._on_model_selected)
+    gui_app.push_widget(self.model_dialog)
+
+  def _open_source_dialog(self, source):
+    """Pick a bundle for one slot: "qcom" (small) or "chestnut" (big).
+
+    Upstream lets both slots be chosen independently, so the picker lists that slot's
+    catalog even when the other slot is the one currently driving.
+    """
+    self._selection_source = source
+    favs = ui_state.params.get("ModelManager_Favs")
+    favorites = set(favs.split(';')) if favs else set()
+    folders_list = self._source_folders(favorites, source)
+    if not folders_list:
+      gui_app.push_widget(alert_dialog(tr("No models are available for this hardware yet. Connect to the internet and refresh the model list.")))
+      return
+    self.model_dialog = TreeOptionDialog(tr("Select a Model"), folders_list, self._slot_active_ref(source), "ModelManager_Favs",
+                                         get_folders_fn=lambda favs: self._source_folders(favs, source), on_exit=self._on_model_selected)
     gui_app.push_widget(self.model_dialog)
 
   def _source_folders(self, favorites, source):
@@ -509,12 +553,15 @@ class ModelsLayout(Widget):
     active_name = self.model_manager.activeBundle.internalName if self.model_manager and self.model_manager.activeBundle.ref else tr("{} (Default)").format(DEFAULT_MODEL)
     self.current_model_item.action_item.set_value(active_name)
 
-    if not ui_state.is_offroad():
-      self.current_model_item.action_item.set_enabled(False)
-      self.current_model_item.set_description(tr("Only available when vehicle is off, or always offroad mode is on"))
-    else:
-      self.current_model_item.action_item.set_enabled(True)
-      self.current_model_item.set_description("")
+    for item, source in ((self.small_model_item, "qcom"), (self.big_model_item, "chestnut")):
+      slot_bundle = get_selected_bundle(ui_state.params, source)
+      item.action_item.set_value(slot_bundle.internalName if slot_bundle else default_model_name(source))
+
+    offroad = ui_state.is_offroad()
+    self.current_model_item.action_item.set_enabled(offroad)
+    self.current_model_item.set_description("" if offroad else tr("Only available when vehicle is off, or always offroad mode is on"))
+    for item in (self.small_model_item, self.big_model_item):
+      item.action_item.set_enabled(offroad)
 
     self._refresh_accelerator_items()
 

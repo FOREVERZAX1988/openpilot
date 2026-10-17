@@ -10,6 +10,7 @@ from openpilot.cereal import custom
 from openpilot.sunnypilot.models.default_model import DEFAULT_MODEL
 from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_selected_bundle
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigMultiToggle
+from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.models import ModelsLayout
 from openpilot.selfdrive.ui.ui_state import ui_state, device
 from openpilot.selfdrive.ui.sunnypilot.accelerator_link import big_model_note, big_model_progress, link_toggle_meaningful, standin_model
@@ -115,8 +116,7 @@ class ModelsLayoutMici(NavScroller):
   def model_manager(self):
     return ui_state.sm["modelManagerSP"]
 
-  def _get_grouped_bundles(self, favorites = None):
-    bundles = self.model_manager.availableBundles
+  def _get_grouped_bundles(self, bundles, favorites = None):
     folders = {}
     for bundle in bundles:
       folder = next((override.value for override in bundle.overrides if override.key == "folder"), "")
@@ -134,26 +134,52 @@ class ModelsLayoutMici(NavScroller):
     gui_app.push_widget(scroller)
 
   def _show_folders(self):
+    """Small and big slots first, each listing its own catalog.
+
+    2026-10-17: upstream asks which slot to fill before listing folders, so the big
+    catalog stays pickable with no chestnut fitted (jetlink runs it). Ours jumped
+    straight into the active source's folders and only showed the release/master
+    folders, so the big models never appeared.
+    """
     self.focused_widget = self.select_model_btn
-    self._selection_source = active_source()
+
+    hardware_btns = []
+    active = active_source()
+    for source, label in (("qcom", tr("small models")), ("chestnut", tr("big models"))):
+      bundle = get_selected_bundle(ui_state.params, source)
+      value = (bundle.internalName if bundle else default_model_name(source)).lower()
+      if source == active:
+        value += f" ({tr('active')})"
+      btn = BigButton(label.lower(), value=value)
+      btn.set_click_callback(lambda s=source: self._select_hardware(s))
+      hardware_btns.append(btn)
+    self._push_selection_view(hardware_btns)
+
+  def _select_hardware(self, source):
+    self._selection_source = source
 
     favs = ui_state.params.get("ModelManager_Favs")
     favorites = set(favs.split(';')) if favs else set()
 
-    folders = self._get_grouped_bundles(favorites)
+    bundles = bundles_for_source(source)
+    if not bundles:
+      gui_app.push_widget(BigDialog(title=tr("No models available"),
+                                    description=tr("No models are available for this hardware yet. Connect to the internet and refresh the model list.")))
+      return
+    folders = self._get_grouped_bundles(bundles, favorites)
+
     folder_buttons = []
-    default_btn = BigButton(tr("{} (Default)").format(DEFAULT_MODEL).lower())
-    default_btn.set_click_callback(self._select_default)
+    default_btn = BigButton(default_model_name(source).lower())
+    default_btn.set_click_callback(lambda s=source: self._select_default(s))
     folder_buttons.append(default_btn)
 
     for folder in sorted(folders.keys(), key=lambda f: max((bundle.index for bundle in folders[f]), default=-1), reverse=True):
-      if folder.lower() in ["release models", "master models", "favorites"]:
-        btn = BigButton(folder.lower())
-        btn.set_click_callback(lambda f=folder: self._select_folder(f))
-        if folder.lower() == "favorites":
-          folder_buttons.insert(0, btn)
-        else:
-          folder_buttons.append(btn)
+      btn = BigButton(folder.lower())
+      btn.set_click_callback(lambda f=folder: self._select_folder(f))
+      if folder.lower() == "favorites":
+        folder_buttons.insert(0, btn)
+      else:
+        folder_buttons.append(btn)
     self._push_selection_view(folder_buttons)
 
   def _pop_to_main(self):
@@ -163,23 +189,26 @@ class ModelsLayoutMici(NavScroller):
     ui_state.params.put("ModelManager_DownloadRef", bundle.ref)
     self._pop_to_main()
 
-  def _select_default(self):
-    source = self._selection_source or active_source()
+  def _select_default(self, source=None):
+    source = source or self._selection_source or active_source()
     if source in ACTIVE_BUNDLE_KEYS:
       ui_state.params.remove(ACTIVE_BUNDLE_KEYS[source])
     self._pop_to_main()
 
   def _select_folder(self, folder_name):
+    source = self._selection_source
+    if source is None:  # folders are only reachable after picking a slot
+      return
     favs = ui_state.params.get("ModelManager_Favs")
     favorites = set(favs.split(';')) if favs else set()
 
-    folders = self._get_grouped_bundles(favorites)
+    folders = self._get_grouped_bundles(bundles_for_source(source), favorites)
     bundles = sorted(folders.get(folder_name, []), key=lambda b: b.index, reverse=True)
 
     btns = []
     for bundle in bundles:
-      txt = bundle.displayName.lower()
-      btn = BigButton(txt)
+      note = big_model_note(bundle.ref) if source == "chestnut" else None
+      btn = BigButton(bundle.displayName.lower(), value=note.lower() if note else "")
       btn.set_click_callback(lambda b=bundle: self._select_model(b))
       btns.append(btn)
     self._push_selection_view(btns)
