@@ -4,14 +4,14 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+import time
+
 import pyray as rl
 
 from openpilot.cereal import custom
-from openpilot.sunnypilot.models.default_model import DEFAULT_MODEL
+from openpilot.selfdrive.ui.mici.widgets.dialog import BigConfirmationDialog, BigDialog
 from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_selected_bundle
-from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigMultiToggle
-from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog
-from openpilot.selfdrive.ui.sunnypilot.layouts.settings.models import ModelsLayout
+from openpilot.selfdrive.ui.mici.widgets.button import BigButton
 from openpilot.selfdrive.ui.ui_state import ui_state, device
 from openpilot.selfdrive.ui.sunnypilot.accelerator_link import big_model_note, big_model_progress, link_toggle_meaningful, standin_model
 from openpilot.selfdrive.ui.sunnypilot.model_info import (active_source, big_model_state, bundles_for_source, carrying_model,
@@ -71,12 +71,12 @@ class CurrentModelInfo(Widget):
     header_color = rl.Color(255, 255, 255, int(255 * 0.9))
     subheader_color = rl.Color(255, 255, 255, int(255 * 0.9 * 0.65))
     max_width = int(self._rect.width - 20)
+    active_text, info_header, info_text = _model_info()
     self.current_model_header = UnifiedLabel(tr("active model"), 48, max_width=max_width, text_color=header_color, font_weight=FontWeight.DISPLAY)
-    default_text = tr("{} (Default)").format(DEFAULT_MODEL).lower()
-    self.current_model_text = UnifiedLabel(default_text, 32, max_width=max_width, text_color=subheader_color, font_weight=FontWeight.ROMAN, scroll=True)
+    self.current_model_text = UnifiedLabel(active_text, 32, max_width=max_width, text_color=subheader_color, font_weight=FontWeight.ROMAN, scroll=True)
 
-    self.info_header = UnifiedLabel(tr("cache size"), 48, max_width=max_width, text_color=header_color, font_weight=FontWeight.DISPLAY)
-    self.info_text = UnifiedLabel("0 mb", 32, max_width=max_width, text_color=subheader_color, font_weight=FontWeight.ROMAN)
+    self.info_header = UnifiedLabel(info_header, 48, max_width=max_width, text_color=header_color, font_weight=FontWeight.DISPLAY)
+    self.info_text = UnifiedLabel(info_text, 32, max_width=max_width, text_color=subheader_color, font_weight=FontWeight.ROMAN, scroll=True)
 
   def _render(self, _):
     self.current_model_header.set_position(self._rect.x + 20, self._rect.y - 10)
@@ -95,21 +95,43 @@ class ModelsLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
     self.focused_widget = None
-    self._selection_source = None
 
     self.current_model_info = CurrentModelInfo()
     self._download_progress = "."
     self._download_frame = 0
     self._was_downloading = False
+    self._selection_source: str | None = None
 
     self.select_model_btn = BigButton(tr("select model"), description=tr("Choose the driving model. Small models run on the comma.\n" +
                                                                          "Big models run on a Chestnut or over Jetlink."))
     self.select_model_btn.set_click_callback(self._show_folders)
 
-    self.cancel_download_btn = BigButton(tr("cancel download"))
+    self.refresh_btn = BigButton(tr("refresh models"), description=tr("Fetches the latest list of driving models."))
+    self.refresh_btn.set_click_callback(self._refresh_models)
+    self._refresh_start: float | None = None
+
+    self.cancel_download_btn = BigButton(tr("cancel download"), description=tr("Stops the model download in progress."))
     self.cancel_download_btn.set_click_callback(lambda: ui_state.params.remove("ModelManager_DownloadRef"))
 
-    self.main_items = [self.current_model_info, self.select_model_btn, self.cancel_download_btn]
+    # the pills follow the param; locked onroad like the model buttons beside it: jetlink switches the link only parked.
+    # the small display exposes only USB/iOS (no Wi-Fi), and a tap cycles off -> USB -> iOS -> off.
+    mici_modes = [m for m in MODES if m != "wifi"]
+    self.link_toggle = BigMultiParamToggleSP(tr("jetlink"), KEYS.link, [tr(LINK_MODE_LABELS[m]) for m in mici_modes],
+                                             values=[MODES.index(m) for m in mici_modes],
+                                             description=tr("Runs big models on a computer or phone plugged into the comma.\n" +
+                                                            "USB for a Mac, Jetson, Linux PC or Android. iOS for an iPhone or iPad.\n" +
+                                                            "Turns off ADB. The small model drives until the big model is ready."))
+    self.link_toggle.set_enabled(lambda: ui_state.is_offroad())
+    self.link_toggle.set_visible(link_toggle_meaningful())
+
+    self.clear_cache_btn = BigButton(tr("clear cache"), value=f"{model_cache_size_mb():.1f} MB",
+                                     description=tr("Deletes downloaded models to free up space.\n" +
+                                                    "Your selected small and big models are kept."))
+    self.clear_cache_btn.set_click_callback(self._confirm_clear_cache)
+    self._cache_size_time = 0.0
+
+    self.main_items = [self.current_model_info, self.select_model_btn, self.cancel_download_btn, self.link_toggle, self.refresh_btn,
+                       self.clear_cache_btn]
     self._scroller.add_widgets(self.main_items)
 
   @property
@@ -134,13 +156,6 @@ class ModelsLayoutMici(NavScroller):
     gui_app.push_widget(scroller)
 
   def _show_folders(self):
-    """Small and big slots first, each listing its own catalog.
-
-    2026-10-17: upstream asks which slot to fill before listing folders, so the big
-    catalog stays pickable with no chestnut fitted (jetlink runs it). Ours jumped
-    straight into the active source's folders and only showed the release/master
-    folders, so the big models never appeared.
-    """
     self.focused_widget = self.select_model_btn
 
     hardware_btns = []
@@ -184,20 +199,28 @@ class ModelsLayoutMici(NavScroller):
 
   def _pop_to_main(self):
     gui_app.pop_widgets_to(self)
+    self._scroller.scroll_panel.set_offset(0.0)
 
   def _select_model(self, bundle):
     ui_state.params.put("ModelManager_DownloadRef", bundle.ref)
     self._pop_to_main()
 
-  def _select_default(self, source=None):
-    source = source or self._selection_source or active_source()
-    if source in ACTIVE_BUNDLE_KEYS:
-      ui_state.params.remove(ACTIVE_BUNDLE_KEYS[source])
+  def _select_default(self, source):
+    ui_state.params.remove(ACTIVE_BUNDLE_KEYS[source])
     self._pop_to_main()
+
+  def _confirm_clear_cache(self):
+    icon = gui_app.texture("icons_mici/settings/network/new/trash.png", 54, 64)
+    gui_app.push_widget(BigConfirmationDialog(f"{tr('slide to')}\n{tr('clear cache')}", icon,
+                                              lambda: ui_state.params.put_bool("ModelManager_ClearCache", True), red=True))
+
+  def _refresh_models(self):
+    refresh_model_list()
+    self._refresh_start = time.monotonic()
 
   def _select_folder(self, folder_name):
     source = self._selection_source
-    if source is None:  # folders are only reachable after picking a slot
+    if source is None:  # folders are only reachable after picking a hardware
       return
     favs = ui_state.params.get("ModelManager_Favs")
     favorites = set(favs.split(';')) if favs else set()
@@ -242,11 +265,26 @@ class ModelsLayoutMici(NavScroller):
       device.set_override_interactive_timeout(None)
     self._was_downloading = is_downloading
 
+    # manager is offroad-only, so an onroad clear would never be serviced
+    clearing = ui_state.params.get_bool("ModelManager_ClearCache")
+    self.clear_cache_btn.set_enabled(ui_state.is_offroad() and not is_downloading and not clearing)
+    if clearing:
+      self.clear_cache_btn.set_value(tr("clearing..."))
+      self._cache_size_time = 0.0  # refresh the size as soon as clearing finishes
+    elif (now := time.monotonic()) - self._cache_size_time > 0.5:
+      self._cache_size_time = now
+      self.clear_cache_btn.set_value(f"{model_cache_size_mb():.1f} MB")
+
+    # manager is offroad-only, so a refresh queued onroad would never be serviced
+    refreshing = refresh_in_progress(self._refresh_start)
+    self.refresh_btn.set_enabled(ui_state.is_offroad() and not is_downloading and not refreshing)
+    self.refresh_btn.set_value(tr("fetching...") if refreshing else "")
+
     self.current_model_info.current_model_header.set_text(tr("active model"))
-    model_text = manager.activeBundle.displayName.lower() if manager.activeBundle.ref else tr("{} (Default)").format(DEFAULT_MODEL).lower()
-    self.current_model_info.current_model_text.set_text(model_text)
-    self.current_model_info.info_header.set_text(tr("cache size"))
-    self.current_model_info.info_text.set_text(f"{ModelsLayout.calculate_cache_size():.2f} MB")
+    active_text, info_header, info_text = _model_info()
+    self.current_model_info.current_model_text.set_text(active_text)
+    self.current_model_info.info_header.set_text(info_header)
+    self.current_model_info.info_text.set_text(info_text)
 
     if manager.selectedBundle and manager.selectedBundle.status == custom.ModelManagerSP.DownloadStatus.failed:
       self.current_model_info.info_header.set_text(tr("error") + self._download_progress)
@@ -257,19 +295,29 @@ class ModelsLayoutMici(NavScroller):
       device.set_override_interactive_timeout(5)
       progress = 0.0
       count = 0
+      verifying = False
       for model in manager.selectedBundle.models:
         count += 1
         p = model.artifact.downloadProgress
-        if p.status == custom.ModelManagerSP.DownloadStatus.downloading:
+        if p.status in (custom.ModelManagerSP.DownloadStatus.downloading,
+                        custom.ModelManagerSP.DownloadStatus.verifying):
           progress += p.progress
+          verifying = verifying or p.status == custom.ModelManagerSP.DownloadStatus.verifying
         elif p.status in (custom.ModelManagerSP.DownloadStatus.downloaded,
                           custom.ModelManagerSP.DownloadStatus.cached):
           progress += 100.0
 
-      self.current_model_info.current_model_header.set_text(tr("downloading"))
+      self.current_model_info.current_model_header.set_text(tr("verifying") if verifying else tr("downloading"))
+      self.cancel_download_btn.set_text(tr("cancel verification") if verifying else tr("cancel download"))
       self.current_model_info.current_model_header._shimmer = True
-      self.current_model_info.current_model_text.set_text(f"{manager.selectedBundle.internalName.lower()}")
+      name_text = manager.selectedBundle.internalName.lower()
+      if queued := queued_name(manager.selectedBundle.ref):
+        name_text += f"  |  {queued.lower()} {tr('queued')}"
+      self.current_model_info.current_model_text.set_text(name_text)
       self.current_model_info.info_header.set_text(tr("progress") + self._download_progress)
       self.current_model_info.info_header._shimmer = True
       self.current_model_info.info_text.set_text(f"{progress/count:.2f}%")
 
+    elif manager.selectedBundle and manager.selectedBundle.status == custom.ModelManagerSP.DownloadStatus.downloaded:
+      self.current_model_info.info_header.set_text(tr("downloaded"))
+      self.current_model_info.info_text.set_text(tr("downloaded"))

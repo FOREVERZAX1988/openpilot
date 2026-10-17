@@ -35,8 +35,18 @@ def active_source() -> str:
 
 
 def bundles_for_source(source: str):
+  """The picker's catalog for one slot.
+
+  The active slot prefers the manager's live list, but that message is only
+  published a tick after boot, a refresh, or a manager restart; on those frames
+  availableBundles is empty and the picker used to answer "no models available
+  for this hardware" while the cache on disk held the whole catalog. Fall back
+  to the cache instead of claiming the hardware has nothing.
+  """
   if source == active_source():
-    return ui_state.sm["modelManagerSP"].availableBundles
+    live = ui_state.sm["modelManagerSP"].availableBundles
+    if len(live):
+      return live
   return get_cached_bundles(ui_state.params, source)
 
 

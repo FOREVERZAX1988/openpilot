@@ -100,9 +100,11 @@ class ModelsLayout(Widget):
     self.off_policy_label = progress_item(tr("Off-Policy Model"))
     self.on_policy_label = progress_item(tr("On-Policy Model"))
 
-    self.refresh_item = button_item(tr("Refresh Model List"), tr("REFRESH"), "",
-                                    lambda: (ui_state.params.put("ModelManager_LastSyncTime", 0),
-                                             gui_app.push_widget(alert_dialog(tr("Fetching Latest Models")))))
+    # the label is read every frame so a queued refresh shows as FETCHING... until both
+    # catalogs are stamped (refresh_in_progress), which is also what gates the button
+    self.refresh_item = button_item(tr("Refresh Model List"),
+                                    lambda: tr("FETCHING...") if self._refreshing else tr("REFRESH"), "",
+                                    self._refresh_models)
 
     self.hf_mirror_item = multiple_button_item_sp(
       tr("Model Download Mirror"),
@@ -562,6 +564,10 @@ class ModelsLayout(Widget):
     self.current_model_item.set_description("" if offroad else tr("Only available when vehicle is off, or always offroad mode is on"))
     for item in (self.small_model_item, self.big_model_item):
       item.action_item.set_enabled(offroad)
+
+    # manager is offroad-only, so a refresh queued onroad would never be serviced
+    self._refreshing = refresh_in_progress(self._refresh_start)
+    self.refresh_item.action_item.set_enabled(offroad and not self._downloading and not self._refreshing)
 
     self._refresh_accelerator_items()
 

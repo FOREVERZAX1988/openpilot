@@ -141,3 +141,39 @@ class TestAChestnutArrivingMidRender(OpenpilotTestCase):
                            (model_info.carrying_model, ("accelerator", "big", "big"))):
       self.reads = 0
       assert call() == expected
+
+
+class TestBundlesForSourceFallback(OpenpilotTestCase):
+  """An empty live list is a start-up frame, not empty hardware. The picker used to
+  answer "no models available for this hardware" on the frames before the manager
+  published, which reads as "our build only has the small models"."""
+
+  def setUp(self):
+    super().setUp()
+    self.ui_state = mock.MagicMock()
+    self.ui_state.chestnut_present = False
+    self.ui_state.chestnut_state = ChestnutState.DISCONNECTED
+    self.ui_state.chestnut_active = False
+    self.ui_state.chestnut_loading = False
+    self.ui_state.jetlink = None
+    self.ui_state.is_offroad.return_value = True
+    patcher = mock.patch.object(model_info, "ui_state", self.ui_state)
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def test_an_unpublished_live_list_reads_the_cache(self):
+    self.ui_state.sm.__getitem__.return_value.availableBundles = []
+    with mock.patch.object(model_info, "get_cached_bundles", return_value=["cached"]) as cached:
+      assert model_info.bundles_for_source("qcom") == ["cached"]
+      cached.assert_called_once_with(self.ui_state.params, "qcom")
+
+  def test_a_published_live_list_wins(self):
+    self.ui_state.sm.__getitem__.return_value.availableBundles = ["live"]
+    with mock.patch.object(model_info, "get_cached_bundles", return_value=["cached"]) as cached:
+      assert model_info.bundles_for_source("qcom") == ["live"]
+      cached.assert_not_called()
+
+  def test_the_inactive_slot_reads_the_cache(self):
+    with mock.patch.object(model_info, "get_cached_bundles", return_value=["cached"]) as cached:
+      assert model_info.bundles_for_source("chestnut") == ["cached"]
+      cached.assert_called_once_with(self.ui_state.params, "chestnut")

@@ -189,10 +189,20 @@ class BigButton(BaseButton):
   def set_touch_valid_callback(self, touch_callback: Callable[[], bool]) -> None:
     super().set_touch_valid_callback(lambda: touch_callback() and self._grow_animation_until is None)
 
-  def _width_hint(self) -> int:
+  def _title_width_hint(self) -> int:
     # A value moves the title to the top, where it shares space with the icon.
     icon_size = self._txt_icon.width if self._txt_icon and self.value else 0
     return int(self._rect.width - self.LABEL_HORIZONTAL_PADDING * 2 - icon_size)
+
+  def _subtitle_width_hint(self) -> int:
+    # Bottom aligned, so it sits below the icon.
+    return int(self._rect.width - self.LABEL_HORIZONTAL_PADDING * 2)
+
+  def _width_hint(self) -> int:
+    # This tree measures the title line through _width_hint; upstream split it into
+    # _title_width_hint/_subtitle_width_hint, which the sunnypilot layer (badges,
+    # subtitle area) calls. Keep both names pointing at the same measure.
+    return self._title_width_hint()
 
   def _get_label_font_size(self):
     if len(self.text) <= 18:
