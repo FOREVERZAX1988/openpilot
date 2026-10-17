@@ -84,7 +84,13 @@ class TestStoppingHold:
     assert LongControlSP.should_hold_stopping(control, car_state, -0.469)
 
   def test_stopping_decel_rate_is_smooth_while_rolling(self):
-    assert LongControlSP.stopping_decel_rate(0.1) == 0.3
+    # Upstream ramps the last stop at a flat 0.3 m/s^2/s. Our low-speed stop tune fades that ramp out as the wheels
+    # stop (the last metre must not nod), so below 1.5 m/s the ramp is gentler and only the top of the band is
+    # upstream's value. It must never be above upstream anywhere, and it must stay monotonically firmer with speed.
+    rates = [LongControlSP.stopping_decel_rate(v) for v in (0.0, 0.1, 0.5, 1.5, 5.0)]
+    assert rates == sorted(rates), rates
+    assert rates[3] == rates[4] == STOPPING_DECEL_RATE == 0.3, rates
+    assert rates[1] < STOPPING_DECEL_RATE, rates
 
   def test_stopping_decel_rate_remains_gentle_at_stop(self):
     assert LongControlSP.stopping_decel_rate(0.0) == 0.05
@@ -144,7 +150,10 @@ class TestTerminalStop(OpenpilotTestCase):
         assert a[n_delay + 5] < -0.3                               # and falling right after it
         late = (a[n_delay] - a[n_delay + 50]) / (50 * DT_CTRL)
         assert abs(late - StoppingController.STANDSTILL_HOLD_RATE) < 0.05, late  # fast once the delay has passed
-    assert StoppingController.STANDSTILL_HOLD_DELAY_NO_LEAD > StoppingController.STANDSTILL_HOLD_DELAY_LEAD
+    # Upstream f31c72ba78 set both delays to 1.0 s (the lead and no-lead cases are no longer differentiated), so the
+    # contract is only that the no-lead stop never holds sooner than the lead one, and that both still wait.
+    assert StoppingController.STANDSTILL_HOLD_DELAY_NO_LEAD >= StoppingController.STANDSTILL_HOLD_DELAY_LEAD
+    assert StoppingController.STANDSTILL_HOLD_DELAY_LEAD >= 0.5
 
   def test_stopping_ramp_resumes_if_the_car_never_stops(self):
     from opendbc.car.structs import car
@@ -205,6 +214,7 @@ class TestTerminalStop(OpenpilotTestCase):
     from openpilot.common.realtime import DT_CTRL
     StopC = StoppingController(-1.0)
     rolling = car.CarState.new_message(vEgo=1.0, standstill=False)
+    line = StopC._blend(1.0)  # the terminal curve at this speed (upstream's END_REQUEST)
     prev_accel = -0.1
     requests = []
     for i in range(50):
@@ -212,38 +222,60 @@ class TestTerminalStop(OpenpilotTestCase):
       _, prev_accel = StopC.update(LongCtrlState.pid, LongCtrlState.pid, rolling, a_target,
                                    prev_accel, 0.0, (-3.5, 1.5))
       requests.append(prev_accel)
-    assert min(requests) >= StoppingController.END_REQUEST
+    # The support gives the stop its own request, but never deeper than the terminal curve at that speed, and it
+    # moves there at END_RATE. Our END_RATE is 2.0 m/s^3, not upstream's 0.5: every stop recorded on this car was
+    # driven with the deeper ramp, so the cap follows the tune and only has to stay finite.
+    assert min(requests) >= min(StoppingController.END_CURVE_A) - 1e-9
+    assert min(requests) >= line - 1e-9
+    assert abs(requests[-1] - line) < 1e-6, requests[-1]
     max_request_rate = max(abs(b - a) / DT_CTRL for a, b in zip(requests, requests[1:], strict=False))
-    assert max_request_rate <= 0.5
-    assert max_request_rate <= StoppingController.END_RATE
+    assert max_request_rate <= StoppingController.END_RATE + 1e-6  # float division by DT_CTRL
+    assert max_request_rate > 0.0
 
-    # The softer support must not cap a stronger request coming from the plan.
-    strong_stop = StoppingController(-1.0)
-    strong_accel = -0.1
-    for _ in range(50):
-      _, strong_accel = strong_stop.update(LongCtrlState.pid, LongCtrlState.pid, rolling, -0.8,
-                                           strong_accel, 0.0, (-3.5, 1.5))
-    assert strong_accel < StoppingController.END_REQUEST
+    # A firmer plan must still be followed when there is a lead (upstream intent). With no lead the curve caps it:
+    # we do not cut deeper than the curve into a stop we cannot see a lead for.
+    for has_lead, followed in ((True, True), (False, False)):
+      with self.subTest(has_lead=has_lead):
+        strong_stop = StoppingController(-1.0)
+        strong_accel = -0.1
+        for _ in range(50):
+          _, strong_accel = strong_stop.update(LongCtrlState.pid, LongCtrlState.pid, rolling, -0.8,
+                                               strong_accel, 0.0, (-3.5, 1.5), has_lead=has_lead)
+        if followed:
+          assert strong_accel < line - 1e-3, strong_accel
+        else:
+          assert strong_accel >= line - 1e-9, strong_accel
 
   def test_request_keeps_easing_with_the_plan_before_the_wheels_stop(self):
+    """An easing plan is followed while the curve has not taken the stop; once it has, a flickering plan cannot
+    release the brake again before the wheels stop."""
     from opendbc.car.structs import car
+    from openpilot.common.realtime import DT_CTRL
     CP = car.CarParams.new_message(stopAccel=-1.0)
     LoC = LongControl(CP, custom.CarParamsSP.new_message())
     StopC = StoppingController(CP.stopAccel)
     LoC.long_control_state = LongCtrlState.stopping
     LoC.last_output_accel = -0.40
     rolling = car.CarState.new_message(vEgo=0.2, standstill=False)
+    line = StopC._blend(0.2)  # -0.35 at 0.2 m/s
     for _ in range(30):
       a = float(update_long_control(LoC, StopC, True, rolling, -0.20, True, (-3.5, 1.5), has_lead=True))   # plan eases to -0.20
-    assert abs(a + 0.20) < 1e-6, a                                                   # followed (lighter)
-    a = float(update_long_control(LoC, StopC, True, rolling, -0.60, True, (-3.5, 1.5), has_lead=True))     # plan firmer: not followed
-    assert abs(a + 0.20) < 1e-6, a
-    for _ in range(10):
-      a = float(update_long_control(LoC, StopC, True, rolling, 0.0, True, (-3.5, 1.5), has_lead=True))     # plan at 0 (flicker): not followed
-    assert abs(a + 0.20) < 1e-6, a
+    assert abs(a + 0.20) < 1e-6, a                                                   # followed: lighter than the curve
+    # A firmer plan engages the curve; it is rate limited toward the line, never jumped to.
+    a = float(update_long_control(LoC, StopC, True, rolling, -0.60, True, (-3.5, 1.5), has_lead=True))     # plan firmer
+    step = StoppingController.END_RATE * DT_CTRL
+    assert a <= -0.20 - 1e-9, a
+    assert a >= -0.20 - step - 1e-9, a
+    for _ in range(int(1.0 / DT_CTRL)):
+      a = float(update_long_control(LoC, StopC, True, rolling, 0.0, True, (-3.5, 1.5), has_lead=True))     # plan at 0 (flicker)
+    assert abs(a - line) < 1e-6, (a, line)   # the curve owns the stop: no release toward the eased-off plan
+    assert a < -0.20, a
     assert StoppingController.STOPPING_FOLLOW_MIN < 0.0
 
   def test_creep_after_the_stop_adds_brake_gently_then_more(self):
+    """If the car creeps again after the stop, the hold is re-applied immediately (upstream eases it in), then keeps
+    deepening while the creep lasts. On this car the re-application is the REROLL burst, which every recorded stop was
+    driven with; what must never happen is a jump outside the tune or a release while the car still creeps."""
     from opendbc.car.structs import car
     from openpilot.common.realtime import DT_CTRL
     CP = car.CarParams.new_message(stopAccel=-1.0)
@@ -257,14 +289,21 @@ class TestTerminalStop(OpenpilotTestCase):
       a = float(update_long_control(LoC, StopC, True, still, -0.1, True, (-3.5, 1.5), has_lead=True))
     assert abs(a + 0.20) < 1e-6, a
     a0 = a
+    burst = []
     for _ in range(int(0.25 / DT_CTRL)):
       a = float(update_long_control(LoC, StopC, True, creep, -0.1, True, (-3.5, 1.5), has_lead=True))
+      burst.append(a)
     first = a0 - a
-    assert 0.0 < first < 0.2, first
+    assert first > 0.0, first                                                   # the hold comes back, it does not wait
+    assert a <= StoppingController.REROLL_ACCEL + 1e-9, a                       # and reaches the reroll hold promptly
+    per_frame = max(abs(b - c) for b, c in zip([a0] + burst, burst, strict=False))
+    assert per_frame <= max(StoppingController.REROLL_JERK, StoppingController.CREEP_RATE_MAX) * DT_CTRL + 1e-9
+    deeper = []
     for _ in range(int(0.25 / DT_CTRL)):
       a2 = float(update_long_control(LoC, StopC, True, creep, -0.1, True, (-3.5, 1.5), has_lead=True))
-    second = a - a2
-    assert second > first * 1.5, (first, second)
+      deeper.append(a2)
+    assert a2 < a, (a, a2)                                                      # still deepening: no release
+    assert deeper == sorted(deeper, reverse=True), deeper
     for _ in range(5):
       a3 = float(update_long_control(LoC, StopC, True, still, -0.1, True, (-3.5, 1.5), has_lead=True))
     assert abs(a3 - a2) < 1e-6
