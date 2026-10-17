@@ -58,6 +58,15 @@ HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
 LOCAL_PORT_WHITELIST = {8022}
 SUNNYLINK_LOG_ATTR_NAME = "user.sunny.upload"
 SUNNYLINK_RECONNECT_TIMEOUT_S = 70  # FYI changing this will also would require a change on sidebar.cc
+# Cadence of our own WS pings. The pongs are what refresh LastSunnylinkPingTime, which the UI turns
+# into ONLINE/OFFLINE, so keep it well inside the UI's staleness window (PING_TIMEOUT_NS in
+# sunnypilot/layouts/sidebar.py and webui/server/bridge/state_api.py): one delayed pong must never
+# be enough to paint the status red.
+SUNNYLINK_PING_INTERVAL_S = 20
+# Transient reconnects deliberately do NOT erase LastSunnylinkPingTime. Removing it on every reset
+# made a single dropped socket -- routine behind a flaky gateway -- blank the status even though the
+# next attempt usually succeeds within seconds. The UI's own staleness window expires it if the link
+# really stays down.
 DISALLOW_LOG_UPLOAD = threading.Event()
 
 LOCAL_PAIRING_SESSION_TIMEOUT_S = PAIRING_WINDOW_S
@@ -170,7 +179,7 @@ def ws_recv(ws: WebSocket, end_event: threading.Event) -> None:
 
 def ws_ping(ws: WebSocket, end_event: threading.Event) -> None:
   ws.ping()  # Send the first ping
-  while not end_event.wait(SUNNYLINK_RECONNECT_TIMEOUT_S * 0.7):  # Sleep about 70% before a timeout
+  while not end_event.wait(SUNNYLINK_PING_INTERVAL_S):
     try:
       ws.ping()
       cloudlog.debug("sunnylinkd.ws_recv.ws_ping: Pinging")
@@ -540,7 +549,6 @@ def _connection_loop(exit_event: threading.Event | None, discovery: LocalDiscove
       if kind != "cloud":
         backoffs[ws_uri] = time.monotonic() + LOCAL_ENDPOINT_BACKOFF_S
       conn_retries += 1
-      params.remove("LastSunnylinkPingTime")
       _log_connection_error(e)
       time.sleep(backoff(conn_retries))
       continue
@@ -566,7 +574,6 @@ def _connection_loop(exit_event: threading.Event | None, discovery: LocalDiscove
         if not paired_ok:
           backoffs[ws_uri] = time.monotonic() + LOCAL_ENDPOINT_BACKOFF_S
           conn_retries += 1
-          params.remove("LastSunnylinkPingTime")
           try:
             ws.close()
           except Exception:
@@ -597,7 +604,6 @@ def _connection_loop(exit_event: threading.Event | None, discovery: LocalDiscove
       break
     except Exception as e:
       conn_retries += 1
-      params.remove("LastSunnylinkPingTime")
       _log_connection_error(e)
     finally:
       if probe_stop is not None:
