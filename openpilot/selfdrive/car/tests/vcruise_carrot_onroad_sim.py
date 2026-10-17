@@ -325,7 +325,9 @@ def build_cp(pcm_cruise=False, openpilot_long=True):
 
 
 def build_cp_sp():
-  return types.SimpleNamespace(pcmCruiseSpeed=False)
+  # CarParamsSP carries the ICBM capability: IcbmLatch reads it in VCruiseCarrot's
+  # own constructor, before any tick, so the sim must build it as the car does.
+  return types.SimpleNamespace(pcmCruiseSpeed=False, intelligentCruiseButtonManagementAvailable=False)
 
 
 print('=== VCruiseCarrot onroad simulation ===')
