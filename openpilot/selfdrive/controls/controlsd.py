@@ -217,11 +217,11 @@ class Controls(ControlsExt):
     # Guarded on validity because carrot_man may not be running at all.
     if self.sm.valid.get('carrotManSP', False):
       carrot = self.sm['carrotManSP']
-      hudControl.activeCarrot = int(getattr(carrot, 'activeCarrot', 0) or 0)
-      hudControl.atcDistance = float(getattr(carrot, 'xDistToTurn', 0) or 0)
+      CC.activeCarrot = int(getattr(carrot, 'activeCarrot', 0) or 0)
+      CC.atcDistance = float(getattr(carrot, 'xDistToTurn', 0) or 0)
     else:
-      hudControl.activeCarrot = 0
-      hudControl.atcDistance = 0.0
+      CC.activeCarrot = 0
+      CC.atcDistance = 0.0
 
     hudControl.rightLaneVisible = True
     hudControl.leftLaneVisible = True
