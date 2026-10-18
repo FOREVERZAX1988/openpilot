@@ -165,8 +165,9 @@ class LatControlTorqueExt(LatControlTorqueExtZP, NeuralNetworkLateralControl, La
     valid_bp = list(tp_sp.speedBinValid)
 
     if self._speed_dep_car_cfg is None:
-      from opendbc.sunnypilot.car.interfaces import get_speed_dep_config_for_car
-      self._speed_dep_car_cfg = get_speed_dep_config_for_car(self.CP)
+      # lives in lateral_tune since opendbc e87989fc1 moved it out of interfaces
+      from opendbc.sunnypilot.car.lateral_tune import get_speed_dep_config_for_car
+      self._speed_dep_car_cfg = get_speed_dep_config_for_car(self.CP) or {}
     cfg = self._speed_dep_car_cfg
     seed_lafs = cfg.get('laf_bp')
     seed_frictions = cfg.get('friction_bp')
