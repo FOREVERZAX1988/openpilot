@@ -3226,6 +3226,32 @@ def _thread_excepthook(args):
   )
 
 
+_FAULT_LOG = None
+
+
+def _enable_fault_diagnostics() -> None:
+  """Keep a per-crash Python traceback of every thread of this daemon.
+
+  carrot_man dies on a fatal signal every few minutes (native heap corruption:
+  2026-10-18 gdb triage of the 07:23 SIGABRT core shows glibc aborting with
+  "malloc(): unaligned tcache chunk detected" inside msgq SubSocket::create,
+  reached from Poller.poll).  The faulting thread is in native code, so neither
+  swaglog nor the apport report names the Python frame; faulthandler dumps all
+  thread stacks on SIGSEGV/SIGABRT/SIGBUS, which is what pins the corruptor down.
+  """
+  global _FAULT_LOG
+  import faulthandler
+  path = '/data/log/carrot_man_faulthandler.log'
+  try:
+    if os.path.exists(path) and os.path.getsize(path) > (4 << 20):
+      os.replace(path, path + '.1')
+    _FAULT_LOG = open(path, 'a', buffering=1)
+    _FAULT_LOG.write(f"\n===== carrot_man start {time.strftime('%Y-%m-%d %H:%M:%S')} pid={os.getpid()} =====\n")
+    faulthandler.enable(file=_FAULT_LOG, all_threads=True)
+  except Exception:
+    cloudlog.exception("carrot_man: faulthandler setup failed")
+
+
 def main_thread():
   # config_realtime_process([0, 1, 2, 3], 5)  # disabled: SCHED_FIFO can starve locationd; use background scheduling below
   set_core_affinity([0, 1, 2, 3])
@@ -3235,6 +3261,7 @@ def main_thread():
   # than silently killing that thread, so navigation-triggered crashes leave an
   # auditable cloudlog entry.
   threading.excepthook = _thread_excepthook
+  _enable_fault_diagnostics()
 
   manager = CarrotManager()
   rk = Ratekeeper(DEFAULT_RATE, print_delay_threshold=None)
