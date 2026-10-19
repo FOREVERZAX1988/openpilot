@@ -143,12 +143,16 @@ class DPathRadarD:
 
   def update(self, sm: messaging.SubMaster, rr: car.RadarData) -> None:
     self.radar_state_valid = sm.all_checks()
-    # Reuse the builder like conventional radard. Reallocating every 20 Hz
-    # frame is measurable on device and does not change any published field.
+    # Cap'n Proto arenas cannot reclaim replaced lists/structs: every per-frame
+    # list replacement and radarErrors assignment would allocate inside this
+    # builder's arena and keep the old storage for the whole drive. publish()
+    # copies only the currently reachable data, so the published messages stay
+    # small and correct while this arena grew (~44 MB/h measured at 20 Hz).
+    # Rebuilding per frame is the upstream radard behaviour and costs ~1 us.
+    self.radar_state = log.RadarState.new_message()
     self.radar_state.mdMonoTime = sm.logMonoTime["modelV2"]
-    # carStateMonoTime and the extended lead lists only exist on newer-upstream
-    # RadarState schemas; this fork's log.capnp still ships leadOne/leadTwo
-    # only. Set them when present so the daemon runs on either schema.
+    # carStateMonoTime and the extended lead fields only exist on newer-upstream
+    # RadarState schemas. Set them when present so the daemon runs on either.
     if hasattr(self.radar_state, "carStateMonoTime"):
       self.radar_state.carStateMonoTime = sm.logMonoTime["carState"]
     self.radar_state.radarErrors = rr.errors
@@ -176,9 +180,6 @@ class DPathRadarD:
       ("leadRight", output.lead_right),
       ("leadCutInRisk", output.lead_cutin_risk),
     )
-    for field_name, value in optional_leads:
-      if hasattr(self.radar_state, field_name):
-        _assign_lead(getattr(self.radar_state, field_name), value)
     optional_lead_lists = (
       ("leadsLeft", output.leads_left),
       ("leadsCenter", output.leads_center),
@@ -188,6 +189,9 @@ class DPathRadarD:
       ("leadsRight2", output.leads_right2),
     )
     lead_fields = set(self.radar_state.leadOne.schema.fields.keys())
+    for field_name, value in optional_leads:
+      if hasattr(self.radar_state, field_name):
+        _assign_lead(getattr(self.radar_state, field_name), value)
     for field_name, value in optional_lead_lists:
       if hasattr(self.radar_state, field_name):
         # pycapnp 2.1 rejects DynamicListBuilder.init() with a size; assign the

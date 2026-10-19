@@ -217,14 +217,14 @@ class TestTerminalStop(OpenpilotTestCase):
     line = StopC._blend(1.0)  # the terminal curve at this speed (upstream's END_REQUEST)
     prev_accel = -0.1
     requests = []
-    for i in range(50):
+    for i in range(200):  # no lead here: the entry runs at END_SOFT_RATE, not END_RATE
       a_target = -0.4 if i == 0 else -0.2  # initial stop intent, then let the terminal support finish gently
       _, prev_accel = StopC.update(LongCtrlState.pid, LongCtrlState.pid, rolling, a_target,
                                    prev_accel, 0.0, (-3.5, 1.5))
       requests.append(prev_accel)
     # The support gives the stop its own request, but never deeper than the terminal curve at that speed, and it
-    # moves there at END_RATE. Our END_RATE is 2.0 m/s^3, not upstream's 0.5: every stop recorded on this car was
-    # driven with the deeper ramp, so the cap follows the tune and only has to stay finite.
+    # moves there rate limited. END_RATE is 2.0 m/s^3 on this car (upstream ships 0.5); a no-lead entry uses
+    # END_SOFT_RATE (1.0) instead, so the loop gives it the frames that rate needs.
     assert min(requests) >= min(StoppingController.END_CURVE_A) - 1e-9
     assert min(requests) >= line - 1e-9
     assert abs(requests[-1] - line) < 1e-6, requests[-1]
@@ -273,9 +273,13 @@ class TestTerminalStop(OpenpilotTestCase):
     assert StoppingController.STOPPING_FOLLOW_MIN < 0.0
 
   def test_creep_after_the_stop_adds_brake_gently_then_more(self):
-    """If the car creeps again after the stop, the hold is re-applied immediately (upstream eases it in), then keeps
-    deepening while the creep lasts. On this car the re-application is the REROLL burst, which every recorded stop was
-    driven with; what must never happen is a jump outside the tune or a release while the car still creeps."""
+    """A creep out of the hold bites in ~0.1 s, then deepens faster and faster.
+
+    The first bite is not gentle on purpose: route 0000010e 17:38:48 stood at -0.30 and rolled at 0.8 km/h for
+    1.1 s inside the hold delay, so the reroll snap (REROLL_ACCEL at REROLL_JERK) is what stops the roll before
+    it becomes motion. What must stay graded is everything after it - the deepening rate grows with creep_t,
+    which is what separates this from a single hard step (see sunnypilot's TestRerollHold for the route side).
+    """
     from opendbc.car.structs import car
     from openpilot.common.realtime import DT_CTRL
     CP = car.CarParams.new_message(stopAccel=-1.0)
@@ -288,23 +292,20 @@ class TestTerminalStop(OpenpilotTestCase):
     for _ in range(10):
       a = float(update_long_control(LoC, StopC, True, still, -0.1, True, (-3.5, 1.5), has_lead=True))
     assert abs(a + 0.20) < 1e-6, a
-    a0 = a
-    burst = []
-    for _ in range(int(0.25 / DT_CTRL)):
-      a = float(update_long_control(LoC, StopC, True, creep, -0.1, True, (-3.5, 1.5), has_lead=True))
-      burst.append(a)
-    first = a0 - a
-    assert first > 0.0, first                                                   # the hold comes back, it does not wait
-    assert a <= StoppingController.REROLL_ACCEL + 1e-9, a                       # and reaches the reroll hold promptly
-    per_frame = max(abs(b - c) for b, c in zip([a0] + burst, burst, strict=False))
-    assert per_frame <= max(StoppingController.REROLL_JERK, StoppingController.CREEP_RATE_MAX) * DT_CTRL + 1e-9
-    deeper = []
-    for _ in range(int(0.25 / DT_CTRL)):
-      a2 = float(update_long_control(LoC, StopC, True, creep, -0.1, True, (-3.5, 1.5), has_lead=True))
-      deeper.append(a2)
-    assert a2 < a, (a, a2)                                                      # still deepening: no release
-    assert deeper == sorted(deeper, reverse=True), deeper
+    trace = []
+    for _ in range(int(0.5 / DT_CTRL)):
+      trace.append(float(update_long_control(LoC, StopC, True, creep, -0.1, True, (-3.5, 1.5), has_lead=True)))
+    # the reroll bite: at REROLL_ACCEL well inside 0.1 s, never steeper than REROLL_JERK
+    assert trace[int(0.1 / DT_CTRL)] <= StoppingController.REROLL_ACCEL + 1e-9, trace[10]
+    steps = [a - b for a, b in zip(trace, trace[1:], strict=False)]
+    assert min(steps) >= -StoppingController.REROLL_JERK * DT_CTRL - 1e-9, min(steps)
+    # then it keeps deepening, and the rate grows instead of stepping once
+    rate_first = (trace[11] - trace[24]) / (13 * DT_CTRL)
+    rate_second = (trace[24] - trace[37]) / (13 * DT_CTRL)
+    assert StoppingController.STOPPING_DECEL_RATE < rate_first < StoppingController.CREEP_RATE_MAX, rate_first
+    assert rate_second > rate_first * 1.2, (rate_first, rate_second)
+    assert rate_second <= StoppingController.CREEP_RATE_MAX + 1e-9, rate_second
     for _ in range(5):
       a3 = float(update_long_control(LoC, StopC, True, still, -0.1, True, (-3.5, 1.5), has_lead=True))
-    assert abs(a3 - a2) < 1e-6
+    assert abs(a3 - trace[-1]) < 1e-6
     assert StoppingController.CREEP_RATE_GROWTH > 0.0

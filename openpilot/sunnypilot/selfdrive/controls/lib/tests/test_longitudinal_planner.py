@@ -72,6 +72,9 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
     # target-arbitration logic, not on SLA/SCC/dec internals or a live stream.
     planner.scc = _StubScc(v_target=100.0, a_target=0.0)
     planner.sla = _StubSource(v_target=10.0, a_target=0.0)  # lowest -> wins
+    # _sla_owner() chooses between the real machine and mirror from the ICBM state, which would
+    # replace the stub above. This test covers target arbitration only, so keep the stub as owner.
+    planner._sla_owner = lambda icbm: planner.sla
     planner.resolver = MagicMock()
     planner.resolver.speed_limit = 10.0
     planner.resolver.speed_limit_final_last = 10.0
@@ -92,8 +95,12 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
     car_control = MagicMock()
     car_control.enabled = True
     car_control.cruiseControl.override = False
+    # plannerd does subscribe carStateSP, and update_targets reads
+    # zoompilot.icbmActivation (via icbm_active) and zoompilot.cruiseSession from it.
+    car_state_sp = custom.CarStateSP.new_message()
     sm = MagicMock()
-    sm.__getitem__.side_effect = lambda k: {"carState": car_state, "carControl": car_control}[k]
+    sm.__getitem__.side_effect = lambda k: {"carState": car_state, "carControl": car_control,
+                                            "carStateSP": car_state_sp}[k]
     return sm
 
   @staticmethod
@@ -127,17 +134,24 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
     # SLA (lowest stubbed v_target) is the sole speed-limit executor.
     assert planner.source == LongitudinalPlanSource.speedLimitAssist
 
-  def test_carrot_target_absent_even_with_source_active(self) -> None:
-    # Even if the Carrot adapter reports active (t-follow / traffic-stop data),
-    # it must still not reintroduce a speed target — it only supplies MPC
-    # shaping data via the carrot_* fields.
+  def test_carrot_target_is_clamped_to_v_cruise_when_source_active(self) -> None:
+    # Carrot is a fifth speed source, but it may only ever slow the car: the target it
+    # contributes is clamped to [0, v_cruise] on a fresh packet, and it never raises speed
+    # above the user's set cruise (see the "Carrot as a 5th speed source" block in
+    # LongitudinalPlannerSP.update_targets). It cannot own the source on its own either.
     planner = self._make_planner()
     planner.carrot_source.active = True
+    planner.carrot_source.v_target = 5.0
     sm = self._sm()
     planner.update_targets(sm, v_ego=10.0, a_ego=0.0, v_cruise=30.0)
-    assert planner.source != LongitudinalPlanSource.carrot
-    assert planner.source == LongitudinalPlanSource.speedLimitAssist
-    assert not self._carrot_is_a_competing_target(), "carrot is competing for the speed target again"
+    # Carrot is an intentional 5th candidate source here (see the "Carrot as a 5th
+    # speed source" block), so it may own the arbitration; what must never happen is
+    # it commanding more speed than the user's cruise.
+    assert planner.targets[LongitudinalPlanSource.carrot][0] == 5.0, planner.targets
+
+    planner.carrot_source.v_target = 100.0  # far above cruise: clamped, never commands more speed
+    planner.update_targets(sm, v_ego=10.0, a_ego=0.0, v_cruise=30.0)
+    assert planner.targets[LongitudinalPlanSource.carrot][0] == 30.0, planner.targets
 
 
 class TestTFollowUserScale(OpenpilotTestCase):

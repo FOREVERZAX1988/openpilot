@@ -87,7 +87,8 @@ def run(directory=DIRECTORY, duration=None):
     for name in ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS'):
       os.environ[name] = '1'
     import cv2
-    from tools.signal_analysis import signal_tracker  # noqa: TID251 - repository-root experiment, not openpilot/tools
+    from openpilot.common.repo_tools import load
+    signal_tracker = load('signal_analysis/signal_tracker.py')
     from msgq.visionipc import VisionIpcClient, VisionStreamType
     from openpilot.common.swaglog import cloudlog
     cv2.setNumThreads(1)

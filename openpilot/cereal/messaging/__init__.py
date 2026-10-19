@@ -210,6 +210,9 @@ class SubMaster:
     self.alive = {s: on_demand[s] for s in services}
     self.freq_ok = {s: on_demand[s] for s in services}
     self.valid = {s: on_demand[s] for s in services}
+    # Last measured frequency-window verdict per service. Only refreshed when
+    # that service actually delivers a message; on-demand services are always ok.
+    self._received_freq_ok = {s: on_demand[s] for s in services}
 
     self.freq_tracker: dict[str, FrequencyTracker] = {}
     self.poller = Poller()
@@ -275,16 +278,32 @@ class SubMaster:
     for s in self.static_freq_services:
       # alive if delay is within 10x the expected frequency; checks relaxed in simulator
       self.alive[s] = (cur_time - self.recv_time[s]) < (10. / SERVICE_LIST[s].frequency) or (self.seen[s] and self.simulation)
-      self.freq_ok[s] = self.freq_tracker[s].valid or self.simulation
+      # Frequency windows only advance when a message is received, so only
+      # re-read the tracker then; liveness above still changes every loop.
+      if self.updated[s]:
+        self._received_freq_ok[s] = self.freq_tracker[s].valid
+      self.freq_ok[s] = self._received_freq_ok[s] or self.simulation
 
   def all_alive(self, service_list: list[str] | None = None) -> bool:
-    return all(self.alive[s] for s in (service_list or self.services) if s not in self.ignore_alive)
+    # Short-circuiting loop: these run at 100 Hz across several services, so the
+    # generator plus per-item attribute lookup is measurable.
+    for s in service_list or self.services:
+      if s not in self.ignore_alive and not self.alive[s]:
+        return False
+    return True
 
   def all_freq_ok(self, service_list: list[str] | None = None) -> bool:
-    return all(self.freq_ok[s] for s in (service_list or self.services) if self._check_avg_freq(s))
+    for s in service_list or self.services:
+      if (SERVICE_LIST[s].frequency > 0.99 and s not in self.ignore_average_freq
+          and s not in self.ignore_alive and not self.freq_ok[s]):
+        return False
+    return True
 
   def all_valid(self, service_list: list[str] | None = None) -> bool:
-    return all(self.valid[s] for s in (service_list or self.services) if s not in self.ignore_valid)
+    for s in service_list or self.services:
+      if s not in self.ignore_valid and not self.valid[s]:
+        return False
+    return True
 
   def all_checks(self, service_list: list[str] | None = None) -> bool:
     return self.all_alive(service_list) and self.all_freq_ok(service_list) and self.all_valid(service_list)

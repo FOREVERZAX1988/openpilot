@@ -54,7 +54,9 @@ class StoppingController:
   STOPPING_DECEL_RATE = 0.3  # m/s^2/s
   STANDSTILL_HOLD_RATE = 1.0  # m/s^2/s
   STANDSTILL_HOLD_DELAY_LEAD = 1.0  # s
-  STANDSTILL_HOLD_DELAY_NO_LEAD = 1.0  # s
+  # Without a lead nothing defines the stop point, so the hold waits longer before firming. With a lead the
+  # lead's own presence corroborates that we are stopping, so leaning on the hold sooner is safe.
+  STANDSTILL_HOLD_DELAY_NO_LEAD = 1.5  # s
   STOPPING_FREEZE_MAX = 2.0  # s
   STOPPING_EXIT_DEBOUNCE = 0.2  # s
   ENGAGE_STANDSTILL_GRACE = 0.6  # s
@@ -67,7 +69,7 @@ class StoppingController:
   BLEND_V = 10.0 / 3.6  # m/s:
   END_V_HI = 5.0 / 3.6  # m/s
   END_HI = -0.65  # m/s^2
-  END_LO = -0.35  # m/s^2
+  END_LO = -0.30  # m/s^2: the rest value the line settles on below 1 km/h
   END_CURVE_V = [0.0, 1.0 / 3.6, 2.0 / 3.6, 3.0 / 3.6, 4.0 / 3.6, 5.0 / 3.6]  # m/s
   # Driver 2026-10-06 (route 00000100, seven manual stops 19:45-19:59, averages 5->2 km/h 0.83, 2->0.3 km/h 0.45 m/s^2;
   # the lightest steady one, 19:56:19, 0.56 / 0.37): "the manual stops are still a touch heavy; give 5-2 km/h a little
@@ -84,7 +86,14 @@ class StoppingController:
   END_CURVE_A = [END_LO, END_LO, -0.48, -0.60, -0.65, END_HI]  # m/s^2
   END_PLAN_MIN = -0.25  # m/s^2: the plan must be braking this much at BLEND_V to count as stopping (a crawl-follow hovers near 0)
   END_RATE = 2.0  # m/s^3: how fast the request may move toward the line
-  END_CAP_RATE = 1.0  # m/s^3 (upstream): cap when easing a moving stop without a lead
+  # The firmest the support will ever ask for on its own: it softens a stop, it never deepens one. A plan
+  # firmer than this still passes through untouched (see _end_request).
+  END_REQUEST = END_HI  # m/s^2
+  # Corroboration-free entry below END_V_HI: nothing in the frame says the stop is real, so ramp in at this rate
+  # instead of grabbing the line in a single frame. Upstream ships 0.4 m/s^3; we keep 1.0 (it replaced our
+  # END_CAP_RATE, which every stop recorded on this car was driven with) and only require it to stay gentler
+  # than END_RATE. END_RATE remains available for a plan that is already committing.
+  END_SOFT_RATE = 1.0  # m/s^3
 
   # Leaving the standstill hold (driver 2026-10-04, route 000000fa 14:43:32: "the brake release at launch is a jerk, as
   # if let go suddenly; make it linear and slow"). There the request went from the -2.0 hold (3960 N) to +0.7 in 0.5 s
@@ -142,9 +151,21 @@ class StoppingController:
   def _end_request(self, a_target, prev_accel, v_ego, has_lead=True):
     line = self._blend(v_ego)
     target = min(a_target, line)  # the firmer of the plan and the line
-    if not has_lead and v_ego < self.END_V_HI and target < line:
-      return float(min(line, prev_accel + self.END_CAP_RATE * DT_CTRL))
-    step = self.END_RATE * DT_CTRL
+    if target < self.END_REQUEST:
+      # A plan firmer than the support floor is the planner's own stop, not our softening: follow it at the
+      # normal rate and never clamp it back up to the floor.
+      if not has_lead and v_ego < self.END_V_HI:
+        # ...but with no lead nothing corroborates the stop, so we still never cut deeper than the curve here
+        # (our divergence from upstream, which follows the plan even then; see
+        # test_terminal_support_is_soft_and_rate_limited).
+        target = line
+      step = self.END_RATE * DT_CTRL
+    else:
+      # Below END_V_HI without a lead nothing corroborates the stop, so the support ramps in at
+      # END_SOFT_RATE instead of grabbing the line in a single frame.
+      soft = not has_lead and v_ego < self.END_V_HI
+      step = (self.END_SOFT_RATE if soft else self.END_RATE) * DT_CTRL
+      target = max(target, self.END_REQUEST)
     return float(np.clip(target, prev_accel - step, prev_accel + step))
 
   def _hold_floor(self, pitch, creeping):
@@ -209,6 +230,10 @@ class StoppingController:
     if state == LongCtrlState.off or not rolling or CS.vEgo >= self.BLEND_V or a_target > 0.0:
       self.end_active = False
     elif not self.end_active and a_target <= self.END_PLAN_MIN:
+      # Latch on any rolling approach, even once the daemon is already in its stopping state: every recorded
+      # halt on this car used this latch, and it keeps a flickering plan from undoing the eased request before
+      # the wheels halt. Upstream latches in the pid state only now; we keep ours on purpose (see
+      # test_request_keeps_easing_with_the_plan_before_the_wheels_stop).
       self.end_active = True
       self.a_entry = min(prev_accel, self.END_HI)
 

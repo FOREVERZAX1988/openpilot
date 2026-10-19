@@ -62,6 +62,11 @@ T_IDXS = np.array(T_IDXS_LST)
 FCW_IDXS = T_IDXS < 5.0
 T_DIFFS = np.diff(T_IDXS, prepend=[0.])
 
+# TODO don't hardcode A_CHANGE_COST idx
+# reduce the cost on (a-a_prev) later in the horizon. The taper only depends on
+# the fixed horizon times, so interpolate it once instead of every horizon step.
+A_CHANGE_FACTORS = np.interp(T_IDXS[:N], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
+
 
 def _read_tuning_float(params, key, default):
   """Best-effort read of a float tuning param; falls back to default (e.g. in tests / no-params env)."""
@@ -280,6 +285,19 @@ class LongitudinalMpc:
     self.danger_zone_cost = _read_tuning_float(p, "LongitudinalMpcTuningDangerZoneCost", DANGER_ZONE_COST)
     self.lead_danger_factor = _read_tuning_float(p, "LongitudinalMpcTuningLeadDangerFactor", LEAD_DANGER_FACTOR)
 
+  def t_follow_user_scale(self, personality=log.LongitudinalPersonality.standard) -> float:
+    """How far the user moved the follow time from its default (1.0 = untouched).
+
+    The Carrot longitudinal source multiplies its own modulated follow time by
+    this, so the Longitudinal MPC Tuning entry stays authoritative even while the
+    Carrot source is active - without changing behaviour for anyone who has left
+    the tuning at its default.
+    """
+    default = T_FOLLOW_DEFAULTS.get(personality)
+    if not default:
+      return 1.0
+    return self.get_t_follow(personality) / default
+
   def get_t_follow(self, personality=log.LongitudinalPersonality.standard):
     if personality == log.LongitudinalPersonality.relaxed:
       return self.t_follow_relaxed
@@ -324,9 +342,7 @@ class LongitudinalMpc:
   def set_cost_weights(self, cost_weights, constraint_cost_weights):
     W = np.asfortranarray(np.diag(cost_weights))
     for i in range(N):
-      # TODO don't hardcode A_CHANGE_COST idx
-      # reduce the cost on (a-a_prev) later in the horizon.
-      W[4,4] = cost_weights[4] * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
+      W[4,4] = cost_weights[4] * A_CHANGE_FACTORS[i]
       self.solver.cost_set(i, 'W', W)
     # Setting the slice without the copy make the array not contiguous,
     # causing issues with the C interface.

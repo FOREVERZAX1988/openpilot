@@ -11,8 +11,12 @@ from types import SimpleNamespace
 
 import numpy as np
 
+from openpilot.common.repo_tools import load
 from openpilot.sunnypilot.carrot import lead_brake_lights as runtime
-from tools.signal_analysis.lead_brake_detector import LeadBrakeDetector
+
+# The detector lives in the repository-root tools/ tree, which `import tools`
+# cannot reach: openpilot/tools is a regular package and shadows it. Load by path.
+LeadBrakeDetector = load('signal_analysis/lead_brake_detector.py').LeadBrakeDetector
 
 
 def context():

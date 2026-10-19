@@ -136,7 +136,8 @@ class BrakeRuntime:
     if now-work_start < .045:
       if self.sm is None:
         import openpilot.cereal.messaging as messaging
-        from tools.signal_analysis.lead_brake_detector import LeadBrakeDetector
+        from openpilot.common.repo_tools import load
+        LeadBrakeDetector = load('signal_analysis/lead_brake_detector.py').LeadBrakeDetector
         self.sm = messaging.SubMaster(['radarState', 'modelV2', 'carState', 'liveCalibration'])
         self.detector = LeadBrakeDetector()
       self.sm.update(0)
