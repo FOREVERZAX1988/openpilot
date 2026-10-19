@@ -79,6 +79,13 @@ class JoiningContract:
       self.assertEqual(missing, [], f"JoiningModelState cannot answer {missing}, which {self.PATH.name} reads")
       for name in stores:
         setattr(joining, name, 1.0)
+        # frame_drop_ratio is the joining model's own: modeld writes it before
+        # every run() and the lag rule reads it back (joining.frame_drop_ratio),
+        # so the joining model keeps it and the small model never sees it. The
+        # rest must reach the model that is driving
+        if name == 'frame_drop_ratio':
+          self.assertEqual(getattr(joining, name), 1.0, 'the joining model keeps its own frame_drop_ratio')
+          continue
         self.assertEqual(getattr(small, name), 1.0, f"model.{name} = ... does not reach the small model")
     finally:
       stop.set()

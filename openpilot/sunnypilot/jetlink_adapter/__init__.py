@@ -222,11 +222,17 @@ class Adapter:
     from openpilot.selfdrive.modeld.constants import ModelConstants
     from openpilot.selfdrive.modeld.modeld import LAT_SMOOTH_SECONDS, LONG_SMOOTH_SECONDS, get_action_from_model
     from openpilot.selfdrive.modeld.parse_model_outputs import Parser
+    from openpilot.sunnypilot.jetlink_adapter import hevc_venus
     from openpilot.sunnypilot.modeld_v2.constants import ModelConstants as V2ModelConstants
     from openpilot.system.camerad.cameras.nv12_info import get_nv12_info
+    # the Venus block is only reachable from the device, so the face carries a
+    # builder only where the block answers: a link with none keeps the frame
+    # carrier it had instead of negotiating a codec nothing can produce
+    encoder = hevc_venus.make_encoder if hevc_venus.available() else None
     return ModelFace(parser=Parser, frame_size=lambda w, h: get_nv12_info(w, h)[3], desire_len=ModelConstants.DESIRE_LEN,
                      constants=V2ModelConstants, lat_smooth_seconds=LAT_SMOOTH_SECONDS,
-                     long_smooth_seconds=LONG_SMOOTH_SECONDS, get_action_from_model=get_action_from_model)
+                     long_smooth_seconds=LONG_SMOOTH_SECONDS, get_action_from_model=get_action_from_model,
+                     hevc_encoder=encoder)
 
   def in_control(self) -> bool:
     """jetlink's own question, from API 3: the joining model asks it on
