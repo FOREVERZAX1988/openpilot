@@ -21,6 +21,9 @@ class BigCatalogCache(ModelCache):
   def __init__(self, params: Params, suffix: str):
     super().__init__(params, suffix=suffix)
     self._refetched_extends: bool | None = None
+    # armed by the fetcher: the change's one attempt must reach the network, so the
+    # fetcher drops the backoff its last failure left here (see ModelFetcherZP)
+    self.on_change = None
 
   def get(self) -> tuple[dict, bool]:
     cached_data, is_expired = super().get()
@@ -30,6 +33,8 @@ class BigCatalogCache(ModelCache):
         self._refetched_extends = extends
         cloudlog.warning(f"big-model catalog was fetched {'without' if extends else 'with'} the newer catalogs; refetching")
         is_expired = True
+        if self.on_change is not None:
+          self.on_change()
     return cached_data, is_expired
 
 
@@ -40,7 +45,14 @@ class ModelFetcherZP(ModelFetcher):
 
   def __init__(self, params: Params):
     super().__init__(params)
-    self.model_caches["chestnut"] = BigCatalogCache(params, self.MODEL_SOURCES["chestnut"][1])
+    cache = BigCatalogCache(params, self.MODEL_SOURCES["chestnut"][1])
+    # A change of hardware is a new event, not a retry: drop the boot-time backoff the last
+    # failed fetch armed for this source, so the one attempt a change is owed is not swallowed
+    # by it. BigCatalogCache latches once per change, so this cannot storm the mirrors.
+    # (fork rule: upstream has no backoff at all and simply asks again on every change -- we
+    # keep the 1970-clock storm guard and only exempt the attempt a change earns.)
+    cache.on_change = lambda: (self._retry_at.pop("chestnut", None), self._failures.pop("chestnut", None))
+    self.model_caches["chestnut"] = cache
 
   def _extension_stale(self, cached_data: dict) -> bool:
     # BigCatalogCache.get() already expires the catalog once per change, on its
