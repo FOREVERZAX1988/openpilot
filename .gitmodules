@@ -18,7 +18,7 @@
 [submodule "tinygrad"]
   path = tinygrad_repo
   url = https://github.com/FOREVERZAX1988/tinygrad.git
-  branch = sp-macanlong-test
+  branch = sp-macan-test
 [submodule "sunnypilot/neural_network_data"]
   path = openpilot/sunnypilot/neural_network_data
   url = https://github.com/mouxangithub/neural-network-data.git
