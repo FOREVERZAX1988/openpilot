@@ -27,6 +27,10 @@
 `starttime` 视为新进程、改名刷新、退出淘汰、PID 复用淘汰、smaps 缓存随身份失效、`main()`
 中 `gc.freeze()` 必须先于 `PubMaster`（AST 顺序断言）。
 
-本机 8 例全 skip（缺 cereal/opendbc），基线 `openpilot/system/tests` 1 例 1 error 不变；
-车机执行。**未做**：长时（小时级）内存曲线对比，因此不声称改善了总内存占用——只修正身份
+本机 8 例全 skip（缺 cereal/opendbc）；车机（`comma tizi` `a821bfb2`，代码 `6c337d05`）8 例
+全部执行并通过（`Ran 8 tests ... OK`）。同机 `openpilot/system/tests` 17 例：`test_big_log`
+仍报错（`/data/log/swaglog.*` 在活设备上被轮转删除，与本次改动无关）；
+`BootNetworkDependencyTest.setUpClass` 因无外网报 error；`InstallerTemplateTest` 3 例报模板与
+已装脚本不一致（这台 tizi 的 `/data/launch*` 是本地自定义版，属既有偏差，非本轮引入）。
+**未做**：长时（小时级）内存曲线对比，因此不声称改善了总内存占用——只修正身份
 正确性与无界增长。

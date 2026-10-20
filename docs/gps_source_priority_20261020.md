@@ -47,5 +47,9 @@
 device 兜底、不可用源穿透、未知源忽略、公开标签稳定，以及 `CarrotServ` 侧的快照组装、
 回退写 `_raw`、navi 优先、**UI 与数据层一致**、设备源可被报告、无效定位被忽略。
 
-本机 15 例通过、6 例 skip（`CarrotServ` 需要 zstandard/opendbc）；车机全跑。**未做**：隧道
-实测、与 llk 精度的对比数据、路线曲率链的实车回归。
+本机 15 例通过、6 例 skip（`CarrotServ` 需要 zstandard/opendbc）。车机（`comma tizi`
+`a821bfb2`，代码 `6c337d05`）单模块 21 例全部执行并通过、**0 skip**：
+`python3 -m unittest openpilot.sunnypilot.carrot.tests.test_gps_sources` → `Ran 21 tests ... OK`。
+说明那 6 例 skip 只是全套件收集顺序里 `zstandard` 被别的用例桩化（`_serv_importable()` 返回
+False），不是跑不了；同机 carrot 全套 **628 run / 0 failed / 6 skip**。**未做**：隧道实测、与
+llk 精度的对比数据、路线曲率链的实车回归。

@@ -56,6 +56,10 @@ track —— 说明这不是新证据，是残留的停车记忆。我们的两�
   不得留孤儿 stop、反向运动、NaN 速度不算离开）。
 - 本机 `unittest discover -s openpilot/sunnypilot/carrot`：521 → 564 例，errors 13 → 13
   （全部为既有的缺 opendbc/zstandard），其中新增 11 例在本机 skip、在车机执行。
+- 车机（`comma tizi` `a821bfb2`，代码 `6c337d05`）：9 个 `test_signal_*` 模块合跑 **78/78
+  通过、0 skip**；其中 `test_signal_departure.py`（22 例）与 `test_signal_stop_prepare_runtime.py`
+  （11 例）单独用 pytest 跑是 33 passed。同机 carrot 全套 **628 run / 0 failed / 6 skip**
+  （6 条 skip 全是 `test_gps_sources` 的收集顺序问题，单模块 21/21 OK）。
 - 未做：路测、真实红灯光学输入回放、closed-loop 轨迹对比。设备 `SignalAssistMode=0` 时整条
   信号控制链休眠，本次改动对现车行为无影响；**打开 mode 2 之前必须补齐上述车机验证**。
 
