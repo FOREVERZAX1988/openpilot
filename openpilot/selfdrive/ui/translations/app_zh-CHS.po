@@ -8939,7 +8939,7 @@ msgid "zoompilot detected a change in the device's mounting position. Ensure the
 msgstr "zoompilot 检测到设备安装位置发生变化。请确认设备已完全卡入支架，且支架牢固固定在挡风玻璃上。"
 
 msgid "Excessive %1 actuation detected on your last drive. Please visit https://community.sunnypilot.ai/ and share your device's Dongle ID for troubleshooting."
-msgstr "上次驾驶中检测到过于频繁的操作。请访问 https://community.sunnypilot.ai/ 并提供您设备的 Dongle ID 以便排查。"
+msgstr "上次驾驶中检测到 %1 过度操作。请访问 https://community.sunnypilot.ai/ 并提供您设备的 Dongle ID 以便排查。"
 
 msgid "Driving Model Loading"
 msgstr "驾驶模型加载中"
