@@ -57,14 +57,14 @@ ensure_pip_dep() {
     [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null || return 1
     if ! "$py" -c "import pip" 2>/dev/null; then
       # Device network cannot reach bootstrap.pypa.io, so prefer Aliyun mirror.
-      curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+      curl -fsSL --max-time 20 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
         "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || true
     fi
     # The device cannot reach pypi.org (TLS dies with SSL_ERROR_SYSCALL); same reason
     # the get-pip bootstrap above prefers mirrors.aliyun.com. Override with PIP_INDEX_URL.
     local index_url="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
     local tmpdir=$(pip_scratch_dir)
-    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --index-url="$index_url" --target="$pydeps" "$module" >> /tmp/bootstrap.log 2>&1 || return 1
+    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --timeout 5 --retries 0 --index-url="$index_url" --target="$pydeps" "$module" >> /tmp/bootstrap.log 2>&1 || return 1
     rm -rf "$tmpdir"/pip-* 2>/dev/null || true
   fi
 }
@@ -180,7 +180,7 @@ ensure_pip_deps() {
 
   [ -d "$pydeps" ] || mkdir -p "$pydeps" 2>/dev/null || return 1
   if ! "$py" -c "import pip" 2>/dev/null; then
-    curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+    curl -fsSL --max-time 20 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
       "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || return 1
   fi
 
@@ -193,7 +193,7 @@ ensure_pip_deps() {
   # --no-cache-dir keeps the wheel cache off the almost-full rootfs (90% used), and
   # TMPDIR moves pip's unpacking off the 150 MB tmpfs.
   local tmpdir=$(pip_scratch_dir)
-  if ! TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade --index-url="$index_url" --target="$pydeps" "${requirements[@]}" >> /tmp/bootstrap.log 2>&1; then
+  if ! TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --timeout 5 --retries 0 --upgrade --index-url="$index_url" --target="$pydeps" "${requirements[@]}" >> /tmp/bootstrap.log 2>&1; then
     echo "[ensure_pip_deps] install failed; will retry on next keep_alive cycle" >> /tmp/bootstrap.log
     rm -rf "$tmpdir"/pip-* 2>/dev/null || true
     return 1
@@ -519,11 +519,11 @@ ensure_updater_deps() {
   # 2) Network fallback via the pip mirror.
   if wait_for_dns 30; then
     if ! "$py" -c "import pip" >/dev/null 2>&1; then
-      curl -fsSL "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
+      curl -fsSL --max-time 20 "${GET_PIP_URL:-https://mirrors.aliyun.com/pypi/get-pip.py}" -o /tmp/get-pip.py 2>/dev/null && \
         "$py" /tmp/get-pip.py --target="$pydeps" --no-warn-script-location >> /tmp/bootstrap.log 2>&1 || true
     fi
     local index_url="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
-    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --upgrade \
+    TMPDIR="$tmpdir" PYTHONPATH="$py_path" "$py" -m pip install --no-cache-dir --timeout 5 --retries 0 --upgrade \
       --index-url="$index_url" --target="$pydeps" pyserial >> /tmp/bootstrap.log 2>&1 || true
   fi
 
