@@ -29,8 +29,16 @@
 
 本机 8 例全 skip（缺 cereal/opendbc）；车机（`comma tizi` `a821bfb2`，代码 `6c337d05`）8 例
 全部执行并通过（`Ran 8 tests ... OK`）。同机 `openpilot/system/tests` 17 例：`test_big_log`
-仍报错（`/data/log/swaglog.*` 在活设备上被轮转删除，与本次改动无关）；
-`BootNetworkDependencyTest.setUpClass` 因无外网报 error；`InstallerTemplateTest` 3 例报模板与
-已装脚本不一致（这台 tizi 的 `/data/launch*` 是本地自定义版，属既有偏差，非本轮引入）。
+仍报错（`/data/log/swaglog.*` 在活设备上被轮转删除，与本次改动无关）。
+`test_launch_boot_bootstrap.py` 8 例全挂（1 个 setUpClass error + 3 failures），单一根因：
+本仓 `launch_chffrplus.sh` 已从 `start_webui()` / `start_op_assistant()` 重构为
+`ensure_pip_deps` + `keep_alive webui`，而测试仍按旧架构断言 ——
+`BootNetworkDependencyTest.setUpClass` 在 `_function_body(..., "start_webui")` 处 assert 失败，
+连唯一与架构无关的「boot 路径不得有无界网络调用」检查也一并失效；`InstallerTemplateTest` 3 例
+同理（脚本里已无 `start_webui()`/`start_op_assistant()` 函数体，也无
+`webui-bootstrap-v2`/`aid-bootstrap-v2` 标记）。
+功能面不受影响：`webui/install`、`ai/install` 都带「new-style launch script already starts
+webui via keep_alive」早退分支，重装/修复不会回写旧函数。属既有偏差、非本轮引入；
+此处更正上一版「模板与 /data/launch* 不一致」的错误归因，是否收口待定。
 **未做**：长时（小时级）内存曲线对比，因此不声称改善了总内存占用——只修正身份
 正确性与无界增长。
