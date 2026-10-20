@@ -155,6 +155,30 @@ def _inject_bootstrap(html: str) -> str:
   return script + html
 
 
+_PWA_HEAD_TAGS: Final = (
+  '<link rel="manifest" href="/manifest.webmanifest">' +
+  '<meta name="theme-color" content="#0b1016">'
+)
+_PWA_SW_SCRIPT: Final = (
+  '<script id="carrotPwaRegister">' +
+  "if ('serviceWorker' in navigator) {" +
+  "window.addEventListener('load', function () {" +
+  "navigator.serviceWorker.register('/sw.js').catch(function () {});" +
+  '});}' +
+  '</script>'
+)
+
+
+def _inject_pwa(html: str) -> str:
+  # Galaxy-style installability: manifest + service worker registration so the
+  # panel can be pinned to a phone home screen and receive Web Push.
+  if "<head>" in html:
+    html = html.replace("<head>", "<head>\n  " + _PWA_HEAD_TAGS, 1)
+  if "</body>" in html:
+    html = html.replace("</body>", _PWA_SW_SCRIPT + "\n</body>", 1)
+  return html
+
+
 def _fingerprinted_asset_url(raw_url: str, web_root: str) -> str | None:
   decoded_url = _HTML_AMPERSAND_RE.sub("&", raw_url)
   if decoded_url.startswith("//"):
@@ -305,6 +329,7 @@ async def handle_index(request: web.Request) -> web.Response:
     return response
   html, manifest_degraded = loaded
   html = _inject_bootstrap(html)
+  html = _inject_pwa(html)
   response = web.Response(text=html, content_type="text/html")
   response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
   response.headers["Pragma"] = "no-cache"

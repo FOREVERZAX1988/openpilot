@@ -181,6 +181,8 @@ lint.flake8-implicit-str-concat.allow-multiline = false
 "openpilot/sunnypilot/carrot/server/features/carrot_navi/client_hub.py" = ["RUF006"]
 "openpilot/sunnypilot/carrot/server/features/dashcam/paths.py" = ["TID251"]
 "openpilot/sunnypilot/carrot/server/features/dashcam/read_state.py" = ["TID251"]
+# Web Push VAPID JWT exp claims require wall-clock epoch time by RFC 8292.
+"openpilot/sunnypilot/carrot/server/services/web_push.py" = ["TID251"]
 "openpilot/sunnypilot/carrot/server/features/dashcam/routes.py" = ["ASYNC240"]
 "openpilot/sunnypilot/carrot/server/features/intro/routes.py" = ["ASYNC240"]
 "openpilot/sunnypilot/carrot/server/features/intro/state.py" = ["TID251"]
