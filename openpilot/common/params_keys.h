@@ -363,6 +363,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TorqueParamsOverrideLatAccelFactor", {PERSISTENT | BACKUP, FLOAT, "2.5"}},
     {"CustomKp", {PERSISTENT | BACKUP, FLOAT, "1.0"}},
     {"VehicleTunesEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"LeadFollowPolicyEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
 
     // PWA Web Push state (carrot_server /push: VAPID keypair + browser subscriptions).
     // These lived in /data/carrot/state/web_push.json while this device could not
