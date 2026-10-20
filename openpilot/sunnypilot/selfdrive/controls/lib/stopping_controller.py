@@ -90,10 +90,11 @@ class StoppingController:
   # firmer than this still passes through untouched (see _end_request).
   END_REQUEST = END_HI  # m/s^2
   # Corroboration-free entry below END_V_HI: nothing in the frame says the stop is real, so ramp in at this rate
-  # instead of grabbing the line in a single frame. Upstream ships 0.4 m/s^3; we keep 1.0 (it replaced our
-  # END_CAP_RATE, which every stop recorded on this car was driven with) and only require it to stay gentler
-  # than END_RATE. END_RATE remains available for a plan that is already committing.
-  END_SOFT_RATE = 1.0  # m/s^3
+  # instead of grabbing the line in a single frame. Driver 2026-10-20: "the coefficient follows upstream for now",
+  # so 0.4 m/s^3 as upstream ships it (ours was 1.0, which had replaced our END_CAP_RATE). Road test owed: does the
+  # gentler entry read as late or weak braking through the last 5-0 km/h, and does the stop point still land where
+  # the curve says. END_RATE (2.0) remains available for a plan that is already committing.
+  END_SOFT_RATE = 0.4  # m/s^3
 
   # Leaving the standstill hold (driver 2026-10-04, route 000000fa 14:43:32: "the brake release at launch is a jerk, as
   # if let go suddenly; make it linear and slow"). There the request went from the -2.0 hold (3960 N) to +0.7 in 0.5 s

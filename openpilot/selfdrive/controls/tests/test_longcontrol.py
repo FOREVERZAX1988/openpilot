@@ -224,7 +224,7 @@ class TestTerminalStop(OpenpilotTestCase):
       requests.append(prev_accel)
     # The support gives the stop its own request, but never deeper than the terminal curve at that speed, and it
     # moves there rate limited. END_RATE is 2.0 m/s^3 on this car (upstream ships 0.5); a no-lead entry uses
-    # END_SOFT_RATE (1.0) instead, so the loop gives it the frames that rate needs.
+    # END_SOFT_RATE (0.4, upstream's value since 2026-10-20) instead, so the loop gives it the frames it needs.
     assert min(requests) >= min(StoppingController.END_CURVE_A) - 1e-9
     assert min(requests) >= line - 1e-9
     assert abs(requests[-1] - line) < 1e-6, requests[-1]
