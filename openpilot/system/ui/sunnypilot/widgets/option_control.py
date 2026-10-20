@@ -24,7 +24,8 @@ class OptionControlSP(ItemAction):
                value_map: dict[int, int] | None = None,
                label_width: int = LABEL_WIDTH,
                use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None,
-               input_title: str | Callable[[], str] | None = None):
+               input_title: str | Callable[[], str] | None = None,
+               use_registered_default: bool = False):
 
     super().__init__(enabled=enabled)
     self.params = unified_params
@@ -41,18 +42,25 @@ class OptionControlSP(ItemAction):
     self.current_value = min_value
     self.label_callback = label_callback
     self.input_title = input_title
+    self.use_registered_default = use_registered_default
     if self.value_map:
       for key in self.value_map:
         if self.value_map[key] == self.params.get(self.param_key):
           self.current_value = int(key)
           break
     else:
-      value = self.params.get(self.param_key)
+      # use_registered_default asks the system store for the default compiled into
+      # params_keys.h, so a param that is registered but never written shows its real
+      # default instead of the control's minimum (CustomKp: 1.00, not 0.50).
+      value = self.params.get(self.param_key, return_default=self.use_registered_default)
       if value is None:
         # unset/unregistered key: show the minimum instead of raising TypeError and
-        # killing the whole settings layout during construction.
-        value = min_value
-      self.current_value = int(float(value) * 100.0) if self.use_float_scaling else int(value)
+        # killing the whole settings layout during construction. min_value is already
+        # in the control's own units, so it must not be float-scaled again (that used
+        # to turn a minimum of 50 = 0.50 into 50.00).
+        self.current_value = int(min_value)
+      else:
+        self.current_value = int(float(value) * 100.0) if self.use_float_scaling else int(value)
 
     # Initialize font and button styles
     self._font = gui_app.font(FontWeight.MEDIUM)

@@ -2621,6 +2621,18 @@ msgid "Let the phone app drive the longitudinal plan: its target speed becomes a
 msgstr "讓手機 App 驅動縱向規劃：其目標速度成為一個規劃源，其跟車時距、舒適制動與停車點進入 MPC。關閉時保持 sunnypilot 原廠行為。需要手機保持連線——沒有新鮮資料時該源自動失效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Lateral Control (advanced)"
+msgstr "橫向控制（進階）"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Steering Kp Scale"
+msgstr "轉向 Kp 縮放"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Multiplies the lateral torque controller proportional gain. 1.00 is stock behaviour; the value only takes effect while it differs from 1.00. Applies within a few seconds, no restart needed."
+msgstr "乘在橫向扭矩控制器的比例增益上。1.00 為原廠行為；只有不等於 1.00 時才生效。數秒內生效，無需重啟。"
+
 msgid "Navigation Control (advanced)"
 msgstr "導航控制（進階）"
 

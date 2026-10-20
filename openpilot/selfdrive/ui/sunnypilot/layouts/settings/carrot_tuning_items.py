@@ -268,6 +268,18 @@ def build_dev_items():
                                    'a plan source, and its follow time, comfort braking and stop point ' +
                                    'reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected ' +
                                    'phone - without a fresh packet the source stays inactive.')),
+    # Lateral counterpart of the switch above: a plain multiplier over the stock
+    # torque PID's speed-interpolated Kp curve. 1.00 is stock, and the code only
+    # rebuilds the controller when the value differs from 1.00, so leaving it alone
+    # is a zero-behaviour-change default. Clamped in latcontrol_torque.py to
+    # [0.50, 2.00] - the range below is the same range, so the UI cannot ask for a
+    # value the controller would silently clip.
+    section_heading_sp(tr('Lateral Control (advanced)')),
+    option_item_sp(title=tr('Steering Kp Scale'), param='CustomKp', min_value=50, max_value=200, value_change_step=5,
+                   use_float_scaling=True, use_registered_default=True,
+                   description=tr('Multiplies the lateral torque controller proportional gain. ' +
+                                   '1.00 is stock behaviour; the value only takes effect while it differs ' +
+                                   'from 1.00. Applies within a few seconds, no restart needed.')),
     section_heading_sp(tr('Navigation Control (advanced)')),
     toggle_item_sp(title=tr('Traffic Congestion Slowdown'), param='CarrotTrafficCongestionEnabled',
                    description=tr('Fold the phone app traffic congestion report into map-based cruise '
