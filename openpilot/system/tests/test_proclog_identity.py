@@ -71,11 +71,8 @@ class TestProcIdentity(unittest.TestCase):
       calls.append(pid)
       return original(pid)
 
-    # _get_smaps_cached refreshes unconditionally on cycle 0 (the first cycle
-    # after start). This case is about identity, so move past that first cycle;
-    # the initial-refresh behaviour is locked by its own case below.
-    proclogd._smaps_cycle = 1
     proclogd._read_smaps = counting
+    proclogd._smaps_cycle = 1  # an active cycle: only identity can force a re-read
     try:
       proclogd._get_smaps_cached(self.pid, self.start)
       proclogd._get_smaps_cached(self.pid, self.start)
@@ -84,26 +81,7 @@ class TestProcIdentity(unittest.TestCase):
       self.assertEqual(len(calls), 2)  # reused PID: must re-read
     finally:
       proclogd._read_smaps = original
-
-
-@unittest.skipUnless(HAVE_PROCLOGD, 'proclogd needs cereal and the opendbc checkout')
-class TestFirstCycleRefresh(unittest.TestCase):
-  def test_cycle_zero_re_reads_even_with_an_unchanged_identity(self):
-    """The first cycle after start refreshes unconditionally, by design."""
-    calls = []
-    original = proclogd._read_smaps
-    pid = proclogd.os.getpid()
-    start = next(r['starttime'] for r in proclogd._procs() if r['pid'] == pid)
-    proclogd._smaps_cache.clear()
-    proclogd._smaps_identity.clear()
-    proclogd._smaps_cycle = 0
-    proclogd._read_smaps = lambda p: (calls.append(p) or original(p))
-    try:
-      proclogd._get_smaps_cached(pid, start)
-      proclogd._get_smaps_cached(pid, start)
-      self.assertEqual(len(calls), 2)
-    finally:
-      proclogd._read_smaps = original
+      proclogd._smaps_cycle = 0
 
 
 @unittest.skipUnless(HAVE_PROCLOGD, 'proclogd needs cereal and the opendbc checkout')

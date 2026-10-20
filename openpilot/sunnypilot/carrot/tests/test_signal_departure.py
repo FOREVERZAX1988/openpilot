@@ -16,14 +16,10 @@ from openpilot.sunnypilot.carrot.signal_assist import SignalAssist, departed_sig
 from openpilot.sunnypilot.carrot.signal_start_guard import SignalStartGuard
 
 try:
-  # This tree's class is CarrotPlanner; the upstream test still uses the
-  # CarrotPilot name from the original carrot fork, so all 11 planner cases
-  # used to skip silently (on the host and on the device alike).
-  from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner as CarrotPilot
-  from openpilot.sunnypilot.carrot.carrot_functions import XState
+  from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner, XState
   HAVE_CARROT = True
-except ImportError:  # host without the opendbc checkout / carrot deps
-  CarrotPilot = XState = None
+except ImportError:  # local host without the opendbc checkout
+  CarrotPlanner = XState = None
   HAVE_CARROT = False
 
 CREEP = 5 / 3.6  # m/s, the stop/creep boundary
@@ -172,7 +168,7 @@ class TestOwnedSignalStopRetirement(unittest.TestCase):
 
   def planner(self, *, x_state, owned=False, guard_hold=False, assist_hold=False,
               user_stop=-1., stay_stop=False):
-    p = object.__new__(CarrotPilot)
+    p = object.__new__(CarrotPlanner)
     p._x_state = x_state
     p._signal_stop_owned = owned
     p.start_guard = type('G', (), {'hold': guard_hold})()
