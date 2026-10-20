@@ -34,6 +34,12 @@ from typing import Any
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.carrot.config import UnifiedParams
+from openpilot.sunnypilot.carrot.gps_sources import Fix, select
+
+try:  # the state machine stays importable (and unit-testable) without cereal
+  from openpilot.cereal import log
+except ImportError:  # pragma: no cover - host checkout without opendbc
+  log = None
 
 
 # Countdown rearm threshold (meters). A jump larger than this means a new
@@ -249,6 +255,10 @@ class CarrotServ:
     # 7714 v2 vehicle stream feeds it too. Read by carrot_navi_route() to rotate
     # the route polyline into the car frame.
     self._navi_gps_angle: float = 0.0
+    # Last fused fix from the device's own localizer. Lowest-priority source:
+    # it only ever fills the position when every external producer is stale,
+    # where the alternative is leaving the route anchored at (0, 0).
+    self._device_gps: Fix = Fix()
 
     # Navi speed-control tuning (from UnifiedParams; safe defaults).
     self.auto_navi_speed_decel_rate: float = 0.8
@@ -490,17 +500,15 @@ class CarrotServ:
       self._navi_gps_lon = lon
       self._navi_gps_angle = _safe_float(msg.get("nPosAngle"), 0.0) % 360.0
       self._last_update_gps_time_navi = time.monotonic()
-    # Phone GPS fallback (App field list §1.4): when the navi block has not
-    # refreshed its fix for >3 s, fall back to the standalone phone GPS block so
-    # `vp_pos_point_*` / heading do not go stale. Without this, an app that only
-    # sends `latitude`/`longitude` leaves the route anchored at (0, 0), which
-    # silently degrades the route-curvature speed chain (TurnSpeedControlMode
-    # 2/3) to its fixed default. Purely a data-layer fallback: it fills the same
-    # `_raw` keys the navi block writes, so no new control entry point appears.
-    elif self._phone_gps_is_usable():
-      self._raw["vpPosPointLat"] = self._phone_gps_lat
-      self._raw["vpPosPointLon"] = self._phone_gps_lon
-      self._raw["nPosAngle"] = self._phone_gps_heading
+    else:
+      # Same decision the `gps_source` property reports, so the UI can never
+      # claim a source the data layer refused.
+      _source, fix = select(self._gps_fixes(), time.monotonic())
+      if fix is not None:
+        self._raw["vpPosPointLat"] = fix.lat
+        self._raw["vpPosPointLon"] = fix.lon
+        if fix.heading is not None:
+          self._raw["nPosAngle"] = fix.heading
     # Periodic system time sync from the phone's epochTime/timezone.
     if "epochTime" in msg and seq % 60 == 0:
       self._maybe_sync_system_time(_safe_int(msg.get("epochTime"), 0),
@@ -543,32 +551,38 @@ class CarrotServ:
         if accuracy < 15.0:
           self._phone_gps_frame += 1
 
-  # The navi GPS block is considered stale after this long without a refresh,
-  # at which point the standalone phone GPS block takes over (App field list
-  # §1.4). Matches the window used by the `gps_source` property.
-  _NAVI_GPS_FRESH_SEC = 3.0
-  # Phone fixes worse than this are not trusted as a fallback.
-  _PHONE_GPS_MAX_ACCURACY_M = 15.0
+  def _gps_fixes(self) -> dict[str, Fix]:
+    """Snapshot every producer's latest fix; freshness is judged per source."""
+    return {
+      'external_navi': Fix(self._navi_gps_lat, self._navi_gps_lon, self._navi_gps_angle,
+                           stamp=self._last_update_gps_time_navi),
+      'phone': Fix(self._phone_gps_lat, self._phone_gps_lon, self._phone_gps_heading,
+                   accuracy=self._phone_gps_accuracy, stamp=self._last_update_gps_time_phone),
+      'device': self._device_gps,
+    }
 
-  def _phone_gps_is_usable(self) -> bool:
-    """True when the standalone phone GPS block can stand in for a stale navi fix.
+  def update_device_gps(self, sm) -> None:
+    """Record the device's own fused position as the lowest-priority source.
 
-    Guards (all must hold):
-      * the navi block has not refreshed within ``_NAVI_GPS_FRESH_SEC``;
-      * the phone fix itself is fresh (same window);
-      * the phone fix has a plausible accuracy;
-      * the phone coordinates are non-zero and in range.
+    Gated on the localizer reporting a valid geodetic fix, the same predicate
+    mapd already uses. Position units are degrees; no accuracy claim is made
+    because this measurement's std is in the same units as its value, and it is
+    only ever used when no external producer has a fresh fix.
     """
-    now = time.monotonic()
-    if (now - self._last_update_gps_time_navi) <= self._NAVI_GPS_FRESH_SEC:
-      return False
-    if (now - self._last_update_gps_time_phone) > self._NAVI_GPS_FRESH_SEC:
-      return False
-    if self._phone_gps_accuracy >= self._PHONE_GPS_MAX_ACCURACY_M:
-      return False
-    if not (-90.0 <= self._phone_gps_lat <= 90.0 and -180.0 <= self._phone_gps_lon <= 180.0):
-      return False
-    return self._phone_gps_lat != 0.0 or self._phone_gps_lon != 0.0
+    if log is None:
+      return
+    try:
+      llk = sm['liveLocationKalman']
+      geodetic = llk.positionGeodetic
+      if llk.status != log.LiveLocationKalman.Status.valid or not geodetic.valid or not llk.gpsOK:
+        return
+      values = list(geodetic.value)
+    except (KeyError, AttributeError, TypeError, ValueError):
+      # A missing or unpopulated service must never disturb navigation.
+      return
+    if len(values) < 2:
+      return
+    self._device_gps = Fix(float(values[0]), float(values[1]), stamp=time.monotonic())
 
   # System clock is only nudged when drift is within this window and the
   # target year is plausible. Guardrails prevent a malformed phone timestamp
@@ -660,17 +674,13 @@ class CarrotServ:
 
   @property
   def gps_source(self) -> str:
-    """Which navigation GPS source is currently fresh ("navi" / "phone" / "none")."""
-    now = time.monotonic()
-    navi_age = now - self._last_update_gps_time_navi
-    phone_age = now - self._last_update_gps_time_phone
-    navi_valid = navi_age < 3.0 and (self._navi_gps_lat != 0.0 or self._navi_gps_lon != 0.0)
-    phone_valid = phone_age < 3.0 and (self._phone_gps_lat != 0.0 or self._phone_gps_lon != 0.0)
-    if navi_valid:
-      return "navi"
-    if phone_valid:
-      return "phone"
-    return "none"
+    """Which navigation GPS source is currently usable ("navi"/"phone"/"device"/"none").
+
+    Delegates to the same selector the data layer uses, so a source the
+    fallback refused (stale, implausible, or too inaccurate) is never reported
+    as active here.
+    """
+    return select(self._gps_fixes(), time.monotonic())[0]
 
   def vehicle_speed_camera_active(self, cs: Any | None) -> bool:
     """True when vehicle CAN reports an active speed-camera zone."""
@@ -1716,6 +1726,7 @@ class CarrotServ:
     # Distance-travelled clock for the rear-camera hold. upstream removed the
     # selfdriveState.distanceTraveled field, so integrate it from vEgo*DT below
     # (the same source selfdrived uses); delta_dist is computed once vEgo is known.
+    self.update_device_gps(sm)
     self.update_navigation_source()
 
     # Stock navd fallback first, so a phone-app packet later in this method still

@@ -301,7 +301,7 @@ CARROT_MAN_UDP_PORT = 7706
 # broadcast thread gets its own instance of the same list (see _broadcast_submaster).
 CARROT_SERVICES = ['deviceState', 'carState', 'controlsState', 'modelV2', 'carParams',
                    'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP',
-                   'selfdriveState', 'longitudinalPlan']
+                   'selfdriveState', 'longitudinalPlan', 'liveLocationKalman']
 CARROT_PUBLISHED_SERVICES = ['carrotManSP', 'navInstructionCarrotSP', 'navRoute']
 NAVI_HTTP_MAX_BODY_SIZE = 16 * 1024 * 1024
 NAVI_EVENT_TYPES = ("complexCrossroad", "rgdata", "vrtx", "ssinf", "sinf", "route")
