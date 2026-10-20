@@ -9,6 +9,8 @@ import asyncio
 import os
 import time
 
+from pathlib import Path
+
 import requests
 from openpilot.common.params import Params
 from openpilot.common.realtime import Ratekeeper
@@ -21,7 +23,6 @@ from openpilot.sunnypilot.models.fetcher import ModelFetcher
 from openpilot.sunnypilot.models.fetcher_zp import ModelFetcherZP
 from openpilot.sunnypilot.models.helpers import (ACTIVE_BUNDLE_KEYS, _bundle_is_valid_locally, get_active_bundle, get_selected_bundle,
                                                   resolve_bundle_by_ref, validate_active_bundles, verify_file)
-from openpilot.sunnypilot.models.default_bootstrap import maybe_apply_default_model
 from openpilot.sunnypilot.models.mirror import apply_hf_mirror, get_hf_mirror_base
 
 # (connect, read) seconds. read is per-request inactivity, not a total cap
@@ -158,6 +159,26 @@ class ModelManagerSP:
       os.remove(base_path)
     del self._download_start_times[artifact.fileName]
 
+  def _try_chunked_download(self, url: str, full_path: str, artifact) -> bool | None:
+    """Optional StarPilot-style chunked transfer for artifacts the catalog lists
+    without per-chunk hashes. Returns True (downloaded into chunk layout), False
+    (transfer failed or cancelled), or None when no .chunkmanifest is offered and
+    the plain single-file path should run exactly as before."""
+    from openpilot.sunnypilot.models.chunked_download import try_download_chunked
+
+    def progress(percent: float) -> None:
+      artifact.downloadProgress.status = custom.ModelManagerSP.DownloadStatus.downloading
+      artifact.downloadProgress.progress = percent
+      artifact.downloadProgress.eta = self._calculate_eta(artifact.fileName, percent)
+      self._sync_artifact_progress(artifact)
+      self._report_status()
+
+    result = try_download_chunked(Path(full_path), [url], expected_sha256=artifact.downloadUri.sha256,
+                                  progress_cb=progress, cancel_cb=self._download_interrupted)
+    if result is False and self._download_interrupted():
+      raise DownloadCancelled("Download cancelled")
+    return result
+
   async def _process_artifact(self, artifact, destination_path: str) -> None:
     if not artifact.downloadUri.uri:
       return None
@@ -217,7 +238,12 @@ class ModelManagerSP:
           if not await verify_file(chunk_path, chunk.sha256):
             raise ValueError(f"Hash validation failed for chunk {i+1} of {filename}")
       else:
-        await self._download_file(url, full_path, artifact)
+        # optional chunked path: when the remote offers this artifact in chunked
+        # layout (.chunkmanifest), pull it via chunked_download; None means no
+        # manifest exists anywhere and the plain single-file path runs as before
+        chunked_result = self._try_chunked_download(url, full_path, artifact)
+        if chunked_result is None:
+          await self._download_file(url, full_path, artifact)
         if not await verify_file(full_path, expected_hash):
           raise ValueError(f"Hash validation failed for {filename}")
 

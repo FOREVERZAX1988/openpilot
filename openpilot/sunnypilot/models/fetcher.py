@@ -53,7 +53,7 @@ class ModelParser:
     """Record the chunk count of an artifact already on disk. Every catalog parses each
     tick and qcom and chestnut list the same file with different counts, so only the source
     whose first chunk exists writes; a download writes its own manifest when it finishes."""
-    from openpilot.common.file_chunker import get_chunk_name, get_manifest_path
+    from openpilot.common.file_chunker import get_manifest_path
 
     try:
       model_dir = Paths.model_root()
