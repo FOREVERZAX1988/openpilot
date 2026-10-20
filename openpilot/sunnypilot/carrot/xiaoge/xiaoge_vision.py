@@ -48,14 +48,11 @@ class CarState(Protocol):
 def lane_width_meters(meta, field: str) -> float:
   """Read a target lane width (metres) from ModelDataV2.meta.
 
-  laneWidthLeft / laneWidthRight are CarrotPilot model extensions that this fork's
-  ModelDataV2.MetaData schema does NOT define (see cereal/log.capnp), so the attribute is
-  absent at runtime.  Reading it directly raised AttributeError, which escaped the
-  ``except (OSError, ValueError)`` guard in v_asm_server.run_camera and silently killed the
-  wide-road camera thread on the first left/right lane change, permanently disabling VASM.
-
-  Missing data fails closed (0.0 m) so the blindspot gate stays inactive instead of trusting
-  a lane width that cannot be verified on this fork.
+  laneWidthLeft / laneWidthRight used to be CarrotPilot-only model extensions; they are
+  now defined in this fork's ModelDataV2.MetaData (@10/@11) and filled by modeld
+  (selfdrive/modeld/lane_width.py). The defensive getattr stays: the manager forks
+  children from its boot-time memory, so a process restarted without a full
+  ``systemctl restart comma`` still runs the pre-change schema and fails closed here.
   """
   try:
     return float(getattr(meta, field, 0.0))
