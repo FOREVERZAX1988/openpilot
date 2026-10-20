@@ -157,7 +157,11 @@ def _inject_bootstrap(html: str) -> str:
 
 _PWA_HEAD_TAGS: Final = (
   '<link rel="manifest" href="/manifest.webmanifest">' +
-  '<meta name="theme-color" content="#0b1016">'
+  '<link rel="apple-touch-icon" href="/icons/icon-192.png">' +
+  '<meta name="theme-color" content="#0b1016">' +
+  '<meta name="mobile-web-app-capable" content="yes">' +
+  '<meta name="apple-mobile-web-app-capable" content="yes">' +
+  '<meta name="apple-mobile-web-app-title" content="Carrot">'
 )
 _PWA_SW_SCRIPT: Final = (
   '<script id="carrotPwaRegister">' +

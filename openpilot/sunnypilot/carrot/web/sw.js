@@ -1,11 +1,18 @@
 // Carrot panel service worker: PWA shell + Web Push delivery.
 // Network-first for API and documents (device data must be fresh), cache-first
 // fallback for same-origin static assets so the shell still opens offline.
-const SHELL_CACHE = 'carrot-shell-v1';
+const SHELL_CACHE = 'carrot-shell-v2';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(['/'])));
-  self.skipWaiting();
+  // A failed precache must not fail the install: a rejected install means no
+  // service worker, which means the panel is not installable and push cannot
+  // subscribe at all.
+  event.waitUntil(
+    caches.open(SHELL_CACHE)
+      .then((cache) => cache.add('/'))
+      .catch(() => {})
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {

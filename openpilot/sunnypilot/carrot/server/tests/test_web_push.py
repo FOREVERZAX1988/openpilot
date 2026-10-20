@@ -187,3 +187,31 @@ def test_status_hands_out_a_stable_vapid_key_and_subscriptions_round_trip(tmp_pa
 
   asyncio.run(check())
   assert pathlib.Path(state_path).exists(), "the keypair must be persisted on first use"
+
+
+class TestPwaInstallability(unittest.TestCase):
+  def test_manifest_icons_are_installable_sizes_and_exist_on_disk(self):
+    # Chrome refuses to treat the panel as installable (no install prompt, no
+    # standalone home-screen app) unless the manifest ships 192px and 512px
+    # icons that actually resolve, and it wants a maskable one as well.
+    manifest_path = os.path.join(config.WEB_DIR, "manifest.webmanifest")
+    with open(manifest_path, encoding="utf-8") as f:
+      manifest = json.load(f)
+
+    icons = {f"{entry['sizes']}:{entry.get('purpose', 'any')}": entry for entry in manifest["icons"]}
+    self.assertIn("192x192:any", icons)
+    self.assertIn("512x512:any", icons)
+    self.assertIn("512x512:maskable", icons)
+
+    for entry in manifest["icons"]:
+      if not entry["src"].startswith("/icons/"):
+        continue  # /shared-assets/* lives in selfdrive/assets and is covered above
+      width, height = (int(part) for part in entry["sizes"].split("x"))
+      icon_path = os.path.join(config.WEB_DIR, entry["src"].lstrip("/"))
+      self.assertTrue(pathlib.Path(icon_path).exists(), f"missing icon file for {entry['src']}")
+      head_bytes = pathlib.Path(icon_path).read_bytes()[:26]
+      self.assertEqual((int.from_bytes(head_bytes[16:20], "big"), int.from_bytes(head_bytes[20:24], "big")),
+                       (width, height))
+
+    self.assertEqual(manifest["id"], "/")
+    self.assertEqual(manifest["display"], "standalone")
