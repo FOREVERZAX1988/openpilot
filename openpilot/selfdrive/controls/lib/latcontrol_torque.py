@@ -10,6 +10,7 @@ from openpilot.common.params import Params
 from openpilot.selfdrive.controls.lib.latcontrol import LatControl
 from openpilot.common.pid import PIDController
 
+from openpilot.sunnypilot.common.param_read import read_float
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext import LatControlTorqueExt
 
 # At higher speeds (25+mph) we can assume:
@@ -62,15 +63,12 @@ class LatControlTorque(LatControl):
     self.update_limits()  # the call above ran before the extension existed
 
   def _read_custom_kp_scale(self) -> float:
-    try:
-      scale = float(self.params.get("CustomKp", return_default=True))
-    except Exception:
-      # params_keys.h is compiled into libparams_c.so, so a device that has not
-      # rebuilt the shared library yet raises UnknownKeyName on every read.
-      # CustomKp is an opt-in surface: fall back to stock (1.0) instead.
-      return 1.0
-    if not math.isfinite(scale):
-      return 1.0
+    # params_keys.h is compiled into libparams_c.so, so a device that has not rebuilt
+    # the shared library yet raises UnknownKeyName on every read. CustomKp is an
+    # opt-in surface: fall back to stock (1.0) instead of taking the daemon down.
+    # read_float() owns that decision (unregistered key / unset / NaN -> default) and
+    # still lets any other error through, so a real params fault stays visible.
+    scale = read_float(self.params, "CustomKp", 1.0)
     return float(np.clip(scale, *CUSTOM_KP_SCALE_LIMITS))
 
   def _apply_custom_kp_scale(self, scale: float) -> None:

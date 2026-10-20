@@ -11,19 +11,31 @@ from openpilot.selfdrive.controls.lib.latcontrol_torque import (
 from openpilot.selfdrive.controls.tests.test_latcontrol_torque_buffer import get_controller
 
 
+class UnknownKeyName(Exception):
+  """Mirrors openpilot.common.params.UnknownKeyName without importing it.
+
+  param_read._is_missing_key_error() matches on the *class name*, so a stand-in that
+  raised a plain RuntimeError would look like a real params fault and be re-raised --
+  the fake has to carry the same name to test the fallback at all.
+  """
+
+
 class ParamsStub:
   """Mirrors common.params.Params.get(key, return_default=False) exactly."""
 
-  def __init__(self, value=None, raises=False):
+  def __init__(self, value=None, raises=False, broken=False):
     self._value = value
     self._raises = raises
+    self._broken = broken
     self.reads = 0
 
   def get(self, key, return_default=False):
     self.reads += 1
     if self._raises:
       # What a device raises while libparams_c.so predates params_keys.h.
-      raise RuntimeError(f"UnknownKeyName {key!r}")
+      raise UnknownKeyName(key)
+    if self._broken:
+      raise RuntimeError("libparams_c.so is not the problem here")
     return self._value
 
 
@@ -46,6 +58,12 @@ class TestLatControlCustomKp(OpenpilotTestCase):
     self.controller.refresh_custom_kp_scale()
     self.assertEqual(self.controller._custom_kp_scale, 1.0)
     self.assertEqual(self._pid_gains(), self._stock_gains())
+
+  def test_other_params_faults_still_propagate(self):
+    """Only "key not registered" is swallowed; a real params fault must stay visible."""
+    self.controller.params = ParamsStub(broken=True)
+    with self.assertRaises(RuntimeError):
+      self.controller._read_custom_kp_scale()
 
   def test_default_value_is_identity(self):
     pid_before = self.controller.pid
