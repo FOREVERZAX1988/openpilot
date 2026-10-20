@@ -23,6 +23,7 @@ from openpilot.selfdrive.selfdrived.events import Events, ET
 from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
 from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
+from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EmptyAlert
 
 from openpilot.common.version import get_build_metadata
 from openpilot.common.hardware import HARDWARE
@@ -151,6 +152,7 @@ class SelfdriveD(CruiseHelper):
     self.initialized = False
     self.enabled = False
     self.active = False
+    self.nnff_alerted = False
     self.mismatch_counter = 0
     self.cruise_mismatch_counter = 0
     self.last_steering_pressed_frame = 0
@@ -664,6 +666,30 @@ class SelfdriveD(CruiseHelper):
 
     return CS
 
+  def update_nnff_alert(self, CS):
+    """Name the NNFF torque model once per onroad session, after startup alerts.
+
+    Polled at 2 Hz from 11 s on rather than fired on the first frame, so a slow
+    initialization or a late CarParamsSP load cannot lose the only notice.
+    """
+    if self.nnff_alerted or self.sm.frame < 550 or self.sm.frame % 50:
+      return
+    if (not self.initialized or self.CP.passive or not self.sm['deviceState'].started
+        or not CS.canValid or CS.canTimeout or not self.sm.all_checks()
+        or self.events.contains(ET.NO_ENTRY) or self.AM.current_alert is not EmptyAlert):
+      return
+    if not self.params.get_bool("NeuralNetworkLateralControl"):
+      return
+    nnlc = self.CP_SP.neuralNetworkLateralControl
+    if not nnlc.model.name or nnlc.model.name == "MOCK":
+      return
+    # Added after this frame's alert selection, then alerts are re-resolved so
+    # neither an existing warning nor the readiness chime can consume it.
+    self.events.bind_nnff_notice(nnlc.model.name, nnlc.fuzzyFingerprint)
+    self.events.add(EventName.torqueNNLoad)
+    self.update_alerts(CS)
+    self.nnff_alerted = True
+
   def update_alerts(self, CS):
     clear_event_types = set()
     if ET.WARNING not in self.state_machine.current_alert_types:
@@ -750,6 +776,7 @@ class SelfdriveD(CruiseHelper):
     if not self.CP.notCar:
       self.mads.update(CS)
     self.update_alerts(CS)
+    self.update_nnff_alert(CS)
 
     self.button_state_tracker.update(CS)
     self.publish_selfdriveState(CS)

@@ -33,9 +33,16 @@ class Events(EventsBase):
   def __init__(self):
     super().__init__()
     self.event_counters = dict.fromkeys(EVENTS.keys(), 0)
+    # Rebuilt once by bind_nnff_notice(), so the per-frame lookup stays a plain
+    # attribute read instead of copying EVENTS on every contains()/create_alerts().
+    self._events_mapping = EVENTS
+
+  def bind_nnff_notice(self, model_name: str, fuzzy: bool) -> None:
+    """Name the loaded NNFF model on the one-shot torqueNNLoad notice."""
+    self._events_mapping = EVENTS | {EventName.torqueNNLoad: {ET.PERMANENT: nnff_load_alert(model_name, fuzzy)}}
 
   def get_events_mapping(self) -> dict[int, dict[str, Alert | AlertCallbackType]]:
-    return EVENTS
+    return self._events_mapping
 
   def get_event_name(self, event: int):
     return EVENT_NAME[event]
@@ -232,6 +239,18 @@ def invalid_lkas_setting_alert(CP: car.CarParams, CS: car.CarState, sm: messagin
     text = "Disable stock LKAS to enable"
   return NormalPermanentAlert("Invalid LKAS Setting", text)
 
+
+
+def nnff_load_alert(model_name: str, fuzzy: bool) -> Alert:
+  """One-shot notice naming the NNFF torque model card picked at boot.
+
+  fuzzy means the model file matched this car's fingerprint only approximately
+  (see nnlc.get_nn_model_path), so the driver should know the tune is a
+  substitute rather than the exact one.
+  """
+  text = f"{model_name}（替代模型）" if fuzzy else model_name
+  return Alert("NNFF 扭矩模型已加载", text, AlertStatus.userPrompt, AlertSize.mid,
+               Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 6.0)
 
 
 EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
@@ -754,6 +773,14 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "Obstacle ahead", "Confirm the path ahead and prepare to slow down",
       AlertStatus.normal, AlertSize.mid,
       Priority.HIGH, VisualAlert.none, AudibleAlert.prompt, 2.),
+  },
+
+  # One-shot NNFF torque model notice. selfdrived rebinds this entry through
+  # Events.bind_nnff_notice() once it knows the model name, which lives in
+  # CarParamsSP rather than CarParams, so the callback signature cannot carry
+  # it. This default only keeps the event a valid, silent placeholder.
+  EventName.torqueNNLoad: {
+    ET.PERMANENT: NormalPermanentAlert("NNFF 扭矩模型已加载"),
   },
 
   # Every frame from the camera should be processed by the model. If modeld
