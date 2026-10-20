@@ -1,19 +1,32 @@
 {
   "_about": "scripts/test_carrot.py 的本地允许清单：这台设备上已知的环境缺口。skips = 设计上会跳过的测试（需写明原因），failures = 环境缺依赖导致的导入失败。新增条目必须写清原因；能用安装依赖解决的缺口不要往这里塞。",
-  "_device": "comma 3x / sp-macan-test, python3 = /usr/local/venv/bin/python3 (3.12.3), pytest 未安装",
+  "_device": "comma 3x / sp-macan-test, python3 = /usr/local/venv/bin/python3 (3.12.3)。venv 所在的根分区只读，pytest 9.1.1 + pluggy 1.7.0 + iniconfig 2.3.1 用 pip --no-deps --target 装在 /data/.pydeps（packaging/pygments 由 venv 满足），因此 failures 已清空。",
+  "_run": "PYTHONPATH=/data/openpilot:/usr/local/venv/lib/python3.12/site-packages:/data/.pydeps python3 scripts/test_carrot.py --allow-from scripts/test_carrot_allow.json  # rc=0；去掉 --allow-from 则因 6 条 skip 而 rc=1（预期）",
   "skips": [
-    {"id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_a_navi_fix_in_the_packet_wins", "reason": "by design: _serv_importable() 在 sys.modules 里已有（被其它 carrot 测试桩化的）zstandard 时返回 False，因为 unittest discover 下结果会随收集顺序变；单独跑该模块时这些用例会执行"},
-    {"id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_fixes_snapshot_carries_each_source", "reason": "同上：discover 下 zstandard 已被桩化，_serv_importable() 主动放弃"},
-    {"id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_invalid_localizer_fix_is_ignored", "reason": "同上：discover 下 zstandard 已被桩化"},
-    {"id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_phone_fills_the_raw_position_when_navi_is_absent", "reason": "同上：discover 下 zstandard 已被桩化"},
-    {"id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_the_reported_source_agrees_with_the_data_path", "reason": "同上：discover 下 zstandard 已被桩化"},
-    {"id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_the_reported_source_can_be_the_device", "reason": "同上：discover 下 zstandard 已被桩化"}
+    {
+      "id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_a_navi_fix_in_the_packet_wins",
+      "reason": "collect-order shadowing: 全套件跑时其它 carrot 测试已把 zstandard 桩进 sys.modules，_serv_importable() 因此返回 False；单独跑 python3 -m unittest openpilot.sunnypilot.carrot.tests.test_gps_sources 是 21 tests OK，不是真缺口"
+    },
+    {
+      "id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_fixes_snapshot_carries_each_source",
+      "reason": "同上：discover 下 zstandard 已被桩化，_serv_importable() 主动放弃"
+    },
+    {
+      "id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_invalid_localizer_fix_is_ignored",
+      "reason": "同上：discover 下 zstandard 已被桩化"
+    },
+    {
+      "id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_phone_fills_the_raw_position_when_navi_is_absent",
+      "reason": "同上：discover 下 zstandard 已被桩化"
+    },
+    {
+      "id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_the_reported_source_agrees_with_the_data_path",
+      "reason": "同上：discover 下 zstandard 已被桩化"
+    },
+    {
+      "id": "openpilot.sunnypilot.carrot.tests.test_gps_sources.TestCarrotServUsesTheSameSelector.test_the_reported_source_can_be_the_device",
+      "reason": "同上：discover 下 zstandard 已被桩化"
+    }
   ],
-  "failures": [
-    {"id": "unittest.loader._FailedTest.openpilot.sunnypilot.carrot.tests.test_lead_brake_lights", "reason": "模块顶层 import pytest；本机 venv 未安装 pytest（可 pip install 后删除本条目）"},
-    {"id": "unittest.loader._FailedTest.openpilot.sunnypilot.carrot.tests.test_signal_assist", "reason": "模块顶层 import pytest；本机 venv 未安装 pytest"},
-    {"id": "unittest.loader._FailedTest.openpilot.sunnypilot.carrot.tests.test_signal_assist_runtime", "reason": "模块顶层 import pytest；本机 venv 未安装 pytest"},
-    {"id": "unittest.loader._FailedTest.openpilot.sunnypilot.carrot.tests.test_signal_display", "reason": "模块顶层 import pytest；本机 venv 未安装 pytest"},
-    {"id": "unittest.loader._FailedTest.openpilot.sunnypilot.carrot.tests.test_signal_stop_prepare_runtime", "reason": "模块顶层 import pytest；本机 venv 未安装 pytest"}
-  ]
+  "failures": []
 }
