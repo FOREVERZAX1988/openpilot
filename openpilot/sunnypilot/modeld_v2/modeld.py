@@ -11,6 +11,7 @@ import os
 os.environ['GMMU'] = '0'
 from openpilot.common.hardware import COMMA_HARDWARE
 from openpilot.selfdrive.modeld.helpers import chestnut_present
+from openpilot.selfdrive.modeld.lane_width import LaneWidthEstimator
 CHESTNUT_PRESENT = chestnut_present()
 # tinygrad picks its default device by opening every backend until one works, 2.6 s of every start
 # on a comma 4. Without a chestnut that is QCOM, so name it; tinygrad reads DEV once, at import
@@ -385,6 +386,8 @@ def main(demo=False):
   DH = DesireHelper()
   meta_constants = load_meta_constants()
   RELC = RoadEdgeLaneChangeController()
+  lane_width_left_est = LaneWidthEstimator()
+  lane_width_right_est = LaneWidthEstimator()
 
   while True:
     # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
@@ -546,6 +549,13 @@ def main(demo=False):
                 carrot_man=carrot_man)
       modelv2_send.modelV2.meta.laneChangeState = DH.lane_change_state
       modelv2_send.modelV2.meta.laneChangeDirection = DH.lane_change_direction
+      # carrot: adjacent-lane widths for the xiaoge BSD gate (cp parity)
+      modelv2_send.modelV2.meta.laneWidthLeft = lane_width_left_est.update(
+        modelv2_send.modelV2.laneLines[0], modelv2_send.modelV2.laneLineProbs[0],
+        modelv2_send.modelV2.laneLines[1], modelv2_send.modelV2.roadEdges[0])
+      modelv2_send.modelV2.meta.laneWidthRight = lane_width_right_est.update(
+        modelv2_send.modelV2.laneLines[3], modelv2_send.modelV2.laneLineProbs[3],
+        modelv2_send.modelV2.laneLines[2], modelv2_send.modelV2.roadEdges[1])
       mdv2sp_send.valid = modelv2_send.valid
       mdv2sp_send.modelDataV2SP.laneTurnDirection = DH.lane_turn_direction
       mdv2sp_send.valid = modelv2_send.valid

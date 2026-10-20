@@ -31,13 +31,14 @@ CARROT_ROOT = Path(__file__).resolve().parents[1]
 
 # cp-only cereal members that this fork's schemas do not define.  Keep in sync with the
 # field list produced by diffing cp's car.capnp / log.capnp against this fork's.
+# laneWidthLeft/laneWidthRight used to be cp-only, but are now defined in this fork's
+# log.capnp (ModelDataV2.MetaData @10/@11) and filled by both modeld paths
+# (selfdrive/modeld/lane_width.py), so raw access to them is legal again.
 CP_ONLY_FIELDS = (
   "leftLatDist",
   "rightLatDist",
   "distanceToRoadEdgeLeft",
   "distanceToRoadEdgeRight",
-  "laneWidthLeft",
-  "laneWidthRight",
 )
 
 # ``.field`` (not ``"field"``): only a real attribute access trips this, so the

@@ -35,6 +35,7 @@ from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, should_stop, smooth_value, get_curvature_from_plan
 from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_driving_model_data, fill_pose_msg, PublishState
+from openpilot.selfdrive.modeld.lane_width import LaneWidthEstimator
 from openpilot.common.file_chunker import open_file_chunked
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.signal_shadow import ShadowClient
@@ -355,6 +356,8 @@ def main(demo=False):
 
   DH = DesireHelper()
   RELC = RoadEdgeLaneChangeController()
+  lane_width_left_est = LaneWidthEstimator()
+  lane_width_right_est = LaneWidthEstimator()
 
   while True:
     # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
@@ -499,6 +502,13 @@ def main(demo=False):
                 carrot_man=carrot_man)
       modelv2_send.modelV2.meta.laneChangeState = DH.lane_change_state
       modelv2_send.modelV2.meta.laneChangeDirection = DH.lane_change_direction
+      # carrot: adjacent-lane widths for the xiaoge BSD gate (cp parity)
+      modelv2_send.modelV2.meta.laneWidthLeft = lane_width_left_est.update(
+        modelv2_send.modelV2.laneLines[0], modelv2_send.modelV2.laneLineProbs[0],
+        modelv2_send.modelV2.laneLines[1], modelv2_send.modelV2.roadEdges[0])
+      modelv2_send.modelV2.meta.laneWidthRight = lane_width_right_est.update(
+        modelv2_send.modelV2.laneLines[3], modelv2_send.modelV2.laneLineProbs[3],
+        modelv2_send.modelV2.laneLines[2], modelv2_send.modelV2.roadEdges[1])
       mdv2sp_send.modelDataV2SP.laneTurnDirection = DH.lane_turn_direction
       mdv2sp_send.valid = modelv2_send.valid
 

@@ -1140,6 +1140,10 @@ struct ModelDataV2 {
     hardBrakePredicted @7 :Bool;
     laneChangeState @8 :LaneChangeState;
     laneChangeDirection @9 :LaneChangeDirection;
+    # carrot: width of the lane left/right of the ego lane, 1.0 s ahead, 1 s running
+    # mean; modeld fills these and the xiaoge BSD gate consumes them. Ordinals match cp.
+    laneWidthLeft @10 :Float32;
+    laneWidthRight @11 :Float32;
 
 
     deprecated :group {
