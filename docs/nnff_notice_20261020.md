@@ -65,8 +65,18 @@ gap analysis; it was residue, not a coverage gap.
 - `python -m ruff check` clean on all touched files.
 - carrot suite unchanged: 568 collected / 13 pre-existing environment errors /
   35 skipped — identical error list to the strict `git stash` baseline.
-- New pytest file: 11 passed locally. NNFF module: 19 skipped locally (no
-  msgq), pending device run with skip=0.
+- New pytest file: 11 passed locally.
+- Device (`comma tizi` `a821bfb2`, at `6c337d05`):
+  - `test_nnff_notice.py` **20/20 passed, skip=0** — the real msgq is present, and the
+    two expectation bugs fixed in `02cd2d1b5` (lowercase capnp `alert_type`; frame 550
+    as the first eligible frame, gate is `frame < 550`) hold on hardware.
+  - `test_signal_stop_prepare_runtime.py` 11 passed (pytest).
+  - `test_alerts` + `test_alertmanager` + `test_state_machine`: 12/12 OK.
+  - Full carrot suite: **628 run / 0 failed / 6 skipped** (`scripts/test_carrot.py --allow-from`).
+- Host gotcha worth recording: `pytest` lives in `/data/.pydeps`, so the suites must run
+  with `PYTHONPATH=/data/openpilot:/data/.pydeps`. Overwriting `PYTHONPATH` with just
+  `/data/openpilot` makes 5 carrot modules die at `import pytest` — that was the earlier
+  "5 failures", an environment artifact and not a code problem.
 - Not validated: on-road behaviour. `selfdrived` is `only_onroad`; the notice
   needs frame >= 550 (~11 s) after initialization, so short trips may never
   see it.
