@@ -6,6 +6,7 @@ from openpilot.cereal import log
 from opendbc.car.lateral import FRICTION_THRESHOLD, get_friction
 from openpilot.common.constants import ACCELERATION_DUE_TO_GRAVITY
 from openpilot.common.filter_simple import FirstOrderFilter
+from openpilot.common.params import Params
 from openpilot.selfdrive.controls.lib.latcontrol import LatControl
 from openpilot.common.pid import PIDController
 
@@ -34,13 +35,22 @@ JERK_GAIN = 0.3
 LAT_ACCEL_REQUEST_BUFFER_SECONDS = 1.0
 VERSION = 1
 
+# User Kp scale (StarPilot Advanced Lateral Tuning "SteerKP" equivalent).
+# A multiplier over the stock speed-interpolated Kp curve; 1.0 = stock.
+# Same params refresh cadence as the torque params override extension.
+CUSTOM_KP_REFRESH_FRAMES = 300
+CUSTOM_KP_SCALE_LIMITS = (0.5, 2.0)
+
 class LatControlTorque(LatControl):
   def __init__(self, CP, CP_SP, CI, dt):
     super().__init__(CP, CP_SP, CI, dt)
     self.torque_params = CP.lateralTuning.torque.as_builder()
     self.torque_from_lateral_accel = CI.torque_from_lateral_accel()
     self.lateral_accel_from_torque = CI.lateral_accel_from_torque()
-    self.pid = PIDController([INTERP_SPEEDS, KP_INTERP], KI, rate=1/self.dt)
+    self.params = Params()
+    self._custom_kp_scale = self._read_custom_kp_scale()
+    self._kp_frame = -1
+    self.pid = PIDController([INTERP_SPEEDS, [k * self._custom_kp_scale for k in KP_INTERP]], KI, rate=1/self.dt)
     self.update_limits()
     self.steering_angle_deadzone_deg = self.torque_params.steeringAngleDeadzoneDeg
     self.lat_accel_request_buffer_len = int(LAT_ACCEL_REQUEST_BUFFER_SECONDS / self.dt)
@@ -50,6 +60,33 @@ class LatControlTorque(LatControl):
 
     self.extension = LatControlTorqueExt(self, CP, CP_SP, CI)
     self.update_limits()  # the call above ran before the extension existed
+
+  def _read_custom_kp_scale(self) -> float:
+    try:
+      scale = float(self.params.get("CustomKp", return_default=True))
+    except Exception:
+      # params_keys.h is compiled into libparams_c.so, so a device that has not
+      # rebuilt the shared library yet raises UnknownKeyName on every read.
+      # CustomKp is an opt-in surface: fall back to stock (1.0) instead.
+      return 1.0
+    if not math.isfinite(scale):
+      return 1.0
+    return float(np.clip(scale, *CUSTOM_KP_SCALE_LIMITS))
+
+  def _apply_custom_kp_scale(self, scale: float) -> None:
+    # Rebuilds the proportional lookup; the integrator resets, so this only
+    # happens when the user actually moved the value between refreshes.
+    self.pid = PIDController([INTERP_SPEEDS, [k * scale for k in KP_INTERP]], KI, rate=1/self.dt)
+    self.update_limits()
+
+  def refresh_custom_kp_scale(self) -> None:
+    self._kp_frame += 1
+    if self._kp_frame % CUSTOM_KP_REFRESH_FRAMES != 0:
+      return
+    scale = self._read_custom_kp_scale()
+    if abs(scale - self._custom_kp_scale) > 1e-6:
+      self._custom_kp_scale = scale
+      self._apply_custom_kp_scale(scale)
 
   def update_torque_parameters(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
@@ -64,6 +101,7 @@ class LatControlTorque(LatControl):
       self.extension.update_limits()
 
   def update(self, active, CS, VM, params, steer_limited_by_safety, desired_curvature, calibrated_pose, curvature_limited, lat_delay):
+    self.refresh_custom_kp_scale()
     # Override torque params from extension
     if self.extension.update_override_torque_params(self.torque_params):
       self.update_limits()
