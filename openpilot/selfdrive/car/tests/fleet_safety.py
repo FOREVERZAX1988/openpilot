@@ -107,6 +107,7 @@ def run_case(platform, route, segment, safety_dir, local_log=None):
   from opendbc.car.can_definitions import CanData
   from opendbc.car.car_helpers import interfaces
   from opendbc.car.fingerprints import MIGRATION
+  from opendbc.safety import ALTERNATIVE_EXPERIENCE
   from openpilot.cereal import custom
   from openpilot.selfdrive.car.helpers import convert_carControlSP
   from openpilot.selfdrive.car.tests.fleet_safety_core import effective_safety_configs, TxAudit
@@ -128,6 +129,12 @@ def run_case(platform, route, segment, safety_dir, local_log=None):
                             recorded.openpilotLongitudinalControl, False, docs=False)
   fp = interface.get_params_sp(cp, platform, fingerprint, list(recorded.carFw),
                                recorded.openpilotLongitudinalControl, False, docs=False)
+  # Local: get_params() only knows structural defaults, so alternativeExperience
+  # comes back 0 here. On this fork lateral authority rides on MADS (card.py ORs
+  # ENABLE_MADS into CP at startup) and the recorded drive carries exactly that
+  # value; keeping the default would audit every MADS-only lateral frame as an
+  # 'unexpected rejection' that the real panda never produced.
+  cp.alternativeExperience = recorded.alternativeExperience
   if cp.dashcamOnly or cp.notCar:
     return dict(status='uncovered', reason='Current interface is dashcamOnly/notCar', platform=platform)
   configs = effective_safety_configs(cp, fp)
@@ -142,6 +149,13 @@ def run_case(platform, route, segment, safety_dir, local_log=None):
       raise ValueError(f'Safety configuration unavailable in built library: {cfg}')
     safety.init_tests()
     safety.set_alternative_experience(cfg.alternative_experience)
+    # Local: set_alternative_experience() only stores the int; this fork's lateral
+    # allow-path reads the MADS state machine, which needs
+    # mads_set_alternative_experience (replay_drive.py does this via set_mads_params).
+    ae = cfg.alternative_experience
+    safety.set_mads_params(bool(ae & ALTERNATIVE_EXPERIENCE.ENABLE_MADS),
+                           bool(ae & ALTERNATIVE_EXPERIENCE.MADS_DISENGAGE_LATERAL_ON_BRAKE),
+                           bool(ae & ALTERNATIVE_EXPERIENCE.MADS_PAUSE_LATERAL_ON_BRAKE))
     modules[cfg.panda_index] = module
     audits[cfg.panda_index] = TxAudit(safety, module.make_CANPacket, config=cfg)
   ci = interface(cp, fp)
@@ -228,7 +242,7 @@ def run_case(platform, route, segment, safety_dir, local_log=None):
               missing_coverage=missing, coverage=dict(coverage), errors=errors[:30],
               safety_configs=[asdict(c) for c in configs], panda_results=summaries, source_hashes=source_hashes,
               warmup_seconds=2,
-              configuration_policy='Recorded actuator requests under current default settings',
+              configuration_policy='Recorded actuator requests under current default settings; alternativeExperience taken from the log',
               recorded_alternative_experience=int(recorded.alternativeExperience),
               limitations=['Controller/safety only: no modeld, selfdrived/MADS latch, UI or physical ECU simulation',
                            'Uses recorded actuator requests; does not test new model outputs or every optional feature'])
