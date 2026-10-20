@@ -75,6 +75,10 @@ def load_safety(directory, panda_index):
   spec = importlib.util.spec_from_file_location(f'fleet_safety_panda_{panda_index}', target/'libsafety_py.py')
   module = importlib.util.module_from_spec(spec)
   spec.loader.exec_module(module)
+  # Load the copied prebuilt .so directly; this fork's libsafety_py would
+  # otherwise recompile from a path-layout assumption that breaks outside
+  # the source tree (and would not include ALLOW_DEBUG the same way).
+  module.load(str(target/'libsafety.so'))
   return module
 
 
