@@ -3,10 +3,14 @@
 Galaxy-inspired (StarPilot MIT). Only the `cryptography` package is required,
 which this fork already ships for sunnylink backups.
 
-State (VAPID keypair + browser subscriptions) lives in a JSON file under the
-carrot state dir rather than in Params: this fork's Params is a strict key
-registry compiled from params_keys.h, and adding two keys there would force a
-libparams_c rebuild for a feature that is pure server-side config.
+State (VAPID keypair + browser subscriptions) lives in Params (`WebPushVapid` /
+`WebPushSubscriptions`, both JSON). It sat in a JSON file under the carrot state
+dir from 2026-10-20 to 2026-10-21 because this fork's Params is a strict key
+registry compiled from params_keys.h and the device could not rebuild
+libparams_c (lowmemorykiller kept killing clang++ on params.cc, see
+ai/docs/libparams_c_rebuild_recipe_20261021.md). The keys are registry keys
+again, so push state rides along with Params backups; the old file is imported
+once and renamed to `web_push.json.migrated`.
 """
 from __future__ import annotations
 
@@ -122,29 +126,74 @@ async def send_push(subscription: dict[str, Any], payload: str,
     return resp.status, (await resp.text())[:200]
 
 
-def load_state() -> dict[str, Any]:
-  """`{"vapid": {...} | None, "subscriptions": [...]}` from the state file."""
+_PARAM_VAPID = "WebPushVapid"
+_PARAM_SUBSCRIPTIONS = "WebPushSubscriptions"
+
+_params_instance: Any = None
+
+
+def _params() -> Any:
+  """Device Params handle, created once. Tests swap this for an in-memory stub."""
+  global _params_instance
+  if _params_instance is None:
+    from openpilot.common.params import Params
+    _params_instance = Params()
+  return _params_instance
+
+
+def _migrate_legacy_file() -> dict[str, Any]:
+  """Import the JSON state file written before these keys moved into Params.
+
+  Runs at most once per install: the file is renamed to `web_push.json.migrated`
+  after a successful import, so subscriptions a phone already registered survive
+  the move and the old bytes stay around as a backup.
+  """
+  path = config.CARROT_WEB_PUSH_PATH
   try:
-    with open(config.CARROT_WEB_PUSH_PATH, encoding="utf-8") as f:
-      state = json.load(f)
+    with open(path, encoding="utf-8") as f:
+      raw = json.load(f)
   except (OSError, ValueError):
-    state = {}
-  if not isinstance(state, dict):
-    state = {}
-  vapid = state.get("vapid")
-  state["vapid"] = vapid if isinstance(vapid, dict) else None
-  subs = state.get("subscriptions")
-  state["subscriptions"] = subs if isinstance(subs, list) else []
+    return {}
+  if not isinstance(raw, dict):
+    return {}
+  state = {
+    "vapid": raw.get("vapid") if isinstance(raw.get("vapid"), dict) else None,
+    "subscriptions": [s for s in raw.get("subscriptions") or [] if isinstance(s, dict)],
+  }
+  if state["vapid"] is None and not state["subscriptions"]:
+    return {}
+  save_state(state)
+  try:
+    os.replace(path, path + ".migrated")
+  except OSError:
+    pass
   return state
 
 
+def load_state() -> dict[str, Any]:
+  """`{"vapid": {...} | None, "subscriptions": [...]}` from Params."""
+  params = _params()
+  vapid = params.get(_PARAM_VAPID)
+  subscriptions = params.get(_PARAM_SUBSCRIPTIONS)
+  if vapid is None and not subscriptions:  # nothing stored yet: maybe a pre-Params file
+    migrated = _migrate_legacy_file()
+    if migrated:
+      return migrated
+  return {
+    "vapid": vapid if isinstance(vapid, dict) else None,
+    "subscriptions": [s for s in subscriptions if isinstance(s, dict)] if isinstance(subscriptions, list) else [],
+  }
+
+
 def save_state(state: dict[str, Any]) -> None:
-  path = config.CARROT_WEB_PUSH_PATH
-  os.makedirs(os.path.dirname(path), exist_ok=True)
-  tmp_path = path + ".tmp"
-  with open(tmp_path, "w", encoding="utf-8") as f:
-    json.dump(state, f)
-  os.replace(tmp_path, path)
+  params = _params()
+  vapid = state.get("vapid")
+  if isinstance(vapid, dict) and vapid:
+    params.put(_PARAM_VAPID, vapid, block=True)
+  subscriptions = state.get("subscriptions")
+  params.put(_PARAM_SUBSCRIPTIONS,
+             [s for s in subscriptions if isinstance(s, dict)] if isinstance(subscriptions, list) else [],
+             block=True)
 
 
 def ensure_vapid_keys(state: dict[str, Any] | None = None) -> dict[str, str]:

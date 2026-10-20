@@ -363,6 +363,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TorqueParamsOverrideLatAccelFactor", {PERSISTENT | BACKUP, FLOAT, "2.5"}},
     {"CustomKp", {PERSISTENT | BACKUP, FLOAT, "1.0"}},
 
+    // PWA Web Push state (carrot_server /push: VAPID keypair + browser subscriptions).
+    // These lived in /data/carrot/state/web_push.json while this device could not
+    // rebuild libparams_c (LMK killed clang++ on params.cc); the rebuild path works
+    // now, so they are registry keys again and ride along with Params backups.
+    {"WebPushVapid", {PERSISTENT | BACKUP, JSON}},
+    {"WebPushSubscriptions", {PERSISTENT | BACKUP, JSON}},
+
     {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
     {"DisableDM", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"LivestreamActiveCamera", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},

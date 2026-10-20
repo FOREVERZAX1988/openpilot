@@ -75,6 +75,9 @@ CARROT_FINGERPRINT_BASELINE_PATH = os.path.join(CARROT_STATE_DIR, "fingerprint_b
 CARROT_SSH_KEYS_PATH = os.path.join(CARROT_STATE_DIR, "ssh_keys.json")
 CARROT_MAPBOX_TOKENS_PATH = os.path.join(CARROT_STATE_DIR, "mapbox_tokens.json")
 CARROT_INTRO_STATE_PATH = os.path.join(CARROT_STATE_DIR, "intro.json")
+# Legacy home of the Web Push state; the VAPID keypair and subscriptions now live in Params
+# (WebPushVapid / WebPushSubscriptions). This path is only read once for the import, and
+# the file is renamed to web_push.json.migrated afterwards.
 CARROT_WEB_PUSH_PATH = os.path.join(CARROT_STATE_DIR, "web_push.json")
 
 # Where a full parameter dump is written so it can be downloaded straight off the device.

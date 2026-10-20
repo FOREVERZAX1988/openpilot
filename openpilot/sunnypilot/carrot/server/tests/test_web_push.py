@@ -11,12 +11,31 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from openpilot.sunnypilot.carrot.server import config
+from openpilot.sunnypilot.carrot.server.services import web_push
 from openpilot.sunnypilot.carrot.server.services.web_push import (
   build_vapid_authorization,
   encrypt_payload,
   ensure_vapid_keys,
   generate_vapid_keys,
 )
+
+
+class _FakeParams:
+  """In-memory Params stand-in.
+
+  Push state lives in Params now, so every test that writes it has to be kept off
+  the device store: these tests run on the car and must not overwrite the VAPID
+  keypair a phone is already subscribed to.
+  """
+
+  def __init__(self):
+    self.store: dict[str, object] = {}
+
+  def get(self, key, **_kwargs):
+    return self.store.get(key)
+
+  def put(self, key, value, **_kwargs):
+    self.store[key] = value
 
 
 def _b64url(data: bytes) -> bytes:
@@ -91,14 +110,16 @@ class TestWebPush(unittest.TestCase):
     pub.verify(der_sig, f"{header}.{claims}".encode(), ec.ECDSA(hashes.SHA256()))
 
   def test_ensure_vapid_keys_persist_across_calls(self):
+    fake = _FakeParams()
     with tempfile.TemporaryDirectory() as tmp:
       path = os.path.join(tmp, "state", "web_push.json")
-      with mock.patch.object(config, "CARROT_WEB_PUSH_PATH", path):
+      with mock.patch.object(web_push, "_params", lambda: fake), \
+           mock.patch.object(config, "CARROT_WEB_PUSH_PATH", path):
         keys = ensure_vapid_keys()
         self.assertIn("private_key", keys)
         self.assertEqual(ensure_vapid_keys(), keys)  # second call reuses the stored keypair
-        with open(path, encoding="utf-8") as f:
-          self.assertEqual(json.load(f)["vapid"], keys)
+        self.assertEqual(fake.store["WebPushVapid"], keys)
+        self.assertFalse(os.path.exists(path), "Params is the store now, not a JSON file")
 
 
 def _push_app():
@@ -162,6 +183,8 @@ def test_status_hands_out_a_stable_vapid_key_and_subscriptions_round_trip(tmp_pa
   from aiohttp.test_utils import TestClient, TestServer
 
   state_path = _state(tmp_path)
+  fake = _FakeParams()
+  monkeypatch.setattr(web_push, "_params", lambda: fake)
   monkeypatch.setattr(config, "CARROT_WEB_PUSH_PATH", state_path)
 
   async def check():
@@ -186,7 +209,33 @@ def test_status_hands_out_a_stable_vapid_key_and_subscriptions_round_trip(tmp_pa
       assert gone == {"ok": True, "subscriptions": 0}
 
   asyncio.run(check())
-  assert pathlib.Path(state_path).exists(), "the keypair must be persisted on first use"
+  assert set(fake.store) == {"WebPushVapid", "WebPushSubscriptions"}, "state must round-trip through Params"
+  assert fake.store["WebPushVapid"]["private_key"]
+  assert fake.store["WebPushSubscriptions"] == [], "the unsubscribed endpoint must be gone"
+  assert not pathlib.Path(state_path).exists(), "no JSON file should be written any more"
+
+
+def test_legacy_json_file_is_imported_once_then_renamed(tmp_path, monkeypatch):
+  """The pre-Params state file must survive the move: same keypair, same subscriptions."""
+  legacy = tmp_path / "web_push.json"
+  legacy.write_text(json.dumps({
+    "vapid": {"private_key": "legacy-priv", "public_key": "legacy-pub"},
+    "subscriptions": [{"endpoint": "https://push.example/legacy", "keys": {"p256dh": "BPk", "auth": "a"}}],
+  }), encoding="utf-8")
+  fake = _FakeParams()
+  monkeypatch.setattr(web_push, "_params", lambda: fake)
+  monkeypatch.setattr(config, "CARROT_WEB_PUSH_PATH", str(legacy))
+
+  state = web_push.load_state()
+  assert state["vapid"]["public_key"] == "legacy-pub"
+  assert [s["endpoint"] for s in state["subscriptions"]] == ["https://push.example/legacy"]
+  assert fake.store["WebPushVapid"]["private_key"] == "legacy-priv"
+  assert not legacy.exists()
+  assert (tmp_path / "web_push.json.migrated").exists(), "the old file stays as a backup"
+
+  # Second read is served from Params, not from the renamed file.
+  fake.store["WebPushSubscriptions"] = []
+  assert web_push.load_state()["subscriptions"] == []
 
 
 class TestPwaInstallability(unittest.TestCase):
