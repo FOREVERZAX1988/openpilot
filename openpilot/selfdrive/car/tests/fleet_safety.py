@@ -103,10 +103,12 @@ def read_route(route, segment, local_log=None):
 
 
 def run_case(platform, route, segment, safety_dir, local_log=None):
-  from opendbc.car import gen_empty_fingerprint, structs
+  from opendbc.car import gen_empty_fingerprint
   from opendbc.car.can_definitions import CanData
   from opendbc.car.car_helpers import interfaces
   from opendbc.car.fingerprints import MIGRATION
+  from openpilot.cereal import custom
+  from openpilot.selfdrive.car.helpers import convert_carControlSP
   from openpilot.selfdrive.car.tests.fleet_safety_core import effective_safety_configs, TxAudit
 
   messages, identifier = read_route(route, segment, local_log)
@@ -184,7 +186,7 @@ def run_case(platform, route, segment, safety_dir, local_log=None):
     cs, cs_sp = ci.update(pending)
     pending.clear()
     cc = msg.carControl.as_builder()
-    cc_sp = structs.CarControlSP.new_message()
+    cc_sp = convert_carControlSP(custom.CarControlSP.new_message())
     if previous_command is not None and msg.logMonoTime-previous_command > 100_000_000:
       coverage['command_gaps_over_100ms'] += 1
     previous_command = msg.logMonoTime
