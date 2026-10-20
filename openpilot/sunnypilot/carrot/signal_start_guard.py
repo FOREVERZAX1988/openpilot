@@ -262,6 +262,16 @@ class SignalStartGuard:
       self.last_now = now if math.isfinite(now) else -math.inf
       self.cooldown = now+10. if math.isfinite(now) else math.inf
       return StartDecision(reason='driver_gas')
+    # Lead following can bypass the effective veto while retaining this latch.
+    # Retire it once outside stop/creep scope, even with missing observations,
+    # invalid context or a clock rollback. None of these grants green rights.
+    # Gated on the latch: an unheld moving entry keeps its legacy reason, and
+    # that branch already resets the same state.
+    from openpilot.sunnypilot.carrot.signal_assist import departed_signal_stop
+    if self.hold and departed_signal_stop(speed):
+      self.reset()
+      self.last_now = now if math.isfinite(now) else -math.inf
+      return StartDecision(reason='departed_stop')
     if not math.isfinite(now) or now < self.last_now:
       # Clock discontinuity cannot turn a held red into permission to go.
       self.pending, self.count, self.box, self.session = None, 0, None, None

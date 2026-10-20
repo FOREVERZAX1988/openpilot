@@ -447,6 +447,9 @@ class CarrotPlanner:
       self._signal_runtime = None
       self._signal_assist = None
     self._signal_decision = None
+    # True while the auxiliary signal guards own the injected e2eStopped state.
+    # Lets a retired latch take its injected stop with it.
+    self._signal_stop_owned = False
 
     # Experimental red-light start guard (ported from carrot). Runs only when
     # SignalAssistMode > 0; mode 1 records the decision for shadow observation,
@@ -1021,6 +1024,29 @@ class CarrotPlanner:
       elif self._start_frames >= _TRAFFIC_GREEN_CONFIRM_FRAMES:
         self._traffic_state = TrafficState.green
 
+  def _retire_departed_signal_stop(self, v_ego: float) -> None:
+    """Drop a stale stopped-red memory and the stop state it injected.
+
+    Both auxiliary guards latch only at rest and are bypassed per cycle while a
+    lead is followed inside the stop boundary. Once the car is past the creep
+    boundary that memory is no longer evidence of a red light, so the injected
+    ``e2eStopped`` must be retired with it. This never confirms green and never
+    grants acceleration; explicit driver stops keep ownership of the stop.
+    """
+    from openpilot.sunnypilot.carrot.signal_assist import departed_signal_stop
+    if self._x_state != XState.e2eStopped:
+      self._signal_stop_owned = False
+    departed_hold = departed_signal_stop(v_ego) and (
+      self._signal_stop_owned
+      or (self.start_guard is not None and self.start_guard.hold)
+      or (self._signal_assist is not None and self._signal_assist.hold))
+    if (departed_hold and self._x_state == XState.e2eStopped
+        and self._user_stop_distance < 0 and not self._carrot_stay_stop):
+      self._x_state = XState.e2eCruise
+      self._actual_stop_distance = 0.0
+      self._stopping_count = 0.0
+      self._signal_stop_owned = False
+
   def _update_x_state(self, sm: Any, v_ego: float, v_ego_kph: float,
                      a_ego: float, x_last: float, lead_in_stop_range: bool) -> None:
     cs = sm["carState"]
@@ -1248,6 +1274,13 @@ class CarrotPlanner:
     lead_detected = bool(lead_one.present)
     d_rel_for_model = float(lead_one.dRel) if lead_detected else 1000.0
 
+    # Both auxiliary guards may have injected e2eStopped on the previous cycle
+    # (below, at the end of this method). Retiring their latch must retire that
+    # injected state too, before the normal model/lead state machine runs again.
+    # Explicit driver holds (user stop distance, stay-stop) retain ownership.
+    from openpilot.sunnypilot.carrot.signal_assist import departed_signal_stop
+    self._retire_departed_signal_stop(v_ego)
+
     self._x_stop = float(self._x_stop_filter2.process(self._x_stop_filter.process(float(x[31]), median=True)))
     stop_model_x = self._x_stop
 
@@ -1351,6 +1384,12 @@ class CarrotPlanner:
       if self.start_decision.hold and _smode >= 2:
         signal_hold = True
 
+    if signal_hold and departed_signal_stop(v_ego):
+      # Final output gate: a stale stopped-car decision may not command a stop at
+      # driving speed. This only releases the signal veto; braking already
+      # requested by MPC, a model obstacle or a lead remains untouched.
+      signal_hold = False
+
     # Experimental geometric red pre-deceleration. Shadow and control share the
     # exact controller/arbitrator code path: at mode 1 the decision is computed
     # and logged, at mode 2 the planner-side accel cap may additionally apply.
@@ -1394,6 +1433,7 @@ class CarrotPlanner:
       stop_model_x = signal_hold_stop_model_x
 
     if self._user_stop_distance >= 0:
+      self._signal_stop_owned = False
       self._user_stop_distance = max(0.0, self._user_stop_distance - v_ego * DT_MDL)
       self._actual_stop_distance = self._user_stop_distance
       self._x_state = XState.e2eStop if self._user_stop_distance > 0 else XState.e2eStopped
@@ -1481,6 +1521,7 @@ class CarrotPlanner:
     # nav-only high-speed floor: this path is explicitly opted-in per device and
     # only fires on a vision-tracked light. Green never sets a go request.
     if signal_hold:
+      self._signal_stop_owned = True
       self._x_state = XState.e2eStopped
       self._actual_stop_distance = 0.0
       stop_dist = 0.0
