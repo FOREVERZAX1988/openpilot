@@ -2609,6 +2609,18 @@ msgid "Navigation"
 msgstr "導航"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Longitudinal Control (advanced)"
+msgstr "縱向控制（進階）"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Carrot Longitudinal Source"
+msgstr "Carrot 縱向源"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Let the phone app drive the longitudinal plan: its target speed becomes a plan source, and its follow time, comfort braking and stop point reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected phone - without a fresh packet the source stays inactive."
+msgstr "讓手機 App 驅動縱向規劃：其目標速度成為一個規劃源，其跟車時距、舒適制動與停車點進入 MPC。關閉時保持 sunnypilot 原廠行為。需要手機保持連線——沒有新鮮資料時該源自動失效。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Navigation Control (advanced)"
 msgstr "導航控制（進階）"
 

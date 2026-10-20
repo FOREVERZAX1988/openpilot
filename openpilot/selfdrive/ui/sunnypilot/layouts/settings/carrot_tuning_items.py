@@ -255,8 +255,19 @@ def build_dev_items():
     section_heading_sp(tr('Hardware / Tests')),
     toggle_item_sp(title=tr('Show Debug Log'), param='ShowDebugLog'),
 
-    # Unified-control killswitches. Both default OFF: they change vehicle
+    # Unified-control killswitches. All default OFF: they change vehicle
     # behaviour, so they are grouped here and opt-in.
+    #
+    # This one is the heaviest of them: it is the only switch on this page that
+    # decides whether the phone app's numbers reach the MPC at all. It used to be
+    # reachable only by writing the param by hand, which made a wired-in
+    # longitudinal source look like dead code.
+    section_heading_sp(tr('Longitudinal Control (advanced)')),
+    toggle_item_sp(title=tr('Carrot Longitudinal Source'), param='CarrotLongitudinalSourceEnabled',
+                   description=tr('Let the phone app drive the longitudinal plan: its target speed becomes ' +
+                                   'a plan source, and its follow time, comfort braking and stop point ' +
+                                   'reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected ' +
+                                   'phone - without a fresh packet the source stays inactive.')),
     section_heading_sp(tr('Navigation Control (advanced)')),
     toggle_item_sp(title=tr('Traffic Congestion Slowdown'), param='CarrotTrafficCongestionEnabled',
                    description=tr('Fold the phone app traffic congestion report into map-based cruise '
