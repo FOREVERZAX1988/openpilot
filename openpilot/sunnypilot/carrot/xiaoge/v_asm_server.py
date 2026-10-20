@@ -71,8 +71,19 @@ PARAM_SETTING_DEFAULTS = {
   "OnnxBsdSmoothingMs": 200,
   "OnnxBsdIntervalMs": 250,
   "OnnxLaneThreshold": 25,
-  "OnnxLaneIntervalMs": 400,
+  "OnnxLaneIntervalMs": 1000,
 }
+
+# Measured on SDM845 (comma 3): the lane model needs ~421 ms on a Gold core and
+# 941-1104 ms on a Silver core, and doubles again while both camera threads infer
+# concurrently. Stored values below this floor therefore cause back-to-back
+# inference that saturates a core, starves the other threads via the GIL, and is
+# what shows up downstream as intermittent "model lagging" freshness errors.
+MIN_LANE_INTERVAL_MS = 600
+# After a slow inference, wait this multiple of the measured latency before the
+# next one so a spiky schedule cannot turn the camera threads into 100 % duty
+# loops that drag each other (and the rest of the process) down.
+INFERENCE_BACKPRESSURE_FACTOR = 1.15
 
 
 DEFAULT_POLYGONS = {
@@ -193,7 +204,7 @@ class VASMService:
     self.lane_inference = LaneInference(DEFAULT_LANE_MODEL_PATH)
     self.lane_inference.load()
     self.lane_threshold = 0.25
-    self.lane_interval_seconds = 0.40
+    self.lane_interval_seconds = 1.0
     self.lane_camera_error = "waiting for road camera"
     self.last_road_jpeg: bytes | None = None
     self.last_road_frame_at = 0.0
@@ -234,7 +245,7 @@ class VASMService:
       self.smoothing_seconds = min(max(values["OnnxBsdSmoothingMs"], 100), 500) / 1000.0
       self.base_interval_seconds = min(max(values["OnnxBsdIntervalMs"], 50), 1000) / 1000.0
       self.lane_threshold = min(max(values["OnnxLaneThreshold"], 5), 100) / 100.0
-      self.lane_interval_seconds = min(max(values["OnnxLaneIntervalMs"], 50), 2000) / 1000.0
+      self.lane_interval_seconds = min(max(values["OnnxLaneIntervalMs"], MIN_LANE_INTERVAL_MS), 2000) / 1000.0
 
   def _persist_settings(self, values: dict[str, int]) -> None:
     if self.params is None:
@@ -538,6 +549,8 @@ class VASMService:
             self.vasm_result = {"left": False, "right": False, "side": "", "updatedMonoTimeNanos": time.monotonic_ns()}
           else:
             interval = FOLLOWUP_INTERVAL_SECONDS if now < self.followup_until else self.base_interval_seconds
+            if self.last_inference_ms > 0.0:
+              interval = max(interval, self.last_inference_ms * INFERENCE_BACKPRESSURE_FACTOR / 1000.0)
             if now - self.last_inference_at < interval:
               continue
         if not gate_active:
@@ -615,7 +628,10 @@ class VASMService:
             self.snapshot_condition.notify_all()
           if not self.lane_inference.valid:
             continue
-          if now - self.last_lane_inference_at < self.lane_interval_seconds:
+          interval = self.lane_interval_seconds
+          if self.last_lane_inference_ms > 0.0:
+            interval = max(interval, self.last_lane_inference_ms * INFERENCE_BACKPRESSURE_FACTOR / 1000.0)
+          if now - self.last_lane_inference_at < interval:
             continue
 
           lane_threshold = self.lane_threshold
