@@ -21,7 +21,7 @@ import sys
 import tempfile
 import uuid
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]  # repo root: this tree nests under openpilot/
 DEFAULT_OUT = Path(__file__).parent / 'fleet_results'
 
 
