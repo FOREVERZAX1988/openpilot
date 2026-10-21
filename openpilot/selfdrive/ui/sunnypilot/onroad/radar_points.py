@@ -10,6 +10,12 @@ without a raylib context; this module only does the drawing.
 
 Nothing here feeds control: the points are a developer view of what radard is
 tracking, and the overlay is off by default.
+
+Level scale follows carrot's ``ShowRadarInfo`` param: 0=off, 1=speed box only,
+2=+ lateral offset / distance, 3=+ static returns drawn as "*". Divergence from
+carrot: its levels 1/2 fall back to labelling the control lead groups, which
+duplicates the chevron lead indicator here, so this port keeps labelling the
+measured points and only prunes the clutter instead.
 """
 import pyray as rl
 from openpilot.selfdrive.ui.radar_display import (
@@ -24,6 +30,17 @@ from openpilot.system.ui.lib.application import FontWeight, gui_app
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 
 
+def radar_info_level() -> int:
+  """Effective overlay level, clamped to carrot's 0-3 scale."""
+  try:
+    level = int(getattr(ui_state, "radar_info_level", 0) or 0)
+  except (TypeError, ValueError):
+    level = 0
+  if level <= 0 and getattr(ui_state, "carrot_radar_points", False):
+    # legacy boolean writers (tests, stale params state) keep the old full view
+    return 3
+  return max(0, min(level, 3))
+
 class RadarPointsRenderer:
   """Projects the current display points into the road view."""
 
@@ -32,7 +49,8 @@ class RadarPointsRenderer:
 
   def render(self, sm, rect: rl.Rectangle, lane_points, project) -> None:
     """`project` maps (d_rel, y_rel, z) in car space to screen pixels, or None."""
-    if not getattr(ui_state, "carrot_radar_points", False):
+    level = radar_info_level()
+    if level <= 0:
       return
     if not sm.valid['modelV2']:
       return
@@ -52,16 +70,17 @@ class RadarPointsRenderer:
       screen = project(d_rel, -y_rel, z)
       if screen is None:
         continue
-      self._draw_point(rect, screen, point, d_rel, y_rel, z, project)
+      self._draw_point(rect, screen, point, d_rel, y_rel, z, project, level)
 
-  def _draw_point(self, rect: rl.Rectangle, screen, point, d_rel: float, y_rel: float, z: float, project) -> None:
+  def _draw_point(self, rect: rl.Rectangle, screen, point, d_rel: float, y_rel: float, z: float, project, level: int) -> None:
     x, y = float(screen[0]), float(screen[1])
     v = float(point.vLeadK)
     v_lat = float(point.vLat)
     v_abs, v_sum = combined_speed(v, v_lat)
 
     if v_abs <= RADAR_MIN_MOVING_SPEED_MS:
-      self._draw_text(rect, "*", x, y, 40)
+      if level >= 3:
+        self._draw_text(rect, "*", x, y, 40)
       return
 
     # where the point will be shortly: carrot's lateral preview vector
@@ -74,8 +93,9 @@ class RadarPointsRenderer:
 
     box_color = point_box_color(v_sum, bool(point.radar), float(point.modelProb))
     self._draw_text_box(rect, x, y, speed_text(v_sum, ui_state.is_metric), 40, rl.Color(*box_color))
-    self._draw_text(rect, f"{y_rel:.1f}", x, y - 40, 30)
-    self._draw_text(rect, f"{d_rel:.1f}", x, y + 30, 30)
+    if level >= 2:
+      self._draw_text(rect, f"{y_rel:.1f}", x, y - 40, 30)
+      self._draw_text(rect, f"{d_rel:.1f}", x, y + 30, 30)
 
   def _draw_text_box(self, rect: rl.Rectangle, x: float, y: float, text: str, font_size: int, box_color: rl.Color) -> None:
     width = max(40, int(len(text) * font_size * 0.8))

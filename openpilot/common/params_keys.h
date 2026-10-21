@@ -873,7 +873,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ShowPathMode", {PERSISTENT | BACKUP, INT, "9"}},
     {"ShowPathModeLane", {PERSISTENT | BACKUP, INT, "11"}},
     {"ShowPlotMode", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"ShowRadarInfo", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowRadarInfo", {PERSISTENT | BACKUP, INT, "0"}},
     {"ShowRouteInfo", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ShowTpms", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"SoftwareMenu", {PERSISTENT | BACKUP, BOOL, "0"}},

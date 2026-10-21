@@ -6,16 +6,12 @@ See the LICENSE.md file in the root directory for more details.
 """
 from enum import Enum
 
-import numpy as np
-
 from openpilot.cereal import messaging, log, custom
 from opendbc.car.structs import car
-from opendbc.sunnypilot.car.interfaces import get_steer_rail_schedule
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.display import OnroadBrightness
 from openpilot.selfdrive.ui.sunnypilot.ui_state_zp import UIStateZP
 from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_active_source
-from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.sunnylink.sunnylink_state import SunnylinkState
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.sunnypilot.widgets.screen_saver import ScreenSaverSP
@@ -84,6 +80,7 @@ class UIStateSP(UIStateZP):
     self.torque_override_enabled: bool = False
     self.carrot_amap_blind_spot_enabled: bool = False
     # display-only overlays: radar points in the road view, signal evidence ring
+    self.radar_info_level: int = 0
     self.carrot_radar_points: bool = False
     self.carrot_signal_hud: bool = False
     self._sp_initialized: bool = False
@@ -112,6 +109,25 @@ class UIStateSP(UIStateZP):
 
     if self.onroad_brightness_timer > 0:
       self.onroad_brightness_timer -= 1
+
+  def _read_radar_info_level(self) -> int:
+    """Radar point overlay level, carrot's ShowRadarInfo scale: 0=off, 1=speed box,
+    2=+ lateral offset / distance, 3=+ static returns.
+
+    Migrates the old CarrotRadarPointsEnabled boolean once: an enabled switch that
+    never carried a level becomes level 2 (the uncluttered view), then the boolean
+    is cleared so the level param is the single source of truth.
+    """
+    try:
+      level = int(self.params.get_int("ShowRadarInfo"))
+    except (TypeError, ValueError):
+      level = 0
+    if self.params.get_bool("CarrotRadarPointsEnabled"):
+      if level <= 0:
+        level = 2
+        self.params.put_int("ShowRadarInfo", 2)
+      self.params.put_bool("CarrotRadarPointsEnabled", False)
+    return max(0, min(level, 3))
 
   def reset_onroad_sleep_timer(self, timer_status: OnroadTimerStatus = OnroadTimerStatus.NONE) -> None:
     # Toggling from active state to inactive
@@ -214,7 +230,8 @@ class UIStateSP(UIStateZP):
     self.always_offroad = self.params.get_bool("OffroadMode") or self.params.get_bool("OffroadModeRequested")  # applied or pending
     self.screensaver_enabled = self.params.get_bool("ScreenSaverEnabled")
     self.carrot_amap_blind_spot_enabled = self.params.get_bool("CarrotAmapBlindSpotEnabled")
-    self.carrot_radar_points = self.params.get_bool("CarrotRadarPointsEnabled")
+    self.radar_info_level = self._read_radar_info_level()
+    self.carrot_radar_points = self.radar_info_level > 0
     self.carrot_signal_hud = self.params.get_bool("CarrotSignalHudEnabled")
 
     if not self._sp_initialized:

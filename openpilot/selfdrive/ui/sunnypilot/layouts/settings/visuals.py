@@ -93,13 +93,6 @@ class VisualsLayout(Widget):
            "This displays what the car is currently doing, not what the planner is requesting."),
         None,
       ),
-      "CarrotRadarPointsEnabled": (
-        lambda: tr("Display Radar Points"),
-        tr("Draw the points the front radar is currently tracking in the road view, with their " +
-           "relative speed, lateral offset and distance." +
-           "<br><br>Display only. It does not change how the car drives."),
-        None,
-      ),
       "CarrotSignalHudEnabled": (
         lambda: tr("Neural Signal Assist Indicator (Experimental)"),
         tr("Draw a ring on the HUD with the traffic light evidence the neural model currently sees." +
@@ -121,6 +114,18 @@ class VisualsLayout(Widget):
       )
       self._toggles[param] = toggle
 
+    # Radar point overlay: carrot's ShowRadarInfo level scale (0-3). Replaces the
+    # old CarrotRadarPointsEnabled bool; ui_state migrates that switch once.
+    self._radar_points_info = multiple_button_item_sp(
+      title=lambda: tr("Display Radar Points"),
+      description=lambda: tr("Label what the front radar tracks on the road view." +
+                             "<br>Speed Only: relative speed on moving tracks. Speed + Distance: adds lateral offset " +
+                             "and distance. Full: every measured point, plus a marker for static returns." +
+                             "<br><br>Display only. It does not change how the car drives."),
+      buttons=[lambda: tr("Off"), lambda: tr("Speed Only"), lambda: tr("Speed + Distance"), lambda: tr("Full")],
+      param="ShowRadarInfo",
+      inline=False,
+    )
     self._chevron_info = multiple_button_item_sp(
       title=lambda: tr("Display Metrics Below Chevron"),
       description="",
@@ -138,6 +143,7 @@ class VisualsLayout(Widget):
     )
 
     items = list(self._toggles.values()) + [
+      self._radar_points_info,
       self._chevron_info,
       self._dev_ui_info,
     ]
@@ -149,6 +155,12 @@ class VisualsLayout(Widget):
     for param in self._toggle_defs:
       self._toggles[param].action_item.set_state(self._params.get_bool(param))
 
+    # a libparams_c.so older than the key must not take the settings page down
+    try:
+      radar_level = int(self._params.get("ShowRadarInfo", return_default=True))
+    except Exception:
+      radar_level = 0
+    self._radar_points_info.action_item.set_selected_button(radar_level)
     self._dev_ui_info.action_item.set_selected_button(ui_state.params.get("DevUIInfo", return_default=True))
 
     if ui_state.has_longitudinal_control:
