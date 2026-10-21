@@ -5,6 +5,7 @@ import time
 from openpilot.cereal import messaging
 from openpilot.common.hardware import COMMA_HARDWARE
 from openpilot.common.realtime import Priority, config_realtime_process, get_available_cores, set_core_affinity
+from openpilot.common.watchdog import kick_watchdog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.main import MainLayout
 from openpilot.selfdrive.ui.mici.layouts.main import MiciMainLayout
@@ -42,6 +43,9 @@ def main():
   ui_cores: set[int] = set()
   pm = messaging.PubMaster(['uiDebug'])
   for should_render, frame_time, cpu_time in gui_app.render():
+    # Tell the manager this process is still making progress. A render loop
+    # that stops ticking is exactly the failure restart_if_crash cannot see.
+    kick_watchdog()
     extra_start = time.monotonic()
     ui_state.update()
 

@@ -33,23 +33,48 @@ def _param_text(value) -> str:
 
 
 def current_vehicle_brand(params=None) -> str:
-  """Return the opendbc brand for the currently fingerprinted vehicle."""
+  """Return the opendbc brand for the currently fingerprinted vehicle.
+
+  The brand comes from a CarParams snapshot that is trustworthy: a MOCK
+  snapshot (written while the car process starts) is skipped, and a previous
+  route's snapshot is only used when it matches the forced model exactly.
+  Otherwise the settings page would show options for a car that is not
+  connected.
+  """
   if params is None:
     from .params import HAS_PARAMS, Params
     if not HAS_PARAMS or Params is None:
       return ""
     params = Params()
 
+  from openpilot.sunnypilot.common.car_capability import capability_snapshot
+
+  def extract(raw: bytes) -> str:
+    from opendbc.car.structs import car
+    import openpilot.cereal.messaging as messaging
+    return str(messaging.log_from_bytes(raw, car.CarParams).carFingerprint)
+
   try:
-    cp_bytes = params.get("CarParamsPersistent")
-    if cp_bytes:
+    is_onroad = bool(params.get_bool("IsOnroad"))
+  except Exception:
+    is_onroad = False
+
+  cp_bytes = capability_snapshot(
+    params,
+    is_onroad=is_onroad,
+    extract=extract,
+    get=lambda key: params.get(key),
+    get_bool=lambda key: bool(params.get_bool(key)),
+  )
+  if cp_bytes:
+    try:
       from opendbc.car.structs import car
       import openpilot.cereal.messaging as messaging
       brand = _param_text(messaging.log_from_bytes(cp_bytes, car.CarParams).brand).lower()
       if brand:
         return brand
-  except Exception:
-    pass
+    except Exception:
+      pass
 
   # CarName is available after fingerprinting and keeps the settings UI safe
   # if a damaged or older CarParamsPersistent value cannot be decoded.

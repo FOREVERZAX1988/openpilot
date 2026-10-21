@@ -19,6 +19,13 @@ from openpilot.sunnypilot.models.helpers import get_active_model_runner
 from openpilot.sunnypilot.sunnylink.utils import sunnylink_need_register, sunnylink_ready, use_sunnylink_uploader
 from openpilot.sunnypilot.system.manager.processes import extend_procs
 
+# A process that is alive but has stopped making progress is not caught by
+# restart_if_crash. These are the thresholds for the processes that are
+# watched. The control chain (the control, selfdrive and planner daemons)
+# is never watched: restarting it leaves a gap in the control output.
+UI_WATCHDOG_MAX_DT = int(os.getenv("UI_WATCHDOG_MAX_DT", "10"))
+CAMERAD_WATCHDOG_MAX_DT = int(os.getenv("CAMERAD_WATCHDOG_MAX_DT", "5"))
+
 WEBCAM = os.getenv("USE_WEBCAM") is not None
 LITE = os.getenv("LITE") is not None
 # Lets an external launcher own the carrot API/web stack, matching CarrotPilot's
@@ -261,7 +268,8 @@ procs = [
   # stays idle until a viewer session opens (CarrotVisionActive).
   NativeProcess("carrot_vision_encoderd", "openpilot/system/loggerd", ["./encoderd", "--carrot-vision-road"], and_(iscar, enable_webrtc)),
 
-  NativeProcess("camerad", "openpilot/system/camerad", ["./camerad"], or_(or_(driverview, livestream), onroad_preview), enabled=not WEBCAM),
+  NativeProcess("camerad", "openpilot/system/camerad", ["./camerad"], or_(or_(driverview, livestream), onroad_preview), enabled=not WEBCAM,
+                watchdog_max_dt=CAMERAD_WATCHDOG_MAX_DT),
   PythonProcess("webcamerad", "openpilot.system.camerad.webcam.camerad", driverview, enabled=WEBCAM),
   PythonProcess("proclogd", "openpilot.system.proclogd", only_onroad, enabled=platform.system() != "Darwin"),
   PythonProcess("journald", "openpilot.system.journald", only_onroad, platform.system() != "Darwin"),
@@ -279,7 +287,8 @@ procs = [
   PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", driverview, enabled=(WEBCAM or not PC) and not LITE),
 
   PythonProcess("sensord", "openpilot.system.sensord.sensord", only_onroad, enabled=not PC),
-  PythonProcess("ui", "openpilot.selfdrive.ui.ui", and_(always_run, builtin_display), restart_if_crash=True),
+  PythonProcess("ui", "openpilot.selfdrive.ui.ui", and_(always_run, builtin_display), restart_if_crash=True,
+                watchdog_max_dt=UI_WATCHDOG_MAX_DT),
   AudioProcess("soundd", "openpilot.selfdrive.ui.soundd", driverview, enabled=not LITE),
   PythonProcess("beepd", "openpilot.sunnypilot.selfdrive.ui.beepd", beep, enabled=LITE),
   PythonProcess("locationd", "openpilot.selfdrive.locationd.locationd", only_onroad),

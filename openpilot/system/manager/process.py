@@ -15,6 +15,7 @@ import openpilot.cereal.messaging as messaging
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.watchdog import clear_watchdog, read_watchdog_time, watchdog_timed_out
 
 
 def launcher(proc: str, name: str) -> None:
@@ -67,10 +68,41 @@ class ManagerProcess(ABC):
   name = ""
   shutting_down = False
   restart_if_crash = False
+  # How long the process may go without reporting progress before it is
+  # considered hung. None means it is not watched.
+  watchdog_max_dt: int | None = None
+  # Set once the process has reported in at least once, so a process that
+  # never started is not restarted in a loop.
+  watchdog_seen = False
 
   @abstractmethod
   def start(self) -> None:
     pass
+
+  def check_watchdog(self) -> None:
+    """Restart the process when it stopped making progress.
+
+    A process that is alive but stuck is not caught by restart_if_crash. The
+    daemon writes a heartbeat file while it works, and this compares the
+    timestamp in that file against the wall clock.
+    """
+    if self.watchdog_max_dt is None or self.proc is None or self.proc.pid is None:
+      return
+
+    dt = watchdog_timed_out(self.proc.pid, self.watchdog_max_dt)
+    if dt is None:
+      # No heartbeat yet. The first one may not have been written; only give
+      # up on a process that has reported before and then stopped.
+      if read_watchdog_time(self.proc.pid) is None:
+        self.watchdog_seen = False
+        return
+      self.watchdog_seen = True
+      return
+
+    cloudlog.error(f"Watchdog timeout for {self.name} ({dt:.1f}s without progress), restarting")
+    clear_watchdog(self.proc.pid)
+    self.watchdog_seen = False
+    self.restart()
 
   def restart(self) -> None:
     self.stop()
@@ -135,13 +167,14 @@ class ManagerProcess(ABC):
 
 
 class NativeProcess(ManagerProcess):
-  def __init__(self, name, cwd, cmdline, should_run, enabled=True, sigkill=False):
+  def __init__(self, name, cwd, cmdline, should_run, enabled=True, sigkill=False, watchdog_max_dt=None):
     self.name = name
     self.cwd = cwd
     self.cmdline = cmdline
     self.should_run = should_run
     self.enabled = enabled
     self.sigkill = sigkill
+    self.watchdog_max_dt = watchdog_max_dt
     self.launcher = nativelauncher
 
   def start(self) -> None:
@@ -160,13 +193,14 @@ class NativeProcess(ManagerProcess):
 
 
 class PythonProcess(ManagerProcess):
-  def __init__(self, name, module, should_run, enabled=True, sigkill=False, restart_if_crash=False):
+  def __init__(self, name, module, should_run, enabled=True, sigkill=False, restart_if_crash=False, watchdog_max_dt=None):
     self.name = name
     self.module = module
     self.should_run = should_run
     self.enabled = enabled
     self.sigkill = sigkill
     self.restart_if_crash = restart_if_crash
+    self.watchdog_max_dt = watchdog_max_dt
     self.launcher = launcher
 
   def start(self) -> None:
@@ -237,6 +271,9 @@ def ensure_running(procs: ValuesView[ManagerProcess], started: bool, params: Par
       if p.restart_if_crash and p.proc is not None and not p.proc.is_alive():
         cloudlog.error(f"Restarting {p.name} (exitcode {p.proc.exitcode})")
         p.restart()
+      elif p.proc is not None and p.proc.is_alive():
+        # The process is alive but may have stopped making progress.
+        p.check_watchdog()
       running.append(p)
     else:
       p.stop(block=False)

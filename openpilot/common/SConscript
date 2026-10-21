@@ -18,6 +18,7 @@ common_libs = [
   'util.cc',
   'ratekeeper.cc',
   'yuv.cc',
+  'watchdog.cc',
 ]
 
 _common = env.Library('common', common_libs + [_params_obj], LIBS="json11")
