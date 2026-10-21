@@ -11,6 +11,7 @@ from openpilot.cereal import custom
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.car.cruise import V_CRUISE_UNSET
+from openpilot.selfdrive.controls.lib.weather_offsets import WeatherOffsets
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
 from openpilot.sunnypilot.common import param_read
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control import MIN_V
@@ -123,6 +124,10 @@ class SmartCruiseControlVision:
     self.learning.load_fn = self._load_learning_data
     self.learning.put_fn = self._put_learning_data
     self.learning_enabled = False
+    # StarPilot weather margin on the lateral-acceleration ceiling (gated,
+    # default off; refreshed with the other params).
+    self.weather_enabled = False
+    self.weather_offsets = WeatherOffsets()
     self._learning_loaded = False
 
   def _load_learning_data(self):
@@ -243,6 +248,16 @@ class SmartCruiseControlVision:
     self.release_frames = 0
     return V_CRUISE_UNSET
 
+  def _weather_lat_accel_scale(self) -> float:
+    """The lateral-acceleration scale the current weather asks for.
+
+    1.0 when the weather feature is off or the user has not asked for a
+    margin, so the stock behaviour is unchanged.
+    """
+    if not self.weather_enabled:
+      return 1.0
+    return 1.0 - self.weather_offsets.reduce_lateral_acceleration
+
   def _update_params(self) -> None:
     if self.frame % int(PARAMS_UPDATE_PERIOD / DT_MDL) == 0:
       self.enabled = self.params.get_bool("SmartCruiseControlVision")
@@ -252,6 +267,14 @@ class SmartCruiseControlVision:
       if self.learning_enabled and not self._learning_loaded:
         self.learning.load()
         self._learning_loaded = True
+      # StarPilot weather margin on the lateral-acceleration ceiling.
+      self.weather_enabled = self.params.get_bool("WeatherOffsetsEnabled")
+      if self.weather_enabled:
+        state = self.params.get("WeatherState", return_default=True)
+        lateral = self.params.get_float("WeatherReduceLateralAcceleration", return_default=True)
+        self.weather_offsets = WeatherOffsets(state, lateral=lateral)
+      else:
+        self.weather_offsets = WeatherOffsets()
 
   def _update_learning(self, sm: messaging.SubMaster, long_enabled: bool) -> None:
     """Feed the StarPilot curvature learner (sampling + override watch)."""
@@ -303,6 +326,9 @@ class SmartCruiseControlVision:
           # factor scale (tuned / _A_LAT_REG_MAX) still applies on top.
           factor_scale = self.tuned_a_lat_reg_max / _A_LAT_REG_MAX
           a_lat_ceiling = self.learning.lat_accel_for_curvature(max_pred_curvature) * factor_scale
+        # StarPilot weather margin: a wet road lowers the lateral-acceleration
+        # ceiling, so the car takes the bend more slowly.
+        a_lat_ceiling *= self._weather_lat_accel_scale()
         self.v_target = min(float((a_lat_ceiling / max_pred_curvature) ** 0.5), V_CRUISE_UNSET)
 
   def _update_state_machine(self) -> tuple[bool, bool]:

@@ -53,12 +53,17 @@ def get_coast_accel(pitch):
   return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
 def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, accel_coast, allow_throttle,
-                      max_accel_override=None, carrot_max_accel=None):
+                      max_accel_override=None, carrot_max_accel=None, weather_accel_scale=1.0):
   if max_accel_override is not None:
     max_accel = max_accel_override
   else:
     max_accel = ACCEL_MAX if e2e else get_max_accel(v_ego)
   if not e2e:
+    # StarPilot weather margin: a wet road lowers the acceleration ceiling.
+    # The e2e branch is left alone - that path is the end-to-end model's own
+    # budget, not the driver's comfort setting.
+    if weather_accel_scale != 1.0 and math.isfinite(weather_accel_scale):
+      max_accel *= float(weather_accel_scale)
     a_total_max = np.interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V)
     a_y = v_ego ** 2 * angle_steers * CV.DEG_TO_RAD / (CP.steerRatio * CP.wheelbase)
     a_x_allowed = math.sqrt(max(a_total_max ** 2 - a_y ** 2, 0.))
@@ -114,6 +119,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
   def update(self, sm):
     LongitudinalPlannerSP.update(self, sm)
+    self.refresh_weather_offsets()
 
     if len(sm['carControl'].orientationNED) == 3:
       accel_coast = get_coast_accel(sm['carControl'].orientationNED[1])
@@ -169,6 +175,18 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     carrot_t_follow = None
     if self.carrot_source_active:
       carrot_t_follow = self.carrot_t_follow * self.mpc.t_follow_user_scale(personality, v_ego)
+
+    # StarPilot weather margin on the follow time. Kept separate from
+    # carrot_t_follow: that variable also decides whether the Carrot source
+    # is in charge further down, and the weather margin applies to the stock
+    # path too. The offset is zero unless the user asked for it.
+    weather_t_follow = self.weather_offsets.increase_following_distance
+
+    # The follow time that is actually in effect this frame. The Carrot
+    # source takes precedence, then the weather margin on top of whichever
+    # base is in use, then the stock personality value.
+    base_t_follow = carrot_t_follow if carrot_t_follow is not None else self.mpc.get_t_follow(personality, v_ego)
+    effective_t_follow = base_t_follow + weather_t_follow
 
     # CarrotPlanner longitudinal overrides (Option C). Only applied when the
     # carrot source is active, so stock behavior is untouched otherwise. These
@@ -227,8 +245,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       raw_uncertainty = compute_raw_uncertainty(sm['modelV2'].meta)
       uncertainty, _uncertainty_accel, uncert_slope = self._uncert_tracker.update(
         raw_uncertainty, sm.logMonoTime['modelV2'] / 1e9)
-      uncert_t_follow = carrot_t_follow if (self.carrot_source_active and carrot_t_follow is not None) \
-        else self.mpc.get_t_follow(personality, v_ego)
+      uncert_t_follow = effective_t_follow
       uncert_lead = sm['radarState'].leadOne
       if uncert_lead is not None and uncert_lead.present:
         scene_desired_gap = float(desired_follow_distance(
@@ -237,7 +254,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
         panic_bypass = should_panic_bypass(uncertainty, uncert_slope, panic_close_window, closing_fast)
 
     self.mpc.update(sm['radarState'], personality=personality,
-                    t_follow=carrot_t_follow,
+                    t_follow=effective_t_follow,
                     model_leads=sm['modelV2'].leadsV3 if self.model_lead_enabled else None,
                     duplicate_guard_enabled=self.duplicate_guard_enabled,
                     panic_bypass=panic_bypass,
@@ -274,12 +291,15 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
     max_accel_override = self.get_max_accel_override(v_ego, sm['carStateSP'].engineOff)
     carrot_max_accel = self.get_carrot_max_accel(sm, v_ego, v_cruise)
+    weather_accel_scale = 1.0 - self.weather_offsets.reduce_acceleration
     v_cruise = self.get_cruise_target_override(v_ego, v_cruise, force_decel, accel_coast if accel_coast < 0.0 else None)
     a_cruise_prev = self.a_cruise
     gated_cruise = get_cruise_accel(is_e2e, v_cruise, v_ego, a_cruise_prev, steer_angle_without_offset,
-                                    self.CP, self.dt, accel_coast, self.allow_throttle, max_accel_override, carrot_max_accel)
+                                    self.CP, self.dt, accel_coast, self.allow_throttle, max_accel_override,
+                                    carrot_max_accel, weather_accel_scale)
     ungated_cruise = get_cruise_accel(is_e2e, v_cruise, v_ego, a_cruise_prev, steer_angle_without_offset,
-                                      self.CP, self.dt, accel_coast, True, max_accel_override, carrot_max_accel)
+                                      self.CP, self.dt, accel_coast, True, max_accel_override,
+                                      carrot_max_accel, weather_accel_scale)
     self.a_cruise = self.arbitrate_cruise_candidate(
       sm, gated_cruise, ungated_cruise, output_a_target_mpc, self.mpc.source,
       allow_throttle=self.allow_throttle, e2e=is_e2e, force_decel=force_decel,
@@ -303,8 +323,6 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self._policy_frame += 1
     if self._policy_frame % 20 == 0:
       self.lead_follow_policy_enabled = self._params.get_bool("LeadFollowPolicyEnabled")
-    effective_t_follow = carrot_t_follow if (self.carrot_source_active and carrot_t_follow is not None) \
-      else self.mpc.get_t_follow(personality, v_ego)
     if self.lead_follow_policy_enabled and self.mpc.source in (LongitudinalPlanSource.lead0, LongitudinalPlanSource.lead1):
       follow_result = apply_follow_policy(
         sm['radarState'].leadOne, sm['radarState'].leadTwo,

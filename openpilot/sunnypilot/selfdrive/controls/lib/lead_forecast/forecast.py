@@ -142,10 +142,12 @@ class LeadForecast:
         report.x = lead_xv[:, 0].tolist()
         report.v = lead_xv[:, 1].tolist()
 
-  def process_lead(self, lead) -> np.ndarray:
+  def process_lead(self, lead, **kwargs) -> np.ndarray:
     i = self._calls
     self._calls += 1
-    lead_xv = self._upstream_process_lead(lead)
+    # 045e473a33: the MPC now passes lead_index/model_lead/smooth_duplicate_vision
+    # through process_lead, so this wrapper forwards whatever it is handed.
+    lead_xv = self._upstream_process_lead(lead, **kwargs)
     if (i < 2 and lead is not None and lead.present and self.weights[i] > 0. and self.v_knots[i] is not None and
         math.isfinite(lead.dRel) and math.isfinite(lead.vLead)):
       v_knots = self.v_knots[i]

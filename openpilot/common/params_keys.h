@@ -390,6 +390,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"FlmRuntimeOverridesEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM runtime injection: apply the friction curve / vehicle knobs from FLMActiveOverrides to the torque controller
     {"LongitudinalFollowingProfileEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot speed-dependent following profiles: interpolate the follow time over speed instead of using one number per personality
     {"LongitudinalFollowingProfile", {PERSISTENT | BACKUP, STRING}},  // JSON document: {aggressive|standard|relaxed: {preset, curve}} for LongitudinalFollowingProfileEnabled
+    {"WeatherOffsetsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot weather adaptation: lengthen the follow time, widen the stopped gap and lower the accel/lateral-accel ceilings in bad weather
+    {"WeatherState", {PERSISTENT | BACKUP, STRING}},  // clear | rain | rain_storm | snow | low_visibility
+    {"WeatherIncreaseFollowing", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // seconds added to the follow time (0..3)
+    {"WeatherIncreaseStoppedDistance", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // meters added to the stopped gap (0..20)
+    {"WeatherReduceAcceleration", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // fraction by which the acceleration ceiling is reduced (0..1)
+    {"WeatherReduceLateralAcceleration", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // fraction by which the lateral-acceleration ceiling is reduced (0..1)
     {"LeadFollowPolicyEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"LeadStopDepartPolicyEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot stop/depart policy: vision approach caps, close-stop hold floors, standstill lead depart
 

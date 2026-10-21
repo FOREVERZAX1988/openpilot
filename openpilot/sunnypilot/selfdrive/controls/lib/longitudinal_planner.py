@@ -18,6 +18,7 @@ from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan
+from openpilot.selfdrive.controls.lib.weather_offsets import WeatherOffsets
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import AccelController
 from openpilot.sunnypilot.selfdrive.controls.lib.turn_accel import get_future_curvature, limit_accel_in_turns
@@ -126,6 +127,13 @@ class LongitudinalPlannerSP:
     self._lead_preview_enabled = self._params.get_bool("CarrotLeadPreviewEnabled")
     self._lead_preview = 0.0
     self._lead_preview_accel = 0.0
+
+    # StarPilot weather-conditioned offsets (gated, default off). The four
+    # offsets are user-facing knobs, so they are refreshed on the same slow
+    # cadence as the switches above.
+    self._weather_frame = 0
+    self.weather_enabled = self._params.get_bool("WeatherOffsetsEnabled")
+    self.weather_offsets = WeatherOffsets()
     # Carrot cruise coasting (default off): a fixed physical m/s reference for
     # the overspeed band. longcontrol applies the actual brake relief; here we
     # only decide eligibility and publish the reference for that consumer.
@@ -173,6 +181,29 @@ class LongitudinalPlannerSP:
       return True
 
     return False
+
+  def refresh_weather_offsets(self) -> None:
+    """Re-read the weather offsets from Params.
+
+    The weather state and the four offsets are user-facing knobs, so they are
+    refreshed on the same slow cadence as the other planner switches.
+    """
+    self._weather_frame += 1
+    if self._weather_frame % 20 != 0:
+      return
+
+    self.weather_enabled = self._params.get_bool("WeatherOffsetsEnabled")
+    if not self.weather_enabled:
+      self.weather_offsets = WeatherOffsets()
+      return
+
+    state = self._params.get("WeatherState", return_default=True)
+    following = self._params.get_float("WeatherIncreaseFollowing", return_default=True)
+    stopped = self._params.get_float("WeatherIncreaseStoppedDistance", return_default=True)
+    accel = self._params.get_float("WeatherReduceAcceleration", return_default=True)
+    lateral = self._params.get_float("WeatherReduceLateralAcceleration", return_default=True)
+    self.weather_offsets = WeatherOffsets(state, following=following, stopped=stopped,
+                                          acceleration=accel, lateral=lateral)
 
   def get_max_accel_override(self, v_ego: float, engine_off: bool = False, lead=None) -> float | None:
     if not self.accel_controller.is_enabled():
