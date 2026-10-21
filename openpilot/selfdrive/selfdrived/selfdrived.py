@@ -24,6 +24,7 @@ from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
 from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EmptyAlert
+from openpilot.sunnypilot.common.safety_guards import CommIssueGrace
 
 from openpilot.common.version import get_build_metadata
 from openpilot.common.hardware import HARDWARE
@@ -166,6 +167,10 @@ class SelfdriveD(CruiseHelper):
     self.last_functional_fan_frame = 0
     self.events_prev = []
     self.logged_comm_issue = None
+    # Data that is present but stale gets a short grace period before it is
+    # called a communication issue. A publisher that is dead or slow is
+    # reported immediately.
+    self.comm_issue_grace = CommIssueGrace()
     self.not_running_prev = None
     self.experimental_mode = False
     # 车距档位自跟踪（与 carstate.stock_zeitluecke 同源：值1=拉近-1/值2=拉远+1，默认3格）
@@ -394,6 +399,11 @@ class SelfdriveD(CruiseHelper):
       if not self.excessive_actuation and excessive_actuation is not None:
         set_offroad_alert("Offroad_ExcessiveActuation", True, extra_text=str(excessive_actuation))
         self.excessive_actuation = True
+      elif self.excessive_actuation and excessive_actuation is None:
+        # The condition is gone. The alert has to be cleared, or it stays on
+        # screen and keeps blocking whatever reads it.
+        set_offroad_alert("Offroad_ExcessiveActuation", False)
+        self.excessive_actuation = False
 
     if self.excessive_actuation:
       self.events.add(EventName.excessiveActuation)
@@ -492,23 +502,31 @@ class SelfdriveD(CruiseHelper):
     warmup_sec = 5.
     big_model_settling = self.big_model_loading or time.monotonic() < self.big_model_ready_t + warmup_sec or self.model_events.settling
     if not self.sm.all_checks() and no_system_errors and not big_model_settling:  # the load holds modelV2 and friends back on purpose
-      if not self.sm.all_alive():
-        self.events.add(EventName.commIssue)
-      elif not self.sm.all_freq_ok():
-        self.events.add(EventName.commIssueAvgFreq)
-      else:
-        self.events.add(EventName.commIssue)
+      all_alive = self.sm.all_alive()
+      all_freq_ok = self.sm.all_freq_ok()
+      # A dead or slow publisher is a real fault and is reported at once.
+      # Data that is merely stale gets a short grace period first.
+      comm_issue = self.comm_issue_grace.update(
+        all_checks=False, all_alive=all_alive, all_freq_ok=all_freq_ok)
+      if comm_issue:
+        if not all_alive:
+          self.events.add(EventName.commIssue)
+        elif not all_freq_ok:
+          self.events.add(EventName.commIssueAvgFreq)
+        else:
+          self.events.add(EventName.commIssue)
 
-      logs = {
-        'invalid': [s for s, valid in self.sm.valid.items() if not valid],
-        'not_alive': [s for s, alive in self.sm.alive.items() if not alive],
-        'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok],
-      }
-      if logs != self.logged_comm_issue:
-        cloudlog.event("commIssue", error=True, **logs)
-        self.logged_comm_issue = logs
+        logs = {
+          'invalid': [s for s, valid in self.sm.valid.items() if not valid],
+          'not_alive': [s for s, alive in self.sm.alive.items() if not alive],
+          'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok],
+        }
+        if logs != self.logged_comm_issue:
+          cloudlog.event("commIssue", error=True, **logs)
+          self.logged_comm_issue = logs
     else:
       self.logged_comm_issue = None
+      self.comm_issue_grace.reset()
 
     if not self.CP.notCar and not big_model_settling:  # localization has nothing to work with during the load
       # the defaults of a message that was never received are not a localizer failure

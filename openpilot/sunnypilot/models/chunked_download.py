@@ -24,6 +24,10 @@ import urllib.parse
 
 from pathlib import Path
 
+# A Git LFS pointer file starts with this exact line. It stands in for the
+# real artifact and must never be published as one.
+LFS_POINTER = b'version https://git-lfs.github.com/spec/v1'
+
 import requests
 
 from openpilot.common.file_chunker import get_chunk_name, get_manifest_path
@@ -179,6 +183,10 @@ def _download_from_source(destination, base_url, chunk_count, expected_size=None
         raise ChunkedDownloadError(f"Downloaded size mismatch for {destination.name}: {downloaded_size} != {expected_size}")
       if expected_sha256 and digest.hexdigest() != expected_sha256:
         raise ChunkedDownloadError(f"SHA-256 mismatch for chunked {destination.name}")
+      if _is_lfs_pointer_file(temporary_paths):
+        # The server handed back a Git LFS pointer instead of the artifact.
+        # Publishing it would leave a model that looks installed but is not.
+        raise ChunkedDownloadError(f"Artifact {destination.name} is a Git LFS pointer, not the model")
 
       # promote the verified temp files into file_chunker layout
       delete_chunked_artifact(destination)
@@ -195,6 +203,23 @@ def _download_from_source(destination, base_url, chunk_count, expected_size=None
     raise
   except (requests.RequestException, OSError):
     return False
+
+
+def _is_lfs_pointer_file(paths) -> bool:
+  """Whether any of the downloaded files is a Git LFS pointer.
+
+  A pointer is a ~130 byte text file. When the expected size is not known it
+  would pass the size check and only fail on the checksum, which reads as a
+  corrupt download rather than as "the server served the wrong thing".
+  """
+  for path in paths:
+    try:
+      with open(path, 'rb') as f:
+        if f.read(len(LFS_POINTER)) == LFS_POINTER:
+          return True
+    except OSError:
+      continue
+  return False
 
 
 def _remote_file_size(url: str) -> int:

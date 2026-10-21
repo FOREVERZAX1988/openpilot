@@ -10,6 +10,11 @@ import threading
 import zlib
 from typing import Any
 
+from openpilot.sunnypilot.common.safety_guards import (
+  blocked_onroad_reason,
+  is_param_action_safe_onroad,
+)
+
 try:
   import brotli
 except Exception:
@@ -390,6 +395,19 @@ def read_param_backup_values(path: str) -> dict[str, Any]:
   return filter_param_backup_values(values)
 
 
+def _is_onroad(params) -> bool:
+  """Whether the car is currently moving.
+
+  The read is defensive: a device whose parameter library predates the key
+  must not take the server down, and an unknown key means "not known to be
+  onroad", which is the safe answer for a guard that blocks writes.
+  """
+  try:
+    return bool(params.get_bool("IsOnroad"))
+  except Exception:
+    return False
+
+
 def set_param_value(name: str, value: Any, p: dict[str, Any] | None = None) -> None:
   if name in INTERNAL_SESSION_PARAMS:
     raise ValueError(f"{name} is controlled internally")
@@ -397,6 +415,13 @@ def set_param_value(name: str, value: Any, p: dict[str, Any] | None = None) -> N
     _mem_store[name] = str(value)
     return
   params = Params()
+
+  # A parameter that changes how the car drives must not be changed while
+  # the car is moving: the control loop and the user would disagree about
+  # the car's configuration. StarPilot keeps the same blocklist.
+  if not is_param_action_safe_onroad(name, _is_onroad(params)):
+    raise ValueError(blocked_onroad_reason(name, True))
+
   try:
     put_typed(params, name, value, p)
   except Exception as exc:
