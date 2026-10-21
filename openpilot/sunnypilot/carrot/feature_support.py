@@ -112,7 +112,7 @@ def current_fingerprint() -> str | None:
 
     raw = Params().get("CarParams")
     if raw is not None:
-      from cereal import car
+      from opendbc.car.structs import car
 
       with car.CarParams.from_bytes(raw) as cp:
         fp = str(cp.carFingerprint) or None

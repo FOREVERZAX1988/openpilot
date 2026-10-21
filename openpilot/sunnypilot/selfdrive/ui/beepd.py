@@ -5,7 +5,8 @@ import subprocess
 import time
 import threading
 
-from cereal import car, messaging
+from opendbc.car.structs import car
+from openpilot.cereal import messaging
 from openpilot.common.hardware.comma.pins import GPIO
 from openpilot.common.realtime import Ratekeeper
 
