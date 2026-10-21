@@ -11,6 +11,7 @@ Groups inside a page are separated by `LineSeparatorSP`, matching how the rest o
 the sunnypilot settings pages express grouping (see steering.py, models.py).
 """
 from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot import feature_support
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
   LineSeparatorSP, button_item_sp, option_item_sp, section_heading_sp, toggle_item_sp,
@@ -20,8 +21,11 @@ def build_start_items():
   return [
     section_heading_sp(tr('Auto Start / Cruise')),
     section_heading_sp(tr('Auto Gas')),
+    # Tesla / BYD only: registered in feature_support, so on the Macan the row stays
+    # visible but grey and cannot be turned on (default is off either way).
     option_item_sp(title=tr('Auto Gas Sync Speed'), param='AutoGasSyncSpeed', min_value=0, max_value=200, value_change_step=5,
-                   description=tr('Speed at which cruise set speed is re-synchronized. Tesla BYD only.')),
+                   description=feature_support.describe('AutoGasSyncSpeed', tr('Speed at which cruise set speed is re-synchronized. Tesla BYD only.')),
+                   enabled=feature_support.ui_enabled('AutoGasSyncSpeed')),
     option_item_sp(title=tr('Eco Cruise Control'), param='CruiseEcoControl', min_value=0, max_value=3, value_change_step=1),
 
   ]
@@ -231,8 +235,10 @@ def build_display_items():
 def build_vehicle_items():
   return [
     section_heading_sp(tr('Radar / Tracks')),
+    # BYD corner radar only: greyed + locked on the Macan, see feature_support.
     toggle_item_sp(title=tr('Enable Radar Tracks'), param='EnableRadarTracks',
-                   description=tr('BYD only: feed corner-radar tracks into the radar interface.')),
+                   description=feature_support.describe('EnableRadarTracks', tr('BYD only: feed corner-radar tracks into the radar interface.')),
+                   enabled=feature_support.ui_enabled('EnableRadarTracks')),
     option_item_sp(title=tr('Alert Volume'), param='SoundVolumeAdjust', min_value=5, max_value=200, value_change_step=5,
                    description=tr('Scale every alert sound, in percent. 100 keeps the current loudness.')),
     option_item_sp(title=tr('Engage Chime Volume'), param='SoundVolumeAdjustEngage', min_value=5, max_value=200, value_change_step=5,

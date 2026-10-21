@@ -55,6 +55,18 @@ def main() -> int:
   except Exception as exc:
     print(f"[carrot_server] failed to set core affinity: {exc}", flush=True)
 
+  # Features that are ported but inert on this car: force them back to off once per
+  # boot, so a value left by an earlier build (or restored from a Params backup taken on
+  # another car) cannot drive a switch the UI already shows as greyed out.
+  try:
+    from openpilot.sunnypilot.carrot.feature_support import enforce as enforce_feature_support
+
+    forced = enforce_feature_support()
+    if forced:
+      print(f"[carrot_server] forced off (not supported on this car): {', '.join(forced)}", flush=True)
+  except Exception as exc:
+    print(f"[carrot_server] feature_support enforce skipped: {exc}", flush=True)
+
   from openpilot.sunnypilot.carrot.server.app import create_app
 
   logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
