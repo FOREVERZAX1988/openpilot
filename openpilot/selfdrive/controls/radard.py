@@ -121,6 +121,9 @@ class Track:
     self.K_C = kalman_params.C
     self.K_K = kalman_params.K
     self.kf = KF1D([[v_lead], [0.0]], self.K_A, self.K_C, self.K_K)
+    # StarPilot adjacent-lane stopped-vehicle detector history
+    from openpilot.selfdrive.controls.lib.adjacent_stop_detector import AdjacentStopHistory
+    self.stop_history = AdjacentStopHistory()
 
   def update(self, d_rel: float, y_rel: float, v_rel: float, v_lead: float):
     # relative values, copy
@@ -141,6 +144,11 @@ class Track:
       self.aLeadTau.x = _LEAD_ACCEL_TAU
     else:
       self.aLeadTau.update(0.0)
+
+    # StarPilot adjacent-lane stopped-vehicle detector: deceleration history
+    # per track (moving -> rest transition). Pure bookkeeping; consumers gate
+    # the actual detection (see controls/lib/adjacent_stop_detector.py).
+    self.stop_history.update_history(v_lead)
 
     self.cnt += 1
 
