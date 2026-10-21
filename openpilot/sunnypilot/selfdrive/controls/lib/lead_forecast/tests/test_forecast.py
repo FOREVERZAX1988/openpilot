@@ -3,9 +3,18 @@ Copyright (c) 2026-, Zeph Leggett.
 
 This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
+
+Ported to stdlib unittest (2026-10): upstream ships this as pytest functions,
+and the device has neither pytest nor msgq, so the module had never been
+executed anywhere it mattered. The bodies are unchanged; only the discovery
+mechanism is (TestCase + assertAlmostEqual, in place of approx).
+
+    python -m unittest openpilot.sunnypilot.selfdrive.controls.lib.lead_forecast.tests.test_forecast
 """
+import pathlib
+
 import numpy as np
-import pytest
+import unittest
 
 import openpilot.cereal.messaging as messaging
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc, T_IDXS
@@ -61,7 +70,7 @@ def run(forecast, mpc, sm, frames=FULL_BLEND_FRAMES):
 SLOWING = [15., 11., 7., 4., 2., 1.]
 
 
-class TestForecastShape:
+class TestForecastShape(unittest.TestCase):
   def test_speed_is_the_models_change_on_vlead(self):
     # the model sees the lead 1 m/s faster than radarState does; only its change counts
     v = forecast_speed(15., np.array(SLOWING) + 1.)
@@ -96,7 +105,7 @@ class TestForecastShape:
     assert (np.diff(xv[:, 0]) >= 0.).all()
 
 
-class TestMpcHook:
+class TestMpcHook(unittest.TestCase):
   def test_disabled_is_upstream(self):
     mpc, forecast, upstream = build(enabled=False)
     sm = build_sm(model_v=SLOWING)
@@ -143,7 +152,7 @@ class TestMpcHook:
     mpc, forecast, upstream = build()
     sm = build_sm(model_v=SLOWING)
     run(forecast, mpc, sm, frames=1)
-    assert forecast.weights[0] == pytest.approx(BLEND_RATE * 0.05)
+    self.assertAlmostEqual(forecast.weights[0], BLEND_RATE * 0.05)
     run(forecast, mpc, sm)
     assert forecast.weights[0] == 1.
     rs = sm['radarState'].as_builder()
@@ -171,7 +180,7 @@ class TestMpcHook:
     mpc, forecast, upstream = build()
     sm = build_sm(d_rel=2., v_lead=5.)
     lead_xv = run(forecast, mpc, sm)
-    assert lead_xv[0, 0] == pytest.approx(upstream(sm['radarState'].leadOne)[0, 0])
+    self.assertAlmostEqual(lead_xv[0, 0], upstream(sm['radarState'].leadOne)[0, 0])
     assert lead_xv[0, 0] > 2.
 
   def test_upstream_tau_unchanged(self):
@@ -179,7 +188,7 @@ class TestMpcHook:
     assert _LEAD_ACCEL_TAU == 1.5
 
 
-class TestGuards:
+class TestGuards(unittest.TestCase):
   def test_braking_lead_may_not_speed_up(self):
     v = forecast_speed(10., [10., 12., 14., 14., 14., 14.], a_lead=-1.5)
     np.testing.assert_allclose(v, 10.)
@@ -247,3 +256,25 @@ class TestGuards:
     sm['radarState'] = rs.as_reader()
     run(forecast, mpc, sm)
     assert forecast.inhibits[0] == Inhibit.none
+
+
+class TestRunnerContract(unittest.TestCase):
+  """Why this exists: these modules sat in the tree for weeks and never ran.
+
+  Upstream wrote them for pytest; the device has no pytest and no msgq, so the
+  suite was green only in the sense that nobody could run it. The runner is
+  therefore part of the contract, not a detail - if someone reintroduces the
+  import, this fails here rather than silently in the field.
+  """
+
+  def test_no_sibling_test_module_needs_pytest(self):
+    here = pathlib.Path(__file__).resolve().parent
+    # Built at runtime so this file does not match its own needle.
+    needle = 'import' + ' pytest'
+    offenders = [q.name for q in sorted(here.glob('test_*.py'))
+                 if q.name != pathlib.Path(__file__).name and needle in q.read_text()]
+    self.assertEqual(offenders, [], f'{offenders} need pytest; the device does not have it')
+
+
+if __name__ == '__main__':
+  unittest.main()

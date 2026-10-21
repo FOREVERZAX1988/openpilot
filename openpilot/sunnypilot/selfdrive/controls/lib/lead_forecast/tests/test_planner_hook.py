@@ -6,9 +6,13 @@ See the LICENSE.md file in the root directory for more details.
 
 The planner hooks: the forecast reaches the MPC through the planner and the plan reports it, and
 the follow-distance assist reports from the same plan.
+
+Ported to stdlib unittest (2026-10) for the same reason as test_forecast.py: upstream
+ships pytest functions, and neither the device nor a bare PC has pytest + msgq, so the
+bodies had never run anywhere. Bodies unchanged.
 """
 import numpy as np
-import pytest
+import unittest
 
 from openpilot.cereal import messaging
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS
@@ -67,26 +71,30 @@ def publish(planner, sm):
   return sent['longitudinalPlanSP'].longitudinalPlanSP.zoompilot
 
 
-def test_off_reaches_the_mpc_as_upstream():
-  planner, sm = run(False)
-  report = publish(planner, sm)
-  assert report.leadForecast.leadOne.inhibit == Inhibit.disabled
-  assert report.leadForecast.leadOne.weight == 0.
-  assert report.e2eLeadGap.inhibit == GapInhibit.disabled
+class TestPlannerHook(unittest.TestCase):
+  def test_off_reaches_the_mpc_as_upstream(self):
+    planner, sm = run(False)
+    report = publish(planner, sm)
+    assert report.leadForecast.leadOne.inhibit == Inhibit.disabled
+    assert report.leadForecast.leadOne.weight == 0.
+    assert report.e2eLeadGap.inhibit == GapInhibit.disabled
+
+  def test_on_reaches_the_mpc(self):
+    off, _ = run(False)
+    planner, sm = run(True)
+    lead = publish(planner, sm).leadForecast.leadOne
+    self.assertEqual(lead.inhibit, Inhibit.none)
+    self.assertAlmostEqual(lead.weight, 1.)
+    assert len(lead.x) == len(T_IDXS)
+    np.testing.assert_allclose(lead.v, forecast_trajectory(D_REL, SLOWING)[:, 1], rtol=1e-5)
+    # a lead the model sees slowing hard: the plan brakes harder than upstream's extrapolation
+    assert planner.mpc.a_solution[:6].min() < off.mpc.a_solution[:6].min() - 0.1
+
+  def test_lead_gap_reports_why_it_idles(self):
+    planner, sm = run(True)
+    # the lead's forecast slows by far more than LEAD_SLOWDOWN
+    assert publish(planner, sm).e2eLeadGap.inhibit == GapInhibit.leadBraking
 
 
-def test_on_reaches_the_mpc():
-  off, _ = run(False)
-  planner, sm = run(True)
-  lead = publish(planner, sm).leadForecast.leadOne
-  assert lead.inhibit == Inhibit.none and lead.weight == pytest.approx(1.)
-  assert len(lead.x) == len(T_IDXS)
-  np.testing.assert_allclose(lead.v, forecast_trajectory(D_REL, SLOWING)[:, 1], rtol=1e-5)
-  # a lead the model sees slowing hard: the plan brakes harder than upstream's extrapolation
-  assert planner.mpc.a_solution[:6].min() < off.mpc.a_solution[:6].min() - 0.1
-
-
-def test_lead_gap_reports_why_it_idles():
-  planner, sm = run(True)
-  # the lead's forecast slows by far more than LEAD_SLOWDOWN
-  assert publish(planner, sm).e2eLeadGap.inhibit == GapInhibit.leadBraking
+if __name__ == '__main__':
+  unittest.main()
