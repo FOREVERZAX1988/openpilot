@@ -353,6 +353,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     // Vision speed limit daemon (speed_limit_vision)
     {"SpeedLimitVisionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // manager gate: run the vision speed-limit daemon onroad
+    {"VisionSpeedLimitEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // feed the detected vision limit into the speed-limit resolver (folded into the map source)
+    {"VisionSpeedLimitLowLimitFilter", {PERSISTENT | BACKUP, BOOL, "0"}},  // drop vision limits at or below the threshold (usually a misread sign)
+    {"VisionSpeedLimitLowLimitThreshold", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // m/s
     {"VASMEnabled", {PERSISTENT, BOOL, "0"}},  // coexistence mode with the VASM detection stack
     {"VisionSpeedLimit", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, FLOAT, "0.0"}},  // latest published vision limit in m/s
     {"VisionSpeedLimitAutoBookmark", {PERSISTENT, BOOL, "0"}},  // capture debug bookmarks on confirmed detections

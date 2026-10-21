@@ -4,6 +4,7 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+import platform
 import time
 
 import openpilot.cereal.messaging as messaging
@@ -14,10 +15,14 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD, get_sanitize_int_param
+from openpilot.sunnypilot.common.param_read import read_bool, read_float
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.limits import COMMIT_FRAC, get_planning_limits
-from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import LIMIT_MAX_MAP_DATA_AGE, LIMIT_ADAPT_ACC
-from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.limits import COMMIT_FRAC, get_planning_limits
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import LIMIT_MAX_MAP_DATA_AGE, LIMIT_ADAPT_ACC, V_CRUISE_UNSET
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Policy, OffsetType
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.vision_limit import (
+  merge_lower_limit,
+  resolve_vision_limit,
+)
 
 SpeedLimitSource = custom.LongitudinalPlanSP.SpeedLimit.Source
 
@@ -61,6 +66,12 @@ class SpeedLimitResolver:
     self._adapt_acc = -COMMIT_FRAC * get_planning_limits(CP).a_budget if CP is not None else LIMIT_ADAPT_ACC
 
     self._gps_location_service = get_gps_location_service(self.params)
+    # The vision limit daemon publishes to the shared-memory params, so the
+    # resolver reads them from there rather than from a message.
+    self.mem_params = Params("/dev/shm/params") if platform.system() != "Darwin" else self.params
+    # param_read so a device without a rebuilt libparams_c.so degrades to "off"
+    # instead of dying on UnknownKeyName (see param_read.py).
+    self.use_vision_limits = read_bool(self.params, "VisionSpeedLimitEnabled")
     self.limit_solutions = {}  # Store for speed limit solutions from different sources
     self.distance_solutions = {}  # Store for distance to current speed limit start for different sources
 
@@ -128,6 +139,7 @@ class SpeedLimitResolver:
       self.offset_type = self.params.get("SpeedLimitOffsetType", return_default=True)
       self.offset_value = self.params.get("SpeedLimitValueOffset", return_default=True)
       self.use_carrot_limits = self.params.get_bool("CarrotNavCruiseSpeedEnabled")
+      self.use_vision_limits = read_bool(self.params, "VisionSpeedLimitEnabled")
 
   def _get_speed_limit_offset(self) -> float:
     if self.offset_type == OffsetType.off:
@@ -148,10 +160,87 @@ class SpeedLimitResolver:
     self.limit_solutions[SpeedLimitSource.car] = sm['carStateSP'].speedLimit
     self.distance_solutions[SpeedLimitSource.car] = 0.
 
+  def _vision_limit(self, sm: messaging.SubMaster) -> float:
+    """The speed limit the vision daemon currently sees, in m/s.
+
+    Zero when the feature is off or the daemon has no reading. The daemon
+    publishes to the shared-memory params, which is where the vision
+    pipeline already writes, so no new message and no cereal change is
+    needed.
+
+    The decision rules live in vision_limit.py, which is plain logic and
+    unit tested on its own.
+    """
+    if not self.use_vision_limits:
+      return 0.0
+
+    try:
+      raw_limit = self.mem_params.get_float("VisionSpeedLimit")
+    except Exception:
+      return 0.0
+
+    support_count = 0
+    support_speed = 0.0
+    try:
+      support_count = self.mem_params.get_int("VisionSpeedLimitSupportCount")
+      support_speed = self.mem_params.get_float("VisionSpeedLimitSupportSpeed")
+    except Exception:
+      pass
+
+    return resolve_vision_limit(
+      raw_limit,
+      self._vision_reference_speed(sm),
+      bool(sm['carState'].standstill),
+      support_count=support_count,
+      support_speed=support_speed,
+      low_limit_filter=read_bool(self.params, "VisionSpeedLimitLowLimitFilter"),
+      low_limit_threshold=read_float(self.params, "VisionSpeedLimitLowLimitThreshold"),
+    )
+
+  def _vision_reference_speed(self, sm: messaging.SubMaster) -> float:
+    """The speed a vision limit is compared against.
+
+    The set speed when there is one, otherwise the current speed. A car
+    driving at its set speed with a sign far away from it is the usual
+    case; at standstill there is nothing to compare against, which is why
+    the caller skips the check there.
+    """
+    try:
+      set_speed_kph = float(sm['carState'].vCruise)
+    except Exception:
+      set_speed_kph = 0.0
+
+    if 0.0 < set_speed_kph < V_CRUISE_UNSET:
+      return set_speed_kph * CV.KPH_TO_MS
+    return max(float(self.v_ego), 0.0)
+
+  def _merge_vision_speed_limit(self, sm: messaging.SubMaster) -> None:
+    """Fold the vision limit into the `map` source.
+
+    The vision pipeline is a separate detection source, but adding an
+    enumerant to ``LongitudinalPlanSP.SpeedLimit.Source`` would change the
+    cereal schema and invalidate every recorded route. The carrot limit is
+    folded into `map` for the same reason.
+
+    The merged value can only *lower* the map solution, never raise it, so
+    the map limit stays authoritative and the vision limit acts as an extra
+    brake.
+    """
+    vision_limit = self._vision_limit(sm)
+    if vision_limit <= 0.0:
+      return
+
+    current = self.limit_solutions.get(SpeedLimitSource.map, 0.0)
+    merged = merge_lower_limit(current, vision_limit)
+    if merged != current:
+      self.limit_solutions[SpeedLimitSource.map] = merged
+      self.distance_solutions[SpeedLimitSource.map] = 0.0
+
   def _get_from_map_data(self, sm: messaging.SubMaster) -> None:
     self._reset_limit_sources(SpeedLimitSource.map)
     self._process_map_data(sm)
     self._merge_carrot_speed_limit(sm)
+    self._merge_vision_speed_limit(sm)
 
   def _merge_carrot_speed_limit(self, sm: messaging.SubMaster) -> None:
     """Fold the carrot phone-navigation limit into the `map` source.
