@@ -21,22 +21,37 @@ class UnknownKeyName(Exception):
 
 
 class ParamsStub:
-  """Mirrors common.params.Params.get(key, return_default=False) exactly."""
+  """Mirrors common.params.Params.get()/get_bool() on the points that matter."""
 
-  def __init__(self, value=None, raises=False, broken=False):
+  def __init__(self, value=None, raises=False, broken=False, gate=False):
     self._value = value
+    self._gate = gate
     self._raises = raises
     self._broken = broken
     self.reads = 0
+    self.reads_by_key = {}
+
+  def _count(self, key):
+    self.reads += 1
+    self.reads_by_key[key] = self.reads_by_key.get(key, 0) + 1
 
   def get(self, key, return_default=False):
-    self.reads += 1
+    self._count(key)
     if self._raises:
       # What a device raises while libparams_c.so predates params_keys.h.
       raise UnknownKeyName(key)
     if self._broken:
       raise RuntimeError("libparams_c.so is not the problem here")
     return self._value
+
+  def get_bool(self, key, return_default=False):
+    # The per-vehicle tune gate: unset on a fresh device means off.
+    self._count(key)
+    if self._raises:
+      raise UnknownKeyName(key)
+    if self._broken:
+      raise RuntimeError("libparams_c.so is not the problem here")
+    return self._gate
 
 
 class TestLatControlCustomKp(OpenpilotTestCase):
@@ -106,12 +121,15 @@ class TestLatControlCustomKp(OpenpilotTestCase):
     self.assertEqual(self._pid_gains(), [k * 1.2 for k in self._stock_gains()])
 
   def test_refresh_cadence_matches_the_torque_override_extension(self):
+    # Two params ride the same 300-frame cadence: the Kp scale and the
+    # per-vehicle tune gate. Counting per key keeps the intent ("one refresh per
+    # 300 frames") visible now that a refresh reads two parameters.
     self.controller.params = ParamsStub(1.0)
     self.controller._kp_frame = -1
     self.controller.refresh_custom_kp_scale()
-    self.assertEqual(self.controller.params.reads, 1)
+    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 1, "VehicleTunesEnabled": 1})
     for _ in range(CUSTOM_KP_REFRESH_FRAMES - 1):
       self.controller.refresh_custom_kp_scale()
-    self.assertEqual(self.controller.params.reads, 1)
+    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 1, "VehicleTunesEnabled": 1})
     self.controller.refresh_custom_kp_scale()
-    self.assertEqual(self.controller.params.reads, 2)
+    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 2, "VehicleTunesEnabled": 2})

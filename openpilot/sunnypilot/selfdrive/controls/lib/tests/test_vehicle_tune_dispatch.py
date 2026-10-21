@@ -3,6 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from opendbc.car.honda.values import CAR as HONDA_CAR
+from opendbc.car.volkswagen.values import CAR as VW_CAR
 
 from openpilot.sunnypilot.selfdrive.controls.lib.vehicle_tune_dispatch import (
   VehicleTuneSpec,
@@ -43,6 +44,28 @@ class TestVehicleTuneDispatch(unittest.TestCase):
     self.assertEqual(len(tunes.BOLT_2017_CARS), 1)
     self.assertEqual(len(tunes.BOLT_2022_2023_CARS), 3)
     self.assertGreater(len(tunes.GENESIS_GV70_CARS), 0)
+
+
+class TestMacanStaysStock(unittest.TestCase):
+  """Local addition (upstream has no such platform test): the device car is a
+  Porsche Macan, which lives in opendbc's Volkswagen MLB family. It must resolve
+  to nothing, so the hook wired into latcontrol_torque.update() can never touch
+  this car even if VehicleTunesEnabled is turned on. String and enum spellings
+  are both checked: CP.carFingerprint is a str on the car, an enum in-dispatch.
+  """
+
+  def test_macan_string_fingerprint_resolves_none(self):
+    self.assertIsNone(resolve_vehicle_tune(_cp("PORSCHE_MACAN_MK1", brand="volkswagen")))
+
+  def test_macan_enum_fingerprint_resolves_none(self):
+    self.assertIsNone(resolve_vehicle_tune(_cp(VW_CAR.PORSCHE_MACAN_MK1, brand="volkswagen")))
+
+  def test_macan_is_in_no_wired_group(self):
+    # If a future port adds Macan to a StarPilot tune group, this fails loudly
+    # instead of silently changing the steering feel of the device car.
+    wired = {*tunes.BOLT_2017_CARS, *tunes.BOLT_2018_2021_CARS, *tunes.GENESIS_G70_CARS,
+             *tunes.GENESIS_GV70_CARS, HONDA_CAR.HONDA_ACCORD}
+    self.assertNotIn(VW_CAR.PORSCHE_MACAN_MK1, wired)
 
 
 if __name__ == "__main__":

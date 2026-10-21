@@ -10,8 +10,9 @@ from openpilot.common.params import Params
 from openpilot.selfdrive.controls.lib.latcontrol import LatControl
 from openpilot.common.pid import PIDController
 
-from openpilot.sunnypilot.common.param_read import read_float
+from openpilot.sunnypilot.common.param_read import read_bool, read_float
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext import LatControlTorqueExt
+from openpilot.sunnypilot.selfdrive.controls.lib.vehicle_tune_dispatch import resolve_vehicle_tune
 
 # At higher speeds (25+mph) we can assume:
 # Lateral acceleration achieved by a specific car correlates to
@@ -62,6 +63,13 @@ class LatControlTorque(LatControl):
     self.extension = LatControlTorqueExt(self, CP, CP_SP, CI)
     self.update_limits()  # the call above ran before the extension existed
 
+    # Per-vehicle tunes (upstream 80cd489f0e, StarPilot port): resolved once per
+    # drive cycle from the fingerprint, gated by VehicleTunesEnabled (default off
+    # = stock behavior). This car (PORSCHE_MACAN_MK1) has no table entry, so
+    # resolve_vehicle_tune() returns None and every use below is skipped.
+    self.vehicle_tune = resolve_vehicle_tune(CP)
+    self.vehicle_tunes_enabled = read_bool(self.params, "VehicleTunesEnabled", False)
+
   def _read_custom_kp_scale(self) -> float:
     # params_keys.h is compiled into libparams_c.so, so a device that has not rebuilt
     # the shared library yet raises UnknownKeyName on every read. CustomKp is an
@@ -85,6 +93,7 @@ class LatControlTorque(LatControl):
     if abs(scale - self._custom_kp_scale) > 1e-6:
       self._custom_kp_scale = scale
       self._apply_custom_kp_scale(scale)
+    self.vehicle_tunes_enabled = read_bool(self.params, "VehicleTunesEnabled", False)
 
   def update_torque_parameters(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
@@ -128,7 +137,17 @@ class LatControlTorque(LatControl):
     ff = gravity_adjusted_future_lateral_accel
     # latAccelOffset corrects roll compensation bias from device roll misalignment relative to car roll
     ff -= self.torque_params.latAccelOffset
-    ff += get_friction(error + JERK_GAIN * desired_lateral_jerk, lateral_accel_deadzone, FRICTION_THRESHOLD, self.torque_params)
+    vehicle_tune = self.vehicle_tune if self.vehicle_tunes_enabled else None
+    friction_threshold = FRICTION_THRESHOLD
+    friction_scale = 1.0
+    if vehicle_tune is not None:
+      if vehicle_tune.ff_scale is not None:
+        ff *= vehicle_tune.ff_scale(setpoint, measurement, desired_lateral_jerk, CS.vEgo)
+      if vehicle_tune.friction_threshold is not None:
+        friction_threshold = vehicle_tune.friction_threshold(setpoint, measurement, desired_lateral_jerk, CS.vEgo)
+      if vehicle_tune.friction_scale is not None:
+        friction_scale = vehicle_tune.friction_scale(setpoint, measurement, desired_lateral_jerk, CS.vEgo)
+    ff += friction_scale * get_friction(error + JERK_GAIN * desired_lateral_jerk, lateral_accel_deadzone, friction_threshold, self.torque_params)
 
     if not active:
       output_torque = 0.0
@@ -149,6 +168,9 @@ class LatControlTorque(LatControl):
       pid_log, output_torque = self.extension.update(CS, VM, self.pid, params, ff, pid_log, setpoint, measurement, calibrated_pose, roll_compensation,
                                                      future_desired_lateral_accel, measurement, lateral_accel_deadzone, gravity_adjusted_future_lateral_accel,
                                                      desired_curvature, measured_curvature, steer_limited_by_safety, output_torque)
+
+      if vehicle_tune is not None and vehicle_tune.output_scale is not None:
+        output_torque *= vehicle_tune.output_scale(setpoint, measurement, desired_lateral_jerk, CS.vEgo)
 
       pid_log.active = True
       pid_log.p = float(self.pid.p)
