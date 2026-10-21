@@ -54,5 +54,25 @@ class TestCarrotUiReach(unittest.TestCase):
     self.assertIn('CarrotLongitudinalSourceEnabled', ui_entries())
 
 
+  def test_every_ported_hook_has_a_switch(self):
+    """The pull that added the Developer page rows, listed so a rename fails here.
+
+    Deliberately not derived from NOTES: the point is that somebody wrote down the
+    exact keys that were curl-only before, so dropping a row (or renaming the param
+    on our side only) turns red instead of quietly going back to "ported, unreachable".
+    """
+    ported = (
+      'CarrotBrakingGapEnabled', 'CarrotCruiseCoastingEnabled', 'CarrotCruiseCoastingPercent',
+      'CarrotCutinPredecelEnabled', 'CarrotCutoutReliefEnabled', 'CarrotFastRadarEnabled',
+      'CarrotGapRecoveryEnabled', 'CarrotLateralReadinessEnabled', 'CarrotLeadPreviewEnabled',
+      'CarrotMapDecelEnabled', 'CarrotSourceTimeoutMs', 'CarrotStoppingLeadEnabled',
+      'CarrotTrafficLightFusionEnabled', 'CarrotTurnAccelEnabled',
+    )
+    exposed = ui_entries()
+    missing = [name for name in ported if name not in exposed]
+    self.assertEqual([], missing, 'a ported carrot key lost its settings row; the owner is '
+                                  'carrot_tuning_items.build_dev_items()')
+
+
 if __name__ == '__main__':
   unittest.main()

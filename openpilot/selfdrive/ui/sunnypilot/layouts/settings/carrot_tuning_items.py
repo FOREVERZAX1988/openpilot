@@ -274,6 +274,80 @@ def build_dev_items():
                                    'a plan source, and its follow time, comfort braking and stop point ' +
                                    'reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected ' +
                                    'phone - without a fresh packet the source stays inactive.')),
+    # Freshness bound for the source above, read every frame in
+    # carrot_longitudinal_source.update(); meaningless while that switch is off.
+    # 2000 ms is the registered default, so leaving the row alone changes nothing.
+    option_item_sp(title=tr('Carrot Source Timeout'), param='CarrotSourceTimeoutMs', min_value=500, max_value=5000,
+                   value_change_step=100, use_registered_default=True,
+                   description=tr("How old a phone packet may be before the carrot source counts as gone; "
+                                   "past this the source goes inactive instead of holding its last request. "
+                                   "Only read while Carrot Longitudinal Source is on.")),
+    # The rest of the ported carrot longitudinal hooks. Every one of them is already
+    # read somewhere on the control path (see docs/carrot_no_ui_switches.md, which
+    # audit_ui_reach.py generates), but until now the only way to flip one was a curl
+    # at the 7000 API. That made "we ported it" and "you can reach it" two different
+    # facts, and left the audit with nothing to do but report the gap. All of them
+    # default off, so a row here changes no behaviour until somebody turns it on.
+    #
+    # Read-once vs live matters for the driver, so each row says which it is: only the
+    # ones with a reload loop in longitudinal_planner.update_targets() apply on the fly
+    # (~5 s); the rest need the owning process to restart.
+    section_heading_sp(tr('Ported Longitudinal Hooks (default off)')),
+    toggle_item_sp(title=tr('Lead Preview'), param='CarrotLeadPreviewEnabled',
+                   description=tr("Ease off from the lead vehicle's own deceleration, before the gap "
+                                   "starts closing. Read once when plannerd starts - restart to apply.")),
+    toggle_item_sp(title=tr('Traffic Light Fusion'), param='CarrotTrafficLightFusionEnabled',
+                   description=tr("Fold the phone app's traffic-light state into the longitudinal plan. "
+                                   "Applies within about five seconds, no restart needed.")),
+    toggle_item_sp(title=tr('Curve Accel Limit'), param='CarrotTurnAccelEnabled',
+                   description=tr("Cap the longitudinal acceleration allowed while the car is inside a "
+                                   "curve. Read once when plannerd starts - restart to apply.")),
+    toggle_item_sp(title=tr('Gap Recovery'), param='CarrotGapRecoveryEnabled',
+                   description=tr("Creep the follow distance back out after something (a cut-in, a hard "
+                                   "slowdown) squeezed it short. Read once when plannerd starts - restart "
+                                   "to apply.")),
+    toggle_item_sp(title=tr('Cut-in Pre-decel'), param='CarrotCutinPredecelEnabled',
+                   description=tr("Start slowing early for a vehicle cutting in from a neighbouring lane, "
+                                   "instead of waiting for the gap to close. Read once when plannerd "
+                                   "starts - restart to apply.")),
+    toggle_item_sp(title=tr('Cut-out Relief'), param='CarrotCutoutReliefEnabled',
+                   description=tr("Release the follow suppression once the lead leaves the lane, so the "
+                                   "car does not keep hanging back. Read once when plannerd starts - "
+                                   "restart to apply.")),
+    toggle_item_sp(title=tr('Comfort Decel Bound'), param='CarrotBrakingGapEnabled',
+                   description=tr("Let the lead vehicle's comfort-deceleration limit enter the MPC as a "
+                                   "soft bound, which softens closing speed. Read once when plannerd "
+                                   "starts - restart to apply.")),
+    toggle_item_sp(title=tr('Cruise Coasting'), param='CarrotCruiseCoastingEnabled',
+                   description=tr("Ease off inside the overspeed band while cruising on the set speed. It "
+                                   "can only ever reduce deceleration, never add acceleration. Read once "
+                                   "when the longitudinal control process starts - restart to apply.")),
+    # Read about once a second, but only while the toggle above is on (params_keys.h
+    # says so too), so the row is inert on its own.
+    option_item_sp(title=tr('Coasting Band'), param='CarrotCruiseCoastingPercent', min_value=0, max_value=10,
+                   value_change_step=1, use_registered_default=True,
+                   description=tr("Width of the coasting band, in percent. Only read while Cruise Coasting "
+                                   "is on; 0 disables the relief without touching the toggle.")),
+    toggle_item_sp(title=tr('Stopped Lead Evidence'), param='CarrotStoppingLeadEnabled',
+                   description=tr("Require range evidence before a stopped lead counts as departed, so a "
+                                   "stationary lead is not mistaken for an open gap. Read once when "
+                                   "plannerd starts - restart to apply.")),
+    toggle_item_sp(title=tr('Lateral Readiness'), param='CarrotLateralReadinessEnabled',
+                   description=tr("Hold lateral actuation back from a standstill until lateral input and CAN "
+                                   "are both ready. One-way latch per drive. Read once when the control "
+                                   "process starts - restart to apply.")),
+    toggle_item_sp(title=tr('Map Speed Slowdown'), param='CarrotMapDecelEnabled',
+                   description=tr("Let map speed limits slow the car; one of the three conditions Smart "
+                                   "Cruise Control - Map needs. Read once when plannerd starts - restart "
+                                   "to apply.")),
+    # Hyundai-only in the source (plannerd gates on CP.brand == "hyundai"), so on the
+    # Macan this row renders greyed and feature_support forces the key back off.
+    toggle_item_sp(title=tr('Fast Radar Refresh'), param='CarrotFastRadarEnabled',
+                   description=feature_support.describe('CarrotFastRadarEnabled',
+                                                       tr("Refresh an already-locked lead from a newer radar "
+                                                          "frame instead of promoting a new track.")),
+                   enabled=feature_support.ui_enabled('CarrotFastRadarEnabled')),
+
     # Lateral counterpart of the switch above: a plain multiplier over the stock
     # torque PID's speed-interpolated Kp curve. 1.00 is stock, and the code only
     # rebuilds the controller when the value differs from 1.00, so leaving it alone

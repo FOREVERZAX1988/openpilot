@@ -69,6 +69,14 @@ UNSUPPORTED: tuple[Unsupported, ...] = (
            "so there are no tracks to feed in.",
     off=False,
   ),
+  Unsupported(
+    param="CarrotFastRadarEnabled",
+    cars=OUR_CARS,
+    reason="Hyundai only: plannerd keeps liveTracks switched on whenever this key is set and "
+           "then requires CarParams.brand == hyundai before using them, so on the Macan the "
+           "switch can be set but never act.",
+    off=False,
+  ),
 )
 
 _BY_PARAM: dict[str, Unsupported] = {row.param: row for row in UNSUPPORTED}

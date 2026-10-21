@@ -9,45 +9,33 @@
 或 webui 的 `panel_catalog.py` 里出现过。8088 网页面板靠扫描车机设置页生成控件，不额外增加可达性。
 `carrot_tuning_api.py` 的白名单不算入口，那是通用编辑器。
 
-共 19 个：**5 个有 UI 入口，14 个没有**。
+共 19 个：**19 个有 UI 入口，0 个没有**。
 
-没有入口的那些，仍然可以通过 carrot_server 写参数（`params_keys.h` 注册即允许，不走白名单）：
-
-```
-curl -X POST http://<device>:7000/api/param_set \
-     -H "Content-Type: application/json" \
-     -d '{"name": "CarrotMapDecelEnabled", "value": 1}'
-
-curl "http://<device>:7000/api/params_bulk?names=CarrotMapDecelEnabled,CarrotTurnAccelEnabled"
-```
+这一节是留给下一次上游拉取的：新搬来的键如果只注册了 `params_keys.h`、还没有接到控件上，
+它会重新出现在这里，而不是悄悄只能用 curl 打开。现在一个都没有。
 
 读点只给文件不给行号：行号一改就漂，用参数名 grep 定位。
 
-## 有 UI 入口（5）
+## 有 UI 入口（19）
 
 | 参数 | 默认 | 读点 | 作用 |
 | --- | --- | --- | --- |
 | `CarrotAtcBlinkerEnabled` | `0` | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
-| `CarrotEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | carrot 导航总开关，地图类功能的前提 |
-| `CarrotLongitudinalSourceEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 手机目标速度成为第 5 个纵向源；跟车时距、舒适制动与停车点进 MPC |
-| `CarrotNavCruiseSpeedEnabled` | `1` | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 导航目标速度限制巡航速度 |
-| `CarrotTrafficCongestionEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 拥堵报告折进地图巡航，只降不升 |
-
-## 没有 UI 入口（14），只能走 7000 的 `POST /api/param_set`
-
-| 参数 | 默认 | 读点 | 作用 |
-| --- | --- | --- | --- |
 | `CarrotBrakingGapEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车舒适制动项（lead_comfort）进 MPC |
 | `CarrotCruiseCoastingEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py`, `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 巡航超速带内松刹车滑行 |
 | `CarrotCruiseCoastingPercent` | `10` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 滑行带的宽度，按百分比 |
 | `CarrotCutinPredecelEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 旁车切入的提前减速 |
 | `CarrotCutoutReliefEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车切出后解除跟车抑制 |
+| `CarrotEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | carrot 导航总开关，地图类功能的前提 |
 | `CarrotFastRadarEnabled` | `0` | `openpilot/selfdrive/controls/plannerd.py` | 用更新的 liveTracks 刷新已锁定的前车（Hyundai） |
 | `CarrotGapRecoveryEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 跟车距离被压近之后的恢复 |
 | `CarrotLateralReadinessEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py` | 起步时挡横向使能，直到横向输入与 CAN 就绪 |
 | `CarrotLeadPreviewEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 用前车加速度做提前量 |
+| `CarrotLongitudinalSourceEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 手机目标速度成为第 5 个纵向源；跟车时距、舒适制动与停车点进 MPC |
 | `CarrotMapDecelEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 地图限速减速，SCC-M 的三个条件之一 |
+| `CarrotNavCruiseSpeedEnabled` | `1` | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 导航目标速度限制巡航速度 |
 | `CarrotSourceTimeoutMs` | `2000` | `openpilot/sunnypilot/selfdrive/controls/lib/carrot_longitudinal_source.py` | carrot 包的新鲜度上界，超过就判该源失效 |
 | `CarrotStoppingLeadEnabled` | `0` | `openpilot/selfdrive/controls/plannerd.py` | 停住的前车要有距离证据才算起步 |
+| `CarrotTrafficCongestionEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 拥堵报告折进地图巡航，只降不升 |
 | `CarrotTrafficLightFusionEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py`, `openpilot/sunnypilot/selfdrive/controls/lib/traffic_light_fusion.py` | 红绿灯状态融合进纵向计划 |
 | `CarrotTurnAccelEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 弯道内限制纵向加速度 |
