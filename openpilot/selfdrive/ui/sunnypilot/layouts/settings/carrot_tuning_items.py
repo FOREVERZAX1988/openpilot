@@ -105,6 +105,11 @@ def build_navi_items():
     option_item_sp(title=tr('Countdown Mode'), param='AutoNaviCountDownMode', min_value=0, max_value=2, value_change_step=1),
     option_item_sp(title=tr('Speed Bump Target Speed'), param='AutoNaviSpeedBumpSpeed', min_value=0, max_value=100, value_change_step=1),
     option_item_sp(title=tr('Speed Bump Hold Time'), param='AutoNaviSpeedBumpTime', min_value=0, max_value=20, value_change_step=1),
+
+    section_heading_sp(tr('Rear Camera')),
+    option_item_sp(title=tr('Rear Camera Hold Distance'), param='AutoNaviRearCameraHoldDistance', min_value=0, max_value=300, value_change_step=10,
+                   description=tr('Distance over which navigation speed control stays paused while the ' +
+                                  'rear camera (reverse gear) is active, in centimetres.')),
   ]
 
 def build_speed_items():
@@ -154,6 +159,10 @@ def build_speed_items():
                    description=tr('How early to react to curves on the highway. Lower reacts to gentler '
                                   'curves. Only applies while Smart Cruise Control (Vision) is on.')),
     option_item_sp(title=tr('Curve Speed Lower Limit'), param='AutoCurveSpeedLowerLimit', min_value=0, max_value=100, value_change_step=5),
+    option_item_sp(title=tr('Lane Line Curve Speed Gate'), param='UseLaneLineCurveSpeed', min_value=0, max_value=100, value_change_step=5,
+                   description=tr('Below this curve speed (km/h), the lane-line curvature correction is ' +
+                                  'suppressed so tight bends rely on the map/vision curve speed alone. ' +
+                                  '0 disables the gate.')),
 
     section_heading_sp(tr('Road Limit Raising')),
     toggle_item_sp(title=tr('Auto Up Road Limit'), param='AutoUpRoadLimit'),
@@ -389,7 +398,26 @@ def build_dev_items():
                                    'Control - Map to be on as well.')),
     toggle_item_sp(title=tr('Lane Guide Blocking'), param='CarrotNavLaneGuideBlockEnabled',
                    description=tr('Let the phone app guided-lane arrows block lane changes toward '
-                                   'non-guided lanes. Only ever adds blocking.')),
+                                  'non-guided lanes. Only ever adds blocking.')),
+    section_heading_sp(tr('ONNX Vision Detection (BSD / Lane)')),
+    # Thresholds and cadence for the xiaoge v_asm ONNX blind-spot / lane server.
+    # Ranges mirror the clamps in carrot/xiaoge/v_asm_server.py; anything outside
+    # is silently clamped there, so the UI cannot write an unusable value.
+    option_item_sp(title=tr('BSD Detection Threshold'), param='OnnxBsdThreshold', min_value=25, max_value=100, value_change_step=5,
+                   description=tr('Confidence threshold for ONNX blind-spot detection, in percent. ' +
+                                  'Higher means fewer, more certain detections.')),
+    option_item_sp(title=tr('BSD Smoothing Time'), param='OnnxBsdSmoothingMs', min_value=100, max_value=500, value_change_step=50,
+                   label_callback=lambda v: f'{v} ms',
+                   description=tr('How long a blind-spot object must persist before it is reported.')),
+    option_item_sp(title=tr('BSD Inference Interval'), param='OnnxBsdIntervalMs', min_value=50, max_value=1000, value_change_step=50,
+                   label_callback=lambda v: f'{v} ms',
+                   description=tr('Time between blind-spot inferences.')),
+    option_item_sp(title=tr('Lane Detection Threshold'), param='OnnxLaneThreshold', min_value=5, max_value=100, value_change_step=5,
+                   description=tr('Confidence threshold for ONNX lane detection, in percent.')),
+    option_item_sp(title=tr('Lane Inference Interval'), param='OnnxLaneIntervalMs', min_value=600, max_value=2000, value_change_step=100,
+                   label_callback=lambda v: f'{v} ms',
+                   description=tr('Time between lane inferences. Values below 600 ms are raised by the ' +
+                                  'server, which would saturate a CPU core.')),
 
   ]
 

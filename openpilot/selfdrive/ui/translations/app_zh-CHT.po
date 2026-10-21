@@ -6434,9 +6434,9 @@ msgstr "目前模型"
 msgid "Custom Lateral Torque"
 msgstr ""
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Custom Steer Ratio"
-msgstr ""
+msgstr "自訂轉向比"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering.py
 msgid "Customize EPS Compensation"
@@ -6989,9 +6989,9 @@ msgstr ""
 msgid "Steer Delta Up (Lane Change)"
 msgstr ""
 
-#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Steer Ratio Rate"
-msgstr ""
+msgstr "轉向比縮放"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "Stock Blinker Control"
@@ -8178,3 +8178,87 @@ msgstr "前方有道路邊緣"
 
 msgid "Waiting for steering"
 msgstr "等待轉向就緒"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device.py
+msgid ""
+"onroad\n"
+"preview"
+msgstr ""
+"行車\n"
+"預覽"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Rear Camera"
+msgstr "倒車影像"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Rear Camera Hold Distance"
+msgstr "倒車影像保持距離"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Distance over which navigation speed control stays paused while the rear camera (reverse gear) is active, in centimetres."
+msgstr "倒車影像（倒檔）啟用期間，導航限速控制暫停保持的距離，單位公分。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lane Line Curve Speed Gate"
+msgstr "車道線曲率速度門檻"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Below this curve speed (km/h), the lane-line curvature correction is suppressed so tight bends rely on the map/vision curve speed alone. 0 disables the gate."
+msgstr "彎道速度低於該值（km/h）時抑制車道線曲率修正，急彎只依賴地圖/視覺彎道速度。0 表示不啟用。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "ONNX Vision Detection (BSD / Lane)"
+msgstr "ONNX 視覺偵測（盲區/車道）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "BSD Detection Threshold"
+msgstr "盲區偵測閾值"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Confidence threshold for ONNX blind-spot detection, in percent. Higher means fewer, more certain detections."
+msgstr "ONNX 盲區偵測的信心度閾值（%）。越高偵出越少但越確定。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "BSD Smoothing Time"
+msgstr "盲區平滑時間"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "How long a blind-spot object must persist before it is reported."
+msgstr "盲區目標需持續存在多久才會上報。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "BSD Inference Interval"
+msgstr "盲區推理間隔"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Time between blind-spot inferences."
+msgstr "兩次盲區推理之間的時間。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lane Detection Threshold"
+msgstr "車道偵測閾值"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Confidence threshold for ONNX lane detection, in percent."
+msgstr "ONNX 車道偵測的信心度閾值（%）。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lane Inference Interval"
+msgstr "車道推理間隔"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Time between lane inferences. Values below 600 ms are raised by the server, which would saturate a CPU core."
+msgstr "兩次車道推理之間的時間。低於 600 ms 的值會被伺服器強制抬高，否則會佔滿一個 CPU 核心。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
+msgid "Scales the live steering ratio, in percent. 100 keeps the vehicle's ratio."
+msgstr "按百分比縮放車輛即時轉向比。100 保持原廠。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
+msgid "Fixed steering ratio in 0.1 units (e.g. 130 = 13.0). Overrides the live ratio when above 10. 0 uses the vehicle's ratio."
+msgstr "固定轉向比，0.1 單位（如 130 = 13.0）。大於 10 時覆蓋即時轉向比。0 使用車輛即時值。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
+msgid "Stock"
+msgstr "原廠"
