@@ -20,6 +20,7 @@ from openpilot.common.gps import get_gps_location_service
 from openpilot.selfdrive.car.car_events import CarEvents
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 from openpilot.selfdrive.selfdrived.events import Events, ET
+from openpilot.selfdrive.selfdrived.modeld_lag import ModeldLagMonitor
 from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
 from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
@@ -43,11 +44,9 @@ REPLAY = "REPLAY" in os.environ
 SIMULATION = "SIMULATION" in os.environ or os.getenv("LITE") is not None
 TESTING_CLOSET = "TESTING_CLOSET" in os.environ
 
-# the filtered frame-drop rate must stay over the lagging threshold for this
-# long before modeldLagging fires; rides out a transient scheduler/IO stall
-MODEL_LAG_HOLD_S = 1.0
 # deviceMotion.inputsOK must read false this long before locationdTemporaryError
-# fires; rides out the same brief stall (locationd already debounces upstream)
+# fires; rides out the same brief stall (locationd already debounces upstream).
+# The modeld frame-drop tiering (thresholds + hold times) lives in modeld_lag.py.
 LOCATIOND_ERROR_HOLD_S = 1.0
 
 LONGITUDINAL_PERSONALITY_MAP = {v: k for k, v in log.LongitudinalPersonality.schema.enumerants.items()}
@@ -159,10 +158,10 @@ class SelfdriveD(CruiseHelper):
     self.last_steering_pressed_frame = 0
     self.distance_traveled = 0
     # consecutive frames the model's filtered drop rate has been over the
-    # lagging threshold; a brief scheduler/IO hiccup pushes the 10 s filter
-    # past 1% for a moment, which must not flash the no-entry the way a
-    # sustained slow model does.
-    self.modeld_lag_counter = 0
+    # lagging thresholds; a brief scheduler/IO hiccup pushes the low-pass past
+    # its floor for a moment, which must not flash the no-entry the way a
+    # sustained slow model does
+    self.modeld_lag_monitor = ModeldLagMonitor()
     self.locationd_error_counter = 0
     self.last_functional_fan_frame = 0
     self.events_prev = []
@@ -598,19 +597,17 @@ class SelfdriveD(CruiseHelper):
     if not SIMULATION or REPLAY:
       # frameDropPerc = 100 * x / (1 + x), where x is a 2 s low-pass of the
       # dropped-frame count. A SINGLE dropped frame therefore spikes the value
-      # to ~2.4% and it takes ~1.8 s to decay below 1% - which no reasonable
-      # hold time can swallow, and which is not "model lagging" anyway: one
-      # missed 50 ms deadline per ~20 s is invisible to the controller (the
-      # MPC absorbs it). Two consecutive dropped frames peak at ~4.5%, three
-      # at ~6.3%. A 5% threshold therefore means "3+ frames dropped in quick
-      # succession", while a genuinely slow model (dropping every loop) still
-      # climbs past it within ~0.1 s and alerts via the hold counter below.
-      if self.sm['modelV2'].frameDropPerc > 5:
-        self.modeld_lag_counter += 1
-      else:
-        self.modeld_lag_counter = 0
-      if self.modeld_lag_counter > int(MODEL_LAG_HOLD_S / DT_CTRL):
+      # to ~2.4%, and clustered one-frame resyncs (loop phase drift over the
+      # 50 ms budget, one frame lost every 5-8 loops for a few seconds) read
+      # 5-12% - all invisible to the controller, so they only earn the
+      # informational modeldLaggingMild alert. A genuinely starved controller
+      # climbs past MODEL_LAG_PERC within a second and soft-disables via
+      # modeldLagging. See modeld_lag.py for the on-device measurements.
+      severe, mild = self.modeld_lag_monitor.update(self.sm['modelV2'].frameDropPerc)
+      if severe:
         self.events.add(EventName.modeldLagging)
+      if mild:
+        self.events.add(EventName.modeldLaggingMild)
 
     # mute canBusMissing event if in Park, as it sometimes may trigger a false alarm with MADS in Paused state
     if CS.gearShifter == car.CarState.GearShifter.park and self.mads.enabled:

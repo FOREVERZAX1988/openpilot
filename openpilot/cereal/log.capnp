@@ -137,6 +137,9 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     # One-shot notice naming the NNFF torque model card loaded at boot, emitted
     # once per onroad session by selfdrived.
     torqueNNLoad @105;
+    # Moderate model frame drops (clustered one-frame resyncs, controller not
+    # starved). Informational permanent alert only - never soft-disable.
+    modeldLaggingMild @106;
 
     lowBatteryDEPRECATED @40;
     soundsUnavailableDEPRECATED @47;

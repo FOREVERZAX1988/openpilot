@@ -792,6 +792,14 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.PERMANENT: modeld_lagging_alert,
   },
 
+  # Clustered one-frame resyncs (a few frames a second) trip the same
+  # "Driving Model Lagging" text as an informational alert. The controller is
+  # not starved, so this must never interrupt the drive the way modeldLagging
+  # does - no SOFT_DISABLE / NO_ENTRY hook on purpose (guardrail test).
+  EventName.modeldLaggingMild: {
+    ET.PERMANENT: modeld_lagging_alert,
+  },
+
   # Besides predicting the path, lane lines and lead car data the model also
   # predicts the current velocity and rotation speed of the car. If the model is
   # very uncertain about the current velocity while the car is moving, this
