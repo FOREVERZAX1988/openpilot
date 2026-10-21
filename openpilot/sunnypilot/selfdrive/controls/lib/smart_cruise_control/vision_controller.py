@@ -12,6 +12,7 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.car.cruise import V_CRUISE_UNSET
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
+from openpilot.sunnypilot.common import param_read
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control import MIN_V
 
 VisionState = custom.LongitudinalPlanSP.SmartCruiseControl.VisionState
@@ -112,6 +113,32 @@ class SmartCruiseControlVision:
     # has not seen the vehicle yet. update() reloads every frame anyway.
     self.tuned_a_lat_reg_max = _A_LAT_REG_MAX
     self.tuned_curve_th_scale = 1.0
+
+    # StarPilot curve-speed self-learning (gated, default off). Learns a
+    # comfort lateral-acceleration curve from the driver's own manual driving;
+    # when enabled it replaces the fixed _A_LAT_REG_MAX baseline (the carrot
+    # factor scale still applies). Data persists through CurvatureLearningData.
+    from openpilot.selfdrive.controls.lib.curve_speed_learning import CurvatureLearning
+    self.learning = CurvatureLearning()
+    self.learning.load_fn = self._load_learning_data
+    self.learning.put_fn = self._put_learning_data
+    self.learning_enabled = False
+    self._learning_loaded = False
+
+  def _load_learning_data(self):
+    try:
+      raw = self.params.get("CurvatureLearningData")
+      import json as _json
+      return _json.loads(raw) if raw else None
+    except Exception:
+      return None
+
+  def _put_learning_data(self, data):
+    try:
+      import json as _json
+      self.params.put("CurvatureLearningData", _json.dumps(data))
+    except Exception:
+      pass
 
   def _load_curve_tuning(self) -> None:
     """Read carrot's curve parameters and derive this controller's setpoints.
@@ -219,6 +246,39 @@ class SmartCruiseControlVision:
   def _update_params(self) -> None:
     if self.frame % int(PARAMS_UPDATE_PERIOD / DT_MDL) == 0:
       self.enabled = self.params.get_bool("SmartCruiseControlVision")
+      # param_read: keep the learner off (instead of raising UnknownKeyName) when
+      # the device libparams_c.so predates this key.
+      self.learning_enabled = param_read.read_bool(self.params, "CscCurvatureLearningEnabled")
+      if self.learning_enabled and not self._learning_loaded:
+        self.learning.load()
+        self._learning_loaded = True
+
+  def _update_learning(self, sm: messaging.SubMaster, long_enabled: bool) -> None:
+    """Feed the StarPilot curvature learner (sampling + override watch)."""
+    cs = sm['carState']
+    manual = (not long_enabled) or bool(cs.gasPressed) or bool(cs.brakePressed)
+    tracking_lead = bool(sm['radarState'].leadOne.status or sm['radarState'].leadTwo.status)
+    driving_in_curve = self.state == VisionState.turning
+    blinker = bool(cs.leftBlinker or cs.rightBlinker)
+    road_curvature = float(sm['controlsState'].curvature)
+
+    self.learning.log_data(
+      v_ego=self.v_ego, tracking_lead=tracking_lead, manual_speed_control=manual,
+      driving_in_curve=driving_in_curve, blinker=blinker,
+      lateral_acceleration=self.current_lat_acc, road_curvature=road_curvature)
+
+    # Override watch: driver pushes through a curve faster than the learned
+    # comfort -> raise it; driver brakes in a curve -> nudge it down.
+    if self.learning.override_watch_key is None:
+      if (long_enabled and driving_in_curve and cs.gasPressed and
+              self.output_v_target < self.v_ego - 0.5):
+        self.learning.start_override_watch(road_curvature, self.current_lat_acc)
+      elif bool(cs.brakePressed) and driving_in_curve:
+        self.learning.apply_brake_nudge(road_curvature)
+    else:
+      self.learning.handle_override_watch(
+        overriding_or_in_curve=bool(manual or driving_in_curve),
+        lateral_acceleration=self.current_lat_acc, road_curvature=road_curvature)
 
   def _update_calculations(self, sm: messaging.SubMaster) -> None:
     if not self.long_enabled:
@@ -237,7 +297,13 @@ class SmartCruiseControlVision:
       self.max_pred_lat_acc = float(np.percentile(rate_plan[valid] * vel_plan[valid], 97))
       max_pred_curvature = float(np.percentile(rate_plan[valid] / vel_plan[valid], 97))
       if max_pred_curvature > 0.:
-        self.v_target = min(float((self.tuned_a_lat_reg_max / max_pred_curvature) ** 0.5), V_CRUISE_UNSET)
+        a_lat_ceiling = self.tuned_a_lat_reg_max
+        if self.learning_enabled:
+          # Learned comfort curve replaces the fixed baseline; the carrot
+          # factor scale (tuned / _A_LAT_REG_MAX) still applies on top.
+          factor_scale = self.tuned_a_lat_reg_max / _A_LAT_REG_MAX
+          a_lat_ceiling = self.learning.lat_accel_for_curvature(max_pred_curvature) * factor_scale
+        self.v_target = min(float((a_lat_ceiling / max_pred_curvature) ** 0.5), V_CRUISE_UNSET)
 
   def _update_state_machine(self) -> tuple[bool, bool]:
     # ENABLED, ENTERING, TURNING, LEAVING, OVERRIDING
@@ -323,6 +389,10 @@ class SmartCruiseControlVision:
     # Reading two params at 20 Hz is negligible next to the modelV2 percentile work.
     self._load_curve_tuning()
     self._update_calculations(sm)
+
+    # StarPilot curve-speed learning sampler (gated; no-op when disabled).
+    if self.learning_enabled:
+      self._update_learning(sm, long_enabled)
 
     self.is_enabled, self.is_active = self._update_state_machine()
 

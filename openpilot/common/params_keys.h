@@ -402,6 +402,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LaneCenteringEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot vision lane-centering: bounded curvature correction toward the lane center (not for use with LateralLaneCentering)
     {"LaneCenterOffset", {PERSISTENT | BACKUP, FLOAT, "0"}},  // Lane centering lateral offset in meters (-0.3..0.3)
     {"LaneCenteringE2EAuthority", {PERSISTENT | BACKUP, BOOL, "0"}},  // Attenuate lane-centering correction on large deliberate path errors unless near a boundary
+    {"CscCurvatureLearningEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot curve-speed self-learning: learns comfort lateral accel per curvature from the driver's manual driving
+    {"CurvatureLearningData", {PERSISTENT | BACKUP, STRING}},  // JSON bucket data for CscCurvatureLearningEnabled
 
     {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
     {"DisableDM", {PERSISTENT | BACKUP, BOOL, "0"}},
