@@ -397,6 +397,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // now, so they are registry keys again and ride along with Params backups.
     {"WebPushVapid", {PERSISTENT | BACKUP, JSON}},
     {"WebPushSubscriptions", {PERSISTENT | BACKUP, JSON}},
+    {"StoppingReleaseHysteresisEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot stopping-release hysteresis: sustained release request leaves stopping even with stock ACC standstill latched
+    {"NegativeTargetCreepGuardEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot negative-target creep guard: bleed stale positive integrator and cap positive output on real decel
 
     {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
     {"DisableDM", {PERSISTENT | BACKUP, BOOL, "0"}},
