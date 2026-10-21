@@ -177,6 +177,7 @@ lint.flake8-implicit-str-concat.allow-multiline = false
 "openpilot/sunnypilot/carrot/signal_mode.py" = ["C408", "E702"]
 "openpilot/selfdrive/modeld/signal_color_shadow.py" = ["C408", "E702", "RUF100"]
 "openpilot/selfdrive/modeld/signal_tracking_shadow.py" = ["C408", "E702", "RUF100"]
+"openpilot/selfdrive/modeld/signal_neural_shadow.py" = ["C408", "E702", "RUF100"]
 "openpilot/sunnypilot/carrot/recovery/server.py" = ["E501", "ISC002"]
 "openpilot/sunnypilot/carrot/server/features/carrot_navi/client_hub.py" = ["RUF006"]
 # Ported from StarPilot verbatim (FLM offline tuning analyzer); long descriptive

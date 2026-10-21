@@ -73,7 +73,7 @@ def result_fields(result, age_ms):
           'reason': result['reason'] if fresh else 'stale_result', 'control_permission': False}
 
 
-def run(directory=DIRECTORY, duration=None):
+def run(directory=DIRECTORY, duration=None, comparison_override=None):
   import fcntl
   directory = Path(directory)
   if not requested(directory) or not tracking_requested(directory):
@@ -97,7 +97,7 @@ def run(directory=DIRECTORY, duration=None):
     source_sha = hashlib.sha256(Path(signal_tracker.__file__).read_bytes()).hexdigest()
     from openpilot.sunnypilot.carrot.signal_assist_runtime import publish_observation
     from openpilot.sunnypilot.carrot.signal_display import display_requested, publish_display
-    comparison = comparison_requested(directory)
+    comparison = comparison_requested(directory) if comparison_override is None else comparison_override
     revalidated = revalidated_requested(directory)
     def new_tracker():
       return (*new_trackers(signal_tracker.SignalTracker, comparison, revalidated), f'{os.getpid()}:{time.monotonic_ns()}')

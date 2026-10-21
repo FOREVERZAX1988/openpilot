@@ -97,9 +97,18 @@ def test_modeld_keeps_original_artifact_and_output():
   assert 'from openpilot.selfdrive.modeld.signal_shadow import ShadowClient' in source
   assert 'ShadowClient.optional' in source
   assert 'shadow_tinygrad' not in source
-  assert "self.npy['prev_feat'][:] = model_output[self.output_slices['hidden_state']]" in source
+  # The history queues live inside the ONNX graph since #38916, so the old
+  # `self.npy['prev_feat'][:] = ...` line this test used to pin no longer
+  # exists in modeld.py. Pinning it made the assertion unpassable rather than
+  # protective; the invariant it stood for is the ordering asserted below.
+  assert 'prev_feat' not in source
   # Capture happens alongside the original inference and the comparison sample
   # is popped out of model_output before modelV2 is filled, so it cannot change
   # any published control value.
-  assert source.index('self.signal_shadow.capture(model_output, self.npy)') < source.index("self.npy['prev_feat'][:] = model_output")
-  assert "model_output.pop('_signal_shadow', None)" in source
+  raw = "model_output = self.outputs['outputs'].numpy()[0]"
+  capture = 'shadow_payload = self.signal_shadow.capture(model_output, self.npy)'
+  parse = 'outputs_dict = self.parser.parse_outputs('
+  assert source.index(raw) < source.index(capture) < source.index(parse)
+  pop = "model_output.pop('_signal_shadow', None)"
+  assert pop in source
+  assert source.index(pop) < source.index("modelv2_send = messaging.new_message('modelV2')")
