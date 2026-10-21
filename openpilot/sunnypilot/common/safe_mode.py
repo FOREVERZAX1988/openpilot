@@ -64,7 +64,7 @@ SAFE_MODE_MANAGED_KEYS: tuple[str, ...] = (
 # stock value, and then to the registered default.
 SAFE_MODE_FIXED_VALUES: dict[str, str] = {
   "ExperimentalMode": "0",
-  "LongitudinalPersonality": "1",  # 1 = relaxed
+  "LongitudinalPersonality": "1",  # 1 = standard (0 = aggressive, 2 = relaxed)
   "ForceAutoTune": "0",
   "ForceAutoTuneOff": "0",
   "UseAutoSteerDelay": "1",
@@ -83,10 +83,23 @@ SAFE_MODE_FIXED_VALUES: dict[str, str] = {
   "CscCurvatureLearningEnabled": "0",
 }
 
-# The stock value of a managed key is registered under this suffix.
-# SteerRatio -> SteerRatioStock. A stock value of 0 means "not known", so
-# Safe Mode leaves the parameter alone rather than writing a wrong number.
-STOCK_KEY_SUFFIX = "Stock"
+# The steer knobs are "0.0 means not set" parameters: every consumer falls
+# back to the vehicle's stock value when the key is absent, and a stored 0.0
+# would be read back as a present-but-invalid value by at least one of them
+# (the FLM workspace's get_float with a stock default). For these, Safe Mode
+# removes the key instead of writing anything, which is what "reset to
+# stock" actually means here.
+SAFE_MODE_REMOVE_KEYS: tuple[str, ...] = (
+  "SteerDelay",
+  "SteerFriction",
+  "SteerKP",
+  "SteerLatAccel",
+  "SteerRatio",
+)
+
+# A registered stock value of "0.0" is indistinguishable from "not known",
+# so Safe Mode refuses to write it; the caller falls back to removing the
+# key or to the registered default.
 UNKNOWN_STOCK = "0.0"
 
 

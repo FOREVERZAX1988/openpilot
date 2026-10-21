@@ -44,7 +44,10 @@ def test_apply_forces_the_knobs_and_records_them(store):
 
   assert apply_safe_mode(store)
 
-  assert store.get("SteerRatio") == pytest.approx(0.0)
+  # Steer knobs are "0.0 means not set" params: Safe Mode removes the key so every
+  # consumer falls back to its own stock value, rather than storing a 0.0 that at
+  # least one of them reads back as present-but-invalid.
+  assert store.get("SteerRatio") is None
   assert store.get("CustomSR") == 0
   assert store.get("LaneCenteringEnabled") is False
   backup = backup_document(store)
@@ -78,7 +81,7 @@ def test_restore_is_refused_while_the_car_is_moving(store):
   store.put_bool("IsOnroad", True, block=True)
 
   assert restore_safe_mode(store) is False
-  assert store.get("SteerRatio") == pytest.approx(0.0)
+  assert store.get("SteerRatio") is None
 
 
 def test_enforce_is_a_noop_with_the_switch_off(store):

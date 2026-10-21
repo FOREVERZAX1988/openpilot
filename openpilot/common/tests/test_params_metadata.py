@@ -75,9 +75,8 @@ def test_stock_value_falls_back_to_the_default():
     stock = params.get_stock_value(key)
     assert stock is not None, key
     assert isinstance(stock, bytes), key
-  # The Steer*Stock keys are registered as 0.0 = "not known" so that Safe Mode leaves
-  # them alone rather than writing a wrong number; the binding must still resolve them.
-  assert params.get_stock_value("SteerRatioStock") is not None
+  # There is no separate Stock key: the value a knob returns to is this default
+  # fallback, and Safe Mode removes the steer knobs rather than writing 0.0.
 
 
 def test_a_missing_binding_degrades_instead_of_breaking_the_import():

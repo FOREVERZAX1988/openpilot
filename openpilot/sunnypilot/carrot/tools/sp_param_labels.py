@@ -242,6 +242,7 @@ PARAM_LABELS: dict[str, tuple[str, str, str, str]] = {
 
   # ---- on-device pages: visuals -------------------------------------------
   "BlindSpot": ("Blind spot UI", "Draw blind-spot indicators on the onroad UI.", "盲点警示", "行车界面绘制盲点指示。"),
+  "SlcLeadDropRelaxationEnabled": ("Comfort speed limit drop", "Ease the target down at a comfort rate when the speed limit drops sharply under a stable lead, instead of stepping it. Vetoed by a closing gap, lead braking, a driver override or a low speed.", "限速突降舒适松弛", "跟随稳定前车时限速突然大幅下降，目标速度按舒适速率下降而不是阶跃。被逼近的车距、前车制动、驾驶者接管或低速否决。"),
   "ShowRadarInfo": ("Radar points overlay", "Level scale for the radar point overlay: 0 off, 1 speed box only, 2 adds lateral offset and distance, 3 also marks static returns. Display only.", "雷达点叠加显示", "雷达点叠加的档位：0 关闭，1 只画速度框，2 增加横向偏移与距离，3 再用 * 标出静止目标。仅用于显示。"),
   "CarrotRadarPointsEnabled": ("Radar points overlay", "Draw the measured front-radar points in the road view, with their relative speed, lateral offset and distance. Display only.", "雷达点叠加显示", "在路面视图中绘制前雷达正在跟踪的点，并标注相对速度、横向偏移与距离。仅用于显示。"),
   "CarrotSignalHudEnabled": ("Neural signal indicator", "Advisory HUD ring: the outer ring is the light evidence the neural model sees, the centre dot is what the planner actually applies (mode 2 only). Never a green departure indication for mixed evidence.", "神经信号灯指示", "提示性 HUD 圆环：外圈为神经模型看到的灯色证据，中心点为规划器实际执行的动作（仅模式 2）。证据混杂时不会给出绿灯放行暗示。"),

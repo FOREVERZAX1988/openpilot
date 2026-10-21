@@ -2,6 +2,7 @@ import unittest
 
 from openpilot.sunnypilot.common.safe_mode import (
   SAFE_MODE_MANAGED_KEYS,
+  SAFE_MODE_REMOVE_KEYS,
   UNKNOWN_STOCK,
   backup_entry,
   can_restore,
@@ -86,6 +87,12 @@ class TestSafeValue(unittest.TestCase):
     # A whitelist covering everything would defeat the purpose.
     self.assertLess(len(SAFE_MODE_MANAGED_KEYS), 40)
 
+  def test_every_removed_key_is_managed(self):
+    # The runtime only backs up managed keys; a removal outside the managed
+    # set would restore from nothing.
+    for key in SAFE_MODE_REMOVE_KEYS:
+      self.assertIn(key, SAFE_MODE_MANAGED_KEYS)
+
 
 class TestCanRestore(unittest.TestCase):
   def test_only_when_parked(self):
@@ -166,6 +173,32 @@ class TestApplyAndRestore(unittest.TestCase):
     params = FakeParams({"ExperimentalMode": "1"}, unknown=("NNFFMode",))
     self.assertTrue(apply_safe_mode(params))
     self.assertEqual(params.values["ExperimentalMode"], "0")
+
+  def test_the_steer_knobs_are_removed_not_written(self):
+    # These knobs are "0.0 means not set" parameters; writing 0.0 would be
+    # read back as a present-but-invalid value, so they are removed.
+    params = FakeParams({"SteerRatio": "16.8", "SteerFriction": "0.3"})
+    self.assertTrue(apply_safe_mode(params))
+    self.assertNotIn("SteerRatio", params.values)
+    self.assertNotIn("SteerFriction", params.values)
+    # And the originals are in the backup.
+    backup = backup_document(params)
+    self.assertEqual(backup["SteerRatio"], {"present": True, "value": "16.8"})
+    self.assertEqual(backup["SteerFriction"], {"present": True, "value": "0.3"})
+
+  def test_a_removed_knob_restores_to_its_original_value(self):
+    params = FakeParams({"SteerRatio": "16.8"})
+    apply_safe_mode(params)
+    self.assertTrue(restore_safe_mode(params))
+    self.assertEqual(params.values["SteerRatio"], "16.8")
+
+  def test_the_enforcer_reapplies_the_removal(self):
+    params = FakeParams({"SafeMode": "1", "SteerRatio": "16.8"})
+    apply_safe_mode(params)
+    # Someone (a learner process) writes the ratio back mid-drive.
+    params.values["SteerRatio"] = "17.2"
+    self.assertTrue(enforce_safe_mode(params, 20))
+    self.assertNotIn("SteerRatio", params.values)
 
   def test_restore_puts_the_values_back(self):
     params = FakeParams({"ExperimentalMode": "1", "NNFFMode": "2"})

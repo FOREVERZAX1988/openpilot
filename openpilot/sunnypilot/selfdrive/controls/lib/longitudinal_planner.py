@@ -17,7 +17,7 @@ from opendbc.car.interfaces import ACCEL_MAX, ACCEL_MIN
 from openpilot.common.constants import CV
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
-from openpilot.selfdrive.car.cruise import V_CRUISE_MAX
+from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan
 from openpilot.selfdrive.controls.lib.weather_offsets import WeatherOffsets
 from openpilot.selfdrive.modeld.constants import ModelConstants
@@ -36,6 +36,7 @@ from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.zoompilot 
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist import SpeedLimitAssist
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.assist_mirror import SpeedLimitAssistMirror
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.helpers import pcm_machine_owns_sla
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.lead_drop_relaxation import LeadDropRelaxation
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.icbm_latch import icbm_active
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist_zp import SpeedLimitAssistZP
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitResolver
@@ -108,6 +109,12 @@ class LongitudinalPlannerSP:
     self.sla_mirror = SpeedLimitAssistMirror(CP, CP_SP)
     self.sla = self._sla_owner(not CP_SP.pcmCruiseSpeed)
     self.scc_actionable = CP.openpilotLongitudinalControl or not CP_SP.pcmCruiseSpeed
+    # Comfort relaxation for a sudden speed-limit drop while a stable lead is
+    # followed (default off). The veto list lives in lead_drop_relaxation and
+    # is the boundary between comfort and safety; the planner only feeds it
+    # values and takes the answer. The switch is read below, where the other
+    # slow-cadence params live (UnifiedParams exists from there on).
+    self._lead_drop = LeadDropRelaxation(DT_MDL)
     self.generation = int(model_bundle.generation) if (model_bundle := get_active_bundle()) else None
     self.source = LongitudinalPlanSource.cruise
     self.e2e_alerts_helper = E2EAlertsHelper()
@@ -152,6 +159,7 @@ class LongitudinalPlannerSP:
     self._braking_gap_enabled = self._params.get_bool("CarrotBrakingGapEnabled")
     self._cutout_relief_enabled = self._params.get_bool("CarrotCutoutReliefEnabled")
     self._param_count = 0
+    self._lead_drop_enabled = param_read.read_bool(self._params, "SlcLeadDropRelaxationEnabled")
     self.carrot_should_stop = False
     # Experimental moving-red pipeline. Observation-only until mode 2 is
     # wired: it reads modeld's tmpfs observations and logs a shadow summary,
@@ -282,6 +290,7 @@ class LongitudinalPlannerSP:
     if self._param_count % 100 == 0:
       self._carrot_enabled = self._params.get_bool("CarrotLongitudinalSourceEnabled")
       self._fusion_enabled = self._params.get_bool("CarrotTrafficLightFusionEnabled")
+      self._lead_drop_enabled = param_read.read_bool(self._params, "SlcLeadDropRelaxationEnabled")
 
     # Smart Cruise Control
     # SCC has nothing to act through without openpilot long or ICBM, the same condition
@@ -302,6 +311,27 @@ class LongitudinalPlannerSP:
     has_speed_limit = self.resolver.speed_limit_valid or self.resolver.speed_limit_last_valid
     self.sla.update(long_enabled, long_override, v_ego, a_ego, v_cruise_cluster, self.resolver.speed_limit,
                     self.resolver.speed_limit_final_last, has_speed_limit, self.resolver.distance, self.events_sp)
+
+    # Comfort relaxation of a sudden speed-limit drop (default off). Applied
+    # after the state machine on purpose: the events above still announce the
+    # real limit, only the target fed to the solver is softened. The lead
+    # persistence counter and the applied target live in the helper; a radar
+    # hiccup must never take the planner down, so any surprise resets it.
+    if self._lead_drop_enabled and 0. < self.sla.output_v_target < V_CRUISE_UNSET:
+      try:
+        lead = sm['radarState'].leadOne
+        self.sla.output_v_target = self._lead_drop.relax(
+          float(self.sla.output_v_target), float(v_ego),
+          lead_present=bool(lead.present),
+          lead_status=bool(lead.status),
+          d_rel=float(lead.dRel),
+          v_lead=float(lead.vLead),
+          a_lead_k=float(lead.aLeadK),
+          override_active=bool(long_override))
+      except (AttributeError, KeyError, TypeError, ValueError):
+        self._lead_drop.reset()
+    else:
+      self._lead_drop.reset()
 
     self.targets = {
       LongitudinalPlanSource.cruise: (v_cruise, a_ego),

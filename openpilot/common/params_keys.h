@@ -774,18 +774,16 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SteerLatAccel", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
     {"SteerRatio", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
     {"SteerRatioRate", {PERSISTENT | BACKUP, INT, "100"}},
-    // Stock values: what the car shipped with, so Safe Mode can put a knob
-    // back without guessing. 0.0 means "not known", which makes Safe Mode
-    // leave the parameter alone rather than write a wrong number.
-    {"SteerDelayStock", {PERSISTENT, FLOAT, "0.0"}},
-    {"SteerFrictionStock", {PERSISTENT, FLOAT, "0.0"}},
-    {"SteerKPStock", {PERSISTENT, FLOAT, "0.0"}},
-    {"SteerLatAccelStock", {PERSISTENT, FLOAT, "0.0"}},
-    {"SteerRatioStock", {PERSISTENT, FLOAT, "0.0"}},
     // Safe Mode: force the driving-related knobs back to a conservative
-    // baseline and remember what they were so it can be undone.
+    // baseline and remember what they were so it can be undone. The stock
+    // value a knob returns to is not a separate key: getKeyStockValue falls
+    // back to the registered default, and the steer knobs are removed rather
+    // than written so every consumer sees its own stock fallback.
     {"SafeMode", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"SafeModeBackup", {PERSISTENT, JSON}},
+    // Comfort relaxation of a sudden speed-limit drop while a stable lead is
+    // followed. Default off: the veto list is the safety boundary.
+    {"SlcLeadDropRelaxationEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // Carrot vehicle / CAN / buttons tuning surface.
     {"AutoGasCancelSpeed", {PERSISTENT | BACKUP, INT, "30"}},
     {"AutoGasSyncSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},

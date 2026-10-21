@@ -15,6 +15,7 @@ from openpilot.sunnypilot.common.safe_mode import (
   SAFE_MODE_BACKUP_PARAM,
   SAFE_MODE_MANAGED_KEYS,
   SAFE_MODE_PARAM,
+  SAFE_MODE_REMOVE_KEYS,
   backup_entry,
   can_restore,
   load_backup,
@@ -137,6 +138,15 @@ def _put(params, key: str, value: str) -> bool:
     return False
 
 
+def _remove(params, key: str) -> bool:
+  """Remove a key, tolerating a store that does not know it."""
+  try:
+    params.remove(key)
+    return True
+  except Exception:
+    return False
+
+
 def is_safe_mode(params) -> bool:
   """Whether Safe Mode is switched on."""
   return read_bool(params, SAFE_MODE_PARAM, False)
@@ -166,7 +176,14 @@ def apply_safe_mode(params, *, ensure_backup: bool = True) -> bool:
       changed = True
 
   backup = load_backup(_get(params, SAFE_MODE_BACKUP_PARAM))
+  for key in SAFE_MODE_REMOVE_KEYS:
+    if _get(params, key) is not None:
+      if _remove(params, key):
+        changed = True
   for key in SAFE_MODE_MANAGED_KEYS:
+    if key in SAFE_MODE_REMOVE_KEYS:
+      # Handled above: these are removed, never written (see safe_mode.py).
+      continue
     target = safe_value(key,
                         current=_get(params, key),
                         stock=_stock(params, key),

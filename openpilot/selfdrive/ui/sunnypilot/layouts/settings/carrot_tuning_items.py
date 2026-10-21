@@ -305,6 +305,12 @@ def build_dev_items():
     toggle_item_sp(title=tr('Lead Preview'), param='CarrotLeadPreviewEnabled',
                    description=tr("Ease off from the lead vehicle's own deceleration, before the gap "
                                    "starts closing. Read once when plannerd starts - restart to apply.")),
+    # SLC = speed limit assist. Not a Carrot* key, so the reach audit does not see it:
+    # without this row the relaxation would run with no switch anywhere on screen.
+    toggle_item_sp(title=tr('Comfort Speed Limit Drop'), param='SlcLeadDropRelaxationEnabled',
+                   description=tr('When the speed limit drops sharply under a stable lead, ease the target down ' +
+                                  'at a comfort rate instead of stepping it. Vetoed by a closing gap, lead ' +
+                                  'braking, a driver override or a low speed. Applies within about five seconds.')),
     toggle_item_sp(title=tr('Traffic Light Fusion'), param='CarrotTrafficLightFusionEnabled',
                    description=tr("Fold the phone app's traffic-light state into the longitudinal plan. "
                                    "Applies within about five seconds, no restart needed.")),
