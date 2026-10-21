@@ -40,13 +40,18 @@ class TestKickAndRead(unittest.TestCase):
     self.assertIsNone(watchdog.watchdog_timed_out(os.getpid(), 10))
 
   def test_a_stale_heartbeat_is_a_timeout(self):
-    # Write a heartbeat that is one hour old.
-    stale_ns = watchdog._now_ns() - int(3600 * 1e9)
+    # A heartbeat that is one hour old -- or half the uptime on a device that
+    # booted more recently than that. CLOCK_BOOTTIME starts at boot, so
+    # "boot - 1h" is negative on a fresh device and struct('<Q') raises
+    # instead of letting the assertion decide (this test was red for the first
+    # hour after every reboot).
+    now_ns = watchdog._now_ns()
+    stale_s = min(3600, max(1, int(now_ns / 1e9) // 2))
     with open(watchdog.watchdog_path(os.getpid()), "wb") as f:
-      f.write(struct.pack("<Q", stale_ns))
-    dt = watchdog.watchdog_timed_out(os.getpid(), 10)
+      f.write(struct.pack("<Q", now_ns - int(stale_s * 1e9)))
+    dt = watchdog.watchdog_timed_out(os.getpid(), stale_s / 10)
     self.assertIsNotNone(dt)
-    self.assertGreater(dt, 3000)
+    self.assertGreater(dt, stale_s * 0.9)
 
   def test_a_missing_heartbeat_is_not_a_timeout(self):
     # A process that has not reported yet must not be restarted in a loop.

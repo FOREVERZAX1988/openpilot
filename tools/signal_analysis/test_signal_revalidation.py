@@ -1,6 +1,7 @@
+from openpilot.common.repo_tools import load
 import cv2,numpy as np,pytest
 from unittest.mock import patch
-from tools.signal_analysis import signal_tracker as tracker_module
+tracker_module = load('signal_analysis/signal_tracker.py')
 from openpilot.sunnypilot.carrot.signal_assist import SignalAssist
 from openpilot.sunnypilot.carrot.tests.test_signal_assist import observation,step
 

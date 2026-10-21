@@ -1,6 +1,8 @@
+from openpilot.common.repo_tools import load
 import copy
 
-from tools.signal_analysis.train_transition_probe import fit, predict
+_train_transition_probe = load('signal_analysis/train_transition_probe.py')
+fit, predict = _train_transition_probe.fit, _train_transition_probe.predict
 
 
 def test_evaluation_rows_cannot_change_training_weights_or_normalization():
