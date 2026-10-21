@@ -35,10 +35,12 @@ def test_metadata_bindings_are_exported():
 
 # Managed keys whose feature we have not ported yet. The managed list is kept verbatim
 # with upstream so future pulls of it apply cleanly, and safe_mode_runtime skips a key
-# the store does not know instead of acting on it. Registry entries (ai/docs/
-# upstream_divergence_registry.json): NNFFMode -> 63a6f3211b, VisionSpeedLimit* ->
-# d81eec5899, both still `eval`.
-UNPORTED_MANAGED_KEYS = frozenset({"NNFFMode", "VisionSpeedLimitEnabled", "VisionSpeedLimitLowLimitFilter"})
+# the store does not know instead of acting on it. Only one entry is left:
+# NNFFMode -> 63a6f3211b (never registered, still `eval`). VisionSpeedLimitEnabled and
+# VisionSpeedLimitLowLimitFilter used to be listed here; round 12 (d81eec5899) ported
+# vision speed limit, which registered both, and this test went red until they were
+# dropped -- exactly what it is for.
+UNPORTED_MANAGED_KEYS = frozenset({"NNFFMode"})
 
 
 def _registered_keys() -> set[str]:
