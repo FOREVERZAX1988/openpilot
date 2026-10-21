@@ -18,6 +18,7 @@ from openpilot.sunnypilot.common.mode_state import (
   ONROAD_PARAM,
   lock_reason,
   plan_matches_store,
+  requested_mode_active,
   selected_mode,
   write_plan,
 )
@@ -76,6 +77,38 @@ def _road_flag(params, key: str) -> bool | None:
   if text in ("0", "False", "false"):
     return False
   return None
+
+
+def _confirmed_flag(params) -> bool | None:
+  """The confirmation bit as tri-state: True, False, or None when unwritten.
+
+  ``read_bool`` cannot tell "unwritten" from "false", and for this bit the
+  difference decides whether a car that predates the bit keeps its mode.
+  """
+  try:
+    raw = params.get(MODE_CONFIRMED_PARAM)
+  except Exception:
+    return None
+  if raw is None:
+    return None
+  if isinstance(raw, bytes):
+    return raw.decode("utf-8", "ignore") not in ("", "0", "False", "false")
+  if isinstance(raw, str):
+    return raw not in ("", "0", "False", "false")
+  return bool(raw)
+
+
+def experimental_mode_requested(params) -> bool:
+  """Whether the store is asking for Experimental Mode right now.
+
+  The single read every consumer should use. controlsd and selfdrived used to
+  take the switch alone, which meant any writer could enable the mode without
+  the driver ever seeing the dialog; routing them through here makes the
+  confirmation bit part of the switch rather than a UI-only convention.
+  """
+  if not read_bool(params, MODE_ON_PARAM, False):
+    return False
+  return requested_mode_active(True, _confirmed_flag(params))
 
 
 def snapshot(params, capable: bool | None = None) -> dict:

@@ -99,6 +99,20 @@ def selected_mode(on: bool) -> str:
   return "experimental" if on else "chill"
 
 
+def requested_mode_active(enabled: bool, confirmed: bool | None) -> bool:
+  """Whether the store is asking for the mode, confirmation bit included.
+
+  ``confirmed is None`` means the store has no confirmation bit at all, which
+  is the layout cars had before the bit existed. Those are grandfathered: the
+  bit exists to stop a *new* enable from skipping the dialog, not to switch
+  off a car that has been driving the mode for months. A bit that is present
+  and False does block, because that state means someone disabled the mode
+  and the switch left over is stale.
+  """
+  return bool(enabled) and confirmed is not False
+
+
+
 def plan_matches_store(plan, read_bool) -> bool:
   """Every planned write is verifiably in the store, by reading it back."""
   for key, value in plan:

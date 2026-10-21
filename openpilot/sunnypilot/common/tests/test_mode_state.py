@@ -13,12 +13,14 @@ from openpilot.sunnypilot.common.mode_state import (
   lock_reason,
   normalize_persisted_status,
   plan_matches_store,
+  requested_mode_active,
   road_state_known,
   selected_mode,
   write_plan,
 )
 from openpilot.sunnypilot.common.mode_state_runtime import (
   ModeStateError,
+  experimental_mode_requested,
   set_experimental_mode,
   snapshot,
 )
@@ -182,6 +184,48 @@ class TestRoadState(unittest.TestCase):
   def test_unknown_states(self):
     self.assertFalse(road_state_known(None, None))
     self.assertFalse(road_state_known(True, True))
+
+
+class TestRequestedMode(unittest.TestCase):
+  """The switch and its confirmation bit, read as one thing."""
+
+  def test_the_switch_alone_is_not_a_request_when_the_bit_says_no(self):
+    self.assertFalse(requested_mode_active(True, False))
+
+  def test_an_acknowledged_switch_is_a_request(self):
+    self.assertTrue(requested_mode_active(True, True))
+
+  def test_an_off_switch_is_never_a_request(self):
+    self.assertFalse(requested_mode_active(False, True))
+    self.assertFalse(requested_mode_active(False, None))
+
+  def test_a_car_without_the_bit_is_grandfathered(self):
+    # The bit exists to stop a new enable from skipping the dialog; it must
+    # not switch off a car that has been driving the mode since before it.
+    self.assertTrue(requested_mode_active(True, None))
+
+  def test_a_runtime_read_of_the_switch_uses_the_bit(self):
+    self.assertFalse(experimental_mode_requested(FakeParams({"ExperimentalMode": "1",
+                                                            "ExperimentalModeConfirmed": "0"})))
+    self.assertTrue(experimental_mode_requested(FakeParams({"ExperimentalMode": "1",
+                                                            "ExperimentalModeConfirmed": "1"})))
+    self.assertFalse(experimental_mode_requested(FakeParams({"ExperimentalMode": "0",
+                                                             "ExperimentalModeConfirmed": "1"})))
+
+  def test_a_runtime_read_grandfathers_a_missing_bit(self):
+    self.assertTrue(experimental_mode_requested(FakeParams({"ExperimentalMode": "1"})))
+
+  def test_a_runtime_read_survives_a_store_that_raises(self):
+    class Broken:
+      def get_bool(self, key, block=False):
+        return True
+
+      def get(self, key, block=False, return_default=False):
+        raise OSError("gone")
+
+    # The switch says on and the bit cannot be read: the honest answer is the
+    # grandfathered one, which is also what the store said before the bit.
+    self.assertTrue(experimental_mode_requested(Broken()))
 
 
 if __name__ == "__main__":

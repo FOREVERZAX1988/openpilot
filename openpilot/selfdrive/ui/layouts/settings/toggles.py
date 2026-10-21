@@ -3,7 +3,7 @@ from openpilot.common.params import Params, UnknownKeyName
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.list_view import multiple_button_item, toggle_item
 from openpilot.system.ui.widgets.scroller_tici import Scroller
-from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
+from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog, alert_dialog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.widgets import DialogResult
@@ -248,7 +248,7 @@ class TogglesLayout(Widget):
         self._long_personality_setting.action_item.set_enabled(False)
         self._accel_controller_enabled.action_item.set_enabled(False)
         self._accel_personality_setting.action_item.set_enabled(False)
-        self._params.remove("ExperimentalMode")
+        self._clear_experimental_mode()
 
         unavailable = tr("Experimental mode is currently unavailable on this car since the car's stock ACC is used for longitudinal control.")
 
@@ -296,13 +296,46 @@ class TogglesLayout(Widget):
     icon = "experimental.png" if self._toggles["ExperimentalMode"].action_item.get_state() else "experimental_white.png"
     self._toggles["ExperimentalMode"].set_icon(icon)
 
+  def _clear_experimental_mode(self):
+    """Turn the mode off and forget the acknowledgement with it.
+
+    This runs when the car turns out to have no openpilot longitudinal
+    control: leaving ExperimentalModeConfirmed set would mean the mode comes
+    back on without a dialog if the car is later swapped to one that does.
+    """
+    from openpilot.sunnypilot.common.mode_state import MODE_CONFIRMED_PARAM
+
+    self._params.remove("ExperimentalMode")
+    try:
+      self._params.remove(MODE_CONFIRMED_PARAM)
+    except UnknownKeyName:
+      pass
+
+  def _apply_experimental_mode(self, enabled: bool, acknowledged: bool):
+    """Write the mode through the state machine, not straight into the store.
+
+    The ui is one of three writers (the wheel buttons and carrot_server are the
+    others), and only the state machine knows about the Safe Mode lock, the
+    road-state prerequisite and the read-back check. A refusal is reported and
+    the drawn switch is put back, because the store did not change.
+    """
+    from openpilot.sunnypilot.common.mode_state_runtime import ModeStateError, set_experimental_mode
+
+    try:
+      set_experimental_mode(self._params, enabled, acknowledged=acknowledged)
+    except ModeStateError as exc:
+      self._toggles["ExperimentalMode"].action_item.set_state(not enabled)
+      gui_app.push_widget(alert_dialog(str(exc)))
+    finally:
+      self._update_experimental_mode_icon()
+
   def _handle_experimental_mode_toggle(self, state: bool):
-    confirmed = self._params.get_bool("ExperimentalModeConfirmed")
+    from openpilot.sunnypilot.common.mode_state import MODE_CONFIRMED_PARAM
+    confirmed = self._params.get_bool(MODE_CONFIRMED_PARAM)
     if state and not confirmed:
       def confirm_callback(result: DialogResult):
         if result == DialogResult.CONFIRM:
-          self._params.put_bool("ExperimentalMode", True, block=True)
-          self._params.put_bool("ExperimentalModeConfirmed", True, block=True)
+          self._apply_experimental_mode(True, True)
         else:
           self._toggles["ExperimentalMode"].action_item.set_state(False)
         self._update_experimental_mode_icon()
@@ -313,8 +346,7 @@ class TogglesLayout(Widget):
       dlg = ConfirmDialog(content, tr("Enable"), rich=True, callback=confirm_callback)
       gui_app.push_widget(dlg)
     else:
-      self._update_experimental_mode_icon()
-      self._params.put_bool("ExperimentalMode", state, block=True)
+      self._apply_experimental_mode(state, True)
 
   def _toggle_callback(self, state: bool, param: str):
     if param == "ExperimentalMode":

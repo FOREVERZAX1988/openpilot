@@ -111,6 +111,12 @@ class CruiseHelper:
   def update_experimental_mode(self, events, experimental_mode) -> None:
     if self.button_frame_counts[ButtonType.altButton2] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:
       self._experimental_mode = not experimental_mode
+      # A wheel-button long press is the driver's own acknowledgement, so
+      # enabling also records the confirmation bit. Disabling leaves it alone,
+      # matching write_plan(): the driver acknowledged the mode once, and a
+      # later off/on cycle should not quietly re-prompt them.
+      if self._experimental_mode:
+        self.params.put_bool("ExperimentalModeConfirmed", True)
       self.params.put_bool("ExperimentalMode", self._experimental_mode)
       events.add(EventNameSP.experimentalModeSwitched)
       self.experimental_mode_switched = True
