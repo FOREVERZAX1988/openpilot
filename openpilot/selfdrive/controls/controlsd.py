@@ -80,9 +80,33 @@ class Controls(ControlsExt):
     elif self.CP.lateralTuning.which() == 'pid':
       self.LaC = LatControlPID(self.CP, self.CP_SP, self.CI, DT_CTRL)
     elif self.CP.lateralTuning.which() == 'torque':
-      self.LaC = LatControlTorque(self.CP, self.CP_SP, self.CI, DT_CTRL)
+      # StarPilot NNFF lateral controller (upstream 63a6f3211b), gated by NNFFMode:
+      # 0=off, 1=lite jerk-friction, 2=full NN. Constructed only when the param says
+      # so; without a matching per-vehicle model the controller degrades to classic
+      # torque math on its own (latcontrol_nnff.py: nnff_loaded). This car
+      # (PORSCHE_MACAN_MK1) has no model and no substitute, so the branch is inert
+      # here -- see feature_support NNFFMode and the Developer-page row.
+      nnff_mode = self._nnff_mode_param()
+      if nnff_mode > 0:
+        from openpilot.selfdrive.controls.lib.latcontrol_nnff import LatControlNNFF
+        self.LaC = LatControlNNFF(self.CP, self.CP_SP, self.CI, DT_CTRL)
+        self.LaC.nnff_mode = nnff_mode
+        self.LaC.attach_sm(self.sm)
+      else:
+        self.LaC = LatControlTorque(self.CP, self.CP_SP, self.CI, DT_CTRL)
 
     self.LaC = ControlsExt.initialize_lateral_control(self, self.LaC, self.CI, DT_CTRL)
+
+  def _nnff_mode_param(self) -> int:
+    """NNFFMode: 0=off, 1=lite (jerk friction only), 2=full NN feedforward.
+
+    A missing or unreadable key means off, which is also what the registered
+    default says: the controller must never be chosen because a read failed.
+    """
+    try:
+      return int(self.params.get("NNFFMode"))
+    except Exception:
+      return 0
 
   def update(self):
     self.sm.update(15)
@@ -111,24 +135,38 @@ class Controls(ControlsExt):
 
     # Update Torque Params
     if self.CP.lateralTuning.which() == 'torque':
+      # NNFF (NNFFMode > 0) is a plain LatControl, not a LatControlTorque: it has no
+      # fork extension (FLM overrides / lane assist / speed-dependent torque) and it
+      # names its live-parameter push update_live_torque_params. Two consequences,
+      # both handled here rather than by pretending the surfaces are the same:
+      #   * the push goes to whichever method the controller actually has. Upstream
+      #     defines update_live_torque_params and never calls it, so up there NNFF
+      #     keeps the CarParams defaults and never sees lateralTorqueParameters;
+      #   * with no extension the fork's overlay hooks do not run, which is the
+      #     honest behaviour: NNFF replaces that math rather than layering on it.
+      lac_ext = getattr(self.LaC, 'extension', None)
       torque_params = self.sm['lateralTorqueParameters']
       if self.sm.all_checks(['lateralTorqueParameters']) and torque_params.useParams:
-        self.LaC.update_torque_parameters(torque_params.latAccelFactorFiltered, torque_params.latAccelOffsetFiltered,
-                                           torque_params.frictionCoefficientFiltered)
+        push = getattr(self.LaC, 'update_torque_parameters', None) or getattr(self.LaC, 'update_live_torque_params', None)
+        if push is not None:
+          push(torque_params.latAccelFactorFiltered, torque_params.latAccelOffsetFiltered,
+               torque_params.frictionCoefficientFiltered)
 
-        self.LaC.extension.update_limits()
+        if lac_ext is not None:
+          lac_ext.update_limits()
 
-      self.LaC.extension.update_model_v2(self.sm['modelV2'])
+      if lac_ext is not None:
+        lac_ext.update_model_v2(self.sm['modelV2'])
 
-      self.LaC.extension.update_lateral_lag(self.lat_delay)
+        lac_ext.update_lateral_lag(self.lat_delay)
 
-      # Carrot's curve speed, for the `UseLaneLineCurveSpeed` gate in the lane
-      # assist: below the configured magnitude the lane-line-derived curvature
-      # correction is suppressed, so the model path guides the bend instead. This
-      # is the fork's home for cp's `lanefull_mode_enabled` coupling
-      # (cp controls/controlsd.py:215); carrotManSP is already subscribed here.
-      if self.sm.valid.get('carrotManSP', False):
-        self.LaC.extension.update_curve_speed(self.sm['carrotManSP'].vTurnSpeed)
+        # Carrot's curve speed, for the `UseLaneLineCurveSpeed` gate in the lane
+        # assist: below the configured magnitude the lane-line-derived curvature
+        # correction is suppressed, so the model path guides the bend instead. This
+        # is the fork's home for cp's `lanefull_mode_enabled` coupling
+        # (cp controls/controlsd.py:215); carrotManSP is already subscribed here.
+        if self.sm.valid.get('carrotManSP', False):
+          lac_ext.update_curve_speed(self.sm['carrotManSP'].vTurnSpeed)
 
     long_plan = self.sm['longitudinalPlan']
     model_v2 = self.sm['modelV2']
@@ -199,6 +237,13 @@ class Controls(ControlsExt):
 
     self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll, lat_jerk_factor)
     lat_delay = self.sm["lateralDelay"].lateralDelay + LAT_SMOOTH_SECONDS
+    if type(self.LaC).__name__ == 'LatControlNNFF':
+      # live delay, and the mode re-read once a second (upstream 63a6f3211b): the
+      # Developer-page row changes the controller without restarting the process.
+      self.LaC.update_live_delay(lat_delay)
+      self._nnff_frame = getattr(self, '_nnff_frame', 0) + 1
+      if self._nnff_frame % 100 == 0:
+        self.LaC.nnff_mode = self._nnff_mode_param()
 
     actuators.curvature = self.desired_curvature
     steer, lateral_output, lac_log = self.LaC.update(CC.latActive, CS, self.VM, lp,

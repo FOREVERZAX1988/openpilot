@@ -70,6 +70,12 @@ UNSUPPORTED: tuple[Unsupported, ...] = (
     off=False,
   ),
   Unsupported(
+    param="NNFFMode",
+    cars=OUR_CARS,
+    reason="No torque model for a Macan: none of the 121 models is a PORSCHE and opendbc has no substitute, so this falls back to stock torque math.",
+    off=0,
+  ),
+  Unsupported(
     param="CarrotFastRadarEnabled",
     cars=OUR_CARS,
     reason="Hyundai only: plannerd keeps liveTracks switched on whenever this key is set and "

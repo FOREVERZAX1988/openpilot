@@ -35,12 +35,14 @@ def test_metadata_bindings_are_exported():
 
 # Managed keys whose feature we have not ported yet. The managed list is kept verbatim
 # with upstream so future pulls of it apply cleanly, and safe_mode_runtime skips a key
-# the store does not know instead of acting on it. Only one entry is left:
-# NNFFMode -> 63a6f3211b (never registered, still `eval`). VisionSpeedLimitEnabled and
-# VisionSpeedLimitLowLimitFilter used to be listed here; round 12 (d81eec5899) ported
-# vision speed limit, which registered both, and this test went red until they were
-# dropped -- exactly what it is for.
-UNPORTED_MANAGED_KEYS = frozenset({"NNFFMode"})
+# the store does not know instead of acting on it.
+#
+# Empty since round 16 registered NNFFMode: 63a6f3211b is now ported (controller,
+# models, param key, Developer-page row), so the exemption has nothing left to hold.
+# VisionSpeedLimitEnabled / VisionSpeedLimitLowLimitFilter left in round 12 the same
+# way. Keeping the empty set is the point: the next unported managed key has to be
+# added here deliberately, and this test fails the moment it gets registered.
+UNPORTED_MANAGED_KEYS: frozenset[str] = frozenset()
 
 
 def _registered_keys() -> set[str]:

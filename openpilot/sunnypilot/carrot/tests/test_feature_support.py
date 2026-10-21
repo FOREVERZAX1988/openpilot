@@ -19,8 +19,14 @@ MACAN = "PORSCHE_MACAN_MK1"
 OTHER_CAR = "TOYOTA_COROLLA_TSS2"
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-TUNING_ITEMS = os.path.join(REPO_ROOT, "selfdrive", "ui", "sunnypilot", "layouts", "settings",
-                            "carrot_tuning_items.py")
+SETTINGS_DIR = os.path.join(REPO_ROOT, "selfdrive", "ui", "sunnypilot", "layouts", "settings")
+TUNING_ITEMS = os.path.join(SETTINGS_DIR, "carrot_tuning_items.py")
+#: Every page that renders a `param=` switch is scanned. NNFFMode's row lives on the
+#: Developer page, and a page nobody scans is exactly where the `enabled=` wiring rots.
+SWITCH_PAGES = (
+  TUNING_ITEMS,
+  os.path.join(SETTINGS_DIR, "developer.py"),
+)
 PARAMS_KEYS = os.path.join(REPO_ROOT, "common", "params_keys.h")
 
 
@@ -145,17 +151,18 @@ class TestUiWiring(unittest.TestCase):
   """
 
   def _switch_calls(self):
-    with open(TUNING_ITEMS) as f:
-      tree = ast.parse(f.read(), filename=TUNING_ITEMS)
-    for node in ast.walk(tree):
-      if not isinstance(node, ast.Call):
-        continue
-      param_kw = next((kw for kw in node.keywords if kw.arg == "param"), None)
-      if param_kw is None or not isinstance(param_kw.value, ast.Constant):
-        continue
-      if not isinstance(param_kw.value.value, str):
-        continue
-      yield param_kw.value.value, node
+    for page in SWITCH_PAGES:
+      with open(page) as f:
+        tree = ast.parse(f.read(), filename=page)
+      for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+          continue
+        param_kw = next((kw for kw in node.keywords if kw.arg == "param"), None)
+        if param_kw is None or not isinstance(param_kw.value, ast.Constant):
+          continue
+        if not isinstance(param_kw.value.value, str):
+          continue
+        yield param_kw.value.value, node
 
   def test_table_rows_found_in_the_page_are_gated(self):
     rows = {row.param: row for row in fs.UNSUPPORTED}
@@ -164,7 +171,7 @@ class TestUiWiring(unittest.TestCase):
       if param not in rows:
         continue
       enabled_kw = next((kw for kw in call.keywords if kw.arg == "enabled"), None)
-      self.assertIsNotNone(enabled_kw, f"{param} has a switch in carrot_tuning_items.py but no enabled= wiring")
+      self.assertIsNotNone(enabled_kw, f"{param} has a switch on a settings page but no enabled= wiring")
       fn = enabled_kw.value
       self.assertIsInstance(fn, ast.Call, f"{param}: enabled= must be feature_support.ui_enabled(...)")
       self.assertIsInstance(fn.func, ast.Attribute, f"{param}: enabled= must be feature_support.ui_enabled(...)")
