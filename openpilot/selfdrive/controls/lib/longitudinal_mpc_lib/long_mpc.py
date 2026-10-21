@@ -6,6 +6,15 @@ from openpilot.cereal import log
 from opendbc.car.interfaces import ACCEL_MIN, ACCEL_MAX
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
+from openpilot.selfdrive.controls.lib.lead_duplicate_policy import (
+  DuplicateVisionLeadFilters,
+  identical_radar_duplicate_source_hold,
+  near_duplicate_lead_source_hysteresis,
+)
+from openpilot.selfdrive.controls.lib.model_lead_trajectory import (
+  build_model_lead_trajectory,
+  should_trigger_planner_fcw,
+)
 # WARNING: imports outside of constants will not trigger a rebuild
 from openpilot.selfdrive.modeld.constants import index_function
 from openpilot.selfdrive.controls.radard import _LEAD_ACCEL_TAU
@@ -271,6 +280,9 @@ class LongitudinalMpc:
     self.lead_gap_margins = np.zeros((N+1, 2))
     self.base_desired_distances = np.zeros(2)
     self.desired_distance = 0.0
+    # StarPilot duplicate-vision comfort filters (used only when the planner
+    # passes smooth_duplicate_vision=True for a qualified non-urgent pair).
+    self.duplicate_lead_filters = DuplicateVisionLeadFilters(self.dt)
     self.reset()
     self.source = LongitudinalPlanSource.cruise
 
@@ -284,6 +296,11 @@ class LongitudinalMpc:
     self.a_change_cost = _read_tuning_float(p, "LongitudinalMpcTuningAChangeCost", A_CHANGE_COST)
     self.danger_zone_cost = _read_tuning_float(p, "LongitudinalMpcTuningDangerZoneCost", DANGER_ZONE_COST)
     self.lead_danger_factor = _read_tuning_float(p, "LongitudinalMpcTuningLeadDangerFactor", LEAD_DANGER_FACTOR)
+
+  def leads_are_near_duplicates(self, lead_one, lead_two, v_ego, *, vision_min_speed=None):
+    """Expose the duplicate-lead detector for lead_follow_policy and tests."""
+    from openpilot.selfdrive.controls.lib.lead_duplicate_policy import leads_are_near_duplicates
+    return leads_are_near_duplicates(lead_one, lead_two, v_ego, vision_min_speed=vision_min_speed)
 
   def t_follow_user_scale(self, personality=log.LongitudinalPersonality.standard) -> float:
     """How far the user moved the follow time from its default (1.0 = untouched).
@@ -335,6 +352,8 @@ class LongitudinalMpc:
     self.x0 = np.zeros(X_DIM)
     self.lead_0_obstacle = None
     self.lead_1_obstacle = None
+    if getattr(self, 'duplicate_lead_filters', None) is not None:
+      self.duplicate_lead_filters.invalidate()
     if getattr(self, 'lead_gap_states', None) is not None:
       self.lead_gap_margins = np.zeros((N+1, 2))
     self.set_weights()
@@ -377,9 +396,23 @@ class LongitudinalMpc:
     lead_xv = np.column_stack((x_lead_traj, v_lead_traj))
     return lead_xv
 
-  def process_lead(self, lead):
+  def process_lead(self, lead, lead_index=0, model_lead=None, smooth_duplicate_vision=False):
     v_ego = self.x0[1]
-    if lead is not None and lead.present:
+    lead_active = lead is not None and lead.present
+
+    # StarPilot model-lead trajectory: the model contributes future deltas on
+    # top of the raw h=0 anchor. Activated only when the planner passes a
+    # model_lead (gated by ModelLeadTrajectoryEnabled); otherwise the raw path
+    # below runs unchanged.
+    if lead_active and model_lead is not None:
+      model_lead_xv = build_model_lead_trajectory(model_lead, lead, v_ego, T_IDXS)
+      if model_lead_xv is not None:
+        # Keep duplicate filters invalidated so leaving this path later
+        # cannot introduce a state discontinuity.
+        self.duplicate_lead_filters.invalidate(lead_index)
+        return model_lead_xv
+
+    if lead_active:
       x_lead = lead.dRel
       v_lead = lead.vLead
       a_lead = lead.aLeadK
@@ -397,13 +430,32 @@ class LongitudinalMpc:
     x_lead = np.clip(x_lead, min_x_lead, 1e8)
     v_lead = np.clip(v_lead, 0.0, 1e8)
     a_lead = np.clip(a_lead, -10., 5.)
+
+    # StarPilot duplicate-vision comfort smoothing: only for a qualified
+    # non-urgent vision duplicate pair (planner-decided). Ratcheted distance
+    # filter lets closers through instantly; outside the scene the filters
+    # invalidate so the raw path is preserved bit-for-bit.
+    if lead_active and smooth_duplicate_vision and not bool(getattr(lead, "radar", False)):
+      x_lead, v_lead, a_lead = self.duplicate_lead_filters.apply(lead_index, float(x_lead), float(v_lead), float(a_lead))
+      x_lead = np.clip(x_lead, min_x_lead, 1e8)
+      v_lead = np.clip(v_lead, 0.0, 1e8)
+      a_lead = np.clip(a_lead, -10., 5.)
+    else:
+      self.duplicate_lead_filters.invalidate(lead_index)
     lead_xv = self.extrapolate_lead(x_lead, v_lead, a_lead, a_lead_tau)
     return lead_xv
 
   def update(self, radarstate, personality=log.LongitudinalPersonality.standard, *, t_follow=None, jerk_factor=None,
               comfort_brake=None, stop_obstacle_distance=0.0, lane_change_credit=None,
               reset_state=False, lead_gap_enabled=False, lead_comfort_enabled=False,
-              cutout_relief_enabled=False, lead_accel_response=0, lane_change_active=False):
+              cutout_relief_enabled=False, lead_accel_response=0, lane_change_active=False,
+              model_leads=None, duplicate_guard_enabled=False, panic_bypass=False):
+    # StarPilot additions (all default off -> stock path byte-identical):
+    # - model_leads: leadsV3 pair; enables the model-trajectory future-delta path
+    #   and the enhanced planner-FCW gate (ModelLeadTrajectoryEnabled).
+    # - duplicate_guard_enabled: near-duplicate source hysteresis + identical
+    #   radar-track source hold (LeadDuplicateGuardEnabled).
+    # - panic_bypass: uncertainty panic gate, forces raw lead path for this frame.
     # Carrot gap/comfort refinements (all default off). lead_gap_enabled adds an
     # opening-gap TF margin, lead_comfort_enabled a bounded comfort slack, and
     # cutout_relief_enabled eases the demand for a confirmed cut-out. With every
@@ -422,8 +474,26 @@ class LongitudinalMpc:
     # obstacle-distance math; they do NOT touch PARAM_DIM or rebuild the solver.
     self.comfort_brake = float(comfort_brake) if comfort_brake is not None else COMFORT_BRAKE
 
-    lead_xv_0 = self.process_lead(radarstate.leadOne)
-    lead_xv_1 = self.process_lead(radarstate.leadTwo)
+    # StarPilot duplicate-vision comfort smoothing only wires for a qualified
+    # non-urgent vision duplicate pair, decided on the raw leads before any
+    # filtering. Panic frames bypass it entirely.
+    from openpilot.selfdrive.controls.lib.lead_follow_policy import is_nonurgent_duplicate_vision_follow
+    smooth_dup_vision = bool(
+      duplicate_guard_enabled and not panic_bypass and
+      is_nonurgent_duplicate_vision_follow(
+        radarstate.leadOne, radarstate.leadTwo, float(self.x0[1]), float(t_follow), self,
+      )
+    )
+    # Panic frames trust raw measurements only: the model trajectory is a
+    # comfort prediction and must not delay the braking response.
+    model_leads_eff = None if panic_bypass else model_leads
+
+    lead_xv_0 = self.process_lead(radarstate.leadOne, lead_index=0,
+                                  model_lead=model_leads_eff[0] if model_leads_eff else None,
+                                  smooth_duplicate_vision=smooth_dup_vision)
+    lead_xv_1 = self.process_lead(radarstate.leadTwo, lead_index=1,
+                                  model_lead=model_leads_eff[1] if model_leads_eff else None,
+                                  smooth_duplicate_vision=smooth_dup_vision)
 
     # To estimate a safe distance from a moving lead, we calculate how much stopping
     # distance that lead needs as a minimum. We can add that to the current distance
@@ -446,8 +516,35 @@ class LongitudinalMpc:
       )
 
     # The MPC source is chosen from the real radar leads only.
+    # StarPilot duplicate-lead guard (default off): hysteresis bias keeps the
+    # tracked source sticky between near-duplicate leads; an identical radar
+    # track holds the source while the two obstacle profiles stay close. The
+    # bias folds into the real obstacles (as upstream StarPilot) so the argmin
+    # and the solver's min-constraint stay consistent.
+    if duplicate_guard_enabled:
+      prev_source_str = {LongitudinalPlanSource.lead0: "lead0",
+                         LongitudinalPlanSource.lead1: "lead1"}.get(self.source)
+      lead0_bias, lead1_bias = near_duplicate_lead_source_hysteresis(
+        prev_source_str, radarstate.leadOne, radarstate.leadTwo, float(self.x0[1]))
+      lead_0_obstacle = lead_0_obstacle + lead0_bias
+      lead_1_obstacle = lead_1_obstacle + lead1_bias
+
     lead_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle])
-    self.source = MPC_SOURCES[np.argmin(lead_obstacles[0])]
+    candidate = MPC_SOURCES[np.argmin(lead_obstacles[0])]
+    sticky = None
+    if duplicate_guard_enabled and candidate in (LongitudinalPlanSource.lead0, LongitudinalPlanSource.lead1):
+      prev_source_str = {LongitudinalPlanSource.lead0: "lead0",
+                         LongitudinalPlanSource.lead1: "lead1"}.get(self.source)
+      if prev_source_str is not None:
+        sticky = identical_radar_duplicate_source_hold(
+          prev_source_str, radarstate.leadOne, radarstate.leadTwo,
+          float(lead_obstacles[0, 0]), float(lead_obstacles[0, 1]))
+    if sticky == "lead1":
+      self.source = LongitudinalPlanSource.lead1
+    elif sticky == "lead0":
+      self.source = LongitudinalPlanSource.lead0
+    else:
+      self.source = candidate
 
     # A virtual stop obstacle (planned stop point) may be injected when the
     # CarrotPlanner is commanding a stop at a known distance. It is folded into
@@ -543,8 +640,15 @@ class LongitudinalMpc:
           (radarstate.leadOne.present, radarstate.leadTwo.present))
         self.run()
 
+    # Enhanced planner-FCW gate (StarPilot): adds closing-speed + TTC windows
+    # on top of modelProb, so a distant or pace-matched lead cannot inflate
+    # crash_cnt. Gated with ModelLeadTrajectoryEnabled (same feature family).
+    if model_leads is not None:
+      fcw_trigger = should_trigger_planner_fcw(radarstate.leadOne, float(self.x0[1]))
+    else:
+      fcw_trigger = radarstate.leadOne.present and radarstate.leadOne.modelProb > 0.9
     if (np.any(lead_xv_0[FCW_IDXS,0] - self.x_sol[FCW_IDXS,0] < CRASH_DISTANCE) and
-            radarstate.leadOne.modelProb > 0.9):
+            fcw_trigger):
       self.crash_cnt += 1
     else:
       self.crash_cnt = 0

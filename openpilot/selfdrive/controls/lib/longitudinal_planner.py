@@ -13,11 +13,22 @@ from openpilot.selfdrive.controls.lib.accel_boost import AccelBoost
 from openpilot.selfdrive.controls.lib.longcontrol import LongCtrlState
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc, LongitudinalPlanSource
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC
+from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import (
+  STOP_DISTANCE,
+  desired_follow_distance,
+)
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan, should_stop
 from openpilot.selfdrive.controls.lib.lead_follow_policy import apply as apply_follow_policy
+from openpilot.selfdrive.controls.lib.longitudinal_uncertainty import (
+  UncertaintyTracker,
+  compute_raw_uncertainty,
+  panic_window_flags,
+  should_panic_bypass,
+)
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
 
+from openpilot.sunnypilot.common import param_read
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 from openpilot.sunnypilot.carrot.traffic_stop import (
   get_traffic_stop_distance_adjust, get_traffic_stop_obstacle_distance,
@@ -84,6 +95,13 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self._stop_depart_frame = 0
     self.lead_stop_depart_enabled = self._params.get_bool("LeadStopDepartPolicyEnabled")
     self._stop_depart_policy = None  # lazy: stateful stop/depart shaper
+    # StarPilot uncertainty/panic gate + duplicate guard + model trajectory
+    # (all default off; refreshed from params every 20 frames like the above)
+    self._uncert_frame = 0
+    self.uncertainty_policy_enabled = param_read.read_bool(self._params, "UncertaintyPanicBypassEnabled")
+    self.duplicate_guard_enabled = param_read.read_bool(self._params, "LeadDuplicateGuardEnabled")
+    self.model_lead_enabled = param_read.read_bool(self._params, "ModelLeadTrajectoryEnabled")
+    self._uncert_tracker = None  # lazy: UncertaintyTracker(self.dt)
 
     self.v_desired_filter = FirstOrderFilter(init_v, 2.0, self.dt)
     self.a_cruise = init_a
@@ -193,8 +211,36 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       mpc_carrot_kwargs['lead_accel_response'] = int(getattr(self.carrot_source.carrot, 'leadAccelResponse', 0) or 0)
       mpc_carrot_kwargs['lane_change_active'] = self.carrot_lane_change_active
 
+    # StarPilot uncertainty panic gate (default off). Combines desire entropy
+    # + decayed brake-press risk into a scene uncertainty metric; a fast rise
+    # or high magnitude while closing on a nearby lead bypasses downstream
+    # comfort smoothing this frame. Refresh gates every 20 frames.
+    self._uncert_frame += 1
+    if self._uncert_frame % 20 == 0:
+      self.uncertainty_policy_enabled = param_read.read_bool(self._params, "UncertaintyPanicBypassEnabled")
+      self.duplicate_guard_enabled = param_read.read_bool(self._params, "LeadDuplicateGuardEnabled")
+      self.model_lead_enabled = param_read.read_bool(self._params, "ModelLeadTrajectoryEnabled")
+    panic_bypass = False
+    if self.uncertainty_policy_enabled:
+      if self._uncert_tracker is None:
+        self._uncert_tracker = UncertaintyTracker(self.dt)
+      raw_uncertainty = compute_raw_uncertainty(sm['modelV2'].meta)
+      uncertainty, _uncertainty_accel, uncert_slope = self._uncert_tracker.update(
+        raw_uncertainty, sm.logMonoTime['modelV2'] / 1e9)
+      uncert_t_follow = carrot_t_follow if (self.carrot_source_active and carrot_t_follow is not None) \
+        else self.mpc.get_t_follow(personality)
+      uncert_lead = sm['radarState'].leadOne
+      if uncert_lead is not None and uncert_lead.present:
+        scene_desired_gap = float(desired_follow_distance(
+          v_ego, float(uncert_lead.vLead), self.mpc.comfort_brake, STOP_DISTANCE, uncert_t_follow))
+        panic_close_window, _closing_speed, closing_fast = panic_window_flags(uncert_lead, v_ego, scene_desired_gap)
+        panic_bypass = should_panic_bypass(uncertainty, uncert_slope, panic_close_window, closing_fast)
+
     self.mpc.update(sm['radarState'], personality=personality,
                     t_follow=carrot_t_follow,
+                    model_leads=sm['modelV2'].leadsV3 if self.model_lead_enabled else None,
+                    duplicate_guard_enabled=self.duplicate_guard_enabled,
+                    panic_bypass=panic_bypass,
                     **mpc_carrot_kwargs)
     self.update_dec(sm)
 
@@ -265,7 +311,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
         active=bool(sm['selfdriveState'].enabled), v_ego=v_ego, t_follow=effective_t_follow,
         previous_target=float(a_prev), raw_target=float(self.output_a_target),
         tracking=True, post_departure=False,
-        blocked=bool(force_decel or self.output_should_stop), panic_bypass=False)
+        blocked=bool(force_decel or self.output_should_stop), panic_bypass=panic_bypass)
       self.output_a_target = float(np.clip(follow_result.target, ACCEL_MIN, ACCEL_MAX))
 
     # StarPilot stop/depart policy: vision-lead approach caps, low-speed stop

@@ -404,6 +404,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LaneCenteringE2EAuthority", {PERSISTENT | BACKUP, BOOL, "0"}},  // Attenuate lane-centering correction on large deliberate path errors unless near a boundary
     {"CscCurvatureLearningEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot curve-speed self-learning: learns comfort lateral accel per curvature from the driver's manual driving
     {"CurvatureLearningData", {PERSISTENT | BACKUP, STRING}},  // JSON bucket data for CscCurvatureLearningEnabled
+    {"UncertaintyPanicBypassEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot model-uncertainty panic bypass: entropy+brake-risk gate bypasses comfort smoothing when closing on a lead
+    {"LeadDuplicateGuardEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot duplicate-lead guard: near-duplicate source hysteresis, identical-radar-track hold, duplicate-vision comfort smoothing
+    {"ModelLeadTrajectoryEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot model lead trajectory: future-delta comfort path over raw anchor + enhanced planner-FCW gate
 
     {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
     {"DisableDM", {PERSISTENT | BACKUP, BOOL, "0"}},
