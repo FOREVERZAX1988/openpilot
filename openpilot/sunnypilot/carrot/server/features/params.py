@@ -77,6 +77,12 @@ async def api_param_set(request: web.Request) -> web.Response:
 
   params = request.app[PARAMS_KEY]
 
+  # The mode switch goes through the mode state machine, not the generic
+  # writer: enabling without the confirmation bit, while Safe Mode holds the
+  # lock, or against a stale snapshot must be refused rather than stored.
+  if name == "ExperimentalMode":
+    return _set_experimental_mode(params, body)
+
   # Read the old value before writing so the history can show what it replaced.
   before = get_param_values(params, [name] if isinstance(name, str) else []).get(name)
 
@@ -96,6 +102,50 @@ async def api_param_set(request: web.Request) -> web.Response:
       pass
 
   return web.json_response({"ok": True, "name": name, "value": json_safe(stored)})
+
+
+
+def _set_experimental_mode(params, body: dict) -> web.Response:
+  """Route an ExperimentalMode write through the mode state machine.
+
+  Wire-compatible with the plain param_set contract: the same request shape
+  still works. ``acknowledge`` and ``expected`` are opt-in extensions --
+  ``expected`` being the caller's snapshot of {ExperimentalMode,
+  ExperimentalModeConfirmed} for optimistic concurrency, and
+  ``acknowledge`` standing in for the confirmation dialog the settings UI
+  shows before enabling the mode.
+  """
+  from openpilot.sunnypilot.common.mode_state import MODE_CONFIRMED_PARAM, MODE_ON_PARAM
+  from openpilot.sunnypilot.common.mode_state_runtime import ModeStateError, set_experimental_mode
+
+  enabled = bool(body.get("value"))
+  expected = body.get("expected")
+  if expected is not None:
+    if not isinstance(expected, dict) or any(type(expected.get(k)) is not bool
+                                             for k in (MODE_ON_PARAM, MODE_CONFIRMED_PARAM)):
+      return web.json_response(
+        {"ok": False, "error": "expected must carry booleans for ExperimentalMode and ExperimentalModeConfirmed"},
+        status=400)
+    expected = {MODE_ON_PARAM: expected[MODE_ON_PARAM], MODE_CONFIRMED_PARAM: expected[MODE_CONFIRMED_PARAM]}
+
+  try:
+    result = set_experimental_mode(params, enabled, acknowledged=bool(body.get("acknowledge", False)),
+                                   expected=expected)
+  except ModeStateError as exc:
+    return web.json_response({"ok": False, "error": str(exc)}, status=exc.status)
+  except Exception:  # pragma: no cover - the store failing is not the caller's mistake
+    return web.json_response({"ok": False, "error": "longitudinal mode update failed"}, status=500)
+
+  stored = result["values"][MODE_ON_PARAM]
+  try:
+    from ..services.param_changes import append_param_change
+
+    append_param_change(MODE_ON_PARAM, not enabled, stored, source=body.get("source", "web_ui"))
+  except Exception:  # pragma: no cover - a history miss must never fail a write
+    pass
+
+  return web.json_response({"ok": True, "name": MODE_ON_PARAM, "value": stored,
+                            "mode": result["mode"], "confirmed": result["experimental_confirmed"]})
 
 
 async def api_params_ping(request: web.Request) -> web.Response:

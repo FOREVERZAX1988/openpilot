@@ -189,7 +189,15 @@ class TestParamEndpoints(unittest.IsolatedAsyncioTestCase):
   """End-to-end over a real aiohttp app and the real (isolated) Params store."""
 
   async def asyncSetUp(self):
-    from openpilot.common.test import OpenpilotPrefix  # noqa: F401  (ensures a clean store)
+    from openpilot.common.prefix import OpenpilotPrefix
+
+    # The store must be isolated *before* the app builds its Params: the C++
+    # side reads OPENPILOT_PREFIX when a Params object is constructed, so merely
+    # importing the test helpers never isolated anything -- these tests used to
+    # write the device's real /data/params (ExperimentalMode included).
+    self._prefix = OpenpilotPrefix()
+    self._prefix.__enter__()
+
     from openpilot.sunnypilot.carrot.server.app import create_app
 
     self.app = create_app()
@@ -198,6 +206,7 @@ class TestParamEndpoints(unittest.IsolatedAsyncioTestCase):
 
   async def asyncTearDown(self):
     await self.client.close()
+    self._prefix.__exit__(None, None, None)
 
   async def test_health(self):
     resp = await self.client.get('/api/health')
@@ -237,6 +246,61 @@ class TestParamEndpoints(unittest.IsolatedAsyncioTestCase):
     resp = await self.client.get('/api/params_bulk?names=IsMetric,DefinitelyNotAKey')
     self.assertEqual(resp.status, 200)
     self.assertIn('IsMetric', (await resp.json())['values'])
+
+  async def _park_the_car(self):
+    from openpilot.common.params import Params
+    params = Params()
+    params.put_bool('IsOnroad', False)
+    params.put_bool('IsOffroad', True)
+
+  async def test_experimental_mode_requires_acknowledgement(self):
+    # The settings UI asks for confirmation; the API must not be the way around it.
+    await self._park_the_car()
+    resp = await self.client.post('/api/param_set', json={'name': 'ExperimentalMode', 'value': 1})
+    self.assertEqual(resp.status, 403)
+    self.assertIn('acknowledgement', (await resp.json())['error'])
+
+  async def test_experimental_mode_enables_with_acknowledgement_and_restores(self):
+    await self._park_the_car()
+    resp = await self.client.post(
+      '/api/param_set', json={'name': 'ExperimentalMode', 'value': 1, 'acknowledge': True})
+    self.assertEqual(resp.status, 200)
+    body = await resp.json()
+    self.assertEqual(body['mode'], 'experimental')
+    self.assertTrue(body['confirmed'])
+    self.assertTrue(body['value'])
+
+    # Disabling works without a confirmation and keeps the confirmed bit.
+    resp = await self.client.post('/api/param_set', json={'name': 'ExperimentalMode', 'value': 0})
+    self.assertEqual(resp.status, 200)
+    body = await resp.json()
+    self.assertEqual(body['mode'], 'chill')
+    self.assertTrue(body['confirmed'])
+
+  async def test_experimental_mode_refuses_a_stale_snapshot(self):
+    # Optimistic concurrency: a settings page that missed a newer change is
+    # told to refresh rather than silently overwriting it.
+    await self._park_the_car()
+    from openpilot.common.params import Params
+    params = Params()
+    params.put_bool('ExperimentalModeConfirmed', True)
+    params.put_bool('ExperimentalMode', True)
+    stale = {'ExperimentalMode': False, 'ExperimentalModeConfirmed': True}
+    resp = await self.client.post(
+      '/api/param_set', json={'name': 'ExperimentalMode', 'value': 0, 'expected': stale})
+    self.assertEqual(resp.status, 409)
+    self.assertIn('changed elsewhere', (await resp.json())['error'])
+
+  async def test_experimental_mode_is_locked_by_safe_mode(self):
+    await self._park_the_car()
+    from openpilot.common.params import Params
+    params = Params()
+    params.put_bool('SafeMode', True)
+    resp = await self.client.post(
+      '/api/param_set', json={'name': 'ExperimentalMode', 'value': 1, 'acknowledge': True})
+    self.assertEqual(resp.status, 403)
+    self.assertIn('Safe Mode', (await resp.json())['error'])
+
 
   async def test_device_type_is_answered_though_it_is_not_a_parameter(self):
     # The app asks for it next to real settings; a 400 there loses the whole batch.
