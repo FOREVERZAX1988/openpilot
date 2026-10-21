@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import Any
 
 from ..config import DEFAULT_SETTINGS_PATH
+from .settings_sp import attach_tuning_metadata
 from openpilot.sunnypilot.selfdrive.car.cruise_helpers import supported_gap_levels
 
 
@@ -336,6 +337,11 @@ def get_settings_cached() -> tuple[dict[str, Any], dict[str, list], dict[str, di
   if settings_cache["data"] is None or settings_cache["mtime"] != mtime:
     data = read_settings_file(path)
     groups, by_name, groups_list = group_index(data)
+    # Stamp the build-time tuning metadata onto every entry. Done here rather than in the
+    # JSON because the header is the only thing that knows it, and done once per reload
+    # because the cache key is the file mtime. A store without the metadata leaves every
+    # entry at "not a knob, advanced", which is what the panel assumed before it existed.
+    attach_tuning_metadata(by_name)
     settings_cache.update({
       "mtime": mtime,
       "data": data,

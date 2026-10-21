@@ -20,6 +20,12 @@ from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.dem
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.migration import migrate_icbm_toggle
 
 
+# The Mazda seed lives in `mazda_torque_seed` (it is a zoompilot port). This module used to
+# carry a byte-for-byte copy of it, which meant `manager_init` could import two different
+# functions under one name and quietly run whichever import came last. One definition, one
+# import: `seed_mazda_torque_defaults` is imported above and called from both places below.
+
+
 def _enforce_torque_lateral_control(CP: structs.CarParams, params: Params | None = None, enabled: bool = False) -> bool:
   if params is None:
     params = Params()
@@ -87,6 +93,7 @@ def _cleanup_unsupported_params(CP: structs.CarParams, CP_SP: structs.CarParamsS
 
 
 def setup_interfaces(CI: CarInterfaceBase, params: Params | None = None) -> None:
+  seed_mazda_torque_defaults(CI.CP, params)
   enforce_torque = _enforce_torque_lateral_control(CI.CP, params)
   nnlc_enabled = _initialize_neural_network_lateral_control(CI.CP, CI.CP_SP, params)
   _initialize_intelligent_cruise_button_management(CI.CP, CI.CP_SP, params)

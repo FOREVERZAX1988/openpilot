@@ -4,51 +4,25 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-"""The settings catalog the app renders: one source, the carrot parameter defaults.
+"""The carrot tuning surface's defaults and values, as the settings server reads them.
 
-sunnypilot has no separate settings JSON to keep in sync - `carrot.config` already owns
-the defaults for the whole carrot tuning surface and `UnifiedParams` owns the values, so
-this module describes what is already there instead of restating it. That is what makes
-"unified through sunnypilot" more than a comment: adding a key to the carrot defaults is
-what makes it appear here, with nothing to edit in the server.
+`carrot.config` owns the defaults for the whole carrot tuning surface and `UnifiedParams`
+owns the values, so this module describes what is already there instead of restating it.
+Adding a key to the carrot defaults is what makes it appear here, with nothing to edit in
+the server.
 
-The catalog is an allow-list for a reason. Params also holds the dongle id, SSH keys and
+It also owns the one place the build-time tuning metadata is read (`_declared_metadata`)
+and the one place it is stamped onto a catalog (`attach_tuning_metadata`), which is what
+`services.settings.get_settings_cached` calls. There used to be a second, parallel
+`carrot_catalog()` in this module that rendered its own view of the same data; it had no
+production reader and drifted from the served one, so it is gone.
+
+These are allow-lists for a reason. Params also holds the dongle id, SSH keys and
 sunnylink credentials; those are not settings and are never listed or returned.
 """
 import logging
 
 logger = logging.getLogger("openpilot.carrot.server.settings")
-
-# Grouping is by key prefix, first match wins. It only affects how the app lays the
-# list out - it never changes which keys are visible.
-GROUP_PREFIXES = (
-  ("navi", ("Auto", "Navi", "Road", "Turn", "Fork", "Map", "Tmc")),
-  ("longitudinal", ("Cruise", "TFollow", "Lead", "Stop", "Accel", "Decel")),
-  ("lateral", ("Steer", "Lat", "Torque", "Lane", "Blind", "Bsd", "Blinker")),
-  ("speed", ("Speed", "Vehicle", "Traffic", "Cam", "Curve")),
-  ("display", ("Show", "Display", "Ui", "Sound", "Color")),
-)
-
-DEFAULT_GROUP = "general"
-
-
-def _group_for(name: str) -> str:
-  for group, prefixes in GROUP_PREFIXES:
-    if name.startswith(prefixes):
-      return group
-  return DEFAULT_GROUP
-
-
-def _type_of(default) -> str:
-  if isinstance(default, bool):
-    return "bool"
-  if isinstance(default, int):
-    return "int"
-  if isinstance(default, float):
-    return "float"
-  if isinstance(default, str):
-    return "string"
-  return "string"
 
 
 def _defaults() -> dict:
@@ -62,21 +36,71 @@ def carrot_defaults() -> dict:
   return _defaults()
 
 
-def carrot_catalog() -> dict:
-  """`{groups, items_by_group, by_name}` - the shape the app renders."""
-  defaults = _defaults()
-  by_name = {
-    name: {"name": name, "default": default, "type": _type_of(default), "group": _group_for(name)}
-    for name, default in defaults.items()
-  }
-  items_by_group: dict = {}
-  for name in sorted(by_name):
-    items_by_group.setdefault(by_name[name]["group"], []).append(by_name[name])
-  groups = [
-    {"name": group, "label": group, "count": len(items)}
-    for group, items in sorted(items_by_group.items())
-  ]
-  return {"groups": groups, "items_by_group": items_by_group, "by_name": by_name, "count": len(by_name)}
+def _metadata_params():
+  """A raw Params handle for the metadata reads, or None when unavailable.
+
+  Raw rather than ``UnifiedParams``: the tuning metadata lives in the compiled
+  key table, not in any of the JSON tables ``UnifiedParams`` merges, so the
+  wrapper would only add a cache between the question and the answer.
+  """
+  try:
+    from openpilot.common.params import Params
+    return Params()
+  except Exception:
+    return None
+
+
+def _declared_metadata(names, params=None) -> tuple[dict[str, int], dict[str, int]]:
+  """`(tuning_level, settings_tier)` per key, as declared in params_keys.h.
+
+  This is the consumer that keeps the metadata from being write-only: the app
+  groups and orders its knobs from these two numbers instead of from a list
+  somebody has to remember to update. A device whose libparams_c.so predates
+  the metadata reports nothing, and every key falls back to "not a knob,
+  advanced" - the pre-metadata behaviour.
+
+  ``params`` is injectable so the fallbacks can be tested without a store.
+  """
+  levels: dict[str, int] = {}
+  tiers: dict[str, int] = {}
+  if params is None:
+    params = _metadata_params()
+  if params is None:
+    return levels, tiers
+
+  from openpilot.sunnypilot.common.param_read import read_settings_tier, read_tuning_level
+
+  for name in names:
+    level = read_tuning_level(params, name, 0)
+    if level:
+      levels[name] = level
+    tiers[name] = read_settings_tier(params, name, 1)
+  return levels, tiers
+
+
+def attach_tuning_metadata(by_name: dict, params=None) -> dict:
+  """Stamp `tuningLevel` / `settingsTier` onto every entry of a catalog `by_name` map.
+
+  This is what turns the declarations in `common/params_keys.h` from write-only metadata
+  into something a renderer can act on: the panel asks each entry how deep its knob sits
+  and which settings tier owns it, instead of carrying a second, hand-maintained table
+  that has to be kept in step with the C++ header. Entries are mutated in place - the
+  catalog hands the same dict object out through `data["params"]`, `groups` and
+  `by_name`, and stamping one copy keeps them from disagreeing.
+
+  Runs once per catalog load (it is behind the mtime cache in `services.settings`), so
+  the cost is one C++ call per key per reload. A store that predates the metadata answers
+  with the defaults - "not a knob, advanced" - which is exactly the pre-metadata
+  behaviour, so this is safe to land before the device's `libparams_c.so` is rebuilt.
+  """
+  if not by_name:
+    return by_name
+  levels, tiers = _declared_metadata(list(by_name), params)
+  for name, entry in by_name.items():
+    if isinstance(entry, dict):
+      entry["tuningLevel"] = levels.get(name, 0)
+      entry["settingsTier"] = tiers.get(name, 1)
+  return by_name
 
 
 def carrot_values(names=None) -> dict:

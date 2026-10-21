@@ -24,7 +24,7 @@ does not exist on a Windows checkout.
 import unittest
 
 from openpilot.sunnypilot.carrot.tests.audit_ui_reach import (
-  DOC_PATH, EXTRA_CONTROL_PARAMS, NOTES, control_switches, render, ui_entries,
+  DOC_PATH, EXTRA_CONTROL_PARAMS, NOTES, control_switches, level_one_gaps, render, ui_entries,
 )
 
 
@@ -48,6 +48,17 @@ class TestCarrotUiReach(unittest.TestCase):
     msg = ('NOTES entries for params no longer read on the control path; '
            + 'remove them so the table stays about live switches')
     self.assertEqual([], stale, msg)
+
+  def test_no_everyday_knob_is_left_without_a_control(self):
+    """A level-1 declaration is a promise that a person can reach it.
+
+    Levels 2 and 3 are allowed to be scripting surfaces - they say "read the
+    code before you touch this". Level 1 says the opposite, so an unreachable
+    level-1 key is a contradiction the declaration itself now catches.
+    """
+    gaps = level_one_gaps()
+    msg = 'these params declare tuning_level 1 (everyday) but no device page or panel exposes them: ' + repr(gaps)
+    self.assertEqual([], gaps, msg)
 
   def test_the_longitudinal_source_switch_is_reachable(self):
     """The regression that started this: the switch was read by plannerd and had no control anywhere."""

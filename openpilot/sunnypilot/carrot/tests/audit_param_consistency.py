@@ -23,7 +23,6 @@ Exit code is non-zero if any check fails, so it can gate CI.
 """
 from __future__ import annotations
 
-import glob
 import json
 import os
 import re
@@ -108,13 +107,36 @@ def parse_params_keys() -> dict[str, str]:
   default that itself contains a brace is still parsed. The naive `[^}]*` form silently
   dropped every such entry - `NavDestination` defaults to `"{}"` and was reported as
   unregistered by the write-side check, which is what surfaced this.
+
+  The default is the FIRST quoted string, not the last: an entry may carry a stock value
+  after it (`{FLAGS, TYPE, "0", "15.5", 2, SETTINGS_ADVANCED}`), and reading the last
+  quoted string would then quietly compare the stock value as if it were the default.
   """
   out: dict[str, str] = {}
   body = r'[^{}"]*(?:"[^"]*"[^{}"]*)*'
   for m in re.finditer(r'\{"([A-Za-z_][A-Za-z0-9_]*)",\s*\{(' + body + r')\}\}', read(PARAMS_KEYS)):
     name, inner = m.group(1), m.group(2)
-    d = re.search(r'"([^"]*)"\s*$', inner.strip().rstrip(','))
+    d = re.search(r'"([^"]*)"', inner)
     out[name] = d.group(1) if d else ''
+  return out
+
+
+def parse_tuning_levels() -> dict[str, int]:
+  """name -> declared tuning_level, for the keys that declare one.
+
+  Only the tail of the attribute list is inspected (`..., <stock>, <level>,
+  <tier>`), so a default that happens to look like a number cannot be mistaken
+  for a level. Keys that declare nothing are absent from the result rather
+  than reported as 0: "declares nothing" and "declares not-a-knob" are
+  different claims and the audit should be able to tell them apart.
+  """
+  out: dict[str, int] = {}
+  body = r'[^{}"]*(?:"[^"]*"[^{}"]*)*'
+  tail = re.compile(r',\s*(?:std::nullopt|"[^"]*")\s*,\s*(\d+)\s*,\s*(SETTINGS_\w+)\s*$')
+  for m in re.finditer(r'\{"([A-Za-z_][A-Za-z0-9_]*)",\s*\{(' + body + r')\}\}', read(PARAMS_KEYS)):
+    found = tail.search(m.group(2).strip())
+    if found:
+      out[m.group(1)] = int(found.group(1))
   return out
 
 

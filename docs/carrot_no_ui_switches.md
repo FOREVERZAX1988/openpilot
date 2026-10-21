@@ -25,34 +25,34 @@ curl "http://<device>:7000/api/params_bulk?names=CarrotMapDecelEnabled,CarrotTur
 
 ## 有 UI 入口（23）
 
-| 参数 | 默认 | 读点 | 作用 |
-| --- | --- | --- | --- |
-| `AdvancedLateralTune` | `0` | `openpilot/selfdrive/controls/lib/flm_workspace.py` | FLM 分析器改用 Steer* 旋钮值，关=报 carParams 原值 |
-| `CarrotAtcBlinkerEnabled` | `0` | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
-| `CarrotBrakingGapEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车舒适制动项（lead_comfort）进 MPC |
-| `CarrotCruiseCoastingEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py`, `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 巡航超速带内松刹车滑行 |
-| `CarrotCruiseCoastingPercent` | `10` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 滑行带的宽度，按百分比 |
-| `CarrotCutinPredecelEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 旁车切入的提前减速 |
-| `CarrotCutoutReliefEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车切出后解除跟车抑制 |
-| `CarrotEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | carrot 导航总开关，地图类功能的前提 |
-| `CarrotFastRadarEnabled` | `0` | `openpilot/selfdrive/controls/plannerd.py` | 用更新的 liveTracks 刷新已锁定的前车（Hyundai） |
-| `CarrotGapRecoveryEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 跟车距离被压近之后的恢复 |
-| `CarrotLateralReadinessEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py` | 起步时挡横向使能，直到横向输入与 CAN 就绪 |
-| `CarrotLeadPreviewEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 用前车加速度做提前量 |
-| `CarrotLongitudinalSourceEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 手机目标速度成为第 5 个纵向源；跟车时距、舒适制动与停车点进 MPC |
-| `CarrotMapDecelEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 地图限速减速，SCC-M 的三个条件之一 |
-| `CarrotNavCruiseSpeedEnabled` | `1` | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 导航目标速度限制巡航速度 |
-| `CarrotSourceTimeoutMs` | `2000` | `openpilot/sunnypilot/selfdrive/controls/lib/carrot_longitudinal_source.py` | carrot 包的新鲜度上界，超过就判该源失效 |
-| `CarrotStoppingLeadEnabled` | `0` | `openpilot/selfdrive/controls/plannerd.py` | 停住的前车要有距离证据才算起步 |
-| `CarrotTrafficCongestionEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 拥堵报告折进地图巡航，只降不升 |
-| `CarrotTrafficLightFusionEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py`, `openpilot/sunnypilot/selfdrive/controls/lib/traffic_light_fusion.py` | 红绿灯状态融合进纵向计划 |
-| `CarrotTurnAccelEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 弯道内限制纵向加速度 |
-| `FlmRuntimeOverridesEnabled` | `0` | `openpilot/selfdrive/controls/lib/latcontrol_torque.py` | 把 FLMActiveOverrides 里的摩擦曲线/车辆旋钮注入扭矩控制器 |
-| `VisionSpeedLimitEnabled` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 视觉识别的限速并入地图源，只降不升 |
-| `VisionSpeedLimitLowLimitFilter` | `0` | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 丢弃低于阈值的识别结果（多为误读） |
+| 参数 | 默认 | 层级 | 读点 | 作用 |
+| --- | --- | --- | --- | --- |
+| `AdvancedLateralTune` | `0` | - | `openpilot/selfdrive/controls/lib/flm_workspace.py` | FLM 分析器改用 Steer* 旋钮值，关=报 carParams 原值 |
+| `CarrotAtcBlinkerEnabled` | `0` | 1 | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
+| `CarrotBrakingGapEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车舒适制动项（lead_comfort）进 MPC |
+| `CarrotCruiseCoastingEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py`, `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 巡航超速带内松刹车滑行 |
+| `CarrotCruiseCoastingPercent` | `10` | 3 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 滑行带的宽度，按百分比 |
+| `CarrotCutinPredecelEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 旁车切入的提前减速 |
+| `CarrotCutoutReliefEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车切出后解除跟车抑制 |
+| `CarrotEnabled` | `0` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | carrot 导航总开关，地图类功能的前提 |
+| `CarrotFastRadarEnabled` | `0` | 3 | `openpilot/selfdrive/controls/plannerd.py` | 用更新的 liveTracks 刷新已锁定的前车（Hyundai） |
+| `CarrotGapRecoveryEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 跟车距离被压近之后的恢复 |
+| `CarrotLateralReadinessEnabled` | `0` | 3 | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py` | 起步时挡横向使能，直到横向输入与 CAN 就绪 |
+| `CarrotLeadPreviewEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 用前车加速度做提前量 |
+| `CarrotLongitudinalSourceEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 手机目标速度成为第 5 个纵向源；跟车时距、舒适制动与停车点进 MPC |
+| `CarrotMapDecelEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 地图限速减速，SCC-M 的三个条件之一 |
+| `CarrotNavCruiseSpeedEnabled` | `1` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 导航目标速度限制巡航速度 |
+| `CarrotSourceTimeoutMs` | `2000` | 3 | `openpilot/sunnypilot/selfdrive/controls/lib/carrot_longitudinal_source.py` | carrot 包的新鲜度上界，超过就判该源失效 |
+| `CarrotStoppingLeadEnabled` | `0` | 2 | `openpilot/selfdrive/controls/plannerd.py` | 停住的前车要有距离证据才算起步 |
+| `CarrotTrafficCongestionEnabled` | `0` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 拥堵报告折进地图巡航，只降不升 |
+| `CarrotTrafficLightFusionEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py`, `openpilot/sunnypilot/selfdrive/controls/lib/traffic_light_fusion.py` | 红绿灯状态融合进纵向计划 |
+| `CarrotTurnAccelEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 弯道内限制纵向加速度 |
+| `FlmRuntimeOverridesEnabled` | `0` | - | `openpilot/selfdrive/controls/lib/latcontrol_torque.py` | 把 FLMActiveOverrides 里的摩擦曲线/车辆旋钮注入扭矩控制器 |
+| `VisionSpeedLimitEnabled` | `0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 视觉识别的限速并入地图源，只降不升 |
+| `VisionSpeedLimitLowLimitFilter` | `0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 丢弃低于阈值的识别结果（多为误读） |
 
 ## 没有 UI 入口（1），只能走 7000 的 `POST /api/param_set`
 
-| 参数 | 默认 | 读点 | 作用 |
-| --- | --- | --- | --- |
-| `VisionSpeedLimitLowLimitThreshold` | `0.0` | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 上一条的阈值，m/s |
+| 参数 | 默认 | 层级 | 读点 | 作用 |
+| --- | --- | --- | --- | --- |
+| `VisionSpeedLimitLowLimitThreshold` | `0.0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 上一条的阈值，m/s |

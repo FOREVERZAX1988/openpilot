@@ -225,7 +225,11 @@ def _clean_name(value: Any) -> str:
 
 
 def _catalog_defaults() -> dict[str, Any]:
-  from .settings import carrot_defaults
+  # `carrot_defaults` lives in settings_sp, not settings: settings is the catalog *renderer*
+  # (menu tree, grouping, gap limits) and never owned the defaults. Importing the name from
+  # there raised ImportError inside the POST handler, so creating a setting profile failed
+  # with a traceback instead of a profile.
+  from .settings_sp import carrot_defaults
 
   return carrot_defaults()
 
@@ -238,7 +242,7 @@ def _clean_values(values: Any) -> dict[str, Any]:
 
 
 def snapshot_current_setting_values() -> dict[str, Any]:
-  from .settings import carrot_values
+  from .settings_sp import carrot_values
 
   return carrot_values()
 

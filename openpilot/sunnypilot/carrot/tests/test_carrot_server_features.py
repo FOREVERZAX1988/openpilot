@@ -17,7 +17,6 @@ import unittest
 
 from openpilot.sunnypilot.carrot.server.services.device_info import listening_ports
 from openpilot.sunnypilot.carrot.server.services.live_runtime import LiveRuntime, json_safe
-from openpilot.sunnypilot.carrot.server.services.settings_sp import _group_for, _type_of
 
 try:
   from aiohttp.test_utils import TestClient, TestServer
@@ -140,23 +139,6 @@ class TestLiveRuntime(unittest.TestCase):
     runtime.poll()
     runtime.close()
     self.assertEqual(runtime._sockets, {})
-
-
-class TestSettingsCatalog(unittest.TestCase):
-  def test_types_follow_the_default(self):
-    self.assertEqual(_type_of(True), "bool")
-    self.assertEqual(_type_of(3), "int")
-    self.assertEqual(_type_of(1.5), "float")
-    self.assertEqual(_type_of("x"), "string")
-
-  def test_groups_are_assigned_by_prefix(self):
-    self.assertEqual(_group_for("AutoTurnControl"), "navi")
-    self.assertEqual(_group_for("TFollowGap1"), "longitudinal")
-    self.assertEqual(_group_for("SteerRatioRate"), "lateral")
-    self.assertEqual(_group_for("ShowPathEnd"), "display")
-
-  def test_every_key_lands_in_some_group(self):
-    self.assertEqual(_group_for("SomethingElse"), "general")
 
 
 class TestListeningPorts(unittest.TestCase):

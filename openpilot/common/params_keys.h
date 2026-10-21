@@ -393,12 +393,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"FlmRuntimeOverridesEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM runtime injection: apply the friction curve / vehicle knobs from FLMActiveOverrides to the torque controller
     {"LongitudinalFollowingProfileEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot speed-dependent following profiles: interpolate the follow time over speed instead of using one number per personality
     {"LongitudinalFollowingProfile", {PERSISTENT | BACKUP, STRING}},  // JSON document: {aggressive|standard|relaxed: {preset, curve}} for LongitudinalFollowingProfileEnabled
-    {"WeatherOffsetsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot weather adaptation: lengthen the follow time, widen the stopped gap and lower the accel/lateral-accel ceilings in bad weather
-    {"WeatherState", {PERSISTENT | BACKUP, STRING}},  // clear | rain | rain_storm | snow | low_visibility
-    {"WeatherIncreaseFollowing", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // seconds added to the follow time (0..3)
-    {"WeatherIncreaseStoppedDistance", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // meters added to the stopped gap (0..20)
-    {"WeatherReduceAcceleration", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // fraction by which the acceleration ceiling is reduced (0..1)
-    {"WeatherReduceLateralAcceleration", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // fraction by which the lateral-acceleration ceiling is reduced (0..1)
+    {"WeatherOffsetsEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},  // StarPilot weather adaptation: lengthen the follow time, widen the stopped gap and lower the accel/lateral-accel ceilings in bad weather
+    {"WeatherAutoDetect", {PERSISTENT | BACKUP, BOOL, "1", std::nullopt, 1, SETTINGS_SIMPLE}},  // ask Open-Meteo for the current conditions instead of trusting a hand-written WeatherState
+    {"WeatherState", {PERSISTENT | BACKUP, STRING, "clear", std::nullopt, 0, SETTINGS_SIMPLE}},  // clear | rain | rain_storm | snow | low_visibility - written by carrot_server when WeatherAutoDetect is on
+    {"WeatherIncreaseFollowing", {PERSISTENT | BACKUP, FLOAT, "0.0", std::nullopt, 2, SETTINGS_ADVANCED}},  // seconds added to the follow time (0..3)
+    {"WeatherIncreaseStoppedDistance", {PERSISTENT | BACKUP, FLOAT, "0.0", std::nullopt, 2, SETTINGS_ADVANCED}},  // meters added to the stopped gap (0..20)
+    {"WeatherReduceAcceleration", {PERSISTENT | BACKUP, FLOAT, "0.0", std::nullopt, 2, SETTINGS_ADVANCED}},  // fraction by which the acceleration ceiling is reduced (0..1)
+    {"WeatherReduceLateralAcceleration", {PERSISTENT | BACKUP, FLOAT, "0.0", std::nullopt, 2, SETTINGS_ADVANCED}},  // fraction by which the lateral-acceleration ceiling is reduced (0..1)
     {"LeadFollowPolicyEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"LeadStopDepartPolicyEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot stop/depart policy: vision approach caps, close-stop hold floors, standstill lead depart
 
@@ -463,7 +464,15 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"OsmMapDataEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     // Parse 7706 UDP blind-spot / LiDAR / extBlinker fields (AmapNaviServ).
     {"CarrotAmapBlindSpotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // Tuning metadata, read back through Params.get_tuning_level /
+    // get_settings_tier. tuning_level: 0 = not a knob, 1 = everyday,
+    // 2 = behaviour you should understand first, 3 = expert. settings_tier
+    // decides whether a settings page shows it without searching. Declaring
+    // it here is what lets the catalog group these knobs from one source
+    // instead of a hand-maintained list that drifts. The stock value is left
+    // at std::nullopt: these switches do not exist on any car, so their
+    // registered default already is the value to fall back to.
+    {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},
     // Read by the upstream Carrot implementation (carrot_controls lead-response tuning and
     // the navi rear-camera hold distance). Registered with upstream's own defaults so the
     // adopted carrot code cannot raise UnknownKeyName / silently fall back to 0.
@@ -472,9 +481,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LeadAccelResponseTF2", {PERSISTENT | BACKUP, INT, "-1"}},
     {"LeadAccelResponseTF3", {PERSISTENT | BACKUP, INT, "-1"}},
     {"LeadAccelResponseTF4", {PERSISTENT | BACKUP, INT, "-1"}},
-    // 7714 WebSocket v2 navi link killswitch. Default off so the new
-    // carrotNavi process never starts unless explicitly enabled. Requires
-    // CarrotEnabled as the master switch (see process_config.py).
+    // Behaviour switch for the 7714 WebSocket v2 navi stream. When off, card.py
+    // consumes only the 7706 navLaneGuide path and ignores the v2 lane data.
+    // NOT a process gate: carrot_navi is always_run (mirrors CarrotPilot) so the
+    // 7714 endpoint is always reachable; this only decides whether what it
+    // produces reaches the driving stack.
     {"CarrotNaviV2Enabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // Opt-in system time sync from the phone's 7706/7714 epochTime/timezone.
     // Default OFF: modifying the system clock on a running car is dangerous and
@@ -516,9 +527,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotNaviAppStatus", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 app foreground/focus/map/capture status
     {"CarrotNaviCameraState", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 camera mode/level/tilt/bearing
     {"CarrotNaviCompositionState", {CLEAR_ON_MANAGER_START, STRING, ""}},  // 7714 v2 UI composition active panels
-    {"TrafficLightDetectMode", {PERSISTENT | BACKUP, INT, "2"}},  // 0=off,1=red stop,2=red stop + green go
+    {"TrafficLightDetectMode", {PERSISTENT | BACKUP, INT, "2"}},  // 0=off, 1=red-stop-only, 2=stop&go (cp default)
     {"CarrotCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
-    {"CarrotNavCruiseSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"CarrotNavCruiseSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1", std::nullopt, 1, SETTINGS_SIMPLE}},
     {"CarrotHudInfoEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"CarrotWebEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // Opt-in support terminal on 6999 (CarrotPilot's recovery/server.py). It serves an
@@ -527,12 +538,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // server's own startup check read it.
     {"CarrotRecoveryEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // Unified control killswitches (carrot > Amap > OSM arbitration). Default off/safe.
-    {"CarrotLongitudinalSourceEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // enable CarrotPlanner as a LongitudinalPlanSP source
-    {"CarrotTrafficLightFusionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // fuse carrot / Amap / vision traffic lights
+    {"CarrotLongitudinalSourceEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // enable CarrotPlanner as a LongitudinalPlanSP source
+    {"CarrotTrafficLightFusionEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // fuse carrot / Amap / vision traffic lights
     {"SignalAssistMode", {PERSISTENT, INT, "0"}},  // 0 off, 1 red-light shadow only, 2 prepare/start control (experimental)
-    {"CarrotTurnAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // cap positive accel by future model curvature in turns
-    {"CarrotCutinPredecelEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // bounded pre-decel for strong early corner-radar cut-in risk
-    {"CarrotLeadPreviewEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // early-decel preview from radar lead deceleration
+    {"CarrotTurnAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // cap positive accel by future model curvature in turns
+    {"CarrotCutinPredecelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // bounded pre-decel for strong early corner-radar cut-in risk
+    {"CarrotLeadPreviewEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // early-decel preview from radar lead deceleration
     // Display-only overlays. Neither one is read anywhere on the control path.
     {"CarrotRadarPointsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw measured front-radar points in the road view
     {"CarrotSignalHudEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw the neural signal evidence ring (needs SignalAssistMode > 0)
@@ -540,15 +551,15 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotArs510Enabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // opt-in ARS510 receive path for radar-DBC-less Toyota cars (RAV4 TSS2 2022/2023)
     // Carrot longitudinal follow refinements, ported from CarrotPilot. All default
     // off so the stock ACC path is unchanged until each one is validated on road.
-    {"CarrotStoppingLeadEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // require range evidence before a stopped lead counts as departing
-    {"CarrotCruiseCoastingEnabled", {PERSISTENT | BACKUP, BOOL, "0"}}, // release cruise overspeed brake within a bounded margin
-    {"CarrotCruiseCoastingPercent", {PERSISTENT | BACKUP, INT, "10"}}, // coasting margin, 0-10 (percent); only read when the toggle is on
-    {"CarrotBrakingGapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},     // comfort reserve against the lead braking path
-    {"CarrotGapRecoveryEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},    // recover the cruise gap after a lead pulls away
+    {"CarrotStoppingLeadEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},   // require range evidence before a stopped lead counts as departing
+    {"CarrotCruiseCoastingEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}}, // release cruise overspeed brake within a bounded margin
+    {"CarrotCruiseCoastingPercent", {PERSISTENT | BACKUP, INT, "10", std::nullopt, 3, SETTINGS_ADVANCED}}, // coasting margin, 0-10 (percent); only read when the toggle is on
+    {"CarrotBrakingGapEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},     // comfort reserve against the lead braking path
+    {"CarrotGapRecoveryEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},    // recover the cruise gap after a lead pulls away
     {"CarrotRadarOnlyWarningEnabled", {PERSISTENT | BACKUP, BOOL, "0"}}, // advisory alert for a measured obstacle with no selected lead
-    {"CarrotLateralReadinessEnabled", {PERSISTENT | BACKUP, BOOL, "0"}}, // block startup steering until lateral inputs and CAN are ready
-    {"CarrotFastRadarEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},      // refresh a selected lead's kinematics from newer liveTracks (Hyundai only)
-    {"CarrotCutoutReliefEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // ease future following demand for a confirmed lead cut-out
+    {"CarrotLateralReadinessEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 3, SETTINGS_ADVANCED}}, // block startup steering until lateral inputs and CAN are ready
+    {"CarrotFastRadarEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 3, SETTINGS_ADVANCED}},      // refresh a selected lead's kinematics from newer liveTracks (Hyundai only)
+    {"CarrotCutoutReliefEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},   // ease future following demand for a confirmed lead cut-out
     {"TrafficLightNavCautionOnly", {PERSISTENT | BACKUP, BOOL, "1"}},       // fused red light only warns; set 0 to allow stop assist
     {"DesireArbiterEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},             // lateral lane-change/fork desire from nav
     // Let carrot ATC (auto turn control) synthesise a turn signal from the phone's
@@ -558,14 +569,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // -> controlsd CC.left/rightBlinker -> the car's own turn-signal CAN message. That is
     // a navigation intent becoming a vehicle actuation, so it has to be an explicit
     // choice rather than the default.
-    {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},
     {"ATCMaxSpeedKph", {PERSISTENT | BACKUP, FLOAT, "35.0"}},               // auto-turn-control speed floor cap
-    {"CarrotSourceTimeoutMs", {PERSISTENT | BACKUP, INT, "2000"}},          // carrot packet timeout [ms]
-    {"CarrotTrafficCongestionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // fold phone TMC congestion into SmartCruiseControlMap (only lowers the target)
+    {"CarrotSourceTimeoutMs", {PERSISTENT | BACKUP, INT, "2000", std::nullopt, 3, SETTINGS_ADVANCED}},          // carrot packet timeout [ms]
+    {"CarrotTrafficCongestionEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},   // fold phone TMC congestion into SmartCruiseControlMap (only lowers the target)
     // Carrot navigation deceleration for a point ahead: ATC turn speed, the curve
     // speed table, and the route-curvature speed. Folds into SmartCruiseControlMap
     // (which must ALSO be on for it to actuate, same as the congestion cap).
-    {"CarrotMapDecelEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotMapDecelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},
     // One-shot: the first time Carrot navigation is enabled, its map-deceleration
     // sub-features (congestion / map-decel / Amap curve) are seeded ON so the user
     // does not have to find three more switches. Each stays independently offable
@@ -681,7 +692,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CruiseEcoControl", {PERSISTENT | BACKUP, INT, "2"}},
     {"MyDrivingModeAuto", {PERSISTENT | BACKUP, INT, "0"}},
     {"DynamicTFollow", {PERSISTENT | BACKUP, FLOAT, "0"}},
-    {"DynamicTFollowLC", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
+    // Integer percent, like TFollowGap*: the consumer divides by 100. It was
+    // declared FLOAT, which made the settings row unable to save - an int
+    // control writing into a FLOAT key raises TypeMismatch, and the only control
+    // that does write a float (use_float_scaling) divides by 100 first, so the
+    // value it stores is 1.00 where the consumer expects 100.
+    {"DynamicTFollowLC", {PERSISTENT | BACKUP, INT, "100"}},
     // Carrot longitudinal / t_follow tuning surface (webui exposure, mirrors config.py).
     {"LeadAccelResponse", {PERSISTENT | BACKUP, INT, "0"}},
     {"LongActuatorDelay", {PERSISTENT | BACKUP, INT, "20"}},

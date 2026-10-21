@@ -91,3 +91,33 @@ def read_str(params: Any, key: str, default: str = "") -> str:
   if raw is None:
     return default
   return str(raw)
+
+
+# The settings tier a key belongs to. Mirrors ParamSettingsTier in
+# common/params.h; duplicated rather than imported because importing the
+# params extension pulls the swaglog chain onto a PC test host.
+SETTINGS_SIMPLE = 0
+SETTINGS_ADVANCED = 1
+
+
+def read_tuning_level(params: Any, key: str, default: int = 0) -> int:
+  """How deep a key sits in the tuning ladder: 0 means "not a knob".
+
+  Everything is swallowed here on purpose, unlike the value reads above. A
+  device whose libparams_c.so predates the metadata answers with the default,
+  and so does a stand-in that has no opinion. That is the honest answer:
+  nothing declared a level there, so nothing may depend on one.
+  """
+  try:
+    return int(params.get_tuning_level(key))
+  except Exception:
+    return int(default)
+
+
+def read_settings_tier(params: Any, key: str, default: int = SETTINGS_ADVANCED) -> int:
+  """Which settings tier a key belongs to: simple (0) or advanced (1)."""
+  try:
+    return int(params.get_settings_tier(key))
+  except Exception:
+    return int(default)
+

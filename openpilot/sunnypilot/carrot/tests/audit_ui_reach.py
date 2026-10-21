@@ -42,7 +42,7 @@ import os
 import re
 import sys
 
-from openpilot.sunnypilot.carrot.tests.audit_param_consistency import parse_params_keys
+from openpilot.sunnypilot.carrot.tests.audit_param_consistency import parse_params_keys, parse_tuning_levels
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
   os.path.abspath(__file__))))))
@@ -173,14 +173,28 @@ def split_switches() -> tuple[dict[str, list[str]], dict[str, list[str]]]:
   return with_ui, without_ui
 
 
-def _row(name: str, files: list[str], defaults: dict[str, str]) -> str:
+def level_one_gaps() -> list[str]:
+  """Declared everyday knobs that no control on the device can reach.
+
+  This is the one rule the tuning_level declaration is allowed to enforce: a
+  parameter a person is expected to toggle without reading anything must have
+  a control. Level 2 and 3 keys are allowed to be scripting surfaces; level 1
+  is not, because "everyday" and "curl only" contradict each other.
+  """
+  levels = parse_tuning_levels()
+  _, without_ui = split_switches()
+  return sorted(name for name in without_ui if levels.get(name) == 1)
+
+
+def _row(name: str, files: list[str], defaults: dict[str, str], levels: dict[str, int]) -> str:
   read_points = ', '.join(f'`{f}`' for f in files)
-  return f'| `{name}` | `{defaults.get(name, "")}` | {read_points} | {NOTES.get(name, "")} |'
+  level = levels.get(name)
+  return f'| `{name}` | `{defaults.get(name, "")}` | {level if level is not None else "-"} | {read_points} | {NOTES.get(name, "")} |'
 
 
-def _table(rows: dict[str, list[str]], defaults: dict[str, str]) -> str:
-  body = ['| 参数 | 默认 | 读点 | 作用 |', '| --- | --- | --- | --- |']
-  body += [_row(name, rows[name], defaults) for name in sorted(rows)]
+def _table(rows: dict[str, list[str]], defaults: dict[str, str], levels: dict[str, int]) -> str:
+  body = ['| 参数 | 默认 | 层级 | 读点 | 作用 |', '| --- | --- | --- | --- | --- |']
+  body += [_row(name, rows[name], defaults, levels) for name in sorted(rows)]
   return '\n'.join(body)
 
 
@@ -202,7 +216,27 @@ _ALL_REACHED_NOTE = '''
 '''
 
 
-def _head(with_ui: dict[str, list[str]], without_ui: dict[str, list[str]]) -> str:
+
+def _level_line(without_ui: dict[str, list[str]], levels: dict[str, int]) -> str:
+  """How many unreachable knobs are declared everyday (level 1).
+
+  A level-1 knob with no control is the one defect this table is really
+  about: every other unreachable key is arguably a scripting surface, but a
+  declared everyday knob that only a curl command can reach is a gap.
+  """
+  everyday = sorted(name for name in without_ui if levels.get(name) == 1)
+  declared = sum(1 for name in without_ui if name in levels)
+  if not declared:
+    return ''
+  if not everyday:
+    return f'\n没有入口的 {declared} 个声明了层级，**没有一个是 level 1（日常）**：都只适合脚本或 App。\n'
+  return (f'\n没有入口的 {declared} 个声明了层级，其中 **level 1（日常）的有 {len(everyday)} 个**：'
+          + '、'.join(f'`{name}`' for name in everyday) + '。这几个值得补 UI 入口。\n')
+
+
+
+
+def _head(with_ui: dict[str, list[str]], without_ui: dict[str, list[str]], levels: dict[str, int]) -> str:
   total = len(with_ui) + len(without_ui)
   note = _NO_UI_NOTE if without_ui else _ALL_REACHED_NOTE
   return f'''# carrot：控制路径上的开关，哪些在 UI 上够得着
@@ -223,13 +257,15 @@ def _head(with_ui: dict[str, list[str]], without_ui: dict[str, list[str]]) -> st
 
 def render() -> str:
   defaults = parse_params_keys()
+  levels = parse_tuning_levels()
   with_ui, without_ui = split_switches()
-  out = _head(with_ui, without_ui)
+  out = _head(with_ui, without_ui, levels)
+  out += _level_line(without_ui, levels)
   if with_ui:
-    out += f'\n## 有 UI 入口（{len(with_ui)}）\n\n{_table(with_ui, defaults)}\n'
+    out += f'\n## 有 UI 入口（{len(with_ui)}）\n\n{_table(with_ui, defaults, levels)}\n'
   if without_ui:
     section = f'\n## 没有 UI 入口（{len(without_ui)}），只能走 7000 的 `POST /api/param_set`\n\n'
-    out += section + _table(without_ui, defaults) + '\n'
+    out += section + _table(without_ui, defaults, levels) + '\n'
   return out
 
 
