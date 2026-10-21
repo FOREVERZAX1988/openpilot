@@ -268,7 +268,7 @@ class SmartCruiseControlVision:
         self.learning.load()
         self._learning_loaded = True
       # StarPilot weather margin on the lateral-acceleration ceiling.
-      self.weather_enabled = self.params.get_bool("WeatherOffsetsEnabled")
+      self.weather_enabled = param_read.read_bool(self.params, "WeatherOffsetsEnabled")
       if self.weather_enabled:
         state = self.params.get("WeatherState", return_default=True)
         lateral = self.params.get_float("WeatherReduceLateralAcceleration", return_default=True)

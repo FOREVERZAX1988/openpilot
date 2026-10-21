@@ -10,6 +10,7 @@ import time
 
 import numpy as np
 
+from openpilot.sunnypilot.common import param_read
 from openpilot.cereal import messaging, custom, log
 from opendbc.car import structs
 from opendbc.car.interfaces import ACCEL_MAX, ACCEL_MIN
@@ -132,7 +133,7 @@ class LongitudinalPlannerSP:
     # offsets are user-facing knobs, so they are refreshed on the same slow
     # cadence as the switches above.
     self._weather_frame = 0
-    self.weather_enabled = self._params.get_bool("WeatherOffsetsEnabled")
+    self.weather_enabled = param_read.read_bool(self._params, "WeatherOffsetsEnabled")
     self.weather_offsets = WeatherOffsets()
     # Carrot cruise coasting (default off): a fixed physical m/s reference for
     # the overspeed band. longcontrol applies the actual brake relief; here we
@@ -192,7 +193,7 @@ class LongitudinalPlannerSP:
     if self._weather_frame % 20 != 0:
       return
 
-    self.weather_enabled = self._params.get_bool("WeatherOffsetsEnabled")
+    self.weather_enabled = param_read.read_bool(self._params, "WeatherOffsetsEnabled")
     if not self.weather_enabled:
       self.weather_offsets = WeatherOffsets()
       return
