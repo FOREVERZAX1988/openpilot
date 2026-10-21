@@ -2,8 +2,14 @@ import pytest
 from pathlib import Path
 from types import SimpleNamespace as NS
 
-from tools.signal_analysis.replay_signal_assist import planner_class, REPO
+from openpilot.common.repo_tools import load
 from openpilot.sunnypilot.carrot.signal_assist import SignalAssist
+
+# ``import tools.signal_analysis`` cannot resolve here: openpilot/tools is a
+# regular package and wins over the repo-root tools/ namespace regardless of
+# sys.path order. Load the harness by location instead (see repo_tools.load).
+_harness = load('signal_analysis/replay_signal_assist.py')
+planner_class, REPO = _harness.planner_class, _harness.REPO
 
 
 def inputs(speed=0., distance=100., lead=False):
