@@ -24,7 +24,7 @@ does not exist on a Windows checkout.
 import unittest
 
 from openpilot.sunnypilot.carrot.tests.audit_ui_reach import (
-  DOC_PATH, NOTES, control_switches, render, ui_entries,
+  DOC_PATH, EXTRA_CONTROL_PARAMS, NOTES, control_switches, render, ui_entries,
 )
 
 
@@ -72,6 +72,29 @@ class TestCarrotUiReach(unittest.TestCase):
     missing = [name for name in ported if name not in exposed]
     self.assertEqual([], missing, 'a ported carrot key lost its settings row; the owner is '
                                   'carrot_tuning_items.build_dev_items()')
+
+
+  def test_every_flm_key_has_a_switch(self):
+    """The second family: FLM keys are read on the control path but are not `Carrot*`.
+
+    They reached `latcontrol_torque.py` and `flm_workspace.py` with no control anywhere,
+    so 3789 ported analyzer lines looked like dead code -- the same regression as the
+    longitudinal source switch, one prefix over. Pinned by hand for the same reason: a
+    dropped row or a rename on our side must fail here.
+    """
+    flm = ('AdvancedLateralTune', 'FlmRuntimeOverridesEnabled')
+    exposed = ui_entries()
+    missing = [name for name in flm if name not in exposed]
+    self.assertEqual([], missing, 'an FLM key lost its settings row; the owner is '
+                                  'carrot_tuning_items.build_dev_items()')
+
+  def test_the_extra_family_list_still_matches_live_switches(self):
+    """EXTRA_CONTROL_PARAMS is hand-written, so it can outlive what it points at."""
+    live = control_switches()
+    stale = [name for name in EXTRA_CONTROL_PARAMS if name not in live]
+    self.assertEqual([], stale, 'EXTRA_CONTROL_PARAMS names a param nothing reads on the '
+                                'control path any more (upstream rename?); update the list '
+                                'in audit_ui_reach.py instead of leaving the audit blind')
 
 
 if __name__ == '__main__':

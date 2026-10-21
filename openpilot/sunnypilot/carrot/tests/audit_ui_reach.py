@@ -69,6 +69,16 @@ DOC_PATH = os.path.join(REPO, 'docs', 'carrot_no_ui_switches.md')
 # is exactly the failure mode this audit exists to prevent.
 NAME_RE = re.compile(r'["\'](Carrot[A-Za-z0-9_]+)["\']')
 
+# Carrot* was the only family when this audit was written. FLM (upstream 44a32ec77c) added
+# a second family of control-path switches under names that do not start with "Carrot", so
+# they were invisible here -- which is exactly the failure this audit exists to catch
+# ("ported, unreachable, nobody notices"). Listed one by one on purpose: a new upstream
+# family should make somebody add it, not be absorbed by a loose pattern.
+EXTRA_CONTROL_PARAMS = (
+  'AdvancedLateralTune',
+  'FlmRuntimeOverridesEnabled',
+)
+
 # What each switch does, in one line, taken from the read site rather than from its name.
 # A switch without an entry here fails the test: the point is that a human wrote down
 # what turning it on does, not that the table has 19 rows.
@@ -92,7 +102,9 @@ NOTES = {
   'CarrotTrafficCongestionEnabled': '拥堵报告折进地图巡航，只降不升',
   'CarrotTrafficLightFusionEnabled': '红绿灯状态融合进纵向计划',
   'CarrotTurnAccelEnabled': '弯道内限制纵向加速度',
-}
+  # FLM family (see EXTRA_CONTROL_PARAMS). Both are inert until an FLM profile is applied.
+  'AdvancedLateralTune': 'FLM 分析器改用 Steer* 旋钮值，关=报 carParams 原值',
+  'FlmRuntimeOverridesEnabled': '把 FLMActiveOverrides 里的摩擦曲线/车辆旋钮注入扭矩控制器',}
 
 
 def _rel(path: str) -> str:
@@ -112,9 +124,14 @@ def _sources(root: str):
 def _names_in(path: str) -> set[str]:
   try:
     with open(path, encoding='utf-8') as f:
-      return set(NAME_RE.findall(f.read()))
+      text = f.read()
   except (OSError, UnicodeDecodeError):
     return set()
+  names = set(NAME_RE.findall(text))
+  # Same quote-pairing rule as NAME_RE, so `param='X'` and `param="X"` both count and a
+  # bare mention in prose does not.
+  names |= {name for name in EXTRA_CONTROL_PARAMS if f'"{name}"' in text or f"'{name}'" in text}
+  return names
 
 
 def control_switches() -> dict[str, list[str]]:

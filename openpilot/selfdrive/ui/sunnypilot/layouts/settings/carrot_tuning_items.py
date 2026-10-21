@@ -360,6 +360,28 @@ def build_dev_items():
                    description=tr('Multiplies the lateral torque controller proportional gain. ' +
                                    '1.00 is stock behaviour; the value only takes effect while it differs ' +
                                    'from 1.00. Applies within a few seconds, no restart needed.')),
+    # FLM (upstream 44a32ec77c) has two switches on the control path and neither had a
+    # control anywhere: both were reachable only by writing the param by hand, which made
+    # 3789 lines of ported analyzer look like dead code. Both default off and both are
+    # inert until an FLM profile is applied, so leaving them alone changes nothing.
+    #
+    # The analyzer-side master: off means it reports the car's own steer delay, friction,
+    # Kp, latAccel and ratio (straight off CarParams) and ignores the Steer*/UseAutoSteerDelay
+    # knobs entirely.
+    toggle_item_sp(title=tr('Advanced Lateral Tune (FLM)'), param='AdvancedLateralTune',
+                   description=tr('Let the FLM analyzer use the Steer Delay / Friction / Kp / Lat Accel / ' +
+                                   'Ratio knobs instead of the values carParams already carries. Off keeps the ' +
+                                   'analyzer reporting stock values, which is what the shipped tune compares against. ' +
+                                   'Affects the analyzer only; nothing reaches the controller until runtime ' +
+                                   'overrides are on and a profile is applied.')),
+    # The controller-side switch: publishes the FLMActiveOverrides bundle to the torque
+    # controller's process-wide override table. Empty bundle = no change, so this switch on
+    # its own is safe; it only matters once the FLM tool has applied a profile.
+    toggle_item_sp(title=tr('FLM Runtime Overrides'), param='FlmRuntimeOverridesEnabled',
+                   description=tr('Apply the friction curve and per-vehicle knobs from the FLM tool\'s applied ' +
+                                   'profile to the lateral torque controller. Off keeps the override table empty ' +
+                                   'and stock friction in force. With no profile applied the bundle is empty and ' +
+                                   'this switch changes nothing; takes effect within a few seconds, no restart.')),
     section_heading_sp(tr('Navigation Control (advanced)')),
     toggle_item_sp(title=tr('Traffic Congestion Slowdown'), param='CarrotTrafficCongestionEnabled',
                    description=tr('Fold the phone app traffic congestion report into map-based cruise '
