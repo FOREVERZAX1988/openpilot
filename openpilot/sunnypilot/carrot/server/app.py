@@ -11,6 +11,8 @@ mount it with a fake `Params`, and the module deliberately does not import `Para
 import time - `carrot_server.py` decides when the real store is needed.
 """
 
+import asyncio
+import contextlib
 import logging
 
 from aiohttp import ClientSession, web
@@ -49,6 +51,7 @@ from .features import web_sound as web_sound_feature
 from .features import ws as ws_feature
 from .features import xiaoge as xiaoge_feature
 from .features.static import handle_index
+from .services import weather as weather_service
 
 logger = logging.getLogger("openpilot.carrot.server")
 
@@ -149,6 +152,22 @@ def create_app(params=None) -> web.Application:
         await session.close()
 
   app.cleanup_ctx.append(_http_session_ctx)
+
+  # Weather adaptation needs somewhere with a clock that is allowed to block on
+  # a socket, and this is the only long-lived process in the fork that already
+  # does. It does nothing unless both WeatherOffsetsEnabled and
+  # WeatherAutoDetect are on, so an off-road device with the feature off makes
+  # no outbound request at all.
+  async def _weather_ctx(app: web.Application):
+    task = asyncio.create_task(weather_service.weather_loop(app))
+    try:
+      yield
+    finally:
+      task.cancel()
+      with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+  app.cleanup_ctx.append(_weather_ctx)
   return app
 
 
@@ -168,4 +187,7 @@ async def _routes(request: web.Request) -> web.Response:
 
 
 async def _health(request: web.Request) -> web.Response:
-  return web.json_response({"ok": True, "status": "ok"})
+  # `weather` is whatever the poller last wrote, so the feature can be checked
+  # with one curl instead of a param read plus a log dig. It is absent until
+  # the first reading and stays at "clear" when the feature is off.
+  return web.json_response({"ok": True, "status": "ok", "weather": request.app.get("weather")})

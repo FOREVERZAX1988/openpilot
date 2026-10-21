@@ -8262,3 +8262,154 @@ msgstr "固定轉向比，0.1 單位（如 130 = 13.0）。大於 10 時覆蓋�
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Stock"
 msgstr "原廠"
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
+msgid "Label what the front radar tracks on the road view.<br>Speed Only: relative speed on moving tracks. Speed + Distance: adds lateral offset and distance. Full: every measured point, plus a marker for static returns.<br><br>Display only. It does not change how the car drives."
+msgstr "在道路畫面上標註前向雷達追蹤的目標。<br>僅速度：只在移動目標上顯示相對速度；速度+距離：額外顯示橫向偏移與距離；全部：顯示所有測量點，靜止點以標記表示。<br><br>僅供顯示用途，不改變車輛的駕駛行為。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
+msgid "Speed Only"
+msgstr "僅速度"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
+msgid "Speed + Distance"
+msgstr "速度+距離"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
+msgid "Full"
+msgstr "全部"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Weather Adaptation"
+msgstr "天氣自適應"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Detect Weather Automatically"
+msgstr "自動偵測天氣"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Extra Follow Time"
+msgstr "額外跟車時距"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Extra Stopped Gap"
+msgstr "額外停車間距"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Acceleration Reduction"
+msgstr "加速度降幅"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lateral Acceleration Reduction"
+msgstr "橫向加速度降幅"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lengthen the follow time, widen the stopped gap and lower the acceleration and lateral limits in bad weather. The weather is detected from the car's position; these offsets are what gets applied."
+msgstr "惡劣天氣下延長跟車時距、加大停車間距並降低加速度與橫向加速度上限。天氣根據車輛位置自動偵測；此處設定的是實際疊加的補償量。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Ask Open-Meteo for the conditions where the car is, instead of entering them by hand. Uses the mobile data connection while driving."
+msgstr "根據車輛所在位置向 Open-Meteo 查詢即時天氣，無需手動填寫。行駛中會使用行動數據網路。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Seconds added to the follow time in bad weather."
+msgstr "惡劣天氣下額外增加的跟車時距（秒）。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Metres added to the distance held behind a stopped lead in bad weather."
+msgstr "惡劣天氣下在前車停止時額外保持的距離（公尺）。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Percent taken off the acceleration ceiling in bad weather."
+msgstr "惡劣天氣下加速度上限降低的百分比。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Percent taken off the lateral acceleration ceiling in bad weather, so curves are taken slower."
+msgstr "惡劣天氣下橫向加速度上限降低的百分比，使過彎更慢更穩。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Ported Longitudinal Hooks (default off)"
+msgstr "已搬運的纵向鉤子（預設關）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Vision Speed Limit (default off)"
+msgstr "視覺限速（預設關）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Advanced Lateral Tune (FLM)"
+msgstr "進階横向調參（FLM）"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Carrot Source Timeout"
+msgstr "手機資料逾時"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Coasting Band"
+msgstr "滑行带"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Comfort Decel Bound"
+msgstr "舒適減速上限"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Comfort Speed Limit Drop"
+msgstr "限速突降舒適鬆弛"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cruise Coasting"
+msgstr "巡航滑行"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Curve Accel Limit"
+msgstr "彎道加速度限制"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cut-in Pre-decel"
+msgstr "切入提前減速"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Cut-out Relief"
+msgstr "切出解除抑制"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Drop Impossible Vision Limits"
+msgstr "丟棄不合理視覺限速"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "FLM Runtime Overrides"
+msgstr "FLM 執行时覆蓋"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Fast Radar Refresh"
+msgstr "雷達快速刷新"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Feed Vision Limit"
+msgstr "併入視覺限速"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Gap Recovery"
+msgstr "跟車距離恢復"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lateral Readiness"
+msgstr "横向就緒"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Lead Preview"
+msgstr "前车預判"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Map Speed Slowdown"
+msgstr "地圖限速減速"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Stopped Lead Evidence"
+msgstr "停車前车证据"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Traffic Light Fusion"
+msgstr "紅綠燈融合"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Vision Sign Reader"
+msgstr "視覺標誌識別"

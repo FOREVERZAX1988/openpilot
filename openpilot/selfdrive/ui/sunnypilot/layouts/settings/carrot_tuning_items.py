@@ -10,11 +10,10 @@ Each `_build_*_items()` supplies the contents of one page in `carrot_tuning.py`.
 Groups inside a page are separated by `LineSeparatorSP`, matching how the rest of
 the sunnypilot settings pages express grouping (see steering.py, models.py).
 """
-from openpilot.common.params import Params
 from openpilot.sunnypilot.carrot import feature_support
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
-  LineSeparatorSP, button_item_sp, option_item_sp, section_heading_sp, toggle_item_sp,
+  option_item_sp, section_heading_sp, toggle_item_sp,
 )
 
 def build_start_items():
@@ -52,20 +51,51 @@ def build_cruise_items():
     # not with the navigation section it was briefly placed in.
     option_item_sp(title=tr('Cruise Gap Levels'), param='CruiseGapLevels', min_value=2, max_value=4, value_change_step=1),
     option_item_sp(title=tr('Follow Time Gap 1'), param='TFollowGap1', min_value=50, max_value=300, value_change_step=5,
-                   use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+                   label_callback=lambda v: f'{v / 100.0:.2f}s'),
     option_item_sp(title=tr('Follow Time Gap 2'), param='TFollowGap2', min_value=50, max_value=300, value_change_step=5,
-                   use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+                   label_callback=lambda v: f'{v / 100.0:.2f}s'),
     option_item_sp(title=tr('Follow Time Gap 3'), param='TFollowGap3', min_value=50, max_value=300, value_change_step=5,
-                   use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+                   label_callback=lambda v: f'{v / 100.0:.2f}s'),
     option_item_sp(title=tr('Follow Time Gap 4'), param='TFollowGap4', min_value=50, max_value=300, value_change_step=5,
-                   use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+                   label_callback=lambda v: f'{v / 100.0:.2f}s'),
     option_item_sp(title=tr('Dynamic Follow Time on Lane Change'), param='DynamicTFollowLC', min_value=0, max_value=200, value_change_step=5,
-                   use_float_scaling=True, label_callback=lambda v: f'{v / 100.0:.2f}s'),
+                   label_callback=lambda v: f'{v / 100.0:.2f}s'),
 
     section_heading_sp(tr('Longitudinal Gains')),
     option_item_sp(title=tr('Lead Acceleration Response'), param='LeadAccelResponse', min_value=-100, max_value=100, value_change_step=5,
                    description=tr('How aggressively the car reacts to lead car acceleration changes.')),
     option_item_sp(title=tr('Follow Deceleration Boost'), param='TFollowDecelBoost', min_value=0, max_value=200, value_change_step=5),
+
+    # StarPilot's weather adaptation. The state itself is detected by
+    # carrot_server from Open-Meteo (or typed in by hand), so all that is left
+    # to the user is how much margin each kind of bad weather should add.
+    # Everything here defaults to no change, so switching it on is not by
+    # itself a behaviour change.
+    section_heading_sp(tr('Weather Adaptation')),
+    toggle_item_sp(title=tr('Weather Adaptation'),
+                   description=tr('Lengthen the follow time, widen the stopped gap and lower the acceleration and lateral limits in bad weather. ' +
+                                  'The weather is detected from the car\'s position; these offsets are what gets applied.'),
+                   param='WeatherOffsetsEnabled'),
+    toggle_item_sp(title=tr('Detect Weather Automatically'),
+                   description=tr('Ask Open-Meteo for the conditions where the car is, instead of entering them by hand. ' +
+                                  'Uses the mobile data connection while driving.'),
+                   param='WeatherAutoDetect'),
+    option_item_sp(title=tr('Extra Follow Time'), param='WeatherIncreaseFollowing',
+                   min_value=0, max_value=300, value_change_step=10, use_float_scaling=True,
+                   label_callback=lambda v: f'{v / 100.0:.1f}s',
+                   description=tr('Seconds added to the follow time in bad weather.')),
+    option_item_sp(title=tr('Extra Stopped Gap'), param='WeatherIncreaseStoppedDistance',
+                   min_value=0, max_value=2000, value_change_step=25, use_float_scaling=True,
+                   label_callback=lambda v: f'{v / 100.0:.1f}m',
+                   description=tr('Metres added to the distance held behind a stopped lead in bad weather.')),
+    option_item_sp(title=tr('Acceleration Reduction'), param='WeatherReduceAcceleration',
+                   min_value=0, max_value=100, value_change_step=5, use_float_scaling=True,
+                   label_callback=lambda v: f'{v} %',
+                   description=tr('Percent taken off the acceleration ceiling in bad weather.')),
+    option_item_sp(title=tr('Lateral Acceleration Reduction'), param='WeatherReduceLateralAcceleration',
+                   min_value=0, max_value=100, value_change_step=5, use_float_scaling=True,
+                   label_callback=lambda v: f'{v} %',
+                   description=tr('Percent taken off the lateral acceleration ceiling in bad weather, so curves are taken slower.')),
 
 
   ]

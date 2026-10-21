@@ -15,11 +15,12 @@ matters: a rainy road should not change how much extra room you leave at a
 stop by a percentage of that room, but the acceleration ceiling is a budget
 and a percentage of a budget is the natural way to shrink it.
 
-This fork keeps the classification and the offset rules but drops the network
-lookup. The weather is taken from a parameter instead, which means the
-feature works without a data connection and cannot be taken down by one.
-The offsets themselves default to zero, so enabling the feature changes
-nothing until the user actually dials a value in.
+The state itself arrives from `sunnypilot.carrot.weather`, which asks
+Open-Meteo the same way StarPilot does; `state_from_wmo_code` is the one place
+a WMO code becomes one of the five states above. A hand-written `WeatherState`
+param still works, so the feature survives without a data connection and
+cannot be taken down by one. The offsets default to zero, so enabling the
+feature changes nothing until the user actually dials a value in.
 
 Pure logic only - no openpilot imports, safe to import on a PC host.
 """
@@ -84,6 +85,40 @@ def normalize_weather_state(state) -> str:
   if key in WEATHER_ALIASES:
     return WEATHER_ALIASES[key]
   return "clear"
+
+
+# WMO 4677 weather codes (what Open-Meteo reports) mapped straight to a state.
+#
+# StarPilot translates each code to an OpenWeatherMap id and then matches that
+# id against per-category ranges; this table is the composition of those two
+# steps, which is why the split looks arbitrary in places. Two of its choices
+# are deliberate and worth not "fixing":
+#
+#   * 80-82 (rain showers) and 66-67 (freezing rain) land in rain_storm, not
+#     rain - that is where StarPilot's 520-522 / 511 ranges put them.
+#   * 1-3 (mainly clear through overcast) land in clear. StarPilot's CLEAR
+#     range is only OWM 800, and 801-803 fall through to the clear default.
+#
+# Anything missing falls back to clear, same as an unknown code does there.
+WMO_STATES = {
+  0: "clear", 1: "clear", 2: "clear", 3: "clear",
+  45: "low_visibility", 48: "low_visibility",
+  51: "rain", 53: "rain", 55: "rain",
+  56: "rain", 57: "rain",
+  61: "rain", 63: "rain", 65: "rain",
+  66: "rain_storm", 67: "rain_storm",
+  71: "snow", 73: "snow", 75: "snow", 77: "snow",
+  80: "rain_storm", 81: "rain_storm", 82: "rain_storm",
+  85: "snow", 86: "snow",
+  95: "rain_storm", 96: "rain_storm", 99: "rain_storm",
+}
+
+
+def state_from_wmo_code(code) -> str:
+  """The weather state for a WMO code. Unknown or malformed -> clear."""
+  if isinstance(code, bool) or not isinstance(code, int):
+    return "clear"
+  return WMO_STATES.get(code, "clear")
 
 
 class WeatherOffsets:
