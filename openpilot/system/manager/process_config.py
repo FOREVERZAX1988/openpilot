@@ -130,6 +130,14 @@ def onroad_preview_shim(started: bool, params: Params, CP: car.CarParams) -> boo
 def use_copyparty(started, params, CP: car.CarParams) -> bool:
   return bool(params.get_bool("EnableCopyparty"))
 
+def speed_limit_vision_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  """Vision speed-limit daemon: opt-in through SpeedLimitVisionEnabled (default off).
+
+  Only runs onroad (offroad the daemon idles by itself) and never in dashcam
+  mode (passive car params), mirroring the StarPilot run_speed_limit_vision gate.
+  """
+  return started and params.get_bool("SpeedLimitVisionEnabled") and not CP.passive
+
 def sunnylink_ready_shim(started, params, CP: car.CarParams) -> bool:
   """Shim for sunnylink_ready to match the process manager signature."""
   return sunnylink_ready(params)
@@ -416,6 +424,11 @@ procs += [
 
   # locationd
   NativeProcess("locationd_llk", "openpilot/sunnypilot/selfdrive/locationd", ["./locationd"], only_onroad),
+
+  # Vision speed-limit recognition daemon (detector + value classifier + reject
+  # classifier ONNX pipeline). Off by default; opt-in through SpeedLimitVisionEnabled.
+  # The process renices itself to 19 and throttles on CPU/memory pressure.
+  PythonProcess("speed_limit_vision", "openpilot.sunnypilot.system.speed_limit_vision", speed_limit_vision_enabled),
 ]
 procs = extend_procs(procs)
 
