@@ -205,6 +205,23 @@ class TestParamEndpoints(unittest.IsolatedAsyncioTestCase):
     await self.client.start_server()
 
   async def asyncTearDown(self):
+    # This class shares one persistent store across tests inside the prefix,
+    # and it may run on a real device. A leaked SafeMode lock would refuse the
+    # next test's writes, and a leaked road flag would disable the "no writes
+    # while driving" guard for the running manager, so put everything back the
+    # way it was found.
+    from openpilot.common.params import Params
+    params = Params()
+    for key in ('SafeMode', 'ExperimentalMode', 'ExperimentalModeConfirmed'):
+      params.put_bool(key, False)
+    for key, value in getattr(self, '_road_originals', {}).items():
+      if value is None:
+        try:
+          params.remove(key)
+        except Exception:
+          pass
+      else:
+        params.put(key, value, block=True)
     await self.client.close()
     self._prefix.__exit__(None, None, None)
 
@@ -247,11 +264,22 @@ class TestParamEndpoints(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(resp.status, 200)
     self.assertIn('IsMetric', (await resp.json())['values'])
 
-  async def _park_the_car(self):
+  async def _park_the_car(self, *, reset_mode: bool = True):
+    """Offroad, and by default with the mode switches cleared.
+
+    The device this may run on has its own ExperimentalModeConfirmed value,
+    so a test that means to exercise the acknowledgement path has to set up
+    from a known state rather than inherit one.
+    """
     from openpilot.common.params import Params
     params = Params()
+    if not hasattr(self, '_road_originals'):
+      self._road_originals = {key: params.get(key) for key in ('IsOnroad', 'IsOffroad')}
     params.put_bool('IsOnroad', False)
     params.put_bool('IsOffroad', True)
+    if reset_mode:
+      params.put_bool('ExperimentalMode', False)
+      params.put_bool('ExperimentalModeConfirmed', False)
 
   async def test_experimental_mode_requires_acknowledgement(self):
     # The settings UI asks for confirmation; the API must not be the way around it.

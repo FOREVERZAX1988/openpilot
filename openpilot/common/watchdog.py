@@ -120,3 +120,60 @@ def clear_watchdog(pid: int) -> None:
     os.unlink(watchdog_path(pid))
   except OSError:
     pass
+
+
+def pid_alive(pid: int) -> bool:
+  """Whether a process with this pid exists.
+
+  ``os.kill(pid, 0)`` is the portable probe: it answers "does this pid
+  exist and may I signal it" without delivering anything. An /proc lookup
+  would be simpler but does not exist on macOS or Windows, and the manager
+  runs on a PC too (process replay), where it would make every process look
+  dead and sweep live heartbeats away.
+  """
+  if pid <= 0:
+    return False
+  try:
+    os.kill(pid, 0)
+  except ProcessLookupError:
+    return False
+  except PermissionError:
+    # Exists, just not ours.
+    return True
+  except OSError:
+    return False
+  return True
+
+
+def sweep_stale_heartbeats() -> int:
+  """Remove heartbeat files whose process is gone; returns how many.
+
+  A manager restart, or any process killed while it still had a heartbeat
+  file, leaves that file behind. The manager only reads files for the pids
+  it watches, so a leftover is harmless to it -- but it accumulates in
+  /dev/shm over restarts, and anything that scans the directory would see
+  ghosts of processes that no longer exist. Swept once at manager start.
+  """
+  prefix = os.path.basename(WATCHDOG_FN)
+  # Scan the directory the prefix lives in, not SHM_PATH: the two are the
+  # same in production, and this keeps the function patchable in tests.
+  directory = os.path.dirname(WATCHDOG_FN) or "."
+  try:
+    names = os.listdir(directory)
+  except OSError:
+    return 0
+
+  removed = 0
+  for name in names:
+    if not name.startswith(prefix):
+      continue
+    pid_text = name[len(prefix):]
+    if not pid_text.isdigit():
+      continue
+    pid = int(pid_text)
+    if pid_alive(pid):
+      continue
+    clear_watchdog(pid)
+    if not os.path.exists(watchdog_path(pid)):
+      removed += 1
+  return removed

@@ -135,6 +135,11 @@ class ManagerProcess(ABC):
     cloudlog.info(f"{self.name} is dead with {ret}")
 
     if self.proc.exitcode is not None:
+      # Drop the heartbeat file together with the process it belonged to, so
+      # a restart does not leave a ghost in /dev/shm. Best effort: a cleanup
+      # failure must never turn a successful stop into an error.
+      if self.proc.pid is not None:
+        clear_watchdog(self.proc.pid)
       self.shutting_down = False
       self.proc = None
 

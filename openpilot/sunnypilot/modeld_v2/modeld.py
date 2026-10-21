@@ -52,7 +52,6 @@ from openpilot.sunnypilot.modeld_v2.helpers import load_oob
 from openpilot.sunnypilot.modeld_v2.model_adapters import get_model_adapter
 from openpilot.sunnypilot.models.helpers import get_active_bundle
 from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeLaneChangeController
-from openpilot.sunnypilot import jetlink_adapter
 
 PROCESS_NAME = "openpilot.selfdrive.modeld.modeld_tinygrad"
 BIG_MODEL_TIMEOUT = 60
@@ -256,6 +255,49 @@ class ModelState(ModelStateBase):
     return log.ModelDataV2.Action(desiredCurvature=float(desired_curvature), desiredAcceleration=float(desired_accel), shouldStop=bool(stop))
 
 
+class LoopTiming:
+  """Per-stage wall time of the consumption loop, logged as a p50/p99 summary.
+
+  The loop runs with ~zero margin against the 50 ms frame budget (publish-dt
+  p90 = 55-57 ms even on a healthy drive; see selfdrived/modeld_lag.py), and
+  clustered one-frame resync drops are the visible symptom. These numbers show
+  where the non-GPU margin goes so any optimization targets a measured stage
+  instead of a guess. recv = waiting for the next frame pair, pre = state
+  sampling and input building, run = model execution, post = fill and publish.
+
+  Stages: mark('recv') at the loop top closes the previous post; mark('pre')
+  after the frame pair is in hand; mark('run') right before model.run();
+  mark('post') right after it."""
+
+  STAGES = ('recv', 'pre', 'run', 'post')
+  LOG_PERIOD_S = 30.0
+
+  def __init__(self):
+    self._samples = {s: [] for s in self.STAGES}
+    self._t0 = time.perf_counter()
+    self._stage = None
+    self._last_log = time.monotonic()
+
+  def mark(self, stage: str) -> None:
+    now = time.perf_counter()
+    if self._stage is not None:
+      self._samples[self._stage].append(now - self._t0)
+    self._t0, self._stage = now, stage
+
+  def maybe_log(self) -> None:
+    if time.monotonic() - self._last_log < self.LOG_PERIOD_S:
+      return
+    self._last_log = time.monotonic()
+    parts = []
+    for s in self.STAGES:
+      xs = sorted(self._samples[s])
+      if xs:
+        parts.append(f"{s} p50={xs[len(xs) // 2] * 1e3:.1f} p99={xs[int(len(xs) * 0.99)] * 1e3:.1f}ms")
+      self._samples[s] = []
+    if parts:
+      cloudlog.warning("modeld loop timing: " + " ".join(parts))
+
+
 def main(demo=False):
   cloudlog.warning("modeld init")
 
@@ -388,8 +430,11 @@ def main(demo=False):
   RELC = RoadEdgeLaneChangeController()
   lane_width_left_est = LaneWidthEstimator()
   lane_width_right_est = LaneWidthEstimator()
+  loop_timing = LoopTiming()
 
   while True:
+    loop_timing.maybe_log()
+    loop_timing.mark('recv')
     # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
     while meta_main.timestamp_sof < meta_extra.timestamp_sof + 25000000:
       buf_main = vipc_client_main.recv()
@@ -422,6 +467,7 @@ def main(demo=False):
       buf_extra = buf_main
       meta_extra = meta_main
 
+    loop_timing.mark('pre')
     sm.update(0)
     desire = DH.desire
     is_rhd = False if is_dm_disabled(params) else sm["driverMonitoringState"].isRHD
@@ -488,6 +534,7 @@ def main(demo=False):
       inputs['lateral_control_params'] = np.array([v_ego, lat_delay], dtype=np.float32)
 
     model.frame_drop_ratio = frame_drop_ratio
+    loop_timing.mark('run')
     mt1 = time.perf_counter()
     try:
       send_chestnut = (chestnut_state is not None and
@@ -505,6 +552,7 @@ def main(demo=False):
       run_count = 0
       model_output = None
     mt2 = time.perf_counter()
+    loop_timing.mark('post')
     model_execution_time = mt2 - mt1
     if jetlink_adapter.handed_over(model):
       run_count, frame_drop_ratio = 0, 0.

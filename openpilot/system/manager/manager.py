@@ -54,6 +54,7 @@ def manager_init() -> None:
 
   if not PC:
     run_migration(params)
+    seed_car_defaults_offroad(params)
 
   if COMMA_HARDWARE:
     headless_override = os.getenv("OPENPILOT_HEADLESS", "").strip().lower()
@@ -93,6 +94,13 @@ def manager_init() -> None:
     pass
   except PermissionError:
     print(f"WARNING: failed to make {Paths.shm_path()}")
+
+  # Heartbeat files of processes that no longer exist would otherwise pile up
+  # in /dev/shm across restarts: the manager only reads the pids it watches,
+  # so nothing else would ever remove them.
+  from openpilot.common.watchdog import sweep_stale_heartbeats
+  if swept := sweep_stale_heartbeats():
+    cloudlog.info(f"removed {swept} stale watchdog heartbeat file(s)")
 
   # set params
   serial = HARDWARE.get_serial()

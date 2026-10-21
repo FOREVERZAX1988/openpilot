@@ -114,3 +114,54 @@ class TestClockConsistency(unittest.TestCase):
 
 if __name__ == "__main__":
   unittest.main()
+
+
+class TestSweep(unittest.TestCase):
+  def setUp(self):
+    self._tmpdir = f"/tmp/wd_sweep_{os.getpid()}"
+    os.makedirs(self._tmpdir, exist_ok=True)
+    self._patch = mock.patch.object(watchdog, "WATCHDOG_FN", f"{self._tmpdir}/wd_")
+
+  def tearDown(self):
+    self._patch.stop()
+    for name in os.listdir(self._tmpdir):
+      os.unlink(os.path.join(self._tmpdir, name))
+    os.rmdir(self._tmpdir)
+
+  def _make(self, pid, name=None):
+    path = os.path.join(self._tmpdir, name or f"wd_{pid}")
+    with open(path, "wb") as f:
+      f.write(struct.pack("Q", 1))
+    return path
+
+  def test_a_dead_pids_heartbeat_is_removed(self):
+    self._patch.start()
+    # pid 0 can never be a live process we created, and /proc/0 does not exist
+    path = self._make(0)
+    self.assertEqual(watchdog.sweep_stale_heartbeats(), 1)
+    self.assertFalse(os.path.exists(path))
+
+  def test_a_live_pids_heartbeat_is_kept(self):
+    self._patch.start()
+    path = self._make(os.getpid())
+    self.assertEqual(watchdog.sweep_stale_heartbeats(), 0)
+    self.assertTrue(os.path.exists(path))
+
+  def test_unrelated_files_are_untouched(self):
+    self._patch.start()
+    other = os.path.join(self._tmpdir, "not_a_heartbeat")
+    with open(other, "wb") as f:
+      f.write(b"x")
+    watchdog.sweep_stale_heartbeats()
+    self.assertTrue(os.path.exists(other))
+
+  def test_a_name_that_is_not_a_pid_is_untouched(self):
+    self._patch.start()
+    path = self._make(0, name="wd_notapid")
+    watchdog.sweep_stale_heartbeats()
+    self.assertTrue(os.path.exists(path))
+
+  def test_a_missing_directory_is_harmless(self):
+    self._patch.start()
+    with mock.patch.object(watchdog, "WATCHDOG_FN", f"{self._tmpdir}/nope/wd_"):
+      self.assertEqual(watchdog.sweep_stale_heartbeats(), 0)
