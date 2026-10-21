@@ -6,6 +6,12 @@ from openpilot.cereal import log
 from opendbc.car.interfaces import ACCEL_MIN, ACCEL_MAX
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
+from openpilot.sunnypilot.common import param_read
+from openpilot.selfdrive.controls.lib.following_profile import (
+  load_profile_document,
+  personality_key,
+  t_follow_for_personality,
+)
 from openpilot.selfdrive.controls.lib.lead_duplicate_policy import (
   DuplicateVisionLeadFilters,
   identical_radar_duplicate_source_hold,
@@ -297,25 +303,65 @@ class LongitudinalMpc:
     self.danger_zone_cost = _read_tuning_float(p, "LongitudinalMpcTuningDangerZoneCost", DANGER_ZONE_COST)
     self.lead_danger_factor = _read_tuning_float(p, "LongitudinalMpcTuningLeadDangerFactor", LEAD_DANGER_FACTOR)
 
+    # StarPilot speed-dependent following profiles. The document is read once
+    # here because Params.get() must stay out of the planning loop; the curve
+    # itself is interpolated per frame from this cached copy. Gate read goes
+    # through param_read so an unregistered key just means "no profile".
+    self.following_profile = None
+    if param_read.read_bool(p, "LongitudinalFollowingProfileEnabled"):
+      try:
+        raw = p.get("LongitudinalFollowingProfile", return_default=True)
+      except Exception:
+        raw = None
+      self.following_profile = load_profile_document(raw) or None
+
   def leads_are_near_duplicates(self, lead_one, lead_two, v_ego, *, vision_min_speed=None):
     """Expose the duplicate-lead detector for lead_follow_policy and tests."""
     from openpilot.selfdrive.controls.lib.lead_duplicate_policy import leads_are_near_duplicates
     return leads_are_near_duplicates(lead_one, lead_two, v_ego, vision_min_speed=vision_min_speed)
 
-  def t_follow_user_scale(self, personality=log.LongitudinalPersonality.standard) -> float:
-    """How far the user moved the follow time from its default (1.0 = untouched).
+  def t_follow_user_scale(self, personality=log.LongitudinalPersonality.standard, v_ego=None) -> float:
+    """How far the follow time moved from its default (1.0 = untouched).
 
     The Carrot longitudinal source multiplies its own modulated follow time by
     this, so the Longitudinal MPC Tuning entry stays authoritative even while the
     Carrot source is active - without changing behaviour for anyone who has left
     the tuning at its default.
+
+    With a speed-dependent profile configured the baseline is the profile's
+    value at the current speed instead of the scalar tuning value, so the
+    Carrot path and the stock path end up with the same gap character. The
+    ratio is taken against the built-in default, which keeps the meaning of
+    the scale identical in both cases.
     """
     default = T_FOLLOW_DEFAULTS.get(personality)
     if not default:
       return 1.0
+
+    if v_ego is not None and self.following_profile:
+      key = personality_key(personality)
+      if key is not None:
+        profile_value = t_follow_for_personality(self.following_profile, key, v_ego)
+        if profile_value is not None:
+          return profile_value / default
+
     return self.get_t_follow(personality) / default
 
-  def get_t_follow(self, personality=log.LongitudinalPersonality.standard):
+  def get_t_follow(self, personality=log.LongitudinalPersonality.standard, v_ego=None):
+    """Follow time for a personality.
+
+    With a speed-dependent profile configured, the value is interpolated at the
+    current speed; otherwise the stock per-personality scalar is used. The speed
+    is optional so that callers with no speed handy (the user-scale helper) keep
+    the scalar behaviour.
+    """
+    if v_ego is not None and self.following_profile:
+      key = personality_key(personality)
+      if key is not None:
+        value = t_follow_for_personality(self.following_profile, key, v_ego)
+        if value is not None:
+          return value
+
     if personality == log.LongitudinalPersonality.relaxed:
       return self.t_follow_relaxed
     elif personality == log.LongitudinalPersonality.standard:
@@ -449,7 +495,7 @@ class LongitudinalMpc:
               comfort_brake=None, stop_obstacle_distance=0.0, lane_change_credit=None,
               reset_state=False, lead_gap_enabled=False, lead_comfort_enabled=False,
               cutout_relief_enabled=False, lead_accel_response=0, lane_change_active=False,
-              model_leads=None, duplicate_guard_enabled=False, panic_bypass=False):
+              model_leads=None, duplicate_guard_enabled=False, panic_bypass=False, v_ego=None):
     # StarPilot additions (all default off -> stock path byte-identical):
     # - model_leads: leadsV3 pair; enables the model-trajectory future-delta path
     #   and the enhanced planner-FCW gate (ModelLeadTrajectoryEnabled).
@@ -465,7 +511,11 @@ class LongitudinalMpc:
     # measures 111 us/key on a tizi, and its tail latency is unbounded when loggerd or the
     # uploader are busy -- not something to put in the planning loop. plannerd only runs
     # onroad, so edits made while parked take effect on the next drive.
-    t_follow = self.get_t_follow(personality) if t_follow is None else float(t_follow)
+    # StarPilot speed-dependent following profile: when one is configured the
+    # follow time is interpolated at the current speed instead of being a
+    # single number per personality. The document itself was read in
+    # __init__; only the interpolation happens here.
+    t_follow = self.get_t_follow(personality, v_ego) if t_follow is None else float(t_follow)
     if jerk_factor is not None:
       jerk_factor = float(jerk_factor)
 

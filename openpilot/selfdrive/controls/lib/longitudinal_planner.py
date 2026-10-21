@@ -168,7 +168,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     personality = sm['selfdriveState'].personality
     carrot_t_follow = None
     if self.carrot_source_active:
-      carrot_t_follow = self.carrot_t_follow * self.mpc.t_follow_user_scale(personality)
+      carrot_t_follow = self.carrot_t_follow * self.mpc.t_follow_user_scale(personality, v_ego)
 
     # CarrotPlanner longitudinal overrides (Option C). Only applied when the
     # carrot source is active, so stock behavior is untouched otherwise. These
@@ -228,7 +228,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       uncertainty, _uncertainty_accel, uncert_slope = self._uncert_tracker.update(
         raw_uncertainty, sm.logMonoTime['modelV2'] / 1e9)
       uncert_t_follow = carrot_t_follow if (self.carrot_source_active and carrot_t_follow is not None) \
-        else self.mpc.get_t_follow(personality)
+        else self.mpc.get_t_follow(personality, v_ego)
       uncert_lead = sm['radarState'].leadOne
       if uncert_lead is not None and uncert_lead.present:
         scene_desired_gap = float(desired_follow_distance(
@@ -241,6 +241,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
                     model_leads=sm['modelV2'].leadsV3 if self.model_lead_enabled else None,
                     duplicate_guard_enabled=self.duplicate_guard_enabled,
                     panic_bypass=panic_bypass,
+                    v_ego=v_ego,
                     **mpc_carrot_kwargs)
     self.update_dec(sm)
 
@@ -303,7 +304,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     if self._policy_frame % 20 == 0:
       self.lead_follow_policy_enabled = self._params.get_bool("LeadFollowPolicyEnabled")
     effective_t_follow = carrot_t_follow if (self.carrot_source_active and carrot_t_follow is not None) \
-      else self.mpc.get_t_follow(personality)
+      else self.mpc.get_t_follow(personality, v_ego)
     if self.lead_follow_policy_enabled and self.mpc.source in (LongitudinalPlanSource.lead0, LongitudinalPlanSource.lead1):
       follow_result = apply_follow_policy(
         sm['radarState'].leadOne, sm['radarState'].leadTwo,
