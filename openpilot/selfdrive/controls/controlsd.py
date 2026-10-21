@@ -26,6 +26,7 @@ from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 
 from openpilot.sunnypilot.selfdrive.controls.controlsd_ext import ControlsExt
 from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
+from openpilot.sunnypilot.common import param_read
 
 State = log.SelfdriveState.OpenpilotState
 LaneChangeState = log.LaneChangeState
@@ -66,6 +67,11 @@ class Controls(ControlsExt):
     self.carrot_controls = CarrotControls(self.CP)
     self.VM = VehicleModel(self.CP)
     self.LaC: LatControl
+    # StarPilot lane-centering controller (lazy; enabled via LaneCenteringEnabled)
+    self.lane_centering = None
+    self._lane_centering_enabled = False
+    self._lane_center_offset = 0.0
+    self._lane_centering_e2e = 0.0
     if self.CP.steerControlType == car.CarParams.SteerControlType.angle:
       self.LaC = LatControlAngle(self.CP, self.CP_SP, self.CI, DT_CTRL)
     elif self.CP.steerControlType == car.CarParams.SteerControlType.curvature:
@@ -165,6 +171,31 @@ class Controls(ControlsExt):
     else:
       new_desired_curvature = model_v2.action.desiredCurvature if CC.latActive else self.curvature
     lat_jerk_factor = self.lane_change_jerk_factor(self.sm, CC.latActive, new_desired_curvature, self.desired_curvature)
+    # StarPilot vision lane-centering correction (gated, default off). Adds a
+    # small bounded curvature correction toward the (optionally offset) lane
+    # center when the model's lane detection is confident. Separate from the
+    # integral LateralLaneCentering; do not enable both.
+    self._lc_frame = getattr(self, '_lc_frame', 0) + 1
+    if self._lc_frame % 100 == 0:
+      # param_read: an unregistered key stays at its documented default instead of
+      # raising UnknownKeyName out of the 100 Hz control loop
+      # (see sunnypilot/common/param_read.py).
+      self._lane_centering_enabled = param_read.read_bool(self.params, "LaneCenteringEnabled")
+      self._lane_center_offset = param_read.read_float(self.params, "LaneCenterOffset")
+      self._lane_centering_e2e = 1.0 if param_read.read_bool(self.params, "LaneCenteringE2EAuthority") else 0.0
+    if self._lane_centering_enabled:
+      if self.lane_centering is None:
+        from openpilot.selfdrive.controls.lib.lane_centering import LaneCenteringController
+        self.lane_centering = LaneCenteringController()
+      lane_change_active = self.sm['modelV2'].meta.laneChangeState != 0  # 0 = LaneChangeState.off
+      new_desired_curvature = self.lane_centering.update(
+        new_desired_curvature, self.sm['modelV2'], CS.vEgo,
+        True, self._lane_center_offset, self._lane_centering_e2e,
+        CC.latActive, bool(self.sm.all_checks(['modelV2'])),
+        lane_change_active=lane_change_active,
+        pause_on_signal=True, turn_signal_active=bool(CS.leftBlinker or CS.rightBlinker),
+        driver_override=bool(CS.steeringPressed))
+
     self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll, lat_jerk_factor)
     lat_delay = self.sm["lateralDelay"].lateralDelay + LAT_SMOOTH_SECONDS
 

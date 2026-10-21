@@ -399,6 +399,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"WebPushSubscriptions", {PERSISTENT | BACKUP, JSON}},
     {"StoppingReleaseHysteresisEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot stopping-release hysteresis: sustained release request leaves stopping even with stock ACC standstill latched
     {"NegativeTargetCreepGuardEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot negative-target creep guard: bleed stale positive integrator and cap positive output on real decel
+    {"LaneCenteringEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot vision lane-centering: bounded curvature correction toward the lane center (not for use with LateralLaneCentering)
+    {"LaneCenterOffset", {PERSISTENT | BACKUP, FLOAT, "0"}},  // Lane centering lateral offset in meters (-0.3..0.3)
+    {"LaneCenteringE2EAuthority", {PERSISTENT | BACKUP, BOOL, "0"}},  // Attenuate lane-centering correction on large deliberate path errors unless near a boundary
 
     {"DistractionDetectionLevel", {PERSISTENT | BACKUP, INT, "1"}},
     {"DisableDM", {PERSISTENT | BACKUP, BOOL, "0"}},
