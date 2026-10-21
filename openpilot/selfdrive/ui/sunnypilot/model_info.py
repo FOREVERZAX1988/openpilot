@@ -12,6 +12,7 @@ from openpilot.common.hardware.hw import Paths
 from openpilot.selfdrive.ui.ui_state import ui_state, ChestnutState
 from openpilot.sunnypilot.models.fetcher import get_cached_bundles
 from openpilot.sunnypilot.models.helpers import get_active_source, get_selected_bundle, resolve_bundle_by_ref
+from openpilot.sunnypilot.models.model_sizes import bundle_download_fraction
 from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.models.model_name import DEFAULT_MODEL
 from openpilot.system.ui.lib.multilang import tr
@@ -102,6 +103,22 @@ def big_model_note(ref: str) -> str | None:
   if ui_state.chestnut_present or ui_state.jetlink is None:
     return None
   return {'ready': tr("ready on Jetson"), 'downloaded': tr("downloaded")}.get(jetlink_adapter.model_state(ref))
+
+
+def local_model_note(bundle) -> str | None:
+  """What the disk says about a bundle's artifacts, for the picker's list:
+  "downloaded", or how much of it is here after an interrupted fetch."""
+  try:
+    fraction = bundle_download_fraction(bundle, Paths.model_root())
+  except Exception:
+    return None
+  if fraction is None:
+    return None
+  if fraction >= 1.0:
+    return tr("downloaded")
+  if fraction > 0:
+    return tr("{}% on disk").format(int(fraction * 100))
+  return None
 
 
 def carrying_model() -> tuple[str | None, str | None, str | None]:

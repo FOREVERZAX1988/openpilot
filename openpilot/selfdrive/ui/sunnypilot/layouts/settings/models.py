@@ -19,8 +19,9 @@ from openpilot.selfdrive.ui.ui_state import device, ui_state
 from openpilot.selfdrive.ui.sunnypilot.accelerator_link import (LINK_MODE_TITLES, LINK_MODES, LINK_PARAM,
                                                            link_mode, link_status, link_toggle_meaningful)
 from openpilot.selfdrive.ui.sunnypilot.model_info import (active_source, big_model_note, big_model_state, bundles_for_source,
-                                                           carrying_model, default_model_name, model_cache_size_mb, queued_name,
-                                                           refresh_in_progress, refresh_model_list, standin_model)
+                                                           carrying_model, default_model_name, local_model_note,
+                                                           model_cache_size_mb, queued_name, refresh_in_progress,
+                                                           refresh_model_list, standin_model)
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import DialogResult, Widget
@@ -469,8 +470,9 @@ class ModelsLayout(Widget):
 
   @staticmethod
   def _bundle_to_node(bundle, noted: bool = False):
-    # a big model's line says whether the Jetson has built it or the comma has it
-    note = big_model_note(bundle.ref) if noted else None
+    # a big model's line says whether the Jetson has built it or the comma has it;
+    # every other line says what the disk holds, so an interrupted fetch is visible
+    note = big_model_note(bundle.ref) if noted else local_model_note(bundle)
     name = f"{bundle.displayName} · {note}" if note else bundle.displayName
     return TreeNode(bundle.ref, {'display_name': name, 'short_name': bundle.internalName})
 
