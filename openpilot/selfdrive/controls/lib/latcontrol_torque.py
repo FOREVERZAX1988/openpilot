@@ -13,6 +13,11 @@ from openpilot.common.pid import PIDController
 from openpilot.sunnypilot.common.param_read import read_bool, read_float
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext import LatControlTorqueExt
 from openpilot.sunnypilot.selfdrive.controls.lib.vehicle_tune_dispatch import resolve_vehicle_tune
+from openpilot.selfdrive.controls.lib.latcontrol_vehicle_tunes import (
+  flm_runtime_overrides_active,
+  get_standard_friction_threshold,
+  set_flm_runtime_overrides,
+)
 
 # At higher speeds (25+mph) we can assume:
 # Lateral acceleration achieved by a specific car correlates to
@@ -43,6 +48,18 @@ VERSION = 1
 CUSTOM_KP_REFRESH_FRAMES = 300
 CUSTOM_KP_SCALE_LIMITS = (0.5, 2.0)
 
+# FLM (friction learning machine) runtime injection.
+#
+# The FLM analyzer in flm_workspace.py writes an override bundle into the
+# FLMActiveOverrides param; latcontrol_vehicle_tunes.set_flm_runtime_overrides
+# publishes it to the process-wide override table. Without this call the
+# analyzer's output is computed and then discarded - the learned friction
+# curve never reaches the controller.
+#
+# The refresh cadence is slow because the bundle only changes when the user
+# applies a new FLM profile.
+FLM_OVERRIDE_REFRESH_FRAMES = 150
+
 class LatControlTorque(LatControl):
   def __init__(self, CP, CP_SP, CI, dt):
     super().__init__(CP, CP_SP, CI, dt)
@@ -69,6 +86,54 @@ class LatControlTorque(LatControl):
     # resolve_vehicle_tune() returns None and every use below is skipped.
     self.vehicle_tune = resolve_vehicle_tune(CP)
     self.vehicle_tunes_enabled = read_bool(self.params, "VehicleTunesEnabled", False)
+    # FLM runtime injection (upstream 44a32ec77c). FlmRuntimeOverridesEnabled
+    # defaults off, so the override table stays empty and FRICTION_THRESHOLD is
+    # untouched unless the user opts in.
+    self._flm_frame = -1
+    self._flm_enabled = read_bool(self.params, "FlmRuntimeOverridesEnabled", False)
+    self._refresh_flm_overrides()
+
+  def _refresh_flm_overrides(self) -> None:
+    """Publish the FLM override bundle to the process-wide override table.
+
+    The bundle lives in the FLMActiveOverrides param as JSON. It is empty
+    unless the user applied an FLM profile, in which case it carries a
+    friction curve and per-vehicle knobs.
+
+    Failures are swallowed on purpose: an unparsable bundle must not take
+    down the lateral controller. The previous overrides stay in effect, which
+    is safer than silently reverting to stock friction mid-corner.
+    """
+    self._flm_frame += 1
+    if self._flm_frame % FLM_OVERRIDE_REFRESH_FRAMES != 0:
+      return
+
+    if not self._flm_enabled:
+      set_flm_runtime_overrides({})
+      return
+
+    # Params.get() in this fork has no encoding kwarg: it hands back bytes.
+    # Decoding here (not in Params) keeps the override bundle a plain string
+    # for the JSON parser and leaves every other reader untouched.
+    try:
+      raw = self.params.get("FLMActiveOverrides") or b""
+      if isinstance(raw, (bytes, bytearray)):
+        raw = raw.decode("utf-8", errors="ignore")
+    except Exception:
+      raw = ""
+
+    if not raw:
+      set_flm_runtime_overrides({})
+      return
+
+    try:
+      import json
+      overrides = json.loads(raw)
+    except Exception:
+      return
+
+    if isinstance(overrides, dict):
+      set_flm_runtime_overrides(overrides)
 
   def _read_custom_kp_scale(self) -> float:
     # params_keys.h is compiled into libparams_c.so, so a device that has not rebuilt
@@ -94,6 +159,8 @@ class LatControlTorque(LatControl):
       self._custom_kp_scale = scale
       self._apply_custom_kp_scale(scale)
     self.vehicle_tunes_enabled = read_bool(self.params, "VehicleTunesEnabled", False)
+    # Same slow cadence: toggling the FLM injection does not need a restart.
+    self._flm_enabled = read_bool(self.params, "FlmRuntimeOverridesEnabled", False)
 
   def update_torque_parameters(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
@@ -109,6 +176,7 @@ class LatControlTorque(LatControl):
 
   def update(self, active, CS, VM, params, steer_limited_by_safety, desired_curvature, calibrated_pose, curvature_limited, lat_delay):
     self.refresh_custom_kp_scale()
+    self._refresh_flm_overrides()
     # Override torque params from extension
     if self.extension.update_override_torque_params(self.torque_params):
       self.update_limits()
@@ -138,7 +206,10 @@ class LatControlTorque(LatControl):
     # latAccelOffset corrects roll compensation bias from device roll misalignment relative to car roll
     ff -= self.torque_params.latAccelOffset
     vehicle_tune = self.vehicle_tune if self.vehicle_tunes_enabled else None
-    friction_threshold = FRICTION_THRESHOLD
+    # Base friction threshold: the speed-dependent standard curve. When an FLM
+    # profile is active it overrides this per speed knot, so the learned
+    # friction profile actually reaches the controller.
+    friction_threshold = get_standard_friction_threshold(CS.vEgo) if flm_runtime_overrides_active() else FRICTION_THRESHOLD
     friction_scale = 1.0
     if vehicle_tune is not None:
       if vehicle_tune.ff_scale is not None:

@@ -1064,8 +1064,8 @@ def _segment_samples(segment_source: RouteSource, params: Params | None = None) 
     if which == "carOutput":
       latest["carOutput"] = msg.carOutput
       continue
-    if which == "liveParameters":
-      latest["liveParameters"] = msg.liveParameters
+    if which == "vehicleParameters":
+      latest["vehicleParameters"] = msg.vehicleParameters
       continue
     if which != "controlsState":
       continue
@@ -1080,7 +1080,7 @@ def _segment_samples(segment_source: RouteSource, params: Params | None = None) 
     torque_state = lateral_state.torqueState
     car_state = latest["carState"]
     car_control = latest["carControl"]
-    live_parameters = latest.get("liveParameters")
+    live_parameters = latest.get("vehicleParameters")
     car_output = latest.get("carOutput")
     roll_deg = math.degrees(float(getattr(live_parameters, "roll", 0.0) or 0.0)) if live_parameters is not None else 0.0
     out_torque = float(getattr(getattr(car_output, "actuatorsOutput", None), "torque", 0.0) or 0.0) if car_output is not None else 0.0

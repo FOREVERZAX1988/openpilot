@@ -387,6 +387,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TorqueParamsOverrideLatAccelFactor", {PERSISTENT | BACKUP, FLOAT, "2.5"}},
     {"CustomKp", {PERSISTENT | BACKUP, FLOAT, "1.0"}},
     {"VehicleTunesEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"FlmRuntimeOverridesEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM runtime injection: apply the friction curve / vehicle knobs from FLMActiveOverrides to the torque controller
     {"LeadFollowPolicyEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"LeadStopDepartPolicyEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot stop/depart policy: vision approach caps, close-stop hold floors, standstill lead depart
 

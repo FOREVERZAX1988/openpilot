@@ -121,15 +121,16 @@ class TestLatControlCustomKp(OpenpilotTestCase):
     self.assertEqual(self._pid_gains(), [k * 1.2 for k in self._stock_gains()])
 
   def test_refresh_cadence_matches_the_torque_override_extension(self):
-    # Two params ride the same 300-frame cadence: the Kp scale and the
-    # per-vehicle tune gate. Counting per key keeps the intent ("one refresh per
-    # 300 frames") visible now that a refresh reads two parameters.
+    # Three params ride the same 300-frame cadence: the Kp scale, the per-vehicle
+    # tune gate, and the FLM override-injection gate. Counting per key keeps the
+    # intent ("one refresh per 300 frames") visible now that a refresh reads
+    # three parameters.
     self.controller.params = ParamsStub(1.0)
     self.controller._kp_frame = -1
     self.controller.refresh_custom_kp_scale()
-    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 1, "VehicleTunesEnabled": 1})
+    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 1, "VehicleTunesEnabled": 1, "FlmRuntimeOverridesEnabled": 1})
     for _ in range(CUSTOM_KP_REFRESH_FRAMES - 1):
       self.controller.refresh_custom_kp_scale()
-    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 1, "VehicleTunesEnabled": 1})
+    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 1, "VehicleTunesEnabled": 1, "FlmRuntimeOverridesEnabled": 1})
     self.controller.refresh_custom_kp_scale()
-    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 2, "VehicleTunesEnabled": 2})
+    self.assertEqual(self.controller.params.reads_by_key, {"CustomKp": 2, "VehicleTunesEnabled": 2, "FlmRuntimeOverridesEnabled": 2})
