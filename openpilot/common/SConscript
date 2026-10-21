@@ -2,15 +2,21 @@ Import('env')
 
 # params.cc #includes params_keys.h, whose whole key registry is one big
 # constexpr std::unordered_map initializer, and that one translation unit is the
-# heaviest thing in the tree: on this C3 (3.6 GB RAM, ~1.9 GB available offroad)
-# clang++ peaks at 1.9 GB RSS with -O1 -g and gets SIGKILLed by lowmemorykiller
-# at -O2 -g (dmesg: "Killing 'clang++' ... to free 1817860kB on behalf of
-# 'openpilot.sunny'"), so plain `scons` could never rebuild the params key table
-# here. -O0 peaks at 261 MB in 34 s and survives next to the running daemons.
-# Pin only this TU to -O0: it is a registry lookup + file/zmq I/O, not hot code,
-# and ABI/semantics are identical. Notes + numbers:
+# heaviest thing in the tree. Measured on this C3 (3.6 GB RAM), 2026-10-21:
+#   -O2 -g   SIGKILLed by lowmemorykiller (dmesg: "Killing 'clang++' (610695)
+#            ... to free 1817860kB on behalf of 'openpilot.sunny'")
+#   -O1 -g   1.9 GB RSS, also SIGKILLed -- the debug info is what eats the memory
+#   -O1 -g0  361 MB peak RSS / 149 s, exit 0, ~1.0 GB still available throughout
+#   -O0      261 MB / 34 s
+# So plain `scons` could never rebuild the params key table on this device. Pin
+# only this TU: -O1 keeps the registry lookup out of the degenerate -O0 path (this
+# library is on the param-read path of every daemon), -g0 drops the debug info that
+# caused both kills, and ABI/semantics are identical. Numbers and recipe:
 # ai/docs/libparams_c_rebuild_recipe_20261021.md
-_params_env = env.Clone(CCFLAGS=[flag for flag in env["CCFLAGS"] if flag != "-O2"] + ["-O0"])
+# Drop every optimisation/debug flag the global env set (exact matches only, so
+# -gcc-toolchain etc. survive) and re-add the pinned pair.
+_PINNED_OUT = {"-O0", "-O1", "-O2", "-O3", "-Os", "-g", "-g1", "-g2", "-g3", "-ggdb"}
+_params_env = env.Clone(CCFLAGS=[f for f in env["CCFLAGS"] if f not in _PINNED_OUT] + ["-O1", "-g0"])
 _params_obj = _params_env.Object("params.o", "params.cc")
 
 common_libs = [
