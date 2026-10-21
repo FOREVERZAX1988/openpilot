@@ -8,6 +8,7 @@
 inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AccessToken", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
     {"AdbEnabled", {PERSISTENT | BACKUP, BOOL}},
+    {"AdvancedLateralTune", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM advanced lateral master switch
     {"AlwaysOnDM", {PERSISTENT | BACKUP, BOOL}},
     {"ApiCache_Device", {PERSISTENT, STRING}},
     {"ApiCache_FirehoseStats", {PERSISTENT, JSON}},
@@ -44,6 +45,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ExperimentalModeConfirmed", {PERSISTENT | BACKUP, BOOL}},
     {"FirmwareQueryDone", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"ForcePowerDown", {PERSISTENT, BOOL}},
+    {"FLMActiveOverrides", {PERSISTENT | BACKUP, JSON}},  // FLM active override blob (friction curves + vehicle knobs)
+    {"FLMActiveProfileId", {PERSISTENT | BACKUP, STRING}},  // FLM active trial/saved-tune profile id
+    {"FLMSubmittedTune", {PERSISTENT, JSON}},  // Galaxy tune submission handoff payload
+    {"FLMTrialApplied", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM trial profile currently applied
+    {"FLMTrialBaseline", {PERSISTENT | BACKUP, JSON}},  // FLM rollback baseline snapshot
+    {"ForceAutoTune", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ForceAutoTuneOff", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"GitBranch", {PERSISTENT, STRING}},
     {"GitCommit", {PERSISTENT, STRING}},
     {"GitCommitDate", {PERSISTENT, STRING}},
@@ -342,6 +350,22 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // (map_data_priority) ignored the car limit entirely whenever map had one.
     {"SpeedLimitPolicy", {PERSISTENT | BACKUP, INT, "4"}},  // 0=car only, 1=map only, 2=car first, 3=map first, 4=combined (min)
     {"SpeedLimitValueOffset", {PERSISTENT | BACKUP, INT, "0"}},
+
+    // Vision speed limit daemon (speed_limit_vision)
+    {"SpeedLimitVisionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // manager gate: run the vision speed-limit daemon onroad
+    {"VASMEnabled", {PERSISTENT, BOOL, "0"}},  // coexistence mode with the VASM detection stack
+    {"VisionSpeedLimit", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, FLOAT, "0.0"}},  // latest published vision limit in m/s
+    {"VisionSpeedLimitAutoBookmark", {PERSISTENT, BOOL, "0"}},  // capture debug bookmarks on confirmed detections
+    {"VisionSpeedLimitAutoPreserveSegment", {PERSISTENT, BOOL, "0"}},
+    {"VisionSpeedLimitBookmarkCount", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
+    {"VisionSpeedLimitConfidence", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, FLOAT, "0.0"}},
+    {"VisionSpeedLimitDebugSession", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, STRING}},
+    {"VisionSpeedLimitLastEvent", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, STRING}},
+    {"VisionSpeedLimitStatus", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, STRING}},
+    {"VisionSpeedLimitStream", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, STRING}},
+    {"VisionSpeedLimitSupportCount", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},
+    {"VisionSpeedLimitSupportSpeed", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, FLOAT, "0.0"}},
+    {"VisionSpeedLimitTrainingCollector", {PERSISTENT, BOOL, "1"}},  // capture training candidates by default
 
     // Smart Cruise Control
     {"MapTargetVelocities", {CLEAR_ON_ONROAD_TRANSITION, STRING}},
@@ -699,6 +723,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"OnnxBsdIntervalMs", {PERSISTENT | BACKUP, INT, "250"}},
     {"OnnxBsdSmoothingMs", {PERSISTENT | BACKUP, INT, "200"}},
     {"OnnxBsdThreshold", {PERSISTENT | BACKUP, INT, "45"}},
+    {"UseAutoSteerDelay", {PERSISTENT | BACKUP, BOOL, "1"}},  // FLM: derive steer delay from CP instead of the manual knob
     {"UseLaneLineCurveSpeed", {PERSISTENT | BACKUP, INT, "0"}},
     {"UseLaneLineSpeed", {PERSISTENT | BACKUP, INT, "0"}},
     // New with L7.
@@ -724,6 +749,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LateralTorqueKpV", {PERSISTENT | BACKUP, INT, "100"}},
     {"PathOffset", {PERSISTENT | BACKUP, INT, "0"}},
     {"SteerActuatorDelay", {PERSISTENT | BACKUP, INT, "30"}},
+    {"SteerDelay", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // FLM advanced lateral knobs
+    {"SteerFriction", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
+    {"SteerKP", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
+    {"SteerLatAccel", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
+    {"SteerRatio", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
     {"SteerRatioRate", {PERSISTENT | BACKUP, INT, "100"}},
     // Carrot vehicle / CAN / buttons tuning surface.
     {"AutoGasCancelSpeed", {PERSISTENT | BACKUP, INT, "30"}},
