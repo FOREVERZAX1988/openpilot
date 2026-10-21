@@ -311,6 +311,23 @@ def build_dev_items():
                    description=tr('When the speed limit drops sharply under a stable lead, ease the target down ' +
                                   'at a comfort rate instead of stepping it. Vetoed by a closing gap, lead ' +
                                   'braking, a driver override or a low speed. Applies within about five seconds.')),
+    # Vision speed limit. Two switches because the pipeline has two halves: the reader
+    # is its own onroad process (three ONNX models on the road camera, ~22 MB of assets,
+    # renices itself to 19), and the feed switch is what lets the resolver use what it
+    # finds. Neither key is Carrot*, so the reach audit cannot see them without the
+    # EXTRA_CONTROL_PARAMS entries - the same blind spot the FLM pair had.
+    section_heading_sp(tr('Vision Speed Limit (default off)')),
+    toggle_item_sp(title=tr('Vision Sign Reader'), param='SpeedLimitVisionEnabled',
+                   description=tr('Run the vision speed-limit reader: three ONNX models look at the road camera ' +
+                                  'and publish the sign they read into shared memory. Started by the process ' +
+                                  'manager, so restart to apply. Off by default.')),
+    toggle_item_sp(title=tr('Feed Vision Limit'), param='VisionSpeedLimitEnabled',
+                   description=tr('Let the speed-limit resolver use the detected limit. It is folded into the ' +
+                                  'map source, so a map limit stays authoritative and vision can only tighten ' +
+                                  'it. Applies within about five seconds.')),
+    toggle_item_sp(title=tr('Drop Impossible Vision Limits'), param='VisionSpeedLimitLowLimitFilter',
+                   description=tr('Discard detected limits at or below the threshold below - usually a misread ' +
+                                  'sign. Off means every reading the reader accepts is used.')),
     toggle_item_sp(title=tr('Traffic Light Fusion'), param='CarrotTrafficLightFusionEnabled',
                    description=tr("Fold the phone app's traffic-light state into the longitudinal plan. "
                                    "Applies within about five seconds, no restart needed.")),

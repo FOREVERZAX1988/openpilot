@@ -77,6 +77,13 @@ NAME_RE = re.compile(r'["\'](Carrot[A-Za-z0-9_]+)["\']')
 EXTRA_CONTROL_PARAMS = (
   'AdvancedLateralTune',
   'FlmRuntimeOverridesEnabled',
+  # Vision speed limit: not Carrot* keys, so NAME_RE would skip them. Only the two the
+  # control path reads belong here; the reader gate (SpeedLimitVisionEnabled) is a
+  # process-manager gate, so listing it would make this table claim a control it has
+  # no read point for.
+  'VisionSpeedLimitEnabled',
+  'VisionSpeedLimitLowLimitFilter',
+  'VisionSpeedLimitLowLimitThreshold',
 )
 
 # What each switch does, in one line, taken from the read site rather than from its name.
@@ -104,6 +111,9 @@ NOTES = {
   'CarrotTurnAccelEnabled': '弯道内限制纵向加速度',
   # FLM family (see EXTRA_CONTROL_PARAMS). Both are inert until an FLM profile is applied.
   'AdvancedLateralTune': 'FLM 分析器改用 Steer* 旋钮值，关=报 carParams 原值',
+  'VisionSpeedLimitEnabled': '视觉识别的限速并入地图源，只降不升',
+  'VisionSpeedLimitLowLimitFilter': '丢弃低于阈值的识别结果（多为误读）',
+  'VisionSpeedLimitLowLimitThreshold': '上一条的阈值，m/s',
   'FlmRuntimeOverridesEnabled': '把 FLMActiveOverrides 里的摩擦曲线/车辆旋钮注入扭矩控制器',}
 
 
