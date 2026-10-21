@@ -82,6 +82,9 @@ params_clear_all = None
 params_check_key = None
 params_get_key_type = None
 params_get_default = None
+params_get_stock = None
+params_get_tuning_level = None
+params_get_settings_tier = None
 params_get = None
 params_get_bool = None
 params_put = None
@@ -109,12 +112,29 @@ if lib is not None:
       return value
     return checked
 
+  def _bind_optional(name, args, result=None):
+    """Bind a symbol the device's library may predate.
+
+    `params_keys.h` and the bindings are compiled into libparams_c.so, so a device that
+    has not rebuilt the library since the parameter metadata landed has no such symbol.
+    Letting _bind raise would take down every daemon that imports Params; the callers of
+    the metadata are written to read a missing answer as "leave this parameter alone".
+    """
+    try:
+      return _bind(name, args, result)
+    except AttributeError:
+      cloudlog.warning(f"params: {name} missing from the params library (stale libparams_c.so?)")
+      return None
+
   params_create = _bind("params_create", [ctypes.c_char_p, ctypes.c_size_t], ParamsHandle)
   params_destroy = _bind("params_destroy", [ParamsHandle])
   params_clear_all = _bind("params_clear_all", [ParamsHandle, ctypes.c_uint])
   params_check_key = _bind("params_check_key", [ParamsHandle, ctypes.c_char_p], ctypes.c_bool)
   params_get_key_type = _bind("params_get_key_type", [ParamsHandle, ctypes.c_char_p], ctypes.c_int)
   params_get_default = _bind("params_get_default", [ParamsHandle, ctypes.c_char_p], ParamsBuffer)
+  params_get_stock = _bind_optional("params_get_stock", [ParamsHandle, ctypes.c_char_p], ParamsBuffer)
+  params_get_tuning_level = _bind_optional("params_get_tuning_level", [ParamsHandle, ctypes.c_char_p], ctypes.c_int)
+  params_get_settings_tier = _bind_optional("params_get_settings_tier", [ParamsHandle, ctypes.c_char_p], ctypes.c_int)
   params_get = _bind("params_get", [ParamsHandle, ctypes.c_char_p, ctypes.c_bool], ParamsBuffer)
   params_get_bool = _bind("params_get_bool", [ParamsHandle, ctypes.c_char_p, ctypes.c_bool], ctypes.c_bool)
   params_put = _bind("params_put", [ParamsHandle, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_bool], ctypes.c_int)
@@ -318,6 +338,27 @@ class Params:
       return ParamKeyType(params_get_key_type(self.p, self.check_key(key)))
     # mock default to string
     return ParamKeyType.STRING
+
+  # 上游 5ee2c9f618 的三项参数元数据。stock_value 与 get(key, return_default=True)
+  # 的区别：它是键自身的属性，不取决于这个参数是否被写过。返回原始字节（与
+  # _copy_string 一致，上游同形），调用方自行按类型解码 —— safe_mode_runtime._stock 就是。
+  def get_stock_value(self, key):
+    """The value the car shipped with, or the registered default."""
+    if lib is not None and params_get_stock is not None:
+      return _copy_string(params_get_stock(self.p, self.check_key(key)))
+    return None
+
+  def get_tuning_level(self, key):
+    """Which tuning level the key belongs to; 0 means it is not a knob."""
+    if lib is not None and params_get_tuning_level is not None:
+      return params_get_tuning_level(self.p, self.check_key(key))
+    return 0
+
+  def get_settings_tier(self, key):
+    """Where the key belongs in the settings page (0 simple, 1 advanced)."""
+    if lib is not None and params_get_settings_tier is not None:
+      return params_get_settings_tier(self.p, self.check_key(key))
+    return 1
 
   def all_keys(self, flag=ParamKeyFlag.ALL):
     if lib is not None:
