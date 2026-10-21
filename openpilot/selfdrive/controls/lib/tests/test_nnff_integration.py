@@ -54,7 +54,12 @@ def _control_source() -> str:
 
 def _make_nnff(fingerprint: str) -> LatControlNNFF:
   params = Params()
-  params.put_bool("EnforceTorqueControl", True, block=True)
+  # block=False on purpose: a blocking param write waits on the params flock, and that
+  # flock can be held forever by a stale file descriptor this process never opened (the
+  # lock is inherited by any child forked while another process held it - params.cc
+  # opens the lock file without O_CLOEXEC). On the device that turns block=True into a
+  # hang; it wedged this whole suite for ten minutes on 2026-10-21.
+  params.put_bool("EnforceTorqueControl", True, block=False)
   car_name = HONDA.HONDA_CIVIC
   CarInterface = interfaces[car_name]
   CP = CarInterface.get_non_essential_params(car_name)
@@ -68,6 +73,21 @@ def _make_nnff(fingerprint: str) -> LatControlNNFF:
 
 class TestThisCarCannotUseIt(unittest.TestCase):
   """The Macan has no model and no substitute, so NNFF is inert here by construction."""
+
+  @classmethod
+  def setUpClass(cls):
+    # EnforceTorqueControl gates configure_torque_tune() in this fork, so it is a
+    # driving-relevant key: remember what the store had and put it back, instead of
+    # leaving a test's value behind (it was left at 1 by a run on 2026-10-21).
+    cls._params = Params()
+    cls._enforce_before = cls._params.get_bool("EnforceTorqueControl")
+
+  @classmethod
+  def tearDownClass(cls):
+    if cls._enforce_before:
+      cls._params.put_bool("EnforceTorqueControl", True, block=False)
+    else:
+      cls._params.remove("EnforceTorqueControl")
 
   def test_no_model_and_no_substitute(self):
     self.assertFalse(nnff_supported(MACAN))

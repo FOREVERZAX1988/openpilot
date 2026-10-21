@@ -28,6 +28,18 @@ EventName = log.OnroadEvent.EventName
 # get event name from enum
 EVENT_NAME = {v: k for k, v in EventName.schema.enumerants.items()}
 
+# Temporary-steering warnings are frequently momentary: a single dropped frame
+# of steering makes steerTempUnavailable true for one cycle, and an alert that
+# flashes for 100 ms trains the driver to ignore it. Present the warning only
+# after 120 ms of accumulated faults, and require 1 s of health before the
+# accumulator resets so short healthy gaps cannot hide repeated interruptions.
+# Presentation only: the events themselves still drive the state machine, the
+# counters and every deadline, and no-entry and critical alerts bypass the
+# delay entirely. (upstream c61d998-series via cp 6a33883d)
+TEMP_STEER_EVENTS = (EventName.steerTempUnavailable, EventName.steerTempUnavailableSilent)
+TEMP_STEER_WARNING_DELAY_FRAMES = round(0.12 / DT_CTRL)
+TEMP_STEER_WARNING_RESET_FRAMES = round(1.0 / DT_CTRL)
+
 
 class Events(EventsBase):
   def __init__(self):
@@ -36,10 +48,52 @@ class Events(EventsBase):
     # Rebuilt once by bind_nnff_notice(), so the per-frame lookup stays a plain
     # attribute read instead of copying EVENTS on every contains()/create_alerts().
     self._events_mapping = EVENTS
+    self._steer_warning_fault_frames = 0
+    self._steer_warning_clear_frames = 0
 
   def bind_nnff_notice(self, model_name: str, fuzzy: bool) -> None:
     """Name the loaded NNFF model on the one-shot torqueNNLoad notice."""
     self._events_mapping = EVENTS | {EventName.torqueNNLoad: {ET.PERMANENT: nnff_load_alert(model_name, fuzzy)}}
+
+  def clear(self) -> None:
+    # Count completed cycles, sharing history across audible/silent variants.
+    if any(e in self.events for e in TEMP_STEER_EVENTS):
+      self._steer_warning_fault_frames = min(self._steer_warning_fault_frames + 1, TEMP_STEER_WARNING_DELAY_FRAMES)
+      self._steer_warning_clear_frames = 0
+    else:
+      self._steer_warning_clear_frames = min(self._steer_warning_clear_frames + 1, TEMP_STEER_WARNING_RESET_FRAMES)
+      if self._steer_warning_clear_frames >= TEMP_STEER_WARNING_RESET_FRAMES:
+        self._steer_warning_fault_frames = 0
+    super().clear()
+
+  def create_alerts(self, event_types: list[str], callback_args=None):
+    """The base builder, plus the temporary-steering presentation delay.
+
+    The event stays in `self.events` the whole time - this only withholds the
+    rendered alert, so control inhibition and the state machine are untouched.
+    """
+    if callback_args is None:
+      callback_args = []
+
+    ret = []
+    for e in self.events:
+      types = self.get_events_mapping()[e].keys()
+      for et in event_types:
+        if et in types:
+          alert = self.get_events_mapping()[e][et]
+          if not isinstance(alert, Alert):
+            alert = alert(*callback_args)
+
+          if (e in TEMP_STEER_EVENTS and et in (ET.SOFT_DISABLE, ET.WARNING) and
+              alert.alert_status != AlertStatus.critical and
+              self._steer_warning_fault_frames < TEMP_STEER_WARNING_DELAY_FRAMES):
+            continue
+
+          if DT_CTRL * (self.event_counters[e] + 1) >= alert.creation_delay:
+            alert.alert_type = f"{self.get_event_name(e)}/{et}"
+            alert.event_type = et
+            ret.append(alert)
+    return ret
 
   def get_events_mapping(self) -> dict[int, dict[str, Alert | AlertCallbackType]]:
     return self._events_mapping
