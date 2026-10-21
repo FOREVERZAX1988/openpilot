@@ -11,6 +11,7 @@ Groups inside a page are separated by `LineSeparatorSP`, matching how the rest o
 the sunnypilot settings pages express grouping (see steering.py, models.py).
 """
 from openpilot.sunnypilot.carrot import feature_support
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
   option_item_sp, section_heading_sp, toggle_item_sp,
@@ -358,6 +359,19 @@ def build_dev_items():
     toggle_item_sp(title=tr('Drop Impossible Vision Limits'), param='VisionSpeedLimitLowLimitFilter',
                    description=tr('Discard detected limits at or below the threshold below - usually a misread ' +
                                   'sign. Off means every reading the reader accepts is used.')),
+    # The threshold that toggle is measured against. The key's own unit is m/s
+    # (params_keys.h) and speed_limit_resolver.py parses it in m/s, so the +/- buttons and
+    # the keypad stay in m/s; the label adds the km/h equivalent because a driver looking at
+    # a misread "5 km/h" sign thinks in km/h. The conversion is display-only on purpose: one
+    # unit on the wire, one unit in the store, no second code path to keep in sync.
+    # Greyed out until the toggle above is on, because the value is read on that path only.
+    option_item_sp(title=tr('Impossible Limit Threshold'), param='VisionSpeedLimitLowLimitThreshold',
+                   min_value=0, max_value=1000, value_change_step=50, use_float_scaling=True,
+                   label_callback=lambda v: f'{v / 100.0:.1f} m/s ({v * 0.036:.0f} km/h)',
+                   enabled=lambda: unified_params.get_bool('VisionSpeedLimitLowLimitFilter'),
+                   description=tr('A detected limit at or below this value is dropped as an impossible ' +
+                                  'reading. Stored in m/s, shown in both; only read while the filter ' +
+                                  'above is on. Applies within about five seconds.')),
     toggle_item_sp(title=tr('Traffic Light Fusion'), param='CarrotTrafficLightFusionEnabled',
                    description=tr("Fold the phone app's traffic-light state into the longitudinal plan. "
                                    "Applies within about five seconds, no restart needed.")),

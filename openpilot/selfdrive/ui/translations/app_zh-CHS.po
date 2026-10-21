@@ -9592,6 +9592,10 @@ msgid "Gap Recovery"
 msgstr "跟车距离恢复"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Impossible Limit Threshold"
+msgstr "不合理限速阈值"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Lateral Readiness"
 msgstr "横向就绪"
 

@@ -24,7 +24,7 @@ does not exist on a Windows checkout.
 import unittest
 
 from openpilot.sunnypilot.carrot.tests.audit_ui_reach import (
-  DOC_PATH, EXTRA_CONTROL_PARAMS, NOTES, control_switches, level_one_gaps, render, ui_entries,
+  DOC_PATH, EXTRA_CONTROL_PARAMS, NOTES, control_switches, level_one_gaps, render, split_switches, ui_entries,
 )
 
 
@@ -106,6 +106,33 @@ class TestCarrotUiReach(unittest.TestCase):
     self.assertEqual([], stale, 'EXTRA_CONTROL_PARAMS names a param nothing reads on the '
                                 'control path any more (upstream rename?); update the list '
                                 'in audit_ui_reach.py instead of leaving the audit blind')
+
+  def test_the_vision_speed_limit_keys_have_switches(self):
+    """The third family (round 12): not `Carrot*`, read by the resolver, easy to forget.
+
+    `VisionSpeedLimitLowLimitThreshold` spent a whole round as the only control-path
+    parameter with no control anywhere - the table said "1", and a threshold nobody can
+    reach makes `VisionSpeedLimitLowLimitFilter` permanently useless. Pinned by hand for
+    the same reason as the two lists above.
+    """
+    vision = ('VisionSpeedLimitEnabled', 'VisionSpeedLimitLowLimitFilter', 'VisionSpeedLimitLowLimitThreshold')
+    exposed = ui_entries()
+    missing = [name for name in vision if name not in exposed]
+    self.assertEqual([], missing, 'a vision speed-limit key lost its settings row; the owner is '
+                                  'carrot_tuning_items.build_dev_items()')
+
+  def test_no_control_switch_falls_back_to_curl_only(self):
+    """The table's own headline claim, asserted instead of just rendered.
+
+    "N switches, 0 unreachable" was true for months only because the doc was regenerated
+    by the same scan that found the gap. This asserts the property directly, so a newly
+    ported key that nobody wired up fails a test instead of quietly appearing in the doc.
+    """
+    _, without_ui = split_switches()
+    self.assertEqual([], sorted(without_ui),
+                     'control-path parameters with no device control: ' + repr(sorted(without_ui))
+                     + ' - add a row (see carrot_tuning_items.build_dev_items()) or write down '
+                       'why it stays script-only in audit_ui_reach.NOTES')
 
 
 if __name__ == '__main__':

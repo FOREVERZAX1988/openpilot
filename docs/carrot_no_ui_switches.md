@@ -9,21 +9,14 @@
 或 webui 的 `panel_catalog.py` 里出现过。8088 网页面板靠扫描车机设置页生成控件，不额外增加可达性。
 `carrot_tuning_api.py` 的白名单不算入口，那是通用编辑器。
 
-共 24 个：**23 个有 UI 入口，1 个没有**。
+共 24 个：**24 个有 UI 入口，0 个没有**。
 
-没有入口的那些，仍然可以通过 carrot_server 写参数（`params_keys.h` 注册即允许，不走白名单）：
-
-```
-curl -X POST http://<device>:7000/api/param_set \
-     -H "Content-Type: application/json" \
-     -d '{"name": "CarrotMapDecelEnabled", "value": 1}'
-
-curl "http://<device>:7000/api/params_bulk?names=CarrotMapDecelEnabled,CarrotTurnAccelEnabled"
-```
+这一节是留给下一次上游拉取的：新搬来的键如果只注册了 `params_keys.h`、还没有接到控件上，
+它会重新出现在这里，而不是悄悄只能用 curl 打开。现在一个都没有。
 
 读点只给文件不给行号：行号一改就漂，用参数名 grep 定位。
 
-## 有 UI 入口（23）
+## 有 UI 入口（24）
 
 | 参数 | 默认 | 层级 | 读点 | 作用 |
 | --- | --- | --- | --- | --- |
@@ -50,9 +43,4 @@ curl "http://<device>:7000/api/params_bulk?names=CarrotMapDecelEnabled,CarrotTur
 | `FlmRuntimeOverridesEnabled` | `0` | - | `openpilot/selfdrive/controls/lib/latcontrol_torque.py` | 把 FLMActiveOverrides 里的摩擦曲线/车辆旋钮注入扭矩控制器 |
 | `VisionSpeedLimitEnabled` | `0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 视觉识别的限速并入地图源，只降不升 |
 | `VisionSpeedLimitLowLimitFilter` | `0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 丢弃低于阈值的识别结果（多为误读） |
-
-## 没有 UI 入口（1），只能走 7000 的 `POST /api/param_set`
-
-| 参数 | 默认 | 层级 | 读点 | 作用 |
-| --- | --- | --- | --- | --- |
 | `VisionSpeedLimitLowLimitThreshold` | `0.0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 上一条的阈值，m/s |

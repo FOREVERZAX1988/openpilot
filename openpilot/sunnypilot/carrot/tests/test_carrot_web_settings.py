@@ -74,6 +74,48 @@ class TestOnDeviceScan(unittest.TestCase):
     self.assertIn("cruise", pages)
     self.assertIn("CustomAccShortPressIncrement", pages["cruise"])
 
+  def test_a_key_quoted_either_way_is_found(self):
+    """The scanner reads source text, so both quote styles have to count.
+
+    `carrot_tuning_items.py` (Carrot Tuning + the Developer page) writes every key as
+    `param='X'`; every other page writes `param="X"`. A regex that only matched `"` made
+    the panel group 150 of the 294 declared keys the pages name, with no error anywhere:
+    the missing ones simply never appeared, and the (then empty) Carrot Tuning section
+    looked like a page that has no settings. Pinned directly so a future rewrite of the
+    scanner has to keep both.
+    """
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as tmp:
+      page = Path(tmp) / "somepage.py"
+      source = "\n".join([
+        "toggle_item_sp(title=tr('A'), param='SingleQuoted')",
+        'toggle_item_sp(title=tr("B"), param="DoubleQuoted")',
+        'toggle_item_sp(title=tr("C"), param="MixedQuotes")',
+      ])
+      page.write_text(source, encoding="utf-8")
+      keys = set(ws.scan_ui_pages(tmp).get("somepage", []))
+    self.assertIn("SingleQuoted", keys)
+    self.assertIn("DoubleQuoted", keys)
+    self.assertIn("MixedQuotes", keys)
+
+  def test_no_declared_key_the_pages_name_is_lost(self):
+    """The end-to-end version: grouping must not drop a key a page actually names.
+
+    Counted against `params_keys.h` rather than a hardcoded number, so adding a page row
+    cannot make this pass by accident, and removing the quote handling cannot make it
+    pass quietly.
+    """
+    from openpilot.sunnypilot.carrot.tests.audit_param_consistency import parse_params_keys
+    declared = set(parse_params_keys())
+    root = ws.ui_settings_dir()
+    scanned = {k for keys in ws.scan_ui_pages(root).values() for k in keys}
+    self.assertGreaterEqual(len(scanned & declared), 280,
+                            "the page scan lost keys again - check _KEYWORD_ARG_RE handles both quote styles")
+    # the Carrot Tuning page is the one that quotes with ', so it is the canary
+    self.assertIn("VisionSpeedLimitLowLimitThreshold", scanned)
+    self.assertIn("CarrotLeadPreviewEnabled", scanned)
+
 
 class TestRender(unittest.TestCase):
   def test_every_declared_type_renders(self):

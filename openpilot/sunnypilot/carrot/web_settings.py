@@ -33,7 +33,14 @@ from typing import Any
 _PARAM_KW_RE = re.compile(r'\bparam\s*=\s*"([A-Za-z0-9_]+)"')
 _PARAM_KW2_RE = re.compile(r'\bparam_key\s*=\s*"([A-Za-z0-9_]+)"')
 _PARAM_POS_RE = re.compile(r'(?:ParamControlSP|BigParamControlSP|ParamControl)\s*\(\s*[^,()]*,\s*"([A-Za-z0-9_]+)"')
-_KEYWORD_ARG_RE = re.compile(r'"([A-Za-z0-9_]+)"')
+# Both quote styles, with the closing quote required to match the opening one (a
+# backreference), so `param="X"` and `param='X'` are equally seen and a key quoted one way
+# is not missed because the file that names it quotes the other way. Matching only `"` was
+# the actual state until 2026-10-21: `carrot_tuning_items.py` - the whole Carrot Tuning and
+# Developer page surface, 144 declared keys - quotes every key with `'`, so the panel
+# grouped 150 of the 294 keys the pages name and silently dropped the rest into no row at
+# all. audit_ui_reach.py has the same lesson written in NAME_RE, for the same reason.
+_KEYWORD_ARG_RE = re.compile(r'([\'"])([A-Za-z0-9_]+)\1')
 
 # helper modules that are not pages of their own; the items module belongs to carrot_tuning
 _NOT_PAGES = ("settings",)
@@ -100,7 +107,7 @@ def _keys_in(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8", errors="ignore")
   except OSError:
     return []
-  return _KEYWORD_ARG_RE.findall(text)
+  return [name for _quote, name in _KEYWORD_ARG_RE.findall(text)]
 
 
 def group_keys(pages: dict[str, list[str]], declared: Iterable[str]) -> dict[str, list[str]]:
