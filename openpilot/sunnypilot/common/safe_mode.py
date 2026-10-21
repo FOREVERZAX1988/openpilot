@@ -167,6 +167,22 @@ def safe_value(key: str, *, current: str | None, stock: str | None,
   return None
 
 
+def can_enter(is_onroad: bool | None) -> bool:
+  """Whether Safe Mode may be switched on now.
+
+  Switching it on rewrites the steering knobs, and the on-road blocklist
+  refuses exactly those writes while the car is moving. Safe Mode must not
+  exempt itself from its own rule: a steering ratio rewritten mid-drive is
+  either ignored, because the control loop read it at start-up, or applied
+  half way through a solve, and both leave the driver guessing what the car
+  is actually running. So switching it on is a parked operation as well.
+
+  ``None`` means the road state could not be read, which is not good enough
+  to authorise a write.
+  """
+  return is_onroad is False
+
+
 def can_restore(is_onroad: bool, is_offroad: bool) -> bool:
   """Whether the backup may be restored now.
 
@@ -175,6 +191,25 @@ def can_restore(is_onroad: bool, is_offroad: bool) -> bool:
   missing pair of flags means the state is unknown and the answer is no.
   """
   return (not is_onroad) and bool(is_offroad)
+
+
+def transition_block_reason(active: bool, is_onroad: bool | None, is_offroad: bool | None) -> str | None:
+  """Why a Safe Mode transition is refused right now, or None when it is allowed.
+
+  Kept here rather than in the runtime so the wording, the gate and the
+  status payload cannot drift apart.
+  """
+  if active:
+    if is_onroad is None or is_offroad is None:
+      return "The road state is unknown; Safe Mode can only be undone while parked."
+    if not can_restore(is_onroad, is_offroad):
+      return "Safe Mode rewrites the steering knobs; park the car before undoing it."
+    return None
+  if is_onroad is None:
+    return "The road state is unknown; Safe Mode can only be switched on while parked."
+  if not can_enter(is_onroad):
+    return "Safe Mode rewrites the steering knobs; park the car before switching it on."
+  return None
 
 
 def restore_plan(backup: dict[str, dict],
