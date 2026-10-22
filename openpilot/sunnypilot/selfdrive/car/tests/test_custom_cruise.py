@@ -1,7 +1,8 @@
+import unittest
+
 from opendbc.can.parser import CANParser
 from opendbc.car import create_button_events
 from opendbc.car.structs import car
-from opendbc.car.toyota.carstate import get_virtual_cruise_button, VIRTUAL_CRUISE_BUTTONS
 from openpilot.cereal import custom
 from openpilot.common.constants import CV
 from openpilot.common.parameterized import parameterized, parameterized_class
@@ -13,6 +14,22 @@ from openpilot.sunnypilot.selfdrive.car.interfaces import initialize_params
 
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
+
+# get_virtual_cruise_button and VIRTUAL_CRUISE_BUTTONS live in the upstream
+# opendbc, not in this fork's opendbc (mouxangithub/opendbc), so the tests that
+# drive the virtual cruise buttons cannot run here. Import them only when the
+# installed opendbc actually has them, and skip those tests otherwise, rather
+# than failing the whole module on the import.
+try:
+  from opendbc.car.toyota.carstate import get_virtual_cruise_button, VIRTUAL_CRUISE_BUTTONS
+  HAS_VIRTUAL_CRUISE_BUTTONS = True
+except ImportError:
+  get_virtual_cruise_button = None
+  VIRTUAL_CRUISE_BUTTONS = []
+  HAS_VIRTUAL_CRUISE_BUTTONS = False
+
+requires_virtual_cruise_buttons = unittest.skipUnless(
+  HAS_VIRTUAL_CRUISE_BUTTONS, "installed opendbc has no virtual cruise button support")
 
 
 class TestToyotaParamsHandoff(OpenpilotTestCase):
@@ -160,6 +177,7 @@ class TestCustomAccIncrements(TestVCruiseHelper):
     assert self.v_cruise_helper.v_cruise_kph == initial_speed + 10  # Should fallback to 10
 
 
+@requires_virtual_cruise_buttons
 class TestToyotaVirtualCruiseSpeed(OpenpilotTestCase):
   def setup_method(self):
     self.params = Params()
