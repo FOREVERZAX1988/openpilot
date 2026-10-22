@@ -80,6 +80,11 @@ def set_car_specific_params(CP: structs.CarParams, CP_SP: structs.CarParamsSP, p
       CP_SP.flags |= HyundaiFlagsSP.LONGITUDINAL_MAIN_CRUISE_TOGGLEABLE.value
       CP_SP.safetyParam |= HyundaiSafetyFlagsSP.LONG_MAIN_CRUISE_TOGGLEABLE
 
+  # Macan 起步跟停（MacanStartStop）：写入 CP_SP.flags 供 carcontroller 读取
+  if CP.brand == "volkswagen":
+    if params.get_bool("MacanStartStop"):
+      CP_SP.flags |= VolkswagenFlagsSP.STOP_AND_GO.value
+
   # MADS Partial Support
   # MADS is currently partially supported for these platforms due to lack of consistent states to engage controls
   # Only MadsSteeringModeOnBrake.DISENGAGE is supported for these platforms

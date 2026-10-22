@@ -82,7 +82,14 @@ class StoppingController:
   # feels as "no second brake", while END_RATE stays available for a plan that is already committing.
   END_SOFT_RATE = 0.4  # m/s^3
 
-  RELEASE_FAST = 4.0  # m/s^3
+  # Leaving the standstill hold (driver 2026-10-04, route 000000fa 14:43:32: "the brake release at launch is a jerk, as
+  # if let go suddenly; make it linear and slow"). There the request went from the -2.0 hold (3960 N) to +0.7 in 0.5 s
+  # at the Toyota windup limit: the PCM bled 3960 -> 0 N in 0.6 s while the gas request was already +0.6, and the car
+  # lurched at +1.7 m/s^2 for the first 0.1 s. The brake pressure cannot move the car while the request is well below
+  # zero, so the release keeps the fast rate down there and goes LINEAR AND SLOW only through the hand-over band where
+  # the clamp falls off and the creep torque takes over: RELEASE_FAST up to RELEASE_BAND_LO, RELEASE_SLOW from there
+  # up to RELEASE_BAND_HI, then the plan again. The first motion comes ~0.1 s later than before, the lurch is gone.
+  RELEASE_FAST = 4.0  # m/s^3 (the stock windup limit)
   RELEASE_SLOW = 1.5  # m/s^3
   RELEASE_BAND_LO = -0.6  # m/s^2
   RELEASE_BAND_HI = 0.4  # m/s^2
@@ -240,20 +247,21 @@ class StoppingController:
       if cf_stop:
         output_accel = self._cf_request(a_target, prev_accel)
       elif self.end_active:
+        # still rolling inside the end window: the line (or the plan where it is firmer), never the eased-off curve
         output_accel = self._end_request(a_target, prev_accel, CS.vEgo, has_lead)
 
       hold_delay = self.STANDSTILL_HOLD_DELAY_LEAD if has_lead else self.STANDSTILL_HOLD_DELAY_NO_LEAD
       if CS.standstill and not has_lead and self.engaged_t < self.ENGAGE_STANDSTILL_GRACE:
-        rate = 0.0
+        rate = 0.0  # just engaged at a standstill: no brake pulse before the launch
       elif self.cf_stopped and CS.standstill and output_accel > self.CF_SETTLE_ACCEL:
-        output_accel = max(self.CF_SETTLE_ACCEL, output_accel - self.CF_SETTLE_JERK * DT_CTRL)
+        output_accel = max(self.CF_SETTLE_ACCEL, output_accel - self.CF_SETTLE_JERK * DT_CTRL)  # H: a little brake now
         rate = 0.0
       elif self.cf_stopped and CS.standstill:
         rate = self.CF_HOLD_RATE  # H: then the rest of the hold, slowly
       elif self.standstill_t >= hold_delay or stop_confirmed:
         rate = self.STANDSTILL_HOLD_RATE
       elif creeping and output_accel > self.REROLL_ACCEL:
-        output_accel = max(self.REROLL_ACCEL, output_accel - self.REROLL_JERK * DT_CTRL)
+        output_accel = max(self.REROLL_ACCEL, output_accel - self.REROLL_JERK * DT_CTRL)  # B: moving again - hold now
         rate = 0.0
       elif creeping:
         rate = min(self.STOPPING_DECEL_RATE + self.CREEP_RATE_GROWTH * self.creep_t, self.CREEP_RATE_MAX)
@@ -262,7 +270,7 @@ class StoppingController:
       else:
         rate = 0.0
       if hold_floor != self.stop_accel:
-        output_accel = max(output_accel - rate * DT_CTRL, min(hold_floor, output_accel))
+        output_accel = max(output_accel - rate * DT_CTRL, min(hold_floor, output_accel))  # C: stop at the flat hold
       else:
         output_accel -= rate * DT_CTRL
 

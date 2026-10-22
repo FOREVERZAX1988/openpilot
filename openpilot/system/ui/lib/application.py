@@ -3,6 +3,7 @@ import cffi
 import math
 import os
 import queue
+import re
 import time
 import signal
 import re
@@ -14,11 +15,12 @@ import subprocess
 from contextlib import contextmanager
 from collections.abc import Callable
 from collections import deque
-from enum import IntEnum, StrEnum
+from enum import StrEnum
 from pathlib import Path
 from typing import NamedTuple
 from importlib.resources import as_file, files
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.basedir import BASEDIR
 from openpilot.common.hardware import HARDWARE, PC
 from openpilot.system.ui.lib.multilang import TRANSLATIONS_DIR, multilang
 from openpilot.common.realtime import Ratekeeper
@@ -92,10 +94,25 @@ DEFAULT_TEXT_COLOR = rl.Color(255, 255, 255, int(255 * 0.9))
 # Qt draws fonts accounting for ascent/descent differently, so compensate to match old styles
 # The real scales for the fonts below range from 1.212 to 1.266
 FONT_SCALE = 1.242 if BIG_UI else 1.16
+# CJK fallback 的兜底放大系数：**只在测不出字形宽度时使用**（正常走 Application.fallback_scale
+# 的实测值）。历史背景：assets 里的 NotoSansCJK*.otf 是子集字体，字形只有 ~0.68 em
+# （实测 size=60 时 '中' advance=41），当初用固定 1.25 硬补，结果连预烘焙 OpFont 图集
+# （与 Inter 同度量）也被放大 25% → 中文比拉丁文又粗又大又糊。
+FALLBACK_FONT_SCALE = 1.25
+
+# 运行时烘焙的 fallback 字体 → 实测补偿系数（见 Application.fallback_scale）。按 id(font)
+# 缓存，字体卸载时必须一起清（raylib 会回收对象地址，见 _apply_pending_language）。
+_FALLBACK_SCALE_CACHE: dict[int, float] = {}
 
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
 EXTRA_FONT_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
+# fallback_font_key() 的哨兵值：不换字体，保留调用方自己的字体。
+PRIMARY_FONT = ""
+
+# 注意：openpilot assets 里的 NotoSansCJK*.otf 是子集字体（仅含 po 出现字形，~460 字形），
+# 合并新翻译后新字缺字形会渲染为 "?"。AGNOS 系统字体为完整版（~2万 CJK 字形），优先使用。
+
 NOTO_FONTS = {
   "ja": "OpFont-Regular.otf",
   "ko": "OpFont-Regular.otf",
@@ -103,6 +120,62 @@ NOTO_FONTS = {
   "zh-CHS": "OpFont-Regular.otf",
   "zh-CHT": "OpFont-Regular.otf",
 }
+
+# 语言菜单里会同时列出多种脚本的语言名（"한국어" / "ไทย" …）。当前 UI 语言的 CJK
+# fallback 字体（zh-CHS 用 NotoSansSC、ja 用 NotoSansJP）都不含 Hangul/Thai 字形，
+# raylib 找不到字形就退回默认字符，菜单里就显示成 "???"。所以按文本实际脚本挑字体。
+SCRIPT_FALLBACK_FONTS = (
+  (re.compile(r"[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]"), "ko"),  # Hangul
+  (re.compile(r"[\u0e00-\u0e7f]"), "th"),  # Thai
+  # 拉丁/西里尔（含 Inter 覆盖的标点、货币符）：本地 CJK 字体都有 у 但都没有 ї，
+  # "Українська" 就缺字；主字体 Inter 有完整西里尔，所以这类文本原样留在 Inter 上。
+  (re.compile(r"^[\u0020-\u007e\u00a0-\u024f\u0400-\u04ff\u2000-\u206f\u20a0-\u20bf\s]*$"), PRIMARY_FONT),
+)
+
+# 界面语言本身就带 CJK 字体的这几种：汉字/假名交给它自己的字体（日语需要日文字形）。
+_CJK_FONT_LANGUAGES = frozenset({"ja", "ko", "zh-CHS", "zh-CHT"})
+_HAN_KANA_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff]")
+
+
+def fallback_font_key(language: str, text: str | None = None) -> str:
+  """Which fallback font to use for ``text``.
+
+  Normally the UI ``language``; ``ko``/``th`` when the text is written in a
+  script that language's font does not cover, ``PRIMARY_FONT`` when it must
+  stay on the caller's own font (Latin/Cyrillic), and the simplified-Chinese
+  font for Han text in a UI language that has no CJK font at all (the language
+  picker lists 日本語 / 中文（简体）whatever the current language is, and
+  NotoSansSC carries Han + kana + full-width punctuation).
+  """
+  if text:
+    for pattern, key in SCRIPT_FALLBACK_FONTS:
+      if key == language or not pattern.search(text):
+        continue
+      if key == PRIMARY_FONT:
+        return PRIMARY_FONT
+      if key in NOTO_FONTS:
+        return key
+    if _HAN_KANA_RE.search(text) and language not in _CJK_FONT_LANGUAGES:
+      return "zh-CHS"
+  return language
+
+
+def _translation_codepoints(language: str) -> list[int]:
+  chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
+  po_path = TRANSLATIONS_DIR.joinpath(f"app_{language}.po")
+  if po_path.is_file():
+    try:
+      from openpilot.selfdrive.ui.translations.potools import parse_po
+
+      _, entries = parse_po(po_path)
+      for entry in entries:
+        if entry.msgstr:
+          chars.update(entry.msgstr)
+        for plural in entry.msgstr_plural.values():
+          chars.update(plural)
+    except Exception:
+      chars.update(po_path.read_text(encoding="utf-8"))
+  return sorted(map(ord, chars))
 
 
 class FontWeight(StrEnum):
@@ -134,16 +207,22 @@ def _opfont_filename(inter_filename: str, lang_code: str) -> str:
 _NON_LATIN_RE = re.compile(r"[\u0e00-\u0e7f\u1100-\u11ff\u2e80-\u318f\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef]")
 FALLBACK_ATLAS_MAX_CODEPOINTS = 2000
 
-class TextAlignment(IntEnum):
-  LEFT = 0
-  CENTER = 1
-  RIGHT = 2
+# Keyed by font stem (no extension): FontWeight values are .ttf files, but the same
+# weight must resolve for .fnt/.otf names too.
+_OPFONT_WEIGHT = {
+  "Inter-Light": "Regular",
+  "Inter-Regular": "Regular",
+  "Inter-Medium": "Medium",
+  "Inter-SemiBold": "SemiBold",
+  "Inter-Bold": "Bold",
+}
 
 
-class TextAlignmentVertical(IntEnum):
-  TOP = 0
-  MIDDLE = 1
-  BOTTOM = 2
+def _opfont_filename(inter_filename: str, lang_code: str) -> str:
+  """Map an Inter font filename to the equivalent OpFont filename for a language."""
+  stem = inter_filename.rsplit(".", 1)[0]
+  weight_name = _OPFONT_WEIGHT.get(stem, "Regular")
+  return f"OpFont-{weight_name}-{lang_code}.fnt"
 
 
 def font_fallback(font: rl.Font, text: str = "") -> rl.Font:
@@ -156,6 +235,16 @@ def font_fallback(font: rl.Font, text: str = "") -> rl.Font:
       return font
     return gui_app.fallback_font()
   return font
+
+
+_CJK_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u0e00-\u0e7f]")
+FALLBACK_ATLAS_MAX_CODEPOINTS = 2000
+
+
+def _text_requires_font_fallback(text: str) -> bool:
+  """True if ``text`` contains CJK/Thai/Korean characters needing Noto."""
+  return bool(_CJK_RE.search(text))
+
 
 
 class MousePos(NamedTuple):
@@ -382,6 +471,7 @@ class GuiApplication(GuiApplicationExt):
       rl.set_target_fps(0 if OFFSCREEN or vblank_control else fps)
 
       self._target_fps = fps
+      self._set_styles()
       self._load_fonts()
       self._patch_text_functions()
       self._patch_scissor_mode()
@@ -812,7 +902,18 @@ class GuiApplication(GuiApplicationExt):
 
   def fallback_font(self, text: str = "") -> rl.Font:
     language = multilang.language
-    if language not in self._fallback_fonts:
+    # 缓存键用「字体所属 locale」而不是 UI 语言本身：同一次渲染里中文界面也要画
+    # 한국어 / ไทย，那两串必须走 ko / th 字体（见 fallback_font_key）。
+    font_key = fallback_font_key(language, text)
+    if font_key == PRIMARY_FONT:
+      # 不改字体（西里尔等由 Inter 覆盖）；GUI 路径需要一个具体字体，给主字体。
+      return self.font()
+    if font_key not in NOTO_FONTS:
+      # 该语言压根没有 Noto fallback（en/de/fr/es…）。text=None 时 fallback_font_key
+      # 直接返回语言本身，于是这里会拿到 "en" —— 之前会 NOTO_FONTS["en"] KeyError
+      # 直接打死 UI 线程。没有"另一种字体"可用就交回主字体。
+      return self.font()
+    if font_key not in self._fallback_fonts:
       chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
       chars.update(TRANSLATIONS_DIR.joinpath(f"app_{language}.po").read_text(encoding="utf-8"))
       self._fallback_chars[language] = chars
@@ -1095,3 +1196,26 @@ class GuiApplication(GuiApplicationExt):
 
 
 gui_app = GuiApplication()
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat shim: upstream master-c3 refactored the text-alignment
+# enums into rl.GuiTextAlignment / rl.GuiTextAlignmentVertical (with
+# TEXT_ALIGN_* member names). Local UI widgets (sunnypilot/system/ui) were
+# written against the older TextAlignment / TextAlignmentVertical enums.
+# Values are identical, so re-export them here so the merge does not break
+# the UI on startup (ImportError: cannot import name 'TextAlignment').
+# ---------------------------------------------------------------------------
+from enum import IntEnum
+
+
+class TextAlignment(IntEnum):
+  LEFT = 0
+  CENTER = 1
+  RIGHT = 2
+
+
+class TextAlignmentVertical(IntEnum):
+  TOP = 0
+  MIDDLE = 1
+  BOTTOM = 2

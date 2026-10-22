@@ -2657,6 +2657,78 @@
           ]
         }
       ]
+    },
+    "volkswagen": {
+      "title": "Volkswagen / Porsche Settings",
+      "description": "",
+      "items": [
+        {
+          "key": "MacanStartupGapSync",
+          "widget": "toggle",
+          "title": "Macan Distance Sync Direction",
+          "description": "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
+        },
+        {
+          "key": "MacanStartStop",
+          "widget": "toggle",
+          "title": "Macan Stop and Go",
+          "description": "Vision model decides when to start; openpilot sends RESUME to release the stock parking hold.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanSlopeComp",
+          "widget": "toggle",
+          "title": "Macan Slope Compensation",
+          "description": "Applies decel on descents / extra pull on ascents.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanSlopeCompUnlimited",
+          "widget": "toggle",
+          "title": "Slope Comp Unlimited (Macan)",
+          "description": "Release the factory torque limit for slope compensation.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            },
+            {
+              "type": "param",
+              "key": "MacanSlopeComp",
+              "equals": true
+            }
+          ]
+        },
+        {
+          "key": "MacanRadarFusion",
+          "widget": "toggle",
+          "title": "Radar Fusion (Macan)",
+          "description": "Uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead. Reduces follow jitter.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "MacanVerzBridge",
+          "widget": "toggle",
+          "title": "Macan Verz Bridge",
+          "description": "When ON, the bridge smooths the requested deceleration with a percentage-based ramp (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills breath/pulse. When OFF, verz passes through un-smoothed. Deep braking (<= -1.5) and OEM brake requests always pass through for safety.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        }
+      ]
     }
   }
 }

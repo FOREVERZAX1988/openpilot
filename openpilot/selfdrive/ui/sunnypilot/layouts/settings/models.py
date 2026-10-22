@@ -4,11 +4,13 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+import os
 import re
 import time
 import pyray as rl
 
 from openpilot.cereal import custom
+from openpilot.sunnypilot.models.default_model import DEFAULT_MODEL
 from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_selected_bundle, resolve_bundle_by_ref
 from openpilot.sunnypilot.models.mirror import (GITHUB_PROXY_PARAM, HF_MIRROR_PARAM, describe_github_proxy,
                                                 describe_hf_mirror, normalize_base_url)
@@ -27,6 +29,7 @@ from openpilot.system.ui.widgets.confirm_dialog import alert_dialog, ConfirmDial
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from openpilot.system.ui.widgets.toggle import ON_COLOR
 
+from openpilot.sunnypilot.models.runners.constants import CUSTOM_MODEL_PATH
 from openpilot.system.ui.sunnypilot.lib.styles import style
 from openpilot.system.ui.sunnypilot.lib.utils import NoElideButtonAction, ScrollingButtonAction
 from openpilot.system.ui.sunnypilot.widgets.list_view import ListItemSP, toggle_item_sp, option_item_sp, multiple_button_item_sp
@@ -42,6 +45,8 @@ class ModelsLayout(Widget):
   def __init__(self):
     super().__init__()
     self.model_manager = None
+    self.download_status = None
+    self.prev_download_status = None
     self.model_dialog = None
     self._selection_source = None
     self._downloading = False
@@ -64,29 +69,39 @@ class ModelsLayout(Widget):
     self._scroller = Scroller(self.items, line_separator=True, spacing=0)
 
   def _initialize_items(self):
+    self.current_model_item = ListItemSP(
+      title=tr("Current Model"),
+      description="",
+      action_item=NoElideButtonAction(tr("SELECT")),
+      callback=self._handle_current_model_clicked
+    )
+
+    # 2026-10-17: 上游把模型选择拆成 small(qcom) / big(chestnut) 两个槽位，各选各的
+    # catalog（没装 chestnut 时 big 槽位由 jetlink 的加速器跑）。本树此前只剩
+    # current_model_item（走 active_source()），没有 chestnut 时选择器里就只有小模型列表，
+    # 与上游不一致。这里补回两个槽位行；current_model_item 继续作状态展示。
     self.small_model_item = ListItemSP(
       title=tr("Small Model"),
       description="",
       action_item=ScrollingButtonAction(tr("SELECT")),
-      callback=lambda: self._open_source_dialog("qcom")
+      callback=lambda: self._open_source_dialog("qcom"),
     )
 
     self.big_model_item = ListItemSP(
       title=tr("Big Model"),
+      description="",
       action_item=ScrollingButtonAction(tr("SELECT")),
-      callback=lambda: self._open_source_dialog("chestnut")
+      callback=lambda: self._open_source_dialog("chestnut"),
     )
 
-    # param-bound; disabled onroad in _refresh_accelerator_items, since the
-    # gadget changes only once the car is parked
-    self.accelerator_link_item = multiple_button_item_sp(
-      tr("Jetlink"),
-      self._link_description(""),
-      buttons=[lambda m=m: tr(LINK_MODE_TITLES[m]) for m in MODES],
-      param=KEYS.link, button_width=300, inline=False)
+    self.supercombo_label = progress_item(tr("Driving Model"))
+    self.vision_label = progress_item(tr("Vision Model"))
+    self.policy_label = progress_item(tr("Policy Model"))
+    self.off_policy_label = progress_item(tr("Off-Policy Model"))
+    self.on_policy_label = progress_item(tr("On-Policy Model"))
 
-    self.download_item = download_status_item(lambda: tr("Download") if self._downloading else tr("Model Status"))
-
+    # the label is read every frame so a queued refresh shows as FETCHING... until both
+    # catalogs are stamped (refresh_in_progress), which is also what gates the button
     self.refresh_item = button_item(tr("Refresh Model List"),
                                     lambda: tr("FETCHING...") if self._refreshing else tr("REFRESH"), "",
                                     self._refresh_models)
@@ -106,13 +121,11 @@ class ModelsLayout(Widget):
     self.clear_cache_item = ListItemSP(
       title=tr("Clear Model Cache"),
       description="",
-      action_item=NoElideButtonAction(lambda: tr("CLEARING...") if self._clearing else tr("CLEAR")),
+      action_item=NoElideButtonAction(tr("CLEAR")),
       callback=self._clear_cache
     )
 
-    self.cancel_download_item = button_item(lambda: tr("Cancel Verification") if self._verifying else tr("Cancel Download"),
-                                            tr("Cancel"), "",
-                                            lambda: ui_state.params.remove("ModelManager_DownloadRef"))
+    self.cancel_download_item = button_item(tr("Cancel Download"), tr("Cancel"), "", lambda: ui_state.params.remove("ModelManager_DownloadRef"))
 
     self.lane_turn_value_control = option_item_sp(tr("Adjust Lane Turn Speed"), "LaneTurnValue", 500, 2000,
                                                   tr("Set the maximum speed for lane turn desires. Default is 19 mph."),
@@ -150,7 +163,7 @@ class ModelsLayout(Widget):
   def _refresh_accelerator_items(self):
     # the setting is a param read, so this rides the half-second tick
     self.accelerator_link_item.set_visible(link_toggle_meaningful())
-    self.accelerator_link_item.action_item.set_selected_button(MODES.index(link_mode()))
+    self.accelerator_link_item.action_item.set_selected_button(LINK_MODES.index(link_mode()))
     self.accelerator_link_item.action_item.set_enabled(ui_state.is_offroad())
     status = link_status()
     if status != self._link_status:
@@ -158,19 +171,26 @@ class ModelsLayout(Widget):
       self.accelerator_link_item.set_description(self._link_description(status))
 
   def _update_lagd_description(self, lagd_toggle: bool):
-    desc = tr("Enable this for the car to learn and adapt its steering response time. Disable to use a fixed steering response time. " +
+    desc = tr("Enable this for the car to learn and adapt its steering response time. Disable to use a fixed steering response time. "
               "Keeping this on provides the stock openpilot experience.")
     if lagd_toggle:
       desc += f"<br>{tr('Live Steer Delay:')} {ui_state.sm['lateralDelay'].lateralDelay:.3f} s"
     elif ui_state.CP is not None:
-      sw = float(ui_state.params.get("LagdToggleDelay", return_default=True))
+      sw = float(ui_state.params.get("LagdToggleDelay", "0.2"))
       cp = ui_state.CP.steerActuatorDelay
       desc += f"<br>{tr('Actuator Delay:')} {cp:.2f} s + {tr('Software Delay:')} {sw:.2f} s = {tr('Total Delay:')} {cp + sw:.2f} s"
     self.lagd_toggle.set_description(desc)
 
+  def _is_downloading(self):
+    return (self.model_manager and self.model_manager.selectedBundle and
+            self.model_manager.selectedBundle.status == custom.ModelManagerSP.DownloadStatus.downloading)
+
   @staticmethod
   def calculate_cache_size():
-    return model_cache_size_mb()
+    cache_size = 0.0
+    if os.path.exists(CUSTOM_MODEL_PATH):
+      cache_size = sum(os.path.getsize(os.path.join(CUSTOM_MODEL_PATH, file)) for file in os.listdir(CUSTOM_MODEL_PATH)) / (1024**2)
+    return cache_size
 
   def _clear_cache(self):
     def _callback(response):
@@ -327,6 +347,151 @@ class ModelsLayout(Widget):
     return segments
 
   @staticmethod
+  def _mirror_button_index() -> int:
+    raw = (ui_state.params.get(HF_MIRROR_PARAM) or "").strip()
+    if raw == "off":
+      return 1
+    if normalize_base_url(raw):
+      return 2
+    return 0  # unset -> built-in default mirror
+
+  @staticmethod
+  def _catalog_button_index() -> int:
+    raw = (ui_state.params.get(GITHUB_PROXY_PARAM) or "").strip()
+    if raw == "direct":
+      return 1
+    if normalize_base_url(raw):
+      return 2
+    return 0  # unset -> auto (direct first, CDN fallback)
+
+  def _on_hf_mirror_mode(self, index: int):
+    if index == 0:
+      ui_state.params.put(HF_MIRROR_PARAM, "")
+    elif index == 1:
+      ui_state.params.put(HF_MIRROR_PARAM, "off")
+    else:
+      current = ui_state.params.get(HF_MIRROR_PARAM) or ""
+      dialog = InputDialogSP(
+        tr("Custom Mirror"),
+        tr("Base URL replacing https://huggingface.co, e.g. https://hf-mirror.com"),
+        current_text="" if current == "off" else current,
+        callback=lambda result, text: self._on_custom_url_result(result, text, HF_MIRROR_PARAM,
+                                                                 tr("The mirror must be an http(s) URL without spaces, e.g. https://hf-mirror.com")))
+      dialog.show()
+
+  def _on_catalog_source_mode(self, index: int):
+    if index == 0:
+      ui_state.params.put(GITHUB_PROXY_PARAM, "")
+    elif index == 1:
+      ui_state.params.put(GITHUB_PROXY_PARAM, "direct")
+    else:
+      current = ui_state.params.get(GITHUB_PROXY_PARAM) or ""
+      dialog = InputDialogSP(
+        tr("Catalog Proxy Prefix"),
+        tr("Prefix prepended to the catalog URL, e.g. https://gh-proxy.com"),
+        current_text="" if current == "direct" else current,
+        callback=lambda result, text: self._on_custom_url_result(result, text, GITHUB_PROXY_PARAM,
+                                                                 tr("The proxy must be an http(s) URL without spaces, e.g. https://gh-proxy.com")))
+      dialog.show()
+
+  def _on_custom_url_result(self, result, text: str, param: str, error_message: str):
+    if result != DialogResult.CONFIRM:
+      return
+    base = normalize_base_url(text)
+    if base is None:
+      gui_app.push_widget(alert_dialog(error_message))
+      return
+    ui_state.params.put(param, base)
+
+  def _refresh_mirror_items(self):
+    for item, index in ((self.hf_mirror_item, self._mirror_button_index()), (self.catalog_source_item, self._catalog_button_index())):
+      if item.action_item.selected_button != index:
+        item.action_item.set_selected_button(index)
+
+    descs = (
+      (self.hf_mirror_item,
+       tr("huggingface.co is unreachable on many networks. Mirror sends model downloads to a mirror site instead; ") +
+       tr("Direct uses huggingface.co as-is; Custom lets you enter your own mirror. Applies to the next download."),
+       describe_hf_mirror(ui_state.params), self._last_mirror_desc),
+      (self.catalog_source_item,
+       tr("The model list lives on GitHub raw. Auto tries direct first and falls back to a CDN mirror when it fails; ") +
+       tr("Direct never falls back; Proxy always fetches through your own prefix. Press Refresh Model List to apply."),
+       describe_github_proxy(ui_state.params), self._last_catalog_desc),
+    )
+    for item, base_desc, effective, last in descs:
+      desc = f"{base_desc}<br>{tr('Current')}: {effective}"
+      if desc != last:
+        item.set_description(desc)
+      # return the newest cache value for each row
+      if item is self.hf_mirror_item:
+        self._last_mirror_desc = desc
+      else:
+        self._last_catalog_desc = desc
+
+  def _handle_bundle_download_progress(self):
+    # every Model.Type the schema can carry needs a row: deep models ship one
+    # `chunked` artifact for the whole bundle (upstream "Support Deep Models"),
+    # and every bundle the catalog serves today is chunked. Without the chunked
+    # entry no row matched, so a download showed neither a percentage bar nor a
+    # status text at all.
+    labels = {custom.ModelManagerSP.Model.Type.supercombo: self.supercombo_label,
+              custom.ModelManagerSP.Model.Type.vision: self.vision_label,
+              custom.ModelManagerSP.Model.Type.policy: self.policy_label,
+              custom.ModelManagerSP.Model.Type.offPolicy: self.off_policy_label,
+              custom.ModelManagerSP.Model.Type.onPolicy: self.on_policy_label,
+              custom.ModelManagerSP.Model.Type.navigation: self.supercombo_label,
+              custom.ModelManagerSP.Model.Type.chunked: self.supercombo_label}
+    for label in labels.values():
+      label.set_visible(False)
+    self.cancel_download_item.set_visible(False)
+
+    if not self.model_manager or (not self.model_manager.selectedBundle and not self.model_manager.activeBundle):
+      return
+
+    bundle = self.model_manager.selectedBundle if self._is_downloading() or (
+      self.model_manager.selectedBundle and self.model_manager.selectedBundle.status == custom.ModelManagerSP.DownloadStatus.failed
+    ) else self.model_manager.activeBundle
+    if not bundle:
+      return
+
+    self.download_status = bundle.status
+    status_changed = self.prev_download_status != self.download_status
+    self.prev_download_status = self.download_status
+
+    self.cancel_download_item.set_visible(ui_state.params.get("ModelManager_DownloadRef") is not None)
+
+    if (current_time := time.monotonic()) - self.last_cache_calc_time > 0.5:
+      self.last_cache_calc_time = current_time
+      self.clear_cache_item.action_item.set_value(f"{self.calculate_cache_size():.2f} {tr('MB')}")
+
+    if self.download_status == custom.ModelManagerSP.DownloadStatus.downloading:
+      device._reset_interactive_timeout()
+
+    for model in bundle.models:
+      # an unknown type (a future Model.Type) still gets the driving-model row:
+      # dropping the row is how the chunked catalogs lost their download status
+      label = labels.get(getattr(model.type, 'raw', model.type), self.supercombo_label)
+      label.set_visible(True)
+      p = model.artifact.downloadProgress
+      text, show, color = tr("pending - {}").format(bundle.displayName), False, rl.GRAY
+      if p.status == custom.ModelManagerSP.DownloadStatus.downloading:
+        text, show = f"{int(p.progress)}% - {bundle.displayName}", True
+      elif p.status in (custom.ModelManagerSP.DownloadStatus.downloaded, custom.ModelManagerSP.DownloadStatus.cached):
+        status_text = tr("from cache" if p.status == custom.ModelManagerSP.DownloadStatus.cached else "downloaded")
+        text, color = f"{bundle.displayName} - {status_text if status_changed else tr('ready')}", ON_COLOR
+      elif p.status == custom.ModelManagerSP.DownloadStatus.failed:
+        text, color = tr("download failed - {}").format(bundle.displayName), rl.RED
+      label.action_item.update(p.progress, text, show, color)
+
+  @staticmethod
+  def _show_reset_params_dialog():
+    def _callback(response):
+      if response == DialogResult.CONFIRM:
+        ui_state.params.remove("CalibrationParams")
+        ui_state.params.remove("LiveTorqueParameters")
+    msg = tr("Model download has started in the background. We suggest resetting calibration. Would you like to do that now?")
+    dialog = ConfirmDialog(msg, tr("Reset Calibration"), callback=_callback)
+    gui_app.push_widget(dialog)
   def _set_item_note(item, text):
     # a description renders only while shown; hide before clearing or the
     # empty description keeps its visible state
@@ -407,18 +572,23 @@ class ModelsLayout(Widget):
 
   def _on_model_selected(self, result):
     if result != DialogResult.CONFIRM:
-      self.model_dialog = None
       return
     selected_ref = self.model_dialog.selection_ref
-    self.model_dialog = None
+    source = self._selection_source or active_source()
     if selected_ref == "Default":
-      if self._selection_source in ACTIVE_BUNDLE_KEYS:
-        ui_state.params.remove(ACTIVE_BUNDLE_KEYS[self._selection_source])
-      return
-    if selected_bundle := self._resolve_selected_bundle(selected_ref):
+      if source in ACTIVE_BUNDLE_KEYS:
+        ui_state.params.remove(ACTIVE_BUNDLE_KEYS[source])
+      self._show_reset_params_dialog()
+    elif selected_bundle := self._resolve_selected_bundle(selected_ref):
       ui_state.params.put("ModelManager_DownloadRef", selected_bundle.ref)
+      if self.model_manager.activeBundle and selected_bundle.generation != self.model_manager.activeBundle.generation:
+        self._show_reset_params_dialog()
+    self.model_dialog = None
 
-  def _resolve_selected_bundle(self, ref):
+  @staticmethod
+  def _resolve_selected_bundle(ref):
+    """The bundle behind `ref`, whichever slot's catalog lists it: a big pick lives in the
+    chestnut catalog, which availableBundles (the active source's) does not carry."""
     source_bundles = {source: bundles_for_source(source) for source in ("qcom", "chestnut")}
     resolved = resolve_bundle_by_ref(ref, source_bundles)
     return resolved[0] if resolved else None
@@ -431,12 +601,14 @@ class ModelsLayout(Widget):
     name = f"{bundle.displayName} · {note}" if note else bundle.displayName
     return TreeNode(bundle.ref, {'display_name': name, 'short_name': bundle.internalName})
 
-  def _get_folders(self, favorites, bundles, noted: bool = False):
+  def _get_folders(self, favorites, bundles=None, noted: bool = False):
+    # 上游新签名带 bundles/noted；本 fork 的 _handle_current_model_clicked 仍按 1 参调用，故补默认值
+    bundles = self.model_manager.availableBundles if bundles is None else bundles
     folders = {}
     for bundle in bundles:
       folders.setdefault(next((ov_ride.value for ov_ride in bundle.overrides if ov_ride.key == "folder"), ""), []).append(bundle)
 
-    folders_list = []
+    folders_list = [TreeFolder("", [TreeNode("Default", {'display_name': tr("{} (Default)").format(DEFAULT_MODEL), 'short_name': "Default"})])]
     for folder, folder_bundles in sorted(folders.items(), key=lambda x: max((bundle.index for bundle in x[1]), default=-1), reverse=True):
       folder_bundles.sort(key=lambda bundle: bundle.index, reverse=True)
       name = folder + (f" - (Updated: {m.group(1)})" if folder_bundles and (m := re.search(r'\(([^)]*)\)[^(]*$', folder_bundles[0].displayName)) else "")
@@ -446,7 +618,23 @@ class ModelsLayout(Widget):
       folders_list.insert(0, TreeFolder(tr("Favorites"), [self._bundle_to_node(bundle, noted) for bundle in fav_bundles]))
     return folders_list
 
+  def _handle_current_model_clicked(self):
+    self._selection_source = active_source()
+    favs = ui_state.params.get("ModelManager_Favs")
+    favorites = set(favs.split(';')) if favs else set()
+    folders_list = self._get_folders(favorites)
+
+    active_ref = self.model_manager.activeBundle.ref if self.model_manager.activeBundle else "Default"
+    self.model_dialog = TreeOptionDialog(tr("Select a Model"), folders_list, active_ref, "ModelManager_Favs",
+                                         get_folders_fn=self._get_folders, on_exit=self._on_model_selected)
+    gui_app.push_widget(self.model_dialog)
+
   def _open_source_dialog(self, source):
+    """Pick a bundle for one slot: "qcom" (small) or "chestnut" (big).
+
+    Upstream lets both slots be chosen independently, so the picker lists that slot's
+    catalog even when the other slot is the one currently driving.
+    """
     self._selection_source = source
     favs = ui_state.params.get("ModelManager_Favs")
     favorites = set(favs.split(';')) if favs else set()
@@ -475,7 +663,7 @@ class ModelsLayout(Widget):
     advanced_controls: bool = ui_state.params.get_bool("ShowAdvancedControls")
     turn_desire: bool = ui_state.params.get_bool("LaneTurnDesire")
     live_delay: bool = ui_state.params.get_bool("LagdToggle")
-    camera_offset: bool = ui_state.active_bundle is not None
+    camera_offset: bool = ui_state.params.get("ModelManager_ActiveBundle") is not None
 
     self.lane_turn_desire_toggle.action_item.set_state(turn_desire)
     self.lane_turn_value_control.set_visible(turn_desire and advanced_controls)
@@ -491,27 +679,18 @@ class ModelsLayout(Widget):
     self._update_lagd_description(live_delay)
     self.model_manager = ui_state.sm["modelManagerSP"]
     self._handle_bundle_download_progress()
+    active_name = self.model_manager.activeBundle.internalName if self.model_manager and self.model_manager.activeBundle.ref else tr("{} (Default)").format(DEFAULT_MODEL)
+    self.current_model_item.action_item.set_value(active_name)
 
-    carry_source, _, carry_display = carrying_model()
-    for item, item_source in ((self.small_model_item, "qcom"), (self.big_model_item, "chestnut")):
-      bundle = get_selected_bundle(ui_state.params, item_source)
-      name = bundle.displayName if bundle else default_model_name(item_source)
-      color = ON_COLOR if (item_source == carry_source and name == carry_display) else style.ITEM_TEXT_VALUE_COLOR
-      item.action_item.set_value(name, color)
-
-    note = self._status_note()
-    if note != self._last_note:
-      self._last_note = note
-      self._set_item_note(self.download_item, note)
+    for item, source in ((self.small_model_item, "qcom"), (self.big_model_item, "chestnut")):
+      slot_bundle = get_selected_bundle(ui_state.params, source)
+      item.action_item.set_value(slot_bundle.internalName if slot_bundle else default_model_name(source))
 
     offroad = ui_state.is_offroad()
-    self.small_model_item.action_item.set_enabled(offroad)
-    self.big_model_item.action_item.set_enabled(offroad)
-    self.accelerator_link_item.action_item.set_enabled(offroad)
-    self.small_model_item.set_description("" if offroad else tr("Only available when vehicle is off, or always offroad mode is on"))
-
-    # manager is offroad-only, so an onroad clear would never be serviced
-    self.clear_cache_item.action_item.set_enabled(offroad and not self._downloading and not self._clearing)
+    self.current_model_item.action_item.set_enabled(offroad)
+    self.current_model_item.set_description("" if offroad else tr("Only available when vehicle is off, or always offroad mode is on"))
+    for item in (self.small_model_item, self.big_model_item):
+      item.action_item.set_enabled(offroad)
 
     # manager is offroad-only, so a refresh queued onroad would never be serviced
     self._refreshing = refresh_in_progress(self._refresh_start)
@@ -524,4 +703,3 @@ class ModelsLayout(Widget):
 
   def show_event(self):
     self._scroller.show_event()
-    self._last_note = None  # re-expand the failover note every time the page opens

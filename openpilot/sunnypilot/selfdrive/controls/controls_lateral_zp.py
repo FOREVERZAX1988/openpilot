@@ -140,7 +140,12 @@ class ControlsLateralZP:
       # both sizes' controllers, so the idle one holds current bins when it takes over.
       # handles activation AND deactivation: useParams off or empty bins de-assert
       for lac in self._lacs:
-        lac.extension.update_speed_dep_torque(tp, tp_sp)
+        # NNFF (upstream 63a6f3211b) is a LatControl with no fork extension, and it can
+        # be one of these controllers whenever NNFFMode > 0. Same getattr idiom as the
+        # rest of this file: a controller without the extension simply has no speed bins.
+        ext = getattr(lac, 'extension', None)
+        if ext is not None:
+          ext.update_speed_dep_torque(tp, tp_sp)
 
   def run_lateral_zp(self, sm: messaging.SubMaster) -> None:
     """run_ext's tail: the steer-limit flag for the next frame, the speed bins, then the tune swap."""

@@ -21,7 +21,6 @@ void PandaSafety::configureSafetyMode(bool is_onroad) {
 }
 
 void PandaSafety::updateMultiplexingMode() {
-  // Initialize to ELM327 without OBD multiplexing for initial fingerprinting
   if (!initialized_) {
     prev_obd_multiplexing_ = false;
     for (int i = 0; i < pandas_.size(); ++i) {
@@ -30,7 +29,6 @@ void PandaSafety::updateMultiplexingMode() {
     initialized_ = true;
   }
 
-  // Switch between multiplexing modes based on the OBD multiplexing request
   bool obd_multiplexing_requested = params_.getBool("ObdMultiplexingEnabled");
   if (obd_multiplexing_requested != prev_obd_multiplexing_) {
     for (int i = 0; i < pandas_.size(); ++i) {
@@ -42,7 +40,6 @@ void PandaSafety::updateMultiplexingMode() {
   }
 }
 
-// TODO-SP: Use structs instead of vector
 std::vector<std::string> PandaSafety::fetchCarParams() {
   if (!params_.getBool("FirmwareQueryDone")) {
     return {};
@@ -59,7 +56,6 @@ std::vector<std::string> PandaSafety::fetchCarParams() {
   return {params_.get("CarParams"), params_.get("CarParamsSP")};
 }
 
-// TODO-SP: Use structs instead of vector
 void PandaSafety::setSafetyMode(const std::vector<std::string> &params_string) {
   AlignedBuffer aligned_buf;
   AlignedBuffer aligned_buf_sp;
@@ -90,6 +86,5 @@ void PandaSafety::setSafetyMode(const std::vector<std::string> &params_string) {
 }
 
 bool PandaSafety::getOffroadMode() {
-  auto offroad_mode = params_.getBool("OffroadMode");
-  return offroad_mode;
+  return params_.getBool("OffroadMode");
 }

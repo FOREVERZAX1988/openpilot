@@ -26,6 +26,13 @@ from openpilot.sunnypilot.models.helpers import get_active_model_runner
 from openpilot.sunnypilot.sunnylink.utils import sunnylink_need_register, sunnylink_ready, use_sunnylink_uploader
 from openpilot.sunnypilot.system.manager.processes import extend_procs
 
+# A process that is alive but has stopped making progress is not caught by
+# restart_if_crash. These are the thresholds for the processes that are
+# watched. The control chain (the control, selfdrive and planner daemons)
+# is never watched: restarting it leaves a gap in the control output.
+UI_WATCHDOG_MAX_DT = int(os.getenv("UI_WATCHDOG_MAX_DT", "10"))
+CAMERAD_WATCHDOG_MAX_DT = int(os.getenv("CAMERAD_WATCHDOG_MAX_DT", "5"))
+
 WEBCAM = os.getenv("USE_WEBCAM") is not None
 LITE = os.getenv("LITE") is not None
 # Lets an external launcher own the carrot API/web stack, matching CarrotPilot's
@@ -174,11 +181,90 @@ def uploader_ready(started: bool, params: Params, CP: car.CarParams) -> bool:
 
   return always_run(started, params, CP)
 
+def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # run even offroad: web panel (8088) / UDP / FTP must work while parked;
+  # carrot_man gates its own behaviour with the IsOnroad param
+  return params.get_bool("CarrotEnabled")
+
 def or_(*fns):
   return lambda *args: any(fn(*args) for fn in fns)
 
 def and_(*fns):
   return lambda *args: all(fn(*args) for fn in fns)
+
+class RestartingPythonProcess(PythonProcess):
+  """A PythonProcess that manager starts again after it dies: start() leaves
+  a proc that has exited in place for good. For jetlinkd, which holds the USB
+  gadget for as long as the link is on; jetlink's owner adopts what a dead
+  one left and holds a crash loop back itself.
+
+  One that dies within QUICK_DEATH of its start never got that far (an
+  import error, a raise before the owner's loop, a second owner stepping
+  aside for a live one), so the next start waits BACKOFF, doubling to
+  BACKOFF_MAX, rather than forking manager twice a second for a whole drive.
+  One that ran longer is started again on the next loop."""
+  QUICK_DEATH = 10.0
+  BACKOFF = 10.0
+  BACKOFF_MAX = 300.0
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.started_at = 0.0
+    self.backoff = 0.0
+    self.next_start = 0.0
+
+  def now(self) -> float:
+    return time.monotonic()
+
+  def start(self) -> None:
+    now = self.now()
+    if self.proc is not None and self.proc.exitcode is not None:
+      if now - self.started_at < self.QUICK_DEATH:
+        self.backoff = min(self.BACKOFF_MAX, 2 * self.backoff or self.BACKOFF)
+        self.next_start = now + self.backoff
+        cloudlog.warning(f"{self.name} died {now - self.started_at:.1f} s after it started, starting it again in {self.backoff:.0f} s")
+      else:
+        self.backoff = 0.0
+      self.stop()  # reaps it, logs the exit code and clears proc
+    if self.proc is None:
+      if now < self.next_start:
+        return
+      self.started_at = now
+    super().start()
+
+class AudioProcess(RestartingPythonProcess):
+  """micd and soundd: started once the sound card exists, which a slow boot can
+  register 30 s after manager wants them, longer than their stream retry waits.
+  Until then, and through a restart's backoff, they report shouldBeRunning with
+  nothing running, so processNotRunning keeps openpilot from engaging silently."""
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.wanted = False
+
+  @staticmethod
+  def sound_card_present() -> bool:
+    return PC or bool(glob.glob("/dev/snd/pcmC*"))
+
+  def start(self) -> None:
+    if self.proc is None and not self.sound_card_present():
+      self.wanted = True
+      return
+    super().start()  # its reap of a dead proc goes through stop()
+    self.wanted = True
+
+  def stop(self, *args, **kwargs):
+    self.wanted = False
+    return super().stop(*args, **kwargs)
+
+  def get_process_state_msg(self):
+    state = super().get_process_state_msg()
+    if self.wanted and self.proc is None:
+      state.name = self.name
+      state.shouldBeRunning = True
+    return state
+
+def not_(*fns):
+  return lambda *args: operator.not_(*(fn(*args) for fn in fns))
 
 class RestartingPythonProcess(PythonProcess):
   """A PythonProcess that manager starts again after it dies: start() leaves
@@ -420,8 +506,15 @@ procs += [
 ]
 procs = extend_procs(procs)
 
+if os.path.exists("./github_runner.sh"):
+  procs += [NativeProcess("github_runner_start", "openpilot/system/manager",
+                          ["./github_runner.sh", "start"], and_(only_offroad, use_github_runner), sigkill=False)]
+
 if os.path.exists("../../sunnypilot/sunnylink/uploader.py"):
-  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader", use_sunnylink_uploader_shim)]
+  # restart_if_crash=True: PythonProcess defaults to False -> if this process ever exits it never
+  # comes back until the manager itself is restarted (seen 2026-09-20: killed uploader stayed down).
+  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader",
+                          use_sunnylink_uploader_shim, restart_if_crash=True)]
 
 if os.path.exists("../../third_party/copyparty/copyparty-sfx.py"):
   sunnypilot_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

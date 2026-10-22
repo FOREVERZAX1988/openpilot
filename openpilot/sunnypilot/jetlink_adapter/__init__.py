@@ -31,7 +31,14 @@ from collections import namedtuple
 from pathlib import Path
 
 # the version of jetlink.openpilot's API this adapter is written to; any other
-# is treated as jetlink being absent, with the reason as the offroad alert
+# is treated as jetlink being absent, with the reason as the offroad alert.
+# 2: modeld wrote in_control onto the joining model before every frame, where
+#    jetlink polled the adapter's engagement() (2026-10-05)
+# 3: the joining model asks Adapter.in_control() before every frame instead
+#    (2026-10-10), so the adapter reads a SubMaster of its own and modeld keeps
+#    one write; an adapter of API 2 has no in_control() at all. Moving the
+#    submodule pin past that commit without this constant leaves the link off
+#    everywhere, with the reason below as the offroad alert
 API = 3
 
 # the gadget owner, as manager names the process and selfdrived lists it
@@ -47,10 +54,11 @@ MODES = ('off', 'usb', 'ios', 'wifi')
 # and catalog are the model manager's big-model slot and catalog
 # (models.helpers.ACTIVE_BUNDLE_KEYS['chestnut'] and ModelFetcher's cache): the
 # owner cannot import the model manager, so they are written out here
-_Keys = namedtuple('_Keys', 'link offroad progress spec pointers big_model catalog charge_phone')
+_Keys = namedtuple('_Keys', 'link offroad progress spec pointers big_model catalog charge_phone preview')
 KEYS = _Keys(link='JetlinkLink', offroad='IsOffroad', progress='AcceleratorProgress', spec='JetlinkSpec',
              pointers='JetlinkModelPointers', big_model='ModelManager_ActiveBundleChestnut',
-             catalog='ModelManager_ModelsCache_Chestnut', charge_phone='JetlinkChargePhone')
+             catalog='ModelManager_ModelsCache_Chestnut', charge_phone='JetlinkChargePhone',
+             preview='IsOnroadPreview')
 
 _AGNOS = os.path.isfile('/AGNOS')
 

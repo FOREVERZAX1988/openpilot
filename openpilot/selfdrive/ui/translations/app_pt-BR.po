@@ -6337,3 +6337,970 @@ msgstr "✓ ASSINADO"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 __TERMO0__ 🚀"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/osm.py
+msgid "0% - Downloading Maps"
+msgstr "0% - Baixando Mapas"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Always Lateral"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Cruise Speed"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Enter New Lane Time"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Enter New Lane Time (Highway)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Gas Cancel Speed"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Gas Takeover Speed"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Speed Up to Road Limit"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Turn Left"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Auto Turn Outside Road Edge"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Basic Cruise Preset Speed Unit"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Blind Spot Delay Time"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Blinker Mode"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "C3x Lite Hardware"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "CANFD Debug"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "CANFD HDA2"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "COMMA"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Camera Yaw Trim"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Carrot Cruise ATC Decel"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Carrot Cruise Decel"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Carrot Navi HUD Profile"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Carrot Tuning"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Carrot YouTube Live"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Carrot YouTube Quality"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Carrot YouTube Timestamp"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "Changing this setting will restart openpilot if the car is powered on."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/eps_settings.py
+msgid "Compensate for the EPS speed-dependent assist curve (the EPS absorbs part of the steering command at low speed). Disable to compare with stock steering feel."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/eps_settings.py
+msgid "Compensation amount: 1.00 = full MQB curve (low speed x1.6), 0.50 = half. WARNING: 0.00 zeroes steering output — use the toggle above to disable instead."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Continuous Lane Change"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Continuous Lane Change Count"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Continuous Lane Change Interval"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Button Long Press Delay"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Button Test 1"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Button Test 2"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Button Test 3"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Max Acceleration 0"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Max Acceleration 1"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Max Acceleration 2"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Max Acceleration 3"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Max Acceleration 4"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Max Acceleration 5"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Max Acceleration 6"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Preset Speed 1"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Preset Speed 2"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Preset Speed 3"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Preset Speed 4"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Preset Speed 5"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Cruise Preset Speed Unit"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "Current API Server"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Current Model"
+msgstr "Modelo Atual"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Custom Lateral Torque"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Custom Steer Ratio"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering.py
+msgid "Customize EPS Compensation"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/osm.py
+msgid "DELETING..."
+msgstr "EXCLUINDO..."
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Disable Min Steer Speed"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
+msgstr "Desative a alternância sunnypilot Controle longitudinal (alfa) para permitir o gerenciamento inteligente do botão de cruzeiro."
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "Disengage to {}"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Driving Model"
+msgstr "Modelo de direção"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Dynamic Follow Time"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/eps_settings.py
+msgid "EPS Assist Compensation"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/eps_settings.py
+msgid "EPS Compensation Scale"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Enable Corner Radar"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Enable Speed TF"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "Enabling this will switch to openpilot longitudinal control."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "End-to-End Longitudinal Control"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "Experimental mode enables alpha-level features that aren't ready for chill mode."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Extended Blinker Test"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Fetching Latest Models"
+msgstr "Buscando modelos mais recentes"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Fusion Control Mode (Macan)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "HDP Use"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Hotspot on Boot"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Hyundai Camera SCC"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "If it does not have a clear view of the driver, unplug and remount before continuing."
+msgstr ""
+
+#: openpilot/system/ui/mici_setup.py
+msgid "Invalid URL: "
+msgstr "URL inválido:"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "KONIK"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "LDWS Vehicle"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lane Change BSD"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lane Change Delay"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lane Change Need Torque"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lane Change Start Cost"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lane Line Check"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lane Offset Adjust"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lane Stabilization Time"
+msgstr ""
+
+#: openpilot/selfdrive/ui/layouts/settings/device.py
+msgid "Language changed. Restart the UI to apply."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Acceleration Cost"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Jerk Cost"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral MPC Input Offset"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Motion Cost"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Path Cost"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Smooth Seconds"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Steering Rate Cost"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Torque Accel Factor"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Torque Derivative"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Torque Feedforward"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Torque Friction"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Torque Integral Velocity"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Lateral Torque Proportional"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "Let the driving model control the gas and brakes."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Longitudinal Actuator Delay"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Longitudinal Feedforward"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Longitudinal Integral Velocity"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Longitudinal Proportional Velocity"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Macan Distance Sync Direction"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "Macan Slope Comp Unlimited"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Macan Slope Comp Unlimited (sub-option): when Slope Compensation is ON, this removes the stock torque cap (option 2: min(max(stock_mom, 200))), giving small slopes room to act. When OFF, the stock cap applies (option 1: min(stock_mom))."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "Macan Slope Compensation"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), a brief positive Verz ramp (+1.285 over 180ms) when overriding a deceleration with the gas pedal, and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "Macan Stop and Go"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Macan Stop and Go: when enabled, the vision model decides when to start, and openpilot sends the RESUME signal to release the stock parking hold (with a chime). When disabled, gently press the gas or SET/RESUME to resume (stock behavior)."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Macan Verz Bridge"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Macan Verz Bridge: when ON, the bridge applies a percentage-based ramp to smooth the requested deceleration (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills the breath/pulse. When OFF, the verz request passes through un-smoothed (one-frame, no ramp). Deep braking (<= -1.5) and OEM brake requests still pass through either way for safety."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Mapbox Style"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Max Angle Frames"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Max Steer Angle"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Max Time Offroad (min)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Model Speed Compensation"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Model download has started in the background. We suggest resetting calibration. Would you like to do that now?"
+msgstr "O download do modelo começou em segundo plano. Sugerimos redefinir a calibração. Você gostaria de fazer isso agora?"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Mute Door"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Mute Seatbelt"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "New Driving Visualization"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "New Lane Width Difference"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "Next, we'll check if comma four can detect the driver properly."
+msgstr ""
+
+#: openpilot/system/ui/mici_setup.py
+msgid "No custom software found at this URL: "
+msgstr "Nenhum software personalizado encontrado neste URL:"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking. OFF: pure OP longitudinal - the stock ACC radar is deactivated (LS_01 bus2 stays standby) and OP self-generates ACC02/04/05 entirely."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "ONNX BSD Interval"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "ONNX BSD Smoothing"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "ONNX BSD Threshold"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "ONNX Lane Interval"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "ONNX Lane Threshold"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Off-Policy Model"
+msgstr "Modelo fora da política"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "On this car, openpilot defaults to the stock system's built-in ACC."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "On-Policy Model"
+msgstr "Modelo dentro da política"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Paddle Mode"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Path"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Path Color"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Path Color Cruise Off"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Path Color Lane"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Path Display Mode"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Path Display Mode Lane"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Path Offset"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "Please connect to Wi-Fi to fetch your key."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Policy Model"
+msgstr "Modelo de Política"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Radar Fusion (Macan)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Record Road Camera"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "Red for braking, green for acceleration, and gray for coasting."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "Remount if your face is blocked, or driver monitoring has difficulty tracking your face."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Road Speed Auto Adjust"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "Server"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Share Data"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Camera with Cluster"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Custom Brightness"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Date Time"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Debug UI"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Device State"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Lane Info"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Model View"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Path End"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Plot Mode"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Radar Info"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show Route Info"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Show TPMS"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Side Radar Min Distance"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Slope Comp Unlimited (Macan)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Slope Compensation (Macan)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Smart Cruise Control - Map"
+msgstr "Controle de cruzeiro inteligente - Mapa"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Smart Cruise Control - Vision"
+msgstr "Controle de cruzeiro inteligente - Visão"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Soft Hold on Cancel"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Software Menu"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Sound Language"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Sound Volume Adjust"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Sound Volume Adjust Engage"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Speed Camera Haptic Alert"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Start"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Startup Safe Distance (Macan)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Startup Safe Distance (Macan): minimum bumper-to-lead distance (3-10 m, default 6 m) required before openpilot auto-resumes from a stop - the stock radar distance or the vision lead must exceed this value, which prevents phantom starts. Only effective when Stop and Go (Macan) is enabled."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Steer Actuator Delay"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Steer Delta Down"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Steer Delta Down (Lane Change)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Steer Delta Up"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Steer Delta Up (Lane Change)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Steer Ratio Rate"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Stock Blinker Control"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Stop Speed Threshold"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Stop Target Distance"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
+msgid "Stop and Go (Macan)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Stopping Acceleration"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "Switch server to {}?"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "The path will change colors to communicate acceleration intent."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "The set speed will only act as an upper bound."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "This is an alpha quality feature; mistakes should be expected."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Tire Trajectory"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Tuning"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Use Lane Line Curve Speed"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Use Lane Line Speed"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
+msgid "Use Wide Camera"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "Using Experimental mode is recommended with openpilot longitudinal control alpha."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Vision Model"
+msgstr "Modelo de visão"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "WARNING: alpha longitudinal control may disable Automatic Emergency Braking (AEB)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Your key is stored locally and is not uploaded."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "cache size"
+msgstr "tamanho do cache"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "device ID"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "download failed - {}"
+msgstr "falha no download - {}"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"driver\n"
+"camera preview"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid ""
+"driver monitoring\n"
+"check"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid ""
+"enable\n"
+"experimental mode"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid ""
+"enable alpha\n"
+"longitudinal"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid ""
+"enabling\n"
+"experimental mode"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
+msgid "enabling alpha longitudinal"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "hours"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "language"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "looking for driver"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid ""
+"make sure comma\n"
+"four can see your face"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "min"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "openpilot defaults to driving in chill mode."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
+msgid "openpilot will drive as it thinks a human would, including stopping for red lights and stop signs."
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "pending - {}"
+msgstr "pendente - {}"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "power off"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "ready"
+msgstr "preparar"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "reboot"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "regulatory info"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "reset calibration"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"review\n"
+"training guide"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "serial"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"slide to\n"
+"{}"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "subscribed"
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/onboarding.py
+msgid "sunnypilot uses the cabin camera to check if the driver is distracted."
+msgstr ""
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid ""
+"terms &\n"
+"conditions"
+msgstr ""
+
+#: openpilot/system/ui/mici_reset.py
+msgid ""
+"this may take up to\n"
+"a minute"
+msgstr ""
+"isso pode levar até\n"
+"um minuto"
+
+#: openpilot/selfdrive/ui/mici/layouts/settings/device.py
+msgid "upgrade to prime"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "{} (Default)"
+msgstr "{} (padrão)"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "this may take up to\na minute{dots}"
+msgstr ""

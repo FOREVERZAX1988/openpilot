@@ -7,7 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 from collections.abc import Callable
 
 import pyray as rl
-from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import MousePos
 from openpilot.system.ui.widgets.toggle import Toggle
 from openpilot.system.ui.sunnypilot.lib.styles import style
@@ -19,7 +19,7 @@ KNOB_RADIUS = style.TOGGLE_BG_HEIGHT / 2 - KNOB_PADDING
 class ToggleSP(Toggle):
   def __init__(self, initial_state=False, callback: Callable[[bool], None] | None = None, param: str | None = None):
     self.param_key = param
-    self.params = Params()
+    self.params = unified_params
     if self.param_key:
       initial_state = self.params.get_bool(self.param_key)
     Toggle.__init__(self, initial_state, callback)

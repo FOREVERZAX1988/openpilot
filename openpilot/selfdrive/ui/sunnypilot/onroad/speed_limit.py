@@ -11,7 +11,7 @@ import pyray as rl
 
 from openpilot.cereal import custom
 from openpilot.common.constants import CV
-from openpilot.selfdrive.ui.onroad.hud_renderer import UI_CONFIG
+from openpilot.selfdrive.ui.onroad.hud_renderer import hud_left_row_rects
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Mode as SpeedLimitMode
 from openpilot.common.hardware import HARDWARE

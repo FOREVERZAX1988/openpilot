@@ -237,6 +237,28 @@ class ModelState(ModelStateBase):
     self.prev_desire[:] = 0
 
 
+def car_params(params: Params) -> bytes:
+  """CarParams, or the car's own persisted one while the driving view is previewed.
+
+  CarParams is CLEAR_ON_MANAGER_START, and only card writes it, from the
+  fingerprint, at every start: offroad it is absent and the blocking read at the
+  end of this function never returns. That is what the preview used to do --
+  modeld alive, cameras connected, and no modelV2, so the driving view drew no
+  path at all.
+
+  CarParamsPersistent is the car's own last fingerprint: card copies it to
+  CarParamsPrevRoute for the same reason, and sunnypilot reads it for the car's
+  capabilities. So the preview reads that instead, and writes nothing. Offroad
+  without the preview nothing changes: the read blocks for card exactly as before.
+  """
+  cp = params.get("CarParams")
+  if cp is None and params.get_bool("IsOnroadPreview"):
+    cp = params.get("CarParamsPersistent")
+  if cp is None:
+    cp = params.get("CarParams", block=True)
+  return cp
+
+
 def main(demo=False):
   cloudlog.warning("modeld init")
 
@@ -328,7 +350,7 @@ def main(demo=False):
   if demo:
     CP = get_demo_car_params()
   else:
-    CP = messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams)
+    CP = messaging.log_from_bytes(car_params(params), car.CarParams)
   cloudlog.info("modeld got CarParams: %s", CP.brand)
 
   # TODO this needs more thought, use .2s extra for now to estimate other delays

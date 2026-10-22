@@ -15,6 +15,7 @@ from openpilot.common.dm import is_dm_disabled
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Priority, ET, Alert, \
   NoEntryAlert, SoftDisableAlert, UserSoftDisableAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, \
   StartupAlert, AlertCallbackType, wrong_car_mode_alert
+from openpilot.system.ui.lib.multilang import tr
 
 
 AlertSize = log.SelfdriveState.AlertSize
@@ -174,8 +175,6 @@ def audio_feedback_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
     priority=Priority.LOW)
 
 
-# *** debug alerts ***
-
 def out_of_space_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   full_perc = round(100. - sm['deviceState'].freeSpacePercent)
   return NormalPermanentAlert("存储空间不足", f"已用 {full_perc}%")
@@ -330,7 +329,6 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.bigModelFailed: {
-    ET.SOFT_DISABLE: soft_disable_alert("Big Model Failed"),
     ET.PERMANENT: NormalPermanentAlert("Big Model Failed ", "Restart the car to retry,\nsmall model is still available", duration=20.),
   },
 
@@ -376,8 +374,12 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("车道保持辅助系统（LKAS）设置无效"),
   },
 
+  # Macan(MLB) 适配：非 pcm 车 OP enabled 但原厂巡航已退出（TSK_04=0）时恢复 USER_DISABLE——
+  # OP 立即跟随原厂退出。否则 panda 经 TSK_04 无条件 pcm_cruise_check 撤 controls_allowed 后，
+  # selfdrived mismatch_counter 200 帧触发 controlsMismatch（00000041 seg5/7/10/12/15 共5次实锤）。
+  # 阈值见 selfdrived.py cruise_mismatch_counter（6s→1s，须 < panda 的 2s）。
   EventName.cruiseMismatch: {
-    #ET.PERMANENT: ImmediateDisableAlert("openpilot failed to cancel cruise"),
+    ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
   },
 
   # openpilot doesn't recognize the car. This switches openpilot into a
@@ -638,6 +640,10 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("方向盘被转动"),
   },
 
+  # Macan(MLB) 适配：停车踩刹车+按SET 原为 PRE_ENABLE → 进入 preEnabled 预激活态
+  # （carControl.enabled=True）与 panda 拒控（TSK_04=0）冲突 → mismatch_counter 2秒后
+  # controlsMismatch 报警（0000003e seg4 @268s 实锤）。且 Macan 激活门槛 30km/h，
+  # preEnabled 窗口过长无意义。改为 NO_ENTRY：停车按 SET 直接挡在 disabled，不激活不报警。
   EventName.preEnableStandstill: {
     ET.PRE_ENABLE: Alert(
       "释放制动以启用",
@@ -839,6 +845,14 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.PERMANENT: modeld_lagging_alert,
   },
 
+  # Clustered one-frame resyncs (a few frames a second) trip the same
+  # "Driving Model Lagging" text as an informational alert. The controller is
+  # not starved, so this must never interrupt the drive the way modeldLagging
+  # does - no SOFT_DISABLE / NO_ENTRY hook on purpose (guardrail test).
+  EventName.modeldLaggingMild: {
+    ET.PERMANENT: modeld_lagging_alert,
+  },
+
   # Besides predicting the path, lane lines and lead car data the model also
   # predicts the current velocity and rotation speed of the car. If the model is
   # very uncertain about the current velocity while the car is moving, this
@@ -967,7 +981,10 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.personalityChanged: {
-    ET.WARNING: personality_changed_alert,
+    # 00000045 实锤：WARNING 类型在未激活时不在 current_alert_types → 停车调车距不显示提示
+    # （personalityChanged 事件存在但 alert 被状态机过滤，00000045 seg1 15条事件 0 显示）。
+    # 改 PERMANENT：未激活/激活都显示；事件仅变化帧存在 + duration=1.5s → 显示到期自动消失。
+    ET.PERMANENT: personality_changed_alert,
   },
 
   EventName.userBookmark: {

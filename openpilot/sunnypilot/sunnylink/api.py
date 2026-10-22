@@ -139,13 +139,19 @@ class SunnylinkApi(BaseApi):
 
     self.params.put("SunnylinkDongleId", sunnylink_dongle_id or UNREGISTERED_SUNNYLINK_DONGLE_ID, block=True)
 
-    # Set the last ping time to the current time since we were just talking to the API
-    last_ping = int((time.monotonic() if successful_registration else start_time) * 1e9)
-    Params().put("LastSunnylinkPingTime", last_ping, block=True)
-
-    # Disable sunnylink if registration was not successful
-    if not successful_registration:
-      Params().put_bool("SunnylinkEnabled", False, block=True)
+    if successful_registration:
+      # Set the last ping time to the current time since we were just talking to the API
+      Params().put("LastSunnylinkPingTime", int(time.monotonic() * 1e9), block=True)
+    else:
+      # Never flip the user's "enabled" preference off behind their back. This used to do exactly
+      # that, so a single failed registration (gateway/DNS hiccup, API 5xx) silently parked the
+      # service in DISABLED and the device looked OFFLINE until someone found the toggle again.
+      # SunnylinkTempFault blocks the service for this boot only: it is CLEAR_ON_MANAGER_START |
+      # CLEAR_ON_OFFROAD_TRANSITION, so registration retries automatically next boot / offroad
+      # transition and the switch stays exactly where the user put it.
+      # Also drop the (stale) ping timestamp so the status reads FAULT rather than a fake ERROR.
+      Params().remove("LastSunnylinkPingTime")
+      Params().put_bool("SunnylinkTempFault", True, block=True)
 
     self.spinner = None
     return sunnylink_dongle_id

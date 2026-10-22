@@ -13,6 +13,7 @@ from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Pr
   NoEntryAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, AlertCallbackType, wrong_car_mode_alert
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import PCM_LONG_REQUIRED_MAX_SET_SPEED, CONFIRM_SPEED_THRESHOLD
 from openpilot.common.hardware import HARDWARE
+from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.sunnypilot.selfdrive.selfdrived.events_zp import EVENTS_SP_ZP, EventsWithZP
 
 AlertSize = log.SelfdriveState.AlertSize
@@ -111,6 +112,10 @@ class EventsSP(EventsWithZP, EventsBase):
 
 EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # sunnypilot
+  EventNameSP.macanAutoResume: {
+    ET.ENABLE: EngagementAlert(AudibleAlert.engage),  # Macan Stop and Go: play engage sound, no state change
+  },
+
   EventNameSP.lkasEnable: {
     ET.ENABLE: EngagementAlert(AudibleAlert.engage),
   },

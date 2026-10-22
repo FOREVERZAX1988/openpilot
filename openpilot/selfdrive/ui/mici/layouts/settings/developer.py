@@ -7,6 +7,7 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.widgets.ssh_key import SshKeyFetcher
 
 
@@ -57,7 +58,7 @@ class DeveloperLayoutMici(NavScroller):
       github_username = ui_state.params.get("GithubUsername") or ""
       dlg = BigInputDialog(tr("enter GitHub username..."), github_username, minimum_length=0, confirm_callback=github_username_callback)
       if not system_time_valid():
-        dlg = BigDialog("", "Please connect to Wi-Fi to fetch your key.")
+        dlg = BigDialog("", tr("Please connect to Wi-Fi to fetch your key."))
         gui_app.push_widget(dlg)
         return
       gui_app.push_widget(dlg)

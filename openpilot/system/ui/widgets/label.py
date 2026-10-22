@@ -8,10 +8,21 @@ from openpilot.system.ui.lib.application import (gui_app, FontWeight, DEFAULT_TE
                                                  FONT_SCALE, TextAlignment, TextAlignmentVertical, font_fallback)
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.lib.text_measure import measure_text_cached
+from openpilot.system.ui.lib.utils import GuiStyleContext
 from openpilot.system.ui.lib.wrap_text import wrap_text
 from openpilot.system.ui.lib.emoji import find_emoji, emoji_tex
 
 ICON_PADDING = 15
+
+
+def _emoji_runs(line: str) -> list[tuple[int, int, str]]:
+  """`find_emoji` 的结果，滤掉彩色字体其实画不出来的"假 emoji"。
+
+  EMOJI_REGEX 覆盖 U+2600-U+2B55 等一大片符号，但 NotoColorEmoji 只含真正的 emoji：
+  ★ / ✕ / → 命中区间却会画成空白（等于把字符吃掉）。这些字形文本字体（Inter、
+  Noto CJK）反而有，所以只让"真能画"的走图集，其余留给 draw_text_ex。
+  """
+  return [(start, end, emoji) for start, end, emoji in find_emoji(line) if emoji_is_renderable(emoji)]
 
 
 # TODO: make this common

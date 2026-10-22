@@ -22,6 +22,7 @@ from openpilot.selfdrive.controls.lib.lead_behavior import (
 from opendbc.car import structs
 from opendbc.car.hyundai.values import HyundaiFlags
 from opendbc.sunnypilot.car.hyundai.values import HyundaiFlagsSP
+from opendbc.sunnypilot.car.volkswagen import macan_calib as _macan_calib
 
 
 # Default lead acceleration decay set to 50% at 1s
@@ -233,6 +234,24 @@ class RadarD:
 
     self.radar_state: capnp._DynamicStructBuilder | None = None
     self.radar_state_valid = False
+    # Macan 原厂雷达融合（bus2 ACC_02.Abstandsindex + ACC_04 前车速度 -> 修正视觉 lead）
+    # 标定口径：0910 方案B / B1 单表 t = 0.008969*idx + 0.332（模块常量 MACAN_B1_T_*），
+    # 与 opendbc radar_interface.py 的 A3 同源；旧 0902 插值查表与 0909 新线性公式均已废弃。
+    self._macan_radar = {'idx': 0, 'obj': 0, 'spd': 0.0}
+    self._macan_fusion_on = False
+    self._macan_fusion_t = 0.0
+    # ---- 落点1: idx 失效保持滞回 (2026-09-22) ----
+    # idx 有效<->无效瞬间翻转(0/1021)时, 若滞回窗口内曾有有效 idx, 则保持最近有效值继续融合,
+    # 避免 15m 级源切换锯齿(007c seg5/8/10 实证). 仅当无效持续超过窗口才真正放弃融合.
+    self._macan_last_valid_idx = 0.0
+    self._macan_last_valid_t = 0.0
+    self._macan_hyst_t0 = 0.0          # 进入无效态的时间戳
+    self._macan_hyst_invalid = False   # 当前是否处于无效保持态
+    self._macan_hyst_win = 0.6         # 滞回窗口(s): 无效保持最近有效 idx 的最长时长
+    # ---- 落点2: 视觉平滑 + A2 变化率限制 状态 ----
+    self._macan_smooth: dict[str, FirstOrderFilter] = {}   # lead_name -> 一阶低通(视觉平滑)
+    self._macan_smooth_v: dict[str, FirstOrderFilter] = {}  # lead_name -> 一阶低通(视觉 vLead 平滑)
+    self._macan_last_fused: dict[str, float] = {}          # lead_name -> 上一帧融合 dRel(变化率限幅)
 
     self.ready = False
 
@@ -342,6 +361,186 @@ class RadarD:
       self.radar_state.leadTwo = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[1], model_v_ego, self.lead_prob_filters[1].x,
                                           self.CP, self.CP_SP, low_speed_override=False)
 
+      # Macan 原厂雷达融合（视觉主导 + 雷达只能改近，开关 MacanRadarFusion）
+      self._macan_fuse_leads(sm, leads_v3)
+
+  def _macan_fusion_enabled(self) -> bool:
+    import time
+    now = time.monotonic()
+    if now - self._macan_fusion_t > 1.0:
+      try:
+        # 门控补强(2026-09-07)：MacanRadarFusion 也仅在 OP 纵向开启时生效——
+        # A1/A2 修正的是 OP 纵向用到的 lead，纯原厂 ACC(关闭OP纵向)时不应改动 lead。
+        # 2026-09-15：移除 MacanFusionMode=1 门控 —— 原厂雷达在 st=0/2（关闭/待命）
+        # 下仍挥续发送 ACC_Abstandsindex / ACC_Gesetzte_Zeitluecke / ACC_Geschw_Zielfahrzeug
+        # 等基础信息信号（routes 0002/0004/0049 实测实铉）。因此 MacanRadarFusion
+        # 对融合模式和纯OP模式都有效：开=雷达参与辅助视觉(也驱动仪表盘)/
+        # 关=仅视觉判定。
+        self._macan_fusion_on = self.CP.carFingerprint == "PORSCHE_MACAN_MK1" \
+            and self.CP.openpilotLongitudinalControl \
+            and Params().get_bool("MacanRadarFusion")
+      except Exception:
+        self._macan_fusion_on = False
+      self._macan_fusion_t = now
+    return self._macan_fusion_on
+
+  def _macan_t_from_idx(self, idx: float) -> float:
+    """Abstandsindex -> 时距 t（0910 方案B / B1 单表直线，与雷达接口 A3 同源）。
+
+    无人工分段：旧 idx<100 锚 0.8 s / idx>560 截顶 6.0 s 已删除（前者在 idx=100 处
+    会造成 0.8 -> 1.89 s 突跳，且与 A3 的直线不一致）。
+    """
+    return _macan_calib.t_from_idx(idx)
+
+  def _macan_idx_to_drel(self, idx: float, v_ego: float) -> float:
+    """Abstandsindex -> 时距 t -> 距离（B1 逆映射，低速用等效 t*max(v,5)，与 A3 一致）"""
+    return _macan_calib.idx_to_drel(idx, v_ego)
+
+  def _macan_drel_to_idx(self, drel: float, v_ego: float) -> float:
+    """距离 -> 时距 t -> Abstandsindex（B1 直线反解，与 A3 同源）。
+
+    去掉 100/561 硬锚（旧代码 t<=0.8 -> 100、t>=6.0 -> 561 会在两端制造与 A3
+    不一致的阶梯），改为钳到信号有效域 1..1020（A3 里 0 与 >=1021 视为无目标）。
+    """
+    return float(_macan_calib.drel_to_idx(drel, v_ego))
+
+
+
+  def _macan_reset_lead(self, lead_name: str | None = None) -> None:
+    """复位某个 lead（lead_name=None 时为全部）的融合状态：视觉平滑器 + 变化率基准 + vLead 平滑。
+
+    必须在【目标丢失】(present=False)、【融合关闭】、【目标换人】三处调用。不复位就会出现
+    「重捕获的新目标沿用上一个目标的距离」：低通与限幅基准都还停在旧目标上，融合 dRel 需要
+    ~0.5 s 才爬回新目标的真实距离，正好覆盖低速起步那段最需要真实车距的时间窗。
+    """
+    names = (set(self._macan_smooth) | set(self._macan_smooth_v) | set(self._macan_last_fused)) \
+        if lead_name is None else {lead_name}
+    for name in names:
+      self._macan_smooth.pop(name, None)
+      self._macan_smooth_v.pop(name, None)
+      self._macan_last_fused.pop(name, None)
+
+  def _macan_fuse_leads(self, sm: messaging.SubMaster, leads_v3) -> None:
+    """Macan 原厂雷达融合（2026-10-09 语义反转：视觉主导，雷达只能改近）。
+
+    旧语义（A1 速度加权 + A2 距离校验，0910 方案B 起）= 原厂主导：
+    A2 用连续权重把原厂距离以 0.7~1.0 的权重替换/混合视觉，A1 把原厂前车速度以
+    0.5~0.85 权重并进 vLead（视觉权重上限 0.5）。
+
+    病灶（route 00000091 seg9 实锤）：静止时原厂 vEgo→0 之后 idx 停止重算（冻结），
+    d_stock = t(idx)*max(v,5) 退化成【常数】—— idx=188 冻结 -> 10.09 m，而视觉当时
+    看到的是真实 6.15 m（车已蠕行靠近 2.4 m）。原厂权重 1.0 把当时唯一准确的视觉
+    距离整段丢掉，dRel 被钉在 10.09 m 长达 11 s。
+
+    新语义（对齐上游丰田「视觉门控 + 雷达辅助」，但方向收紧为单向）：
+      1. 视觉可用（leadsV3[i].prob >= 0.5）→ 距离与前车速度都以【视觉】为基准；
+      2. 原厂 idx 换算距离只有在【更近】且过 sanity 门时才被采纳 —— 可改近、绝不可改远；
+      3. vLead 同理：原厂前车速度只允许把 vLead 改【低】（更保守方向），权重 <= 0.3；
+      4. 视觉无目标而原厂有目标（上游 get_lead 的 low_speed_override 分支，
+         potential_low_speed_lead: v_ego<4 / 0.75<dRel<25 / |yRel|<1）→ 保留原厂值，
+         保证「视觉没捕捉到但雷达捕捉到」仍能进执行层（该场景只能靠雷达安全刹车）。
+
+    这样随着上游视觉模型变准，融合值自动收敛到视觉，不会再被冻结的 idx 拖累。
+    """
+    if not self._macan_fusion_enabled():
+      self._macan_reset_lead()   # 关闭期间同样复位，避免下次开启沿用旧目标基准
+      return
+    r = self._macan_radar
+    r['idx'] = r['obj'] = 0
+    r['spd'] = 0.0
+    for msg in sm['can']:
+      if msg.src != 2:
+        continue
+      d = msg.dat
+      if msg.address == 780 and len(d) >= 7:
+        r['idx'] = (d[3] | (d[4] << 8)) & 0x3FF
+        r['obj'] = (d[5] >> 6) & 0x3
+      elif msg.address == 804 and len(d) >= 7:
+        v = ((d[5] | (d[6] << 8)) & 0x3FF) * 0.32  # km/h
+        r['spd'] = v if v < 320 else 0.0
+
+    import time
+    now = time.monotonic()
+    have_stock = False
+    if 0 < r['idx'] < 1021:
+      self._macan_last_valid_idx = r['idx']
+      self._macan_last_valid_t = now
+      self._macan_hyst_invalid = False
+      have_stock = True
+    elif self._macan_last_valid_idx > 0:
+      # 无效(0/1021)：滞回保持最近有效值，抑制源切换锯齿（007c seg5/8/10 实证）。
+      # 语义反转后保持值只剩「改近」一条出口，最坏影响被 sanity 门限幅。
+      if not self._macan_hyst_invalid:
+        self._macan_hyst_invalid = True
+        self._macan_hyst_t0 = now
+        r['idx'] = self._macan_last_valid_idx
+        have_stock = True
+      elif now - self._macan_hyst_t0 <= self._macan_hyst_win:
+        r['idx'] = self._macan_last_valid_idx
+        have_stock = True
+      else:
+        self._macan_hyst_invalid = False
+        self._macan_last_valid_idx = 0.0
+    # A2 换算：原厂 idx -> 距离（B1 正解，与 A3 同源；低速用等效 t*max(v,5)）
+    stock_drel = self._macan_idx_to_drel(r['idx'], self.v_ego) if have_stock else 0.0
+
+    for lead_name, li in (('leadOne', 0), ('leadTwo', 1)):
+      lead = getattr(self.radar_state, lead_name)
+      if not lead.present:
+        # 目标丢失 -> 立即复位该 lead 的融合状态，禁止下一个目标继承旧基准
+        self._macan_reset_lead(lead_name)
+        continue
+
+      # ---- 视觉基准：modelV2 原始前车（雷达坐标系 -> 减 RADAR_TO_CAMERA 对齐保险杠口径）----
+      d_vis = None
+      v_vis = None
+      try:
+        if li < len(leads_v3) and float(leads_v3[li].prob) >= MACAN_VISION_PROB_MIN:
+          x_vis = float(leads_v3[li].x[0]) - RADAR_TO_CAMERA
+          if 0.0 < x_vis < 150.0:
+            d_vis = x_vis
+            v_vis = float(leads_v3[li].v[0])
+      except Exception:
+        d_vis = None
+        v_vis = None
+
+      # ---- 距离：视觉主导，雷达只能改近 ----
+      if d_vis is not None:
+        d_used = d_vis
+        gate = max(MACAN_FUSE_REL_GATE * d_vis, MACAN_FUSE_MIN_GAP)
+        if 0.0 < stock_drel < d_vis and (d_vis - stock_drel) <= gate:
+          d_used = stock_drel          # 原厂更近且过门 -> 采纳（安全方向）
+        # 落点2 保持：视觉平滑 + 变化率限幅，压制 25<->40m 原生 cv 噪声与源切换瞬跳
+        max_step = MACAN_RATE_MIN_STEP + MACAN_RATE_VFACTOR * max(self.v_ego, 0.0) * DT_MDL
+        prev = self._macan_last_fused.get(lead_name)
+        # 换人检测（present 一直为真，但目标已不是同一个）：原始融合值相对上一帧基准突然更近，
+        # 且幅度超过物理单帧上限（4x max_step 且 >=4 m）-> 平滑器/限幅基准作废，用新目标重新播种。
+        if prev is not None and (prev - d_used) > max(MACAN_RESEED_MIN_JUMP, MACAN_RESEED_STEP_FACTOR * max_step):
+          self._macan_reset_lead(lead_name)
+          prev = None
+        if lead_name not in self._macan_smooth:
+          self._macan_smooth[lead_name] = FirstOrderFilter(d_used, MACAN_SMOOTH_RC, DT_MDL)
+        d_used = self._macan_smooth[lead_name].update(d_used)
+        if prev is not None:
+          d_used = float(np.clip(d_used, prev - max_step, prev + max_step))
+        self._macan_last_fused[lead_name] = d_used
+        lead.dRel = d_used
+      # d_vis is None -> 保留上游 get_lead 结果（雷达 track / low_speed_override / 无前车）
+
+      # ---- 前车速度：视觉主导，原厂只允许改低 ----
+      if v_vis is not None:
+        v_used = v_vis
+        if have_stock and r['spd'] > 0.0:
+          v_stock = r['spd'] / 3.6
+          if v_stock < v_used:
+            v_used = (1.0 - MACAN_FUSE_V_MAX_W) * v_used + MACAN_FUSE_V_MAX_W * v_stock
+        if lead_name not in self._macan_smooth_v:
+          self._macan_smooth_v[lead_name] = FirstOrderFilter(v_used, MACAN_SMOOTH_RC, DT_MDL)
+        v_used = self._macan_smooth_v[lead_name].update(v_used)
+        lead.vLead = v_used
+        lead.vLeadK = v_used
+        lead.vRel = v_used - self.v_ego
+
   def publish(self, pm: messaging.PubMaster):
     assert self.radar_state is not None
 
@@ -365,7 +564,7 @@ def main() -> None:
   cloudlog.info("radard got CarParamsSP")
 
   # *** setup messaging
-  sm = messaging.SubMaster(['modelV2', 'carState', 'radarTracks'], poll='modelV2')
+  sm = messaging.SubMaster(['modelV2', 'carState', 'radarTracks', 'can'], poll='modelV2')
   pm = messaging.PubMaster(['radarState'])
 
   RD = RadarD(CP, CP_SP, CP.radarDelay)

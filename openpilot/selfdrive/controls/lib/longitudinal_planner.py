@@ -28,6 +28,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_uncertainty import (
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
 
+from openpilot.sunnypilot.common import param_read
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 from openpilot.sunnypilot.carrot.traffic_stop import (
   get_traffic_stop_distance_adjust, get_traffic_stop_obstacle_distance,
@@ -315,6 +316,59 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
     self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
+
+    # StarPilot lead_follow_policy: shape only the non-urgent follow output of
+    # an MPC-selected lead. Gated (default off) and never applied to e2e,
+    # stops, force decel or post-departure handoffs.
+    self._policy_frame += 1
+    if self._policy_frame % 20 == 0:
+      self.lead_follow_policy_enabled = self._params.get_bool("LeadFollowPolicyEnabled")
+    if self.lead_follow_policy_enabled and self.mpc.source in (LongitudinalPlanSource.lead0, LongitudinalPlanSource.lead1):
+      follow_result = apply_follow_policy(
+        sm['radarState'].leadOne, sm['radarState'].leadTwo,
+        source='lead0' if self.mpc.source == LongitudinalPlanSource.lead0 else 'lead1',
+        active=bool(sm['selfdriveState'].enabled), v_ego=v_ego, t_follow=effective_t_follow,
+        previous_target=float(a_prev), raw_target=float(self.output_a_target),
+        tracking=True, post_departure=False,
+        blocked=bool(force_decel or self.output_should_stop), panic_bypass=panic_bypass)
+      self.output_a_target = float(np.clip(follow_result.target, ACCEL_MIN, ACCEL_MAX))
+
+    # StarPilot stop/depart policy: vision-lead approach caps, low-speed stop
+    # buffer, close-stop hold floors, standstill lead-depart releases. Gated
+    # (default off); when off this whole stage is a pass-through and the
+    # plan above is untouched.
+    self._stop_depart_frame += 1
+    if self._stop_depart_frame % 20 == 0:
+      self.lead_stop_depart_enabled = self._params.get_bool("LeadStopDepartPolicyEnabled")
+    if self.lead_stop_depart_enabled and not force_decel:
+      from openpilot.selfdrive.controls.lib.lead_stop_depart_policy import LeadStopDepartPolicy, StopDepartContext
+      if self._stop_depart_policy is None:
+        self._stop_depart_policy = LeadStopDepartPolicy(self.CP, self.dt)
+      stop_ctx = StopDepartContext(
+        CP=self.CP, dt=self.dt,
+        lead_one=sm['radarState'].leadOne, lead_two=sm['radarState'].leadTwo,
+        v_ego=v_ego, standstill=bool(sm['carState'].standstill),
+        brake_pressed=bool(sm['carState'].brakePressed), gas_pressed=bool(sm['carState'].gasPressed),
+        long_control_stopping=sm['controlsState'].longControlState == LongCtrlState.stopping,
+        active=bool(sm['selfdriveState'].enabled),
+        tracking=self.mpc.source in (LongitudinalPlanSource.lead0, LongitudinalPlanSource.lead1),
+        t_follow=effective_t_follow,
+        a_target=float(self.output_a_target), should_stop=bool(self.output_should_stop),
+        output_accel_min=float(ACCEL_MIN),
+        model_desired_accel=float(sm['modelV2'].action.desiredAcceleration),
+        model_should_stop=bool(sm['modelV2'].action.shouldStop),
+        model_data=sm['modelV2'],
+        source='lead1' if self.mpc.source == LongitudinalPlanSource.lead1 else 'lead0',
+      )
+      stop_result = self._stop_depart_policy.apply(stop_ctx)
+      self.output_a_target = float(np.clip(stop_result.a_target, ACCEL_MIN, ACCEL_MAX))
+      self.output_should_stop = stop_result.should_stop
+
+    # sunnypilot: geometric red-light pre-deceleration runs after the final
+    # arbitration so its gentle cap cannot be overwritten. A no-op unless the
+    # SignalAssistMode killswitch is set (the SP subclass owns the gating).
+    if hasattr(self, 'apply_signal_prepare'):
+      self.apply_signal_prepare(sm)
     self.accel_controller_active = self.is_accel_controller_active(force_decel)
 
     # StarPilot lead_follow_policy: shape only the non-urgent follow output of
