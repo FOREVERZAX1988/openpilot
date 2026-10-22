@@ -141,9 +141,6 @@ class Car:
     set_alternative_experience(self.CP, self.CP_SP, self.params)
     set_car_specific_params(self.CP, self.CP_SP, self.params)
 
-    # Dynamic Experimental Control
-    self.dynamic_experimental_control = self.params.get_bool("DynamicExperimentalControl")
-
     openpilot_enabled_toggle = self.params.get_bool("OpenpilotEnabledToggle")
     controller_available = self.CI.CC is not None and openpilot_enabled_toggle and not self.CP.dashcamOnly
     self.CP.passive = not controller_available or self.CP.dashcamOnly
@@ -404,7 +401,6 @@ class Car:
       self.carrot_nav_lane_guide_block = self.params.get_bool("CarrotNavLaneGuideBlockEnabled")
 
       # sunnypilot
-      self.dynamic_experimental_control = self.params.get_bool("DynamicExperimentalControl")
       self.v_cruise_helper.read_custom_set_speed_params()
       self.card_ext.update_params()
 

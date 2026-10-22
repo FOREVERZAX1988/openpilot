@@ -336,6 +336,8 @@ procs += [
   # that is the unplug at every ignition edge this arrangement removes
   RestartingPythonProcess(jetlink_adapter.OWNER, jetlink_adapter.__name__, and_(always_run, jetlink_adapter.should_run)),
   NativeProcess("modeld_tinygrad", "openpilot/sunnypilot/modeld_v2", ["./modeld"], and_(or_(only_onroad, onroad_preview), is_tinygrad_model)),
+  # after modeld_tinygrad: warmup spawns a child that loads a model, and both want the tinygrad device
+  PythonProcess("modeld_warmup", "openpilot.sunnypilot.modeld_v2.warmup", only_offroad),
 
   # Backup
   PythonProcess("backup_manager", "openpilot.sunnypilot.sunnylink.backups.manager", and_(only_offroad, sunnylink_ready_shim)),

@@ -309,12 +309,13 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
     candidates = [(output_a_target_mpc, self.mpc.source, output_should_stop_mpc),
                   (self.a_cruise, LongitudinalPlanSource.cruise, cruise_should_stop)]
-    if is_e2e:
+    if experimental_mode:
       candidates.append((output_a_target_e2e, LongitudinalPlanSource.e2e, output_should_stop_e2e))
 
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
     self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
+    self.accel_controller_active = self.is_accel_controller_active(force_decel)
 
     # StarPilot lead_follow_policy: shape only the non-urgent follow output of
     # an MPC-selected lead. Gated (default off) and never applied to e2e,

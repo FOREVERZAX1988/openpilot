@@ -5,8 +5,8 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 
-import time
 import os
+import time
 import requests
 from requests.exceptions import RequestException, HTTPError
 from openpilot.common.params import Params
@@ -157,8 +157,8 @@ class ModelCache:
 
 class ModelFetcher:
   """Handles fetching and caching of model data from remote source"""
-  MODEL_URL = "https://raw.githubusercontent.com/sunnypilot/sunnypilot-models/refs/heads/gh-pages/docs/driving_models_v23.json"
-  MODEL_URL_CHESTNUT = "https://raw.githubusercontent.com/sunnypilot/sunnypilot-models/refs/heads/gh-pages/docs/driving_models_chestnut_v27.json"
+  MODEL_URL = "https://raw.githubusercontent.com/sunnypilot/sunnypilot-models/refs/heads/gh-pages/docs/driving_models_v25.json"
+  MODEL_URL_CHESTNUT = "https://raw.githubusercontent.com/sunnypilot/sunnypilot-models/refs/heads/gh-pages/docs/driving_models_chestnut_v28.json"
 
   MODEL_SOURCES = {
     "qcom": (MODEL_URL, ""),
@@ -339,5 +339,3 @@ if __name__ == "__main__":
       model_overrides = {override.key: override.value for override in bundle.overrides}
       print(f"Bundle: {bundle.internalName}, Type: {model.type}, Status: {bundle.status}, Overrides: {model_overrides}")
       print(f"Artifact: {model.artifact.fileName}, Download URI: {model.artifact.downloadUri.uri}")
-      if model.artifact.chunks:
-        print(f"Contains {len(model.artifact.chunks)} chunks.")

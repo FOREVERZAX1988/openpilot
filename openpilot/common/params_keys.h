@@ -307,10 +307,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"AccelPersonality", {PERSISTENT | BACKUP, INT, "1"}},
 
-    // Accel Controller profiles (Eco / Normal / Sport)
-    {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"AccelPersonality", {PERSISTENT | BACKUP, INT, "1"}},
-
     // sunnypilot model params
     {"CameraOffset", {PERSISTENT | BACKUP, FLOAT, "0.0"}},
     {"LagdToggle", {PERSISTENT | BACKUP, BOOL, "1"}},

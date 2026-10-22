@@ -113,6 +113,27 @@ class ControlsExt(ModelStateBase, ControlsLateralZP):
     self._stopping_prev = (state, accel)
     actuators.accel = float(accel)
 
+  def long_accel_sp(self, actuators, CS, long_plan, accel_limits: tuple[float, float]) -> None:
+    """sunnypilot: terminal-stop policy applied after the stock LongControl.update() (see stopping_controller.py)."""
+    stock_state = self.LoC.long_control_state
+    stock_accel = actuators.accel
+    prev_state, prev_accel = self._stopping_prev
+    self._stopping_prev = (stock_state, stock_accel)
+
+    if self.stopping_controller is None:
+      return
+
+    state, accel = self.stopping_controller.update(
+      prev_state, stock_state, CS, long_plan.aTarget, prev_accel, stock_accel, accel_limits, long_plan.hasLead,
+      pitch=self.calibrated_pose.orientation.pitch if self.calibrated_pose is not None else None,
+      a_long=self.calibrated_pose.acceleration.x if self.calibrated_pose is not None else None)
+    if state != stock_state:
+      self.LoC.reset()
+    self.LoC.long_control_state = state
+    self.LoC.last_output_accel = accel
+    self._stopping_prev = (state, accel)
+    actuators.accel = float(accel)
+
   def get_params_sp(self, sm: messaging.SubMaster) -> None:
     if time.monotonic() - self._param_update_time > PARAMS_UPDATE_PERIOD:
       self.blinker_pause_lateral.get_params()

@@ -6,6 +6,7 @@ from functools import cached_property
 import os
 os.environ['GMMU'] = '0' # for chestnut fast loading, noop for qcom
 from tinygrad.device import Buffer, Device
+from tinygrad.engine.realize import lower_and_compile
 from tinygrad.dtype import DType, dtypes
 from tinygrad.tensor import Tensor
 from tinygrad.helpers import round_up
@@ -139,8 +140,8 @@ class FrameMeta:
 
 
 def input_view(buffer: Buffer, shape: tuple[int, ...], dtype: DType, offset: int) -> Tensor:
-  view = buffer.view(math.prod(shape), dtype, offset).ensure_allocated()
-  return Tensor(UOp.from_buffer(view)).reshape(shape)
+  view = buffer.view(math.prod(shape) * dtype.itemsize, offset).ensure_allocated()
+  return Tensor(UOp.from_buffer(view, dtype)).reshape(shape)
 
 
 class ModelState(ModelStateBase):
@@ -148,7 +149,7 @@ class ModelState(ModelStateBase):
 
   def __init__(self, cam_w: int, cam_h: int, chestnut: bool):
     ModelStateBase.__init__(self)
-    jits = load_oob(open_file_chunked(modeld_pkl_path(chestnut)))
+    jits = load_oob(modeld_pkl_path(chestnut), chestnut)
     self.model_device = jits['input_specs']['new_img'][2]
     self.input_shapes = {name: (shape, np.dtype(dtype)) for name, (shape, dtype, _) in jits['input_specs'].items()}
     self.state_pairs = {name: f'next_{name}' for name in self.input_shapes if f'next_{name}' in jits['metadata']['output_shapes']}
@@ -164,7 +165,9 @@ class ModelState(ModelStateBase):
     self.pack_inputs()
     with open(MODELS_DIR / f'{"big_" if chestnut else ""}driving_warp_{cam_w}x{cam_h}_tinygrad.pkl', 'rb') as f:
       self.run_warp = pickle.load(f)['run']
+    self.run_warp.captured._linear = lower_and_compile(self.run_warp.captured._linear)
     self.run_model = jits['run']
+    self.run_model.captured._linear = lower_and_compile(self.run_model.captured._linear)
     self.outputs = {name: Tensor(np.zeros(shape, dtype=dtype), device=device).realize() for name, (shape, dtype, device) in jits['output_specs'].items()}
     for name, next_name in self.state_pairs.items():
       state = self.input_queues[name]
@@ -239,7 +242,8 @@ def main(demo=False):
 
   CHESTNUT = chestnut_present() and chestnut_compiled()
   if CHESTNUT:
-    os.environ['HCQDEV_WAIT_TIMEOUT_MS'] = '3000'
+    from tinygrad.runtime.ops_amd import AMDDevice
+    AMDDevice.wait_timeout_ms = 3000
   params = Params()
   params.put_bool("ChestnutLoading", CHESTNUT)
   params.remove("ChestnutActive")
