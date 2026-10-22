@@ -586,6 +586,7 @@ struct OnroadEventSP @0xda96579883444c35 {
     trafficSignGreen @26;
     trafficSignChanged @27;
     trafficStopping @28;
+    macanAutoResume @37;  # Macan 起步跟停：OP 代发 RESUME（fork-only；@29 归上游 bigModelAvailable、@31 本批又归上游 silentPedalPressed，故改 @37）
   }
 }
 
