@@ -191,18 +191,54 @@ def render_page(page: str, keys: list[str], kinds: dict[str, int], values: dict[
   return _PAGE_HEAD.format(title=html.escape(page), message=message, index=html.escape(index_href)) + rows + _PAGE_TAIL
 
 
-def render_index(grouped: dict[str, list[str]], *, href_fmt: str = "/settings?page={page}") -> str:
+def render_index(grouped: dict[str, list[str]], *, href_fmt: str = "/settings?page={page}", extra: str = "") -> str:
   items = []
   for page, keys in grouped.items():
     label = OTHER_LABEL if page == OTHER else page
     href = html.escape(href_fmt.format(page=html.escape(page, quote=True)), quote=True)
     items.append(f'<li><a href="{href}">{html.escape(label)}</a> <span class="n">({len(keys)})</span></li>')
-  return _INDEX_HEAD + "\n".join(items) + _INDEX_TAIL
+  tail = _INDEX_TAIL.replace("</ul>", "</ul>\n" + extra, 1) if extra else _INDEX_TAIL
+  return _INDEX_HEAD + "\n".join(items) + tail
 
 
 # the group that holds keys no on-device page names: reachable, but not a page setting
 OTHER = "other"
 OTHER_LABEL = "内部参数（车机设置页未暴露，谨慎修改）"
+
+
+def render_curve_learning_status(params) -> str:
+  """Read-only card for the curve-speed self-learning state.
+
+  No new param keys: everything is derived from CurvatureLearningData, which is
+  already persistent, so this renders the same values the planner sees without
+  a rebuild of libparams_c.so on the device.
+  """
+  from openpilot.selfdrive.controls.lib.curve_speed_learning import learning_status_from_data
+
+  try:
+    import json as _json
+    raw = params.get("CurvatureLearningData")
+    data = _json.loads(raw) if raw else None
+  except Exception:
+    data = None
+  status = learning_status_from_data(data)
+
+  enabled = None
+  try:
+    enabled = params.get_bool("CscCurvatureLearningEnabled")
+  except Exception:
+    pass
+  if enabled is None:
+    state = "未知（键不可读）"
+  else:
+    state = "开启" if enabled else "关闭（默认）"
+
+  lines = [
+    '<h2>弯道速度自学习（StarPilot 移植）</h2>',
+    f'<p>状态：{state} · 标定进度 {status["progress_pct"]}% · 学习横向加速度 {status["lateral_acceleration"]} m/s²</p>',
+    f'<p>已采样 {status["buckets"]}/24 桶 · 样本总数 {status["total_count"]}</p>',
+  ]
+  return "\n".join(lines) + "\n"
 
 
 # ---- live state (needs a params handle) ------------------------------------ #
