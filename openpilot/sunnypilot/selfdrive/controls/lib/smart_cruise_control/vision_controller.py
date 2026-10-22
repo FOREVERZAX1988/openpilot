@@ -32,10 +32,11 @@ _URGENT_PRED_LAT_ACC_TH = 3.  # Predicted Lat Acc threshold that requires an imm
 _LEAVING_LAT_ACC_TH = 1.3  # Lat Acc threshold to trigger leaving turn state.
 _FINISH_LAT_ACC_TH = 1.1  # Lat Acc threshold to trigger the end of the turn cycle.
 
-# Maximum lateral acceleration. 1.8 m/s² matches zoompilot's Mazda curve planning
-# (vs 2.0 in sunnypilot); tighter ceiling means slower through curves but
-# safer lateral g on unfamiliar roads.
-_A_LAT_REG_MAX = 1.8
+# Maximum lateral acceleration, aligned with upstream sunnypilot (2.0 m/s²).
+# The zoompilot-derived 1.8 m/s² override (fork commit 852969b46a) was reverted:
+# it made SCC vision ~5% slower through curves and left two upstream tests red
+# (7.589 vs 8.0 == sqrt(1.8/2.0)).
+_A_LAT_REG_MAX = 2.0
 
 # Minimum smooth deceleration during the ENTERING state: the car starts slowing
 # for the upcoming curve before the tightest part. Lookup by predicted lat acc.
