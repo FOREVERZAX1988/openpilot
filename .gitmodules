@@ -1,11 +1,11 @@
 [submodule "panda"]
   path = panda
   url = https://github.com/FOREVERZAX1988/panda.git
-  branch = sp-macan-test
+  branch = sp-macan-test2
 [submodule "opendbc"]
   path = opendbc_repo
   url = https://github.com/FOREVERZAX1988/opendbc.git
-  branch = sp-macan-test
+  branch = sp-macan-test2
 [submodule "msgq"]
   path = msgq_repo
   url = https://github.com/sunnypilot/msgq.git
@@ -18,19 +18,19 @@
 [submodule "tinygrad"]
   path = tinygrad_repo
   url = https://github.com/FOREVERZAX1988/tinygrad.git
-  branch = sp-macan-test
+  branch = sp-macan-test2
 [submodule "sunnypilot/neural_network_data"]
   path = openpilot/sunnypilot/neural_network_data
   url = https://github.com/mouxangithub/neural-network-data.git
 [submodule "ai"]
   path = ai
   url = https://github.com/FOREVERZAX1988/ai.git
-	branch = sp-macan-test
+	branch = sp-macan-test2
 [submodule "webui"]
   path = webui
   url = https://github.com/FOREVERZAX1988/webui.git
-  branch = sp-macan-test
+  branch = sp-macan-test2
 [submodule "jetlink"]
   path = jetlink_repo
   url = https://github.com/FOREVERZAX1988/jetlink.git
-  branch = sp-macan-test
+  branch = sp-macan-test2
