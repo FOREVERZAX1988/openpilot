@@ -376,7 +376,11 @@ class TestSmartCruiseControlVision(OpenpilotTestCase):
     self.update_lat_accels(0.5, 2.0, v_ego=v_ego, model_speed=model_speed)
     self.update_lat_accels(0.5, 2.0, v_ego=v_ego, model_speed=model_speed)
 
-    self.assert_approx(self.scc_v.v_target, 8.0)
+    # The curve target at a 2.0 m/s² predicted lat acc under the 1.8 m/s² ceiling is
+    # sqrt(1.8 / (2.0 / 8**2)) = 7.589, not the 8.0 a 2.0 ceiling would give. Derived
+    # here rather than hardcoded: upstream still carries the stale 8.0 and is red.
+    expected_v_target = (_A_LAT_REG_MAX / (2.0 / model_speed ** 2)) ** 0.5
+    self.assert_approx(self.scc_v.v_target, expected_v_target)
     self.assert_approx(self.scc_v.output_v_target, v_ego)
 
   def test_nonurgent_tightening_is_confirmed_and_rate_limited(self):
