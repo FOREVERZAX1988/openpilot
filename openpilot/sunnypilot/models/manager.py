@@ -201,7 +201,28 @@ class ModelManagerSP:
         url = mirrored_url
 
     try:
-      if await verify_file(full_path, expected_hash):
+      # progress counts only valid chunks so a resumed download continues the
+      # bar from where verification left it, instead of falling back to zero
+      is_cached = False
+      valid_chunks: set[int] = set()
+      if len(artifact.chunks) > 0:
+        from openpilot.common.file_chunker import get_chunk_name
+        num_chunks = len(artifact.chunks)
+        for i, chunk in enumerate(artifact.chunks):
+          if self._download_interrupted():
+            raise DownloadCancelled("Download cancelled")
+          if await verify_file(get_chunk_name(full_path, i, num_chunks), chunk.sha256):
+            valid_chunks.add(i)
+          artifact.downloadProgress.status = custom.ModelManagerSP.DownloadStatus.verifying
+          artifact.downloadProgress.progress = (len(valid_chunks) / num_chunks) * 100
+          self._sync_artifact_progress(artifact)
+          self._report_status()
+        is_cached = len(valid_chunks) == num_chunks
+      else:
+        if await verify_file(full_path, expected_hash):
+          is_cached = True
+
+      if is_cached:
         artifact.downloadProgress.status = custom.ModelManagerSP.DownloadStatus.cached
         artifact.downloadProgress.progress = 100
         artifact.downloadProgress.eta = 0
@@ -233,6 +254,7 @@ class ModelManagerSP:
       self._report_status()
 
     except DownloadCancelled:
+      # a cancel keeps whatever is on disk: complete chunks resume the next attempt
       self._download_start_times.pop(artifact.fileName, None)
       artifact.downloadProgress.status = custom.ModelManagerSP.DownloadStatus.failed
       artifact.downloadProgress.eta = 0
@@ -409,11 +431,14 @@ class ModelManagerSP:
           if model.artifact.fileName:
             active_files.append(model.artifact.fileName)
 
-    # Remove all files except active ones
+    # Remove all files except active ones (including their chunk files)
     model_dir = Paths.model_root()
     try:
       for filename in os.listdir(model_dir):
-        if filename not in active_files:
+        # a chunk file belongs to its base name: "model.pkl.chunk0" is part of
+        # "model.pkl", so keep it whenever the base is still active
+        base = filename.split('.chunk')[0] if '.chunk' in filename else filename
+        if base not in active_files and filename not in active_files:
           file_path = os.path.join(model_dir, filename)
           if os.path.isfile(file_path):
             os.remove(file_path)
