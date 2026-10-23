@@ -1,5 +1,6 @@
 import atexit
 import cffi
+import faulthandler
 import math
 import os
 import queue
@@ -42,6 +43,10 @@ SHOW_TOUCHES = os.getenv("SHOW_TOUCHES") == "1"
 STRICT_MODE = os.getenv("STRICT_MODE") == "1"
 SCALE = float(os.getenv("SCALE", "1.0"))
 GRID_SIZE = int(os.getenv("GRID", "0"))
+# A stall this long, entered from a loop that had already reached its target
+# rate, is a frozen screen rather than one slow frame.
+FPS_STALL_DUMP_S = int(os.getenv("FPS_STALL_DUMP_S", "15"))
+FPS_STALL_DUMP_DIR = os.getenv("FPS_STALL_DUMP_DIR", "/data/log")
 PROFILE_RENDER = int(os.getenv("PROFILE_RENDER", "0"))
 PROFILE_STATS = int(os.getenv("PROFILE_STATS", "100"))  # Number of functions to show in profile output
 RECORD = os.getenv("RECORD") == "1"
@@ -369,6 +374,9 @@ class GuiApplication(GuiApplicationExt):
     self._textures: dict[str, rl.Texture] = {}
     self._target_fps: int = _DEFAULT_FPS
     self._last_fps_log_time: float = time.monotonic()
+    # Render-stall tracking; see _watch_for_render_stall.
+    self._render_stall_since: float | None = None
+    self._fps_healthy = False
     self._frame = 0
     self._window_close_requested = False
     self._nav_stack: list[object] = []
@@ -1116,6 +1124,56 @@ class GuiApplication(GuiApplicationExt):
       cloudlog.error(f"FPS dropped critically below {fps}. Shutting down UI.")
       self.close_ffmpeg()
       os._exit(1)
+
+    self._watch_for_render_stall(fps)
+
+  def _watch_for_render_stall(self, fps: float):
+    """Turn a frozen screen into a restart instead of a power cycle.
+
+    This loop keeps iterating while it draws nothing, so the kick_watchdog() in
+    ui.py stays fresh and restart_if_crash never sees a death: the panel holds
+    the last frame it managed to swap and every watchdog believes the UI is
+    healthy. The frame rate read here is the only thing that knows otherwise.
+
+    The stall clock only starts once this loop has been healthy at least once,
+    so a first boot that is slow to bake fonts and load models is not mistaken
+    for a freeze and turned into a restart loop.
+    """
+    healthy = fps >= self._target_fps * FPS_DROP_THRESHOLD
+    frozen = fps < self._target_fps * FPS_CRITICAL_THRESHOLD
+    if healthy:
+      self._fps_healthy = True
+
+    if not (self._fps_healthy and frozen):
+      # Recovered, merely slow, or never got going: nothing is stalled.
+      self._render_stall_since = None
+      return
+
+    now = time.monotonic()
+    if self._render_stall_since is None:
+      self._render_stall_since = now
+      return
+
+    stalled_s = now - self._render_stall_since
+    if stalled_s < FPS_STALL_DUMP_S:
+      return
+
+    dump_path = self._dump_stall_stacks(fps, stalled_s)
+    cloudlog.error(f"render stalled at {fps} fps for {stalled_s:.0f}s, stacks in {dump_path}; exiting for a restart")
+    self.close_ffmpeg()
+    os._exit(1)
+
+  def _dump_stall_stacks(self, fps: float, stalled_s: float) -> str:
+    """Write every thread's stack to the log dir; the next freeze is then readable."""
+    path = f"{FPS_STALL_DUMP_DIR}/ui_render_stall_{os.getpid()}_{int(time.monotonic())}.log"
+    try:
+      with open(path, 'w') as f:
+        f.write(f"render stall: {stalled_s:.1f}s at {fps} fps (target {self._target_fps})\n")
+        f.write(f"frame {self._frame}, should_render {self._should_render}, scale {self._scale}\n")
+        faulthandler.dump_traceback(file=f, all_threads=True)
+    except OSError:
+      return "(could not be written)"
+    return path
 
   def _draw_touch_points(self):
     current_time = time.monotonic()
