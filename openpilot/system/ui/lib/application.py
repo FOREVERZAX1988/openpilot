@@ -7,7 +7,6 @@ import queue
 import re
 import time
 import signal
-import re
 import sys
 import pyray as rl
 import threading
@@ -21,7 +20,6 @@ from pathlib import Path
 from typing import NamedTuple
 from importlib.resources import as_file, files
 from openpilot.common.swaglog import cloudlog
-from openpilot.common.basedir import BASEDIR
 from openpilot.common.hardware import HARDWARE, PC
 from openpilot.system.ui.lib.multilang import TRANSLATIONS_DIR, multilang
 from openpilot.common.realtime import Ratekeeper
@@ -907,6 +905,39 @@ class GuiApplication(GuiApplicationExt):
     rl.gen_texture_mipmaps(font.texture)
     rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     return font
+
+  def fallback_scale(self, font: rl.Font) -> float:
+    """Size compensation for a non-primary font, measured from its own metrics.
+
+    A well-formed CJK font renders a full-width ideograph/syllable with advance == font_size
+    (1 em), so no compensation is needed. The stripped `.otf` subsets shipped in
+    `selfdrive/assets/fonts` are only ~0.68 em wide, which is what the old blanket
+    FALLBACK_FONT_SCALE = 1.25 was papering over -- and that constant also hit the pre-baked
+    OpFont atlases, making every CJK string 25% larger (and blurrier) than the Latin text
+    beside it. Measure instead of hardcoding: probe full-width glyphs only, ignore fonts that
+    have none (Thai is narrow by design).
+    """
+    key = id(font)
+    cached = _FALLBACK_SCALE_CACHE.get(key)
+    if cached is not None:
+      return cached
+
+    scale = FALLBACK_FONT_SCALE
+    probe_size = 100.0
+    for probe in ("中", "あ", "한"):
+      try:
+        width = float(rl.measure_text_ex(font, probe, probe_size, 0).x)  # noqa: TID251
+      except Exception:
+        width = 0.0
+      if width > 1.0:
+        scale = min(1.5, max(1.0, probe_size / width))
+        break
+    else:
+      # 没有全宽字形（泰文/拉丁等）：按原样绘制
+      scale = 1.0
+
+    _FALLBACK_SCALE_CACHE[key] = scale
+    return scale
 
   def fallback_font(self, text: str = "") -> rl.Font:
     language = multilang.language
