@@ -84,7 +84,7 @@ def _make_sm():
 
 def _make_helper(brand, pcm_cruise, op_long, carrot_own_kph=40.0):
   cp = SimpleNamespace(brand=brand, pcmCruise=pcm_cruise, openpilotLongitudinalControl=op_long)
-  cp_sp = SimpleNamespace(pcmCruiseSpeed=True)
+  cp_sp = SimpleNamespace(pcmCruiseSpeed=True, intelligentCruiseButtonManagementAvailable=False)
   helper = VCruiseCarrot(cp, cp_sp)
   # The button state machine is not what these tests cover, and its real implementation
   # writes params (LongitudinalPersonality / MyDrivingMode / ActivateCruiseAfterBrake) -

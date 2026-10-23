@@ -325,7 +325,7 @@ def build_cp(pcm_cruise=False, openpilot_long=True):
 
 
 def build_cp_sp():
-  return types.SimpleNamespace(pcmCruiseSpeed=False)
+  return types.SimpleNamespace(pcmCruiseSpeed=False, intelligentCruiseButtonManagementAvailable=False)
 
 
 print('=== VCruiseCarrot onroad simulation ===')

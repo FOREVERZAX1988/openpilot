@@ -71,6 +71,14 @@ class VCruiseHelper(VCruiseHelperSP):
   def v_cruise_initialized(self):
     return self.v_cruise_kph != V_CRUISE_UNSET
 
+  @property
+  def software_pcm_cruise_speed(self) -> bool:
+    return self.CP.brand == "toyota" and self.CP.pcmCruise and self.CP.openpilotLongitudinalControl and not self.CP_SP.pcmCruiseSpeed
+
+  @property
+  def software_pcm_cruise_initialized(self) -> bool:
+    return 0 < self.v_cruise_kph < V_CRUISE_UNSET and 0 < self.v_cruise_cluster_kph < V_CRUISE_UNSET
+
   def update_v_cruise(self, CS, enabled, is_metric):
     self.v_cruise_kph_last = self.v_cruise_kph
 
@@ -529,10 +537,9 @@ class VCruiseCarrot(VCruiseHelper):
   def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool = False) -> None:
     """No-op override; the inherited VCruiseHelper.initialize_v_cruise owns v_cruise.
 
-    The signature must stay identical to the base class because card.py calls the
-    helper polymorphically with (CS, experimental_mode, dynamic_experimental_control).
-    The previous two-argument override raised
-    `TypeError: takes 3 positional arguments but 4 were given` on every SET press.
+    card.py calls the helper polymorphically with (CS, experimental_mode). The extra
+    third argument is kept optional so out-of-tree callers that still pass it do not
+    raise `TypeError: takes 3 positional arguments but 4 were given` on every SET press.
     """
     return
 
