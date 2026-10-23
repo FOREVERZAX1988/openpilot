@@ -99,7 +99,7 @@ class TestThePublishedFrame(OpenpilotTestCase):
 
     self.assertTrue(sm.all_alive(jetlink_adapter.IN_CONTROL))
     self.assertTrue(sm.all_valid(jetlink_adapter.IN_CONTROL))
-    self.assertFalse(jetlink_adapter.in_control(sm), "nothing is in control in a parked preview")
+    self.assertFalse(jetlink_adapter.adapter().engaged(sm), "nothing is in control in a parked preview")
 
   def test_the_parked_frame_is_a_parked_car(self):
     msgs = parked_messages()

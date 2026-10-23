@@ -125,6 +125,15 @@ def signal_color_observer(started: bool, params: Params, CP: car.CarParams) -> b
 def onroad_preview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("IsOnroadPreview")
 
+def onroad_preview_shim(started: bool, params: Params, CP: car.CarParams) -> bool:
+  """The parked preview's missing onroad signals (sunnypilot/onroad_preview_shim.py).
+
+  Offroad only. Once the device is started, card publishes the real carState,
+  selfdrived/controlsd the real carControl and carControlSP, and calibrationd the
+  real calibration: a second publisher of any of them would be a lie on the bus.
+  """
+  return params.get_bool("IsOnroadPreview") and not started
+
 def use_github_runner(started, params, CP: car.CarParams) -> bool:
   # Restored 2026-10-23: round-23 re-ordering dropped this definition while the
   # call site near the bottom of the file survived, so a fresh compile raised
@@ -370,6 +379,11 @@ procs = [
   PythonProcess("timed", "openpilot.system.timed", always_run, enabled=not PC),
 
   PythonProcess("modeld", "openpilot.selfdrive.modeld.modeld", and_(or_(only_onroad, onroad_preview), is_stock_model)),
+  # The parked preview's stand-in for card, selfdrived and calibrationd, so the
+  # driving view draws and jetlink may swap in: see sunnypilot/onroad_preview_shim.py.
+  # It publishes no control and writes no parameter, and is stopped the moment the
+  # device is started and the real publishers take over.
+  PythonProcess("preview_shimd", "openpilot.sunnypilot.onroad_preview_shim", onroad_preview_shim),
   # Signal-light colour observation (camera comparison only, never control).
   PythonProcess("signalcolord", "openpilot.selfdrive.modeld.signal_color_shadow", signal_color_observer, restart_if_crash=True),
   PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", dm_process, enabled=(WEBCAM or not PC) and not LITE),

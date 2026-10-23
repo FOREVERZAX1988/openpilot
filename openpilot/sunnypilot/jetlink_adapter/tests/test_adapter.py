@@ -158,8 +158,8 @@ class TestTheDevice(OpenpilotTestCase):
     from openpilot.common.transformations.model import MEDMODEL_INPUT_SIZE
     for camera in (_ar_ox_fisheye, _os_fisheye):
       path = Adapter().warp_path(camera.width, camera.height, *MEDMODEL_INPUT_SIZE)
-      self.assertEqual(path, jetlink_adapter.warp_path(camera.width, camera.height, *MEDMODEL_INPUT_SIZE))
-      self.assertEqual(path.parent, Path(jetlink_adapter.__file__).resolve().parent / 'models')
+      self.assertEqual(path.parent.parent.name, 'modeld', 'modeld/models, where its SConscript compiles it')
+      self.assertGreater(path.stat().st_size, 100_000, 'a real compiled warp, not the LFS pointer')
 
 
 class TestModeld(OpenpilotTestCase):

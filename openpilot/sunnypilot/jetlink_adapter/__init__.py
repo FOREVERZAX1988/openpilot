@@ -85,6 +85,12 @@ def _link_on() -> bool:
     return False
 
 
+# Single source of truth for the adapter's 'is anything already driving' probe,
+# also built into a SubMaster by the parked-preview shim
+# (sunnypilot/onroad_preview_shim.py); both test suites pin this tuple.
+IN_CONTROL = ('carState', 'carControl', 'carControlSP')
+
+
 @functools.cache
 def _adapter_class():
   from jetlink.openpilot.interface import Keys
@@ -95,10 +101,11 @@ def _adapter_class():
     but for what follows."""
     KEYS = Keys(**KEYS._asdict())
     # MADS's state rides on carControlSP
-    IN_CONTROL_SERVICES = ('carState', 'carControl', 'carControlSP')
-    # modeld_tinygrad's warp, which every checkout carries (LFS); stock modeld
-    # loads the same compile from its own models dir, which only scons fills
-    WARP_DIR = 'openpilot/sunnypilot/modeld_v2/models'
+    IN_CONTROL_SERVICES = IN_CONTROL
+    # WARP_DIR stays stock's (openpilot/selfdrive/modeld/models), where modeld's
+    # SConscript compiles the 2-input driving warp for every road camera. This
+    # checkout's copy under openpilot/sunnypilot/modeld_v2/models is an LFS pointer
+    # (132 bytes here), so pointing there would hand the link no warp at all.
 
     @property
     def catalog_selector(self) -> int:
