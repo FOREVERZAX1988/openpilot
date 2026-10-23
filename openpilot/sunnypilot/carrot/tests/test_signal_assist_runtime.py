@@ -24,7 +24,12 @@ def test_default_does_not_enable_control(tmp_path):
 
 @pytest.mark.parametrize('assist,trial', [(False, False), (False, True), (True, False), (True, True)])
 def test_revalidation_requires_both_explicit_flags(tmp_path, assist, trial):
-  flag = tmp_path / 'assist_enabled'
+  # The legacy /data/signal-color-shadow/assist_enabled file is retired in this fork
+  # (signal_assist_runtime.requested() answers False for that exact name; the single
+  # user switch is SignalAssistMode now). Any other path still reads as a file flag,
+  # which is what this test pins: one flag to run at all, a second one to publish red
+  # history.
+  flag = tmp_path / 'enable'
   flag.write_text('1' if assist else '0')
   (tmp_path / 'revalidated_enabled').write_text('1' if trial else '0')
   runtime = SignalAssistRuntime(flag, tmp_path / 'obs')

@@ -33,7 +33,7 @@ from typing import Any
 _PARAM_KW_RE = re.compile(r'\bparam\s*=\s*"([A-Za-z0-9_]+)"')
 _PARAM_KW2_RE = re.compile(r'\bparam_key\s*=\s*"([A-Za-z0-9_]+)"')
 _PARAM_POS_RE = re.compile(r'(?:ParamControlSP|BigParamControlSP|ParamControl)\s*\(\s*[^,()]*,\s*"([A-Za-z0-9_]+)"')
-_KEYWORD_ARG_RE = re.compile(r'"([A-Za-z0-9_]+)"')
+_KEYWORD_ARG_RE = re.compile(r'([\'"])([A-Za-z0-9_]+)\1')
 
 # helper modules that are not pages of their own; the items module belongs to carrot_tuning
 _NOT_PAGES = ("settings",)
@@ -100,7 +100,7 @@ def _keys_in(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8", errors="ignore")
   except OSError:
     return []
-  return _KEYWORD_ARG_RE.findall(text)
+  return [name for _quote, name in _KEYWORD_ARG_RE.findall(text)]
 
 
 def group_keys(pages: dict[str, list[str]], declared: Iterable[str]) -> dict[str, list[str]]:
@@ -254,7 +254,8 @@ def collect(params) -> tuple[dict[str, list[str]], dict[str, int], dict[str, Any
   The binary's key list is the source of truth: a page key it does not declare is dropped
   rather than rendered as a control that could never be written.
   """
-  declared = list(params.all_keys())
+  # the params binary hands its key list back as bytes; the page scan produces str
+  declared = [k.decode() if isinstance(k, (bytes, bytearray)) else str(k) for k in params.all_keys()]
   kinds: dict[str, int] = {}
   values: dict[str, Any] = {}
   for key in declared:
