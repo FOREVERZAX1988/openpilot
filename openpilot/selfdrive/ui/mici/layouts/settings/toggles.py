@@ -101,6 +101,15 @@ class TogglesLayoutMici(NavScroller):
                                        description=tr("Enable to use sunnypilot driver assistance.\n" +
                                                    "Disable to use your car's stock driver assistance."))
 
+    macan_start_stop = BigParamControl(tr("Macan Stop and Go"), "MacanStartStop")
+    macan_start_stop_distance = MacanStartStopDistControl(tr("Startup Safe Distance (Macan)"), "MacanStartStopDistance")
+    macan_slope_comp = BigParamControl(tr("Macan Slope Compensation"), "MacanSlopeComp")
+    macan_verz_bridge = BigParamControl(tr("Macan Verz Bridge"), "MacanVerzBridge")
+    macan_slope_comp_unlimited = BigParamControl(tr("Macan Slope Comp Unlimited"), "MacanSlopeCompUnlimited")
+    macan_radar_fusion = BigParamControl(tr("Radar Fusion (Macan)"), "MacanRadarFusion")
+    macan_startup_gap_sync = BigParamControl(tr("Macan Distance Sync Direction"), "MacanStartupGapSync")
+    macan_fusion_mode = BigParamControl(tr("Fusion Control Mode (Macan)"), "MacanFusionMode")
+
     self._scroller.add_widgets([
       self._personality_toggle,
       self._accel_controller_enabled,
@@ -123,6 +132,14 @@ class TogglesLayoutMici(NavScroller):
       macan_fusion_mode,
     ])
 
+    self._macan_start_stop = macan_start_stop
+    self._macan_start_stop_distance = macan_start_stop_distance
+    self._macan_slope_comp = macan_slope_comp
+    self._macan_verz_bridge = macan_verz_bridge
+    self._macan_slope_comp_unlimited = macan_slope_comp_unlimited
+    self._macan_radar_fusion = macan_radar_fusion
+    self._macan_startup_gap_sync = macan_startup_gap_sync
+    self._macan_fusion_mode = macan_fusion_mode
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
 
