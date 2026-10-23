@@ -120,9 +120,6 @@ class NavButton(Widget):
     )
     rl.draw_text_ex(self.parent._font_medium, panel_name, text_pos, 55, 0, text_color)
 
-    # Store button rect for click detection
-    self.panel_info.button_rect = rect
-
 
 class SettingsLayoutSP(OP.SettingsLayout):
   def __init__(self):

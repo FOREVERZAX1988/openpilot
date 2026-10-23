@@ -18,7 +18,11 @@ _RECT = NS(x=0.0, y=0.0, width=2160.0, height=1080.0)
 
 
 def _point(d_rel=20.0, y_rel=0.0, v_lead=10.0, v_lat=0.0, measured=True, source="frontRadar"):
-  return NS(trackId=1, dRel=d_rel, yRel=y_rel, vLeadK=v_lead, vLat=v_lat, radar=True, modelProb=0.03,
+  # car.RadarData.RadarPoint's own field names, which is the struct radarcan
+  # publishes on liveTracks: vLead / yvRel / measured / radarSource. The
+  # LeadData names (vLeadK / vLat) belong to radarState's leads, a different
+  # struct, and reading them here is what emptied the overlay.
+  return NS(trackId=1, dRel=d_rel, yRel=y_rel, vRel=0.0, aRel=0.0, vLead=v_lead, yvRel=v_lat,
             measured=measured, radarSource=source)
 
 
@@ -60,7 +64,7 @@ class TestRenderLoop(unittest.TestCase):
     self._fake = NS(
       Color=lambda *a: ('color',) + a,
       Rectangle=lambda *a: ('rect',) + a,
-      Vector2=lambda *a: ('vec',) + a,
+      Vector2=lambda x, y: NS(x=float(x), y=float(y)),
       WHITE=('white',),
       draw_text_ex=lambda *a: self.calls.append('text'),
       draw_line_ex=lambda *a: self.calls.append('line'),
@@ -89,12 +93,12 @@ class TestRenderLoop(unittest.TestCase):
     ui_state.radar_info_level = 0
     ui_state.carrot_radar_points = True
     self.renderer.render(_SM([_point(20.0, -1.0, 10.0, 0.5)]), _RECT, _lane(), _project)
-    self.assertEqual(self.calls, ['line', 'circle', 'box', 'text', 'text', 'text'])
+    self.assertEqual(self.calls, ['line', 'circle', 'box'] + ['text'] * 6)
 
   def test_level1_draws_speed_box_only(self):
     ui_state.radar_info_level = 1
     self.renderer.render(_SM([_point(20.0, -1.0, 10.0, 0.5)]), _RECT, _lane(), _project)
-    self.assertEqual(self.calls, ['line', 'circle', 'box', 'text'])
+    self.assertEqual(self.calls, ['line', 'circle', 'box'] + ['text'] * 2)
 
   def test_level2_skips_static_points(self):
     ui_state.radar_info_level = 2
@@ -104,7 +108,7 @@ class TestRenderLoop(unittest.TestCase):
   def test_level2_draws_labels_on_moving_points(self):
     ui_state.radar_info_level = 2
     self.renderer.render(_SM([_point(20.0, -1.0, 10.0, 0.5)]), _RECT, _lane(), _project)
-    self.assertEqual(self.calls, ['line', 'circle', 'box', 'text', 'text', 'text'])
+    self.assertEqual(self.calls, ['line', 'circle', 'box'] + ['text'] * 6)
 
   def test_invalid_model_draws_nothing(self):
     sm = _SM([_point()])
@@ -114,11 +118,11 @@ class TestRenderLoop(unittest.TestCase):
 
   def test_moving_point_draws_vector_then_box(self):
     self.renderer.render(_SM([_point(20.0, -1.0, 10.0, 0.5)]), _RECT, _lane(), _project)
-    self.assertEqual(self.calls, ['line', 'circle', 'box', 'text', 'text', 'text'])
+    self.assertEqual(self.calls, ['line', 'circle', 'box'] + ['text'] * 6)
 
   def test_slow_point_is_a_star(self):
     self.renderer.render(_SM([_point(20.0, 0.0, 0.0, 0.0)]), _RECT, _lane(), _project)
-    self.assertEqual(self.calls, ['text'])
+    self.assertEqual(self.calls, ['text'] * 2)
 
   def test_near_point_is_skipped(self):
     self.renderer.render(_SM([_point(1.0, 0.0, 0.0, 0.0)]), _RECT, _lane(), _project)
