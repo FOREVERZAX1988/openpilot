@@ -137,7 +137,7 @@ class StoppingController:
 
   def _end_request(self, a_target, prev_accel, v_ego, has_lead=True):
     line = self._blend(v_ego)
-    target = min(a_target, line)  # the firmer of the plan and the line
+    target = min(a_target, line) if has_lead else line  # no lead: the curve caps it
     if target < self.END_REQUEST:
       # A plan firmer than the support floor is the planner's own stop, not our softening: follow it at the
       # normal rate and never clamp it back up to the floor.
@@ -211,10 +211,8 @@ class StoppingController:
     rolling = not CS.standstill and not self.stopped_once
     if state == LongCtrlState.off or not rolling or CS.vEgo >= self.BLEND_V or a_target > 0.0:
       self.end_active = False
-    elif state != LongCtrlState.stopping and not self.end_active and a_target <= self.END_PLAN_MIN:
-      # Latch only while rolling in the pid state. Once controlsd is already stopping, the stock ramp owns the
-      # request; re-arming the line there would pull the request toward the plan mid-stop (it used to re-deepen
-      # an already eased -0.20 to -0.22 on a plan that went firmer).
+    elif not self.end_active and a_target <= self.END_PLAN_MIN:
+      # 2026-10-23 回贴本地语义：latch 不限 pid 状态（registry ours_keeps 第 3 条；上游为 pid-only）
       self.end_active = True
       self.a_entry = min(prev_accel, self.END_HI)
 
