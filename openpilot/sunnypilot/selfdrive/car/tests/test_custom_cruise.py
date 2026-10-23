@@ -8,7 +8,7 @@ from openpilot.common.constants import CV
 from openpilot.common.parameterized import parameterized, parameterized_class
 from openpilot.common.params import Params
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.selfdrive.car.cruise import V_CRUISE_INITIAL
+from openpilot.selfdrive.car.cruise import V_CRUISE_INITIAL, V_CRUISE_UNSET, VCruiseHelper
 from openpilot.selfdrive.car.tests.test_cruise_speed import TestVCruiseHelper
 
 ButtonEvent = car.CarState.ButtonEvent
@@ -20,11 +20,15 @@ ButtonType = car.CarState.ButtonEvent.Type
 # installed opendbc actually has them, and skip those tests otherwise, rather
 # than failing the whole module on the import.
 try:
-  from opendbc.car.toyota.carstate import get_virtual_cruise_button, VIRTUAL_CRUISE_BUTTONS
+  from opendbc.car.toyota.carstate import (get_virtual_cruise_button, VIRTUAL_CRUISE_BUTTONS,
+                                             TOYOTA_VIRTUAL_CRUISE_LONG_PRESS)
   HAS_VIRTUAL_CRUISE_BUTTONS = True
 except ImportError:
   get_virtual_cruise_button = None
   VIRTUAL_CRUISE_BUTTONS = []
+  # 占位值：整个消费类在该常量缺席时被 requires_virtual_cruise_buttons 跳过，
+  # 这里只需让装饰期算术（range/expand）成立。opendbc 有真值时走上面的导入。
+  TOYOTA_VIRTUAL_CRUISE_LONG_PRESS = 100
   HAS_VIRTUAL_CRUISE_BUTTONS = False
 
 requires_virtual_cruise_buttons = unittest.skipUnless(
