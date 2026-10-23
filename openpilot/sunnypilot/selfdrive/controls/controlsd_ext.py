@@ -6,13 +6,11 @@ See the LICENSE.md file in the root directory for more details.
 """
 import time
 
-import numpy as np
 
 import openpilot.cereal.messaging as messaging
 from openpilot.cereal import log, custom
 
 from opendbc.car import structs
-from opendbc.sunnypilot.car.interfaces import get_steer_slew_schedule
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL
 from openpilot.common.swaglog import cloudlog
@@ -25,19 +23,10 @@ from openpilot.sunnypilot.selfdrive.locationd.speed_bin_learner import LIVE_TORQ
 from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
 from openpilot.sunnypilot.selfdrive.controls.controls_lateral_zp import ControlsLateralZP
 from openpilot.sunnypilot.selfdrive.controls.lib.blinker_pause_lateral import BlinkerPauseLateral
-from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_smoothing import LaneChangeSmoothing
-from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
-from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v2 import LatControlTorque as LatControlTorqueV2
 from openpilot.sunnypilot.selfdrive.controls.lib.stopping_controller import StoppingController
 from openpilot.sunnypilot.selfdrive.controls.lib.lateral_readiness import LateralStartupGate
 from openpilot.sunnypilot.selfdrive.controls.lib.cruise_coasting import CruiseCoastingControl, coasting_relief
-from openpilot.sunnypilot.selfdrive.controls.lib.steer_limit import classify
-from openpilot.sunnypilot.selfdrive.controls.lib.torque_tune import resolved_tune_versions
 
-# how long lateral control has to be inactive, continuously, before the torque tune follows
-# a model change: a one-frame drop (a steer fault flicker) would otherwise swap and resume
-# steering on a controller no inactive frame had primed
-TUNE_SWAP_INACTIVE_FRAMES = round(0.5 / DT_CTRL)
 
 
 class ControlsExt(ModelStateBase, ControlsLateralZP):
@@ -146,43 +135,6 @@ class ControlsExt(ModelStateBase, ControlsLateralZP):
 
     # MADS not available, use stock state to engage
     return bool(sm['selfdriveState'].active)
-
-  def reclassify_steer_limit(self, sm: messaging.SubMaster) -> None:
-    """Runs after publish() has set this frame's steer_limited_by_safety from the raw torque
-    mismatch. Replaces it with the classifier's directional, rail-aware flag (lib/steer_limit.py)
-    before the next frame's LaC.update reads it. Torque tunes only; while lateral is inactive
-    (get_lat_active's last value, the one publish() gated on) the flag is left as controlsd set it."""
-    ext = getattr(self.LaC, 'extension', None)
-    if ext is None or self._steer_slew_schedule is None:
-      return
-    if not self._lat_active_last:
-      self._applied_torque_prev = None
-      return
-    v_ego = sm['carState'].vEgo
-    applied = float(sm['carOutput'].actuatorsOutput.torque)
-    bp, up, down = self._steer_slew_schedule
-    rail_scale = ext.rail_scale_at(v_ego)
-    limit = classify(ext.commanded_torque, applied, self._applied_torque_prev,
-                     float(np.interp(v_ego, bp, up)), float(np.interp(v_ego, bp, down)),
-                     rail_scale, self.steer_limited_by_safety, ext.last_error, ext.integrator)
-    self.steer_limited_by_safety = limit.limited
-    ext.set_actuator_state(applied, limit.at_rail)
-    self._applied_torque_prev = applied
-
-  def lane_change_jerk_factor(self, sm: messaging.SubMaster, lat_active: bool,
-                              new_desired_curvature: float, prev_desired_curvature: float) -> float:
-    """Lane-change smoothing's jerk factor for clip_curvature (1.0 outside a smoothed lane
-    change). The lateral maneuver mode's scripted commands pass through the stock clip.
-    Called once a frame with CC.latActive, which select_lateral_control waits on."""
-    self.note_lat_active(lat_active)
-    if sm.valid['lateralManeuverPlan']:
-      # a lane-change unwind armed before maneuver mode must not resume stale after it
-      self.lane_change_smoothing.reset()
-      return 1.0
-    return self.lane_change_smoothing.update(sm['carState'], sm['modelV2'], lat_active, new_desired_curvature, prev_desired_curvature)
-
-  def note_lat_active(self, lat_active: bool) -> None:
-    self._inactive_frames = 0 if lat_active else self._inactive_frames + 1
 
   @staticmethod
   def get_lead_data(_lead, src: log.RadarState.LeadData) -> None:
