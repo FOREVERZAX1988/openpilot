@@ -4,7 +4,7 @@ import time
 
 from openpilot.cereal import messaging
 from openpilot.common.hardware import COMMA_HARDWARE
-from openpilot.common.realtime import Priority, config_realtime_process, get_available_cores, set_core_affinity
+from openpilot.common.realtime import Priority, config_realtime_process, get_online_cores, set_core_affinity
 from openpilot.common.watchdog import kick_watchdog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.main import MainLayout
@@ -22,17 +22,22 @@ UI_CORES = (5, 4)
 
 
 def resolve_ui_cores() -> list[int]:
-  """Pick a CPU for the UI, skipping any core power save has taken offline."""
-  available = get_available_cores()
+  """Pick a CPU for the UI, skipping any core power save has taken offline.
+
+  Must consult the kernel's online set, not this process's affinity mask: the UI
+  bootstraps pinned to core 0, so its own mask never lists the big cluster and
+  every later re-pin degraded to a no-op (UI stuck on core 0 -> dropped frames).
+  """
+  online = get_online_cores()
   for core in UI_CORES:
-    if core in available:
+    if core in online:
       return [core]
   return []
 
 
 def main():
-  # above plannerd and radard
-  config_realtime_process(0, Priority.CTRL_HIGH)
+  # above plannerd and radard; core 0 only when power save has the big cluster offline
+  config_realtime_process(resolve_ui_cores() or 0, Priority.CTRL_HIGH)
 
   gui_app.init_window("UI")
   if BIG_UI:
@@ -40,7 +45,7 @@ def main():
   else:
     MiciMainLayout()
 
-  ui_cores: set[int] = set()
+  next_affinity_check = 0.0
   pm = messaging.PubMaster(['uiDebug'])
   for should_render, frame_time, cpu_time in gui_app.render():
     # Tell the manager this process is still making progress. A render loop
@@ -50,9 +55,14 @@ def main():
     ui_state.update()
 
     if should_render:
-      # reaffine after power save offlines our core
-      if COMMA_HARDWARE and os.sched_getaffinity(0) != ui_cores:
-        ui_cores = set_core_affinity(resolve_ui_cores())
+      # reaffine after power save offlines/onlines our core; rate limited so a
+      # pending re-pin cannot turn into a per-frame syscall storm
+      now = time.monotonic()
+      if COMMA_HARDWARE and now >= next_affinity_check:
+        next_affinity_check = now + 1.0
+        target = resolve_ui_cores()
+        if target and os.sched_getaffinity(0) != set(target):
+          set_core_affinity(target)
 
       extra_cpu = time.monotonic() - extra_start
       msg = messaging.new_message('uiDebug')

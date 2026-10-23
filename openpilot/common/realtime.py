@@ -3,6 +3,7 @@ import gc
 import os
 import sys
 import time
+from pathlib import Path
 
 from setproctitle import getproctitle
 
@@ -64,6 +65,41 @@ def get_available_cores() -> set[int]:
   return set(range(os.cpu_count() or 1))
 
 
+def _parse_cpu_list(spec: str) -> set[int]:
+  """Parse a kernel cpu list ("0-3,6-7") into a set of cpus."""
+  cores: set[int] = set()
+  for group in spec.strip().split(','):
+    if not group:
+      continue
+    bounds = group.split('-', maxsplit=1)
+    first = int(bounds[0])
+    last = int(bounds[-1])
+    if last < first:
+      raise ValueError(f"bad cpu range: {group!r}")
+    cores.update(range(first, last + 1))
+  return cores
+
+
+def get_online_cores() -> set[int]:
+  """CPUs the kernel currently reports as online.
+
+  Deliberately different from get_available_cores(), which reports this process's
+  affinity mask. A process that pinned itself to one core (the UI bootstraps with
+  config_realtime_process(0, ...)) keeps that narrow mask forever, so using the
+  mask as the definition of "available" makes every later re-pin a silent no-op:
+  the mask never mentions the big cluster again, even after power save brings it
+  back online. The UI stayed on core 0 for its whole lifetime because of this.
+  """
+  if sys.platform == 'linux':
+    try:
+      cores = _parse_cpu_list(Path("/sys/devices/system/cpu/online").read_text(encoding="utf-8"))
+      if cores:
+        return cores
+    except (OSError, ValueError):
+      pass
+  return set(range(os.cpu_count() or 1))
+
+
 def set_core_affinity(cores: list[int]) -> set[int]:
   """Pin the current process to `cores`, skipping any CPU that is not online.
 
@@ -76,8 +112,10 @@ def set_core_affinity(cores: list[int]) -> set[int]:
   if not (sys.platform == 'linux' and not PC):
     return set()
 
-  available = get_available_cores()
-  usable = [c for c in cores if c in available]
+  # online, not this process's mask: a mask narrowed by an earlier pin must not
+  # veto widening back onto the big cluster once power save has re-onlined it.
+  online = get_online_cores()
+  usable = [c for c in cores if c in online]
   if not usable:
     return set()
 
