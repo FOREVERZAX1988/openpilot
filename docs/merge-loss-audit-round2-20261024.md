@@ -168,3 +168,39 @@ openpilot/sunnypilot/modeld_v2/models/{big_,}driving_warp_{1344x760,1928x1208}_t
 
 其中 `sunnypilot/modeld_v2/models/*` 那 4 个已被 jetlink 显式绕开（见 §3.1），
 `selfdrive/modeld/models/big_driving_tinygrad.pkl` 需要单独确认是否有代码按路径读它。
+
+## 6. 执行进度（2026-10-24 上午，真机）
+
+§3.2 pandad / §3.3 web push / §3.5 主体已落地，三笔提交：
+
+| 提交 | 内容 |
+|---|---|
+| `bbe5886f06` | pandad 三条 H7/DOS 判定 + carrot web push 全链（§3.2/§3.3） |
+| `65c0109059` | 回归网第一批 + **真回归①：macan 融合分支**（§3.1 之外的新发现） |
+| `73e7fb3d69` | 回归网第二批 + **真回归②：carrot_man msgq 安全 / ③：LatSuspendAngleDeg 裸读** |
+
+### 6.1 回补过程中新捞出的三条真回归（原审计没列）
+
+1. **`cruise.py` 的 `macan_fusion` 分支整体丢失**（子类 531 行 + 基类 82 行两处）。
+   HEAD 里 `macan_fusion` 只剩 `__init__` 一处赋值 → 融合分支不执行 → carrot 状态机
+   （`_cruise_speed_min`=5）当家。即 `TestMacanFusionSetSpeed` 注释记录的现场缺陷
+   （5 km/h 幽灵速度 + 纵向双源争夺）。回贴时**未**退回已不存在的 `_clamp_set_speed`。
+2. **`carrot_man.py` 的共享 msgq 安全整套丢失**：`_publish_msg`/`_pub_lock`/
+   `_pub_contention`/`_broadcast_submaster`/`CARROT_SERVICES` 全无，`sm.update(0)` 出现两处。
+   即"两个线程同时进 `PubMaster.send`/同时 update 同一 msgq"的堆损坏根因。
+   三方合并唯一冲突点正是"广播线程读 `sm` 还是 `self.sm`"，取本地那份。
+3. **`carrot_controls.py` 参数裸读**：`get("LatSuspendAngleDeg")` 少了 `return_default=True`
+   → 未写过的键给 `float(None)` → `wants_suspend()` 抛 TypeError，而它由 onroad 控制回环轮询。
+
+### 6.2 仍未做（下一轮起点）
+
+- **§3.1 jetlink 测试对齐新设计**：`test_warp_build.py`(5 红)/`test_tinygrad.py`(5 错误)
+  等 9 failed + 5 errors。已确认这三个文件（warp_build/tinygrad/chestnut_parity）在 HEAD
+  与上游底座**逐字节相同**，红是合并前就有的，属"测试断言旧设计"，不是本轮引入。
+  注意 HEAD 已有上游新增的 `jetlink_adapter/warp_build.py`（179 行），对齐应以它为基准。
+- **§3.4 死注释**：`sunnypilot/modeld_v2/helpers.py:18` 那句指向不存在实现的注释。
+- **§2 的 5 个 LFS 指针桩**（132/134 B）与 `big_driving_tinygrad.pkl` 的按路径读取确认。
+- **环境疑点（路试前值得实测一次）**：设备上 `/data/openpilot/tinygrad`（未受管、10-01 部署）
+  的 `Buffer.view` 是 `(size, dtype, offset)` 三参，而 `selfdrive/modeld/modeld.py:143`
+  的 `input_view()` 传两参，且 `pack_inputs()` 在 `ModelState.__init__` 里无条件调用。
+  该行与上游底座逐字节相同，故不是合并问题；需确认 modeld 实际加载的 tinygrad 版本。
