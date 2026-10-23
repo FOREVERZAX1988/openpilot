@@ -168,6 +168,10 @@ class ModelFetcher:
   # stamped on the big-model catalog: whether it carries the newer catalogs' models
   EXTENDED_KEY = "extended"
 
+  # exponential backoff between failed catalog refreshes (per source)
+  RETRY_BASE_S = 30
+  RETRY_MAX_S = 600
+
   def __init__(self, params: Params):
     self.params = params
     self.model_parser = ModelParser()
@@ -176,6 +180,12 @@ class ModelFetcher:
       for source, (_, suffix) in self.MODEL_SOURCES.items()
     }
     self._refetched: set[str] = set()
+    # Boot-time storm guard. This hw cannot write its RTC (qpnp_rtc -> EINVAL), so every
+    # cold boot the clock reads 1970 until NTP lands; TLS then fails with "certificate is
+    # not yet valid" and each caller used to re-hit every mirror once a second.
+    self._retry_at: dict[str, float] = {}
+    self._failures: dict[str, int] = {}
+    self._time_invalid_logged = False
     self._last_active_json: dict[str, str] | None = None
     self._refetched_extends: bool | None = None
     self._update_active_json(extended=False)

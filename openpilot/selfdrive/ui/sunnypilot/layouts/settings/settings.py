@@ -39,9 +39,14 @@ from openpilot.system.ui.widgets.scroller_tici import Scroller
 OP.PANEL_COLOR = rl.Color(10, 10, 10, 255)
 ICON_SIZE = 70
 
-OP.PanelType = IntEnum(  # type: ignore[assignment] # ty: ignore[invalid-assignment]
-  "PanelType",
-  [es.name for es in OP.PanelType] + [
+# Upstream now ships its own BLUETOOTH panel (base PanelType.BLUETOOTH = 2) and this
+# fork used to append "BLUETOOTH" on top of it. enum.IntEnum raises TypeError on a
+# duplicate member name, and this module is imported by the ui entrypoint, so the
+# whole UI died at import and the manager restart-looped it once a second (dead boot
+# screen). Append only names upstream does not already provide: upstream panels keep
+# their order and values, and BLUETOOTH still maps to CarrotBluetoothLayout below.
+_BASE_PANEL_NAMES = [es.name for es in OP.PanelType]
+_EXTRA_PANEL_NAMES = [
     "BLUETOOTH",
     "SUNNYLINK",
     "MODELS",
@@ -54,7 +59,10 @@ OP.PanelType = IntEnum(  # type: ignore[assignment] # ty: ignore[invalid-assignm
     "CARROT",
     "TRIPS",
     "VEHICLE",
-  ],
+]
+OP.PanelType = IntEnum(  # type: ignore[assignment] # ty: ignore[invalid-assignment]
+  "PanelType",
+  _BASE_PANEL_NAMES + [n for n in _EXTRA_PANEL_NAMES if n not in _BASE_PANEL_NAMES],
   start=0,
 )
 

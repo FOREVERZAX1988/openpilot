@@ -1,4 +1,5 @@
 import glob
+import operator
 import os
 import platform
 import time
@@ -123,6 +124,14 @@ def signal_color_observer(started: bool, params: Params, CP: car.CarParams) -> b
 
 def onroad_preview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("IsOnroadPreview")
+
+def use_github_runner(started, params, CP: car.CarParams) -> bool:
+  # Restored 2026-10-23: round-23 re-ordering dropped this definition while the
+  # call site near the bottom of the file survived, so a fresh compile raised
+  # NameError at import and the manager never started (dead boot screen).
+  # Semantics are the pre-merge fork version verbatim.
+  return not PC and params.get_bool("EnableGithubRunner") and (
+    not params.get_bool("NetworkMetered") and not params.get_bool("GithubRunnerSufficientVoltage"))
 
 def use_copyparty(started, params, CP: car.CarParams) -> bool:
   return bool(params.get_bool("EnableCopyparty"))

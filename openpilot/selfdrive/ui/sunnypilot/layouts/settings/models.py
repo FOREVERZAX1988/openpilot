@@ -16,9 +16,9 @@ from openpilot.sunnypilot.models.mirror import (GITHUB_PROXY_PARAM, HF_MIRROR_PA
                                                 describe_hf_mirror, normalize_base_url)
 from openpilot.common.constants import CV
 from openpilot.selfdrive.ui.ui_state import device, ui_state
-from openpilot.selfdrive.ui.sunnypilot.accelerator_link import LINK_MODE_TITLES, big_model_note, link_mode, link_status, \
+from openpilot.selfdrive.ui.sunnypilot.accelerator_link import LINK_MODES, LINK_MODE_TITLES, big_model_note, link_mode, link_status, \
   link_toggle_meaningful, standin_model
-from openpilot.selfdrive.ui.sunnypilot.model_info import (big_model_state, bundles_for_source, carrying_model, default_model_name,
+from openpilot.selfdrive.ui.sunnypilot.model_info import (active_source, big_model_state, bundles_for_source, carrying_model, default_model_name,
                                                            local_model_note, model_cache_size_mb, queued_name,
                                                            refresh_in_progress, refresh_model_list)
 from openpilot.sunnypilot.jetlink_adapter import KEYS, MODES
@@ -36,6 +36,7 @@ from openpilot.system.ui.sunnypilot.widgets.list_view import ListItemSP, toggle_
 from openpilot.system.ui.sunnypilot.widgets.download_status import download_status_item
 from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
 from openpilot.system.ui.sunnypilot.widgets.tree_dialog import TreeOptionDialog, TreeNode, TreeFolder
+from openpilot.system.ui.sunnypilot.widgets.progress_bar import progress_item
 
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp as button_item
@@ -93,6 +94,18 @@ class ModelsLayout(Widget):
       action_item=ScrollingButtonAction(tr("SELECT")),
       callback=lambda: self._open_source_dialog("chestnut"),
     )
+
+    # round-23 重排（7399ffe498）把这两个构造块整段丢了，但 _initialize_items 末尾的
+    # self.items 列表仍在引用它们 → ModelsLayout() 构造即 AttributeError，
+    # ui 在 SettingsLayout 里建面板时抛异常退出(1)，manager 每 6 秒重启一次 ui，
+    # 屏幕就停死在启动画面。语义按 2e36dcdd71 原文恢复，不做任何行为改动。
+    self.accelerator_link_item = multiple_button_item_sp(
+      tr("Jetlink"),
+      self._link_description(""),
+      buttons=[lambda m=m: tr(LINK_MODE_TITLES[m]) for m in MODES],
+      param=KEYS.link, button_width=300, inline=False)
+
+    self.download_item = download_status_item(lambda: tr("Download") if self._downloading else tr("Model Status"))
 
     self.supercombo_label = progress_item(tr("Driving Model"))
     self.vision_label = progress_item(tr("Vision Model"))
