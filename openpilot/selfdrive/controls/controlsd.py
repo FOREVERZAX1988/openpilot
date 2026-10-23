@@ -33,9 +33,6 @@ from openpilot.sunnypilot.common.safe_mode_runtime import enforce_safe_mode
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 
 from openpilot.sunnypilot.selfdrive.controls.controlsd_ext import ControlsExt
-from openpilot.sunnypilot.carrot.carrot_controls import CarrotControls
-from openpilot.sunnypilot.common import param_read
-from openpilot.sunnypilot.common.safe_mode_runtime import enforce_safe_mode
 
 State = log.SelfdriveState.OpenpilotState
 LaneChangeState = log.LaneChangeState
