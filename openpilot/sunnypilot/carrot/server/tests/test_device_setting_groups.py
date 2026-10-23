@@ -11,15 +11,41 @@ def test_no_parameter_appears_in_two_groups():
   assert len(names) == len(set(names))
 
 
+def _base_owner_by_name() -> dict[str, str]:
+  return {
+    name: group
+    for group, entries in device_info.DEVICE_SETTING_GROUPS
+    for name, _default in entries
+  }
+
+
 def test_every_base_default_is_unique_within_the_base_groups():
   grouped = device_info.get_device_setting_group_names()
-  # Base params may be restated by a sunnypilot section (IsMetric sits in
-  # Toggles and on the trips page, AlphaLongitudinalEnabled on the vehicle
-  # page); within the base groups themselves each default appears once.
+  # The base groups own their names, so each one is drawn by exactly one group.
   base_names = [name for _group, entries in device_info.DEVICE_SETTING_GROUPS for name, _default in entries]
   assert len(base_names) == len(set(base_names))
   flattened = [name for names in grouped.values() for name in names]
   assert set(device_info.DEVICE_SETTING_DEFAULTS) <= set(flattened)
+
+
+def test_no_parameter_appears_in_two_device_groups():
+  grouped = device_info.get_device_setting_group_names()
+  # One param, one row: the merged table (base groups first, then the catalog
+  # sections) must never name the same param twice.
+  flattened = [name for names in grouped.values() for name in names]
+  assert len(flattened) == len(set(flattened))
+
+
+def test_a_section_never_restates_a_base_param():
+  grouped = device_info.get_device_setting_group_names()
+  # A sunnypilot section repeats a param only if the catalog menu lists it under
+  # a second node; the base groups are the first sections, so a section that
+  # restates one of their names would render a duplicate row further down.
+  base_owner = _base_owner_by_name()
+  for group_id, names in grouped.items():
+    for name in names:
+      if name in base_owner:
+        assert group_id == base_owner[name], f"{name} is on {group_id} and on {base_owner[name]}"
 
 
 def test_the_group_mapping_keeps_declaration_order():

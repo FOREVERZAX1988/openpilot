@@ -37,12 +37,39 @@ class _StubSource:
     pass
 
 
+class _StubSccTarget(_StubSource):
+  """Vision / Map half of SmartCruiseControl.
+
+  After the upstream alignment the v/a targets live on the halves, so the stub
+  has to expose them there; reading them off the parent raises AttributeError.
+  """
+
+  def __init__(self, v_target: float = 0.0, a_target: float = 0.0) -> None:
+    super().__init__(v_target, a_target)
+    self.state = 0
+    self.is_enabled = False
+    self.is_active = False
+    self.current_lat_acc = 0.0
+    self.max_pred_lat_acc = 0.0
+
+
+class _StubScc:
+  """SmartCruiseControl double: .vision / .map own the targets, not the parent."""
+
+  def __init__(self, v_target: float = 0.0, a_target: float = 0.0) -> None:
+    self.vision = _StubSccTarget(v_target, a_target)
+    self.map = _StubSccTarget(v_target, a_target)
+
+  def update(self, *args, **kwargs) -> None:
+    pass
+
+
 class TestCarrotTargetUnification(OpenpilotTestCase):
   def _make_planner(self):
     planner = LongitudinalPlannerSP(MagicMock(), MagicMock(), MagicMock())
     # Stub the heavy collaborators so the test depends only on the planner's
     # target-arbitration logic, not on SLA/SCC/dec internals or a live stream.
-    planner.scc = _StubSource(v_target=100.0, a_target=0.0)
+    planner.scc = _StubScc(v_target=100.0, a_target=0.0)
     planner.sla = _StubSource(v_target=10.0, a_target=0.0)  # lowest -> wins
     # _sla_owner() chooses between the real machine and mirror from the ICBM state, which would
     # replace the stub above. This test covers target arbitration only, so keep the stub as owner.
@@ -75,12 +102,34 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
                                             "carStateSP": car_state_sp}[k]
     return sm
 
+  @staticmethod
+  def _carrot_is_a_competing_target() -> bool:
+    """Is carrot one of the candidate speed targets?
+
+    ``targets`` is a local in ``update_targets`` now and only the winner is kept
+    (``self.source`` / ``self.output_v_target``), so the call site is what has to
+    be inspected: a carrot key there is exactly the regression this guards.
+    """
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[6]
+    src = (root / "openpilot" / "sunnypilot" / "selfdrive" / "controls" / "lib" /
+           "longitudinal_planner.py").read_text(encoding="utf-8")
+    # 上游把候选表从本地 `targets` 改成实例属性 `self.targets`（long MPC 对齐），锚点两种写法都接受；
+    # 断言的性质不变：carrot 不得出现在候选速度目标里。
+    block = re.search(r"^\s*(?:self\.)?targets = \{(.*?)^\s*\}", src, re.S | re.M)
+    assert block is not None, "the candidate-targets dict moved; update this test"
+    return "LongitudinalPlanSource.carrot" in block.group(1)
+
   def test_no_carrot_target_injected(self) -> None:
     planner = self._make_planner()
     sm = self._sm()
     planner.update_targets(sm, v_ego=10.0, a_ego=0.0, v_cruise=30.0)
-    # The competing carrot speed target is gone.
-    assert LongitudinalPlanSource.carrot not in planner.targets
+    # The competing carrot speed target is gone from both the arbitrated
+    # outcome and the candidate list that could reintroduce it.
+    assert planner.source != LongitudinalPlanSource.carrot
+    assert not self._carrot_is_a_competing_target(), "carrot is competing for the speed target again"
     # SLA (lowest stubbed v_target) is the sole speed-limit executor.
     assert planner.source == LongitudinalPlanSource.speedLimitAssist
 
@@ -94,6 +143,9 @@ class TestCarrotTargetUnification(OpenpilotTestCase):
     planner.carrot_source.v_target = 5.0
     sm = self._sm()
     planner.update_targets(sm, v_ego=10.0, a_ego=0.0, v_cruise=30.0)
+    # Carrot is an intentional 5th candidate source here (see the "Carrot as a 5th
+    # speed source" block), so it may own the arbitration; what must never happen is
+    # it commanding more speed than the user's cruise.
     assert planner.targets[LongitudinalPlanSource.carrot][0] == 5.0, planner.targets
 
     planner.carrot_source.v_target = 100.0  # far above cruise: clamped, never commands more speed
@@ -135,8 +187,8 @@ class TestTFollowUserScale(OpenpilotTestCase):
       m = re.search(r'\{"' + key + r'",\s*\{\s*PERSISTENT \| BACKUP,\s*FLOAT,\s*"([\d.]+)"\s*\}\}', keys_src)
       assert m is not None, f"{key} is not registered"
       assert declared.get(personality) == float(m.group(1)), (
-        f"{personality}: T_FOLLOW_DEFAULTS={declared.get(personality)} but {key} defaults to " +
-        f"{m.group(1)} - the user scale would not be 1.0 on an untouched device")
+        f"{personality}: T_FOLLOW_DEFAULTS={declared.get(personality)} but {key} defaults to "
+        + f"{m.group(1)} - the user scale would not be 1.0 on an untouched device")
 
   def test_scale_is_exactly_one_on_defaults(self) -> None:
     """Behaviour preservation: untouched tuning must not change the follow time."""

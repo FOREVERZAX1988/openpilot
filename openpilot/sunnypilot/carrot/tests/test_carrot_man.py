@@ -11,6 +11,7 @@ import sys
 import time
 import types
 import inspect
+import threading
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -250,6 +251,22 @@ sys.modules["opendbc.car"] = _opendbc_car_pkg
 sys.modules["opendbc.car.common"] = _opendbc_car_common_pkg
 sys.modules["opendbc.car.common.conversions"] = _opendbc_conversions_mod
 
+# `import a.b as x` resolves the submodule through the parent package's *attribute*
+# chain, not only through sys.modules. If an earlier test module already imported the
+# real `openpilot.common` / `openpilot.cereal` / `opendbc`, those attributes keep
+# pointing at the real packages even after the sys.modules swap above, so carrot_man
+# would bind the real SubMaster/Params (e.g. when collected after
+# server/tests/test_carrot_navi_hud_profile.py, which imports openpilot.cereal).
+# Repoint the attributes too; they are restored with the modules at the bottom.
+import openpilot as _openpilot_pkg
+
+_SAVED_ATTRS = {}
+for _pkg, _attr, _stub in ((_openpilot_pkg, "common", _common_pkg),
+                           (_openpilot_pkg, "cereal", _cereal_pkg),
+                           (_openpilot_pkg, "opendbc", _opendbc_pkg)):
+  _SAVED_ATTRS[(_pkg, _attr)] = getattr(_pkg, _attr, None)
+  setattr(_pkg, _attr, _stub)
+del _pkg, _attr, _stub
 # config.py binds `Params` at import time. If a sibling module imported the
 # carrot subtree earlier in this process (e.g. test_lane_change_gap ->
 # carrot_functions -> config), those cached modules hold the REAL Params and
@@ -271,6 +288,7 @@ sys.modules["opendbc.car.common.conversions"] = _opendbc_conversions_mod
 import openpilot.sunnypilot.carrot.config as _carrot_config
 if _carrot_config.Params is not _FakeParams:
   _carrot_config.Params = _FakeParams
+
 
 from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPPING
 from openpilot.sunnypilot.carrot.web_interface import WebInterface
@@ -1449,7 +1467,7 @@ class TestCarrotManager(unittest.TestCase):
     serv = self.mgr._carrot_serv
     with patch.object(serv._params, "get_bool", return_value=False), \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
-      serv._maybe_sync_system_time(int(time.time()) + 600, "Asia/Seoul")  # noqa: TID251
+      serv._maybe_sync_system_time(int(time.time()) + 600, "Asia/Seoul")  # noqa: TID251 - epoch 秒是接口语义
     # Default-off: no system clock command may run.
     assert mock_run.call_count == 0
 
@@ -1458,7 +1476,7 @@ class TestCarrotManager(unittest.TestCase):
     with patch.object(serv._params, "get_bool", return_value=True), \
          patch("openpilot.system.hardware.PC", False, create=True), \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
-      serv._maybe_sync_system_time(int(time.time()) + 30, "Asia/Seoul")  # noqa: TID251
+      serv._maybe_sync_system_time(int(time.time()) + 30, "Asia/Seoul")  # noqa: TID251 - epoch 秒是接口语义
     # Within the 60s limited-drift window: no clock change.
     assert mock_run.call_count == 0
 
@@ -1478,7 +1496,7 @@ class TestCarrotManager(unittest.TestCase):
          patch("openpilot.system.hardware.PC", False, create=True), \
          patch.object(serv._params, "put") as mock_put, \
          patch("openpilot.sunnypilot.carrot.carrot_serv.subprocess.run") as mock_run:
-      serv._maybe_sync_system_time(int(time.time()) + 120, "Asia/Seoul")  # noqa: TID251
+      serv._maybe_sync_system_time(int(time.time()) + 120, "Asia/Seoul")  # noqa: TID251 - epoch 秒是接口语义
     assert mock_run.call_count >= 1
     put_keys = [c.args[0] for c in mock_put.call_args_list]
     assert "TimezoneName" in put_keys
@@ -2460,6 +2478,113 @@ class TestSectionAverageCarrotServ(unittest.TestCase):
 # Put the real modules back. This has to happen at the very end of the module: this file
 # has module-level imports of the code under test spread through it (see the
 # carrot_functions import above), and every one of them needs the stubs. Once they are
+class _OverlapDetectingPubMaster:
+  """PubMaster stand-in that flags two threads being inside ``send()`` at once."""
+
+  def __init__(self, services):
+    self.services = services
+    self.sent = []
+    self.overlaps = 0
+    self._busy = False
+
+  def send(self, service, msg):
+    if self._busy:
+      self.overlaps += 1
+    self._busy = True
+    try:
+      # Release the GIL so a second thread can really land inside send().
+      time.sleep(0.002)
+      self.sent.append((service, msg))
+    finally:
+      self._busy = False
+
+
+class TestCarrotManSharedMsgqSafety(unittest.TestCase):
+  """carrot_man must never use one msgq socket set from two threads.
+
+  The 2026-10-18 crash round (7 faulthandler dumps + the 07:23 gdb core) all died in
+  native code: glibc aborting with "malloc(): unaligned tcache chunk detected" in
+  SubSocket::create <- Poller.poll <- SubMaster.update, and two aborts inside _publish.
+  Both are the primitives that were reached from two threads at once: tick() and the
+  broadcast thread shared `self.sm`, tick() and the route server thread shared `self.pm`.
+  """
+
+  def setUp(self):
+    # Same isolation as TestCarrotManager.setUp: a sibling module may already have
+    # imported carrot_man bound to the real cereal.messaging.
+    import openpilot.sunnypilot.carrot.carrot_man as _cm
+    self._real_messaging = _cm.messaging
+    _cm.messaging = _FakeMessaging
+    try:
+      self.mgr = CarrotManager()
+    except Exception:
+      _cm.messaging = self._real_messaging
+      raise
+    self.mgr.params_memory._store = self.mgr.params._store
+    self.mgr.pm = _OverlapDetectingPubMaster(['carrotManSP', 'navInstructionCarrotSP', 'navRoute'])
+
+  def tearDown(self):
+    import openpilot.sunnypilot.carrot.carrot_man as _cm
+    _cm.messaging = self._real_messaging
+
+  def test_broadcast_thread_gets_its_own_submaster(self):
+    bc = self.mgr._broadcast_submaster()
+    assert bc is not self.mgr.sm
+    # Cached, otherwise every broadcast tick would rebuild 11 subscriptions.
+    assert self.mgr._broadcast_submaster() is bc
+
+  def test_broadcast_message_reads_its_own_submaster(self):
+    bc = self.mgr._broadcast_submaster()
+    bc._data["carState"] = MagicMock(vEgoCluster=30.0, vCruise=0.0, cruiseState=None, logCarrot="BC")
+    self.mgr.sm._data["carState"] = MagicMock(vEgoCluster=10.0, vCruise=0.0, cruiseState=None, logCarrot="TICK")
+
+    msg = json.loads(self.mgr.make_send_message(bc))
+    assert msg["log_carrot"] == "BC"
+    assert msg["v_ego_kph"] == 108  # 30 m/s, not the 36 km/h the tick SubMaster would give
+
+  def test_publish_is_serialized_across_threads(self):
+    errors = []
+
+    def worker(service):
+      try:
+        for _ in range(25):
+          self.mgr._publish_msg(service, object())
+      except Exception as e:  # pragma: no cover - surfaced through the assert below
+        errors.append(e)
+
+    threads = [threading.Thread(target=worker, args=(s,), name=f"pub-{s}")
+               for s in ("carrotManSP", "navRoute")]
+    for t in threads:
+      t.start()
+    for t in threads:
+      t.join(timeout=30)
+
+    assert not errors, errors
+    assert self.mgr.pm.overlaps == 0, "two threads were inside PubMaster.send at the same time"
+    assert len(self.mgr.pm.sent) == 50
+    # Without real contention this test proves nothing, so make it explicit.
+    assert self.mgr._pub_contention > 0, "the two threads never overlapped - test is not exercising the race"
+
+  def test_tick_publish_goes_through_the_serialized_path(self):
+    calls = []
+    self.mgr._publish_msg = lambda service, msg: calls.append(service)
+    self.mgr._publish()
+    assert calls == ["carrotManSP", "navInstructionCarrotSP"]
+
+  def test_nav_route_goes_through_the_serialized_path(self):
+    calls = []
+    self.mgr._publish_msg = lambda service, msg: calls.append(service)
+    self.mgr.send_routes([{"longitude": 127.0, "latitude": 37.0}])
+    assert calls == ["navRoute"]
+
+  def test_submaster_update_only_happens_on_the_tick_thread(self):
+    """A second thread calling sm.update() is exactly what corrupted the heap."""
+    import openpilot.sunnypilot.carrot.carrot_man as _cm
+    src = inspect.getsource(_cm)
+    update_calls = [line.strip() for line in src.splitlines() if ".sm.update(" in line]
+    assert update_calls == ["self.sm.update(0)"], update_calls
+
+
 # bound, the stubs have done their job - leaving them installed is what broke the rest of
 # the suite, because "openpilot.common" ends up as a non-package object and any later
 # module importing openpilot.common.test dies with "'openpilot.common' is not a package".
@@ -2471,6 +2596,16 @@ for _name, _module in _SAVED_MODULES.items():
   else:
     sys.modules[_name] = _module
 del _name, _module
+
+# Also undo the parent-package attribute swap made just before the carrot_man import.
+for (_pkg, _attr), _saved in _SAVED_ATTRS.items():
+  if _saved is None:
+    if hasattr(_pkg, _attr):
+      delattr(_pkg, _attr)
+  else:
+    setattr(_pkg, _attr, _saved)
+del _pkg, _attr, _saved
+_SAVED_ATTRS.clear()
 
 
 if __name__ == "__main__":
