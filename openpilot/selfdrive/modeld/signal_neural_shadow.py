@@ -38,15 +38,21 @@ def run_selected(directory, backend):
 
 def automatic_backend(params):
   from openpilot.sunnypilot.carrot.signal_mode import read_mode
+  from openpilot.sunnypilot.common.param_read import read_bool
   if read_mode(params) == 2:
     # Preparation requires the measured-housing CPU evidence contract.
     return 'tracking_cpu'
   # The DM model also runs on the internal GPU with an external driving model.
   # Parked A/B/A showed ~20 -> 10 Hz DM even at QCOM priority 15. Camera failure
   # must never grant GPU access: that would keep the overloaded DM in fallback.
-  dm_needed = (params.get_bool('DriverMonitoringEnabled') and
-               not params.get_bool('DriverMonitoringSessionDisabled')) or params.get_bool('IsDriverViewEnabled')
-  return 'qcom' if params.get_bool('UsbGpuActive') and not dm_needed else 'tracking_cpu'
+  # Every key goes through param_read: Params.get_bool raises UnknownKeyName for a
+  # key that params_keys.h has not registered, and DriverMonitoringSessionDisabled
+  # is not registered on this fork - a raw read would kill the worker on its first
+  # loop instead of answering 'cpu'. ChestnutActive is the current name of the USB
+  # GPU flag (upstream renamed UsbGpu* to Chestnut*).
+  dm_needed = (read_bool(params, 'DriverMonitoringEnabled') and
+               not read_bool(params, 'DriverMonitoringSessionDisabled')) or read_bool(params, 'IsDriverViewEnabled')
+  return 'qcom' if read_bool(params, 'ChestnutActive') and not dm_needed else 'tracking_cpu'
 
 
 def run_auto(directory=DIRECTORY, duration=None):

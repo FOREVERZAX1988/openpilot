@@ -19,7 +19,7 @@ from openpilot.sunnypilot.carrot.tests.audit_param_consistency import parse_para
 
 MODULE = Path(shadow.__file__)
 BACKEND_KEYS = {'DriverMonitoringEnabled', 'DriverMonitoringSessionDisabled',
-                'IsDriverViewEnabled', 'UsbGpuActive'}
+                'IsDriverViewEnabled', 'ChestnutActive'}
 
 
 class UnknownKeyName(Exception):
@@ -60,12 +60,12 @@ def test_automatic_backend_survives_keys_this_fork_never_registered():
   # DM enabled: the GPU belongs to the DM model, so neural work stays on CPU.
   assert shadow.automatic_backend(FakeParams({'DriverMonitoringEnabled': 1})) == 'tracking_cpu'
   # DM off and the USB GPU present: QCOM is allowed.
-  assert shadow.automatic_backend(FakeParams({'DriverMonitoringEnabled': 0, 'UsbGpuActive': 1})) == 'qcom'
+  assert shadow.automatic_backend(FakeParams({'DriverMonitoringEnabled': 0, 'ChestnutActive': 1})) == 'qcom'
   # A driver-facing camera needs the GPU too, even with DM off.
   assert shadow.automatic_backend(
-    FakeParams({'DriverMonitoringEnabled': 0, 'UsbGpuActive': 1, 'IsDriverViewEnabled': 1})) == 'tracking_cpu'
+    FakeParams({'DriverMonitoringEnabled': 0, 'ChestnutActive': 1, 'IsDriverViewEnabled': 1})) == 'tracking_cpu'
   # Preparation mode (2) demands the measured-housing CPU evidence contract.
-  assert shadow.automatic_backend(FakeParams({'SignalAssistMode': 2, 'UsbGpuActive': 1})) == 'tracking_cpu'
+  assert shadow.automatic_backend(FakeParams({'SignalAssistMode': 2, 'ChestnutActive': 1})) == 'tracking_cpu'
   # No keys at all: the whole selection still answers instead of raising.
   assert shadow.automatic_backend(FakeParams({})) == 'tracking_cpu'
 
