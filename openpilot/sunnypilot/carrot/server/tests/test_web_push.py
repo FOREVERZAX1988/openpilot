@@ -1,17 +1,41 @@
 #!/usr/bin/env python3
 import base64
 import json
+import os
+import pathlib
+import tempfile
 import unittest
+from unittest import mock
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from openpilot.sunnypilot.carrot.server import config
+from openpilot.sunnypilot.carrot.server.services import web_push
 from openpilot.sunnypilot.carrot.server.services.web_push import (
   build_vapid_authorization,
   encrypt_payload,
   ensure_vapid_keys,
   generate_vapid_keys,
 )
+
+
+class _FakeParams:
+  """In-memory Params stand-in.
+
+  Push state lives in Params now, so every test that writes it has to be kept off
+  the device store: these tests run on the car and must not overwrite the VAPID
+  keypair a phone is already subscribed to.
+  """
+
+  def __init__(self):
+    self.store: dict[str, object] = {}
+
+  def get(self, key, **_kwargs):
+    return self.store.get(key)
+
+  def put(self, key, value, **_kwargs):
+    self.store[key] = value
 
 
 def _b64url(data: bytes) -> bytes:
@@ -85,22 +109,158 @@ class TestWebPush(unittest.TestCase):
                                               int.from_bytes(raw_sig[32:], "big"))
     pub.verify(der_sig, f"{header}.{claims}".encode(), ec.ECDSA(hashes.SHA256()))
 
-  def test_ensure_vapid_keys_persists(self):
-    class FakeParams:
-      def __init__(self):
-        self.store = {}
-
-      def get(self, key):
-        return self.store.get(key)
-
-      def put(self, key, value):
-        self.store[key] = value
-
-    fake = FakeParams()
-    keys = ensure_vapid_keys(fake)
-    self.assertIn("private_key", keys)
-    self.assertEqual(ensure_vapid_keys(fake), keys)  # second call reuses stored keys
+  def test_ensure_vapid_keys_persist_across_calls(self):
+    fake = _FakeParams()
+    with tempfile.TemporaryDirectory() as tmp:
+      path = os.path.join(tmp, "state", "web_push.json")
+      with mock.patch.object(web_push, "_params", lambda: fake), \
+           mock.patch.object(config, "CARROT_WEB_PUSH_PATH", path):
+        keys = ensure_vapid_keys()
+        self.assertIn("private_key", keys)
+        self.assertEqual(ensure_vapid_keys(), keys)  # second call reuses the stored keypair
+        self.assertEqual(fake.store["WebPushVapid"], keys)
+        self.assertFalse(os.path.exists(path), "Params is the store now, not a JSON file")
 
 
-if __name__ == "__main__":
-  unittest.main()
+def _push_app():
+  from aiohttp import web
+  from openpilot.sunnypilot.carrot.server.features import push as push_feature
+
+  app = web.Application()
+  push_feature.register(app)
+  return app
+
+
+def _state(tmp_path):
+  return os.path.join(str(tmp_path), "web_push.json")
+
+
+def test_manifest_icon_size_matches_the_file_we_serve():
+  """Chrome refuses the install prompt when the declared icon size is wrong."""
+  from openpilot.sunnypilot.carrot.server.config import SELFDRIVE_ASSETS_DIR
+
+  icon = os.path.join(SELFDRIVE_ASSETS_DIR, "img_spinner_comma.png")
+  if not os.path.exists(icon):
+    raise unittest.SkipTest("icon asset not present in this checkout")
+  head = pathlib.Path(icon).read_bytes()[:26]
+  assert (int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")) == (800, 800)
+
+
+def test_pwa_assets_are_served_and_the_panel_links_them(tmp_path, monkeypatch):
+  import asyncio
+  from aiohttp.test_utils import TestClient, TestServer
+
+  monkeypatch.setattr(config, "CARROT_WEB_PUSH_PATH", _state(tmp_path))
+
+  async def check():
+    async with TestClient(TestServer(_push_app())) as client:
+      manifest = await client.get("/manifest.webmanifest")
+      assert manifest.status == 200
+      assert manifest.headers["Content-Type"].startswith("application/manifest+json")
+      text = await manifest.text()
+      assert '"sizes": "800x800"' in text
+      assert "/shared-assets/img_spinner_comma.png" in text
+
+      sw = await client.get("/sw.js")
+      assert sw.status == 200
+      assert sw.headers["Content-Type"].startswith("application/javascript")
+      sw_text = await sw.text()
+      assert "self.addEventListener('push'" in sw_text
+      assert "/api/" in sw_text  # network-first API path in the SW fetch handler
+
+      page = await client.get("/push")
+      assert page.status == 200
+      page_text = await page.text()
+      for needle in ("/api/push/status", "/api/push/subscribe", "/api/push/unsubscribe",
+                     "/api/push/test", "pushManager.subscribe", "isSecureContext"):
+        assert needle in page_text
+
+  asyncio.run(check())
+
+
+def test_status_hands_out_a_stable_vapid_key_and_subscriptions_round_trip(tmp_path, monkeypatch):
+  import asyncio
+  from aiohttp.test_utils import TestClient, TestServer
+
+  state_path = _state(tmp_path)
+  fake = _FakeParams()
+  monkeypatch.setattr(web_push, "_params", lambda: fake)
+  monkeypatch.setattr(config, "CARROT_WEB_PUSH_PATH", state_path)
+
+  async def check():
+    async with TestClient(TestServer(_push_app())) as client:
+      first = await (await client.get("/api/push/status")).json()
+      second = await (await client.get("/api/push/status")).json()
+      assert first["vapidPublicKey"] == second["vapidPublicKey"], "VAPID keys must be stable across requests"
+      assert len(base64.urlsafe_b64decode(first["vapidPublicKey"] + "==")) == 65
+      assert first["subscriptions"] == 0
+
+      bad = await client.post("/api/push/subscribe", json={"endpoint": "http://insecure"})
+      assert bad.status == 400
+
+      sub = {"endpoint": "https://push.example/abc", "keys": {"p256dh": "BPk", "auth": "a"}}
+      ok = await (await client.post("/api/push/subscribe", json=sub)).json()
+      assert ok == {"ok": True, "subscriptions": 1}
+
+      again = await (await client.post("/api/push/subscribe", json=sub)).json()
+      assert again["subscriptions"] == 1, "re-subscribing the same endpoint must not duplicate"
+
+      gone = await (await client.post("/api/push/unsubscribe", json={"endpoint": sub["endpoint"]})).json()
+      assert gone == {"ok": True, "subscriptions": 0}
+
+  asyncio.run(check())
+  assert set(fake.store) == {"WebPushVapid", "WebPushSubscriptions"}, "state must round-trip through Params"
+  assert fake.store["WebPushVapid"]["private_key"]
+  assert fake.store["WebPushSubscriptions"] == [], "the unsubscribed endpoint must be gone"
+  assert not pathlib.Path(state_path).exists(), "no JSON file should be written any more"
+
+
+def test_legacy_json_file_is_imported_once_then_renamed(tmp_path, monkeypatch):
+  """The pre-Params state file must survive the move: same keypair, same subscriptions."""
+  legacy = tmp_path / "web_push.json"
+  legacy.write_text(json.dumps({
+    "vapid": {"private_key": "legacy-priv", "public_key": "legacy-pub"},
+    "subscriptions": [{"endpoint": "https://push.example/legacy", "keys": {"p256dh": "BPk", "auth": "a"}}],
+  }), encoding="utf-8")
+  fake = _FakeParams()
+  monkeypatch.setattr(web_push, "_params", lambda: fake)
+  monkeypatch.setattr(config, "CARROT_WEB_PUSH_PATH", str(legacy))
+
+  state = web_push.load_state()
+  assert state["vapid"]["public_key"] == "legacy-pub"
+  assert [s["endpoint"] for s in state["subscriptions"]] == ["https://push.example/legacy"]
+  assert fake.store["WebPushVapid"]["private_key"] == "legacy-priv"
+  assert not legacy.exists()
+  assert (tmp_path / "web_push.json.migrated").exists(), "the old file stays as a backup"
+
+  # Second read is served from Params, not from the renamed file.
+  fake.store["WebPushSubscriptions"] = []
+  assert web_push.load_state()["subscriptions"] == []
+
+
+class TestPwaInstallability(unittest.TestCase):
+  def test_manifest_icons_are_installable_sizes_and_exist_on_disk(self):
+    # Chrome refuses to treat the panel as installable (no install prompt, no
+    # standalone home-screen app) unless the manifest ships 192px and 512px
+    # icons that actually resolve, and it wants a maskable one as well.
+    manifest_path = os.path.join(config.WEB_DIR, "manifest.webmanifest")
+    with open(manifest_path, encoding="utf-8") as f:
+      manifest = json.load(f)
+
+    icons = {f"{entry['sizes']}:{entry.get('purpose', 'any')}": entry for entry in manifest["icons"]}
+    self.assertIn("192x192:any", icons)
+    self.assertIn("512x512:any", icons)
+    self.assertIn("512x512:maskable", icons)
+
+    for entry in manifest["icons"]:
+      if not entry["src"].startswith("/icons/"):
+        continue  # /shared-assets/* lives in selfdrive/assets and is covered above
+      width, height = (int(part) for part in entry["sizes"].split("x"))
+      icon_path = os.path.join(config.WEB_DIR, entry["src"].lstrip("/"))
+      self.assertTrue(pathlib.Path(icon_path).exists(), f"missing icon file for {entry['src']}")
+      head_bytes = pathlib.Path(icon_path).read_bytes()[:26]
+      self.assertEqual((int.from_bytes(head_bytes[16:20], "big"), int.from_bytes(head_bytes[20:24], "big")),
+                       (width, height))
+
+    self.assertEqual(manifest["id"], "/")
+    self.assertEqual(manifest["display"], "standalone")

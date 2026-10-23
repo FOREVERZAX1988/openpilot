@@ -413,9 +413,6 @@ def test_auto_update_repairs_tracking_and_ignores_unrelated_fetch(web_dispatcher
     proc = await asyncio.to_thread(subprocess.run, ["git", *args], cwd="/data/openpilot", capture_output=True, text=True, timeout=timeout)
     return proc.returncode, (proc.stdout + proc.stderr).strip()
 
-  async def notify(head):
-    pass
-
   def prepare(repo):
     result = prepare_git_pull(repo)
     git(device, "fetch", "origin", "carrot-wip", "carrot-other")
@@ -429,7 +426,6 @@ def test_auto_update_repairs_tracking_and_ignores_unrelated_fetch(web_dispatcher
   monkeypatch.setattr(auto_update, "write_auto_update_event", lambda status, **fields: events.append(status) or {"status": status})
   monkeypatch.setattr(auto_update, "_set_auto_update_alert", lambda *args: None)
   monkeypatch.setattr(auto_update, "write_git_pull_time", lambda: None)
-  monkeypatch.setattr(auto_update, "_notify_cwp", notify)
   monkeypatch.setattr(auto_update, "_last_pull_at", float("-inf"))
   assert asyncio.run(auto_update._attempt_update(types.SimpleNamespace(ready=lambda: True))) == (True, True, expected)
   assert events == ["pulling", "updated"]

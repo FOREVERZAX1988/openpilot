@@ -246,18 +246,16 @@ def test_git_pull_reports_actual_update_and_records_pull_time(monkeypatch):
     commands.append(args)
     return next(responses)
 
-  async def fake_notify(old_head):
-    recorded.append(("notify", old_head))
-
   monkeypatch.setattr(auto_update, "_git", fake_git)
   monkeypatch.setattr(auto_update, "read_auto_update_state", dict)
   monkeypatch.setattr(auto_update, "write_auto_update_event", lambda status, **fields: {"status": status, **fields})
   monkeypatch.setattr(auto_update, "_set_auto_update_alert", lambda show, detail="": recorded.append(("alert", show)))
   monkeypatch.setattr(auto_update, "write_git_pull_time", lambda: recorded.append(("time", None)))
-  monkeypatch.setattr(auto_update, "_notify_cwp", fake_notify)
 
   assert asyncio.run(auto_update._run_git_pull("new-head")) == (True, True, "new-head")
-  assert recorded == [("alert", False), ("time", None), ("notify", "old-head")]
+  # The dead CWP phone-home was removed with upstream 4f4256c37b, so a pull no
+  # longer records a notify step.
+  assert recorded == [("alert", False), ("time", None)]
   assert ["merge", "--ff-only", "new-head"] in commands
   assert not any(args[0] == "pull" for args in commands)
 
