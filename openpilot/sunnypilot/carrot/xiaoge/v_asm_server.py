@@ -57,6 +57,12 @@ FOLLOWUP_INTERVAL_SECONDS = 0.15
 FOLLOWUP_WINDOW_SECONDS = 1.5
 VASM_MIN_SPEED_MPS = 30.0 / 3.6
 VASM_MAX_SPEED_MPS = 120.0 / 3.6
+# Below this the vehicle is parked (~1 km/h). camerad keeps feeding frames while the
+# car sits in a garage or at a light, and at the lane model's 1 Hz floor that is a
+# quarter of the device's CPU spent on a picture nothing consumes (measured 24 % of
+# the whole device while parked with onroad preview open, 2026-10-22). 0.3 m/s is
+# far under any real creep: 0.3 m/s for a second is 30 cm.
+PARKED_SPEED_MPS = 0.3
 VASM_MIN_LANE_WIDTH_METERS = 3.0
 CAMERA_TIMEOUT_SECONDS = 2.0
 SNAPSHOT_TIMEOUT_SECONDS = 5.0
@@ -137,6 +143,23 @@ def normalize_config(config: object) -> dict:
   return normalized
 
 
+def parked_gate(speed_mps: float | None) -> dict:
+  """Whether vision inference may run at all, given the vehicle's speed.
+
+  ``None`` means carState is unavailable, which is *not* the same as parked: this
+  process also starts offroad (carrot_enabled, not only_onroad), so the honest
+  answer is "keep inferring" and let the freshness timeouts downstream decide.
+  Failing closed here would drop lane data the moment a state message hiccups on
+  the highway, which is the opposite of what a CPU-saving gate should risk.
+  """
+  if speed_mps is None:
+    return {"active": True, "reason": "carState unavailable: inference left on", "speed": None}
+  speed = float(speed_mps)
+  if speed < PARKED_SPEED_MPS:
+    return {"active": False, "reason": f"parked (vEgo {speed:.2f} m/s)", "speed": speed}
+  return {"active": True, "reason": "", "speed": speed}
+
+
 def create_params():
   try:
     from openpilot.common.params import Params
@@ -190,6 +213,11 @@ class VASMService:
     self.followup_until = 0.0
     self.camera_error = "waiting for wide road camera"
     self.sm = messaging.SubMaster(["carState", "modelV2"])
+    # Both camera threads consult the vehicle state, and SubMaster is not thread
+    # safe: one lock over update()+reads keeps the parked gate and the lane-change
+    # gate from draining the same sockets concurrently.
+    self.sm_lock = threading.Lock()
+    self.inference_gate = {"active": True, "reason": "not checked yet", "speed": None}
     self.pm = messaging.PubMaster(["customReservedRawData0"])
     self.vasm_gate = {
       "active": False,
@@ -390,6 +418,7 @@ class VASMService:
         "configured": bool(self.config),
         "configuredSides": list(self.inference.configured_sides),
         "gate": self.vasm_gate,
+        "inferenceGate": self.inference_gate,
         "threshold": self.threshold,
         "smoothingSeconds": self.smoothing_seconds,
         "baseIntervalSeconds": self.base_interval_seconds,
@@ -442,29 +471,57 @@ class VASMService:
         return None
       return self.last_road_jpeg if stream_type == "road" else self.last_jpeg
 
+  def _update_inference_gate(self) -> tuple[bool, str]:
+    """Shut the ONNX runs off while the vehicle is parked.
+
+    Both camera threads keep draining frames, so snapshots, `status()` and the
+    web panel keep working; only the model runs are skipped. The gate is
+    re-evaluated on every camera frame, so the first inference after pulling away
+    is one frame late rather than one interval late.
+    """
+    speed = None
+    with self.sm_lock:
+      self.sm.update(0)
+      if self.sm.all_alive(["carState"]) and self.sm.all_valid(["carState"]):
+        try:
+          speed = float(self.sm["carState"].vEgo)
+        except (AttributeError, TypeError, ValueError):
+          speed = None
+    gate = parked_gate(speed)
+    with self.lock:
+      self.inference_gate = gate
+    return bool(gate["active"]), str(gate["reason"])
+
   def _update_vasm_gate(self) -> tuple[bool, str]:
-    self.sm.update(0)
-    services = ["carState", "modelV2"]
-    if not (self.sm.all_alive(services) and self.sm.all_valid(services)):
-      gate = {"active": False, "side": "", "reason": "carState or modelV2 is unavailable", "laneWidth": 0.0}
-    else:
-      speed = float(self.sm["carState"].vEgo)
-      direction = self.sm["modelV2"].meta.laneChangeDirection
-      if speed < VASM_MIN_SPEED_MPS or speed > VASM_MAX_SPEED_MPS:
-        gate = {"active": False, "side": "", "reason": "speed outside 30-120 km/h", "laneWidth": 0.0}
-      elif direction == log.LaneChangeDirection.left:
-        width = lane_width_meters(self.sm["modelV2"].meta, "laneWidthLeft")
-        gate = {"active": width >= VASM_MIN_LANE_WIDTH_METERS, "side": "left", "reason": "", "laneWidth": width}
-      elif direction == log.LaneChangeDirection.right:
-        width = lane_width_meters(self.sm["modelV2"].meta, "laneWidthRight")
-        gate = {"active": width >= VASM_MIN_LANE_WIDTH_METERS, "side": "right", "reason": "", "laneWidth": width}
+    with self.sm_lock:
+      self.sm.update(0)
+      services = ["carState", "modelV2"]
+      if not (self.sm.all_alive(services) and self.sm.all_valid(services)):
+        gate = {"active": False, "side": "", "reason": "carState or modelV2 is unavailable", "laneWidth": 0.0}
       else:
-        gate = {"active": False, "side": "", "reason": "no lane-change direction", "laneWidth": 0.0}
-      if gate["side"] and not gate["active"]:
-        gate["reason"] = "lane width unavailable on this fork" if gate["laneWidth"] <= 0.0 else "target lane width below 3.0 m"
+        meta = self.sm["modelV2"].meta
+        gate = self._lane_change_gate(float(self.sm["carState"].vEgo), meta.laneChangeDirection, meta)
     with self.lock:
       self.vasm_gate = gate
     return bool(gate["active"]), str(gate["side"])
+
+  def _lane_change_gate(self, speed: float, direction, meta) -> dict:
+    """Blindspot gate for one frame: parked and out-of-range speeds never infer."""
+    if speed < PARKED_SPEED_MPS:
+      gate = {"active": False, "side": "", "reason": "parked (inference off)", "laneWidth": 0.0}
+    elif speed < VASM_MIN_SPEED_MPS or speed > VASM_MAX_SPEED_MPS:
+      gate = {"active": False, "side": "", "reason": "speed outside 30-120 km/h", "laneWidth": 0.0}
+    elif direction == log.LaneChangeDirection.left:
+      width = lane_width_meters(meta, "laneWidthLeft")
+      gate = {"active": width >= VASM_MIN_LANE_WIDTH_METERS, "side": "left", "reason": "", "laneWidth": width}
+    elif direction == log.LaneChangeDirection.right:
+      width = lane_width_meters(meta, "laneWidthRight")
+      gate = {"active": width >= VASM_MIN_LANE_WIDTH_METERS, "side": "right", "reason": "", "laneWidth": width}
+    else:
+      gate = {"active": False, "side": "", "reason": "no lane-change direction", "laneWidth": 0.0}
+    if gate["side"] and not gate["active"]:
+      gate["reason"] = "lane width unavailable on this fork" if gate["laneWidth"] <= 0.0 else "target lane width below 3.0 m"
+    return gate
 
   def publish_vision_result(self) -> None:
     status = self.status()
@@ -617,7 +674,7 @@ class VASMService:
           continue
         now = time.monotonic()
         self._refresh_settings_from_params()
-        frame = nv12_y_plane(buffer.data, buffer.width, buffer.height, buffer.stride)
+        infer_active, _gate_reason = self._update_inference_gate()
         with self.lock:
           self.last_road_frame_at = now
           self.lane_camera_error = ""
@@ -625,7 +682,8 @@ class VASMService:
             self.last_road_jpeg = self._lane_jpeg_from_nv12(buffer.data, buffer.width, buffer.height, buffer.stride)
             self.snapshot_responses["road"] = self.snapshot_requests["road"]
             self.snapshot_condition.notify_all()
-          if not self.lane_inference.valid:
+          # Parked: keep the frame pump alive (snapshots, status) but skip the model.
+          if not infer_active or not self.lane_inference.valid:
             continue
           interval = self.lane_interval_seconds
           if self.last_lane_inference_ms > 0.0:
@@ -634,6 +692,9 @@ class VASMService:
             continue
 
           lane_threshold = self.lane_threshold
+        # Only build the model input on the frames that will actually be inferred:
+        # at the 1 Hz lane floor this was a 2.7 MB Y-plane copy 20 times a second.
+        frame = nv12_y_plane(buffer.data, buffer.width, buffer.height, buffer.stride)
         t0 = time.monotonic()
         cpu0 = time.thread_time()
         res = self.lane_inference.infer(
