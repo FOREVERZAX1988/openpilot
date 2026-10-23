@@ -46,5 +46,5 @@ def get_nnff_substitutes() -> dict[str, str]:
 
 
 def nnff_supported(car_fingerprint: str) -> bool:
-  from openpilot.selfdrive.controls.lib.neural_network_feedforward import get_nn_model_path
+  from openpilot.selfdrive.controls.lib.nnff_model import get_nn_model_path
   return get_nn_model_path(car_fingerprint, "") is not None

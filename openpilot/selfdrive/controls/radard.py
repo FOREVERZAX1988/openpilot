@@ -36,6 +36,52 @@ V_EGO_STATIONARY = 4.   # no stationary object flag below this speed
 
 RADAR_TO_CAMERA = 1.52  # RADAR is ~ 1.5m ahead from center of mesh frame
 
+# Macan Abstandsindex <-> 时距标定（0910 方案B / B1 单表）：t(idx) = A*idx + B
+# 干净"同目标"帧、6 route / 15,040 帧重拟合，RMS 0.61 s；视觉-雷达 中位差 -0.77 m、
+# 中位绝对差 1.90 m、82.0% 帧 <=5 m、A2 原厂替换率 6.3%（旧 0909 新线性 0.008718/+1.0178
+# 为 -7.10 m / 35.3%）。注意：opendbc radar_interface.py 的 A3 使用同一组系数，必须同源修改。
+# 详见 ai/docs/MLB_MACAN_PLANB_FIT_0910.md
+# 【同源收敛 2026-10-09】标定改为从 macan_calib 单一源取（与 A3 / 仪表 / SnG 门同源）。
+MACAN_B1_T_A = _macan_calib.MACAN_B1_T_A
+MACAN_B1_T_B = _macan_calib.MACAN_B1_T_B
+
+# ---- A2 判据物理化（2026-09-10）：相对偏差定义在【距离域】，不再用 idx 域 ----
+# 旧: ratio = |vis_idx - stock_idx| / stock_idx
+#          = |Δt| / (t - B)          <- idx 是 t 的仿射量，展开后多出一个放大因子
+#   放大因子 t/(t-B)（B1 的 B=0.332）随距离变小 => 阈值随距离偷偷变严：
+#     t=1.5 s -> 名义 30% 实为 23.4%；t=2 s -> 25.0%；t=3 s -> 26.7%；t=4 s -> 27.5%
+#   而且原阈值是 2026-09-01 在【旧 0902 表】(等效 B≈0.163) 上标的，换 B1 后同一物理偏差
+#   给出的 ratio 再大 ~10% => 有效阈值被静默收紧，已不是当初的操作点。
+# 新: rel = |d_vis - d_stock| / d_stock = |Δt| / t   （同一 v 下与距离比等价）
+#   -> 换任何表都不会再移动操作点；工具 ai/tools/verify_planB_code_0910.py 早就是物理口径
+#      （ratio = |d_vis - d_stock|/d_stock > 0.30），本次把代码对齐到它。
+# ---- 融合方向（2026-10-09）：视觉主导，雷达只能改近 ----
+# 取代旧的「原厂主导 + 连续权重」方案（MACAN_A2_REL_TH=0.30，已删；见 _macan_fuse_leads）。
+# 相对门沿用上游 dist_sane 的 25%；绝对下限由上游的 5.0 m 收紧到 2.0 m —— 只允许
+# 「改近」时，5 m 的绝对下限等于允许一个荒谬的近距读数把车距一次砍掉 5 m。
+MACAN_FUSE_REL_GATE = 0.25   # |d_vis - d_stock| < 25% * d_vis 才采纳原厂更近值
+MACAN_FUSE_MIN_GAP = 2.0     # 绝对下限(m)：d_vis 很小时兜底
+MACAN_FUSE_V_MAX_W = 0.30    # 原厂前车速度最大权重（只允许把 vLead 改低）
+MACAN_VISION_PROB_MIN = 0.5  # 视觉前车可信门（对齐上游 get_lead 的 lead_prob > .5）
+
+# ---- 落点2: 视觉平滑 + A2 变化率限制 (2026-09-23) ----
+# 视觉主导帧在驾驶段 25<->40m 有原生 cv 噪声(±2~5m), 用一阶低通平滑; 同时对最终融合
+# dRel 做单帧变化率限幅, 把 15m 级瞬跳斜坡化, 消除用户可见锯齿. 速率上限随 v_ego 缩放,
+# 以免压制真实接近/远离(108km/h 单帧约 3m/0.1s).
+MACAN_SMOOTH_RC = 0.5       # 视觉平滑一阶低通时间常数(s)
+MACAN_RATE_MIN_STEP = 1.0   # 单帧最小可容忍变化(m)
+MACAN_RATE_VFACTOR = 1.2    # v_ego 缩放系数(倍 DT_MDL)
+
+# ---- 状态复位 / 换人重播种 (2026-10-10) ----
+# 病灶：lead 消失时 _macan_smooth / _macan_last_fused 不复位，重捕获后 (1) 一阶低通从旧目标
+# 的 dRel 指数爬升，tau≈0.5 s；(2) 变化率限幅以旧目标的 dRel 为基准做 clip（低速域
+# max_step 仅 1 m/帧）。两者叠加 =>「新目标已经 3 m，融合值还停在旧目标的 10 m」持续
+# ~0.5 s，纵向控制据此少刹车——二次起步险些追尾的直接成像。
+# 修复：目标丢失/融合关闭 -> 立即复位该 lead 的状态；目标仍在但明显换人（视觉重新锁定、
+# 遮挡后重捕）-> 复位并重新播种。只对「更近」方向判换人：「更远」方向维持限幅是保守的。
+MACAN_RESEED_MIN_JUMP = 4.0     # 换人判据(m)：原始融合值比上一帧基准突然更近超过此值，
+MACAN_RESEED_STEP_FACTOR = 4.0  # 且同时超过 4x 单帧允许步长，才判为「换了目标」
+
 # Radarless anti-dropout (ported from StarPilot lead_behavior). A recently
 # dropped vision lead is held for a bounded time instead of hard-cutting the
 # target, gated on filtered model prob, a path-relative lateral window and the

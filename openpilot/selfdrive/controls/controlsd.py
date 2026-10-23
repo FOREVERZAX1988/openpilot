@@ -212,13 +212,6 @@ class Controls(ControlsExt):
         if self.sm.valid.get('carrotManSP', False):
           lac_ext.update_curve_speed(self.sm['carrotManSP'].vTurnSpeed)
 
-      # Carrot's curve speed, for the `UseLaneLineCurveSpeed` gate in the lane
-      # assist: below the configured magnitude the lane-line-derived curvature
-      # correction is suppressed, so the model path guides the bend instead. This
-      # is the fork's home for cp's `lanefull_mode_enabled` coupling
-      # (cp controls/controlsd.py:215); carrotManSP is already subscribed here.
-      if self.sm.valid.get('carrotManSP', False):
-        self.LaC.extension.update_curve_speed(self.sm['carrotManSP'].vTurnSpeed)
 
     long_plan = self.sm['longitudinalPlan']
     model_v2 = self.sm['modelV2']

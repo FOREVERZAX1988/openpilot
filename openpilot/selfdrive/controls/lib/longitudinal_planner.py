@@ -28,7 +28,6 @@ from openpilot.selfdrive.controls.lib.longitudinal_uncertainty import (
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
 
-from openpilot.sunnypilot.common import param_read
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
 from openpilot.sunnypilot.carrot.traffic_stop import (
   get_traffic_stop_distance_adjust, get_traffic_stop_obstacle_distance,
