@@ -11,6 +11,7 @@ Groups inside a page are separated by `LineSeparatorSP`, matching how the rest o
 the sunnypilot settings pages express grouping (see steering.py, models.py).
 """
 from openpilot.sunnypilot.carrot import feature_support
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
   option_item_sp, section_heading_sp, toggle_item_sp,

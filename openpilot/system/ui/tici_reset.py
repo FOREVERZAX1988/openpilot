@@ -12,7 +12,7 @@ from openpilot.system.ui.lib.application import gui_app, FontWeight, FONT_SCALE
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
-from openpilot.system.ui.widgets.label import gui_label, gui_text_box
+from openpilot.system.ui.widgets.label import UnifiedLabel, gui_label, gui_text_box
 
 USERDATA = "/dev/disk/by-partlabel/userdata"
 TIMEOUT = 3*60

@@ -51,6 +51,27 @@ PREVIEW_BTN_H = 80
 PREVIEW_BTN_PAD = 16
 
 
+def preview_button_rects(rect: rl.Rectangle, bottom_reserved: int = 0) -> dict[str, rl.Rectangle]:
+  """三个切换按钮（广角 / 普通 / 退出）的矩形，按屏宽居中、贴底边。
+
+  `bottom_reserved` 是画面底部已经被别人占掉的高度：sunnypilot 的开发者 UI 底栏
+  （`DevUIInfo` = BOTTOM 或 BOTH，见 sunnypilot/onroad/developer_ui/__init__.py）就是
+  画在画面最后 61px 上的一条黑底 + 一行数值文字（aEgo/前车速度/摩擦/方位/海拔）。
+
+  原先按钮行只留 `PREVIEW_BTN_PAD`(16px) 的边距，行底落在距底边 16px 处，正好压在
+  那行字上 —— 用户 2026-10-20 报告「广角/普通/关闭 位置太低，跟最底部的状态栏文字
+  重叠」。留出 `bottom_reserved` 后行底抬到底栏上方 PAD 处，几何在本函数里唯一确定，
+  由 `_draw_preview_controls` 消费、`tests/preview_row_layout_smoke.py` 守住。
+  """
+  total_width = 3 * PREVIEW_BTN_W + 2 * PREVIEW_BTN_PAD
+  base_x = rect.x + (rect.width - total_width) / 2
+  base_y = rect.y + rect.height - PREVIEW_BTN_H - PREVIEW_BTN_PAD - bottom_reserved
+  return {
+    name: rl.Rectangle(base_x + i * (PREVIEW_BTN_W + PREVIEW_BTN_PAD), base_y, PREVIEW_BTN_W, PREVIEW_BTN_H)
+    for i, name in enumerate(("wide", "road", "exit"))
+  }
+
+
 class AugmentedRoadView(CameraView, AugmentedRoadViewSP):
   def __init__(self, stream_type: VisionStreamType = VisionStreamType.VISION_STREAM_NARROW_ROAD):
     CameraView.__init__(self, "camerad", stream_type)
@@ -136,22 +157,15 @@ class AugmentedRoadView(CameraView, AugmentedRoadViewSP):
   def _draw_preview_controls(self):
     if not ui_state.started:
       return
-    total_width = 3 * PREVIEW_BTN_W + 2 * PREVIEW_BTN_PAD
-    base_x = self._content_rect.x + (self._content_rect.width - total_width) / 2
-    base_y = self._content_rect.y + self._content_rect.height - PREVIEW_BTN_H - PREVIEW_BTN_PAD
+    # The developer UI's bottom bar owns the last 61px of the frame, so the row
+    # moves above it instead of sitting on its text (get_bottom_dev_ui_offset()
+    # is the single source of that height, same as the torque bar's cut).
+    self._preview_button_rects = preview_button_rects(self._content_rect, get_bottom_dev_ui_offset())
     is_road = self.stream_type == NARROW_ROAD_CAM
-
-    wide_rect = rl.Rectangle(base_x, base_y, PREVIEW_BTN_W, PREVIEW_BTN_H)
-    self._preview_button_rects["wide"] = wide_rect
-    self._draw_preview_button(wide_rect, self._preview_label_wide, not is_road)
-
-    road_rect = rl.Rectangle(base_x + PREVIEW_BTN_W + PREVIEW_BTN_PAD, base_y, PREVIEW_BTN_W, PREVIEW_BTN_H)
-    self._preview_button_rects["road"] = road_rect
-    self._draw_preview_button(road_rect, self._preview_label_road, is_road)
-
-    exit_rect = rl.Rectangle(base_x + 2 * (PREVIEW_BTN_W + PREVIEW_BTN_PAD), base_y, PREVIEW_BTN_W, PREVIEW_BTN_H)
-    self._preview_button_rects["exit"] = exit_rect
-    self._draw_preview_button(exit_rect, self._preview_label_exit, False, bg_color=rl.Color(180, 60, 60, 200))
+    self._draw_preview_button(self._preview_button_rects["wide"], self._preview_label_wide, not is_road)
+    self._draw_preview_button(self._preview_button_rects["road"], self._preview_label_road, is_road)
+    self._draw_preview_button(self._preview_button_rects["exit"], self._preview_label_exit, False,
+                              bg_color=rl.Color(180, 60, 60, 200))
 
   def _draw_preview_button(self, rect: rl.Rectangle, label: UnifiedLabel, active: bool, bg_color: rl.Color | None = None):
     bg = bg_color if bg_color is not None else (rl.Color(0, 120, 60, 220) if active else rl.Color(40, 40, 40, 180))

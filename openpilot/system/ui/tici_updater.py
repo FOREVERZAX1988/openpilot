@@ -11,7 +11,7 @@ from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.wifi_manager import WifiManager
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
-from openpilot.system.ui.widgets.label import gui_text_box, gui_label
+from openpilot.system.ui.widgets.label import UnifiedLabel, gui_label, gui_text_box
 from openpilot.system.ui.widgets.network import WifiManagerUI
 
 # Constants

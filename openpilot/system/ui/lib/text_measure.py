@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import pyray as rl
-from openpilot.system.ui.lib.application import FONT_SCALE, font_fallback
+from openpilot.system.ui.lib.application import (FONT_SCALE, FALLBACK_FONT_SCALE, PRIMARY_FONT, fallback_font_key,
+                                                 font_fallback, gui_app)
 from openpilot.system.ui.lib.emoji import find_emoji
+from openpilot.system.ui.lib.multilang import multilang
 
 _cache: dict[int, rl.Vector2] = {}
 
