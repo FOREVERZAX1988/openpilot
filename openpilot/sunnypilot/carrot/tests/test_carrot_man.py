@@ -1806,7 +1806,7 @@ class TestCarrotParamAlignment(unittest.TestCase):
     "MyDrivingModeAuto": 0,
     "OnnxBsdIntervalMs": 250,
     "OnnxBsdSmoothingMs": 200,
-    "OnnxBsdThreshold": 94,
+    "OnnxBsdThreshold": 45,  # local: 上游 67ffbe9f03 的 BSD 三类默认值 94 未移植，保持 45
     "OnnxLaneIntervalMs": 400,
     "OnnxLaneThreshold": 25,
     "PathOffset": 0,
