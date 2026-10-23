@@ -84,6 +84,9 @@ def _status_service():
                                       model_path=Path("/dev/null"), configured_sides=["left", "right"])
   service.lane_inference = SimpleNamespace(valid=True, error="")
   service.config = {}
+  # bsd_enabled 是 2fe4acf5dc（本树 587cb39ebc）新引入的「BSD 常驻模型」开关，
+  # __init__ 里初始化；本 helper 绕过 __init__ 造对象，故显式补上，保持运行期代码严格。
+  service.bsd_enabled = False
   service.threshold = 0.45
   service.smoothing_seconds = 0.2
   service.base_interval_seconds = 0.25
