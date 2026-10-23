@@ -7,8 +7,6 @@ See the LICENSE.md file in the root directory for more details.
 
 from collections.abc import Callable
 
-import unittest
-
 import numpy as np
 
 from openpilot.common.constants import CV
@@ -19,7 +17,7 @@ from openpilot.selfdrive.controls.lib.drive_helpers import should_stop
 from openpilot.selfdrive.controls.lib.longitudinal_planner import A_CRUISE_MAX_BP, J_CRUISE_VALS, get_cruise_accel
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalPlanSource, T_IDXS as T_IDXS_MPC
 from openpilot.sunnypilot.selfdrive.controls.lib.accel_controller.accel_controller import (
-  AccelController, AccelProfile, ECO_CRUISE_DECEL_BP, ECO_CRUISE_DECEL_V, MAX_ACCEL_BREAKPOINTS, MAX_ACCEL_PROFILES,
+  AccelController, AccelProfile, ECO_CRUISE_DECEL_BP, ECO_CRUISE_DECEL_V,
 )
 from openpilot.sunnypilot.selfdrive.test.longitudinal_maneuvers.plant import PRIUS_TSS2_ROUTE_MODEL, PlantSP
 

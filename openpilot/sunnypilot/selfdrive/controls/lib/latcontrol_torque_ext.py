@@ -32,9 +32,6 @@ class LatControlTorqueExt(LatControlTorqueExtZP, NeuralNetworkLateralControl, La
     # this frame's command, for controlsd_ext: update() only runs on active frames, so the
     # per-frame update_override_torque_params call clears the mark and update() sets it
     self._commanded = False
-    # what the carcontroller reported back, pushed by controlsd_ext after its classifier
-    self._applied_torque = 0.0
-    self._at_rail = False
 
   def adjust_desired_curvature(self, desired_curvature, CS, active):
     return self.lateral_lane_assist.update(desired_curvature, CS.vEgo, active, CS.steeringPressed, self.model_v2,
@@ -70,10 +67,6 @@ class LatControlTorqueExt(LatControlTorqueExtZP, NeuralNetworkLateralControl, La
   @property
   def integrator(self) -> float:
     return float(self._pid.i)
-
-  def set_actuator_state(self, applied_torque: float, at_rail: bool) -> None:
-    self._applied_torque = applied_torque
-    self._at_rail = at_rail
 
   def update_override_torque_params(self, torque_params) -> bool:
     self._commanded = False
