@@ -87,6 +87,10 @@ def _status_service():
   # bsd_enabled 是 2fe4acf5dc（本树 587cb39ebc）新引入的「BSD 常驻模型」开关，
   # __init__ 里初始化；本 helper 绕过 __init__ 造对象，故显式补上，保持运行期代码严格。
   service.bsd_enabled = False
+  # settings_refresh_lock / bsd_generation 是 fa32bf598b（上游）新引入的「刷新串行化 +
+  # 代际计数」，__init__ 里初始化；本 helper 同样绕过 __init__，故显式补上。
+  service.settings_refresh_lock = threading.Lock()
+  service.bsd_generation = 0
   service.threshold = 0.45
   service.smoothing_seconds = 0.2
   service.base_interval_seconds = 0.25
