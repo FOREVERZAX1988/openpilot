@@ -106,6 +106,18 @@ def _status_service():
   service.lane_inference_fps = 0.0
   service.lane_inference_count = 0
   service.last_lane_inference_at = 0.0
+  # YOLO 障碍物头（上游 7ed16d83a6）新增的常驻状态：yolo_enabled / yolo_result /
+  # yolo_tracker 都在 __init__ 里初始化，status() 还会读 yolo.valid/error 与 fps/count/
+  # tracks；本 helper 绕过 __init__，故同样显式补上。
+  service.yolo_enabled = False
+  service.yolo_result = None
+  service.yolo = SimpleNamespace(valid=False, error="")
+  service.yolo_tracker = SimpleNamespace(tracks=[], reset=lambda: None)
+  service.vasm_inference_lock = threading.Lock()
+  service.last_yolo_inference_at = 0.0
+  service.last_yolo_inference_ms = 0.0
+  service.yolo_inference_fps = 0.0
+  service.yolo_inference_count = 0
   return service
 
 
@@ -250,9 +262,18 @@ class RoadLoopOrderTest(unittest.TestCase):
     self.assertLess(y_plane_at, model_at)
 
   def test_gate_guard_skips_the_model(self):
-    guard_at = self.body.index("if not infer_active or not self.lane_inference.valid:")
+    # 7ed16d83a6（YOLO）把单个 lane 守卫换成「门控内分别决定两个头」，所以这里钉的是
+    # 结构而不是某一行字面量：默认都不到期，只有 infer_active 才允许判 due。
+    guard_at = self.body.index("lane_due = yolo_due = False")
+    gate_at = self.body.index("if infer_active:")
     model_at = self.body.index("self.lane_inference.infer(")
-    self.assertLess(guard_at, model_at)
+    self.assertLess(guard_at, gate_at)
+    self.assertLess(gate_at, model_at, "lane 与 yolo 都必须先过驻车门控")
+    self.assertIn("yolo_due = self.yolo_enabled and self.yolo.valid", self.body)
+    # 两个头都没到期时直接下一帧：不建帧、不推理。
+    skip_at = self.body.index("if not (lane_due or yolo_due):")
+    self.assertLess(skip_at, model_at)
+    self.assertLess(skip_at, self.body.index("nv12_y_plane("))
 
 
 if __name__ == "__main__":
