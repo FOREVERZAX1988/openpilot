@@ -1,3 +1,5 @@
+import time
+
 import pyray as rl
 from collections.abc import Callable
 from openpilot.sunnypilot.carrot.config import unified_params
@@ -15,6 +17,11 @@ BUTTON_SPACING = 25
 VALUE_FONT_SIZE = 50
 BUTTON_FONT_SIZE = 60
 CONTAINER_PADDING = 20
+
+# Same rule as ToggleSP: the store is shared with the web panel, so a bound control
+# re-reads it while on screen (2 Hz) instead of trusting the value it was built with.
+SYNC_INTERVAL = 0.5
+PENDING_WRITE_TIMEOUT = 1.0
 
 
 class OptionControlSP(ItemAction):
@@ -43,24 +50,18 @@ class OptionControlSP(ItemAction):
     self.label_callback = label_callback
     self.input_title = input_title
     self.use_registered_default = use_registered_default
-    if self.value_map:
-      for key in self.value_map:
-        if self.value_map[key] == self.params.get(self.param_key):
-          self.current_value = int(key)
-          break
+    self._pending_value: int | None = None
+    self._pending_until = 0.0
+    self._next_sync = 0.0
+    stored = self._stored_value()
+    if stored is None:
+      # unset/unregistered key: show the minimum instead of raising TypeError and
+      # killing the whole settings layout during construction. min_value is already
+      # in the control's own units, so it must not be float-scaled again (that used
+      # to turn a minimum of 50 = 0.50 into 50.00).
+      self.current_value = int(min_value)
     else:
-      # use_registered_default asks the system store for the default compiled into
-      # params_keys.h, so a param that is registered but never written shows its real
-      # default instead of the control's minimum (CustomKp: 1.00, not 0.50).
-      value = self.params.get(self.param_key, return_default=self.use_registered_default)
-      if value is None:
-        # unset/unregistered key: show the minimum instead of raising TypeError and
-        # killing the whole settings layout during construction. min_value is already
-        # in the control's own units, so it must not be float-scaled again (that used
-        # to turn a minimum of 50 = 0.50 into 50.00).
-        self.current_value = int(min_value)
-      else:
-        self.current_value = int(float(value) * 100.0) if self.use_float_scaling else int(value)
+      self.current_value = stored
 
     # Initialize font and button styles
     self._font = gui_app.font(FontWeight.MEDIUM)
@@ -69,6 +70,51 @@ class OptionControlSP(ItemAction):
     self.minus_btn_rect = rl.Rectangle(0, 0, 0, 0)
     self.plus_btn_rect = rl.Rectangle(0, 0, 0, 0)
     self.label_rect = rl.Rectangle(0, 0, 0, 0)
+
+  def _stored_value(self) -> int | None:
+    """The value the store holds, in this control's own units, or None if unreadable.
+
+    use_registered_default asks the system store for the default compiled into
+    params_keys.h, so a param that is registered but never written shows its real
+    default instead of the control's minimum (CustomKp: 1.00, not 0.50).
+    """
+    if self.value_map:
+      stored = self.params.get(self.param_key)
+      for index, mapped in self.value_map.items():
+        if mapped == stored:
+          return int(index)
+      return None
+    value = self.params.get(self.param_key, return_default=self.use_registered_default)
+    if value is None:
+      return None
+    return int(float(value) * 100.0) if self.use_float_scaling else int(value)
+
+  def sync(self, now: float | None = None) -> bool:
+    """Adopt a value another surface wrote. True when the control moved.
+
+    A write this control just made stays on screen until the store echoes it back:
+    params writes are asynchronous, so a read straight after one returns the old value.
+    """
+    now = time.monotonic() if now is None else now
+    if now < self._next_sync:
+      return False
+    self._next_sync = now + SYNC_INTERVAL
+
+    stored = self._stored_value()
+    if stored is None:
+      return False
+    if self._pending_value is not None:
+      if stored == self._pending_value:
+        self._pending_value = None
+      elif now < self._pending_until:
+        return False
+      else:
+        self._pending_value = None
+
+    if stored != self.current_value:
+      self.current_value = stored
+      return True
+    return False
 
   def get_value(self) -> int:
     """Get the current value of the control"""
@@ -87,6 +133,8 @@ class OptionControlSP(ItemAction):
       self.params.put(self.param_key, value / 100.0)
     else:
       self.params.put(self.param_key, value)
+    self._pending_value = value
+    self._pending_until = time.monotonic() + PENDING_WRITE_TIMEOUT
     if self.on_value_changed:
       self.on_value_changed(value)
 
@@ -171,6 +219,7 @@ class OptionControlSP(ItemAction):
   def _render(self, rect: rl.Rectangle):
     if self._rect.width == 0 or self._rect.height == 0 or not self.is_visible:
       return
+    self.sync()
 
     control_width = (BUTTON_WIDTH * 2) + self.label_width + (BUTTON_SPACING * 2)
     total_width = control_width + (CONTAINER_PADDING * 2)

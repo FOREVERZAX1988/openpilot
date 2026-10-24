@@ -294,6 +294,34 @@ from openpilot.sunnypilot.carrot.carrot_man import CarrotManager, TURN_TYPE_MAPP
 from openpilot.sunnypilot.carrot.web_interface import WebInterface
 
 
+class _MemorySystemParams:
+  """An in-memory stand-in for the system Params behind UnifiedParams.
+
+  These tests are about clamping and scaling, so they need a store they can write to and
+  read back. Reaching into the real store's private attributes made them pass only when an
+  earlier test had left a mock in the UnifiedParams singleton, and writing to the device
+  store instead leaked values into /data/params.
+  """
+
+  def __init__(self, values=None):
+    self.values = dict(values or {})
+
+  def get(self, key, block=False, return_default=False):
+    return self.values.get(key)
+
+  def get_bool(self, key, block=False):
+    return bool(self.values.get(key, False))
+
+  def put(self, key, value, block=False):
+    self.values[key] = value
+
+  def put_bool(self, key, value, block=False):
+    self.values[key] = bool(value)
+
+  def remove(self, key):
+    self.values.pop(key, None)
+
+
 class TestCarrotManager(unittest.TestCase):
   def setUp(self):
     # Test isolation under `unittest discover`: a sibling module may already
@@ -1280,10 +1308,10 @@ class TestCarrotManager(unittest.TestCase):
     10 Hz, so _param_frame is reset to make the read deterministic.
     """
     serv = self.mgr._carrot_serv
-    store = serv._params._system_params._store
-    try:
+    key = "VehicleSpeedCameraDistanceTime"
+    with patch.object(serv._params, "_system_params", _MemorySystemParams()):
       def read(raw):
-        store["VehicleSpeedCameraDistanceTime"] = raw
+        serv._params.put(key, raw)
         serv._param_frame = 0
         serv.update_params()
         return serv.vehicle_speed_camera_distance_time
@@ -1293,8 +1321,6 @@ class TestCarrotManager(unittest.TestCase):
       assert abs(read(1) - 1.0) < 1e-9, "below-minimum input must clamp up"
       assert abs(read(200) - 20.0) < 1e-9, "the registered maximum is 200"
       assert abs(read(9999) - 20.0) < 1e-9, "above-maximum input must clamp down"
-    finally:
-      store.pop("VehicleSpeedCameraDistanceTime", None)
 
   def _make_status_item(self, sequence=1, **values):
     item = MagicMock()
@@ -2257,13 +2283,11 @@ class TestCarrotPlannerDrivingMode(unittest.TestCase):
     planner = CarrotPlanner()
     key = "LongitudinalMpcTuningComfortBrake"
     try:
-      store = planner._params._system_params._store
-      store[key] = 3.5
-      planner._params_count = 39           # the next tick lands on the == 40 slot
-      planner._params_update()
-      assert planner._comfort_brake_base == 3.5
+      with patch.object(planner._params, "_system_params", _MemorySystemParams({key: 3.5})):
+        planner._params_count = 39         # the next tick lands on the == 40 slot
+        planner._params_update()
+        assert planner._comfort_brake_base == 3.5
     finally:
-      store.pop(key, None)                 # type: ignore[possibly-undefined]
       planner._comfort_brake_base = _DEFAULT_COMFORT_BRAKE
 
   def test_comfort_brake_is_recomputed_each_tick_not_compounded(self):

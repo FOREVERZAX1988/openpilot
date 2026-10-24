@@ -37,9 +37,10 @@ class Spacer(Widget):
 
 class ToggleActionSP(ToggleAction):
   def __init__(self, initial_state: bool = False, width: int = style.TOGGLE_WIDTH, enabled: bool | Callable[[], bool] = True,
-               callback: Callable[[bool], None] | None = None, param: str | None = None):
+               callback: Callable[[bool], None] | None = None, param: str | None = None,
+               sync_param: str | None = None):
     ToggleAction.__init__(self, initial_state, width, enabled, callback)
-    self.toggle = ToggleSP(initial_state=initial_state, callback=callback, param=param)
+    self.toggle = ToggleSP(initial_state=initial_state, callback=callback, param=param, sync_param=sync_param)
 
 
 class ButtonSP(Button):
@@ -370,8 +371,11 @@ def simple_button_item_sp(button_text: str | Callable[[], str], callback: Callab
 
 
 def toggle_item_sp(title: str | Callable[[], str], description: str | Callable[[], str] | None = None, initial_state: bool = False,
-                   callback: Callable | None = None, icon: str = "", enabled: bool | Callable[[], bool] = True, param: str | None = None) -> ListItemSP:
-  action = ToggleActionSP(initial_state=initial_state, enabled=enabled, callback=callback, param=param)
+                   callback: Callable | None = None, icon: str = "", enabled: bool | Callable[[], bool] = True, param: str | None = None,
+                   sync_param: str | None = None) -> ListItemSP:
+  """`param`: the switch owns the write. `sync_param`: the switch only mirrors a store
+  key someone else writes (a callback-driven confirm gives the write to the callback)."""
+  action = ToggleActionSP(initial_state=initial_state, enabled=enabled, callback=callback, param=param, sync_param=sync_param)
   return ListItemSP(title=title, description=description, action_item=action, icon=icon)
 
 

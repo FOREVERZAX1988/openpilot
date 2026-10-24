@@ -271,18 +271,67 @@ def collect(params) -> tuple[dict[str, list[str]], dict[str, int], dict[str, Any
   return grouped, kinds, values
 
 
+# The two keys that are not plain values: they are transitions with rules around them.
+MODE_ON_PARAM = "ExperimentalMode"
+SAFE_MODE_PARAM = "SafeMode"
+
+
+def _write_mode(params, enabled: bool) -> None:
+  """Experimental Mode through the mode state machine, or raise.
+
+  This panel is the other writer a driver can reach, and it used to write the key raw.
+  That skipped everything the companion API already enforces: the confirmation bit, the
+  Safe Mode lock, and the road state. The result was visible -- enabling from the browser
+  set the switch on the device while `experimental_mode_requested()` still said no, so the
+  mode never actually ran. Saving the form here is the driver pressing "enable", which is
+  what the acknowledgement means on this surface.
+  """
+  from openpilot.sunnypilot.common.mode_state_runtime import set_experimental_mode
+  set_experimental_mode(params, enabled, acknowledged=True)
+
+
+def _write_safe_mode(params, enabled: bool) -> None:
+  """Safe Mode through its transition (parked precondition, backup, read-back), or raise."""
+  from openpilot.sunnypilot.common.safe_mode_runtime import set_safe_mode
+  set_safe_mode(params, enabled)
+
+
+def _record_change(name: str, before, after, source: str = "web_ui") -> None:
+  """Add the write to the same history the companion API writes to; never raise."""
+  try:
+    from openpilot.sunnypilot.carrot.server.services.param_changes import append_param_change
+    append_param_change(name, before, after, source=source)
+  except Exception:
+    pass
+
+
+def _read_value(params, key: str):
+  try:
+    return params.get(key)
+  except Exception:
+    return None
+
+
 def apply_updates(params, updates: dict[str, str], kinds: dict[str, int]) -> tuple[int, int]:
   """Writes the (key, string) pairs. Returns (written, skipped).
 
   Each value goes through the setter for the declared type, so the binary's own cast and
   validation decide, and a key whose type does not accept the text is skipped rather than
-  written raw.
+  written raw. The keys that carry rules instead of values go through the state machine
+  that owns those rules, and a refused transition is reported as skipped rather than
+  stored: a browser session must not be able to leave the store in a state the device UI
+  would refuse to produce.
   """
   written = skipped = 0
   for key, raw in updates.items():
     kind = kinds.get(key, T_STRING)
+    before = _read_value(params, key)
     try:
-      if kind == T_BOOL:
+      if key == MODE_ON_PARAM:
+        _write_mode(params, _truthy(raw))
+      elif key == SAFE_MODE_PARAM:
+        _write_safe_mode(params, _truthy(raw))
+      elif kind == T_BOOL:
         params.put_bool(key, _truthy(raw))
       elif kind == T_INT:
         params.put(key, int(raw), block=True)
@@ -292,9 +341,17 @@ def apply_updates(params, updates: dict[str, str], kinds: dict[str, int]) -> tup
         continue  # not editable as text
       else:
         params.put(key, raw, block=True)
-      written += 1
     except (ValueError, TypeError, OverflowError):
       skipped += 1
+      continue
+    except Exception:
+      # a refused or failed transition (mode locked, car not parked, write unverified)
+      skipped += 1
+      continue
+    written += 1
+    after = _read_value(params, key)
+    if after != before:
+      _record_change(key, before, after)
   return written, skipped
 
 

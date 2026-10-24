@@ -13,6 +13,7 @@ exposed without polluting ``common/params_keys.h``.
 """
 import json
 import os
+import time
 from typing import Any, Optional
 
 from openpilot.common.params import Params
@@ -230,6 +231,11 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
 }
 
 
+# How often the JSON fallback is re-stat'ed for another process's write. A bound settings
+# control polls its key twice a second, so this is what keeps the entry cost at one stat.
+NAV_PARAMS_RELOAD_INTERVAL = 1.0
+
+
 class UnifiedParams:
   """Single accessor for carrot parameters.
 
@@ -257,6 +263,8 @@ class UnifiedParams:
       nav_json_file = os.path.join(current_dir, "nav_params.json")
     self._nav_json_file = os.path.realpath(nav_json_file)
     self._nav_data: dict[str, Any] = dict(_DEFAULT_NAV_PARAMS)
+    self._nav_mtime_ns: int | None = None
+    self._next_nav_check = 0.0
     self._load_nav_params()
     self._initialized = True
 
@@ -265,6 +273,7 @@ class UnifiedParams:
   def _load_nav_params(self) -> None:
     try:
       if os.path.exists(self._nav_json_file):
+        self._nav_mtime_ns = os.stat(self._nav_json_file).st_mtime_ns
         with open(self._nav_json_file, encoding="utf-8") as fh:
           on_disk = json.load(fh)
         if isinstance(on_disk, dict):
@@ -280,8 +289,30 @@ class UnifiedParams:
     try:
       with open(self._nav_json_file, "w", encoding="utf-8") as fh:
         json.dump(self._nav_data, fh, indent=2, ensure_ascii=False)
+      self._nav_mtime_ns = os.stat(self._nav_json_file).st_mtime_ns
     except OSError:
       pass
+
+  def _reload_nav_params_if_changed(self, now: float | None = None) -> None:
+    """Pick up writes another process made to nav_params.json.
+
+    The file is the store for keys the params binary does not declare, and it is shared
+    with the web panel's nav-params form and with tools. Holding one copy in memory for
+    the life of the process meant a value written on the other surface never arrived
+    here, which is the second half of why the two ends could disagree. Checked at most
+    once a second, so the frame path keeps costing one stat at most.
+    """
+    now = time.monotonic() if now is None else now
+    if now < self._next_nav_check:
+      return
+    self._next_nav_check = now + NAV_PARAMS_RELOAD_INTERVAL
+    try:
+      mtime_ns = os.stat(self._nav_json_file).st_mtime_ns
+    except OSError:
+      return
+    if self._nav_mtime_ns is not None and mtime_ns == self._nav_mtime_ns:
+      return
+    self._load_nav_params()
 
   def _is_int(self, value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
@@ -333,6 +364,7 @@ class UnifiedParams:
   # ---- public API ---------------------------------------------------------
 
   def get(self, key: str, default: Any = None, return_default: bool = False) -> Any:
+    self._reload_nav_params_if_changed()
     sys_val = self._read_from_system(key, return_default)
     if sys_val is not None and sys_val != b"":
       return sys_val
@@ -385,8 +417,12 @@ class UnifiedParams:
       self._system_params.remove(key)
     except Exception:
       pass
-    self._nav_data.pop(key, None)
-    self._save_nav_params()
+    # Only rewrite the file when the JSON actually held the key: every tool and test that
+    # clears a *registered* key used to re-serialise this whole file, which reordered it and
+    # dropped its comment, so a read-only errand looked like an edit in the working tree.
+    if key in self._nav_data:
+      del self._nav_data[key]
+      self._save_nav_params()
 
   def keys(self):
     return set(self._nav_data.keys())

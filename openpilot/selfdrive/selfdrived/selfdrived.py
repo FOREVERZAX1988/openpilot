@@ -27,6 +27,7 @@ from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EmptyAlert
 from openpilot.sunnypilot.common.safety_guards import CommIssueGrace
+from openpilot.sunnypilot.common.mode_state import longitudinal_capable
 from openpilot.sunnypilot.common.mode_state_runtime import experimental_mode_requested
 
 from openpilot.common.version import get_build_metadata
@@ -142,7 +143,12 @@ class SelfdriveD(CruiseHelper):
     # cleanup old params
     if not self.CP.alphaLongitudinalAvailable:
       self.params.remove("AlphaLongitudinalEnabled")
-    if not self.CP.openpilotLongitudinalControl:
+    # The settings UI asks this alpha-aware; asking only the stock flag here wiped the
+    # mode at every start on an alpha-longitudinal car, so a switch the UI had enabled
+    # came back off after each reboot.
+    if not longitudinal_capable(openpilot_longitudinal=self.CP.openpilotLongitudinalControl,
+                               alpha_available=self.CP.alphaLongitudinalAvailable,
+                               alpha_enabled=self.params.get_bool("AlphaLongitudinalEnabled")):
       self.params.remove("ExperimentalMode")
 
     self.CS_prev = car.CarState.new_message()

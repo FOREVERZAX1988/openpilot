@@ -17,6 +17,7 @@ and are what these tests pin down:
   than written.
 """
 import unittest
+from unittest import mock
 
 from openpilot.sunnypilot.carrot import web_settings as ws
 
@@ -136,6 +137,96 @@ class TestRender(unittest.TestCase):
     self.assertEqual(ws.parse_form_updates({"p[SomeKey]": ["7"]}, kinds), {"SomeKey": "7"})
     self.assertEqual(ws.parse_form_updates({"p[NotDeclared]": ["7"]}, kinds), {})
     self.assertEqual(ws.parse_form_updates({"SomeKey": ["7"]}, kinds), {})
+
+
+class _PanelParams:
+  """Params stand-in for apply_updates: the binary's string-shaped store."""
+
+  def __init__(self, values=None):
+    self.values = dict(values or {})
+    self.puts = []
+
+  def get(self, key, block=False, return_default=False):
+    return self.values.get(key)
+
+  def get_bool(self, key, block=False):
+    return str(self.values.get(key, "0")) in ("1", "True", "true")
+
+  def put(self, key, value, block=False):
+    self.puts.append((key, value))
+    self.values[key] = "1" if value is True else "0" if value is False else str(value)
+
+  def put_bool(self, key, value, block=False):
+    self.put(key, bool(value), block=block)
+
+
+def _offroad_panel(**values) -> _PanelParams:
+  return _PanelParams({"IsOnroad": "0", "IsOffroad": "1", **values})
+
+
+class TestApplyUpdatesUsesTheOneWriter(unittest.TestCase):
+  """The panel is a second writer, and it must not be a second set of rules.
+
+  Writing ExperimentalMode raw from the browser set the switch while the confirmation bit
+  stayed clear, so the mode never actually ran (`experimental_mode_requested()` answered no)
+  -- and after the next reboot selfdrived deleted the switch. The panel now goes through the
+  same state machine the companion API uses, and a refused transition is reported instead
+  of stored.
+  """
+
+  def setUp(self):
+    recorder = mock.patch.object(ws, "_record_change")
+    self.recorded = recorder.start()
+    self.addCleanup(recorder.stop)
+
+  def test_enabling_experimental_mode_also_arms_the_confirmation_bit(self):
+    params = _offroad_panel()
+    written, skipped = ws.apply_updates(params, {ws.MODE_ON_PARAM: "1"},
+                                        {ws.MODE_ON_PARAM: ws.T_BOOL})
+
+    self.assertEqual((written, skipped), (1, 0))
+    self.assertEqual(params.values[ws.MODE_ON_PARAM], "1")
+    self.assertEqual(params.values["ExperimentalModeConfirmed"], "1")
+
+    from openpilot.sunnypilot.common.mode_state_runtime import experimental_mode_requested
+    self.assertTrue(experimental_mode_requested(params))
+    self.recorded.assert_called_once()
+
+  def test_an_unknown_road_state_is_skipped_not_stored(self):
+    # nothing wrote IsOnroad/IsOffroad: a mode change on a half-known road state is a guess
+    params = _PanelParams()
+    written, skipped = ws.apply_updates(params, {ws.MODE_ON_PARAM: "1"},
+                                        {ws.MODE_ON_PARAM: ws.T_BOOL})
+
+    self.assertEqual((written, skipped), (0, 1))
+    self.assertNotIn(ws.MODE_ON_PARAM, params.values)
+    self.recorded.assert_not_called()
+
+  def test_safe_mode_holds_the_switch(self):
+    params = _offroad_panel(SafeMode="1")
+    written, skipped = ws.apply_updates(params, {ws.MODE_ON_PARAM: "1"},
+                                        {ws.MODE_ON_PARAM: ws.T_BOOL})
+
+    self.assertEqual((written, skipped), (0, 1))
+    self.assertNotIn(ws.MODE_ON_PARAM, params.values)
+
+  def test_disabling_never_touches_the_confirmation_bit(self):
+    params = _offroad_panel(**{ws.MODE_ON_PARAM: "1", "ExperimentalModeConfirmed": "1"})
+    written, _ = ws.apply_updates(params, {ws.MODE_ON_PARAM: "0"}, {ws.MODE_ON_PARAM: ws.T_BOOL})
+
+    self.assertEqual(written, 1)
+    self.assertEqual(params.values[ws.MODE_ON_PARAM], "0")
+    self.assertEqual(params.values["ExperimentalModeConfirmed"], "1")
+
+  def test_plain_values_still_write_through_the_declared_type(self):
+    params = _offroad_panel()
+    written, skipped = ws.apply_updates(params, {"IsMetric": "1", "SomeInt": "not-a-number"},
+                                        {"IsMetric": ws.T_BOOL, "SomeInt": ws.T_INT})
+
+    self.assertEqual((written, skipped), (1, 1))
+    self.assertEqual(params.values["IsMetric"], "1")
+    self.assertNotIn("SomeInt", params.values)
+    self.recorded.assert_called_once()
 
 
 if __name__ == "__main__":

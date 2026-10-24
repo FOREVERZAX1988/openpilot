@@ -37,12 +37,17 @@ class AlphaLongitudinalToggles:
       title=lambda: tr("Alpha Longitudinal"),
       description=lambda: tr(DEVELOPER_DESCRIPTIONS["alpha_longitudinal"]),
       callback=self._on_alpha_long,
-      enabled=ui_state.is_offroad)
+      enabled=ui_state.is_offroad,
+      sync_param="AlphaLongitudinalEnabled")
 
     self._experimental_toggle = toggle_item_sp(
       title=lambda: tr("Experimental Mode"),
       description=lambda: tr(EXPERIMENTAL_MODE_DESCRIPTION),
-      callback=self._on_experimental_mode)
+      callback=self._on_experimental_mode,
+      # the write belongs to the callback (it may need the risk dialog first), so the
+      # switch only mirrors the key: a mode set from the web panel or the companion app
+      # shows here without waiting for the next offroad/engaged transition
+      sync_param="ExperimentalMode")
 
     self._dec_toggle = toggle_item_sp(
       title=lambda: tr("Dynamic Experimental Control"),
@@ -112,7 +117,17 @@ class AlphaLongitudinalToggles:
   @staticmethod
   def _confirm(item, callback) -> None:
     content = f"<h1>{item.title}</h1><br><p>{item.description}</p>"
-    gui_app.push_widget(ConfirmDialog(content, tr("Enable"), rich=True, callback=callback))
+    # The store still holds the old value until the driver answers, so a switch that
+    # follows the store would flip back behind the dialog. Paused for the dialog's life,
+    # then re-read through the callback's own set_state/refresh path.
+    toggle = item.action_item.toggle
+    toggle.set_sync_paused(True)
+
+    def on_result(result: DialogResult):
+      toggle.set_sync_paused(False)
+      callback(result)
+
+    gui_app.push_widget(ConfirmDialog(content, tr("Enable"), rich=True, callback=on_result))
 
   def _on_alpha_long(self, state: bool):
     if not state:
