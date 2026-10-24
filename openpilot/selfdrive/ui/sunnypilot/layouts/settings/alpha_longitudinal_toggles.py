@@ -70,16 +70,16 @@ class AlphaLongitudinalToggles:
     # Which situations may hand speed control to the model under DEC. All on by
     # default; a switch that is off can only stop a hand-over, never cause one.
     self._dec_trigger_specs = (
-      ("DynamicExperimentalTriggerCurve", "DEC: Curves",
-       "Let a curve ahead hand speed control to the model."),
-      ("DynamicExperimentalTriggerLead", "DEC: Slower Lead",
-       "Let a slower or stopped car ahead hand speed control to the model."),
-      ("DynamicExperimentalTriggerSignal", "DEC: Turn Signal",
-       "Let an active turn signal below the lane-change speed hand speed control to the model."),
-      ("DynamicExperimentalTriggerStopLight", "DEC: Stops Ahead",
-       "Let a predicted stop for a light or sign hand speed control to the model."),
-      ("DynamicExperimentalTriggerLowSpeed", "DEC: Low Speed Creep",
-       "Let creeping at very low speed hand speed control to the model."),
+      ("DynamicExperimentalTriggerCurve", tr_noop("DEC: Curves"),
+       tr_noop("Let a curve ahead hand speed control to the model.")),
+      ("DynamicExperimentalTriggerLead", tr_noop("DEC: Slower Lead"),
+       tr_noop("Let a slower or stopped car ahead hand speed control to the model.")),
+      ("DynamicExperimentalTriggerSignal", tr_noop("DEC: Turn Signal"),
+       tr_noop("Let an active turn signal below the lane-change speed hand speed control to the model.")),
+      ("DynamicExperimentalTriggerStopLight", tr_noop("DEC: Stops Ahead"),
+       tr_noop("Let a predicted stop for a light or sign hand speed control to the model.")),
+      ("DynamicExperimentalTriggerLowSpeed", tr_noop("DEC: Low Speed Creep"),
+       tr_noop("Let creeping at very low speed hand speed control to the model.")),
     )
     self._dec_trigger_toggles = [
       toggle_item_sp(title=lambda t=title: tr(t), description=lambda d=desc: tr(d), param=param)

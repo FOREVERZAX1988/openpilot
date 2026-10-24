@@ -2431,7 +2431,7 @@ msgstr "启用 SSH"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Enable Safe Mode"
-msgstr ""
+msgstr "启用安全模式"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "Enable Speed TF"
@@ -2698,7 +2698,7 @@ msgstr "退出始终离路"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Exit Safe Mode"
-msgstr ""
+msgstr "退出安全模式"
 
 #: selfdrive/ui/layouts/settings/toggles.py
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
@@ -5480,11 +5480,11 @@ msgstr "西南"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Safe Mode forces every driving knob this fork adds back to a conservative value and remembers what it replaced. Continue?"
-msgstr ""
+msgstr "安全模式会把本分支新增的每个驾驶参数强制改回保守值，并记住被替换掉的原值。继续？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Safe Mode is on. Reboot so every process picks up the forced values."
-msgstr ""
+msgstr "安全模式已开启。重启设备，让所有进程采用强制值。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Same Direction Speed Cam Filter"
@@ -6893,7 +6893,7 @@ msgstr "无法恢复设置，请稍后重试。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Undo Safe Mode and put back the values it replaced?"
-msgstr ""
+msgstr "撤销安全模式并恢复被替换的原值？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
 msgid "Unified Engagement Mode (UEM)"
@@ -9457,3 +9457,42 @@ msgstr "🔥 Firehose 模式 🔥"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 SunnyLink 🚀"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Curves"
+msgstr "DEC: 弯道"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Slower Lead"
+msgstr "DEC: 前车更慢"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Turn Signal"
+msgstr "DEC: 转向灯"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Stops Ahead"
+msgstr "DEC: 前方停车"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Low Speed Creep"
+msgstr "DEC: 低速蠕行"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a curve ahead hand speed control to the model."
+msgstr "前方有弯道时，把速度控制交给模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a slower or stopped car ahead hand speed control to the model."
+msgstr "前方有更慢或已停下的车辆时，把速度控制交给模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let an active turn signal below the lane-change speed hand speed control to the model."
+msgstr "车速低于变道速度且已打转向灯时，把速度控制交给模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a predicted stop for a light or sign hand speed control to the model."
+msgstr "预测前方信号灯或标志需要停车时，把速度控制交给模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let creeping at very low speed hand speed control to the model."
+msgstr "极低速蠕行时，把速度控制交给模型。"

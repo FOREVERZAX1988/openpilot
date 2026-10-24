@@ -7370,3 +7370,42 @@ msgstr ""
 msgid "Select"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Curves"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Slower Lead"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Turn Signal"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Stops Ahead"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Low Speed Creep"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a curve ahead hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a slower or stopped car ahead hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let an active turn signal below the lane-change speed hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a predicted stop for a light or sign hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let creeping at very low speed hand speed control to the model."
+msgstr ""
