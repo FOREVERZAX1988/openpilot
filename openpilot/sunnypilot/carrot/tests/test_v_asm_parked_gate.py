@@ -21,7 +21,6 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from openpilot.cereal import log
 from openpilot.sunnypilot.carrot.xiaoge import v_asm_server
 from openpilot.sunnypilot.carrot.xiaoge.v_asm_server import PARKED_SPEED_MPS, VASMService, parked_gate
 
@@ -59,10 +58,13 @@ class FakeSubMaster:
 
 def _service(**kw):
   """A VASMService with only the attributes the gates touch (no ONNX, no camera)."""
+  sides = kw.pop("configured_sides", ("left", "right"))
   service = object.__new__(VASMService)
   service.lock = threading.Lock()
   service.sm_lock = threading.Lock()
   service.sm = FakeSubMaster(**kw)
+  service.inference = SimpleNamespace(configured_sides=tuple(sides))
+  service.next_side = "left"
   service.vasm_gate = {"active": False, "side": "", "reason": "waiting", "laneWidth": 0.0}
   service.inference_gate = {"active": True, "reason": "not checked yet", "speed": None}
   return service
@@ -77,7 +79,9 @@ def _status_service():
   service.last_road_frame_at = 0.0
   service.camera_error = ""
   service.lane_camera_error = ""
-  service.vasm_result = {"left": False, "right": False, "side": "", "updatedMonoTimeNanos": 0}
+  # updatedMonoTimeNanosBySide 是 cp c6566c65a 引入的「按侧新鲜度」，status() 逐侧读取。
+  service.vasm_result = {"left": False, "right": False, "side": "", "updatedMonoTimeNanos": 0,
+                         "updatedMonoTimeNanosBySide": {"left": 0, "right": 0}}
   service.lane_result = {"leftLine": -1, "rightLine": -1, "leftConf": 0.0, "rightConf": 0.0,
                          "candidatesCount": 0, "valid": False, "error": "", "updatedMonoTimeNanos": 0}
   service.inference = SimpleNamespace(valid=True, error="", confidence={"left": 0.0, "right": 0.0},
@@ -192,32 +196,42 @@ class UpdateInferenceGateTest(unittest.TestCase):
     self.assertIn("unavailable", reason)
 
 
-class LaneChangeGateTest(unittest.TestCase):
-  """The blindspot gate now reports "parked" instead of "outside 30-120 km/h"."""
+class DualSideGateTest(unittest.TestCase):
+  """cp c6566c65a replaced the direction/speed gate with a dual-side one.
 
-  def test_parked_reason_wins_over_the_speed_range(self):
+  The parked answer moved to ``parked_gate``/``inference_gate``, so this gate only
+  answers "is there room beside us". The old ``_lane_change_gate`` (30-120 km/h +
+  turn indicator) is gone on purpose: it made the blind spot blind exactly when a
+  lane change was being prepared.
+  """
+
+  def test_both_wide_lanes_are_eligible(self):
+    service = _service(speed=60.0 / 3.6)
+    self.assertEqual(service._update_vasm_gate(), ("left", "right"))
+    self.assertEqual(service.vasm_gate["eligibleSides"], ["left", "right"])
+
+  def test_narrow_lanes_close_the_gate_with_the_new_floor(self):
+    service = _service(speed=60.0 / 3.6, lane_width=1.99)
+    self.assertEqual(service._update_vasm_gate(), ())
+    self.assertIn("2.0 m", service.vasm_gate["reason"])
+
+  def test_two_metre_lane_is_the_boundary(self):
+    service = _service(speed=60.0 / 3.6, lane_width=2.0)
+    self.assertEqual(service._update_vasm_gate(), ("left", "right"))
+
+  def test_unconfigured_side_is_not_eligible(self):
+    service = _service(speed=60.0 / 3.6, configured_sides=("left",))
+    self.assertEqual(service._update_vasm_gate(), ("left",))
+    self.assertEqual(service.vasm_gate["side"], "left")
+
+  def test_parked_no_longer_closes_this_gate(self):
+    # Parking is the inference gate's job now: one failure, one reason. If both
+    # gates answered "parked", the web panel would blame the wrong layer.
     service = _service(speed=0.0)
-    active, _side = service._update_vasm_gate()
-    self.assertFalse(active)
-    self.assertIn("parked", service.vasm_gate["reason"])
+    self.assertEqual(service._update_vasm_gate(), ("left", "right"))
 
-  def test_low_speed_still_reports_the_range(self):
-    service = _service(speed=20.0 / 3.6, direction=log.LaneChangeDirection.left)
-    service._update_vasm_gate()
-    self.assertIn("30-120", service.vasm_gate["reason"])
-
-  def test_moving_lane_change_keeps_the_old_behaviour(self):
-    service = _service(speed=60.0 / 3.6, direction=log.LaneChangeDirection.left, lane_width=3.5)
-    active, side = service._update_vasm_gate()
-    self.assertTrue(active)
-    self.assertEqual(side, "left")
-    self.assertEqual(service.vasm_gate["laneWidth"], 3.5)
-
-  def test_narrow_target_lane_stays_closed(self):
-    service = _service(speed=60.0 / 3.6, direction=log.LaneChangeDirection.right, lane_width=2.5)
-    active, _side = service._update_vasm_gate()
-    self.assertFalse(active)
-    self.assertIn("3.0 m", service.vasm_gate["reason"])
+  def test_lane_change_gate_is_gone(self):
+    self.assertFalse(hasattr(VASMService, "_lane_change_gate"))
 
 
 class StatusContractTest(unittest.TestCase):
@@ -230,7 +244,7 @@ class StatusContractTest(unittest.TestCase):
     self.assertIn("inferenceGate", status)
     self.assertFalse(status["inferenceGate"]["active"])
     self.assertIn("parked", status["inferenceGate"]["reason"])
-    # the lane-change gate keeps its own key, so old readers are untouched
+    # the lane-width gate keeps its own key, so old readers are untouched
     self.assertIn("gate", status)
 
   def test_status_carries_the_live_gate_not_a_copy(self):
