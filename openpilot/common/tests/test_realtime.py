@@ -82,6 +82,23 @@ class TestOnlineCores(unittest.TestCase):
       self.assertEqual(realtime.get_online_cores(), set(range(4)))
 
 
+class TestPickOnlineCore(unittest.TestCase):
+  def test_prefers_first_online_core(self):
+    self.assertEqual(realtime.pick_online_core((4, 5), {0, 1, 2, 3, 5}), [5])
+
+  def test_prefers_core4_over_core5_when_both_online(self):
+    """Core 5 also hosts card at the same FIFO priority; core 4 only has radarcan."""
+    self.assertEqual(realtime.pick_online_core((4, 5), {4, 5, 6, 7}), [4])
+
+  def test_returns_empty_when_no_preferred_core_is_online(self):
+    # core_ctl keeps 4/5 offline in steady state (online = 0-3,6-7) -> caller falls back
+    self.assertEqual(realtime.pick_online_core((4, 5), {0, 1, 2, 3, 6, 7}), [])
+
+  def test_defaults_to_kernel_online_set(self):
+    with mock.patch.object(realtime, 'get_online_cores', return_value={5}):
+      self.assertEqual(realtime.pick_online_core((4, 5)), [5])
+
+
 class TestRepinAfterSelfPin(unittest.TestCase):
   def test_pinned_process_can_still_move_to_an_online_core(self):
     """Regression: the UI bootstraps with config_realtime_process(0, ...), which

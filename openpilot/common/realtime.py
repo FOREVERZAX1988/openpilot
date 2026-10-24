@@ -100,6 +100,21 @@ def get_online_cores() -> set[int]:
   return set(range(os.cpu_count() or 1))
 
 
+def pick_online_core(preference: tuple[int, ...] | list[int], online: set[int] | None = None) -> list[int]:
+  """Return the first CPU in `preference` that is online, or [] when none is.
+
+  Kept separate from the callers so the preference order is testable without
+  importing the UI. `online` defaults to the kernel's online set, never this
+  process's affinity mask (see get_online_cores).
+  """
+  if online is None:
+    online = get_online_cores()
+  for core in preference:
+    if core in online:
+      return [core]
+  return []
+
+
 def set_core_affinity(cores: list[int]) -> set[int]:
   """Pin the current process to `cores`, skipping any CPU that is not online.
 
