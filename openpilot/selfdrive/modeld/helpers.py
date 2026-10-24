@@ -1,14 +1,11 @@
 import io
-import os
 import pickle
 import shutil
 import struct
 import tempfile
-import sys
 from pathlib import Path
 
-from openpilot.common.file_chunker import get_chunk_name, get_manifest_path, open_file_chunked
-from openpilot.common.hardware import AGNOS
+from openpilot.common.file_chunker import get_manifest_path
 from openpilot.common.hardware.usb import CHESTNUT_USB_PRODUCT, USB_DEVICES_PATH, is_chestnut_usb_id
 
 MODELS_DIR = Path(__file__).resolve().parent / 'models'
@@ -37,19 +34,26 @@ def modeld_pkl_path(chestnut: bool):
   prefix = 'big_' if chestnut else ''
   return MODELS_DIR / f'{prefix}driving_tinygrad.pkl'
 
-def load_oob(path, chestnut=False):
-  from tinygrad import Context, Device
-  from tinygrad.device import Buffer
-  device = 'USB+AMD:LLVM' if chestnut else 'QCOM' if AGNOS else 'METAL' if sys.platform == 'darwin' else 'CPU:LLVM'
-  chunks = 0 if os.path.isfile(path) else int(Path(get_manifest_path(path)).read_text())
-  paths = [get_chunk_name(path, i, chunks) for i in range(chunks)] or [path]
-  with Context(DEV=device), open_file_chunked(path) as f:
-    opcodes = f.read(struct.unpack('<q', f.read(8))[0])
-    buffers, stage = Buffer(Device.DEFAULT, sum(map(os.path.getsize, paths)) - 8 - len(opcodes)).ensure_allocated(), bytearray(64 << 20)
-    for offset in range(0, buffers.nbytes, len(stage)):
-      n = f.readinto(piece := memoryview(stage)[:min(len(stage), buffers.nbytes - offset)])
-      buffers.view(n, offset).ensure_allocated().copy_from(Buffer("PYTHON", n, initial_value=piece[:n]))
-    return type("_Unpickler", (pickle.Unpickler,), {"persistent_load": lambda self, pid: buffers.view(*pid)})(io.BytesIO(opcodes)).load()
+def load_oob(f):
+  """Unpickle a compile_modeld.py artifact: pickle opcodes, then length-prefixed buffers.
+
+  Restored to upstream/test's form 2026-10-24. sp-macan-test2 carried a device-Buffer
+  variant (Buffer(dev, nbytes) streamed straight into video memory) written against the
+  tinygrad that predates fe5d3169: there Buffer.__init__ took no dtype and view() was
+  (size, offset). Both now require one, so the very first Buffer(...) raised
+  TypeError, modeld died in ModelState.__init__, and the manager tore down camerad and
+  preview_shimd with it -- the parked preview then drew no path and jetlink never got a
+  window. Callers pass an open file object (open_file_chunked covers the big model's
+  chunked manifest), which is what compile_modeld.py already did.
+  """
+  opcodes = f.read(struct.unpack('<q', f.read(8))[0])
+  def buffers():
+    while (h := f.read(8)):
+      pb = pickle.PickleBuffer(bytearray(struct.unpack('<q', h)[0]))
+      if f.readinto(pb) != pb.raw().nbytes:
+        raise EOFError("incomplete model buffer")
+      yield pb
+  return pickle.load(io.BytesIO(opcodes), buffers=buffers())
 
 # the top level of the pkl compile_modeld.py writes. checked at both ends: a pkl from another
 # compile_modeld.py unpickles fine and only fails on the first key it lacks, as a bare KeyError
@@ -80,34 +84,6 @@ def check_camera_jit(jits: dict, cam_w: int, cam_h: int, path) -> None:
     compiled = ', '.join(f'{w}x{h}' for w, h in sorted(k for k in jits if isinstance(k, tuple)))
     raise _camera_mismatch(cam_w, cam_h, compiled, path)
 
-# the top level of the pkl compile_modeld.py writes. checked at both ends: a pkl from another
-# compile_modeld.py unpickles fine and only fails on the first key it lacks, as a bare KeyError
-MODELD_PKL_KEYS = ('metadata', 'input_devices', 'run_model')
-
-def check_modeld_pkl(jits: dict, path) -> None:
-  missing = [k for k in MODELD_PKL_KEYS if k not in jits]
-  if missing:
-    raise RuntimeError(f"{path} is missing {missing}: it was compiled by a different compile_modeld.py than this modeld, rebuild it")
-
-# every warp jit is compiled for one driver camera resolution and keyed by it, so a prebuilt cut
-# on a device with a different camera carries none for this one. Without this the mismatch
-# surfaces as a bare FileNotFoundError or KeyError inside ModelState.__init__ and the process
-# just stops. See PREBUILT_ALL_CAMERAS in modeld/SConscript
-def _camera_mismatch(cam_w: int, cam_h: int, compiled: str, path) -> RuntimeError:
-  have = f"{path} has only [{compiled or 'none'}]"
-  return RuntimeError(f"no jit for this device's {cam_w}x{cam_h} driver camera: {have}. This build was compiled for another device")
-
-def dm_warp_path(cam_w: int, cam_h: int):
-  path = MODELS_DIR / f'dm_warp_{cam_w}x{cam_h}_tinygrad.pkl'
-  if not path.is_file():
-    compiled = ', '.join(sorted(p.name.split('_')[2] for p in MODELS_DIR.glob('dm_warp_*_tinygrad.pkl')))
-    raise _camera_mismatch(cam_w, cam_h, compiled, MODELS_DIR)
-  return path
-
-def check_camera_jit(jits: dict, cam_w: int, cam_h: int, path) -> None:
-  if (cam_w, cam_h) not in jits:
-    compiled = ', '.join(f'{w}x{h}' for w, h in sorted(k for k in jits if isinstance(k, tuple)))
-    raise _camera_mismatch(cam_w, cam_h, compiled, path)
 
 def chestnut_present() -> bool:
   for d in USB_DEVICES_PATH.glob("*"):
