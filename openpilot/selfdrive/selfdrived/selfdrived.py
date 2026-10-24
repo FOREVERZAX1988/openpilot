@@ -13,7 +13,6 @@ from msgq.visionipc import VisionIpcClient
 
 from openpilot.common.dm import is_dm_disabled
 from openpilot.common.params import Params
-from openpilot.common.dm import is_dm_disabled
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.gps import get_gps_location_service
@@ -67,6 +66,21 @@ MonitoringPolicy = log.DriverMonitoringState.MonitoringPolicy
 TurnDirection = custom.ModelDataV2SP.TurnDirection
 
 IGNORED_SAFETY_MODES = (SafetyModel.silent, SafetyModel.noOutput)
+
+
+def comm_issue_checked_services(sm) -> list[str]:
+  """The services that the commIssue cloudlog is allowed to name as evidence.
+
+  This is the set `SubMaster.all_checks()` actually walks: static-frequency
+  services minus everything on an ignore list. The on-demand services
+  (alertDebug, lateralManeuverPlan, uiDebug, operatingSystemLog, ...) publish
+  without valid=True and can never pass validation, so naming them pointed every
+  diagnosis at a service that was never expected to be valid in the first place.
+  """
+  return [s for s in sm.static_freq_services
+          if s not in sm.ignore_valid
+          and s not in sm.ignore_alive
+          and s not in sm.ignore_average_freq]
 
 
 class SelfdriveD(CruiseHelper):
@@ -531,10 +545,13 @@ class SelfdriveD(CruiseHelper):
         else:
           self.events.add(EventName.commIssue)
 
+        # Name only the services that actually take part in the check, see
+        # comm_issue_checked_services().
+        checked = comm_issue_checked_services(self.sm)
         logs = {
-          'invalid': [s for s, valid in self.sm.valid.items() if not valid],
-          'not_alive': [s for s, alive in self.sm.alive.items() if not alive],
-          'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok],
+          'invalid': [s for s in checked if not self.sm.valid[s]],
+          'not_alive': [s for s in checked if not self.sm.alive[s]],
+          'not_freq_ok': [s for s in checked if not self.sm.freq_ok[s]],
         }
         if logs != self.logged_comm_issue:
           cloudlog.event("commIssue", error=True, **logs)
