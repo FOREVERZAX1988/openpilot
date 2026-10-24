@@ -18,6 +18,33 @@ CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
 
+
+def extend_polyline(points: np.ndarray, max_distance: float) -> np.ndarray:
+  """The polyline, carried along its own tangent out to `max_distance`.
+
+  Only for the parked preview (see `_update_model`): while the ego is not moving
+  the model's plan horizon collapses to a few metres of forward travel, and every
+  one of those metres projects below the bottom edge of the road view (the ground
+  closer than ~6 m is off-screen at the view's zoom), so the path was drawn off
+  frame and the preview looked like it had lost it. The points the model did
+  produce are kept as they are; one point is appended on the last segment's
+  tangent, so the drawn line reaches the minimum draw distance.
+
+  Pure numpy, no pyray: pinned by tests/test_model_path_extend.py.
+  """
+  if points.shape[0] < 2 or points[-1, 0] >= max_distance:
+    return points
+
+  p0, p1 = points[-2], points[-1]
+  tangent = p1 - p0
+  if tangent[0] <= 1e-3:
+    # not heading anywhere in x: no tangent to extend along
+    return points
+
+  s = (max_distance - p1[0]) / tangent[0]
+  return np.concatenate((points, (p1 + s * tangent)[None, :]), axis=0).astype(points.dtype)
+
+
 THROTTLE_COLORS = [
   rl.Color(13, 248, 122, 102),   # HSLF(148/360, 0.94, 0.51, 0.4)
   rl.Color(114, 255, 92, 89),    # HSLF(112/360, 1.0, 0.68, 0.35)
@@ -58,6 +85,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._lead_vehicles = [LeadVehicle(), LeadVehicle()]
     self._path_offset_z = HEIGHT_INIT[0]
     self._counter = -1
+    self._preview = ui_state.params.get_bool("IsOnroadPreview")
     self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
     # Initialize ModelPoints objects
     self._path = ModelPoints()
@@ -107,6 +135,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
 
     if self._counter % 60 == 0:
       self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+      self._preview = ui_state.params.get_bool("IsOnroadPreview")
     self._counter += 1
 
     if sm.updated['carParams']:
@@ -192,9 +221,14 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
       lead_d = lead.dRel * 2.0
       max_distance = np.clip(lead_d - min(lead_d * 0.35, 10.0), 0.0, max_distance)
 
-    max_idx = self._get_path_length_idx(path_x_array, max_distance)
+    # Parked preview only: the plan's own horizon is shorter than the minimum
+    # draw distance (v_ego is 0, so the plan is a few metres long and all of it
+    # projects below the frame). Carrying the line out to max_distance is what
+    # makes the preview show a path at all; onroad this is a no-op.
+    path_points = extend_polyline(self._path.raw_points, max_distance) if self._preview else self._path.raw_points
+    max_idx = self._get_path_length_idx(path_points[:, 0], max_distance)
     self._path.projected_points = self._map_line_to_polygon(
-      self._path.raw_points, self._get_path_half_width(), self._path_offset_z, max_idx, max_distance, allow_invert=False
+      path_points, self._get_path_half_width(), self._path_offset_z, max_idx, max_distance, allow_invert=False
     )
 
     self._update_experimental_gradient()
