@@ -178,6 +178,17 @@ class ModelState(ModelStateBase):
       self.outputs[next_name] = input_view(state._buffer(), state.shape, state.dtype, 0)
     self.parser = Parser()
 
+    # The observer is handed the packed host inputs. prev_feat is a state pair: it never reaches
+    # self.npy because next_prev_feat is written straight back into its device buffer. Handing
+    # self.npy over as-is made the first capture raise KeyError('prev_feat'), which the client
+    # turns into failed=True -- the comparison silently never produced a single sample. Mirror
+    # the state the model is about to consume into the dict instead.
+    self.shadow_inputs = None
+    if self.signal_shadow is not None and 'prev_feat' in self.input_queues:
+      self.prev_feat_host = np.zeros(self.input_shapes['prev_feat'][0], dtype=np.float32)
+      self.shadow_inputs = dict(self.npy)
+      self.shadow_inputs['prev_feat'] = self.prev_feat_host
+
   def pack_inputs(self) -> None:
     # Pack host inputs into one upload to reduce USB transfer overhead for the eGPU.
     self.input_queues = {name: Tensor(np.zeros(shape, dtype=dtype), device=self.model_device).realize()
@@ -214,12 +225,15 @@ class ModelState(ModelStateBase):
     self.npy['action_t'][:] = inputs['action_t']
 
     self.input_device.copy_from(self.input_host)
+    if self.shadow_inputs is not None:
+      # read it before run_model overwrites the same buffer with next_prev_feat
+      self.prev_feat_host[:] = self.input_queues['prev_feat'].numpy().reshape(self.prev_feat_host.shape)
     self.input_queues['new_img'] = self.run_warp(**self.warp_inputs)
     self.run_model(output_buffers=self.outputs, **self.input_queues)
     if after_enqueue is not None:
       after_enqueue()
     model_output = self.outputs['outputs'].numpy()[0]
-    shadow_payload = self.signal_shadow.capture(model_output, self.npy) if self.signal_shadow is not None else None
+    shadow_payload = self.signal_shadow.capture(model_output, self.shadow_inputs) if self.shadow_inputs is not None else None
     if self.chestnut and not np.all(np.isfinite(model_output)):
       raise RuntimeError("model output not finite")
     outputs_dict = self.parser.parse_outputs(self.slice_outputs(model_output, self.output_slices))

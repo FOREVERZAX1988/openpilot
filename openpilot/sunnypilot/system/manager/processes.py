@@ -100,17 +100,16 @@ def use_github_runner(started: bool, params: Params, CP: car.CarParams) -> bool:
 
 
 def extend_procs(procs: list[ManagerProcess]) -> list[ManagerProcess]:
-  """process_config's list with micd and soundd as AudioProcess, jetlinkd beside
-  the model manager, and the GitHub runner at the end."""
+  """process_config's list with micd and soundd as AudioProcess and the GitHub runner
+  at the end."""
   procs = [AudioProcess(p.name, p.module, p.should_run, enabled=p.enabled, sigkill=p.sigkill) if p.name in AUDIO_PROCESSES else p
            for p in procs]
 
-  # runs onroad too: jetlinkd holds the USB gadget open for as long as the link
-  # is enabled. A gadget whose owner exits leaves the bus, and that is the
-  # unplug at every ignition edge this arrangement removes
-  jetlinkd = RestartingPythonProcess(jetlink_adapter.OWNER, jetlink_adapter.__name__, jetlink_adapter.should_run)
-  at = next((i + 1 for i, p in enumerate(procs) if p.name == "models_manager"), len(procs))
-  procs.insert(at, jetlinkd)
+  # jetlinkd used to be inserted here as well, but process_config now registers its own
+  # (and_(always_run, should_run): the link keeps the USB gadget onroad). Two entries with
+  # the same name left procs at 73 entries for 72 names, and TestManager.test_duplicate_procs
+  # failed; the later insert also shadowed the onroad-capable one whenever the dict was built
+  # the other way round. Nothing to add: process_config's entry is the one that runs.
 
   if os.path.exists("../../../release/ci/github_runner.sh"):
     procs.append(NativeProcess("github_runner_start", "release/ci", ["./github_runner.sh", "start"], use_github_runner, sigkill=False))

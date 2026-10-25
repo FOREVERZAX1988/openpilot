@@ -195,19 +195,6 @@ class FontWeight(StrEnum):
   ROMAN = "Inter-Regular.ttf"
   DISPLAY = "Inter-Bold.ttf"
 
-_OPFONT_WEIGHT = {
-  "Inter-Light.fnt": "Regular",
-  "Inter-Regular.fnt": "Regular",
-  "Inter-Medium.fnt": "Medium",
-  "Inter-SemiBold.fnt": "SemiBold",
-  "Inter-Bold.fnt": "Bold",
-}
-
-
-def _opfont_filename(inter_filename: str, lang_code: str) -> str:
-  """Map an Inter font filename to the equivalent OpFont filename for a language."""
-  weight_name = _OPFONT_WEIGHT.get(inter_filename, "Regular")
-  return f"OpFont-{weight_name}-{lang_code}.fnt"
 _NON_LATIN_RE = re.compile(r"[\u0e00-\u0e7f\u1100-\u11ff\u2e80-\u318f\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef]")
 FALLBACK_ATLAS_MAX_CODEPOINTS = 2000
 

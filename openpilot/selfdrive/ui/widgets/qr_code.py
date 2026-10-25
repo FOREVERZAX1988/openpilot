@@ -1,8 +1,13 @@
 import numpy as np
 import pyray as rl
-import qrcode
 
 from openpilot.common.swaglog import cloudlog
+
+try:
+  import qrcode
+except ImportError:  # never declared as a dependency: without this the main UI layout
+  # (main -> CarrotWebDialog -> CarrotWebQrSession -> this module) fails to import at all.
+  qrcode = None
 
 
 class QRCodeTexture:
@@ -22,6 +27,10 @@ class QRCodeTexture:
     self.destroy()
     self._data = normalized
     if not normalized:
+      return True
+
+    if qrcode is None:
+      cloudlog.warning("Carrot Web QR code unavailable: the qrcode package is not installed")
       return True
 
     try:

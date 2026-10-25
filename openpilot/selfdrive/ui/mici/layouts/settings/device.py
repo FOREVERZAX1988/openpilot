@@ -245,6 +245,11 @@ class DeviceLayoutMici(NavScroller):
     server = tr("KONIK") if ui_state.params.get_bool("UseKonikServer", False) else tr("COMMA")
     self._server_btn.set_value(server)
     self._api_server_btn.set_value(get_api_host())
+    # 行车预览按钮色跟随 param（曾因同名方法重复定义被后来的版本整个覆盖，服务器按钮因此不再刷新）
+    if self._onroad_preview_btn is not None:
+      is_preview = self._params.get_bool("IsOnroadPreview")
+      tint = rl.Color(70, 91, 234, 255) if (self._onroad_preview_btn.enabled and is_preview) else rl.WHITE
+      self._onroad_preview_btn.set_bg_tint(tint)
 
   def _on_language_selected(self, display_name: str):
     """BigMultiToggle 选择回调：显示名 → 语言代码，切换后重启 UI。
@@ -265,13 +270,6 @@ class DeviceLayoutMici(NavScroller):
     if not self._fcc_dialog:
       self._fcc_dialog = MiciFccModal(os.path.join(BASEDIR, "openpilot/selfdrive/assets/offroad/mici_fcc.html"))
     gui_app.push_widget(self._fcc_dialog)
-
-  def _update_state(self):
-    super()._update_state()
-    if self._onroad_preview_btn is not None:
-      is_preview = self._params.get_bool("IsOnroadPreview")
-      tint = rl.Color(70, 91, 234, 255) if (self._onroad_preview_btn.enabled and is_preview) else rl.WHITE
-      self._onroad_preview_btn.set_bg_tint(tint)
 
   def set_preview_callback(self, callback: Callable | None) -> None:
     self._preview_callback = callback

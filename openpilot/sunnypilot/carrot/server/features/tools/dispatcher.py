@@ -62,8 +62,15 @@ def capture_tmux_log_sync() -> tuple[int, str]:
   os.makedirs(os.path.dirname(TMUX_LOG_PATH), exist_ok=True)
   with open(TMUX_LOG_PATH, "w", encoding="utf-8") as f:
     f.write(proc.stdout or "")
-  from openpilot.common.egpu_diagnostics import append_report
-  append_report(TMUX_LOG_PATH)
+  try:
+    from openpilot.common.egpu_diagnostics import append_report
+  except ImportError:
+    # the module was never added; a hard import here failed the whole tmux capture
+    return 0, ""
+  try:
+    append_report(TMUX_LOG_PATH)
+  except Exception:
+    return 1, "egpu diagnostics failed"
   return 0, ""
 
 

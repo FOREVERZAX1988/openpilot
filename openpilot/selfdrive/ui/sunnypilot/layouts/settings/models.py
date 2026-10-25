@@ -221,121 +221,6 @@ class ModelsLayout(Widget):
 
   # ---- download mirror ------------------------------------------------- #
 
-  @staticmethod
-  def _mirror_button_index() -> int:
-    raw = (ui_state.params.get(HF_MIRROR_PARAM) or "").strip()
-    if raw == "off":
-      return 1
-    if normalize_base_url(raw):
-      return 2
-    return 0  # unset -> built-in default mirror
-
-  @staticmethod
-  def _catalog_button_index() -> int:
-    raw = (ui_state.params.get(GITHUB_PROXY_PARAM) or "").strip()
-    if raw == "direct":
-      return 1
-    if normalize_base_url(raw):
-      return 2
-    return 0  # unset -> auto (direct first, CDN fallback)
-
-  def _on_hf_mirror_mode(self, index: int):
-    if index == 0:
-      ui_state.params.put(HF_MIRROR_PARAM, "")
-    elif index == 1:
-      ui_state.params.put(HF_MIRROR_PARAM, "off")
-    else:
-      current = ui_state.params.get(HF_MIRROR_PARAM) or ""
-      dialog = InputDialogSP(
-        tr("Custom Mirror"),
-        tr("Base URL replacing https://huggingface.co, e.g. https://hf-mirror.com"),
-        current_text="" if current == "off" else current,
-        callback=lambda result, text: self._on_custom_url_result(result, text, HF_MIRROR_PARAM,
-                                                                 tr("The mirror must be an http(s) URL without spaces, e.g. https://hf-mirror.com")))
-      dialog.show()
-
-  def _on_catalog_source_mode(self, index: int):
-    if index == 0:
-      ui_state.params.put(GITHUB_PROXY_PARAM, "")
-    elif index == 1:
-      ui_state.params.put(GITHUB_PROXY_PARAM, "direct")
-    else:
-      current = ui_state.params.get(GITHUB_PROXY_PARAM) or ""
-      dialog = InputDialogSP(
-        tr("Catalog Proxy Prefix"),
-        tr("Prefix prepended to the catalog URL, e.g. https://gh-proxy.com"),
-        current_text="" if current == "direct" else current,
-        callback=lambda result, text: self._on_custom_url_result(result, text, GITHUB_PROXY_PARAM,
-                                                                 tr("The proxy must be an http(s) URL without spaces, e.g. https://gh-proxy.com")))
-      dialog.show()
-
-  def _on_custom_url_result(self, result, text: str, param: str, error_message: str):
-    if result != DialogResult.CONFIRM:
-      return
-    base = normalize_base_url(text)
-    if base is None:
-      gui_app.push_widget(alert_dialog(error_message))
-      return
-    ui_state.params.put(param, base)
-
-  def _refresh_mirror_items(self):
-    for item, index in ((self.hf_mirror_item, self._mirror_button_index()), (self.catalog_source_item, self._catalog_button_index())):
-      if item.action_item.selected_button != index:
-        item.action_item.set_selected_button(index)
-
-    descs = (
-      (self.hf_mirror_item,
-       tr("huggingface.co is unreachable on many networks. Mirror sends model downloads to a mirror site instead; ") +
-       tr("Direct uses huggingface.co as-is; Custom lets you enter your own mirror. Applies to the next download."),
-       describe_hf_mirror(ui_state.params), self._last_mirror_desc),
-      (self.catalog_source_item,
-       tr("The model list lives on GitHub raw. Auto tries direct first and falls back to a CDN mirror when it fails; ") +
-       tr("Direct never falls back; Proxy always fetches through your own prefix. Press Refresh Model List to apply."),
-       describe_github_proxy(ui_state.params), self._last_catalog_desc),
-    )
-    for item, base_desc, effective, last in descs:
-      desc = f"{base_desc}<br>{tr('Current')}: {effective}"
-      if desc != last:
-        item.set_description(desc)
-      # return the newest cache value for each row
-      if item is self.hf_mirror_item:
-        self._last_mirror_desc = desc
-      else:
-        self._last_catalog_desc = desc
-
-  def _handle_bundle_download_progress(self):
-    self.cancel_download_item.set_visible(False)
-    self._downloading = False
-    self._verifying = False
-    self.download_item.set_visible(True)
-
-    self._clearing = ui_state.params.get_bool("ModelManager_ClearCache")
-    if self._clearing:
-      self.last_cache_calc_time = 0.0  # refresh the size as soon as clearing finishes
-    elif (current_time := time.monotonic()) - self.last_cache_calc_time > 0.5:
-      self.last_cache_calc_time = current_time
-      self.clear_cache_item.action_item.set_value(f"{self.calculate_cache_size():.2f} {tr('MB')}")
-      self._refresh_accelerator_items()
-
-    bundle = self.model_manager.selectedBundle if self.model_manager else None
-    progresses = [model.artifact.downloadProgress for model in bundle.models if model.artifact.fileName] if bundle else []
-    if not progresses or bundle.status not in (custom.ModelManagerSP.DownloadStatus.downloading,
-                                               custom.ModelManagerSP.DownloadStatus.failed):
-      self.download_item.action_item.update(name="", segments=self._slot_segments())
-      return
-
-    self.cancel_download_item.set_visible(ui_state.params.get("ModelManager_DownloadRef") is not None)
-    if bundle.status == custom.ModelManagerSP.DownloadStatus.downloading:
-      device._reset_interactive_timeout()
-
-    state = self._download_row_state(progresses, bundle.internalName)
-    if queued := queued_name(bundle.ref):
-      state["name"] += f"  |  {queued} {tr('queued')}"
-    self.download_item.action_item.update(**state)
-    self._downloading = self.download_item.action_item.downloading
-    ds = custom.ModelManagerSP.DownloadStatus
-    self._verifying = any(getattr(p.status, 'raw', p.status) == ds.verifying for p in progresses)
-
   def _slot_segments(self):
     """small and big slots side by side; green marks the slot whose pick is actually
     driving (runner-matched, so a failed Default big greens neither slot), an empty
@@ -495,6 +380,13 @@ class ModelsLayout(Widget):
       elif p.status == custom.ModelManagerSP.DownloadStatus.failed:
         text, color = tr("download failed - {}").format(bundle.displayName), rl.RED
       label.action_item.update(p.progress, text, show, color)
+
+    # the cache/refresh row gates on these, and the chunked rewrite dropped the only writer
+    ds = custom.ModelManagerSP.DownloadStatus
+    self._downloading = any(getattr(m.artifact.downloadProgress.status, 'raw', m.artifact.downloadProgress.status) == ds.downloading
+                            for m in bundle.models)
+    self._verifying = any(getattr(m.artifact.downloadProgress.status, 'raw', m.artifact.downloadProgress.status) == ds.verifying
+                          for m in bundle.models)
 
   @staticmethod
   def _show_reset_params_dialog():

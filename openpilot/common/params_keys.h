@@ -438,6 +438,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CscCurvatureLearningEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot curve-speed self-learning: learns comfort lateral accel per curvature from the driver's manual driving
     {"CurvatureLearningData", {PERSISTENT | BACKUP, STRING}},  // JSON bucket data for CscCurvatureLearningEnabled
     {"NNFFMode", {PERSISTENT | BACKUP, INT, "0"}},  // StarPilot NNFF lateral control: 0=off, 1=lite (jerk friction), 2=full NN feedforward
+    {"NNFFModelName", {PERSISTENT | BACKUP, STRING}},  // StarPilot NNFF model name shown in the UI border; was read by carrot_param_cache without being registered, which raises UnknownKeyName on device
     {"LaneCenteringEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot vision lane-centering: bounded curvature correction toward the lane center (not for use with LateralLaneCentering)
     {"LaneCenterOffset", {PERSISTENT | BACKUP, FLOAT, "0"}},  // Lane centering lateral offset in meters (-0.3..0.3)
     {"LaneCenteringE2EAuthority", {PERSISTENT | BACKUP, BOOL, "0"}},  // Attenuate lane-centering correction on large deliberate path errors unless near a boundary
