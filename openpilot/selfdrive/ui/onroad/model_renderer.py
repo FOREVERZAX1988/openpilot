@@ -17,6 +17,9 @@ from openpilot.selfdrive.ui.sunnypilot.onroad.model_renderer import ChevronMetri
 CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
+# Lane lines and road edges are drawn to the model's own horizon rather than to the plan's,
+# which is what makes them look like they run along the markings instead of stopping mid-road.
+LANE_DRAW_DISTANCE = 150.0
 
 
 def camera_offset_for_drawing() -> float:
@@ -221,20 +224,27 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
 
   def _update_model(self, lead, path_x_array):
     """Update model visualization data based on model message"""
-    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
-    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], max_distance)
+    # Lane lines and road edges are perception, not plan. They used to be cut at
+    # min(plan end, MAX_DRAW_DISTANCE), and the plan collapses when following a car: at
+    # 33 km/h behind a lead at 12 m, modelV2.position.x[-1] is only 54 m, so both lane lines
+    # and both road edges stopped in the middle of the road. Perspective has already brought
+    # them close together by then, so it read as "the lines converge mid-road and never reach
+    # the car ahead" instead of running along the markings to the horizon.
+    lane_distance = LANE_DRAW_DISTANCE
+    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], lane_distance)
 
     # Update lane lines using raw points
     for i, lane_line in enumerate(self._lane_lines):
       lane_line.projected_points = self._map_line_to_polygon(
-        lane_line.raw_points, 0.025 * self._lane_line_probs[i], 0.0, max_idx, max_distance
+        lane_line.raw_points, 0.025 * self._lane_line_probs[i], 0.0, max_idx, lane_distance
       )
 
     # Update road edges using raw points
     for road_edge in self._road_edges:
-      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, 0.025, 0.0, max_idx, max_distance)
+      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, 0.025, 0.0, max_idx, lane_distance)
 
     # Update path using raw points
+    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
     if lead and lead.present:
       lead_d = lead.dRel * 2.0
       max_distance = np.clip(lead_d - min(lead_d * 0.35, 10.0), 0.0, max_distance)

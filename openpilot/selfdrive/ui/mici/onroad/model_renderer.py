@@ -18,6 +18,8 @@ from openpilot.selfdrive.ui.sunnypilot.mici.onroad.model_renderer import LANE_LI
 CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
+# Lane lines and road edges are drawn to the model's own horizon, not to the plan's.
+LANE_DRAW_DISTANCE = 150.0
 
 
 def camera_offset_for_drawing() -> float:
@@ -205,8 +207,13 @@ class ModelRenderer(Widget, ModelRendererSP):
 
   def _update_model(self, lead, path_x_array):
     """Update model visualization data based on model message"""
-    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
-    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], max_distance)
+    # Lane lines and road edges are perception, not plan. They used to be cut at the plan end,
+    # and the plan collapses when following a car: at 33 km/h behind a lead at 12 m,
+    # modelV2.position.x[-1] is only 54 m, so every line stopped in the middle of the road.
+    # Perspective has already pulled them together by then, so it read as "lines converge
+    # mid-road and never reach the car ahead" instead of running to the horizon.
+    lane_distance = LANE_DRAW_DISTANCE
+    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], lane_distance)
 
     # Update lane lines using raw points
     line_width_factor = 0.12
@@ -222,6 +229,7 @@ class ModelRenderer(Widget, ModelRendererSP):
       road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, line_width_factor, 0.0, max_idx)
 
     # Update path using raw points
+    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
     if lead and lead.present:
       lead_d = lead.dRel * 2.0
       max_distance = np.clip(lead_d - min(lead_d * 0.35, 10.0), 0.0, max_distance)
