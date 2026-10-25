@@ -17,9 +17,9 @@ from openpilot.selfdrive.ui.sunnypilot.onroad.model_renderer import ChevronMetri
 CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
-# Lane lines and road edges are drawn to the model's own horizon rather than to the plan's,
-# which is what makes them look like they run along the markings instead of stopping mid-road.
-LANE_DRAW_DISTANCE = 150.0
+# Lane lines and road edges are perception: they keep upstream's 100 m cap but are no longer
+# tied to the plan's own length, which is what made them stop mid-road when following a car.
+LANE_DRAW_DISTANCE = 100.0
 
 
 def camera_offset_for_drawing() -> float:
