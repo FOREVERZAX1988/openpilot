@@ -449,6 +449,31 @@ agnos_init() {
 
   [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
 
+  # Only ever move an existing Carrot install forward; never convert a stock comma
+  # image behind the user's back.
+  #
+  # agnos.json carries 5 stock comma partitions but its boot and system come from
+  # cnb.cool as the 19.8-carrot-bt2 image, so on a stock device the updater has to
+  # download that image, flash it into the *other* slot, swap to it and reboot.
+  # A fresh install then comes back up on the installer screen instead of the UI --
+  # it looks exactly like the install never finished. (--verify itself cannot help
+  # here: it checks the other slot, which on a stock device is empty, so it exits 1
+  # and this function falls through to the updater.)
+  #
+  # Stock devices therefore skip the whole thing: no download, no flash, no slot
+  # swap, no reboot. Carrot's Bluetooth HID needs the Carrot image, so flash it on
+  # purpose (WebUI -> Software -> AGNOS, or `agnos.py --swap`) instead of on every
+  # boot. AGNOS_ENFORCE=1 restores the old "keep flashing until /VERSION matches".
+  if [ "${AGNOS_ENFORCE:-0}" != "1" ]; then
+    case "$(< /VERSION)" in
+      *carrot*) ;;
+      *)
+        echo "[agnos] stock OS $(cat /VERSION) left alone (wanted $AGNOS_VERSION); skipping the OS update. Bluetooth HID needs the Carrot image: flash it from WebUI -> Software -> AGNOS" | tee -a /tmp/agnos_pending.log
+        return 0
+        ;;
+    esac
+  fi
+
   local agnos_py="$DIR/openpilot/common/hardware/comma/agnos.py"
   local manifest="$DIR/openpilot/system/hardware/comma/agnos.json"
   if $agnos_py --verify $manifest; then
