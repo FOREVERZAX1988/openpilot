@@ -19,6 +19,22 @@ CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
 
+
+def camera_offset_for_drawing() -> float:
+  """Lateral shift the renderer still has to add to the model's geometry.
+
+  CameraOffset is a *virtual camera* shift: the tinygrad runner applies it inside the model
+  (sunnypilot/modeld_v2/camera_offset_helper shears the image warp), so the lane lines it
+  returns are already displaced and the drawing has to add the displacement back for them to
+  land on the road. The stock runner does not apply it at all, and adding the offset there
+  moved the path, every lane line and both road edges sideways together -- the "trajectory,
+  lanes and road edges all sit off the real road" report. Only compensate when the model
+  itself shifted.
+  """
+  if not getattr(ui_state, 'active_bundle', None) or not getattr(ui_state, 'model_runner_tinygrad', False):
+    return 0.0
+  return float(ui_state.params.get("CameraOffset", return_default=True) or 0.0)
+
 THROTTLE_COLORS = [
   rl.Color(13, 248, 122, 102),   # HSLF(148/360, 0.94, 0.51, 0.4)
   rl.Color(114, 255, 92, 89),    # HSLF(112/360, 1.0, 0.68, 0.35)
@@ -83,7 +99,7 @@ class ModelRenderer(Widget, ModelRendererSP):
     self._clip_region = None
 
     self._counter = -1
-    self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+    self._camera_offset = camera_offset_for_drawing()
 
     self._exp_gradient = Gradient(
       start=(0.0, 1.0),  # Bottom of path
@@ -105,7 +121,7 @@ class ModelRenderer(Widget, ModelRendererSP):
     sm = ui_state.sm
 
     if self._counter % 180 == 0:  # This runs at 60fps, so we query every 3 seconds
-      self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+      self._camera_offset = camera_offset_for_drawing()
     self._counter += 1
 
     self._torque_filter.update(-ui_state.torque_utilization)

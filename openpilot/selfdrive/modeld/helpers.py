@@ -35,25 +35,51 @@ def modeld_pkl_path(chestnut: bool):
   return MODELS_DIR / f'{prefix}driving_tinygrad.pkl'
 
 def load_oob(f):
-  """Unpickle a compile_modeld.py artifact: pickle opcodes, then length-prefixed buffers.
+  """Unpickle a model artifact: 8-byte opcode length, opcode stream, then weight buffers.
 
-  Restored to upstream/test's form 2026-10-24. sp-macan-test2 carried a device-Buffer
-  variant (Buffer(dev, nbytes) streamed straight into video memory) written against the
-  tinygrad that predates fe5d3169: there Buffer.__init__ took no dtype and view() was
-  (size, offset). Both now require one, so the very first Buffer(...) raised
-  TypeError, modeld died in ModelState.__init__, and the manager tore down camerad and
-  preview_shimd with it -- the parked preview then drew no path and jetlink never got a
-  window. Callers pass an open file object (open_file_chunked covers the big model's
-  chunked manifest), which is what compile_modeld.py already did.
+  Two layouts are in circulation and both have to load, because the two compilers in this
+  tree disagree on how out-of-band buffers are addressed:
+
+  A) openpilot's own dump_oob (compile_modeld.py, selfdrive/modeld): PEP 574 buffers, each
+     prefixed with its length, referenced by NEXT_BUFFER -- pickle.load(buffers=...) below.
+  B) tinygrad's examples/openpilot dump_pickle, which is what SConscript's compile_model()
+     actually runs (compile_onnx.py --out-of-band, for both Darwin and comma_arm64): one raw
+     device-buffer blob covering the rest of the file, referenced by BINPERSID with
+     (nbytes, offset) and resolved via Unpickler.persistent_load.
+
+  Reading a B-layout pkl with the A path raised "A load persistent id instruction was
+  encountered, but no persistent_load function was specified": modeld died in
+  ModelState.__init__ before the first frame, so the car drew no path, no lane lines and no
+  road edges at all. The 2026-10-24 restore to "upstream's form" only accounted for A --
+  upstream builds its pkls with compile_modeld.py, this fork's SConscript does not.
+
+  Callers pass an open file object (open_file_chunked covers the big model's chunked
+  manifest).
   """
   opcodes = f.read(struct.unpack('<q', f.read(8))[0])
+  rest = f.read()
+
   def buffers():
-    while (h := f.read(8)):
+    r = io.BytesIO(rest)
+    while (h := r.read(8)):
       pb = pickle.PickleBuffer(bytearray(struct.unpack('<q', h)[0]))
-      if f.readinto(pb) != pb.raw().nbytes:
+      if r.readinto(pb) != pb.raw().nbytes:
         raise EOFError("incomplete model buffer")
       yield pb
-  return pickle.load(io.BytesIO(opcodes), buffers=buffers())
+
+  try:
+    return pickle.load(io.BytesIO(opcodes), buffers=buffers())
+  except pickle.UnpicklingError as e:
+    if 'persistent' not in str(e):
+      raise
+
+  # B layout: the remaining bytes are the weight blob; a persistent id is (nbytes, offset) into it.
+  import numpy as np
+  from tinygrad import Device, Tensor
+  blob = Tensor(np.frombuffer(rest, dtype=np.uint8)).to(Device.DEFAULT).realize().uop.buffer
+  u = pickle.Unpickler(io.BytesIO(opcodes))
+  u.persistent_load = lambda pid: blob.view(*pid)
+  return u.load()
 
 # the top level of the pkl compile_modeld.py writes. checked at both ends: a pkl from another
 # compile_modeld.py unpickles fine and only fails on the first key it lacks, as a bare KeyError

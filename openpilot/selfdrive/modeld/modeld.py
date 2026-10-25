@@ -140,8 +140,12 @@ class FrameMeta:
 
 
 def input_view(buffer: Buffer, shape: tuple[int, ...], dtype: DType, offset: int) -> Tensor:
-  view = buffer.view(math.prod(shape), dtype, offset).ensure_allocated()
-  return Tensor(UOp.from_buffer(view)).reshape(shape)
+  # tinygrad's Buffer.view(nbytes, offset) has no dtype argument (the dtype belongs to the
+  # storage interpretation, not to the byte range), so passing it here raised
+  # "Buffer.view() takes 3 positional arguments but 4 were given" in ModelState.pack_inputs.
+  # View the byte range first, then build the storage UOp with the dtype.
+  view = buffer.view(math.prod(shape) * dtype.itemsize, offset).ensure_allocated()
+  return Tensor(UOp.from_buffer(view, dtype)).reshape(shape)
 
 
 class ModelState(ModelStateBase):

@@ -19,6 +19,24 @@ MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
 
 
+def camera_offset_for_drawing() -> float:
+  """Lateral shift the renderer still has to add to the model's geometry.
+
+  CameraOffset is a *virtual camera* shift: the tinygrad runner applies it inside the model
+  (sunnypilot/modeld_v2/camera_offset_helper shears the image warp), so the lane lines it
+  returns are already displaced by that many metres and the drawing has to add the
+  displacement back for them to land on the road.
+
+  The stock runner does not apply it at all. Adding the offset there nonetheless moved the
+  path, all four lane lines and both road edges sideways together -- which is exactly the
+  "trajectory line, lane lines and road edges all sit off the real road" report. Only
+  compensate when the model itself shifted.
+  """
+  if not getattr(ui_state, 'active_bundle', None) or not getattr(ui_state, 'model_runner_tinygrad', False):
+    return 0.0
+  return float(ui_state.params.get("CameraOffset", return_default=True) or 0.0)
+
+
 def extend_polyline(points: np.ndarray, max_distance: float) -> np.ndarray:
   """The polyline, carried along its own tangent out to `max_distance`.
 
@@ -86,7 +104,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._path_offset_z = HEIGHT_INIT[0]
     self._counter = -1
     self._preview = ui_state.params.get_bool("IsOnroadPreview")
-    self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+    self._camera_offset = camera_offset_for_drawing()
     # Initialize ModelPoints objects
     self._path = ModelPoints()
     self._lane_lines = [ModelPoints() for _ in range(4)]
@@ -134,7 +152,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._path_offset_z = extrinsics_calibration.height[0] if extrinsics_calibration.height else HEIGHT_INIT[0]
 
     if self._counter % 60 == 0:
-      self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+      self._camera_offset = camera_offset_for_drawing()
       self._preview = ui_state.params.get_bool("IsOnroadPreview")
     self._counter += 1
 

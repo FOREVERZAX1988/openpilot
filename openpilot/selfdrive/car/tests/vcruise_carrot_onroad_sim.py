@@ -15,6 +15,7 @@ Run from the repo root:
 """
 from __future__ import annotations
 
+import platform
 import sys
 import types
 from pathlib import Path
@@ -140,7 +141,7 @@ class _Paths:
     return '/tmp/op_sim'
   @staticmethod
   def params_root():
-    return '/dev/shm/params'
+    return '/tmp/params' if platform.system() == 'Darwin' else '/dev/shm/params'
 _hw_hw.Paths = _Paths
 _hw_hw.HardwareBase = object
 sys.modules['openpilot.common.hardware.hw'] = _hw_hw

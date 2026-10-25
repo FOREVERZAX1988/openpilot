@@ -119,15 +119,26 @@ def _libflags(target, source, env, for_signature):
   return _stripixes(env['LIBLINKPREFIX'], libs, env['LIBLINKSUFFIX'],
                     env['LIBPREFIXES'], env['LIBSUFFIXES'], env, env['LIBLITERALPREFIX'])
 
+# SCons starts every command from its own ENV instead of inheriting ours, so anything a build
+# step needs has to be listed here.
+build_env = {
+  "PATH": os.environ['PATH'],
+  "TMPDIR": os.environ.get('TMPDIR', '/tmp'),
+  # Without HOME, params.cc resolves its root to "/.comma/params", and every Python step that
+  # opens Params (acados MPC JSON generation) dies on the read-only root with errno 30.
+  "HOME": os.environ.get('HOME') or os.path.expanduser('~'),
+  "PYTHONPATH": os.pathsep.join(submodule_python_paths),
+  "ACADOS_SOURCE_DIR": acados.DIR,
+  "ACADOS_PYTHON_INTERFACE_PATH": acados.TEMPLATE_DIR,
+  "TERA_PATH": acados.TERA_PATH,
+}
+# Passed through only when set: an empty PARAMS_ROOT is worse than none, params.cc takes it
+# literally and resolves to "" (same errno 30 as above).
+if os.environ.get('PARAMS_ROOT'):
+  build_env["PARAMS_ROOT"] = os.environ['PARAMS_ROOT']
+
 env = Environment(
-  ENV={
-    "PATH": os.environ['PATH'],
-    "TMPDIR": os.environ.get('TMPDIR', '/tmp'),
-    "PYTHONPATH": os.pathsep.join(submodule_python_paths),
-    "ACADOS_SOURCE_DIR": acados.DIR,
-    "ACADOS_PYTHON_INTERFACE_PATH": acados.TEMPLATE_DIR,
-    "TERA_PATH": acados.TERA_PATH
-  },
+  ENV=build_env,
   CCFLAGS=[
     "-g",
     "-fPIC",

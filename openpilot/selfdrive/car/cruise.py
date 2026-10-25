@@ -1,4 +1,5 @@
 import math
+import platform
 import numpy as np
 
 from opendbc.car import structs
@@ -301,7 +302,7 @@ class VCruiseCarrot(VCruiseHelper):
     super().__init__(CP, CP_SP)
     self.CP = CP
     self.frame = 0
-    self.params_memory = Params("/dev/shm/params")
+    self.params_memory = Params("/tmp/params" if platform.system() == "Darwin" else "/dev/shm/params")
     self.params = Params()
     # Bluetooth HID remote commands (carrot_bluetooth daemon → /dev/shm/carrot-bluetooth/cruise.json).
     self.bluetooth_commands = CommandReader('cruise')

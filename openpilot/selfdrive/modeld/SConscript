@@ -60,8 +60,11 @@ def chestnut_action(command):
 
 def compile_model(onnx_path, pkl_path):
   onnx_path, target_pkl_path = File(onnx_path).abspath, File(pkl_path).abspath
+  # No --device-input here: the pinned tinygrad's examples/openpilot/compile_onnx.py has no
+  # such flag (only modeld_v2/compile_modeld_v2.py does), so passing it aborted the ONNX step
+  # with "unrecognized arguments" and no driving/dmonitoring pkl was produced at all.
   cmd = (f'{tg_flags} {mac_brew_string} {taskset}python3 "{compiler}/compile_onnx.py" '
-         f'"{onnx_path}" "{target_pkl_path}" --device-input "*" --out-of-band --benchmark-runs 1')
+         f'"{onnx_path}" "{target_pkl_path}" --out-of-band --benchmark-runs 1')
   lenv.Command(
     target_pkl_path,
     tinygrad_files + [onnx_path, Value(cmd)],
