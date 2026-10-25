@@ -469,12 +469,46 @@ agnos_init() {
     return 0
   fi
 
-  while true; do
+  # Try the updater a bounded number of times, then boot anyway.
+  #
+  # The old `while true` is right when AGNOS_VERSION is a stock comma version: the
+  # updater flashes the partitions, reboots, and the next boot matches. It never
+  # returns when the required version is a CUSTOM image the manifest cannot
+  # produce -- which is this fork: launch_env.sh asks for 19.8-carrot-bt2 while
+  # agnos.json carries comma's stock partitions, so the updater installs stock
+  # AGNOS, /VERSION stays stock, the check fails again, and manager/ui are never
+  # started. The screen then just sits on the comma logo with no update or build
+  # screen, which is indistinguishable from a bricked device.
+  #
+  # So: AGNOS_UPDATE_ATTEMPTS tries (default 2), then log loudly and continue
+  # booting. Set AGNOS_UPDATE_BLOCKING=1 to get the old "never boot without the
+  # matching AGNOS" behaviour back.
+  local attempts="${AGNOS_UPDATE_ATTEMPTS:-2}"
+  local i=1
+  while :; do
     # PYTHONPATH must explicitly carry $PYDEPS_DIR: the updater inherits this
     # environment, and the deps installed by bootstrap_deps (notably pyserial,
     # needed by the bundled snapshot above) live there.
-    PYTHONPATH="$PY_PATH" "$PY" "$DIR/openpilot/common/hardware/comma/updater" "$agnos_py" "$manifest"
+    PYTHONPATH="$PY_PATH" "$PY" "$DIR/openpilot/common/hardware/comma/updater" "$agnos_py" "$manifest" \
+      || echo "[agnos] updater exited $? (attempt $i/$attempts)" | tee -a /tmp/agnos_pending.log
+
+    # A successful flash normally reboots inside the updater. Reaching here means
+    # it did not, so re-check before deciding anything.
+    [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
+
+    if [ "${AGNOS_UPDATE_BLOCKING:-0}" = "1" ]; then
+      echo "[agnos] blocking: /VERSION $(cat /VERSION) != $AGNOS_VERSION, retrying" | tee -a /tmp/agnos_pending.log
+      continue
+    fi
+
+    [ "$i" -ge "$attempts" ] && break
+    i=$((i + 1))
+    sleep 20
   done
+
+  echo "[agnos] WARNING: /VERSION is still $(cat /VERSION), wanted $AGNOS_VERSION." | tee -a /tmp/agnos_pending.log
+  echo "[agnos] WARNING: booting anyway; OS features that need that AGNOS (bluetooth HID) stay off." | tee -a /tmp/agnos_pending.log
+  return 0
 }
 
 # Guarantees the AGNOS updater can start on a FIRST BOOT. The updater is a
