@@ -12,6 +12,16 @@ the control path is worse than a UI that exits and lets the manager restart it
 (``restart_if_crash``). The success log is emitted only after a readback
 confirms the policy, so a failed demotion can never be reported as success.
 """
+# NOT WIRED — deliberate, decided 2026-10-24, see
+# ai/docs/upstream_ui_core_affinity_20261023.md section 7.2.
+#
+# ui.py keeps this process at FIFO CTRL_HIGH on a dedicated big core, because
+# frame pacing is the user-visible failure mode on this device. Wiring this
+# function in would demote the UI to SCHED_OTHER and trade the frame pacing for
+# a locationd/paramsd starvation we have never measured (no loop-time or lagging
+# events in the logs). It stays here as the contingency lever: if a route shows
+# locationd lag while the UI is pinned to cores 0-3, wire it in before touching
+# anything else.
 import os
 import sys
 

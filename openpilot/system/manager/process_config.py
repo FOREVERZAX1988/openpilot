@@ -1,4 +1,5 @@
 import glob
+import operator
 import os
 import platform
 import time
@@ -25,6 +26,13 @@ from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.models.helpers import get_active_model_runner
 from openpilot.sunnypilot.sunnylink.utils import sunnylink_need_register, sunnylink_ready, use_sunnylink_uploader
 from openpilot.sunnypilot.system.manager.processes import extend_procs
+
+# A process that is alive but has stopped making progress is not caught by
+# restart_if_crash. These are the thresholds for the processes that are
+# watched. The control chain (the control, selfdrive and planner daemons)
+# is never watched: restarting it leaves a gap in the control output.
+UI_WATCHDOG_MAX_DT = int(os.getenv("UI_WATCHDOG_MAX_DT", "10"))
+CAMERAD_WATCHDOG_MAX_DT = int(os.getenv("CAMERAD_WATCHDOG_MAX_DT", "5"))
 
 WEBCAM = os.getenv("USE_WEBCAM") is not None
 LITE = os.getenv("LITE") is not None
@@ -117,6 +125,23 @@ def signal_color_observer(started: bool, params: Params, CP: car.CarParams) -> b
 def onroad_preview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("IsOnroadPreview")
 
+def onroad_preview_shim(started: bool, params: Params, CP: car.CarParams) -> bool:
+  """The parked preview's missing onroad signals (sunnypilot/onroad_preview_shim.py).
+
+  Offroad only. Once the device is started, card publishes the real carState,
+  selfdrived/controlsd the real carControl and carControlSP, and calibrationd the
+  real calibration: a second publisher of any of them would be a lie on the bus.
+  """
+  return params.get_bool("IsOnroadPreview") and not started
+
+def use_github_runner(started, params, CP: car.CarParams) -> bool:
+  # Restored 2026-10-23: round-23 re-ordering dropped this definition while the
+  # call site near the bottom of the file survived, so a fresh compile raised
+  # NameError at import and the manager never started (dead boot screen).
+  # Semantics are the pre-merge fork version verbatim.
+  return not PC and params.get_bool("EnableGithubRunner") and (
+    not params.get_bool("NetworkMetered") and not params.get_bool("GithubRunnerSufficientVoltage"))
+
 def use_copyparty(started, params, CP: car.CarParams) -> bool:
   return bool(params.get_bool("EnableCopyparty"))
 
@@ -173,6 +198,11 @@ def uploader_ready(started: bool, params: Params, CP: car.CarParams) -> bool:
     return only_offroad(started, params, CP)
 
   return always_run(started, params, CP)
+
+def carrot_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # run even offroad: web panel (8088) / UDP / FTP must work while parked;
+  # carrot_man gates its own behaviour with the IsOnroad param
+  return params.get_bool("CarrotEnabled")
 
 def or_(*fns):
   return lambda *args: any(fn(*args) for fn in fns)
@@ -275,6 +305,11 @@ procs = [
   PythonProcess("timed", "openpilot.system.timed", always_run, enabled=not PC),
 
   PythonProcess("modeld", "openpilot.selfdrive.modeld.modeld", and_(or_(only_onroad, onroad_preview), is_stock_model)),
+  # The parked preview's stand-in for card, selfdrived and calibrationd, so the
+  # driving view draws and jetlink may swap in: see sunnypilot/onroad_preview_shim.py.
+  # It publishes no control and writes no parameter, and is stopped the moment the
+  # device is started and the real publishers take over.
+  PythonProcess("preview_shimd", "openpilot.sunnypilot.onroad_preview_shim", onroad_preview_shim),
   # Signal-light colour observation (camera comparison only, never control).
   PythonProcess("signalcolord", "openpilot.selfdrive.modeld.signal_color_shadow", signal_color_observer, restart_if_crash=True),
   PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", dm_process, enabled=(WEBCAM or not PC) and not LITE),
@@ -336,6 +371,8 @@ procs += [
   # that is the unplug at every ignition edge this arrangement removes
   RestartingPythonProcess(jetlink_adapter.OWNER, jetlink_adapter.__name__, and_(always_run, jetlink_adapter.should_run)),
   NativeProcess("modeld_tinygrad", "openpilot/sunnypilot/modeld_v2", ["./modeld"], and_(or_(only_onroad, onroad_preview), is_tinygrad_model)),
+  # after modeld_tinygrad: warmup spawns a child that loads a model, and both want the tinygrad device
+  PythonProcess("modeld_warmup", "openpilot.sunnypilot.modeld_v2.warmup", only_offroad),
 
   # Backup
   PythonProcess("backup_manager", "openpilot.sunnypilot.sunnylink.backups.manager", and_(only_offroad, sunnylink_ready_shim)),
@@ -427,8 +464,15 @@ procs += [
 ]
 procs = extend_procs(procs)
 
+if os.path.exists("./github_runner.sh"):
+  procs += [NativeProcess("github_runner_start", "openpilot/system/manager",
+                          ["./github_runner.sh", "start"], and_(only_offroad, use_github_runner), sigkill=False)]
+
 if os.path.exists("../../sunnypilot/sunnylink/uploader.py"):
-  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader", use_sunnylink_uploader_shim)]
+  # restart_if_crash=True: PythonProcess defaults to False -> if this process ever exits it never
+  # comes back until the manager itself is restarted (seen 2026-09-20: killed uploader stayed down).
+  procs += [PythonProcess("sunnylink_uploader", "openpilot.sunnypilot.sunnylink.uploader",
+                          use_sunnylink_uploader_shim, restart_if_crash=True)]
 
 if os.path.exists("../../third_party/copyparty/copyparty-sfx.py"):
   sunnypilot_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

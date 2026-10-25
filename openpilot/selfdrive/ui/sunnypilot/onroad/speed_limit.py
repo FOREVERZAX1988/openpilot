@@ -11,7 +11,7 @@ import pyray as rl
 
 from openpilot.cereal import custom
 from openpilot.common.constants import CV
-from openpilot.selfdrive.ui.onroad.hud_renderer import UI_CONFIG
+from openpilot.selfdrive.ui.onroad.hud_renderer import hud_left_row_rects
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Mode as SpeedLimitMode
 from openpilot.common.hardware import HARDWARE
@@ -120,9 +120,10 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
     self.font_demi = gui_app.font(FontWeight.SEMI_BOLD)
     self.font_norm = gui_app.font(FontWeight.NORMAL)
 
-    # CarrotPanelOpacity (0-100, default 100) + CarrotPanelSide (0=right, 1=left).
+    # CarrotPanelOpacity (0-100, default 100) 只缩放淡入 alpha。
+    # CarrotPanelSide 不参与限速标志布局：左槽已被 MAX 胶囊占用，标志恒在胶囊右侧
+    # （见 hud_left_row_rects 与 2026-10-04 实车重叠修复）。
     self._panel_opacity = 100
-    self._panel_side = 0
 
   @property
   def speed_conv(self):
@@ -131,15 +132,11 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
   def update(self):
     SpeedLimitAlertRenderer.update(self)
     sm = ui_state.sm
-    # Read CarrotPanelOpacity (0-100) and CarrotPanelSide (0=right, 1=left).
+    # Read CarrotPanelOpacity (0-100).
     try:
       self._panel_opacity = max(10, min(100, int(ui_state.params.get("CarrotPanelOpacity", 100))))
     except Exception:
       self._panel_opacity = 100
-    try:
-      self._panel_side = max(0, min(1, int(ui_state.params.get("CarrotPanelSide", 0))))
-    except Exception:
-      self._panel_side = 0
     if sm.recv_frame["carState"] < ui_state.started_frame:
       self.set_speed = SET_SPEED_NA
       self.speed = 0.0
@@ -193,19 +190,11 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
     rl.draw_text_ex(font, text, rl.Vector2(pos_center.x - sz.x / 2, pos_center.y - sz.y / 2), size, 0, color)
 
   def _render(self, rect: rl.Rectangle):
-    width = UI_CONFIG.set_speed_width_metric if ui_state.is_metric else UI_CONFIG.set_speed_width_imperial
-
-    # CarrotPanelSide: 0=left (stacked under the MAX box), 1=right (next to the MAX box, default).
-    # The MAX box owns x+46..x+246 at the left edge of the content area, so "left" can only mean
-    # *below* it — the original x+60 landed exactly on top of the MAX box.
-    if self._panel_side == 0:
-      x = rect.x + 60
-      y = rect.y + 45 + UI_CONFIG.set_speed_height + 24
-    else:
-      x = rect.x + 60 + width + 30 - 6
-      y = rect.y + 45 - 6
-
-    sign_rect = rl.Rectangle(x, y, width, UI_CONFIG.set_speed_height + 6 * 2)
+    # 几何唯一来源：hud_left_row_rects（2026-10-04 重叠修复，与 WebUI
+    # `.opui-hud-sla{left:calc(60px + w + 24px)}` 同口径）。10-22 的合并曾把旧的
+    # CarrotPanelSide 手写分支带回来（0=左 → 画进 MAX 胶囊槽位/其下方），实车表现
+    # 为限速圈压在 MAX 胶囊上；此处恒取 helper 的右槽。
+    _, sign_rect = hud_left_row_rects(rect, ui_state.is_metric)
 
     # CarrotPanelOpacity (10-100) scales the animation fade alpha.
     alpha = self._pre_active_fade.alpha * (self._panel_opacity / 100.0)

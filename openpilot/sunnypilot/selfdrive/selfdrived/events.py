@@ -111,6 +111,10 @@ class EventsSP(EventsWithZP, EventsBase):
 
 EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # sunnypilot
+  EventNameSP.macanAutoResume: {
+    ET.ENABLE: EngagementAlert(AudibleAlert.engage),  # Macan Stop and Go: play engage sound, no state change
+  },
+
   EventNameSP.lkasEnable: {
     ET.ENABLE: EngagementAlert(AudibleAlert.engage),
   },

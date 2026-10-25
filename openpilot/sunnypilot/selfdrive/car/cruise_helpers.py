@@ -49,7 +49,12 @@ class CruiseHelper:
     self.CP = CP
     self.params = Params()
 
-    self.button_frame_counts = {ButtonType.gapAdjustCruise: 0}
+    # altButton2 = VW/MLB 的 Dist+1（zeitluecke 加一格），长按切 experimental；
+    # gapAdjustCruise = Dist-1，update() 里仍会读它的计数（保持 < DISTANCE_LONG_PRESS
+    # 才走 gap 分支）。两个键都得先建好：字典里缺 gapAdjustCruise 时 update() 会直接
+    # KeyError(11) 抛在每帧的 CruiseHelper.update 上（openpilotLongitudinalControl +
+    # cruiseState.available 一成立就触发）。
+    self.button_frame_counts = {ButtonType.altButton2: 0, ButtonType.gapAdjustCruise: 0}
     self._experimental_mode = False
     self.experimental_mode_switched = False
     # Set on a fresh distance-button press, consumed once, so holding the button does
@@ -63,7 +68,7 @@ class CruiseHelper:
       if CS.cruiseState.available:
         self.update_button_frame_counts(CS)
 
-        # toggle experimental mode once on distance button hold
+        # toggle experimental mode once on gap-adjust-plus (Dist+1, value 2) button hold
         self.update_experimental_mode(events, experimental_mode)
 
     if self.sm is not None:
@@ -102,7 +107,7 @@ class CruiseHelper:
           self._gap_press_pending = True
 
   def update_experimental_mode(self, events, experimental_mode) -> None:
-    if self.button_frame_counts[ButtonType.gapAdjustCruise] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:
+    if self.button_frame_counts[ButtonType.altButton2] >= DISTANCE_LONG_PRESS and not self.experimental_mode_switched:
       self._experimental_mode = not experimental_mode
       # A wheel-button long press is the driver's own acknowledgement, so
       # enabling also records the confirmation bit. Disabling leaves it alone,

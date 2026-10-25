@@ -4,7 +4,6 @@ import functools
 import itertools
 
 import numpy as np
-import pyray as rl
 
 
 # (ec codewords per block, block count) for levels L, M, Q, H, versions 1-40
@@ -222,9 +221,10 @@ class _Qr:
       right -= 2
 
 
-def make_texture(data: str, inverted: bool = False) -> rl.Texture:
+def make_texture(data: str, inverted: bool = False):
   """Render a URL as the RGBA QR texture used by the UI. The texture upload
   copies the pixels, so the intermediate image/array don't need to outlive it."""
+  import pyray as rl
   raw = data.encode()
   for version in range(1, 21):
     count_bits = 8 if version <= 9 else 16

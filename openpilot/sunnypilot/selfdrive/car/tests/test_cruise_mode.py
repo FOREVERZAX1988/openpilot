@@ -19,7 +19,7 @@ class TestCruiseHelper(OpenpilotTestCase):
   def reset(self):
     for _ in range(2):
       CS = car.CarState(cruiseState={"available": False})
-      CS.buttonEvents = [ButtonEvent(type=ButtonType.gapAdjustCruise, pressed=False)]
+      CS.buttonEvents = [ButtonEvent(type=ButtonType.altButton2, pressed=False)]
       self.cruise_helper._experimental_mode = False
       self.cruise_helper.experimental_mode_switched = False
       self.cruise_helper.update(CS, self.events, False)
@@ -34,7 +34,7 @@ class TestCruiseHelper(OpenpilotTestCase):
 
         for i in range(DISTANCE_LONG_PRESS):
           CS = car.CarState(cruiseState={"available": True})
-          CS.buttonEvents = [ButtonEvent(type=ButtonType.gapAdjustCruise, pressed=pressed)] if i == 0 else []
+          CS.buttonEvents = [ButtonEvent(type=ButtonType.altButton2, pressed=pressed)] if i == 0 else []
           self.cruise_helper.update(CS, self.events, experimental_mode)
 
         # mode should be toggled
@@ -44,7 +44,7 @@ class TestCruiseHelper(OpenpilotTestCase):
         # keep holding button after switching mode
         for _ in range(DISTANCE_LONG_PRESS):
           CS = car.CarState(cruiseState={"available": True})
-          CS.buttonEvents = [ButtonEvent(type=ButtonType.gapAdjustCruise, pressed=pressed)]
+          CS.buttonEvents = [ButtonEvent(type=ButtonType.altButton2, pressed=pressed)]
           self.cruise_helper.update(CS, self.events, toggled_mode)
 
         # mode should not be toggled
@@ -59,7 +59,7 @@ class TestCruiseHelper(OpenpilotTestCase):
 
         for i in range(DISTANCE_LONG_PRESS - 1):
           CS = car.CarState(cruiseState={"available": True})
-          CS.buttonEvents = [ButtonEvent(type=ButtonType.gapAdjustCruise, pressed=pressed)] if i == 0 else []
+          CS.buttonEvents = [ButtonEvent(type=ButtonType.altButton2, pressed=pressed)] if i == 0 else []
           self.cruise_helper.update(CS, self.events, experimental_mode)
 
         # mode should not be toggled

@@ -156,8 +156,20 @@ class CruiseLayout(Widget):
           self.icbm_toggle.show_description(True)
 
       if has_long or has_icbm:
+        # Macan(MLB) 融合控制模式恒开：自定义 ACC 增量自动灰色关闭（OP 巡航速度直接跟随原厂，
+        # 步进由原厂 ACC 决定，自定义短按/长按增量与 OP 同步逻辑冲突）。
+        # 只看车型，与 selfdrive/car/cruise.py 的 VCruiseHelper.macan_fusion 同口径
+        # （那里对 PORSCHE_MACAN_MK1 恒为 True，不再读 MacanFusionMode），
+        # 否则参数残留 0 时 UI 会放出一个运行时不生效的开关。
+        macan_fusion_on = ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1"
         software_cruise_speed = has_long and (not ui_state.CP.pcmCruise or not ui_state.CP_SP.pcmCruiseSpeed)
-        self.custom_acc_toggle.action_item.set_enabled((software_cruise_speed or has_icbm) and ui_state.is_offroad())
+        custom_acc_enabled = (software_cruise_speed or has_icbm) and ui_state.is_offroad() and not macan_fusion_on
+        self.custom_acc_toggle.action_item.set_enabled(custom_acc_enabled)
+        if macan_fusion_on:
+          self.custom_acc_toggle.action_item.set_state(False)  # 自动关闭自定义增量
+          _on = self.custom_acc_toggle.action_item.get_state()
+          self.custom_acc_short_increment.set_visible(_on)
+          self.custom_acc_long_increment.set_visible(_on)
         self.scc_v_toggle.action_item.set_enabled(True)
         self.scc_m_toggle.action_item.set_enabled(True)
       else:

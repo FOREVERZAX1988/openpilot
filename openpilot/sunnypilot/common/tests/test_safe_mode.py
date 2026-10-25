@@ -1,7 +1,10 @@
 import json
+import re
 import unittest
+from pathlib import Path
 
 from openpilot.sunnypilot.common.safe_mode import (
+  SAFE_MODE_FIXED_VALUES,
   SAFE_MODE_MANAGED_KEYS,
   SAFE_MODE_REMOVE_KEYS,
   UNKNOWN_STOCK,
@@ -59,7 +62,7 @@ KEY_TYPES = {
   "LaneCenteringEnabled": "BOOL",
   "LaneCenterOffset": "FLOAT",
   "LaneCenteringE2EAuthority": "BOOL",
-  "NNFFMode": "INT",
+  "NeuralNetworkLateralControl": "BOOL",
   "FlmRuntimeOverridesEnabled": "BOOL",
   "LongitudinalFollowingProfileEnabled": "BOOL",
   "WeatherOffsetsEnabled": "BOOL",
@@ -254,18 +257,18 @@ class TestBackupDocument(unittest.TestCase):
 
 class TestApplyAndRestore(unittest.TestCase):
   def test_applying_forces_the_fixed_values(self):
-    params = FakeParams({"ExperimentalMode": "1", "NNFFMode": "2", "LaneCenteringEnabled": "1"})
+    params = FakeParams({"ExperimentalMode": "1", "NeuralNetworkLateralControl": "1", "LaneCenteringEnabled": "1"})
     self.assertTrue(apply_safe_mode(params))
     self.assertEqual(params.values["ExperimentalMode"], "0")
-    self.assertEqual(params.values["NNFFMode"], "0")
+    self.assertEqual(params.values["NeuralNetworkLateralControl"], "0")
     self.assertEqual(params.values["LaneCenteringEnabled"], "0")
 
   def test_applying_records_the_original_values(self):
-    params = FakeParams({"ExperimentalMode": "1", "NNFFMode": "2"})
+    params = FakeParams({"ExperimentalMode": "1", "NeuralNetworkLateralControl": "1"})
     apply_safe_mode(params)
     backup = backup_document(params)
     self.assertEqual(backup["ExperimentalMode"], {"present": True, "value": "1"})
-    self.assertEqual(backup["NNFFMode"], {"present": True, "value": "2"})
+    self.assertEqual(backup["NeuralNetworkLateralControl"], {"present": True, "value": "1"})
 
   def test_a_second_apply_does_not_overwrite_the_backup(self):
     params = FakeParams({"ExperimentalMode": "1"})
@@ -283,7 +286,7 @@ class TestApplyAndRestore(unittest.TestCase):
 
   def test_a_key_the_store_does_not_know_is_left_alone(self):
     # A device whose parameter library predates the key must not crash.
-    params = FakeParams({"ExperimentalMode": "1"}, unknown=("NNFFMode",))
+    params = FakeParams({"ExperimentalMode": "1"}, unknown=("NeuralNetworkLateralControl",))
     self.assertTrue(apply_safe_mode(params))
     self.assertEqual(params.values["ExperimentalMode"], "0")
 
@@ -314,11 +317,11 @@ class TestApplyAndRestore(unittest.TestCase):
     self.assertNotIn("SteerRatio", params.values)
 
   def test_restore_puts_the_values_back(self):
-    params = FakeParams({"ExperimentalMode": "1", "NNFFMode": "2"})
+    params = FakeParams({"ExperimentalMode": "1", "NeuralNetworkLateralControl": "1"})
     apply_safe_mode(params)
     self.assertTrue(restore_safe_mode(params))
     self.assertEqual(params.values["ExperimentalMode"], "1")
-    self.assertEqual(params.values["NNFFMode"], "2")
+    self.assertEqual(params.values["NeuralNetworkLateralControl"], "1")
 
   def test_restore_removes_a_key_that_was_absent(self):
     params = FakeParams({"ExperimentalMode": "1"})
@@ -395,13 +398,13 @@ class TestSetSafeMode(unittest.TestCase):
   """The transition itself: backup, force, flag, read-back."""
 
   def test_entering_forces_the_knobs_and_sets_the_flag(self):
-    params = FakeParams({"ExperimentalMode": "1", "NNFFMode": "2", "SteerRatio": "16.8"})
+    params = FakeParams({"ExperimentalMode": "1", "NeuralNetworkLateralControl": "1", "SteerRatio": "16.8"})
     status = set_safe_mode(params, True)
 
     self.assertTrue(status["active"])
     self.assertTrue(is_safe_mode(params))
     self.assertEqual(params.values["ExperimentalMode"], "0")
-    self.assertEqual(params.values["NNFFMode"], "0")
+    self.assertEqual(params.values["NeuralNetworkLateralControl"], "0")
     # A "0.0 means not set" knob is removed, never written.
     self.assertNotIn("SteerRatio", params.values)
     self.assertGreater(status["backupKeys"], 0)
@@ -416,7 +419,7 @@ class TestSetSafeMode(unittest.TestCase):
     self.assertEqual(params.values["ExperimentalMode"], "1")
 
   def test_entering_twice_is_a_no_op(self):
-    params = FakeParams({"NNFFMode": "2"})
+    params = FakeParams({"NeuralNetworkLateralControl": "1"})
     set_safe_mode(params, True)
     backup = params.values["SafeModeBackup"]
     status = set_safe_mode(params, True)
@@ -426,19 +429,19 @@ class TestSetSafeMode(unittest.TestCase):
     self.assertEqual(params.values["SafeModeBackup"], backup)
 
   def test_leaving_puts_the_original_values_back(self):
-    params = FakeParams({"ExperimentalMode": "1", "NNFFMode": "2", "SteerRatio": "16.8"})
+    params = FakeParams({"ExperimentalMode": "1", "NeuralNetworkLateralControl": "1", "SteerRatio": "16.8"})
     set_safe_mode(params, True)
     status = set_safe_mode(params, False)
 
     self.assertFalse(status["active"])
     self.assertFalse(is_safe_mode(params))
     self.assertEqual(params.values["ExperimentalMode"], "1")
-    self.assertEqual(params.values["NNFFMode"], "2")
+    self.assertEqual(params.values["NeuralNetworkLateralControl"], "1")
     self.assertEqual(params.values["SteerRatio"], "16.8")
     self.assertNotIn("SafeModeBackup", params.values)
 
   def test_leaving_is_refused_while_moving(self):
-    params = FakeParams({"NNFFMode": "2"})
+    params = FakeParams({"NeuralNetworkLateralControl": "1"})
     set_safe_mode(params, True)
     params.values["IsOnroad"] = "1"
     params.values["IsOffroad"] = "0"
@@ -448,10 +451,10 @@ class TestSetSafeMode(unittest.TestCase):
 
     self.assertEqual(caught.exception.status, 403)
     self.assertTrue(is_safe_mode(params))
-    self.assertEqual(params.values["NNFFMode"], "0")
+    self.assertEqual(params.values["NeuralNetworkLateralControl"], "0")
 
   def test_a_flag_that_does_not_stick_is_reported(self):
-    params = FakeParams({"NNFFMode": "2"}, drop_writes=("SafeMode",))
+    params = FakeParams({"NeuralNetworkLateralControl": "1"}, drop_writes=("SafeMode",))
     with self.assertRaises(SafeModeError) as caught:
       set_safe_mode(params, True)
 
@@ -461,7 +464,7 @@ class TestSetSafeMode(unittest.TestCase):
   def test_a_backup_that_cannot_be_cleared_keeps_safe_mode_on(self):
     # Clearing the flag here would strand the forced values with no record
     # of what they used to be, so the refusal has to keep the flag.
-    params = FakeParams({"NNFFMode": "2"})
+    params = FakeParams({"NeuralNetworkLateralControl": "1"})
     set_safe_mode(params, True)
     params.fail_remove.add("SafeModeBackup")
 
@@ -486,13 +489,13 @@ class TestSetSafeMode(unittest.TestCase):
           raise TypeError("this store refuses json")
         super().put(key, value, block)
 
-    params = NoJson({"NNFFMode": "2", "SteerRatio": "16.8"})
+    params = NoJson({"NeuralNetworkLateralControl": "1", "SteerRatio": "16.8"})
     with self.assertRaises(SafeModeError) as caught:
       set_safe_mode(params, True)
 
     self.assertEqual(caught.exception.status, 500)
     self.assertFalse(is_safe_mode(params))
-    self.assertEqual(params.values["NNFFMode"], "2")
+    self.assertEqual(params.values["NeuralNetworkLateralControl"], "1")
     self.assertEqual(params.values["SteerRatio"], "16.8")
 
   def test_status_explains_a_refusal_without_raising(self):
@@ -505,7 +508,7 @@ class TestSetSafeMode(unittest.TestCase):
     self.assertIn("park", moving["reason"])
 
   def test_status_of_an_active_mode_offers_the_restore(self):
-    params = FakeParams({"NNFFMode": "2"})
+    params = FakeParams({"NeuralNetworkLateralControl": "1"})
     set_safe_mode(params, True)
     status = safe_mode_status(params, is_onroad=False, is_offroad=True)
 
@@ -513,6 +516,61 @@ class TestSetSafeMode(unittest.TestCase):
     self.assertFalse(status["canEnter"])
     self.assertTrue(status["canRestore"])
     self.assertIsNone(status["reason"])
+
+
+def _declared_keys() -> set[str] | None:
+  """Every key params_keys.h registers, or None when the header is not reachable.
+
+  Read from the header rather than from a Params instance: the header is the
+  contract, and a stale libparams_c.so would answer for a build nobody has.
+  """
+  header = Path(__file__).resolve().parents[4] / "openpilot" / "common" / "params_keys.h"
+  if not header.is_file():
+    return None
+  return set(re.findall(r'\{\s*"([A-Za-z0-9_]+)"\s*,\s*\{', header.read_text()))
+
+
+class TestKeysAreRegistered(unittest.TestCase):
+  """Safe Mode may only name keys this fork actually registers.
+
+  Found on the device: ``NNFFMode`` was in the managed list, but no params_keys.h
+  entry declares it - this fork's neural feedforward switch is
+  ``NeuralNetworkLateralControl``. ``Params.get`` therefore raised UnknownKeyName,
+  the runtime swallowed it as "not set", and the line meant to switch the neural
+  feedforward off did nothing at all. Every unit test passed, because FakeParams
+  accepts any key it is handed; only a check against the header catches this.
+  """
+
+  def test_the_header_is_reachable(self):
+    self.assertIsNotNone(_declared_keys(), "params_keys.h not found - the checks below cannot run")
+
+  def test_every_named_key_is_declared(self):
+    declared = _declared_keys()
+    if declared is None:
+      self.skipTest("params_keys.h not reachable")
+    named = set(SAFE_MODE_MANAGED_KEYS) | set(SAFE_MODE_REMOVE_KEYS) | set(SAFE_MODE_FIXED_VALUES)
+    missing = sorted(named - declared)
+    self.assertEqual([], missing, f"Safe Mode names keys params_keys.h does not register: {missing}")
+
+  def test_fixed_values_only_cover_managed_keys(self):
+    # A fixed value for a key nobody forces is dead code that silently rots.
+    extra = sorted(set(SAFE_MODE_FIXED_VALUES) - set(SAFE_MODE_MANAGED_KEYS))
+    self.assertEqual([], extra, f"fixed values for unmanaged keys: {extra}")
+
+  def test_both_lateral_master_switches_are_managed(self):
+    """Pinned by name: this class exists for the switch that went missing.
+
+    `NeuralNetworkLateralControl` and `NNFFMode` are **two different params**, not a
+    rename (BOOL vs INT in params_keys.h). The 2026-10-24 upstream merge replaced the
+    first with the second in SAFE_MODE_MANAGED_KEYS one-for-one, so Safe Mode silently
+    stopped forcing the NNLC master switch that `selfdrived.py` and the UI steering page
+    read. Resolved as a union; this asserts both sides stay, so the next merge cannot
+    quietly drop either.
+    """
+    self.assertIn("NeuralNetworkLateralControl", SAFE_MODE_MANAGED_KEYS)
+    self.assertIn("NNFFMode", SAFE_MODE_MANAGED_KEYS)
+    self.assertEqual("0", SAFE_MODE_FIXED_VALUES["NeuralNetworkLateralControl"])
+    self.assertEqual("0", SAFE_MODE_FIXED_VALUES["NNFFMode"])
 
 
 if __name__ == "__main__":

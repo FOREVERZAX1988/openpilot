@@ -49,6 +49,9 @@ SAFE_MODE_MANAGED_KEYS: tuple[str, ...] = (
   "LaneCenteringEnabled",
   "LaneCenterOffset",
   "LaneCenteringE2EAuthority",
+  # 合并把它换成了 NNFFMode（两个是不同参数，不是改名）：NNLC 是 fork 侧横向总开关，
+  # 被 selfdrived.py 与 UI steering 读取，Safe Mode 必须一起关；NNFFMode 是后加的档位开关。
+  "NeuralNetworkLateralControl",
   "NNFFMode",
   "FlmRuntimeOverridesEnabled",
   "LongitudinalFollowingProfileEnabled",
@@ -72,6 +75,7 @@ SAFE_MODE_FIXED_VALUES: dict[str, str] = {
   "LaneCenteringEnabled": "0",
   "LaneCenterOffset": "0.0",
   "LaneCenteringE2EAuthority": "0",
+  "NeuralNetworkLateralControl": "0",
   "NNFFMode": "0",
   "FlmRuntimeOverridesEnabled": "0",
   "LongitudinalFollowingProfileEnabled": "0",

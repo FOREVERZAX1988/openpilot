@@ -11,6 +11,7 @@ from openpilot.sunnypilot.common.mode_state import (
   STATUS_USER_ENABLED,
   is_manual_status,
   lock_reason,
+  longitudinal_capable,
   normalize_persisted_status,
   plan_matches_store,
   requested_mode_active,
@@ -226,6 +227,35 @@ class TestRequestedMode(unittest.TestCase):
     # The switch says on and the bit cannot be read: the honest answer is the
     # grandfathered one, which is also what the store said before the bit.
     self.assertTrue(experimental_mode_requested(Broken()))
+
+
+class TestLongitudinalCapability(unittest.TestCase):
+  """One answer to "can this car run the mode", shared by the switch and the cleanup.
+
+  The two used to ask different questions: the settings UI was alpha-aware, selfdrived was
+  not, so on an alpha-longitudinal car the switch stayed enabled and selfdrived deleted the
+  mode it sets at every start.
+  """
+
+  def test_stock_longitudinal_is_capable(self):
+    self.assertTrue(longitudinal_capable(openpilot_longitudinal=True, alpha_available=False,
+                                         alpha_enabled=False))
+
+  def test_alpha_longitudinal_needs_the_drivers_switch(self):
+    self.assertTrue(longitudinal_capable(openpilot_longitudinal=False, alpha_available=True,
+                                         alpha_enabled=True))
+    self.assertFalse(longitudinal_capable(openpilot_longitudinal=False, alpha_available=True,
+                                          alpha_enabled=False))
+
+  def test_a_car_without_longitudinal_is_not_capable(self):
+    self.assertFalse(longitudinal_capable(openpilot_longitudinal=False, alpha_available=False,
+                                          alpha_enabled=False))
+
+  def test_alpha_availability_decides_over_the_stock_flag(self):
+    # a car that advertises alpha longitudinal but is not currently running it: the switch
+    # is the answer, not the stock flag
+    self.assertFalse(longitudinal_capable(openpilot_longitudinal=True, alpha_available=True,
+                                          alpha_enabled=False))
 
 
 if __name__ == "__main__":

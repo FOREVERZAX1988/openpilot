@@ -25,6 +25,21 @@ from openpilot.sunnypilot.selfdrive.car.stock_ecu_handback import StockEcuHandBa
 from openpilot.sunnypilot.system.params_migration import run_migration
 
 
+def _mirror_onroad(params: Params, onroad: bool) -> None:
+  """Keep IsOnroad in step with IsOffroad; a store without the key is not fatal.
+
+  Both halves of the road state have to be written together: mode_state refuses a mode
+  change on a half-known state, and nothing else wrote IsOnroad, so once the car was moving
+  a companion app or the web panel could never change Experimental Mode. params_keys.h is
+  compiled into libparams_c.so, so a device whose library predates the key raises
+  UnknownKeyName here -- the supervisor must never die for a mirror.
+  """
+  try:
+    params.put_bool("IsOnroad", onroad, block=True)
+  except Exception:
+    pass
+
+
 def manager_init() -> None:
   save_bootlog()
 
@@ -168,6 +183,7 @@ def manager_thread() -> None:
   pm = messaging.PubMaster(['managerState'])
 
   params.put_bool("IsOffroad", True, block=True)
+  _mirror_onroad(params, False)
   ensure_running(managed_processes.values(), False, params=params, CP=sm['carParams'], not_run=ignore)
 
   started_prev = False
@@ -192,6 +208,7 @@ def manager_thread() -> None:
     # update offroad state for services that don't subscribe to deviceState
     if started != started_prev:
       params.put_bool("IsOffroad", not started, block=True)
+      _mirror_onroad(params, started)
 
     started_prev = started
     ignition_prev = ignition

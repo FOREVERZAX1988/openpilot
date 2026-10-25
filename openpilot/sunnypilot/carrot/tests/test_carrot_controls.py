@@ -54,11 +54,26 @@ class _FakeCS:
     self.steeringAngleDeg = steering_angle_deg
 
 
+_REGISTERED_DEFAULTS = {"LatSuspendAngleDeg": "300"}
+
+
+def _params_get(key, block=False, return_default=False):
+  """Mirror Params.get for LatSuspendAngleDeg.
+
+  Faithful on purpose: for a key that was never written, `get(key)` returns None and
+  only `get(key, return_default=True)` yields the value registered in params_keys.h.
+  A bare read therefore hands float() a None and raises TypeError from inside
+  wants_suspend, which the onroad controls loop polls via ControlsExt.get_lat_active.
+  Keeping that difference visible here is what makes these tests able to fail.
+  """
+  return _REGISTERED_DEFAULTS.get(key) if return_default else None
+
+
 class TestCarrotControlsLatSuspend(unittest.TestCase):
   def setUp(self):
     self.ctrl = CarrotControls(MagicMock())
     self.ctrl.params = MagicMock()
-    self.ctrl.params.get = lambda key: 300  # LatSuspendAngleDeg = 300 degrees
+    self.ctrl.params.get = _params_get
     self.ctrl.enabled = True
 
   def test_no_suspend_when_steering_small(self):
@@ -74,7 +89,6 @@ class TestCarrotControlsLatSuspend(unittest.TestCase):
     This is why folding the check into get_lat_active is behaviour-preserving by
     default: the predicate can only ever return False unless the user lowers it.
     """
-    self.ctrl.params.get = lambda key: 300
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=180.0)
     for _ in range(1000):
       self.assertFalse(self.ctrl.wants_suspend(cs))
@@ -132,6 +146,20 @@ class TestCarrotControlsLatSuspend(unittest.TestCase):
     self.ctrl.enabled = False
     cs = _FakeCS(steering_pressed=True, steering_angle_deg=350.0)
     for _ in range(1000):
+      self.assertFalse(self.ctrl.wants_suspend(cs))
+    self.assertFalse(self.ctrl.lat_suspend_active)
+
+  def test_absent_param_uses_registered_default_instead_of_crashing(self):
+    """A device that never wrote LatSuspendAngleDeg must still drive.
+
+    The read used to be a bare `params.get("LatSuspendAngleDeg")`, which returns None
+    for an unset key; float(None) then raised TypeError out of wants_suspend, which the
+    onroad controls loop polls via ControlsExt.get_lat_active. Asking for the
+    registered default keeps the predicate evaluating at the same 300 deg it defaults
+    to, so a fresh device can never suspend.
+    """
+    cs = _FakeCS(True, 180.0)
+    for _ in range(200):
       self.assertFalse(self.ctrl.wants_suspend(cs))
     self.assertFalse(self.ctrl.lat_suspend_active)
 

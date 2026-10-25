@@ -4,16 +4,17 @@ from collections.abc import Callable
 from typing import Union
 
 from openpilot.common.basedir import BASEDIR
+from openpilot.common.api.comma_connect import get_api_host
 from openpilot.common.params import Params
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.system.ui.widgets.scroller import NavRawScrollPanel, NavScroller
-from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton
+from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton, BigMultiToggle, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationDialog
 from openpilot.selfdrive.ui.mici.widgets.pairing_dialog import PairingDialog
 from openpilot.selfdrive.ui.mici.onroad.cabin_camera_dialog import CabinCameraDialog
 from openpilot.selfdrive.ui.mici.layouts.onboarding import TrainingGuide, TermsPage
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
-from openpilot.system.ui.lib.multilang import tr
+from openpilot.system.ui.lib.multilang import tr, multilang
 from openpilot.system.ui.widgets import Widget
 from openpilot.selfdrive.ui.ui_state import device, ui_state
 from openpilot.system.ui.widgets.label import UnifiedLabel
@@ -71,9 +72,9 @@ def _engaged_confirmation_click(callback: Callable, action_text: str, icon: rl.T
       if not ui_state.engaged:
         callback()
 
-    gui_app.push_widget(BigConfirmationDialog(f"slide to\n{action_text.lower()}", icon, confirm_callback, exit_on_confirm=exit_on_confirm, red=red))
+    gui_app.push_widget(BigConfirmationDialog(tr("slide to\n{}").format(tr(action_text).lower()), icon, confirm_callback, exit_on_confirm=exit_on_confirm, red=red))
   else:
-    gui_app.push_widget(BigDialog("", f"Disengage to {action_text}"))
+    gui_app.push_widget(BigDialog("", tr("Disengage to {}").format(tr(action_text))))
 
 
 class EngagedConfirmationCircleButton(BigCircleButton):
@@ -150,9 +151,9 @@ class PairBigButton(BigButton):
       return
     dlg: BigDialog | PairingDialog
     if not system_time_valid():
-      dlg = BigDialog("", tr("Please connect to Wi-Fi to complete initial pairing."))
+      dlg = BigDialog("", tr(tr("Please connect to Wi-Fi to complete initial pairing.")))
     elif UNREGISTERED_DONGLE_ID == (ui_state.params.get("DongleId") or UNREGISTERED_DONGLE_ID):
-      dlg = BigDialog("", tr("Device must be registered with the comma.ai backend to pair."))
+      dlg = BigDialog("", tr(tr("Device must be registered with the comma.ai backend to pair.")))
     else:
       dlg = PairingDialog()
     gui_app.push_widget(dlg)
@@ -220,11 +221,45 @@ class DeviceLayoutMici(NavScroller):
       cabin_cam_btn,
       self._onroad_preview_btn,
       terms_btn,
+      self._language_btn,
+      self._api_server_btn,
+      self._server_btn,
       regulatory_btn,
       reset_calibration_btn,
       reboot_btn,
       self._power_off_btn,
     ])
+
+  def _on_server_selected(self, value: str):
+    """BigMultiToggle 选择回调：COMMA ↔ KONIK 直接切换（样式同驾驶风格）。
+    API host 由 athenad 等多进程读取，需整机重启（DoReboot）确保生效（与 tizi 一致）。"""
+    use_konik = value == tr("KONIK")
+    if use_konik == ui_state.params.get_bool("UseKonikServer", False):
+      return
+    ui_state.params.put_bool("UseKonikServer", use_konik, block=True)
+    ui_state.params.put_bool("DoReboot", True, block=True)
+
+  def _update_state(self):
+    super()._update_state()
+    # 服务器按钮值跟随 param 刷新（外部修改后同步显示）
+    server = tr("KONIK") if ui_state.params.get_bool("UseKonikServer", False) else tr("COMMA")
+    self._server_btn.set_value(server)
+    self._api_server_btn.set_value(get_api_host())
+
+  def _on_language_selected(self, display_name: str):
+    """BigMultiToggle 选择回调：显示名 → 语言代码，切换后重启 UI。
+    OnroadCycleRequested 只重启 onroad 循环、不重启 always-on 的 UI 进程（2026-08-17 实测无效），
+    改 gui_app.request_close() 让 UI 进程退出、由 manager（managed_processes['ui']）自动拉起，
+    新语言完整生效；同时不再调 on_language_changed（会卸载字体导致文字消失/？？）。"""
+    new_code = "en"
+    for code, name in multilang.codes.items():
+      if tr(name) == display_name:
+        new_code = code
+        break
+    if new_code == multilang.language:
+      return
+    multilang.change_language(new_code)
+    gui_app.request_close()
 
   def _on_regulatory(self):
     if not self._fcc_dialog:

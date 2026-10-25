@@ -35,6 +35,17 @@ def modeld_pkl_path(chestnut: bool):
   return MODELS_DIR / f'{prefix}driving_tinygrad.pkl'
 
 def load_oob(f):
+  """Unpickle a compile_modeld.py artifact: pickle opcodes, then length-prefixed buffers.
+
+  Restored to upstream/test's form 2026-10-24. sp-macan-test2 carried a device-Buffer
+  variant (Buffer(dev, nbytes) streamed straight into video memory) written against the
+  tinygrad that predates fe5d3169: there Buffer.__init__ took no dtype and view() was
+  (size, offset). Both now require one, so the very first Buffer(...) raised
+  TypeError, modeld died in ModelState.__init__, and the manager tore down camerad and
+  preview_shimd with it -- the parked preview then drew no path and jetlink never got a
+  window. Callers pass an open file object (open_file_chunked covers the big model's
+  chunked manifest), which is what compile_modeld.py already did.
+  """
   opcodes = f.read(struct.unpack('<q', f.read(8))[0])
   def buffers():
     while (h := f.read(8)):
@@ -72,6 +83,7 @@ def check_camera_jit(jits: dict, cam_w: int, cam_h: int, path) -> None:
   if (cam_w, cam_h) not in jits:
     compiled = ', '.join(f'{w}x{h}' for w, h in sorted(k for k in jits if isinstance(k, tuple)))
     raise _camera_mismatch(cam_w, cam_h, compiled, path)
+
 
 def chestnut_present() -> bool:
   for d in USB_DEVICES_PATH.glob("*"):

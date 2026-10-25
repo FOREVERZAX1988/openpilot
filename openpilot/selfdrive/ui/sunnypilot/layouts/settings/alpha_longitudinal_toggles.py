@@ -37,12 +37,17 @@ class AlphaLongitudinalToggles:
       title=lambda: tr("Alpha Longitudinal"),
       description=lambda: tr(DEVELOPER_DESCRIPTIONS["alpha_longitudinal"]),
       callback=self._on_alpha_long,
-      enabled=ui_state.is_offroad)
+      enabled=ui_state.is_offroad,
+      sync_param="AlphaLongitudinalEnabled")
 
     self._experimental_toggle = toggle_item_sp(
       title=lambda: tr("Experimental Mode"),
       description=lambda: tr(EXPERIMENTAL_MODE_DESCRIPTION),
-      callback=self._on_experimental_mode)
+      callback=self._on_experimental_mode,
+      # the write belongs to the callback (it may need the risk dialog first), so the
+      # switch only mirrors the key: a mode set from the web panel or the companion app
+      # shows here without waiting for the next offroad/engaged transition
+      sync_param="ExperimentalMode")
 
     self._dec_toggle = toggle_item_sp(
       title=lambda: tr("Dynamic Experimental Control"),
@@ -65,16 +70,16 @@ class AlphaLongitudinalToggles:
     # Which situations may hand speed control to the model under DEC. All on by
     # default; a switch that is off can only stop a hand-over, never cause one.
     self._dec_trigger_specs = (
-      ("DynamicExperimentalTriggerCurve", "DEC: Curves",
-       "Let a curve ahead hand speed control to the model."),
-      ("DynamicExperimentalTriggerLead", "DEC: Slower Lead",
-       "Let a slower or stopped car ahead hand speed control to the model."),
-      ("DynamicExperimentalTriggerSignal", "DEC: Turn Signal",
-       "Let an active turn signal below the lane-change speed hand speed control to the model."),
-      ("DynamicExperimentalTriggerStopLight", "DEC: Stops Ahead",
-       "Let a predicted stop for a light or sign hand speed control to the model."),
-      ("DynamicExperimentalTriggerLowSpeed", "DEC: Low Speed Creep",
-       "Let creeping at very low speed hand speed control to the model."),
+      ("DynamicExperimentalTriggerCurve", tr_noop("DEC: Curves"),
+       tr_noop("Let a curve ahead hand speed control to the model.")),
+      ("DynamicExperimentalTriggerLead", tr_noop("DEC: Slower Lead"),
+       tr_noop("Let a slower or stopped car ahead hand speed control to the model.")),
+      ("DynamicExperimentalTriggerSignal", tr_noop("DEC: Turn Signal"),
+       tr_noop("Let an active turn signal below the lane-change speed hand speed control to the model.")),
+      ("DynamicExperimentalTriggerStopLight", tr_noop("DEC: Stops Ahead"),
+       tr_noop("Let a predicted stop for a light or sign hand speed control to the model.")),
+      ("DynamicExperimentalTriggerLowSpeed", tr_noop("DEC: Low Speed Creep"),
+       tr_noop("Let creeping at very low speed hand speed control to the model.")),
     )
     self._dec_trigger_toggles = [
       toggle_item_sp(title=lambda t=title: tr(t), description=lambda d=desc: tr(d), param=param)
@@ -112,7 +117,17 @@ class AlphaLongitudinalToggles:
   @staticmethod
   def _confirm(item, callback) -> None:
     content = f"<h1>{item.title}</h1><br><p>{item.description}</p>"
-    gui_app.push_widget(ConfirmDialog(content, tr("Enable"), rich=True, callback=callback))
+    # The store still holds the old value until the driver answers, so a switch that
+    # follows the store would flip back behind the dialog. Paused for the dialog's life,
+    # then re-read through the callback's own set_state/refresh path.
+    toggle = item.action_item.toggle
+    toggle.set_sync_paused(True)
+
+    def on_result(result: DialogResult):
+      toggle.set_sync_paused(False)
+      callback(result)
+
+    gui_app.push_widget(ConfirmDialog(content, tr("Enable"), rich=True, callback=on_result))
 
   def _on_alpha_long(self, state: bool):
     if not state:

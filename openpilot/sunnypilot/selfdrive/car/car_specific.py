@@ -9,6 +9,7 @@ from openpilot.cereal import log, custom
 from opendbc.car import structs
 
 from opendbc.car.chrysler.values import RAM_DT
+from opendbc.sunnypilot.car.volkswagen.values_ext import VolkswagenFlagsSP
 from opendbc.car.mazda.values import MazdaFlags
 from openpilot.selfdrive.selfdrived.events import Events
 from openpilot.sunnypilot.mads.mads import SET_SPEED_BUTTONS
@@ -35,6 +36,7 @@ class CarSpecificEventsSP:
     self.CP_SP = CP_SP
 
     self.low_speed_alert = False
+    self.prev_standstill = False  # Macan Stop and Go: detect parking hold release edge
     self.stock_ecu_prev = StockEcuState.notNeeded
 
   def update(self, CS: structs.CarState, events: Events, CS_SP, mads_enabled_toggle: bool = False, mads_enabled: bool = False):
@@ -61,6 +63,13 @@ class CarSpecificEventsSP:
           if events.has(EventName.resumeRequired):
             events.remove(EventName.resumeRequired)
 
+    elif self.CP.brand == 'volkswagen':
+      # Macan 起步跟停：开关开启时，原厂停车保持态解除（standstill 1→0）瞬间
+      # 触发 macanAutoResume 事件 → 播放 engage 音效（OP 代发 RESUME 成功后车起步）
+      if self.CP_SP.flags & VolkswagenFlagsSP.STOP_AND_GO:
+        if self.prev_standstill and not CS.cruiseState.standstill:
+          events_sp.add(EventNameSP.macanAutoResume)
+      self.prev_standstill = CS.cruiseState.standstill
     elif self.CP.brand == 'mazda':
       if self.CP.flags & MazdaFlags.STEER_TO_ZERO_EPS and events.has(EventName.steerTempUnavailable):
         # steerFaultTemporary on this EPS is the non-delivery latch reporting a sustained

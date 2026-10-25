@@ -13,7 +13,7 @@ from opendbc.sunnypilot.car.lateral_tune import get_steer_slew_schedule
 from openpilot.common.realtime import DT_CTRL
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.selfdrive.locationd.speed_bin_learner import LIVE_TORQUE_PARAMETERS_SP_SERVICE
-from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_smoothing import LaneChangeSmoothing, clip_curvature_rate
+from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_smoothing import LaneChangeSmoothing
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v2 import LatControlTorque as LatControlTorqueV2
 from openpilot.sunnypilot.selfdrive.controls.lib.steer_limit import classify
@@ -90,6 +90,18 @@ class ControlsLateralZP:
     self._lat_active_last = self._get_lat_active(sm)
     return self._lat_active_last
 
+  def lane_change_jerk_factor(self, sm: messaging.SubMaster, lat_active: bool,
+                              new_desired_curvature: float, prev_desired_curvature: float) -> float:
+    """Lane-change smoothing's jerk factor for clip_curvature (1.0 outside a smoothed lane
+    change). The lateral maneuver mode's scripted commands pass through the stock clip.
+    Called once a frame with CC.latActive, which select_lateral_control waits on."""
+    self.note_lat_active(lat_active)
+    if sm.valid['lateralManeuverPlan']:
+      # a lane-change unwind armed before maneuver mode must not resume stale after it
+      self.lane_change_smoothing.reset()
+      return 1.0
+    return self.lane_change_smoothing.update(sm['carState'], sm['modelV2'], lat_active, new_desired_curvature, prev_desired_curvature)
+
   def reclassify_steer_limit(self, sm: messaging.SubMaster) -> None:
     """Runs after publish() has set this frame's steer_limited_by_safety from the raw torque
     mismatch. Replaces it with the classifier's directional, rail-aware flag (lib/steer_limit.py)
@@ -111,20 +123,6 @@ class ControlsLateralZP:
     self.steer_limited_by_safety = limit.limited
     self._applied_torque_prev = applied
 
-  def lane_change_curvature(self, sm: messaging.SubMaster, lat_active: bool, v_ego: float,
-                            new_desired_curvature: float, prev_desired_curvature: float) -> float:
-    """new_desired_curvature held to lane-change smoothing's curvature rate, for upstream's
-    clip_curvature to take (unchanged outside a smoothed lane change). The lateral maneuver
-    mode's scripted commands pass through the stock clip. Called once a frame with
-    CC.latActive, which select_lateral_control waits on."""
-    self.note_lat_active(lat_active)
-    if sm.valid['lateralManeuverPlan']:
-      # a lane-change unwind armed before maneuver mode must not resume stale after it
-      self.lane_change_smoothing.reset()
-      return new_desired_curvature
-    jerk_factor = self.lane_change_smoothing.update(sm['carState'], sm['modelV2'], lat_active, new_desired_curvature, prev_desired_curvature)
-    return clip_curvature_rate(v_ego, prev_desired_curvature, new_desired_curvature, jerk_factor)
-
   def note_lat_active(self, lat_active: bool) -> None:
     self._inactive_frames = 0 if lat_active else self._inactive_frames + 1
 
@@ -140,7 +138,12 @@ class ControlsLateralZP:
       # both sizes' controllers, so the idle one holds current bins when it takes over.
       # handles activation AND deactivation: useParams off or empty bins de-assert
       for lac in self._lacs:
-        lac.extension.update_speed_dep_torque(tp, tp_sp)
+        # NNFF (upstream 63a6f3211b) is a LatControl with no fork extension, and it can
+        # be one of these controllers whenever NNFFMode > 0. Same getattr idiom as the
+        # rest of this file: a controller without the extension simply has no speed bins.
+        ext = getattr(lac, 'extension', None)
+        if ext is not None:
+          ext.update_speed_dep_torque(tp, tp_sp)
 
   def run_lateral_zp(self, sm: messaging.SubMaster) -> None:
     """run_ext's tail: the steer-limit flag for the next frame, the speed bins, then the tune swap."""

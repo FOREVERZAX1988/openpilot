@@ -31,7 +31,14 @@ from collections import namedtuple
 from pathlib import Path
 
 # the version of jetlink.openpilot's API this adapter is written to; any other
-# is treated as jetlink being absent, with the reason as the offroad alert
+# is treated as jetlink being absent, with the reason as the offroad alert.
+# 2: modeld wrote in_control onto the joining model before every frame, where
+#    jetlink polled the adapter's engagement() (2026-10-05)
+# 3: the joining model asks Adapter.in_control() before every frame instead
+#    (2026-10-10), so the adapter reads a SubMaster of its own and modeld keeps
+#    one write; an adapter of API 2 has no in_control() at all. Moving the
+#    submodule pin past that commit without this constant leaves the link off
+#    everywhere, with the reason below as the offroad alert
 API = 3
 
 # the gadget owner, as manager names the process and selfdrived lists it
@@ -47,10 +54,11 @@ MODES = ('off', 'usb', 'ios', 'wifi')
 # and catalog are the model manager's big-model slot and catalog
 # (models.helpers.ACTIVE_BUNDLE_KEYS['chestnut'] and ModelFetcher's cache): the
 # owner cannot import the model manager, so they are written out here
-_Keys = namedtuple('_Keys', 'link offroad progress spec pointers big_model catalog charge_phone')
+_Keys = namedtuple('_Keys', 'link offroad progress spec pointers big_model catalog charge_phone preview')
 KEYS = _Keys(link='JetlinkLink', offroad='IsOffroad', progress='AcceleratorProgress', spec='JetlinkSpec',
              pointers='JetlinkModelPointers', big_model='ModelManager_ActiveBundleChestnut',
-             catalog='ModelManager_ModelsCache_Chestnut', charge_phone='JetlinkChargePhone')
+             catalog='ModelManager_ModelsCache_Chestnut', charge_phone='JetlinkChargePhone',
+             preview='IsOnroadPreview')
 
 _AGNOS = os.path.isfile('/AGNOS')
 
@@ -77,6 +85,12 @@ def _link_on() -> bool:
     return False
 
 
+# Single source of truth for the adapter's 'is anything already driving' probe,
+# also built into a SubMaster by the parked-preview shim
+# (sunnypilot/onroad_preview_shim.py); both test suites pin this tuple.
+IN_CONTROL = ('carState', 'carControl', 'carControlSP')
+
+
 @functools.cache
 def _adapter_class():
   from jetlink.openpilot.interface import Keys
@@ -87,10 +101,11 @@ def _adapter_class():
     but for what follows."""
     KEYS = Keys(**KEYS._asdict())
     # MADS's state rides on carControlSP
-    IN_CONTROL_SERVICES = ('carState', 'carControl', 'carControlSP')
-    # modeld_tinygrad's warp, which every checkout carries (LFS); stock modeld
-    # loads the same compile from its own models dir, which only scons fills
-    WARP_DIR = 'openpilot/sunnypilot/modeld_v2/models'
+    IN_CONTROL_SERVICES = IN_CONTROL
+    # WARP_DIR stays stock's (openpilot/selfdrive/modeld/models), where modeld's
+    # SConscript compiles the 2-input driving warp for every road camera. This
+    # checkout's copy under openpilot/sunnypilot/modeld_v2/models is an LFS pointer
+    # (132 bytes here), so pointing there would hand the link no warp at all.
 
     @property
     def catalog_selector(self) -> int:
@@ -108,6 +123,16 @@ def _adapter_class():
       # modeld_tinygrad reads modeld_v2's off the model
       from openpilot.sunnypilot.modeld_v2.constants import ModelConstants
       return ModelConstants
+
+    def model_face(self):
+      # the Venus block is only reachable from the device, so the face carries a
+      # builder only where the block answers: a link with none keeps the frame
+      # carrier it had instead of negotiating a codec nothing can produce
+      import dataclasses
+
+      from openpilot.sunnypilot.jetlink_adapter import hevc_venus
+      encoder = hevc_venus.make_encoder if hevc_venus.available() else None
+      return dataclasses.replace(super().model_face(), hevc_encoder=encoder)
 
     def engaged(self, sm) -> bool:
       # selfdrived's enabled or mads.enabled, as controlsd republishes them.

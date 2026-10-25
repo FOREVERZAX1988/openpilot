@@ -250,6 +250,9 @@ def _bare_gate_service(left, right, configured=("left", "right"), next_side="lef
   from openpilot.sunnypilot.carrot.xiaoge.v_asm_server import VASMService
   svc = VASMService.__new__(VASMService)
   svc.lock = threading.Lock()
+  # 本树保留 sm_lock（两个相机线程 + HTTP 线程共用一个 SubMaster），上游没有这个锁；
+  # 这里补上，否则绕过 __init__ 造出来的对象一进 _update_vasm_gate 就 AttributeError。
+  svc.sm_lock = threading.Lock()
   svc.sm = _FakeSm(left, right)
   svc.next_side = next_side
   svc.inference = types.SimpleNamespace(configured_sides=tuple(configured))

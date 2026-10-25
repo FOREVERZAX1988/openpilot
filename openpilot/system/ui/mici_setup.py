@@ -198,7 +198,7 @@ class DownloadingPage(NavWidget):
     self._title_label = UnifiedLabel(tr("downloading..."), 64, text_color=rl.Color(255, 255, 255, int(255 * 0.9)),
                                      font_weight=FontWeight.DISPLAY)
     self._progress_label = UnifiedLabel("", 132, text_color=rl.Color(255, 255, 255, int(255 * 0.9 * 0.65)),
-                                        font_weight=FontWeight.ROMAN, alignment_vertical=TextAlignmentVertical.BOTTOM)
+                                        font_weight=FontWeight.ROMAN, alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_BOTTOM)
     self._progress = 0
 
   def _back_enabled(self) -> bool:
@@ -262,8 +262,8 @@ class BigPillButton(BigButton):
     super().__init__(*args, **kwargs)
 
     self._label.set_font_size(48)
-    self._label.set_alignment(TextAlignment.CENTER)
-    self._label.set_alignment_vertical(TextAlignmentVertical.MIDDLE)
+    self._label.set_alignment(rl.GuiTextAlignment.TEXT_ALIGN_CENTER)
+    self._label.set_alignment_vertical(rl.GuiTextAlignmentVertical.TEXT_ALIGN_MIDDLE)
 
   def _load_images(self):
     if self._green:

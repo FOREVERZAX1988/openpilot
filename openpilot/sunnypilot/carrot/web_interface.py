@@ -428,7 +428,7 @@ class WebInterface:
     grouped, kinds, values = ws.collect(params)
     page = (query or {}).get("page", [""])[0].strip()
     if page not in grouped:
-      return ws.render_index(grouped).encode("utf-8")
+      return ws.render_index(grouped, extra=ws.render_curve_learning_status(params)).encode("utf-8")
     saved_raw = (query or {}).get("saved", [""])[0]
     saved = 1 if saved_raw == "1" else (0 if saved_raw == "0" else None)
     return ws.render_page(page, grouped[page], kinds, values, saved=saved).encode("utf-8")

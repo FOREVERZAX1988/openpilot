@@ -2,14 +2,10 @@
 set -e
 
 # Default values
-DEFAULT_REPO_URL="https://github.com/sunnypilot"
+DEFAULT_REPO_URL="https://github.com/mouxangithub/openpilot"
 START_AT_BOOT=false
 RESTORE_MODE=false
-RUNNER_VERSION="2.325.0"
-# Runner groups only exist for org/enterprise scopes and cannot be created on a free
-# plan, so pass an empty group to register against a single repository instead.
-RUNNER_GROUP="tici-tizi"
-RUNNER_LABELS="tici"
+RUNNER_VERSION="2.337.0"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -24,14 +20,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --repo)
             REPO_URL="$2"
-            shift 2
-            ;;
-        --runnergroup)
-            RUNNER_GROUP="$2"
-            shift 2
-            ;;
-        --labels)
-            RUNNER_LABELS="$2"
             shift 2
             ;;
         --restore)
@@ -131,9 +119,17 @@ configure_runner() {
     remount_rw
     echo "Configuring runner..."
     cd "$RUNNER_DIR"
-    local group_args=()
-    [ -n "$RUNNER_GROUP" ] && group_args=(--runnergroup "$RUNNER_GROUP")
-    sudo -u ${RUNNER_USER} ./config.sh --url "$REPO_URL" --token "$GITHUB_TOKEN" --name $(hostname) "${group_args[@]}" --labels "$RUNNER_LABELS" --work "$BUILDS_DIR" --unattended
+    sudo -u ${RUNNER_USER} ./config.sh --url "$REPO_URL" --token "$GITHUB_TOKEN" --name $(hostname) --labels "tici" --work "$BUILDS_DIR" --unattended
+    # Keep git-lfs and other temp files off the small /tmp tmpfs on comma devices.
+    grep -qxF 'TMPDIR=/data/github/tmp' "$RUNNER_DIR/.env" 2>/dev/null || echo 'TMPDIR=/data/github/tmp' | sudo tee -a "$RUNNER_DIR/.env" >/dev/null
+    mkdir -p /data/github/tmp "$CACHE_DIR" /data/github/ci
+    chown ${RUNNER_USER}:comma /data/github/tmp "$CACHE_DIR" /data/github/ci 2>/dev/null || true
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "${SCRIPT_DIR}/git_resilient_clone.sh" ]; then
+        cp "${SCRIPT_DIR}/git_resilient_clone.sh" /data/github/ci/
+        chmod +x /data/github/ci/git_resilient_clone.sh
+        chown ${RUNNER_USER}:comma /data/github/ci/git_resilient_clone.sh 2>/dev/null || true
+    fi
     remount_ro
 }
 
@@ -150,7 +146,9 @@ StartLimitBurst=10
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/bin/unshare -m -- /bin/bash -c 'mount --bind ${OPENPILOT_DIR} /data/openpilot && setpriv --reuid={{User}} --regid={{User}} --init-groups env HOME=${BASE_DIR} USER={{User}} LOGNAME={{User}} MAIL=/var/mail/{{User}} {{RunnerRoot}}/runsvc.sh'
+# Do not bind-mount an empty ${OPENPILOT_DIR} over /data/openpilot — that hides the real
+# on-device repo and breaks checkout_selfhosted.sh (LOCAL_GIT_REPO=/data/openpilot).
+ExecStart=/usr/bin/unshare -m -- /bin/bash -c 'setpriv --reuid={{User}} --regid={{User}} --init-groups env HOME=${BASE_DIR} USER={{User}} LOGNAME={{User}} MAIL=/var/mail/{{User}} {{RunnerRoot}}/runsvc.sh'
 WorkingDirectory={{RunnerRoot}}
 KillMode=process
 KillSignal=SIGTERM
@@ -182,14 +180,6 @@ install_service() {
     
     cd "$RUNNER_DIR"
     sudo ./svc.sh install $RUNNER_USER
-
-    # svc.sh install just wrote .service with the real unit name (derived from the
-    # registered org/repo). On a fresh install the pre-install fallback above guessed
-    # "sunnypilot", so re-read it here; disabling the guessed name would fail on the
-    # nonexistent unit and set -e would kill the script half-installed.
-    if [ -f "${RUNNER_DIR}/.service" ]; then
-        service_name=$(cat "${RUNNER_DIR}/.service")
-    fi
 
     if [ "$START_AT_BOOT" = false ]; then
         sudo systemctl disable "${service_name}"
@@ -265,8 +255,6 @@ main() {
             echo "Optional arguments:"
             echo "  --start-at-boot    Enable auto-start at boot (default: false)"
             echo "  --repo            Repository URL (default: ${DEFAULT_REPO_URL})"
-            echo "  --runnergroup     Runner group, org scope only; pass '' for a repo runner (default: ${RUNNER_GROUP})"
-            echo "  --labels          Runner labels (default: ${RUNNER_LABELS})"
             echo "  --restore         Restore existing runner configuration"
             exit 1
         fi

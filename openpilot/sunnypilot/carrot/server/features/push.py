@@ -1,9 +1,13 @@
 """Web Push + PWA endpoints (Galaxy-inspired, StarPilot MIT).
 
-The phone installs the panel as a PWA and subscribes to push; the server holds
-subscriptions in Params and can notify on events (offroad errors, updates).
-The payload encryption lives in services/web_push.py; this feature only wires
-the HTTP surface.
+The phone installs the panel as a PWA and subscribes to push; the server keeps
+the VAPID keypair and the browser subscriptions in a JSON state file and can
+notify on events (offroad errors, updates). The payload encryption lives in
+services/web_push.py; this feature only wires the HTTP surface.
+
+Note: browsers only register service workers on a secure origin, so `npm`-free
+LAN installs work over http for the manifest, while push needs the https tunnel
+(the /push page says so explicitly).
 """
 from __future__ import annotations
 
@@ -15,41 +19,30 @@ import aiohttp
 from aiohttp import web
 
 from ..config import WEB_DIR
-from ..services.web_push import ensure_vapid_keys, send_push
-from .params import PARAMS_KEY
+from ..services.web_push import ensure_vapid_keys, load_state, save_state, send_push
 
 _MAX_SUBSCRIPTIONS = 8
 
 
-def _params(request: web.Request):
-  return request.app[PARAMS_KEY]
+def _load_subscriptions() -> list[dict]:
+  return [s for s in load_state()["subscriptions"] if isinstance(s, dict)]
 
 
-def _load_subscriptions(params) -> list[dict]:
-  raw = params.get("WebPushSubscriptions")
-  if not raw:
-    return []
-  try:
-    subs = json.loads(raw)
-    return subs if isinstance(subs, list) else []
-  except ValueError:
-    return []
-
-
-def _save_subscriptions(params, subscriptions: list[dict]) -> None:
-  params.put("WebPushSubscriptions", json.dumps(subscriptions))
+def _save_subscriptions(subscriptions: list[dict]) -> None:
+  state = load_state()
+  state["subscriptions"] = subscriptions
+  save_state(state)
 
 
 async def handle_status(request: web.Request) -> web.Response:
-  params = _params(request)
+  state = load_state()
   return web.json_response({
-    "vapidPublicKey": ensure_vapid_keys(params)["public_key"],
-    "subscriptions": len(_load_subscriptions(params)),
+    "vapidPublicKey": ensure_vapid_keys(state)["public_key"],
+    "subscriptions": len(state["subscriptions"]),
   })
 
 
 async def handle_subscribe(request: web.Request) -> web.Response:
-  params = _params(request)
   try:
     body = await request.json()
   except ValueError:
@@ -59,28 +52,26 @@ async def handle_subscribe(request: web.Request) -> web.Response:
   if not endpoint.startswith("https://") or not keys.get("p256dh") or not keys.get("auth"):
     return web.json_response({"error": "endpoint and keys.p256dh/keys.auth required"}, status=400)
 
-  subscriptions = [s for s in _load_subscriptions(params) if s.get("endpoint") != endpoint]
+  subscriptions = [s for s in _load_subscriptions() if s.get("endpoint") != endpoint]
   subscriptions.append({"endpoint": endpoint, "keys": keys})
   if len(subscriptions) > _MAX_SUBSCRIPTIONS:
     subscriptions = subscriptions[-_MAX_SUBSCRIPTIONS:]
-  _save_subscriptions(params, subscriptions)
+  _save_subscriptions(subscriptions)
   return web.json_response({"ok": True, "subscriptions": len(subscriptions)})
 
 
 async def handle_unsubscribe(request: web.Request) -> web.Response:
-  params = _params(request)
   try:
     body = await request.json()
   except ValueError:
     return web.json_response({"error": "invalid json"}, status=400)
   endpoint = str(body.get("endpoint", ""))
-  remaining = [s for s in _load_subscriptions(params) if s.get("endpoint") != endpoint]
-  _save_subscriptions(params, remaining)
+  remaining = [s for s in _load_subscriptions() if s.get("endpoint") != endpoint]
+  _save_subscriptions(remaining)
   return web.json_response({"ok": True, "subscriptions": len(remaining)})
 
 
 async def handle_test(request: web.Request) -> web.Response:
-  params = _params(request)
   try:
     body = await request.json()
   except ValueError:
@@ -89,8 +80,8 @@ async def handle_test(request: web.Request) -> web.Response:
   text = str(body.get("body", "push test"))[:200]
   payload = json.dumps({"title": title, "body": text})
 
-  vapid_keys = ensure_vapid_keys(params)
-  subscriptions = _load_subscriptions(params)
+  vapid_keys = ensure_vapid_keys()
+  subscriptions = _load_subscriptions()
   if not subscriptions:
     return web.json_response({"error": "no subscriptions"}, status=404)
   results = []
@@ -103,6 +94,16 @@ async def handle_test(request: web.Request) -> web.Response:
         results.append({"endpoint": sub.get("endpoint", "")[:80], "error": type(exc).__name__})
         await asyncio.sleep(0)
   return web.json_response({"ok": True, "results": results})
+
+
+async def handle_page(request: web.Request) -> web.Response:
+  # The panel itself cannot host the subscribe flow: the SW/Push permission prompt
+  # must come from a user gesture on a secure origin, so this page is standalone
+  # (reachable over the same LAN address, or over the cloudflared https tunnel).
+  page_path = os.path.join(WEB_DIR, "push.html")
+  text = await asyncio.to_thread(_read_file_text, page_path)
+  return web.Response(text=text, content_type="text/html",
+                      headers={"Cache-Control": "no-store"})
 
 
 async def handle_service_worker(request: web.Request) -> web.Response:
@@ -127,6 +128,7 @@ def _read_file_text(path: str) -> str:
 def register(app: web.Application) -> None:
   app.router.add_get("/sw.js", handle_service_worker)
   app.router.add_get("/manifest.webmanifest", handle_manifest)
+  app.router.add_get("/push", handle_page)
   app.router.add_get("/api/push/status", handle_status)
   app.router.add_post("/api/push/subscribe", handle_subscribe)
   app.router.add_post("/api/push/unsubscribe", handle_unsubscribe)

@@ -1,0 +1,21 @@
+你是 openpilot fork 的 CI 修复机器人。上游同步合并后，冒烟验证失败。
+
+验证脚本：`.github/scripts/upstream_sync_validate.sh`
+检查项：
+- SConstruct、panda/、sunnypilot/common/version.h 存在
+- .gitmodules 指向 mouxangithub/opendbc 与 mouxangithub/panda
+- 无残留 Git 冲突标记
+- sunnypilot Python 模块可 compileall
+
+任务：
+1. 根据下方 CI 日志定位失败原因
+2. 修改源码使验证通过
+3. 保留 master-c3 / C3 / tici / 统一 pandad + panda 双固件 / sunnypilot C3 适配
+4. 子模块指针由脚本维护，不要改回 commaai 官方地址
+
+常见修复方向：
+- 合并残留冲突标记或 SyntaxError
+- sunnypilot/common/version.h 被误删或路径错误
+- .gitmodules 在冲突解决时被改错
+
+用中文简要说明你改了什么。

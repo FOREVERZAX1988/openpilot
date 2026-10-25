@@ -19,7 +19,17 @@ from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
 from openpilot.system.ui.widgets.list_view import button_item
 
 from openpilot.system.ui.sunnypilot.widgets.html_render import HtmlModalSP
-from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
+from openpilot.system.ui.sunnypilot.widgets.list_view import option_item_sp, toggle_item_sp
+
+from openpilot.sunnypilot.carrot import feature_support
+
+#: NNFFMode is 0/1/2, so the row is a stepper rather than a toggle. The names are the
+#: controller's own vocabulary (latcontrol_nnff.py: 0=off, 1=lite, 2=full NN).
+NNFF_MODE_LABELS = {0: "Off", 1: "Lite (jerk friction)", 2: "Full NN feedforward"}
+
+
+def _nnff_mode_label(value: int) -> str:
+  return tr(NNFF_MODE_LABELS.get(int(value), "Off"))
 
 PREBUILT_PATH = os.path.join(Paths.comma_home(), "prebuilt") if PC else "/data/openpilot/prebuilt"
 
@@ -41,23 +51,34 @@ class DeveloperLayoutSP(DeveloperLayout):
 
   def _initialize_items(self):
     self.show_advanced_controls = toggle_item_sp(tr("Show Advanced Controls"),
-                                                 tr("Toggle visibility of advanced zoompilot controls.<br>This only changes the visibility of the toggles; " +
+                                                 tr("Toggle visibility of advanced sunnypilot controls.<br>This only changes the visibility of the toggles; "
                                                     "it does not change the actual enabled/disabled state."), param="ShowAdvancedControls")
 
     self.enable_github_runner_toggle = toggle_item_sp(tr("GitHub Runner Service"), tr("Enables or disables the GitHub runner service."),
                                                       param="EnableGithubRunner")
 
     self.enable_copyparty_toggle = toggle_item_sp(tr("copyparty Service"),
-                                                  tr("copyparty is a very capable file server, you can use it to download your routes, view your logs " +
-                                                     "and even make some edits on some files from your browser. " +
+                                                  tr("copyparty is a very capable file server, you can use it to download your routes, view your logs "
+                                                     "and even make some edits on some files from your browser. "
                                                      "Requires you to connect to your comma locally via its IP address."), param="EnableCopyparty")
 
     self.prebuilt_toggle = toggle_item_sp(tr("Quickboot Mode"), "", param="QuickBootToggle", callback=self._on_prebuilt_toggled)
 
+    # Ported-but-inert upstream features get a row here so the screen can answer
+    # "did we pull it, and is it on?". On this car feature_support greys the row and
+    # swallows the taps; the description carries the reason.
+    nnff_desc = tr("StarPilot's per-vehicle lateral torque network, replacing the stock torque math. Needs a torque model for this car.")
+    self.nnff_mode = option_item_sp(tr("NNFF Lateral Feedforward"), param="NNFFMode",
+                                    min_value=0, max_value=2, value_change_step=1,
+                                    description=feature_support.describe("NNFFMode", nnff_desc),
+                                    enabled=feature_support.ui_enabled("NNFFMode"),
+                                    label_callback=_nnff_mode_label)
+
     self.error_log_btn = button_item(tr("Error Log"), tr("VIEW"), tr("View the error log for zoompilot crashes."), callback=self._on_error_log_clicked)
 
     # zoompilot: no Error Log row, nothing writes error.log since sentry was removed
-    self.items: list = [self.show_advanced_controls, self.enable_github_runner_toggle, self.enable_copyparty_toggle, self.prebuilt_toggle,]
+    self.items: list = [self.show_advanced_controls, self.enable_github_runner_toggle, self.enable_copyparty_toggle, self.prebuilt_toggle,
+                        self.nnff_mode,]
 
   @staticmethod
   def _on_prebuilt_toggled(state):
@@ -101,7 +122,7 @@ class DeveloperLayoutSP(DeveloperLayout):
     self.prebuilt_toggle.action_item.set_enabled(disable_updates)
 
     if disable_updates:
-      self.prebuilt_toggle.set_description(tr("When toggled on, this creates a prebuilt file to allow accelerated boot times. When toggled off, it " +
+      self.prebuilt_toggle.set_description(tr("When toggled on, this creates a prebuilt file to allow accelerated boot times. When toggled off, it "
                                               "removes the prebuilt file so compilation of locally edited cpp files can be made."))
     else:
       self.prebuilt_toggle.set_description(tr("Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' in the Software panel first."))

@@ -18,11 +18,17 @@ T_IDXS = np.array(ModelConstants.T_IDXS)
 
 
 class MockParams:
-  def __init__(self, enabled=True):
+  def __init__(self, enabled=True, overrides=None):
     self._enabled = enabled
+    self._overrides = overrides or {}
 
   def get_bool(self, name):
     return self._enabled
+
+  def get(self, name, return_default=False):
+    # Trigger switches all default on: an unset key must read as on, exactly like
+    # Params.get(..., return_default=True) on a key with a "1" default.
+    return self._overrides.get(name, True)
 
 
 class MockMpc:

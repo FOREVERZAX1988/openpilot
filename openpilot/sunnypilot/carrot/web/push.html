@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>carrot 通知</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#0b1016">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Carrot">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 20px; background: #0b1016; color: #e6edf3;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  p { font-size: 14px; line-height: 1.5; margin: 8px 0; }
+  .hint { color: #8b98a5; font-size: 13px; }
+  .warn { color: #f0b429; }
+  .good { color: #4ade80; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+  button { flex: 1 1 140px; padding: 12px 14px; border-radius: 10px; border: 1px solid #26313c;
+           background: #16202a; color: #e6edf3; font-size: 15px; }
+  button:active { background: #22303c; }
+  button:disabled { opacity: .45; }
+  #install { border-color: #2f5d46; background: #12241c; }
+  .card { border: 1px solid #26313c; border-radius: 10px; padding: 12px; margin: 12px 0; background: #101820; }
+  .card h2 { font-size: 15px; margin: 0 0 8px; color: #f0b429; }
+  .card ol { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #c3ced8; }
+  pre { margin: 0; padding: 12px; border-radius: 10px; background: #101820; color: #9ad1a0;
+        font-size: 12px; min-height: 120px; white-space: pre-wrap; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>carrot 通知</h1>
+<p id="state">正在检查…</p>
+<p class="hint" id="secure"></p>
+<p class="hint" id="facts"></p>
+<div class="row">
+  <button id="enable" hidden>开启通知</button>
+  <button id="recheck">重新检查</button>
+  <button id="test">发送测试通知</button>
+  <button id="disable">关闭通知</button>
+</div>
+<div class="row"><button id="install" hidden>添加到主屏幕</button></div>
+<div class="card" id="inAppHelp" hidden>
+  <h2>当前是 App 内置浏览器</h2>
+  <p class="hint">微信 / QQ / 抖音 / 小红书等内置浏览器不支持 Web Push，通知权限会直接返回 denied，也没有「添加到主屏幕」。请点右上角「…」→ 用浏览器打开（Chrome / Safari），或复制链接到浏览器。</p>
+</div>
+<div class="card" id="deniedHelp" hidden>
+  <h2>通知权限已被"拒绝"，浏览器不会再弹窗</h2>
+  <p class="hint" id="deniedPlatform"></p>
+  <div id="deniedSteps"></div>
+  <p class="hint">改完设置后回到本页点「重新检查」。如果这是 cloudflared 临时隧道，域名每次重启都会变（每次都是新站点），务必用同一个域名完成设置。</p>
+</div>
+<div class="card" id="iosHelp" hidden>
+  <h2>iPhone / iPad 需要手动添加</h2>
+  <ol>
+    <li>用 Safari 打开本页</li>
+    <li>点底部「分享」→「添加到主屏幕」</li>
+    <li>从主屏幕图标进入（才会 standalone），再点「开启通知」</li>
+  </ol>
+</div>
+<pre id="log"></pre>
+<script>
+'use strict';
+const logEl = document.getElementById('log');
+const stateEl = document.getElementById('state');
+const secureEl = document.getElementById('secure');
+const factsEl = document.getElementById('facts');
+const enableBtn = document.getElementById('enable');
+const installBtn = document.getElementById('install');
+const deniedHelp = document.getElementById('deniedHelp');
+const iosHelp = document.getElementById('iosHelp');
+const log = (msg) => { logEl.textContent += msg + '\n'; };
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(navigator.userAgent);
+const inAppBrowser = /MicroMessenger|\bQQ\/|Weibo|Douyin|XiaoHongShu|BytedanceWebview|baiduboxapp/i.test(navigator.userAgent);
+const standalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+let installEvent = null;
+
+function b64urlToBytes(value) {
+  const pad = '='.repeat((4 - (value.length % 4)) % 4);
+  const raw = atob((value + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function readStatus() {
+  const response = await fetch('/api/push/status', { cache: 'no-store' });
+  return response.json();
+}
+
+async function registration() {
+  if (!('serviceWorker' in navigator)) return null;
+  return navigator.serviceWorker.getRegistration('/sw.js');
+}
+
+async function currentSubscription() {
+  const reg = await registration();
+  if (!reg) return null;
+  return reg.pushManager.getSubscription();
+}
+
+function permission() {
+  return ('Notification' in window) ? Notification.permission : 'unsupported';
+}
+
+function renderDeniedHelp() {
+  deniedHelp.hidden = permission() !== 'denied';
+  if (deniedHelp.hidden) return;
+  const steps = document.getElementById('deniedSteps');
+  document.getElementById('deniedPlatform').textContent =
+    isAndroid ? '检测到 Android' : (isIOS ? '检测到 iOS' : '检测到桌面浏览器');
+  if (isAndroid) {
+    steps.innerHTML =
+      '<ol>' +
+      '<li>确认系统层面允许浏览器通知：设置 → 应用 → Chrome（或你用的浏览器）→ 通知 → 允许</li>' +
+      '<li>回到浏览器，点地址栏左边的锁/ⓘ 图标 → 权限 → 通知 → 改成「允许」</li>' +
+      '<li>或者：Chrome 菜单 → 设置 → 网站设置 → 通知 → 找到本域名 → 允许</li>' +
+      '</ol>';
+  } else if (isIOS) {
+    steps.innerHTML =
+      '<ol>' +
+      '<li>iOS 只有在「已添加到主屏幕」且从主屏幕图标打开时才能申请通知权限</li>' +
+      '<li>设置 → 通知 → 找到 Carrot（或本浏览器）→ 允许通知</li>' +
+      '</ol>';
+  } else {
+    steps.innerHTML =
+      '<ol>' +
+      '<li>点地址栏左侧的图标 → 网站设置 → 通知 → 重置为「询问」/「允许」</li>' +
+      '<li>或者在浏览器设置里搜索本域名，把通知权限改掉后刷新本页</li>' +
+      '</ol>';
+  }
+}
+
+function renderFacts(sub) {
+  factsEl.textContent =
+    '权限：' + permission() +
+    '，Service Worker：' + (navigator.serviceWorker.controller ? '已接管' : '未接管') +
+    '，本机订阅：' + (sub ? '已订阅' : '未订阅') +
+    '，显示模式：' + (standalone ? 'standalone（已安装）' : '浏览器标签页');
+  enableBtn.hidden = permission() === 'granted' && !!sub;
+  installBtn.hidden = standalone || (installEvent === null && !isIOS);
+  iosHelp.hidden = !(isIOS && !standalone) || installEvent !== null;
+}
+
+async function refresh() {
+  let status = { subscriptions: 0 };
+  try { status = await readStatus(); } catch (e) { log('读取设备状态失败：' + e); }
+  const sub = await currentSubscription();
+  stateEl.textContent = '设备端订阅数：' + status.subscriptions + '，本机：' + (sub ? '已订阅' : '未订阅');
+  renderDeniedHelp();
+  renderFacts(sub);
+  document.getElementById('inAppHelp').hidden = !inAppBrowser;
+}
+
+async function ensureRegistration() {
+  const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+  await navigator.serviceWorker.ready;
+  return reg;
+}
+
+async function enable() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    log('这个浏览器页面不支持推送：Service Worker / Push 需要 https 或 localhost。');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    renderDeniedHelp();
+    deniedHelp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    log('通知权限是 denied：浏览器不会再弹窗，请按上面的步骤重置后点「重新检查」。');
+    return;
+  }
+  // register first: installability and push both need the SW, and the
+  // permission prompt is better raised from an active page with a live SW.
+  const reg = await ensureRegistration();
+  const asked = await Notification.requestPermission();
+  if (asked !== 'granted') { log('通知权限被拒绝：' + asked); await refresh(); return; }
+  const status = await readStatus();
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: b64urlToBytes(status.vapidPublicKey),
+    });
+    log('已向浏览器申请到订阅端点');
+  }
+  const response = await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sub.toJSON()),
+  });
+  log('设备端登记：' + JSON.stringify(await response.json()));
+  await refresh();
+}
+
+async function sendTest() {
+  const response = await fetch('/api/push/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'carrot', body: '测试通知 ' + new Date().toLocaleTimeString() }),
+  });
+  log('测试发送：' + JSON.stringify(await response.json()));
+}
+
+async function disable() {
+  const sub = await currentSubscription();
+  if (!sub) { log('本机没有订阅'); return; }
+  const endpoint = sub.endpoint;
+  await sub.unsubscribe();
+  const response = await fetch('/api/push/unsubscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint }),
+  });
+  log('已取消：' + JSON.stringify(await response.json()));
+  await refresh();
+}
+
+enableBtn.addEventListener('click', () => enable().catch((e) => log('失败：' + e)));
+document.getElementById('recheck').addEventListener('click', () => refresh().catch((e) => log('失败：' + e)));
+document.getElementById('test').addEventListener('click', () => sendTest().catch((e) => log('失败：' + e)));
+document.getElementById('disable').addEventListener('click', () => disable().catch((e) => log('失败：' + e)));
+installBtn.addEventListener('click', async () => {
+  if (installEvent) {
+    installEvent.prompt();
+    const choice = await installEvent.userChoice;
+    log('安装选择：' + choice.outcome);
+    installEvent = null;
+    await refresh();
+    return;
+  }
+  if (isIOS) {
+    iosHelp.hidden = false;
+    iosHelp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installEvent = event;
+  refresh().catch(() => {});
+});
+window.addEventListener('appinstalled', () => { installEvent = null; refresh().catch(() => {}); });
+
+// Register the service worker unconditionally on load: without it the page is
+// not installable at all, and installing first is what makes notification
+// permission stick on Android.
+if ('serviceWorker' in navigator) {
+  ensureRegistration().then(() => refresh()).catch((e) => log('Service Worker 注册失败：' + e));
+}
+
+if (window.isSecureContext === false) {
+  secureEl.className = 'hint warn';
+  secureEl.textContent =
+    '当前是 http 局域网地址：可以看订阅状态，但浏览器不会注册 Service Worker。' +
+    '要在手机上真正收到推送，请用 https 地址打开本页（例如 carrot 里的 cloudflared 隧道域名）。';
+} else {
+  secureEl.textContent = '安全上下文正常，可以直接开启通知。';
+}
+refresh().catch((e) => { stateEl.textContent = '读取状态失败：' + e; });
+</script>
+</body>
+</html>

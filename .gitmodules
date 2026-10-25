@@ -1,5 +1,3 @@
-# Use the zoompilot opendbc fork. Changes to this file make submodule sync refresh
-# legacy URLs.
 [submodule "panda"]
   path = panda
   url = https://github.com/mouxangithub/panda.git
@@ -23,7 +21,8 @@
   url = https://github.com/commaai/teleoprtc
 [submodule "tinygrad"]
   path = tinygrad_repo
-  url = https://github.com/sunnypilot/tinygrad.git
+  url = https://github.com/FOREVERZAX1988/tinygrad.git
+  branch = sp-macan-test2
 [submodule "sunnypilot/neural_network_data"]
 	path = openpilot/sunnypilot/neural_network_data
   url = https://github.com/mouxangithub/neural-network-data.git

@@ -1,7 +1,10 @@
+import time
+
 import pyray as rl
 from collections.abc import Callable
-from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.lib.styles import style
 from openpilot.system.ui.widgets.list_view import ItemAction
@@ -15,6 +18,11 @@ VALUE_FONT_SIZE = 50
 BUTTON_FONT_SIZE = 60
 CONTAINER_PADDING = 20
 
+# Same rule as ToggleSP: the store is shared with the web panel, so a bound control
+# re-reads it while on screen (2 Hz) instead of trusting the value it was built with.
+SYNC_INTERVAL = 0.5
+PENDING_WRITE_TIMEOUT = 1.0
+
 
 class OptionControlSP(ItemAction):
   def __init__(self, param: str, min_value: int, max_value: int,
@@ -22,10 +30,12 @@ class OptionControlSP(ItemAction):
                on_value_changed: Callable[[int], None] | None = None,
                value_map: dict[int, int] | None = None,
                label_width: int = LABEL_WIDTH,
-               use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None):
+               use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None,
+               input_title: str | Callable[[], str] | None = None,
+               use_registered_default: bool = False):
 
     super().__init__(enabled=enabled)
-    self.params = Params()
+    self.params = unified_params
     self.param_key = param
     self.min_value = min_value
     self.max_value = max_value
@@ -38,14 +48,20 @@ class OptionControlSP(ItemAction):
     self.use_float_scaling = use_float_scaling
     self.current_value = min_value
     self.label_callback = label_callback
-    if self.value_map:
-      for key in self.value_map:
-        if self.value_map[key] == self.params.get(self.param_key, return_default=True):
-          self.current_value = int(key)
-          break
+    self.input_title = input_title
+    self.use_registered_default = use_registered_default
+    self._pending_value: int | None = None
+    self._pending_until = 0.0
+    self._next_sync = 0.0
+    stored = self._stored_value()
+    if stored is None:
+      # unset/unregistered key: show the minimum instead of raising TypeError and
+      # killing the whole settings layout during construction. min_value is already
+      # in the control's own units, so it must not be float-scaled again (that used
+      # to turn a minimum of 50 = 0.50 into 50.00).
+      self.current_value = int(min_value)
     else:
-      value = self.params.get(self.param_key, return_default=True)
-      self.current_value = int(float(value) * 100.0) if self.use_float_scaling else int(value)
+      self.current_value = stored
 
     # Initialize font and button styles
     self._font = gui_app.font(FontWeight.MEDIUM)
@@ -53,6 +69,52 @@ class OptionControlSP(ItemAction):
     # Layout rectangles for components
     self.minus_btn_rect = rl.Rectangle(0, 0, 0, 0)
     self.plus_btn_rect = rl.Rectangle(0, 0, 0, 0)
+    self.label_rect = rl.Rectangle(0, 0, 0, 0)
+
+  def _stored_value(self) -> int | None:
+    """The value the store holds, in this control's own units, or None if unreadable.
+
+    use_registered_default asks the system store for the default compiled into
+    params_keys.h, so a param that is registered but never written shows its real
+    default instead of the control's minimum (CustomKp: 1.00, not 0.50).
+    """
+    if self.value_map:
+      stored = self.params.get(self.param_key)
+      for index, mapped in self.value_map.items():
+        if mapped == stored:
+          return int(index)
+      return None
+    value = self.params.get(self.param_key, return_default=self.use_registered_default)
+    if value is None:
+      return None
+    return int(float(value) * 100.0) if self.use_float_scaling else int(value)
+
+  def sync(self, now: float | None = None) -> bool:
+    """Adopt a value another surface wrote. True when the control moved.
+
+    A write this control just made stays on screen until the store echoes it back:
+    params writes are asynchronous, so a read straight after one returns the old value.
+    """
+    now = time.monotonic() if now is None else now
+    if now < self._next_sync:
+      return False
+    self._next_sync = now + SYNC_INTERVAL
+
+    stored = self._stored_value()
+    if stored is None:
+      return False
+    if self._pending_value is not None:
+      if stored == self._pending_value:
+        self._pending_value = None
+      elif now < self._pending_until:
+        return False
+      else:
+        self._pending_value = None
+
+    if stored != self.current_value:
+      self.current_value = stored
+      return True
+    return False
 
   def get_value(self) -> int:
     """Get the current value of the control"""
@@ -71,6 +133,8 @@ class OptionControlSP(ItemAction):
       self.params.put(self.param_key, value / 100.0)
     else:
       self.params.put(self.param_key, value)
+    self._pending_value = value
+    self._pending_until = time.monotonic() + PENDING_WRITE_TIMEOUT
     if self.on_value_changed:
       self.on_value_changed(value)
 
@@ -95,9 +159,67 @@ class OptionControlSP(ItemAction):
 
     return str(value)
 
+  def _input_title_text(self) -> str:
+    title = self.input_title() if callable(self.input_title) else self.input_title
+    return title or tr("Enter value")
+
+  def _editable_text(self) -> str:
+    """Prefill for the keypad: the number the +/- buttons act on (mapped value kept as-is)."""
+    if self.value_map and self.current_value in self.value_map:
+      return str(self.value_map[self.current_value])
+    if self.use_float_scaling:
+      return f"{self.current_value / 100.0:g}"
+    return str(self.current_value)
+
+  def _open_input_dialog(self):
+    # Direct numeric entry (user request 2026-09-19): tapping the value box opens the
+    # on-screen keypad so a value that +/- stepping reaches only slowly (or an enum index)
+    # can be typed.  Imported lazily to avoid a circular import (input_dialog -> keyboard).
+    from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
+    if self.value_map:
+      sub_title = None
+    elif self.use_float_scaling:
+      sub_title = f"{self.min_value / 100.0:g} - {self.max_value / 100.0:g}"
+    else:
+      sub_title = f"{self.min_value} - {self.max_value}"
+    InputDialogSP(
+      self._input_title_text(),
+      sub_title=sub_title,
+      current_text=self._editable_text(),
+      callback=self._on_input_result,
+    ).show()
+
+  def _on_input_result(self, result, text: str):
+    from openpilot.system.ui.widgets import DialogResult
+    if result != DialogResult.CONFIRM:
+      return
+    text = (text or "").strip().replace(" ", "")
+    if not text:
+      return
+    try:
+      typed = float(text)
+    except ValueError:
+      return  # non-numeric entry: leave the value untouched (do not crash the layout)
+
+    if self.value_map:
+      # The box shows the mapped value; find the key that yields it and set that key.
+      for key, mapped in self.value_map.items():
+        try:
+          if abs(float(mapped) - typed) < 1e-6:
+            self.set_value(int(key))
+            return
+        except (TypeError, ValueError):
+          continue
+      return
+
+    value = int(round(typed * 100.0)) if self.use_float_scaling else int(round(typed))
+    value = max(self.min_value, min(self.max_value, value))
+    self.set_value(value)
+
   def _render(self, rect: rl.Rectangle):
     if self._rect.width == 0 or self._rect.height == 0 or not self.is_visible:
       return
+    self.sync()
 
     control_width = (BUTTON_WIDTH * 2) + self.label_width + (BUTTON_SPACING * 2)
     total_width = control_width + (CONTAINER_PADDING * 2)
@@ -151,6 +273,10 @@ class OptionControlSP(ItemAction):
     text = self.get_displayed_value()
     text_color = style.ITEM_TEXT_COLOR if self.enabled else style.ITEM_DISABLED_TEXT_COLOR
 
+    # Make it obvious the value box is tappable: tap it to type a value directly.
+    if self.enabled:
+      rl.draw_rectangle_rounded(self.label_rect, 0.2, 12, style.OPTION_CONTROL_BTN_ENABLED)
+
     text_size = measure_text_cached(self._font, text, VALUE_FONT_SIZE)
     text_x = self.label_rect.x + (self.label_rect.width - text_size.x) / 2
     text_y = self.label_rect.y + (self.label_rect.height - text_size.y) / 2
@@ -166,3 +292,5 @@ class OptionControlSP(ItemAction):
       new_value = self.current_value + self.value_change_step
       new_value = min(self.max_value, new_value)
       self.set_value(new_value)
+    elif self.enabled and self.label_rect.width > 0 and rl.check_collision_point_rec(mouse_pos, self.label_rect):
+      self._open_input_dialog()

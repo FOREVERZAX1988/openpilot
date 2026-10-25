@@ -40,6 +40,7 @@ import re
 import sys
 import types
 from collections import namedtuple
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +113,114 @@ class _AnyCall:
     if name.startswith("__"):
       raise AttributeError(name)
     return _AnyCall()
+
+  # UIState doubles get subscripted (`sm.updated["selfdriveState"]`), iterated
+  # and membership-tested by panels. Stay permissive and, importantly, keep the
+  # object truthy (no __len__/__bool__) so `if ui_state.something:` still holds.
+  def __getitem__(self, key):
+    return _AnyCall()
+
+  def __setitem__(self, key, value):
+    pass
+
+  def __contains__(self, key):
+    return False
+
+  def __format__(self, spec):
+    return ""
+
+  def __float__(self):
+    return 0.0
+
+  def __int__(self):
+    return 0
+
+  def __index__(self):
+    return 0
+
+  # panels mix double-returned values into arithmetic
+  def __add__(self, other):
+    return 0.0
+
+  def __radd__(self, other):
+    return 0.0
+
+  def __sub__(self, other):
+    return 0.0
+
+  def __rsub__(self, other):
+    return 0.0
+
+  def __mul__(self, other):
+    return 0.0
+
+  def __rmul__(self, other):
+    return 0.0
+
+  def __truediv__(self, other):
+    return 0.0
+
+  def __rtruediv__(self, other):
+    return 0.0
+
+
+class _AnyCallChain(_AnyCall):
+  """Like _AnyCall but every access/call returns the double itself, so chained
+  access such as `sunnylink_state.get_sponsor_tier().name` never hits None."""
+
+  def __call__(self, *a, **k):
+    return self
+
+  def __getattr__(self, name):
+    if name.startswith("__"):
+      raise AttributeError(name)
+    return _AnyCallChain()
+
+  def __getitem__(self, key):
+    return _AnyCallChain()
+
+  def __len__(self):
+    return 0
+
+
+class _FakeFlag:
+  """UIState exposes several booleans that panels *also* call as methods
+  (`ui_state.is_onroad()` vs `if ui_state.is_onroad:`). Be both."""
+
+  def __init__(self, value: bool = False):
+    self._value = value
+
+  def __call__(self, *a, **k):
+    return self._value
+
+  def __bool__(self):
+    return self._value
+
+
+class _FakeMsg:
+  """A cereal message stand-in: unknown fields read as 0, so enum lookups like
+  PERSONALITY_TO_INT[msg.personality] resolve instead of KeyError-ing."""
+
+  def __getattr__(self, name):
+    if name.startswith("__"):
+      raise AttributeError(name)
+    return 0
+
+
+class _FakeSm:
+  """SubMaster double: `updated`/`alive`/`valid` behave like dicts-of-False."""
+
+  def __init__(self):
+    self.updated: dict = defaultdict(lambda: False)
+    self.alive: dict = defaultdict(lambda: True)
+    self.valid: dict = defaultdict(lambda: True)
+    self.logMonoTime: dict = defaultdict(int)
+
+  def __getitem__(self, key):
+    return _FakeMsg()
+
+  def __contains__(self, key):
+    return False
 
 
 def _measure_text_ex(font, text, size, spacing):
@@ -186,6 +295,7 @@ class FakeGuiApp:
     self._font_cache: dict = {}
     self.target_fps = 60
     self.show_touches = False
+    self.show_fps = False
     self.width, self.height = 2160, 1080
     self._textures: dict = {}
     # Widget._process_mouse_events iterates this every render; an empty list is
@@ -206,7 +316,10 @@ class FakeGuiApp:
   def fallback_font(self, text: str = ""):
     return self._font_cache.setdefault("__fallback__", Font(999))
 
-  def texture(self, path, w=0, h=0):
+  def texture(self, path, w=0, h=0, alpha_premultiply=False, keep_aspect_ratio=True, flip_x=False):
+    # Mirror GuiApplication.texture's full signature: the settings panels call it with
+    # keep_aspect_ratio=, and a fake missing that kwarg makes the panel raise instead of
+    # render, which silently drops the panel from the smoke suite entirely.
     return Texture()
 
   def big_ui(self):
@@ -215,6 +328,16 @@ class FakeGuiApp:
   # Modules branch on this at import time to pick the sunnypilot UI paths.
   def sunnypilot_ui(self):
     return True
+
+  # Settings panels (Developer/Toggles) poke these on the real app instance.
+  def set_show_touches(self, value: bool) -> None:
+    self.show_touches = value
+
+  def set_show_fps(self, value: bool) -> None:
+    self.show_fps = value
+
+  def set_show_mouse_coords(self, value: bool) -> None:
+    self.show_mouse_coords = value
 
   def render(self):
     return iter(())
@@ -261,28 +384,72 @@ def build_fake_multilang() -> types.ModuleType:
   return m
 
 
+_FAKE_PARAMS_MOD: types.ModuleType | None = None
+
+
 def build_fake_params() -> types.ModuleType:
+  # install_stubs() and the smoke mains all ask for this module; hand out one
+  # shared instance so the Params class, the store and _FakeUiState.params agree.
+  global _FAKE_PARAMS_MOD
+  if _FAKE_PARAMS_MOD is not None:
+    return _FAKE_PARAMS_MOD
+
   m = types.ModuleType("openpilot.common.params")
   store: dict[str, Any] = {}
 
   class Params:
-    def get(self, key, return_default=False):
-      return store.get(key, 0 if return_default else None)
+    def __init__(self, *a, **k):
+      pass
 
-    def get_bool(self, key):
+    def get(self, key, *a, **k):
+      want_default = k.get("return_default", bool(a) and bool(a[0]))
+      if key in store:
+        return store[key]
+      # Mirror the declared param default closely enough for a render pass:
+      # value-typed defaults come back numeric, everything else empty.
+      # numeric default: panels parse these with int()/float() and compare them
+      return 0 if want_default else None
+
+    def get_bool(self, key, *a, **k):
       return bool(store.get(key, False))
 
-    def put(self, key, value, block=False):
+    def put(self, key, value, *a, **k):
       store[key] = value
 
-    def put_bool(self, key, value):
+    def put_bool(self, key, value, *a, **k):
       store[key] = value
 
-    def remove(self, key):
+    def remove(self, key, *a, **k):
       store.pop(key, None)
 
+    def get_int(self, key, *a, **k):
+      return int(store.get(key, 0) or 0)
+
+    def get_float(self, key, *a, **k):
+      return float(store.get(key, 0.0) or 0.0)
+
+    def put_int(self, key, value, *a, **k):
+      store[key] = int(value)
+
+    def put_float(self, key, value, *a, **k):
+      store[key] = float(value)
+
+    def clear(self, *a, **k):
+      store.clear()
+
+    def __getattr__(self, name):
+      if name.startswith("__"):
+        raise AttributeError(name)
+      return _AnyCall()
+
+  # real openpilot.common.params exports this; panels import it by name.
+  class UnknownKeyName(Exception):
+    pass
+
   m.Params = Params
+  m.UnknownKeyName = UnknownKeyName
   m.store = store
+  _FAKE_PARAMS_MOD = m
   return m
 
 
@@ -292,7 +459,27 @@ def install_stubs() -> None:
   # carrot_tuning.py needs ui_state.is_offroad() for the offroad-only toggle.
   _ui_mod = types.ModuleType('openpilot.selfdrive.ui.ui_state')
 
+  # The fake param store must exist before _FakeUiState() is built: the real
+  # UIState holds a Params() too, and panels read ui_state.params everywhere.
+  sys.modules["openpilot.common.params"] = build_fake_params()
+
   class _FakeUiState:
+    def __init__(self) -> None:
+      from openpilot.common.params import Params as _FakeParams
+      self.params = _FakeParams()
+      self.CP = _AnyCall()
+      self.sm = _FakeSm()
+      self.prime_state = _AnyCall()
+      self.engaged = _FakeFlag(False)
+      self.started = _FakeFlag(True)
+      self.personality = 0
+      self.has_longitudinal_control = _FakeFlag(False)
+      self.has_icbm = _FakeFlag(False)
+      self.CP_SP = _AnyCall()
+      self.sunnylink_state = _AnyCallChain()
+      self.is_onroad = _FakeFlag(False)
+      self.is_metric = _FakeFlag(False)
+
     @staticmethod
     def is_offroad() -> bool:
       return True
@@ -301,7 +488,21 @@ def install_stubs() -> None:
     def update_params() -> None:
       return None
 
+    @staticmethod
+    def add_engaged_transition_callback(cb) -> None:
+      return None
+
+    @staticmethod
+    def add_offroad_transition_callback(cb) -> None:
+      return None
+
+    @staticmethod
+    def add_onroad_transition_callback(cb) -> None:
+      return None
+
   _ui_mod.ui_state = _FakeUiState()
+  # panels do `from ...ui_state import ui_state, device`.
+  _ui_mod.device = _AnyCall()
   sys.modules['openpilot.selfdrive.ui.ui_state'] = _ui_mod
 
   fake_pyray = build_fake_pyray()
@@ -436,6 +637,8 @@ def main() -> int:
 
       page = root._group_layouts[key]
       items = page._scroller._items
+      # 只用来把 items 分成两块；分隔线数量本身不断言（各组排版不同）。
+      _dividers = [i for i in items if isinstance(i, LineSeparatorSP)]
       settings = [i for i in items if not isinstance(i, LineSeparatorSP)]
       assert settings, "group page has no settings items"
       assert not isinstance(items[0], LineSeparatorSP), "page must not start with a divider"
@@ -514,6 +717,21 @@ def main() -> int:
     for _ in range(frames):
       frame([])
 
+  # A viewport tall enough to hold every row. The real panel is 900px and culls the
+  # rows below the fold; a tap aimed at one of those lands outside the panel rect
+  # entirely, so a check that taps "every row" against the 900px viewport can only
+  # ever exercise the first two. The root-page checks above render into the same
+  # tall rect for the same reason.
+  tall = Rect(0, 0, content.width, 6000)
+
+  def frame_tall(events):
+    gui_app._mouse_events = events
+    root.render(tall)
+
+  def settle_tall(frames=60):
+    for _ in range(frames):
+      frame_tall([])
+
   def reset():
     """Back to the root page, scrolled to the top, with inertia decayed."""
     root.show_event()
@@ -576,8 +794,12 @@ def main() -> int:
   def all_rows_tappable():
     bad = []
     for i in range(len(root._nav_rows)):
-      reset()
-      tap(*row_tap_point(root._nav_rows[i]))
+      root.show_event()
+      settle_tall()
+      r = root._nav_rows[i].rect
+      x, y = r.x + 120, r.y + r.height / 2
+      for step in range(3):
+        frame_tall([Event(Rect(x, y), 0, step == 0, step == 2, step != 2, step / 60)])
       if root._current_group != CarrotGroupKey(i):
         bad.append((i, root._current_group))
     assert not bad, f"rows that did not navigate: {bad}"

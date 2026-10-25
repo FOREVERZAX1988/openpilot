@@ -46,7 +46,11 @@ class CarrotControls:
     if not self.enabled:
       return False
 
-    suspend_angle = float(self.params.get("LatSuspendAngleDeg"))
+    # return_default=True 不是可选优化：裸 get() 对从未写过的键返回 None，
+    # float(None) 会在 wants_suspend 里抛 TypeError，而本函数由 onroad 控制回环
+    # 经 ControlsExt.get_lat_active 轮询 —— 新设备/参数被清后直接打断控制线程。
+    # 回归网：tests/test_carrot_controls.py::TestCarrotControlsLatSuspend
+    suspend_angle = float(self.params.get("LatSuspendAngleDeg", return_default=True))
     resume_angle = 15.0
     delay_sec = 1.0
     hold_sec = 0.5

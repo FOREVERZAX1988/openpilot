@@ -128,7 +128,11 @@ class TestSettingsRefreshLifecycle(unittest.TestCase):
       error=RuntimeError)
     for name in ("setNumThreads", "cvtColor", "resize", "rotate", "imencode", "imdecode"):
       setattr(fake_cv2, name, lambda *a, **k: None)
-    sys.modules.setdefault("cv2", fake_cv2)
+    # Override instead of setdefault: v_asm_server pins the cv2 thread count at
+    # import (``cv2.setNumThreads(1)``, our fork), so a minimal double leaked by
+    # a sibling suite would decide whether the module can even be imported.
+    cls._cv2_was = sys.modules.get("cv2")
+    sys.modules["cv2"] = fake_cv2
     for name in ("PIL", "PIL.Image", "PIL.ImageDraw", "PIL.ImageFont"):
       sys.modules.setdefault(name, types.ModuleType(name))
     # Windows pycapnp aborts the process parsing the full openpilot schemas
@@ -150,6 +154,14 @@ class TestSettingsRefreshLifecycle(unittest.TestCase):
       sys.modules["capnp"] = _FakeModule("capnp")
       sys.modules["capnp.lib"] = _FakeModule("capnp.lib")
       sys.modules["capnp.lib.capnp"] = _FakeModule("capnp.lib.capnp")
+
+  @classmethod
+  def tearDownClass(cls):
+    import sys
+    if cls._cv2_was is None:
+      sys.modules.pop("cv2", None)
+    else:
+      sys.modules["cv2"] = cls._cv2_was
 
   @staticmethod
   def _bare_service():

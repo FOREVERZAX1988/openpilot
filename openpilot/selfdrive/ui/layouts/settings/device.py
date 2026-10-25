@@ -1,5 +1,6 @@
 import os
 import math
+import subprocess
 
 from openpilot.cereal import messaging, log
 from openpilot.common.basedir import BASEDIR
@@ -122,6 +123,16 @@ class DeviceLayout(Widget):
                                                      option_font_weight=FontWeight.UNIFONT, callback=handle_language_selection)
     gui_app.push_widget(self._select_language_dialog)
 
+  def _apply_language_selection(self, selected_language: str, result: DialogResult):
+    # 取消=不切换（保持原语言）；确定=切换语言并重启 UI（防字体热重载空白）
+    if result != DialogResult.CONFIRM:
+      return
+    multilang.change_language(selected_language)
+    gui_app.on_language_changed(selected_language)
+    self._update_calib_description()
+    # ui 进程 restart_if_crash=True，pkill 后 manager 自动拉起
+    subprocess.run(["pkill", "-f", "openpilot.selfdrive.ui.ui"], check=False)
+
   def _reset_calibration_prompt(self):
     if ui_state.engaged:
       gui_app.push_widget(alert_dialog(tr("Disengage to Reset Calibration")))
@@ -185,7 +196,7 @@ class DeviceLayout(Widget):
         cloudlog.exception("invalid LiveTorqueParameters")
 
     desc += "<br><br>"
-    desc += tr("sunnypilot is continuously calibrating, resetting is rarely required. " +
+    desc += tr("sunnypilot is continuously calibrating, resetting is rarely required. "
                "Resetting calibration will restart sunnypilot if the car is powered on.")
 
     self._reset_calib_btn.set_description(desc)

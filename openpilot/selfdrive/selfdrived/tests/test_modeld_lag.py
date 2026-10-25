@@ -51,5 +51,36 @@ class TestModeldLagMonitor(unittest.TestCase):
     self.assertFalse(severe)
 
 
+
+class TestMildTierWiring(unittest.TestCase):
+  """The mild tier is informational wiring: it must never gain a takeover hook.
+
+  These assertions are the reason the tier can be shipped on day one - if someone
+  later promotes modeldLaggingMild to an interrupting alert, this goes red.
+  """
+
+  def test_mild_event_has_only_the_permanent_hook(self):
+    from openpilot.cereal import log
+    from openpilot.selfdrive.selfdrived.events import EVENTS, ET
+    entry = EVENTS[log.OnroadEvent.EventName.modeldLaggingMild]
+    self.assertEqual(set(entry), {ET.PERMANENT})
+
+  def test_severe_event_keeps_both_takeover_hooks(self):
+    from openpilot.cereal import log
+    from openpilot.selfdrive.selfdrived.events import EVENTS, ET
+    entry = EVENTS[log.OnroadEvent.EventName.modeldLagging]
+    self.assertIn(ET.SOFT_DISABLE, entry)
+    self.assertIn(ET.NO_ENTRY, entry)
+
+  def test_selfdrived_still_consumes_the_monitor(self):
+    """Guard against a rename in selfdrived.py silently dropping the mild tier."""
+    import pathlib
+    src = pathlib.Path(__file__).resolve().parents[1].joinpath('selfdrived.py').read_text()
+    self.assertIn('self.modeld_lag_monitor.update(', src)
+    self.assertIn('EventName.modeldLaggingMild', src)
+    # the pre-tier scalar counter must be gone, not merely unused
+    self.assertNotIn('modeld_lag_counter', src)
+
+
 if __name__ == "__main__":
   unittest.main()

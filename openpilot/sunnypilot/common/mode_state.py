@@ -122,3 +122,24 @@ def plan_matches_store(plan, read_bool) -> bool:
     except Exception:
       return False
   return True
+
+
+def longitudinal_capable(*, openpilot_longitudinal: bool, alpha_available: bool,
+                         alpha_enabled: bool) -> bool:
+  """Whether openpilot longitudinal control is what this car runs right now.
+
+  There are two ways to have it and they are not the same flag: a car can hold
+  it stock (``openpilotLongitudinalControl``), or get it through alpha
+  longitudinal on a car that only advertises it (``alphaLongitudinalAvailable``
+  plus the driver's ``AlphaLongitudinalEnabled``).
+
+  The two surfaces used to ask this differently. The settings UI asked it
+  alpha-aware, so the Experimental Mode switch was enabled and accepted; selfdrived
+  asked only the stock flag and therefore deleted ExperimentalMode at every start
+  on an alpha-longitudinal car. The result was a mode that came back off after each
+  reboot while the UI said the car supported it. One definition, so a car cannot be
+  capable for the switch and incapable for the store.
+  """
+  if alpha_available:
+    return bool(alpha_enabled)
+  return bool(openpilot_longitudinal)

@@ -20,7 +20,6 @@ from openpilot.common.realtime import DT_HW
 from openpilot.selfdrive.selfdrived.alertmanager import set_offroad_alert
 from openpilot.common.hardware import HARDWARE, COMMA_HARDWARE
 from openpilot.common.basedir import BASEDIR
-from openpilot.common.git import get_short_branch
 from openpilot.common.hardware.usb import CHESTNUT_FW_VERSION, CHESTNUT_USB_PRODUCT, get_usb_state, get_usb_topology, is_chestnut_usb_id, set_usb_state
 from openpilot.common.linux import LinuxSystemStats
 from openpilot.system.loggerd.config import get_available_percent
@@ -32,6 +31,7 @@ from openpilot.system.hardware.fan_controller import FanController
 from openpilot.system.hardware.chestnut.monitoring import chestnut_state_thread
 from openpilot.system.hardware.chestnut.status import ChestnutStatus
 from openpilot.common.version import terms_version, training_version, get_build_metadata, terms_version_sp
+from openpilot.common.git import get_short_branch
 
 ThermalStatus = log.DeviceState.ThermalStatus
 NetworkType = log.DeviceState.NetworkType
@@ -83,8 +83,6 @@ class Chestnut:
     cloudlog.warning(f"chestnut firmware out of date, flashing (attempt {self.attempts})")
     self.thread = threading.Thread(target=self.flash, daemon=True)
     self.thread.start()
-
-
 ThermalBand = namedtuple("ThermalBand", ['min_temp', 'max_temp'])
 HardwareState = namedtuple("HardwareState", ['network_type', 'network_info', 'network_strength', 'network_stats',
                                              'network_metered', 'modem_temps', 'usb_state'])
@@ -402,7 +400,11 @@ def hardware_thread(end_event, hw_queue) -> None:
       except Exception:
         pass
 
-    should_pwrsave = not onroad_conditions["ignition"] and msg.deviceState.screenBrightnessPercent < 1e-3
+    if HARDWARE.has_builtin_display():
+      should_pwrsave = not onroad_conditions["ignition"] and msg.deviceState.screenBrightnessPercent < 1e-3
+    else:
+      # Headless: no backlight sysfs; only power-save offroad without ignition.
+      should_pwrsave = not onroad_conditions["ignition"]
     if should_pwrsave != pwrsave or (count == 0):
       HARDWARE.set_power_save(should_pwrsave)
     pwrsave = should_pwrsave
@@ -480,21 +482,34 @@ def hardware_thread(end_event, hw_queue) -> None:
     rising_edge_started = should_start and not should_start_prev
     status_packet_interval = 1. if show_alert else 600.
     if rising_edge_started or (count % int(status_packet_interval / DT_HW)) == 0:
-      dat = {
-        'count': count,
-        'pandaStates': [strip_deprecated_keys(p.to_dict()) for p in pandaStates],
-        'peripheralState': strip_deprecated_keys(peripheralState.to_dict()),
-        'location': (strip_deprecated_keys(sm["gpsLocationExternal"].to_dict()) if sm.alive["gpsLocationExternal"] else None),
-        'deviceState': strip_deprecated_keys(msg.to_dict())
-      }
-      cloudlog.event("STATUS_PACKET", **dat)
+      # This packet is only for reporting. capnp raises RuntimeError("Member was null.")
+      # from to_dict() when a nested enum carries an ordinal the local schema does not
+      # know (schema/firmware skew). That must never kill hardware_thread: this thread is
+      # the only deviceState publisher, so losing it freezes networkType/thermal for the
+      # whole UI (shows up as "no network" while Wi-Fi is up).
+      # 2026-10-03 根因已定位（此前记作“待单独定位”）：pandad 可执行文件是 panda#2425
+      # 「health packet cleanup」之前的旧链接产物，health_t 字段偏移与本仓 panda/board/
+      # health.h 不一致，fault_status_pkt 被读成越界值（实测 210）→ PandaState.FaultStatus
+      # 枚举越界 → 本 to_dict() 抛错。修法是重新链接 pandad，不是改这段代码；
+      # 详见 DAY_LOG_2026-10-03-PANDAD_HEALTH_STRUCT_SKEW.md。此处 try/except 保留为兜底。
+      try:
+        dat = {
+          'count': count,
+          'pandaStates': [strip_deprecated_keys(p.to_dict()) for p in pandaStates],
+          'peripheralState': strip_deprecated_keys(peripheralState.to_dict()),
+          'location': (strip_deprecated_keys(sm["gpsLocationExternal"].to_dict()) if sm.alive["gpsLocationExternal"] else None),
+          'deviceState': strip_deprecated_keys(msg.to_dict())
+        }
+        cloudlog.event("STATUS_PACKET", **dat)
 
-      # save last one before going onroad
-      if rising_edge_started:
-        try:
-          params.put("LastOffroadStatusPacket", dat, block=True)
-        except Exception:
-          cloudlog.exception("failed to save offroad status")
+        # save last one before going onroad
+        if rising_edge_started:
+          try:
+            params.put("LastOffroadStatusPacket", dat, block=True)
+          except Exception:
+            cloudlog.exception("failed to save offroad status")
+      except Exception:
+        cloudlog.exception("failed to build STATUS_PACKET (enum/schema skew); keeping deviceState alive")
 
     params.put_bool("NetworkMetered", msg.deviceState.networkMetered)
 
@@ -522,8 +537,8 @@ def main():
     threading.Thread(target=hardware_thread, args=(end_event, hw_queue)),
   ]
 
-  if COMMA_HARDWARE:
-    threads.append(threading.Thread(target=touch_thread, args=(end_event,)))
+  if COMMA_HARDWARE and HARDWARE.has_builtin_display():
+    threads.append(threading.Thread(target=touch_thread, args=(end_event,), name="touch"))
     threads.append(threading.Thread(target=chestnut_state_thread, args=(end_event,)))
 
   for t in threads:

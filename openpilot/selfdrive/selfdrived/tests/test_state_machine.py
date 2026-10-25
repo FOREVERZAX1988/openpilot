@@ -14,12 +14,20 @@ ALL_STATES = tuple(State.schema.enumerants.values())
 ENABLE_EVENT_TYPES = (ET.ENABLE, ET.PRE_ENABLE, ET.OVERRIDE_LATERAL, ET.OVERRIDE_LONGITUDINAL)
 
 
+# Upstream's suite fabricates its event under id 0, which is unused there (`none`).
+# This tree's log.capnp has no `none`: 0 is canError, so writing EVENTS[0] here
+# silently destroyed a real alert mapping for every later test in the process --
+# test_steering_warning_delay caught it (canError stopped producing its
+# immediate-disable alert). Use an id past the real ones instead of a magic 0.
+_FAKE_EVENT_ID = max(EVENTS) + 1
+
+
 def make_event(event_types: list[str | None]):
-  EVENTS[0] = {}
+  EVENTS[_FAKE_EVENT_ID] = {}
   for ev in event_types:
     if ev is not None:
-      EVENTS[0][ev] = NormalPermanentAlert("alert")
-  return 0
+      EVENTS[_FAKE_EVENT_ID][ev] = NormalPermanentAlert("alert")
+  return _FAKE_EVENT_ID
 
 
 class TestStateMachine(OpenpilotTestCase):

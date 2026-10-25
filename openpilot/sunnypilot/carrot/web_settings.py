@@ -33,7 +33,7 @@ from typing import Any
 _PARAM_KW_RE = re.compile(r'\bparam\s*=\s*"([A-Za-z0-9_]+)"')
 _PARAM_KW2_RE = re.compile(r'\bparam_key\s*=\s*"([A-Za-z0-9_]+)"')
 _PARAM_POS_RE = re.compile(r'(?:ParamControlSP|BigParamControlSP|ParamControl)\s*\(\s*[^,()]*,\s*"([A-Za-z0-9_]+)"')
-_KEYWORD_ARG_RE = re.compile(r'"([A-Za-z0-9_]+)"')
+_KEYWORD_ARG_RE = re.compile(r'([\'"])([A-Za-z0-9_]+)\1')
 
 # helper modules that are not pages of their own; the items module belongs to carrot_tuning
 _NOT_PAGES = ("settings",)
@@ -100,7 +100,7 @@ def _keys_in(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8", errors="ignore")
   except OSError:
     return []
-  return _KEYWORD_ARG_RE.findall(text)
+  return [name for _quote, name in _KEYWORD_ARG_RE.findall(text)]
 
 
 def group_keys(pages: dict[str, list[str]], declared: Iterable[str]) -> dict[str, list[str]]:
@@ -191,18 +191,54 @@ def render_page(page: str, keys: list[str], kinds: dict[str, int], values: dict[
   return _PAGE_HEAD.format(title=html.escape(page), message=message, index=html.escape(index_href)) + rows + _PAGE_TAIL
 
 
-def render_index(grouped: dict[str, list[str]], *, href_fmt: str = "/settings?page={page}") -> str:
+def render_index(grouped: dict[str, list[str]], *, href_fmt: str = "/settings?page={page}", extra: str = "") -> str:
   items = []
   for page, keys in grouped.items():
     label = OTHER_LABEL if page == OTHER else page
     href = html.escape(href_fmt.format(page=html.escape(page, quote=True)), quote=True)
     items.append(f'<li><a href="{href}">{html.escape(label)}</a> <span class="n">({len(keys)})</span></li>')
-  return _INDEX_HEAD + "\n".join(items) + _INDEX_TAIL
+  tail = _INDEX_TAIL.replace("</ul>", "</ul>\n" + extra, 1) if extra else _INDEX_TAIL
+  return _INDEX_HEAD + "\n".join(items) + tail
 
 
 # the group that holds keys no on-device page names: reachable, but not a page setting
 OTHER = "other"
 OTHER_LABEL = "内部参数（车机设置页未暴露，谨慎修改）"
+
+
+def render_curve_learning_status(params) -> str:
+  """Read-only card for the curve-speed self-learning state.
+
+  No new param keys: everything is derived from CurvatureLearningData, which is
+  already persistent, so this renders the same values the planner sees without
+  a rebuild of libparams_c.so on the device.
+  """
+  from openpilot.selfdrive.controls.lib.curve_speed_learning import learning_status_from_data
+
+  try:
+    import json as _json
+    raw = params.get("CurvatureLearningData")
+    data = _json.loads(raw) if raw else None
+  except Exception:
+    data = None
+  status = learning_status_from_data(data)
+
+  enabled = None
+  try:
+    enabled = params.get_bool("CscCurvatureLearningEnabled")
+  except Exception:
+    pass
+  if enabled is None:
+    state = "未知（键不可读）"
+  else:
+    state = "开启" if enabled else "关闭（默认）"
+
+  lines = [
+    '<h2>弯道速度自学习（StarPilot 移植）</h2>',
+    f'<p>状态：{state} · 标定进度 {status["progress_pct"]}% · 学习横向加速度 {status["lateral_acceleration"]} m/s²</p>',
+    f'<p>已采样 {status["buckets"]}/24 桶 · 样本总数 {status["total_count"]}</p>',
+  ]
+  return "\n".join(lines) + "\n"
 
 
 # ---- live state (needs a params handle) ------------------------------------ #
@@ -218,7 +254,8 @@ def collect(params) -> tuple[dict[str, list[str]], dict[str, int], dict[str, Any
   The binary's key list is the source of truth: a page key it does not declare is dropped
   rather than rendered as a control that could never be written.
   """
-  declared = list(params.all_keys())
+  # the params binary hands its key list back as bytes; the page scan produces str
+  declared = [k.decode() if isinstance(k, (bytes, bytearray)) else str(k) for k in params.all_keys()]
   kinds: dict[str, int] = {}
   values: dict[str, Any] = {}
   for key in declared:
@@ -234,18 +271,67 @@ def collect(params) -> tuple[dict[str, list[str]], dict[str, int], dict[str, Any
   return grouped, kinds, values
 
 
+# The two keys that are not plain values: they are transitions with rules around them.
+MODE_ON_PARAM = "ExperimentalMode"
+SAFE_MODE_PARAM = "SafeMode"
+
+
+def _write_mode(params, enabled: bool) -> None:
+  """Experimental Mode through the mode state machine, or raise.
+
+  This panel is the other writer a driver can reach, and it used to write the key raw.
+  That skipped everything the companion API already enforces: the confirmation bit, the
+  Safe Mode lock, and the road state. The result was visible -- enabling from the browser
+  set the switch on the device while `experimental_mode_requested()` still said no, so the
+  mode never actually ran. Saving the form here is the driver pressing "enable", which is
+  what the acknowledgement means on this surface.
+  """
+  from openpilot.sunnypilot.common.mode_state_runtime import set_experimental_mode
+  set_experimental_mode(params, enabled, acknowledged=True)
+
+
+def _write_safe_mode(params, enabled: bool) -> None:
+  """Safe Mode through its transition (parked precondition, backup, read-back), or raise."""
+  from openpilot.sunnypilot.common.safe_mode_runtime import set_safe_mode
+  set_safe_mode(params, enabled)
+
+
+def _record_change(name: str, before, after, source: str = "web_ui") -> None:
+  """Add the write to the same history the companion API writes to; never raise."""
+  try:
+    from openpilot.sunnypilot.carrot.server.services.param_changes import append_param_change
+    append_param_change(name, before, after, source=source)
+  except Exception:
+    pass
+
+
+def _read_value(params, key: str):
+  try:
+    return params.get(key)
+  except Exception:
+    return None
+
+
 def apply_updates(params, updates: dict[str, str], kinds: dict[str, int]) -> tuple[int, int]:
   """Writes the (key, string) pairs. Returns (written, skipped).
 
   Each value goes through the setter for the declared type, so the binary's own cast and
   validation decide, and a key whose type does not accept the text is skipped rather than
-  written raw.
+  written raw. The keys that carry rules instead of values go through the state machine
+  that owns those rules, and a refused transition is reported as skipped rather than
+  stored: a browser session must not be able to leave the store in a state the device UI
+  would refuse to produce.
   """
   written = skipped = 0
   for key, raw in updates.items():
     kind = kinds.get(key, T_STRING)
+    before = _read_value(params, key)
     try:
-      if kind == T_BOOL:
+      if key == MODE_ON_PARAM:
+        _write_mode(params, _truthy(raw))
+      elif key == SAFE_MODE_PARAM:
+        _write_safe_mode(params, _truthy(raw))
+      elif kind == T_BOOL:
         params.put_bool(key, _truthy(raw))
       elif kind == T_INT:
         params.put(key, int(raw), block=True)
@@ -255,9 +341,17 @@ def apply_updates(params, updates: dict[str, str], kinds: dict[str, int]) -> tup
         continue  # not editable as text
       else:
         params.put(key, raw, block=True)
-      written += 1
     except (ValueError, TypeError, OverflowError):
       skipped += 1
+      continue
+    except Exception:
+      # a refused or failed transition (mode locked, car not parked, write unverified)
+      skipped += 1
+      continue
+    written += 1
+    after = _read_value(params, key)
+    if after != before:
+      _record_change(key, before, after)
   return written, skipped
 
 
