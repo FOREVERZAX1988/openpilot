@@ -29,12 +29,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/shared-assets/img_spinner_comma.png",
-      "sizes": "800x800",
-      "type": "image/png",
-      "purpose": "any"
     }
   ]
 }
