@@ -249,6 +249,12 @@ void Params::clearAll(ParamKeyFlag key_flag) {
 void Params::putNonBlocking(const std::string &key, const std::string &val) {
    queue.push(std::make_pair(key, val));
   // start thread on demand
+  // The whole check-then-replace is one critical section: `future` is read,
+  // tested and assigned here, and every Python `params.put()` defaults to this
+  // path, so any process with two threads writing params races on it. The
+  // assignment destroys the previous state object, so an unguarded race makes
+  // one thread free what the other is using -- __cxa_pure_virtual, SIGABRT.
+  std::lock_guard<std::mutex> lk(future_lock);
   if (!future.valid() || future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
     future = std::async(std::launch::async, &Params::asyncWriteThread, this);
   }
