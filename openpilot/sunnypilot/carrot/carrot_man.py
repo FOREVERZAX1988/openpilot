@@ -41,6 +41,15 @@ except ImportError:
 
 # ---- 7714 WebSocket v2 parsed control structures ------------------------- #
 
+#: Serialises the read-modify-write on CarrotNaviDebug. Two writers share that
+#: param -- `_write_navi_debug` (the 10 Hz snapshot, from the tick and from the
+#: broadcast loop) and `_write_navi_debug_param` (events, from the navi data
+#: dispatch) -- and both go through `_merge_navi_debug`. The merge only works if
+#: nothing writes between its get and its put: concurrent merges each start from
+#: the snapshot they read, so the later put drops the other's keys, which is the
+#: very symptom (event keys never surviving) the merge was added to fix.
+_NAVI_DEBUG_LOCK = threading.Lock()
+
 class _NaviControlBase:
   def __init__(self, present: bool, sequence: int):
     self.present = present
@@ -2718,19 +2727,26 @@ class CarrotManager:
     every ~100 ms, so the event keys never survived and the webui debug viewer
     (carrot_navi_api.py reads `debug["summary"]`) always rendered empty.
     Merging lets both writers coexist.
+
+    The merge holds `_NAVI_DEBUG_LOCK` across its get and its put. Two writers run
+    on different threads -- the tick publishes, the broadcast loop and the navi
+    dispatch fire on theirs -- so without the lock the second writer merges into the
+    snapshot it read *before* the first one wrote: the same loss the merge exists to
+    prevent, and two concurrent params.put() on one key besides.
     """
-    try:
-      existing = self.params.get(NAVI_DEBUG_PARAM)
-      # Params.get() decodes a JSON param to a dict, but tolerate a raw str/bytes
-      # too: an unset key reads back as "" and returning {} on an unexpected shape
-      # would erase the very keys this helper exists to preserve.
-      if isinstance(existing, (str, bytes, bytearray)):
-        existing = json.loads(existing) if len(existing) else {}
-      merged: dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
-      merged.update(updates)
-      self.params.put(NAVI_DEBUG_PARAM, merged)
-    except Exception as e:
-      cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
+    with _NAVI_DEBUG_LOCK:
+      try:
+        existing = self.params.get(NAVI_DEBUG_PARAM)
+        # Params.get() decodes a JSON param to a dict, but tolerate a raw str/bytes
+        # too: an unset key reads back as "" and returning {} on an unexpected shape
+        # would erase the very keys this helper exists to preserve.
+        if isinstance(existing, (str, bytes, bytearray)):
+          existing = json.loads(existing) if len(existing) else {}
+        merged: dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
+        merged.update(updates)
+        self.params.put(NAVI_DEBUG_PARAM, merged)
+      except Exception as e:
+        cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
 
   def _put_navi_traffic_light(self, lamp: str | None, remain: Any, distance: Any,
                               location: Any = None) -> None:
