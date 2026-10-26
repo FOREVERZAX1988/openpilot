@@ -297,6 +297,24 @@ class LoopTiming:
       cloudlog.warning("modeld loop timing: " + " ".join(parts))
 
 
+def car_params(params: Params) -> bytes:
+  """CarParams, or the car's own persisted one while the driving view is previewed.
+
+  Same contract as selfdrive/modeld/modeld.py: CarParams is CLEAR_ON_MANAGER_START
+  and only card writes it, so offroad the blocking read never returns. The stock
+  modeld already falls back to CarParamsPersistent for the preview; this runner
+  did not, so with the tinygrad runner selected the preview stayed on a bare
+  camera feed with no path drawn. Offroad without the preview nothing changes:
+  the read blocks for card exactly as before.
+  """
+  cp = params.get("CarParams")
+  if cp is None and params.get_bool("IsOnroadPreview"):
+    cp = params.get("CarParamsPersistent")
+  if cp is None:
+    cp = params.get("CarParams", block=True)
+  return cp
+
+
 def main(demo=False):
   cloudlog.warning("modeld init")
 
@@ -421,7 +439,7 @@ def main(demo=False):
     from opendbc.car.car_helpers import get_demo_car_params
     CP = get_demo_car_params()
   else:
-    CP = messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams)
+    CP = messaging.log_from_bytes(car_params(params), car.CarParams)
   cloudlog.info("modeld got CarParams: %s", CP.brand)
 
   # TODO Move smooth seconds to action function
