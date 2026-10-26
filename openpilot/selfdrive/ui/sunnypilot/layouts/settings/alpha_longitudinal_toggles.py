@@ -102,8 +102,19 @@ class AlphaLongitudinalToggles:
   def update_state(self):
     CP = ui_state.CP
     has_long = CP is not None and ui_state.has_longitudinal_control
-    self._alpha_long_toggle.set_visible(CP is not None and CP.alphaLongitudinalAvailable)
-    self._experimental_toggle.action_item.set_enabled(CP is None or has_long)
+    # CP is None means nothing has fingerprinted this car yet (fresh install, or /data
+    # rebuilt after a factory reset). Hiding the row then reads as "the feature is gone",
+    # which is exactly how it looked after the rebuild, while the car may well support it.
+    # Keep it on screen and dead until a drive fills CP in; hide it only when a car we
+    # have actually seen does not offer alpha longitudinal.
+    alpha_available = CP is not None and CP.alphaLongitudinalAvailable
+    self._alpha_long_toggle.set_visible(alpha_available or CP is None)
+    self._alpha_long_toggle.action_item.set_enabled(alpha_available and ui_state.is_offroad())
+    # Experimental Mode runs on openpilot longitudinal control and both selfdrived and
+    # ui_state._enforce_constraints delete the key when there is none, so accepting the
+    # tap only to flip back -- which is what `CP is None or` allowed -- is a lie. has_long
+    # is the same condition those two enforce.
+    self._experimental_toggle.action_item.set_enabled(has_long)
     self._dec_toggle.action_item.set_enabled(has_long)
     # DEC decides the mode on its own, and the e2e assists never act under it
     dec = self._dec_toggle.action_item.get_state()

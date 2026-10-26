@@ -11,7 +11,10 @@ looking live again. Both cases fail here rather than on the road.
 """
 import ast
 import os
+import sys
+import types
 import unittest
+from unittest import mock
 
 from openpilot.sunnypilot.carrot import feature_support as fs
 
@@ -182,6 +185,89 @@ class TestUiWiring(unittest.TestCase):
     # Rows marked on_screen=False have no switch; everything else must be gated above.
     expected = {r.param for r in rows.values() if r.on_screen}
     self.assertEqual(gated, expected, f"gated: {sorted(gated)}, expected: {sorted(expected)}")
+
+
+class _FakeCP:
+  def __init__(self, fingerprint):
+    self.carFingerprint = fingerprint
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *exc):
+    return False
+
+
+class _FakeCarParams:
+  def __init__(self, fingerprint):
+    self._fingerprint = fingerprint
+
+  def from_bytes(self, raw):
+    return _FakeCP(self._fingerprint)
+
+
+class _FakeParams:
+  """Only `get`, which is all the fingerprint lookup uses."""
+
+  def __init__(self, values=None):
+    self.values = dict(values or {})
+
+  def get(self, key):
+    return self.values.get(key)
+
+
+class TestFingerprintSources(unittest.TestCase):
+  """`CarParams` is CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION.
+
+  Reading only that key made the fingerprint unknown for the whole offroad session, so
+  the rows above stayed live on the Macan in every settings page the driver opened. The
+  lookup must fall back to what survives a manager start, and to the platform bundle.
+  """
+
+  def setUp(self):
+    fs.reset_cache()
+    self.addCleanup(fs.reset_cache)
+
+  def _install(self, store, fingerprint=MACAN):
+    params_mod = types.ModuleType("openpilot.common.params")
+    params_mod.Params = lambda: store
+    car_mod = types.ModuleType("opendbc.car.structs")
+    car_mod.car = types.SimpleNamespace(CarParams=_FakeCarParams(fingerprint))
+    patcher = mock.patch.dict(sys.modules, {
+      "openpilot.common.params": params_mod,
+      "opendbc.car.structs": car_mod,
+    })
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def test_platform_bundle_alone_identifies_the_car(self):
+    """A restored /data has no CarParams at all, but the bound platform survives."""
+    self._install(_FakeParams({"CarPlatformBundle": {"platform": MACAN}}))
+    self.assertEqual(fs.current_fingerprint(), MACAN)
+    for row in fs.UNSUPPORTED:
+      self.assertFalse(fs.is_supported(row.param), row.param)
+
+  def test_platform_bundle_as_raw_json_bytes(self):
+    self._install(_FakeParams({"CarPlatformBundle": b'{"platform": "PORSCHE_MACAN_MK1"}'}))
+    self.assertEqual(fs.current_fingerprint(), MACAN)
+
+  def test_persisted_car_params_carry_the_answer_offroad(self):
+    """The live key is gone offroad; the persisted one is what card left behind."""
+    self._install(_FakeParams({"CarParamsPersistent": b"blob"}), fingerprint=MACAN)
+    self.assertEqual(fs.current_fingerprint(), MACAN)
+
+  def test_nothing_identifies_the_car_yet(self):
+    self._install(_FakeParams())
+    self.assertIsNone(fs.current_fingerprint())
+
+  def test_a_miss_is_retried_so_a_later_drive_is_seen(self):
+    """carrot_server outlives the drive that fills CarParams in; a cached None would not."""
+    store = _FakeParams()
+    self._install(store)
+    self.assertIsNone(fs.current_fingerprint())
+    store.values["CarParamsPersistent"] = b"blob"
+    fs._fp_retry_at = 0.0  # past the miss throttle
+    self.assertEqual(fs.current_fingerprint(), MACAN)
 
 
 if __name__ == "__main__":

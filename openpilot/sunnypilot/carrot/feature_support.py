@@ -28,7 +28,9 @@ the key is not in common/params_keys.h, so an upstream rename shows up as a red 
 instead of a dead switch.
 """
 
+import json
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -90,37 +92,93 @@ _BY_PARAM: dict[str, Unsupported] = {row.param: row for row in UNSUPPORTED}
 _fp_lock = threading.Lock()
 _fp_cached = False
 _fp_value: str | None = None
+#: A miss is not cached: card writes CarParamsPersistent when the car is finally
+#: connected, and a settings page open across that moment must stop lying. Retry at
+#: most this often so a page redrawn every frame does not read /data/params per frame.
+_FP_MISS_TTL = 1.0
+_fp_retry_at = 0.0
+
+#: Where the car's identity comes from, most durable first.
+#:
+#: `CarParams` alone is not enough: it is CLEAR_ON_MANAGER_START |
+#: CLEAR_ON_ONROAD_TRANSITION, so it is absent for the whole offroad session -- which is
+#: exactly when every settings page is drawn. Reading only that key made the four rows
+#: below see "unknown platform" offroad, and an unknown platform deliberately disables
+#: nothing, so the switches stayed live on the Macan every time the settings were opened.
+#:
+#: `CarPlatformBundle` is what card uses as `fixed_fingerprint`, so it always agrees with
+#: what card will report, and it is present even on a freshly restored /data before any
+#: car has been connected. `CarParamsPersistent` is the last successful fingerprint and
+#: survives the manager start.
+_PLATFORM_BUNDLE = "CarPlatformBundle"
+_CAR_PARAMS_KEYS = ("CarParamsPersistent", "CarParams")
 
 
 def reset_cache() -> None:
   """Drop the cached fingerprint (tests; a car change needs a reboot anyway)."""
-  global _fp_cached, _fp_value
+  global _fp_cached, _fp_value, _fp_retry_at
   with _fp_lock:
     _fp_cached = False
     _fp_value = None
+    _fp_retry_at = 0.0
+
+
+def _fingerprint() -> str | None:
+  """Best available fingerprint, or None when nothing has identified the car yet."""
+  from openpilot.common.params import Params
+
+  params = Params()
+
+  bundle = params.get(_PLATFORM_BUNDLE)
+  if isinstance(bundle, (bytes, str)) and bundle:
+    try:
+      bundle = json.loads(bundle)
+    except ValueError:
+      bundle = None
+  if isinstance(bundle, dict):
+    platform = bundle.get("platform")
+    if isinstance(platform, str) and platform:
+      return platform
+
+  from opendbc.car.structs import car
+
+  for key in _CAR_PARAMS_KEYS:
+    raw = params.get(key)
+    if not raw:
+      continue
+    try:
+      with car.CarParams.from_bytes(raw) as cp:
+        fp = str(cp.carFingerprint) or None
+    except Exception:
+      # A blob from a build whose schema has since changed: try the next source.
+      continue
+    if fp:
+      return fp
+  return None
 
 
 def current_fingerprint() -> str | None:
-  """CarParams.carFingerprint from /data/params, or None when it is not there yet."""
-  global _fp_cached, _fp_value
+  """The car's fingerprint from /data/params, or None when nothing has identified it.
+
+  Checks the platform bundle and the persisted CarParams, not only the live key, so this
+  answers offroad too (see _PLATFORM_BUNDLE). A miss is retried, never cached.
+  """
+  global _fp_cached, _fp_value, _fp_retry_at
   with _fp_lock:
     if _fp_cached:
       return _fp_value
-  fp: str | None = None
+    if time.monotonic() < _fp_retry_at:
+      return None
   try:
-    from openpilot.common.params import Params
-
-    raw = Params().get("CarParams")
-    if raw is not None:
-      from opendbc.car.structs import car
-
-      with car.CarParams.from_bytes(raw) as cp:
-        fp = str(cp.carFingerprint) or None
+    fp = _fingerprint()
   except Exception:
-    # No CarParams yet (fresh install / offroad before card runs) or an unreadable blob:
-    # "unknown platform" is the safe answer, and a stale value is never cached.
-    return None
+    # No param store at all (host tests, a build without /data): "unknown platform"
+    # is the safe answer, and a failed read is never cached.
+    fp = None
   with _fp_lock:
+    if fp is None:
+      _fp_retry_at = time.monotonic() + _FP_MISS_TTL
+      return None
     _fp_value = fp
     _fp_cached = True
   return fp

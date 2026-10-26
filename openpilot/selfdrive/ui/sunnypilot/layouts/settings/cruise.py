@@ -179,6 +179,20 @@ class CruiseLayout(Widget):
 
     else:
       has_icbm = has_long = False
+      # CP is None: nothing has fingerprinted this car yet (fresh install, or /data
+      # rebuilt after a factory reset). Every set_enabled in the branch above is inside
+      # `if CP is not None`, so none of it runs and the rows keep the enabled default
+      # they were built with -- the whole panel looks usable on a car we know nothing
+      # about. Grey them out instead, and say why: offroad the description below is
+      # ONROAD_ONLY_DESCRIPTION, which asks for exactly the drive that fills CP in.
+      self.icbm_toggle.action_item.set_enabled(False)
+      self.custom_acc_toggle.action_item.set_enabled(False)
+      self.scc_v_toggle.action_item.set_enabled(False)
+      self.scc_m_toggle.action_item.set_enabled(False)
+      new_icbm_desc = "<b>" + tr(ONROAD_ONLY_DESCRIPTION) + "</b>\n\n" + tr(ICBM_DESC)
+      if self.icbm_toggle.description != new_icbm_desc:
+        self.icbm_toggle.set_description(new_icbm_desc)
+        self.icbm_toggle.show_description(True)
 
     show_custom_acc_desc = False
 
