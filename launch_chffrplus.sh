@@ -800,6 +800,34 @@ launch() {
     fi
   fi
 
+  # The installer checks the submodules out as part of clone. When that clone is
+  # cut short (factory reset, power loss, timeout) the directories still exist
+  # but are empty, and the index can lose its gitlinks too. build.py then dies on
+  # a bare `import opendbc`, and on a fresh install there is no SSH yet, so all
+  # the user gets is a black screen. Say what is wrong and try to repair it here.
+  local empty_subs=()
+  for sub in msgq_repo opendbc_repo rednose_repo teleoprtc_repo tinygrad_repo jetlink_repo; do
+    [ -d "$sub" ] && [ -n "$(ls -A "$sub" 2>/dev/null)" ] || empty_subs+=("$sub")
+  done
+  if [ ${#empty_subs[@]} -gt 0 ]; then
+    echo "[warn] submodules not checked out: ${empty_subs[*]}"
+    # Bounded: a slow or blocked network must not hold the boot forever. The
+    # full set of submodules takes a few minutes on a C3X over wifi.
+    GIT_LFS_SKIP_SMUDGE=1 timeout 240 git submodule update --init "${empty_subs[@]}" >/dev/null 2>&1
+    local still_empty=()
+    for sub in "${empty_subs[@]}"; do
+      [ -n "$(ls -A "$sub" 2>/dev/null)" ] || still_empty+=("$sub")
+    done
+    if [ ${#still_empty[@]} -eq 0 ]; then
+      echo "[warn] submodules recovered"
+    else
+      echo "[error] submodules still empty: ${still_empty[*]}"
+      echo "[error] from a shell: cd $DIR && GIT_LFS_SKIP_SMUDGE=1 git submodule update --init --recursive"
+      echo "[error] if that reports no submodule mapping, the index lost its gitlinks:"
+      echo "[error]   git reset --mixed HEAD && git submodule update --init --recursive"
+    fi
+  fi
+
   ln -sfn "$(pwd)" /data/pythonpath
 
   # submodule package symlinks for bare `import opendbc`/`import jetlink` on device;
@@ -893,10 +921,27 @@ launch() {
 
   cd openpilot/system/manager
   if [ ! -f "$DIR/prebuilt" ]; then
-    if ! ./build.py; then
-      echo "[warn] build.py failed, UI resources may be missing"
-    else
+    # scons writes its objects and temporary output under TMPDIR, which defaults
+    # to /tmp on the root partition. On a C3X that partition is ~4.3G and has
+    # well under 500M free after an install, so a full build can die halfway
+    # through with "No space left on device". /data has tens of GB, and AGNOS's
+    # comma.sh has already recreated /data/tmp for us by this point.
+    if mountpoint -q /data; then
+      export TMPDIR=/data/tmp
+      mkdir -p "$TMPDIR"
+    fi
+    # Keep the build log on /data. A fresh install has no SSH, and the old
+    # one-line warning then left a black screen with no way to find out why.
+    # tee, not a redirect: build.py draws the 0-100% progress bar on the screen
+    # and swallowing it would leave the user staring at a frozen frame.
+    BUILD_LOG=/data/build.log
+    ./build.py 2>&1 | tee "$BUILD_LOG"
+    build_rc=${PIPESTATUS[0]}
+    if [ "$build_rc" -eq 0 ]; then
       touch "$DIR/prebuilt"
+    else
+      echo "[error] build.py failed (exit $build_rc), log: $BUILD_LOG"
+      tail -n 20 "$BUILD_LOG" 2>/dev/null | sed 's/^/[error] /'
     fi
   fi
   ./manager.py
