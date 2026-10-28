@@ -11,15 +11,23 @@ import types
 import unittest
 
 # cloudlog pulls in the hardware stack, which needs opendbc; that is a device
-# dependency. Stub it so these pure-logic tests run on a PC.
-if "openpilot.common.swaglog" not in sys.modules:
+# dependency. Stub it only when the real module cannot be imported: an
+# unconditional entry in sys.modules leaks into every other test collected in the
+# same run -- a types.ModuleType has no __file__ ("unknown location"), and
+# manager.py's `from openpilot.common.swaglog import cloudlog, add_file_handler`
+# then fails while collecting test_sp_branch_migrations.py next door.
+try:
+  import openpilot.common.swaglog  # noqa: F401
+except Exception:
   stub = types.ModuleType("openpilot.common.swaglog")
   stub.cloudlog = types.SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None,
                                         exception=lambda *a, **k: None)
+  stub.add_file_handler = lambda *a, **k: None
   sys.modules["openpilot.common.swaglog"] = stub
 
 from openpilot.sunnypilot.system.updated.git_proxy import (
   MAX_ACCEPTABLE_MS,
+  PROBE_TIMEOUT_S,
   ProbeResult,
   build_candidates,
   probe_once,
@@ -103,6 +111,132 @@ class TestProbe(unittest.TestCase):
     result = probe_source("https://127.0.0.1:1/x.git", samples=2)
     self.assertFalse(result.ok)
     self.assertTrue(result.error)
+
+  def test_probe_stops_at_the_deadline(self):
+    """A slow source must not hold up the whole probe.
+
+    The updater answers a user-initiated check, so the probe has to stay
+    inside its budget even when several sources hang.
+    """
+    import time
+
+    deadline = time.monotonic() + 0.01
+    result = probe_source("https://127.0.0.1:1/x.git", samples=3, deadline=deadline)
+    self.assertFalse(result.ok)
+    self.assertLessEqual(len(result.samples), 3)
+
+  def test_an_expired_deadline_takes_no_samples(self):
+    import time
+
+    result = probe_source("https://127.0.0.1:1/x.git", samples=3,
+                           deadline=time.monotonic() - 1)
+    self.assertFalse(result.ok)
+    self.assertEqual(result.samples, [])
+
+  def test_one_flaky_sample_does_not_condemn_a_working_source(self):
+    """A source that answers on the retry is usable.
+
+    These links time out intermittently; condemning a source on its first
+    timeout would throw away a working mirror.
+    """
+    calls = []
+
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      calls.append(url)
+      if len(calls) == 1:
+        return False, 12000, "timeout"
+      return True, 1800, ""
+
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+    original = mod.probe_once
+    mod.probe_once = fake_probe
+    try:
+      result = mod.probe_source("https://example.test/x.git", samples=3)
+    finally:
+      mod.probe_once = original
+
+    self.assertTrue(result.ok)
+    # the median is taken over the answers that came back
+    self.assertEqual(result.median_ms, 1800)
+
+  def test_a_source_that_never_answers_is_failed(self):
+    calls = []
+
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      calls.append(url)
+      return False, 900, "timeout"
+
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+    original = mod.probe_once
+    mod.probe_once = fake_probe
+    try:
+      result = mod.probe_source("https://example.test/x.git", samples=3)
+    finally:
+      mod.probe_once = original
+
+    self.assertFalse(result.ok)
+    self.assertEqual(result.error, "timeout")
+
+
+class TestMeasureAndSelect(unittest.TestCase):
+  """The selection runs the probes concurrently, so it needs its own cover."""
+
+  def test_official_source_wins_when_it_is_fastest(self):
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      if "github.com/" in url and "gh-" not in url and "cdn" not in url and "fast" not in url and "proxy.net" not in url:
+        return True, 900, ""
+      return True, 3000, ""
+
+    original = mod.probe_once
+    mod.probe_once = fake_probe
+    try:
+      best, prefix = mod.measure_and_select(".", "https://github.com/x/y.git", budget_s=5)
+    finally:
+      mod.probe_once = original
+
+    self.assertIsNotNone(best)
+    self.assertEqual(best.url, "https://github.com/x/y.git")
+    self.assertEqual(prefix, "")
+
+  def test_a_proxy_wins_when_the_official_source_is_down(self):
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+
+    official = "https://github.com/x/y.git"
+
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      if url == official:
+        return False, 30, "timeout"
+      return True, 1200, ""
+
+    original = mod.probe_once
+    mod.probe_once = fake_probe
+    try:
+      best, prefix = mod.measure_and_select(".", official, budget_s=5)
+    finally:
+      mod.probe_once = original
+
+    self.assertIsNotNone(best)
+    self.assertNotEqual(best.url, official)
+    self.assertTrue(prefix)
+    self.assertEqual(best.url, prefix + official)
+
+  def test_no_usable_source_returns_none(self):
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      return False, 30, "timeout"
+
+    original = mod.probe_once
+    mod.probe_once = fake_probe
+    try:
+      best, prefix = mod.measure_and_select(".", "https://github.com/x/y.git", budget_s=5)
+    finally:
+      mod.probe_once = original
+
+    self.assertIsNone(best)
+    self.assertEqual(prefix, "")
 
 
 class TestGitmodulesParsing(unittest.TestCase):

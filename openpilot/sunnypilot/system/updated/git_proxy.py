@@ -19,6 +19,7 @@ import os
 import shutil
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from openpilot.common.swaglog import cloudlog
@@ -42,7 +43,14 @@ MAX_ACCEPTABLE_MS = 15000
 PROBE_SAMPLES = 3
 
 # A probe that has not answered in this long is a dead source.
-PROBE_TIMEOUT_S = 20
+PROBE_TIMEOUT_S = 12
+
+# The whole probe runs under this budget. Without it a dead source on a
+# slow link would stall the updater for the sum of every timeout.
+PROBE_BUDGET_S = 45
+
+# How many sources are probed at once.
+MAX_PROBE_WORKERS = 7
 
 
 @dataclass
@@ -114,34 +122,58 @@ def probe_once(url: str, cwd: str | None = None, timeout_s: int = PROBE_TIMEOUT_
   return True, elapsed_ms, ""
 
 
-def probe_source(url: str, cwd: str | None = None, samples: int = PROBE_SAMPLES) -> ProbeResult:
+def probe_source(url: str, cwd: str | None = None, samples: int = PROBE_SAMPLES,
+                 deadline: float | None = None) -> ProbeResult:
   """Sample a source several times and judge it on its median.
 
-  A source counts as healthy only when every sample it ran came back ok: a
-  link that answers one request in three is not usable for a fetch.
+  A source is healthy when it answered at least once and its median is
+  good. One flaky sample does not condemn a working source: the links
+  here time out intermittently, and a source that answered on the retry
+  is usable. A source that never answers is not.
+
+  A source that fails its first sample is given one more chance, then
+  dropped: retrying a dead source three times only burns the budget the
+  remaining candidates need.
+
+  `deadline` is a monotonic timestamp past which no further sample is
+  taken, so a slow source cannot hold up the whole probe.
   """
   timings: list[int] = []
-  outcomes: list[bool] = []
+  good_timings: list[int] = []
+  successes = 0
+  failures = 0
   last_error = ""
 
   for _ in range(samples):
-    ok, ms, err = probe_once(url, cwd=cwd)
-    timings.append(ms)
-    outcomes.append(ok)
-    if not ok:
-      last_error = err
-    # A source that answered cleanly does not need the remaining samples; a
-    # source that failed once gets the rest of them to be sure.
-    if ok and len(outcomes) >= 2:
+    if deadline is not None and time.monotonic() >= deadline:
+      last_error = last_error or "probe budget exhausted"
       break
 
-  ordered = sorted(timings)
+    ok, ms, err = probe_once(url, cwd=cwd)
+    timings.append(ms)
+    if ok:
+      successes += 1
+      good_timings.append(ms)
+    else:
+      failures += 1
+      last_error = err
+
+    # A source that answered cleanly does not need the remaining samples.
+    if successes >= 2:
+      break
+    # A source that failed twice is not going to answer.
+    if failures >= 2:
+      break
+
+  # The median is taken over the answers that came back, so one timeout
+  # does not make a source that answers in 2s look like a 12s link.
+  ordered = sorted(good_timings)
   median_ms = ordered[len(ordered) // 2] if ordered else 0
 
   if not timings:
-    return ProbeResult(url=url, ok=False, median_ms=0, samples=[], error="no samples")
+    return ProbeResult(url=url, ok=False, median_ms=0, samples=[], error=last_error or "no samples")
 
-  if not all(outcomes):
+  if successes == 0:
     return ProbeResult(url=url, ok=False, median_ms=median_ms, samples=timings, error=last_error or "failed")
 
   return ProbeResult(url=url, ok=True, median_ms=median_ms, samples=timings, error="")
@@ -334,22 +366,40 @@ def restore_source(root: str, upstream_url: str) -> None:
     set_submodule_config_url(root, section, upstream)
 
 
-def measure_and_select(root: str, upstream_url: str, use_proxies: bool = True) -> tuple[ProbeResult | None, str]:
+def measure_and_select(root: str, upstream_url: str, use_proxies: bool = True,
+                        budget_s: float = PROBE_BUDGET_S) -> tuple[ProbeResult | None, str]:
   """Probe every candidate and return the winner plus the prefix to use.
 
   The prefix is empty for the official source, so the caller can tell an
   origin that needs no rewriting apart from one that does.
+
+  The candidates are probed concurrently: the sources are independent, and
+  probing them one after another made a dead source add its timeout to
+  every candidate behind it. In parallel the whole probe costs about as
+  much as the slowest single source.
   """
   candidates = build_candidates(upstream_url, use_proxies=use_proxies)
-  results: list[ProbeResult] = []
+  deadline = time.monotonic() + budget_s
 
-  for url in candidates:
-    result = probe_source(url, cwd=root)
-    results.append(result)
-    cloudlog.info(
-      f"git_proxy: probe {'OK ' if result.ok else 'FAIL'} {result.median_ms:>6}ms {url}"
-      + (f" ({result.error})" if result.error else "")
-    )
+  results: list[ProbeResult] = []
+  with ThreadPoolExecutor(max_workers=min(len(candidates), MAX_PROBE_WORKERS)) as pool:
+    futures = {pool.submit(probe_source, url, root, PROBE_SAMPLES, deadline): url for url in candidates}
+    for future in futures:
+      url = futures[future]
+      try:
+        result = future.result(timeout=budget_s + PROBE_TIMEOUT_S)
+      except Exception as e:
+        result = ProbeResult(url=url, ok=False, median_ms=0, samples=[], error=str(e))
+      results.append(result)
+      cloudlog.info(
+        f"git_proxy: probe {'OK ' if result.ok else 'FAIL'} {result.median_ms:>6}ms {url}"
+        + (f" ({result.error})" if result.error else "")
+      )
+
+  # The results come back in completion order; sort by the candidate order
+  # so a tie still goes to the official origin.
+  order = {url: i for i, url in enumerate(candidates)}
+  results.sort(key=lambda r: order.get(r.url, len(order)))
 
   best = select_best(results)
   if best is None:
