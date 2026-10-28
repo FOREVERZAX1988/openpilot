@@ -7,22 +7,27 @@
 #include <vector>
 
 #include <libusb-1.0/libusb.h>
-#include <linux/spi/spidev.h>
+
 
 #define TIMEOUT 0
-#define SPI_BUF_SIZE 2048
+#define SPI_BUF_SIZE 4096
 
 
+// Transport-agnostic panda handle. zp's restructure went SPI-only, but the
+// comma three's internal panda (HW type dos, STM32F4) is wired over USB -
+// only the comma 3X (tres/cuatro) uses SPI. USB is restored 2026-10 so the
+// restructured pandad keeps working on the comma three; Panda tries USB
+// first and falls back to SPI.
 class PandaCommsHandle {
 public:
   PandaCommsHandle(std::string) {}
   virtual ~PandaCommsHandle() {}
-  virtual void cleanup() = 0;
 
   std::string hw_serial;
   std::atomic<bool> connected = true;
   std::atomic<bool> comms_healthy = true;
 
+  virtual void cleanup() = 0;
   virtual int control_write(uint8_t request, uint16_t param1, uint16_t param2, unsigned int timeout=TIMEOUT) = 0;
   virtual int control_read(uint8_t request, uint16_t param1, uint16_t param2, unsigned char *data, uint16_t length, unsigned int timeout=TIMEOUT) = 0;
   virtual int bulk_write(unsigned char endpoint, unsigned char* data, int length, unsigned int timeout=TIMEOUT) = 0;
@@ -69,15 +74,18 @@ private:
   inline static std::recursive_mutex hw_lock;
 
   struct __attribute__((packed)) spi_header {
-    uint8_t sync;
     uint8_t endpoint;
+    uint32_t id;
     uint16_t tx_len;
-    uint16_t max_rx_len;
+    uint16_t rx_len;
+  };
+  struct __attribute__((packed)) spi_resp_header {
+    uint8_t status;
+    uint32_t id;
+    uint16_t len;
   };
 
-  int wait_for_ack(uint8_t ack, uint8_t tx, unsigned int timeout, unsigned int length);
-  int bulk_transfer(uint8_t endpoint, uint8_t *tx_data, uint16_t tx_len, uint8_t *rx_data, uint16_t rx_len, unsigned int timeout);
-  int spi_transfer(uint8_t endpoint, uint8_t *tx_data, uint16_t tx_len, uint8_t *rx_data, uint16_t max_rx_len, unsigned int timeout);
+  int spi_transfer(uint8_t endpoint, uint32_t id, uint8_t *tx_data, uint16_t tx_len, uint8_t *rx_data, uint16_t max_rx_len, double deadline);
   int spi_transfer_retry(uint8_t endpoint, uint8_t *tx_data, uint16_t tx_len, uint8_t *rx_data, uint16_t max_rx_len, unsigned int timeout);
   int lltransfer(struct spi_ioc_transfer &t);
 

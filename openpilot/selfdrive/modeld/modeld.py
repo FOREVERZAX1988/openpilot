@@ -2,9 +2,12 @@
 from collections.abc import Callable
 import base64
 import ctypes
+import gc
 from functools import cached_property
 import os
 os.environ['GMMU'] = '0' # for chestnut fast loading, noop for qcom
+os.environ.setdefault('AM_POWER_LIMIT', '100')
+os.environ.setdefault('AM_PERF_LEVEL', 'high')
 from tinygrad.device import Buffer, Device
 from tinygrad.engine.realize import lower_and_compile
 from tinygrad.dtype import DType, dtypes
@@ -26,6 +29,7 @@ from msgq.visionipc import VisionIpcClient, VisionBuf
 from opendbc.car.car_helpers import get_demo_car_params
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
 from openpilot.common.dm import is_dm_disabled
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.realtime import config_realtime_process, DT_MDL
@@ -37,10 +41,9 @@ from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, 
 from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_driving_model_data, fill_pose_msg, PublishState
 from openpilot.selfdrive.modeld.lane_width import LaneWidthEstimator
-from openpilot.common.file_chunker import open_file_chunked
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.signal_shadow import ShadowClient
-from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob
+from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob, wait_for_chestnut
 from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.livedelay.helpers import get_lat_delay
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
@@ -153,7 +156,7 @@ class ModelState(ModelStateBase):
 
   def __init__(self, cam_w: int, cam_h: int, chestnut: bool):
     ModelStateBase.__init__(self)
-    jits = load_oob(open_file_chunked(modeld_pkl_path(chestnut)))
+    jits = load_oob(modeld_pkl_path(chestnut), chestnut)
     self.model_device = jits['input_specs']['new_img'][2]
     self.input_shapes = {name: (shape, np.dtype(dtype)) for name, (shape, dtype, _) in jits['input_specs'].items()}
     self.state_pairs = {name: f'next_{name}' for name in self.input_shapes if f'next_{name}' in jits['metadata']['output_shapes']}
@@ -230,6 +233,8 @@ class ModelState(ModelStateBase):
       self.prev_feat_host[:] = self.input_queues['prev_feat'].numpy().reshape(self.prev_feat_host.shape)
     self.input_queues['new_img'] = self.run_warp(**self.warp_inputs)
     self.run_model(output_buffers=self.outputs, **self.input_queues)
+    if self.chestnut and (err := Device[self.outputs['outputs'].device].error_state.host.view(fmt='q')[0]):
+      raise RuntimeError(f"chestnut failed with {err}")
     if after_enqueue is not None:
       after_enqueue()
     model_output = self.outputs['outputs'].numpy()[0]
@@ -280,7 +285,7 @@ def car_params(params: Params) -> bytes:
 def main(demo=False):
   cloudlog.warning("modeld init")
 
-  CHESTNUT = chestnut_present() and chestnut_compiled()
+  CHESTNUT = chestnut_compiled() and (chestnut_present() or jetlink_adapter.chestnut_cable())
   if CHESTNUT:
     from tinygrad.runtime.ops_amd import AMDDevice
     AMDDevice.wait_timeout_ms = 3000
@@ -289,7 +294,7 @@ def main(demo=False):
   params.remove("ChestnutActive")
   jetlink_adapter.prepare(CHESTNUT)  # before going realtime; prepare() no-ops beside a chestnut
 
-  config_realtime_process(7, 54)
+  gc.disable()
 
   # visionipc clients
   while True:
@@ -322,6 +327,7 @@ def main(demo=False):
     def load_big():
       nonlocal big_model
       try:
+        wait_for_chestnut()
         m = ModelState(vipc_client_main.width, vipc_client_main.height, True)
         m.warmup()
         big_model = m
@@ -331,7 +337,13 @@ def main(demo=False):
     loader.start()
     loader.join(BIG_MODEL_TIMEOUT)
     model = big_model
-    params.put_bool("ChestnutActive", model is not None)
+    if model is None and not params.get_bool("ChestnutRetry"):
+      # a crank can cut the chestnut power during the load, retry once with an onroad cycle
+      cloudlog.error("big model load failed, cycling onroad to retry")
+      params.put_bool("ChestnutRetry", True)
+      params.put_bool("OnroadCycleRequested", True)
+    else:
+      params.put_bool("ChestnutActive", model is not None)
 
   small_model = ModelState(vipc_client_main.width, vipc_client_main.height, False) if model is None or CHESTNUT else None
   if model is None:
@@ -340,6 +352,8 @@ def main(demo=False):
   assert model is not None
   params.put_bool("ChestnutLoading", False)
   cloudlog.warning(f"models loaded in {time.monotonic() - st:.1f}s, modeld starting")
+
+  config_realtime_process(7, 54)
 
   # messaging
   pub_socks = ["modelV2", "drivingModelData", "cameraOdometry", "modelDataV2SP"] + (["chestnutGpuState"] if CHESTNUT else [])
@@ -467,7 +481,7 @@ def main(demo=False):
                        run_count % round(ModelConstants.MODEL_RUN_FREQ / SERVICE_LIST['chestnutGpuState'].frequency) == 0)
       model_output = model.run(bufs, transforms, inputs, chestnut_state.send if send_chestnut else None)
     except Exception:
-      if not params.get_bool("ChestnutActive"):
+      if not model.chestnut:
         raise
       # fallback to small model
       cloudlog.exception("big model failed, fall back to small")
@@ -517,7 +531,7 @@ def main(demo=False):
       # fork's big_model_ready_alert (selfdrived/events.py) reads the top-level field
       mdv2sp_send.modelDataV2SP.acceleratorState = _accel_state
       left_edge, right_edge = RELC.update_and_fill(modelv2_send.modelV2, mdv2sp_send.modelDataV2SP, v_ego)
-      carrot_man = sm['carrotManSP'] if sm.alive['carrotManSP'] else None
+      carrot_man = get_carrot_man(sm)
       DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob, left_edge, right_edge,
                 left_lane_line_blocked=left_lane_line_blocked,
                 right_lane_line_blocked=right_lane_line_blocked,

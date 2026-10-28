@@ -12,6 +12,8 @@ import os
 import pytest
 from unittest import mock
 
+from opendbc.car.mazda.values import MazdaFlags
+
 os.environ["BIG"] = "0"
 os.environ.setdefault("SCALE", "1")
 
@@ -256,36 +258,55 @@ class TestRoadEdgeLaneChange:
   """RoadEdgeLaneChangeEnabled is ungated (matches TICI lane_change_settings) and works even
   with auto lane change off, so it must keep the lane-change entry button alive on its own."""
 
-  def test_toggle_writes_param(self, params):
+  def test_tap_cycles_modes(self, params):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import SteeringLayoutMici
+    from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeMode
     from openpilot.system.ui.lib.application import MousePos
 
-    params.put_bool("RoadEdgeLaneChangeEnabled", False, block=True)
+    params.put("RoadEdgeLaneChangeEnabled", RoadEdgeMode.OFF, block=True)
     layout = SteeringLayoutMici()
     render(layout._lc_view)  # sub-panel self-refresh must not fight the tap
-    assert not layout._lc_road_edge._checked
     assert layout._lc_road_edge.enabled, "toggle is ungated — no BSM/timer/offroad dependency"
 
-    layout._lc_road_edge._handle_mouse_release(MousePos(0, 0))
-    assert layout._lc_road_edge._checked
-    assert params.get_bool("RoadEdgeLaneChangeEnabled")
+    for mode in (RoadEdgeMode.AUDIBLE, RoadEdgeMode.SILENT, RoadEdgeMode.OFF):
+      layout._lc_road_edge._handle_mouse_release(MousePos(0, 0))
+      assert params.get("RoadEdgeLaneChangeEnabled") == mode
+      render(layout._lc_view)
+      assert params.get("RoadEdgeLaneChangeEnabled") == mode, "self-refresh must not flip the tap back"
 
-    render(layout._lc_view)
-    assert layout._lc_road_edge._checked, "self-refresh must not flip the tap back"
+  def test_legacy_bool_reads_as_audible(self, params):
+    """The param was a bool: a stored "1" must still mean blocking, with the chime."""
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import ROAD_EDGE_LABELS, SteeringLayoutMici
+    from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeMode, read_road_edge_mode
 
-  def test_button_badge_when_only_road_edge_on(self, params):
+    params.put_bool("RoadEdgeLaneChangeEnabled", True, block=True)
+    assert read_road_edge_mode(params) == RoadEdgeMode.AUDIBLE
+    layout = SteeringLayoutMici()
+    assert layout._lc_road_edge.value == ROAD_EDGE_LABELS[RoadEdgeMode.AUDIBLE]
+
+  def test_out_of_range_clamps(self, params):
+    from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeMode, read_road_edge_mode
+
+    params.put("RoadEdgeLaneChangeEnabled", 7, block=True)
+    assert read_road_edge_mode(params) == RoadEdgeMode.SILENT
+    params.put("RoadEdgeLaneChangeEnabled", -1, block=True)
+    assert read_road_edge_mode(params) == RoadEdgeMode.OFF
+
+  @pytest.mark.parametrize("mode", [1, 2])
+  def test_button_badge_when_only_road_edge_on(self, params, mode):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import SteeringLayoutMici
     from openpilot.sunnypilot.selfdrive.controls.lib.auto_lane_change import AutoLaneChangeMode
+    from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeMode
 
     params.put("AutoLaneChangeTimer", AutoLaneChangeMode.OFF, block=True)
     params.put_bool("AutoLaneChangeBsmDelay", False, block=True)
-    params.put_bool("RoadEdgeLaneChangeEnabled", True, block=True)
+    params.put("RoadEdgeLaneChangeEnabled", mode, block=True)
     layout = SteeringLayoutMici()
     layout._update_state()
     assert "road-edge" in (layout._lane_change_btn._badge_labels or [])
     assert not layout._lane_change_btn._disabled
 
-    params.put_bool("RoadEdgeLaneChangeEnabled", False, block=True)
+    params.put("RoadEdgeLaneChangeEnabled", RoadEdgeMode.OFF, block=True)
     layout._update_state()
     assert layout._lane_change_btn._disabled, "everything off must still read disabled"
 
@@ -359,8 +380,9 @@ class TestJerkAwareToggle:
     from openpilot.selfdrive.ui.ui_state import ui_state
 
     class _CP:
+      brand = "mazda"
+      flags = 0
       steerControlType = car.CarParams.SteerControlType.torque
-      enableBsm = False
 
     old_cp = ui_state.CP
     ui_state.CP = _CP()
@@ -406,7 +428,7 @@ class TestMadsLimitedCallSignature:
     class _CP:
       brand = "mazda"
       steerControlType = car.CarParams.SteerControlType.torque
-      enableBsm = True
+      flags = MazdaFlags.HAS_BSM
 
     class _CPSP:
       flags = 0
@@ -433,7 +455,6 @@ LAYOUT_TARGETS = [
   ("software", "SoftwareLayoutSP"),
   ("steering", "SteeringLayoutMici"),
   ("sunnylink", "SunnylinkLayoutMici"),
-  ("toggles", "TogglesLayoutMiciSP"),
   ("trips", "TripsLayoutMici"),
   ("visuals", "VisualsLayoutMici"),
 ]
@@ -623,6 +644,67 @@ class TestLayoutsSurviveRender:
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.home import MiciHomeLayoutSP
 
     render(MiciHomeLayoutSP())
+
+  def test_home_shows_experimental_mode_after_network(self, params, monkeypatch):
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.home import MiciHomeLayoutSP
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    home = MiciHomeLayoutSP()
+    assert home._status_bar_layout.widgets[2] is home._experimental_icon
+    for has_long, experimental, shown in ((True, True, True), (True, False, False), (False, True, False)):
+      monkeypatch.setattr(ui_state, "has_longitudinal_control", has_long)
+      monkeypatch.setattr(ui_state, "experimental_mode", experimental)
+      assert home._experimental_icon.is_visible == shown
+    render(home)
+
+  def test_home_knows_the_port_jetlink_holds(self, params, monkeypatch):
+    # a Jetson enumerates as nothing comma knows; with the link holding the port it is not unknown
+    from types import SimpleNamespace
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.home import MiciHomeLayoutSP
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    monkeypatch.setattr(ui_state, "usb_connected", True)
+    monkeypatch.setattr(ui_state, "usb_unknown", True)
+    home = MiciHomeLayoutSP()
+    for jetlink, shown in ((None, True), (SimpleNamespace(holds_port=False), True), (SimpleNamespace(holds_port=True), False)):
+      monkeypatch.setattr(ui_state, "jetlink", jetlink)
+      ui_state._enforce_usb_port()
+      home._set_chestnut_visibility()
+      assert home._usb_icon.is_visible == shown
+
+  def test_home_model_toggle_reaches_both_homes(self, params, monkeypatch):
+    from openpilot.selfdrive.ui.sunnypilot import home_model
+    from openpilot.selfdrive.ui.sunnypilot.layouts.home import HomeLayoutSP
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.home import MiciHomeLayoutSP
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    monkeypatch.setattr(home_model, "carrying_short_name", lambda: "MDMV3")
+    for on, name in ((False, None), (True, "MDMV3")):
+      params.put_bool("HomeShowActiveModel", on, block=True)
+      ui_state.update_params()
+      assert ui_state.home_model_name == name
+      render(MiciHomeLayoutSP())
+      render(HomeLayoutSP())
+
+  def test_home_model_name_takes_the_footer_gap(self, params, monkeypatch):
+    # right of the last visible icon, left of the alerts pill while it shows
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts import home as home_mod
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    monkeypatch.setattr(ui_state, "home_model_name", "MDMV3")
+    home = home_mod.MiciHomeLayoutSP()
+    drawn = []
+    monkeypatch.setattr(home_mod, "gui_label", lambda rect, text, *a, **k: drawn.append((rect, text)))
+
+    render(home, 536, 240)
+    rect, text = drawn[-1]
+    assert text == "mdmv3"
+    assert rect.x + rect.width == 536 - home_mod.HOME_PADDING
+
+    home.set_callbacks(alert_count_callback=lambda: 2)
+    render(home, 536, 240)
+    rect, _ = drawn[-1]
+    assert rect.x + rect.width <= home._alerts_pill.rect.x
 
 
 class TestRowDescriptions:
@@ -879,18 +961,27 @@ class TestDefaultBigModelMici:
 
 
 class TestAlphaLongSwitchMici:
-  """The alpha switch is the saved preference, editable offroad only (forced offroad included)."""
+  """The alpha switch is the saved preference, editable offroad or disengaged onroad."""
 
-  def test_switch_is_offroad_only(self, params, monkeypatch):
+  @pytest.mark.parametrize("engaged", [True, False])
+  def test_switch_locks_only_while_engaged(self, params, monkeypatch, engaged):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.alpha_longitudinal import AlphaLongitudinalLayoutMici
-    from openpilot.selfdrive.ui.ui_state import ui_state
+    from openpilot.selfdrive.ui.ui_state import UIState
+    monkeypatch.setattr(UIState, "engaged", property(lambda _: engaged))
     layout = AlphaLongitudinalLayoutMici()
-    monkeypatch.setattr(ui_state, "started", True)
     render(layout)
-    assert not layout._alpha_long_toggle.enabled
-    monkeypatch.setattr(ui_state, "started", False)  # naturally offroad or forced offroad
-    render(layout)
-    assert layout._alpha_long_toggle.enabled
+    assert layout._alpha_long_toggle.enabled == (not engaged)
+
+  @pytest.mark.parametrize("started", [True, False])
+  def test_switch_cycles_onroad_only(self, params, monkeypatch, started):
+    # set_alpha_longitudinal is shared by the tizi and mici switches
+    from openpilot.selfdrive.ui.ui_state import ui_state
+    monkeypatch.setattr(ui_state, "started", started)
+    params.put_bool("OnroadCycleRequested", False, block=True)
+    ui_state.set_alpha_longitudinal(False)
+    assert not params.get_bool("AlphaLongitudinalEnabled")
+    # card reads the switch at fingerprint: onroad needs a cycle, offroad the next start does it
+    assert params.get_bool("OnroadCycleRequested") == started
 
   def test_force_offroad_writes_the_preference_only(self, params, monkeypatch):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.settings import SettingsLayoutSP
@@ -905,35 +996,30 @@ class TestAlphaLongSwitchMici:
 
 
 class TestAlphaLongitudinalPanelMici:
-  """The alpha switch, experimental mode, speed assist and DEC live under Cruise, once."""
+  """The alpha switch, experimental mode and the e2e assists live under Cruise, once."""
 
   def test_moved_switches_appear_once(self, params):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.alpha_longitudinal import AlphaLongitudinalLayoutMici
-    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.cruise import CruiseLayoutMici
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.developer import DeveloperLayoutMiciSP
-    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.toggles import TogglesLayoutMiciSP
 
-    developer, toggles = DeveloperLayoutMiciSP(), TogglesLayoutMiciSP()
+    developer = DeveloperLayoutMiciSP()
     assert developer._alpha_long_toggle not in developer._scroller.items
-    assert toggles._experimental_btn not in toggles._scroller.items
-    assert not hasattr(CruiseLayoutMici(), "_dec_toggle")
 
     alpha = AlphaLongitudinalLayoutMici()
     assert [key for key, _ in alpha._refresh_toggles] == [
-      "AlphaLongitudinalEnabled", "ExperimentalMode", "ExperimentalModeSetSpeed", "ExperimentalModeLeadGap",
-      "DynamicExperimentalControl"]
+      "AlphaLongitudinalEnabled", "ExperimentalMode", "ExperimentalModeSetSpeed", "ExperimentalModeLeadGap"]
 
   def test_settings_opens_the_sp_panels(self, params, monkeypatch):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.developer import DeveloperLayoutMiciSP
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.settings import SettingsLayoutSP
+    from openpilot.selfdrive.ui.mici.layouts.settings.toggles import TogglesLayoutMici
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.software import SoftwareLayoutSP
-    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.toggles import TogglesLayoutMiciSP
     from openpilot.system.ui.lib.application import gui_app
 
     buttons = {btn.get_text(): btn for btn in SettingsLayoutSP()._scroller.items if hasattr(btn, "get_text")}
     pushed = []
     monkeypatch.setattr(gui_app, "push_widget", lambda w: pushed.append(w))
-    for label, cls in (("toggles", TogglesLayoutMiciSP), ("developer", DeveloperLayoutMiciSP), ("software", SoftwareLayoutSP)):
+    for label, cls in (("toggles", TogglesLayoutMici), ("developer", DeveloperLayoutMiciSP), ("software", SoftwareLayoutSP)):
       buttons[label]._click_callback()
       assert type(pushed[-1]) is cls
 
@@ -974,22 +1060,17 @@ class TestAlphaLongitudinalPanelMici:
       for param, _ in E2E_ASSISTS:
         params.remove(param)
 
-  def test_experimental_mode_waits_for_confirmation(self, params, monkeypatch):
+  def test_experimental_mode_needs_no_confirm(self, params, monkeypatch):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts import alpha_longitudinal
     from openpilot.system.ui.lib.application import gui_app
 
-    params.remove("ExperimentalModeConfirmed")
-    params.put_bool("ExperimentalMode", False, block=True)
-    confirms = []
-    monkeypatch.setattr(alpha_longitudinal, "ExperimentalModeConfirmPage", confirms.append)
-    monkeypatch.setattr(gui_app, "push_widget", lambda w: None)
+    pushed = []
+    monkeypatch.setattr(gui_app, "push_widget", pushed.append)
     layout = alpha_longitudinal.AlphaLongitudinalLayoutMici()
-    layout._on_experimental_mode(True)
-    assert not layout._experimental_toggle._checked
-    assert not params.get_bool("ExperimentalMode")
-    confirms[-1]()
-    assert wait_for_param(params, "ExperimentalMode") is True
-    assert layout._experimental_toggle._checked
+    for state in (False, True):
+      layout._experimental_toggle._toggle_callback(state)
+      assert params.get_bool("ExperimentalMode") is state
+    assert not pushed
 
 
 class TestOverriddenToggles:
@@ -1005,13 +1086,12 @@ class TestOverriddenToggles:
     monkeypatch.setattr(ui_state, "has_longitudinal_control", True)
     for key in ("ExperimentalModeSetSpeed", "ExperimentalModeLeadGap"):
       params.put_bool(key, True, block=True)
-    params.put_bool("DynamicExperimentalControl", False, block=True)
     params.put_bool("ExperimentalMode", experimental, block=True)
     try:
       layout = AlphaLongitudinalLayoutMici()
       layout._refresh()
       layout._update_state()
-      for toggle in (layout._dec_toggle, layout._set_speed_toggle, layout._lead_gap_toggle):
+      for toggle in (layout._set_speed_toggle, layout._lead_gap_toggle):
         assert toggle.enabled == experimental
       for toggle in (layout._set_speed_toggle, layout._lead_gap_toggle):
         assert toggle._checked, "locking must keep the stored value"
@@ -1036,7 +1116,7 @@ class TestOverriddenToggles:
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.visuals import VisualsLayoutMici
     from openpilot.selfdrive.ui.ui_state import ui_state
 
-    monkeypatch.setattr(ui_state, "CP", car.CarParams.new_message(enableBsm=bsm))
+    monkeypatch.setattr(ui_state, "CP", car.CarParams.new_message(brand="mazda", flags=int(MazdaFlags.HAS_BSM) if bsm else 0))
     toggle = VisualsLayoutMici()._toggles["BlindSpot"]
     assert toggle.enabled == bsm
     assert toggle.superseded == (not bsm)
@@ -1097,3 +1177,20 @@ class TestOverriddenToggles:
     layout._tq_manual_rt.set_checked(False)
     for item in (layout._tq_self_tune, layout._tq_relaxed):
       assert item.enabled and not item.superseded
+
+
+class TestOnroadOverlays:
+  def test_left_blind_spot_hides_the_long_indicator(self, params, monkeypatch):
+    # both sit at the top left; the right blind spot leaves it alone
+    from openpilot.selfdrive.ui.sunnypilot.onroad.blind_spot_indicators import BlindSpotIndicators
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    monkeypatch.setattr(ui_state, "blindspot", True)
+    bsm = BlindSpotIndicators()
+    assert not bsm.left_detected
+    bsm._blind_spot_right_alpha_filter.x = 1.
+    assert bsm.detected and not bsm.left_detected
+    bsm._blind_spot_left_alpha_filter.x = 1.
+    assert bsm.left_detected
+    monkeypatch.setattr(ui_state, "blindspot", False)
+    assert not bsm.left_detected

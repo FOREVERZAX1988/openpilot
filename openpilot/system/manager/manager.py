@@ -20,9 +20,9 @@ from openpilot.common.swaglog import cloudlog, add_file_handler
 from openpilot.common.version import get_build_metadata
 from openpilot.common.hardware.hw import Paths
 
-from openpilot.sunnypilot.selfdrive.car.mazda_torque_seed import seed_car_defaults_offroad
 from openpilot.sunnypilot.selfdrive.car.stock_ecu_handback import StockEcuHandBackGate
 from openpilot.sunnypilot.system.params_migration import run_migration
+from openpilot.sunnypilot.system.params_migration_zp import run_migration_zp
 
 
 def _mirror_onroad(params: Params, onroad: bool) -> None:
@@ -69,7 +69,7 @@ def manager_init() -> None:
 
   if not PC:
     run_migration(params)
-    seed_car_defaults_offroad(params)
+    run_migration_zp(params)
 
   if COMMA_HARDWARE:
     headless_override = os.getenv("OPENPILOT_HEADLESS", "").strip().lower()
@@ -246,7 +246,36 @@ def manager_thread() -> None:
       break
 
 
+def _acquire_singleton_lock() -> bool:
+  """Refuse to start when another manager instance is already running.
+
+  Double managers fight over msgq publisher endpoints: the losers die with
+  MultiplePublishersError, loggers interleave (corrupt rlogs), and onroad this
+  shows up as the "进程间通信问题" disengage cascade with modelV2 dead. Every
+  second entry point (systemd restart racing, the AI agent's manager_control
+  tool, a stray manual launch) must lose here instead of taking down the stack.
+
+  Uses an flock on /dev/shm so the kernel releases it even on SIGKILL. PC/dev
+  machines without fcntl just skip the check.
+  """
+  try:
+    import fcntl
+  except ImportError:
+    return True
+  lock_path = "/dev/shm/openpilot_manager.lock"
+  try:
+    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+  except OSError:
+    print("manager: another instance is already running (singleton lock held), exiting")
+    return False
+  # fd intentionally never closed: the lock lives for the process lifetime.
+  return True
+
+
 def main() -> None:
+  if not _acquire_singleton_lock():
+    return
   manager_init()
   if os.getenv("PREPAREONLY") is not None:
     return

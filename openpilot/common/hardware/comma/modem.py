@@ -17,6 +17,7 @@ from ipaddress import IPv4Address, AddressValueError
 from enum import Enum
 
 from openpilot.common.hardware.comma.hardware import is_tici_dos
+from openpilot.common.esim.base import WEBBING_ICCID_PREFIX
 
 logging.basicConfig(
   level=logging.INFO,
@@ -45,7 +46,6 @@ NETWORK_TYPE = {0: "gsm", 1: "gsm", 3: "gsm", 8: "gsm",
                 11: "nr", 12: "nr", 13: "nr"}
 
 DIAL_CID = 1
-WEBBING_ICCID_PREFIX = "8985235"
 
 
 def parse_imei_value(text: str) -> str:

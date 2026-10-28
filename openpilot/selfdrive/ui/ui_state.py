@@ -14,10 +14,16 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.ui.lib.prime_state import PrimeState
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.common.hardware import HARDWARE, PC
-from openpilot.common.hardware.usb import TYPEC_CC_ORIENTATION_PATH, get_usb_state, is_chestnut_usb_id, read_int
+from openpilot.common.hardware.usb import cable_connected, get_usb_state, is_chestnut_usb_id
 from openpilot.selfdrive.modeld.helpers import chestnut_compiled
+from openpilot.selfdrive.selfdrived.alertmanager import OFFROAD_ALERTS
 
 from openpilot.selfdrive.ui.sunnypilot.ui_state import UIStateSP, DeviceSP
+from openpilot.selfdrive.ui.screen_settings import (
+  apply_offset,
+  calculate_screen_brightness,
+  read_screen_brightness,
+)
 
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
 PARAM_UPDATE_TIME = 1 / 5.0
@@ -75,6 +81,8 @@ class UIState(UIStateSP):
         "selfdriveState",
         "longitudinalPlan",
         "gpsLocationExternal",
+        "gpsLocation",
+        "navInstruction",
         "carOutput",
         "carControl",
         "vehicleParameters",
@@ -94,14 +102,18 @@ class UIState(UIStateSP):
 
     # Core state variables
     self.is_metric: bool = self.params.get_bool("IsMetric")
+    self.initial_cruise_speed: int = self.params.get("InitialCruiseSpeedKph", return_default=True)
     self.is_release = False  # self.params.get_bool("IsReleaseBranch")
     self.always_on_dm: bool = self.params.get_bool("AlwaysOnDM")
-    self.experimental_mode: bool = self.params.get_bool("ExperimentalMode")
-    self.experimental_mode_confirmed: bool = self.params.get_bool("ExperimentalModeConfirmed")
+    # Pearl eyes replaces the DM camera thumbnail; default on when unset.
+    self.pearl_eyes: bool = self.params.get("CarrotDMPearlEyes", return_default=True)
+    self.navigation_enabled: bool = self.params.get_bool("NavigationEnabled")
+    self.nav_destination_set: bool = self.params.get("NavDestination") is not None
     self.chestnut_present: bool = False
     self.chestnut_compiled: bool = chestnut_compiled()
     self.chestnut_active: bool | None = None
     self.chestnut_loading: bool = False
+    self.chestnut_alert: bool = False
     self.usb_connected: bool = False
     self.usb_connected_ts: float | None = None
     self.usb_disconnected_ts: float | None = None
@@ -221,7 +233,7 @@ class UIState(UIStateSP):
         self.status = UIStatus.DISENGAGED
         self.started_frame = self.sm.frame
         self.started_time = time.monotonic()
-        self.chestnut_present = self.sm["deviceState"].chestnutPresent
+        self.chestnut_present = self.sm["deviceState"].chestnutPresent or (self.chestnut_compiled and self.usb_connected)
 
       for callback in self._offroad_transition_callbacks:
         callback()
@@ -236,7 +248,8 @@ class UIState(UIStateSP):
     detected = self.sm["deviceState"].chestnutPresent
     if not self.started:
       self.chestnut_present = detected
-      self.chestnut_state = (ChestnutState.READY if detected and self.chestnut_compiled else
+      self.chestnut_state = (ChestnutState.FAILED if self.chestnut_alert else
+                             ChestnutState.READY if detected and self.chestnut_compiled else
                              ChestnutState.UNCOMPILED if detected else ChestnutState.DISCONNECTED)
       return
 
@@ -245,10 +258,10 @@ class UIState(UIStateSP):
       self.chestnut_state = ChestnutState.DISCONNECTED
     elif not self.chestnut_compiled:
       self.chestnut_state = ChestnutState.UNCOMPILED
-    elif self.chestnut_state == ChestnutState.FAILED or not detected or (model_seen and (not self.sm.alive["modelV2"] or not self.sm["modelV2"].big)):
-      self.chestnut_state = ChestnutState.FAILED
     elif self.chestnut_loading or not model_seen:
       self.chestnut_state = ChestnutState.LOADING
+    elif self.chestnut_state == ChestnutState.FAILED or not detected or (model_seen and (not self.sm.alive["modelV2"] or not self.sm["modelV2"].big)):
+      self.chestnut_state = ChestnutState.FAILED
     elif self.chestnut_active is False:
       self.chestnut_state = ChestnutState.FAILED
     else:
@@ -270,15 +283,16 @@ class UIState(UIStateSP):
 
     self.recording_audio = self.params.get_bool("RecordAudio") and self.started
     self.is_metric = self.params.get_bool("IsMetric")
+    self.initial_cruise_speed = self.params.get("InitialCruiseSpeedKph", return_default=True)
     self.always_on_dm = self.params.get_bool("AlwaysOnDM")
-    self.experimental_mode = self.params.get_bool("ExperimentalMode")
-    self.experimental_mode_confirmed = self.params.get_bool("ExperimentalModeConfirmed")
-    if not self.chestnut_compiled:
-      self.chestnut_compiled = chestnut_compiled()
+    self.pearl_eyes = self.params.get("CarrotDMPearlEyes", return_default=True)
+    self.navigation_enabled = self.params.get_bool("NavigationEnabled")
+    self.nav_destination_set = self.params.get("NavDestination") is not None
     self.chestnut_active = self.params.get("ChestnutActive")
     self.chestnut_loading = self.params.get_bool("ChestnutLoading")
+    self.chestnut_alert = any(self.params.get(k) is not None for k, a in OFFROAD_ALERTS.items() if k.startswith("Offroad_Chestnut") and a["severity"] >= 0)
     now = time.monotonic()
-    if read_int(TYPEC_CC_ORIENTATION_PATH) != 0:
+    if cable_connected():
       self.usb_disconnected_ts = None
       if not self.usb_connected:
         self.usb_connected = True
@@ -311,6 +325,12 @@ class Device(DeviceSP):
     self._awake: bool = True
 
     self._offroad_brightness: int = BACKLIGHT_OFFROAD
+    # StarPilot-style screen settings: onroad/offroad levels + offsets.
+    # Keys are unregistered (defaults in code); unset = stock behavior.
+    self._screen_brightness_onroad: int | None = None
+    self._screen_brightness_onroad_offset: float = 0.0
+    self._screen_brightness_offroad: int | None = None
+    self._screen_brightness_offroad_offset: float = 0.0
     self._last_brightness: int = 0
     self._brightness_filter = FirstOrderFilter(BACKLIGHT_OFFROAD, 10.00, 1 / gui_app.target_fps)
     self._brightness_thread: threading.Thread | None = None
@@ -378,23 +398,42 @@ class Device(DeviceSP):
     else:
       self.set_offroad_brightness(int(val))
 
+    # StarPilot-style screen settings: dedicated offroad level + offset.
+    # Unknown keys read as unset and leave the stock Brightness handling
+    # above untouched. Settings-page entry to be added separately.
+    try:
+      (self._screen_brightness_onroad, self._screen_brightness_onroad_offset,
+       self._screen_brightness_offroad, self._screen_brightness_offroad_offset) = read_screen_brightness(ui_state.params)
+    except Exception:
+      self._screen_brightness_onroad, self._screen_brightness_onroad_offset = None, 0.0
+      self._screen_brightness_offroad, self._screen_brightness_offroad_offset = None, 0.0
+    self._offroad_brightness = calculate_screen_brightness(
+      self._offroad_brightness, self._screen_brightness_offroad, self._screen_brightness_offroad_offset)
+
   def _update_brightness(self):
     clipped_brightness = self._offroad_brightness
 
     if ui_state.started and ui_state.light_sensor >= 0:
-      clipped_brightness = ui_state.light_sensor
+      # StarPilot-style screen settings: ScreenBrightnessOnroad (unset = auto)
+      # overrides the light-sensor path; the offset scales the automatic path
+      # only and is ignored in manual mode, matching StarPilot semantics.
+      if self._screen_brightness_onroad is None:
+        clipped_brightness = ui_state.light_sensor
 
-      # CIE 1931 - https://www.photonstophotos.net/GeneralTopics/Exposure/Psychometric_Lightness_and_Gamma.htm
-      if clipped_brightness <= 8:
-        clipped_brightness = clipped_brightness / 903.3
+        # CIE 1931 - https://www.photonstophotos.net/GeneralTopics/Exposure/Psychometric_Lightness_and_Gamma.htm
+        if clipped_brightness <= 8:
+          clipped_brightness = clipped_brightness / 903.3
+        else:
+          clipped_brightness = ((clipped_brightness + 16.0) / 116.0) ** 3.0
+
+        min_brightness = 30
+        if gui_app.sunnypilot_ui():
+          min_brightness = DeviceSP.set_min_onroad_brightness(ui_state, min_brightness)
+
+        clipped_brightness = float(np.interp(clipped_brightness, [0, 1], [min_brightness, 100]))
+        clipped_brightness = apply_offset(clipped_brightness, self._screen_brightness_onroad_offset)
       else:
-        clipped_brightness = ((clipped_brightness + 16.0) / 116.0) ** 3.0
-
-      min_brightness = 30
-      if gui_app.sunnypilot_ui():
-        min_brightness = DeviceSP.set_min_onroad_brightness(ui_state, min_brightness)
-
-      clipped_brightness = float(np.interp(clipped_brightness, [0, 1], [min_brightness, 100]))
+        clipped_brightness = float(self._screen_brightness_onroad)
 
     brightness = round(self._brightness_filter.update(clipped_brightness))
 

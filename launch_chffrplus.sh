@@ -327,13 +327,32 @@ ensure_magic_service() {
 # boots into a permanent splash loop. Self-heal the vendor symlinks on boot.
 ensure_egl_vendor() {
   local lib="/usr/lib/aarch64-linux-gnu"
+  local gles_target
+  # EGL: force the Adreno blob (mesa can never get a display here, see above).
+  # GLESv2: the 20.2-carrot-bt2 graphics rework ships a standalone
+  # libGLESv2_adreno.so and the image expects libGLESv2.so.2 -> libGLESv2_adreno.so
+  # (mesa's .so.2.1.0 sits next to it). Pointing that symlink at mesa instead of
+  # the blob makes glGetString return NULL inside raylib's rlLoadExtensions and
+  # magic.py SIGSEGVs before it can serve /tmp/drmfd.sock - the UI then cannot
+  # get a DRM master fd and the device boots into a permanent splash loop.
+  # Prefer the blob whenever the image has one; on older images, heal only when
+  # dangling and never hardcode the version.
+  if [ -f "$lib/libGLESv2_adreno.so" ]; then
+    gles_target="libGLESv2_adreno.so"
+  else
+    [ "$(readlink "$lib/libEGL.so.1" 2>/dev/null)" = "libEGL_adreno.so" ] && \
+      [ -e "$lib/libGLESv2.so.2" ] && return 0
+    gles_target="$(ls "$lib"/libGLESv2.so.2.* 2>/dev/null | head -1)"
+    gles_target="$(basename "$gles_target" 2>/dev/null)"
+    [ -n "$gles_target" ] || return 0
+  fi
   [ "$(readlink "$lib/libEGL.so.1" 2>/dev/null)" = "libEGL_adreno.so" ] && \
-    [ "$(readlink "$lib/libGLESv2.so.2" 2>/dev/null)" = "libGLESv2.so.2.0.0" ] && return 0
+    [ "$(readlink "$lib/libGLESv2.so.2" 2>/dev/null)" = "$gles_target" ] && return 0
   sudo -n mount -o remount,rw / || return 0
   sudo -n ln -sfn libEGL_adreno.so "$lib/libEGL.so.1"
-  sudo -n ln -sfn libGLESv2.so.2.0.0 "$lib/libGLESv2.so.2"
+  sudo -n ln -sfn "$gles_target" "$lib/libGLESv2.so.2"
   sudo -n mount -o remount,ro /
-  echo "egl: restored Adreno vendor symlinks"
+  echo "egl: restored Adreno vendor symlinks (libGLESv2.so.2 -> $gles_target)"
 }
 
 comma_device_slug() {
@@ -437,6 +456,10 @@ mount_nvme() {
 
 set_lite_hw() {
   [ "$(comma_device_slug)" = "tici" ] || return 0
+  # the probe needs i2c-tools; AGNOS images without it would read as "Lite HW"
+  # on every full-fat C3 and disable DM (dmonitoringd) for good. A missing
+  # probe must not count as a missing chip.
+  command -v i2cget >/dev/null 2>&1 || return 0
   [ -z "$(i2cget -y 0 0x10 0x00 2>/dev/null)" ] && echo "Lite HW" && export LITE=1
 }
 
@@ -912,7 +935,12 @@ launch() {
   # panel backlight is present but the touch controller did not probe, the
   # system magic.service fails; we fall back to a virtual touch device and a
   # userspace magic.py instance.
-  is_comma_big_hw && { ensure_touch_input; ensure_egl_vendor; ensure_magic_service; }
+  # EGL vendor symlinks must point at the Adreno blob on every comma device:
+  # a stale overlay/upper symlink at mesa (e.g. left by a previous image's
+  # self-heal) SIGSEGVs magic.py before it can serve /tmp/drmfd.sock, and the
+  # UI splash-loops for lack of a DRM master fd. Idempotent, fails safe.
+  ensure_egl_vendor
+  is_comma_big_hw && { ensure_touch_input; ensure_magic_service; }
 
   # AGNOS OS update (may loop updater)
   [ -f /AGNOS ] && agnos_init

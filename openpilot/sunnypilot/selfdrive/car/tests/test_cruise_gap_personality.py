@@ -1,4 +1,4 @@
-"""Tests for the distance-button gap cycle in CruiseHelper.
+"""Tests for the distance-button gap cycle in carrot.cruise_gap.
 
 Ported from cp's carrot/cruise_gap.py. The three helpers are checked against cp's source
 semantics, and the pcm_gap -> LongitudinalPersonality mapping against this fork's actual
@@ -13,7 +13,7 @@ the extracted helpers while developing; run this on the device or a built tree.
 import os
 import unittest
 
-from openpilot.sunnypilot.selfdrive.car.cruise_helpers import (
+from openpilot.sunnypilot.carrot.cruise_gap import (
   PERSONALITY_LEVELS, cruise_gap_levels, next_gap_personality, supported_gap_levels,
 )
 
@@ -80,10 +80,12 @@ class TestPcmGapMapping(unittest.TestCase):
     """cp clamps to vehicle_max-1. With four enum entries that is safe; here the enum has
     three, so a gap of 4 or 5 would produce index 3 and long_mpc.get_T_FOLLOW raises
     NotImplementedError. Pin the enum-based clamp."""
-    src = open(os.path.join(os.path.dirname(__file__), '..', 'cruise_helpers.py'),
+    src = open(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'carrot', 'cruise_gap.py'),
                encoding='utf-8').read()
-    self.assertIn('PERSONALITY_LEVELS - 1', src,
-                  'the clamp no longer bounds to the enum size')
+    self.assertIn('levels - 1', src,
+                  'the wrap no longer bounds to the level count')
+    self.assertIn('PERSONALITY_LEVELS = 3', src,
+                  'the enum-bound constant changed size')
 
 
 if __name__ == '__main__':

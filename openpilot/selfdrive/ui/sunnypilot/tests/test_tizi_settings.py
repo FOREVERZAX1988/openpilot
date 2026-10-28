@@ -5,36 +5,32 @@ This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 
 The tizi (comma three / 3X) settings: the top of Cruise owns the alpha switch
-(offroad-only, no status line) and experimental mode, which Developer and Toggles no longer
-show. Its own module: the big UI is chosen at import, so it cannot share a window with the mici
+(locked while engaged, no status line), which Developer no longer shows, and experimental mode.
+Its own module: the big UI is chosen at import, so it cannot share a window with the mici
 tests.
 """
 import os
+
+import pytest
 
 os.environ["BIG"] = "1"
 os.environ.setdefault("SCALE", "0.5")  # a full-size 2160x1080 hidden window aborts on macOS
 
 
-def test_alpha_toggle_is_offroad_only(params, monkeypatch):
+@pytest.mark.parametrize("engaged", [True, False])
+def test_alpha_toggle_locks_only_while_engaged(params, monkeypatch, engaged):
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import AlphaLongitudinalToggles
-  from openpilot.selfdrive.ui.ui_state import ui_state
-  layout = AlphaLongitudinalToggles()
-  monkeypatch.setattr(ui_state, "started", True)
-  assert not layout._alpha_long_toggle.action_item.enabled
-  monkeypatch.setattr(ui_state, "started", False)
-  assert layout._alpha_long_toggle.action_item.enabled
+  from openpilot.selfdrive.ui.ui_state import UIState
+  monkeypatch.setattr(UIState, "engaged", property(lambda _: engaged))
+  assert AlphaLongitudinalToggles()._alpha_long_toggle.action_item.enabled == (not engaged)
 
 
 def test_moved_switches_appear_once(params):
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import AlphaLongitudinalToggles
-  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise import CruiseLayout
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.developer import DeveloperLayoutSP
-  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.toggles import TogglesLayoutSP
 
-  developer, toggles = DeveloperLayoutSP(), TogglesLayoutSP()
+  developer = DeveloperLayoutSP()
   assert developer._alpha_long_toggle not in developer._scroller._items
-  assert not toggles._toggles["ExperimentalMode"].is_visible
-  assert not hasattr(CruiseLayout(), "dec_toggle")
 
   alpha = AlphaLongitudinalToggles()
   # the five DEC trigger switches (upstream 29174dca7) are appended after the DEC toggle: they can
@@ -66,32 +62,66 @@ def test_alpha_longitudinal_heads_cruise(params, monkeypatch):
   params.remove("ExperimentalModeSetSpeed")
 
 
-def test_experimental_mode_text_matches_upstream(params, monkeypatch):
-  # upstream writes this text inline in TogglesLayout._update_toggles; the panel keeps a copy with our name
-  from opendbc.car.structs import car
-  from openpilot.selfdrive.ui.layouts.settings.toggles import TogglesLayout
-  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import EXPERIMENTAL_MODE_DESCRIPTION
-  from openpilot.selfdrive.ui.ui_state import ui_state
+def test_experimental_toggle_needs_no_confirm(params, monkeypatch):
+  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import AlphaLongitudinalToggles
+  from openpilot.system.ui.lib.application import gui_app
 
-  monkeypatch.setattr(ui_state, "update_params", lambda: None)
-  monkeypatch.setattr(ui_state, "CP", car.CarParams.new_message(openpilotLongitudinalControl=True))
-  monkeypatch.setattr(ui_state, "has_longitudinal_control", True)
-  toggles = TogglesLayout()
-  toggles._update_toggles()
-  assert toggles._toggles["ExperimentalMode"].description.replace("sunnypilot", "zoompilot") == EXPERIMENTAL_MODE_DESCRIPTION
+  pushed = []
+  monkeypatch.setattr(gui_app, "push_widget", pushed.append)
+  layout = AlphaLongitudinalToggles()
+  for state in (False, True):
+    layout._experimental_toggle.action_item.toggle._callback(state)
+    assert params.get_bool("ExperimentalMode") is state
+  assert not pushed
 
 
-def test_set_speed_greys_out_under_dec(params, monkeypatch):
+def test_assists_grey_out_without_long(params, monkeypatch):
   from opendbc.car.structs import car
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import AlphaLongitudinalToggles
   from openpilot.selfdrive.ui.ui_state import ui_state
 
   monkeypatch.setattr(ui_state, "CP", car.CarParams.new_message(alphaLongitudinalAvailable=True, openpilotLongitudinalControl=True))
-  monkeypatch.setattr(ui_state, "has_longitudinal_control", True)
   layout = AlphaLongitudinalToggles()
-  layout._dec_toggle.action_item.set_state(False)
-  layout.update_state()
-  assert layout._set_speed_toggle.action_item.enabled
-  layout._dec_toggle.action_item.set_state(True)
-  layout.update_state()
-  assert not layout._set_speed_toggle.action_item.enabled
+  for has_long in (True, False):
+    monkeypatch.setattr(ui_state, "has_longitudinal_control", has_long)
+    layout.update_state()
+    assert layout._set_speed_toggle.action_item.enabled == has_long
+    assert layout._lead_gap_toggle.action_item.enabled == has_long
+
+
+def test_onroad_button_switches_experimental_mode(params, monkeypatch):
+  from openpilot.selfdrive.ui.sunnypilot.onroad.exp_button import ExpButton
+  from openpilot.selfdrive.ui.ui_state import ui_state
+
+  button = ExpButton(192, 144)
+  monkeypatch.setattr(ui_state, "has_longitudinal_control", True)
+  for start in (True, False):
+    button._experimental_mode = start
+    button._handle_mouse_release(None)
+    assert params.get_bool("ExperimentalMode") is (not start)
+    assert button._held_or_actual_mode() is (not start)  # shown until selfdrived publishes it
+
+  monkeypatch.setattr(ui_state, "has_longitudinal_control", False)
+  button._experimental_mode = True
+  button._handle_mouse_release(None)
+  assert params.get_bool("ExperimentalMode") is True
+
+
+def test_onroad_button_tap_leaves_the_sidebar(params, monkeypatch):
+  from openpilot.selfdrive.ui.sunnypilot.onroad.augmented_road_view import AugmentedRoadViewSP
+  from openpilot.selfdrive.ui.sunnypilot.onroad.hud_renderer import HudRendererSP
+  from openpilot.system.ui.widgets import Widget
+
+  class View(Widget, AugmentedRoadViewSP):
+    def __init__(self):
+      Widget.__init__(self)
+      AugmentedRoadViewSP.__init__(self)
+      self._hud_renderer = HudRendererSP()
+
+    def _render(self, rect):
+      pass
+
+  view = View()
+  assert view._touch_valid()
+  monkeypatch.setattr(type(view._hud_renderer._exp_button), "is_pressed", property(lambda self: True))
+  assert not view._touch_valid()

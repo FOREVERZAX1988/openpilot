@@ -20,9 +20,31 @@ def lfs_files(filenames: list[str]) -> set[str]:
   return {fields[i] for i in range(0, len(fields), 3) if fields[i + 2] == "lfs"}
 
 
+# Fork-level allowlist: these files exceed the size gate but must ship as plain git
+# blobs because this fork cannot push to the sunnypilot LFS endpoint (see the
+# cluster rules in .gitattributes, same precedent as the UI fonts/icons).
+FORK_LARGE_ALLOWLIST = {
+  "openpilot/sunnypilot/carrot/cluster/cluster_renderer.py",
+  "openpilot/sunnypilot/carrot/cluster/cluster_route_replay.py",
+  "openpilot/sunnypilot/carrot/cluster/cluster_scene.py",
+  "openpilot/sunnypilot/carrot/cluster/radar_trajectory_labels.json",
+  "openpilot/sunnypilot/carrot/cluster/assets/models/cybertruck/cybertruck_cluster.obj",
+  # Vision models. .gitattributes deliberately overrides the global *.onnx LFS
+  # rule for these paths so they ship as plain blobs, which means the LFS
+  # exemption above does not cover them.
+  "openpilot/sunnypilot/assets/vision_models/speed_limit_us_detector.onnx",
+  "openpilot/sunnypilot/assets/vision_models/speed_limit_us_reject_classifier.onnx",
+  "openpilot/sunnypilot/assets/vision_models/speed_limit_us_value_classifier.onnx",
+  "openpilot/sunnypilot/assets/vision_models/signal_light_detector.onnx",
+  "openpilot/sunnypilot/carrot/xiaoge/assets/lane.onnx",
+  "openpilot/sunnypilot/carrot/xiaoge/assets/v_asm_model.onnx",
+  "openpilot/sunnypilot/carrot/xiaoge/assets/yolov8n_192.onnx",
+}
+
+
 def check_added_large_files(filenames: list[str], max_kb: int) -> int:
   failed = False
-  ignored = lfs_files(filenames)
+  ignored = lfs_files(filenames) | FORK_LARGE_ALLOWLIST
   for filename in filenames:
     if filename in ignored:
       continue

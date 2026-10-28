@@ -9,13 +9,17 @@ import subprocess
 from panda import Panda, PandaDFU, PandaProtocolMismatch, FW_PATH
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
-from openpilot.common.hardware import COMMA_HARDWARE, HARDWARE
+from openpilot.common.hardware import HARDWARE
 from openpilot.common.hardware.comma.hardware import is_tici_dos
 from openpilot.common.swaglog import cloudlog
+
 from openpilot.sunnypilot.selfdrive.pandad.rivian_long_flasher import flash_rivian_long
 
 
 def get_expected_signature(panda: Panda) -> bytes:
+  # MCU-aware (our fork supports the comma three dos F4 panda, which zp's
+  # hardcoded McuType.H7 does not): pick the app binary by the panda's actual
+  # MCU type, so dos (F4 -> panda.bin.signed) and H7 devices both match.
   try:
     fn = os.path.join(FW_PATH, panda.get_mcu_type().config.app_fn)
     return Panda.get_signature_from_firmware(fn)
@@ -24,6 +28,8 @@ def get_expected_signature(panda: Panda) -> bytes:
     return b""
 
 
+# C3 DOS carries an internal F4 panda; the H7 devices are the ones that can be
+# safely reset / re-flashed by the Python wrapper the way zp expects.
 H7_HW_TYPES = (
   Panda.HW_TYPE_RED_PANDA,
   Panda.HW_TYPE_RED_PANDA_V2,
@@ -32,8 +38,8 @@ H7_HW_TYPES = (
 )
 
 
-def is_h7_panda_hw(panda: Panda) -> bool:
-  return panda.get_type() in H7_HW_TYPES
+def is_h7_panda_hw(hw_type: int) -> bool:
+  return hw_type in H7_HW_TYPES
 
 
 def should_launch_cpp_directly(panda_serials: list[str]) -> bool:
@@ -41,51 +47,104 @@ def should_launch_cpp_directly(panda_serials: list[str]) -> bool:
   return is_tici_dos() and len(panda_serials) == 1
 
 
-def flash_panda(panda_serial: str) -> Panda:
-  try:
-    panda = Panda(panda_serial)
-  except PandaProtocolMismatch:
-    cloudlog.warning("detected protocol mismatch, reflashing panda")
-    HARDWARE.recover_internal_panda()
-    raise
+def flash_panda(panda_serial: str):
+  """Flash/verify one panda. Returns its hw type (or None if unsupported)."""
+  panda = Panda(panda_serial)
+  hw_type = panda.get_type()
 
-  try:
-    fw_signature = get_expected_signature(panda)
-    internal_panda = panda.is_internal()
-
-    panda_version = "bootstub" if panda.bootstub else panda.get_version()
-    panda_signature = b"" if panda.bootstub else panda.get_signature()
-    cloudlog.warning(f"Panda {panda_serial} connected, version: {panda_version}, signature {panda_signature.hex()[:16]}, expected {fw_signature.hex()[:16]}")
-
-    if panda.bootstub or panda_signature != fw_signature:
-      cloudlog.info("Panda firmware out of date, update required")
-      panda.flash()
-      cloudlog.info("Done flashing")
-
-    if panda.bootstub:
-      bootstub_version = panda.get_version()
-      cloudlog.info(f"Flashed firmware not booting, flashing development bootloader. {bootstub_version=}, {internal_panda=}")
-      if internal_panda:
-        HARDWARE.recover_internal_panda()
-      panda.recover(reset=(not internal_panda))
-      cloudlog.info("Done flashing bootstub")
-
-    if panda.bootstub:
-      cloudlog.info("Panda still not booting, exiting")
-      raise AssertionError
-
-    panda_signature = panda.get_signature()
-    if panda_signature != fw_signature:
-      cloudlog.info("Version mismatch after flashing, exiting")
-      raise AssertionError
-
-    return panda
-  except Exception:
+  # skip flashing if the detected panda is not supported
+  if hw_type not in Panda.SUPPORTED_DEVICES:
+    cloudlog.warning(f"Panda {panda_serial} is not supported (hw_type: {hw_type}), skipping flash...")
     panda.close()
-    raise
+    return hw_type
+
+  fw_signature = get_expected_signature(panda)
+  internal_panda = panda.is_internal()
+
+  panda_version = "bootstub" if panda.bootstub else panda.get_version()
+  panda_signature = b"" if panda.bootstub else panda.get_signature()
+  cloudlog.warning(f"Panda {panda_serial} connected, version: {panda_version}, signature {panda_signature.hex()[:16]}, expected {fw_signature.hex()[:16]}")
+
+  if panda.bootstub or panda_signature != fw_signature:
+    cloudlog.info("Panda firmware out of date, update required")
+    panda.flash()
+    cloudlog.info("Done flashing")
+
+  if panda.bootstub:
+    bootstub_version = panda.get_version()
+    cloudlog.info(f"Flashed firmware not booting, flashing development bootloader. {bootstub_version=}, {internal_panda=}")
+    if internal_panda:
+      HARDWARE.recover_internal_panda()
+    panda.recover(reset=(not internal_panda))
+    cloudlog.info("Done flashing bootstub")
+
+  if panda.bootstub:
+    cloudlog.info("Panda still not booting, exiting")
+    raise AssertionError
+
+  panda_signature = panda.get_signature()
+  if panda_signature != fw_signature:
+    cloudlog.info("Version mismatch after flashing, exiting")
+    raise AssertionError
+
+  panda.close()
+  return hw_type
+
+
+def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -> tuple[list[str], str | None, bool]:
+  """Pick the active (CAN/safety) panda and, when it is external, the internal aux panda.
+
+  Returns (active_serials, aux_serial, red_panda_present).
+
+  master-c3 connects every panda and sorts the internal one first, so the
+  internal dos always ends up as peripheral_panda and keeps the fan. Our C++
+  core is single-CAN, so the split is expressed as an aux slot instead: the
+  active panda runs CAN/safety, the aux (internal dos) runs fan/peripherals.
+
+  The Red Panda flag feeds PANDAD_MASK_DOS_IGNITION: on comma three setups with
+  an external Red Panda the dos reports false ignitions via the harness box
+  without a harness connector, so the C++ daemon must mask the dos ignition
+  line (ported from master-c3's red_panda_comma_three).
+  """
+  red_panda_present = False
+  spi_serials = set(Panda.spi_list())
+  usb_serials = [s for s in panda_serials if s not in spi_serials]
+
+  # scan every USB panda once: both the external Red Panda and the internal
+  # dos must be found regardless of which one enumerates first
+  red_serial = None
+  internal_serial = None
+  for serial in usb_serials:
+    panda = Panda(serial)
+    try:
+      hw_type = panda.get_type()
+      red_panda_present |= hw_type == Panda.HW_TYPE_RED_PANDA
+      if red_serial is None and hw_type == Panda.HW_TYPE_RED_PANDA:
+        red_serial = serial
+      if internal_serial is None and panda.is_internal():
+        internal_serial = serial
+    finally:
+      panda.close()
+
+  # 1. SPI panda (comma 3X internal) wins unconditionally
+  for serial in panda_serials:
+    if serial in spi_serials:
+      return [serial], None, red_panda_present
+
+  # 2. UseRedPanda: the external Red Panda is the active CAN panda; the
+  #    internal dos stays on fan/peripheral duty via the aux slot
+  if use_red_panda and red_serial is not None:
+    return [red_serial], internal_serial, red_panda_present
+
+  # 3. default: the internal panda is the active (and only) panda
+  if internal_serial is not None:
+    return [internal_serial], None, red_panda_present
+
+  return [], None, red_panda_present
 
 
 def main() -> None:
+  # signal pandad to close the relay and exit
   def signal_handler(signum, frame):
     cloudlog.info(f"Caught signal {signum}, exiting")
     nonlocal do_exit
@@ -97,102 +156,104 @@ def main() -> None:
   do_exit = False
   signal.signal(signal.SIGINT, signal_handler)
 
-  count = 0
-  first_run = True
-  params = Params()
-  no_internal_panda_count = 0
+  # check health for lost heartbeat
+  try:
+    use_red_panda = Params().get_bool("UseRedPanda")
+    for s in Panda.list():
+      with Panda(s) as p:
+        # when a Red Panda is the active CAN panda, the internal dos runs as the
+        # aux peripheral panda and is heartbeated by the C++ daemon; skip it so
+        # a pre-update flag never false-triggers PandaHeartbeatLost
+        if use_red_panda and p.is_internal():
+          continue
+        health = p.health()
+        if p.is_internal() and health["heartbeat_lost"]:
+          Params().put_bool("PandaHeartbeatLost", True, block=True)
+          cloudlog.event("heartbeat lost", deviceState=health)
+  except Exception:
+    cloudlog.exception("pandad.uncaught_exception")
 
+  count = 0
   while not do_exit:
     try:
-      count += 1
       cloudlog.event("pandad.flash_and_connect", count=count)
+      if (count % 2) == 0:
+        HARDWARE.reset_internal_panda()
+      else:
+        HARDWARE.recover_internal_panda()
+      count += 1
 
-      if no_internal_panda_count > 0:
-        if no_internal_panda_count == 3:
-          cloudlog.info("No pandas found, putting internal panda into DFU")
-          HARDWARE.recover_internal_panda()
-        else:
-          cloudlog.info("No pandas found, resetting internal panda")
-          HARDWARE.reset_internal_panda()
-        time.sleep(3)
-
-      dfu_serials = PandaDFU.list()
-      if len(dfu_serials) > 0:
-        for serial in dfu_serials:
-          cloudlog.info(f"Panda in DFU mode found, flashing recovery {serial}")
-          PandaDFU(serial).recover()
+      # Flash all Pandas in DFU mode
+      for serial in PandaDFU.list():
+        cloudlog.info(f"Panda in DFU mode found, flashing recovery {serial}")
+        PandaDFU(serial).recover()
         time.sleep(1)
 
       panda_serials = Panda.list()
-      if len(panda_serials) == 0:
-        no_internal_panda_count += 1
-        continue
-
-      cloudlog.info(f"{len(panda_serials)} panda(s) found, connecting - {panda_serials}")
 
       if should_launch_cpp_directly(panda_serials):
+        # C3 DOS: the internal F4 is flashed out of band and pandad.cc rejects its
+        # firmware through up_to_date(), so hand off to the C++ daemon immediately.
         cloudlog.warning("DOS internal panda: skipping Python panda setup, launching pandad directly")
-        first_run = False
         os.environ['MANAGER_DAEMON'] = 'pandad'
         os.environ['BOARDD_SKIP_FW_CHECK'] = '1'
         process = subprocess.Popen(["./pandad", *panda_serials], cwd=os.path.join(BASEDIR, "openpilot/selfdrive/pandad"))
         process.wait()
         continue
 
-      flash_rivian_long(panda_serials)
+      if len(panda_serials):
+        # custom flasher for xnor's Rivian Longitudinal Upgrade Kit
+        flash_rivian_long(panda_serials)
+        # find the active (CAN) panda and the internal aux for peripherals
+        active_serials, aux_serial, red_panda_present = check_panda_support(panda_serials, use_red_panda=Params().get_bool("UseRedPanda"))
 
-      pandas: list[Panda] = []
-      try:
-        for serial in panda_serials:
-          pandas.append(flash_panda(serial))
-      except Exception:
-        for panda in pandas:
-          panda.close()
-        raise
+        if not active_serials:
+          # e.g. only an external panda is visible while the internal one is
+          # mid-reset; retry instead of crashing so the loop stays calm
+          cloudlog.warning("no supported panda found, retrying...")
+          time.sleep(2)
+          continue
 
-      internal_pandas = [panda for panda in pandas if panda.is_internal()]
-      if COMMA_HARDWARE and len(internal_pandas) == 0:
-        cloudlog.error("Internal panda is missing, trying again")
-        no_internal_panda_count += 1
-        continue
-      no_internal_panda_count = 0
+        assert len(active_serials) == 1
+        cloudlog.info(f"{len(active_serials)} active panda found, connecting - {active_serials}, aux (peripherals/fan) - {aux_serial}")
+        to_flash = list(dict.fromkeys(active_serials + ([aux_serial] if aux_serial else [])))
+        # C3 DOS (internal F4) is not an H7 device and pandad.cc's up_to_date() gate
+        # rejects its firmware, so run the C++ daemon without the fw check for it.
+        has_non_h7_panda = False
+        for serial in to_flash:
+          hw_type = flash_panda(serial)
+          has_non_h7_panda |= hw_type is not None and not is_h7_panda_hw(hw_type)
+        if has_non_h7_panda:
+          os.environ['BOARDD_SKIP_FW_CHECK'] = '1'
+        else:
+          os.environ.pop('BOARDD_SKIP_FW_CHECK', None)
 
-      pandas.sort(key=lambda x: (not x.is_internal(), x.get_type(), x.get_usb_serial()))
-      panda_serials = [p.get_usb_serial() for p in pandas]
+        # comma three + external Red Panda: the dos gets false positive
+        # ignitions from the harness box without a harness connector; tell the
+        # C++ daemon to mask the dos ignition line (master-c3
+        # red_panda_comma_three, adapted to the single-panda architecture)
+        if red_panda_present:
+          cloudlog.warning("external Red Panda detected, masking dos ignition line false positives")
+          os.environ['PANDAD_MASK_DOS_IGNITION'] = '1'
+        else:
+          os.environ.pop('PANDAD_MASK_DOS_IGNITION', None)
 
-      has_non_h7_panda = any(not is_h7_panda_hw(panda) for panda in pandas)
-
-      for panda in pandas:
-        health = panda.health()
-        if health["heartbeat_lost"]:
-          params.put_bool("PandaHeartbeatLost", True)
-          cloudlog.event("heartbeat lost", deviceState=health, serial=panda.get_usb_serial())
-        if health["som_reset_triggered"]:
-          cloudlog.event("panda.som_reset_triggered", health=health, serial=panda.get_usb_serial())
-
-        if first_run and is_h7_panda_hw(panda):
-          cloudlog.info(f"Resetting panda {panda.get_usb_serial()}")
-          panda.reset(reconnect=True)
-
-      for p in pandas:
-        p.close()
+        # run real pandad; pass the verified serial so the C++ daemon connects
+        # the selected panda instead of picking USB enumeration order, which
+        # with an external panda plugged in may be the unverified one; the aux
+        # serial keeps fan/peripheral control on the internal dos (master-c3)
+        os.environ['MANAGER_DAEMON'] = 'pandad'
+        cmd = ["./pandad", *active_serials] + ([aux_serial] if aux_serial else [])
+        process = subprocess.Popen(cmd, cwd=os.path.join(BASEDIR, "openpilot/selfdrive/pandad"))
+        process.wait()
+    # TODO: wrap all panda exceptions in a base panda exception
     except (usb1.USBErrorNoDevice, usb1.USBErrorPipe):
+      # a panda was disconnected while setting everything up. let's try again
       cloudlog.exception("Panda USB exception while setting up")
-      continue
     except PandaProtocolMismatch:
       cloudlog.exception("pandad.protocol_mismatch")
-      continue
     except Exception:
       cloudlog.exception("pandad.uncaught_exception")
-      continue
-
-    first_run = False
-
-    os.environ['MANAGER_DAEMON'] = 'pandad'
-    if has_non_h7_panda:
-      os.environ['BOARDD_SKIP_FW_CHECK'] = '1'
-    process = subprocess.Popen(["./pandad", *panda_serials], cwd=os.path.join(BASEDIR, "openpilot/selfdrive/pandad"))
-    process.wait()
 
 
 if __name__ == "__main__":

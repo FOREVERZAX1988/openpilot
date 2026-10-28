@@ -9,7 +9,7 @@ if arch != "Darwin":
   pandad_env['LIBPATH'] += [libusb.LIB_DIR]
 
   libs = [common, messaging, 'pthread', 'usb-1.0']
-  panda = env.Library('panda', ['panda.cc', 'panda_comms.cc', 'spi.cc'])
+  panda = pandad_env.Library('panda', ['panda.cc', 'usb.cc', 'spi.cc'])
 
   pandad_env.Program('pandad', ['main.cc', 'pandad.cc', 'panda_safety.cc'], LIBS=[panda] + libs)
 

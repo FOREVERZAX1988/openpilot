@@ -158,6 +158,8 @@ class ModelCache:
 
 class ModelFetcher:
   """Handles fetching and caching of model data from remote source"""
+  # v25/v28 are the catalogs matching REQUIRED_JSON_VERSION (21): v23/v27 carry
+  # minimum_selector_version=20 and every bundle would be filtered out.
   MODEL_URL = "https://raw.githubusercontent.com/sunnypilot/sunnypilot-models/refs/heads/gh-pages/docs/driving_models_v25.json"
   MODEL_URL_CHESTNUT = "https://raw.githubusercontent.com/sunnypilot/sunnypilot-models/refs/heads/gh-pages/docs/driving_models_chestnut_v28.json"
 

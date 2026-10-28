@@ -1,21 +1,28 @@
 from openpilot.cereal import log
 from openpilot.common.params import Params, UnknownKeyName
 from openpilot.system.ui.widgets import Widget
-from openpilot.system.ui.widgets.list_view import multiple_button_item, toggle_item
+from openpilot.system.ui.widgets.list_view import ListItem, multiple_button_item, toggle_item
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog, alert_dialog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.widgets import DialogResult
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.selfdrive.ui.layouts.settings.initial_cruise_speed import InitialCruiseSpeedControl
 
 import os
 
 LITE = os.getenv("LITE") is not None
 
+# Params whose registered default is on: get_bool() ignores the registered
+# default, so these must be read with return_default=True.
+DEFAULT_ON_PARAMS = {"CarrotDMPearlEyes"}
+
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp as toggle_item
   from openpilot.system.ui.sunnypilot.widgets.list_view import multiple_button_item_sp as multiple_button_item
+  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.initial_cruise_speed import initial_cruise_speed_item_sp as ListItem
+  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.initial_cruise_speed import InitialCruiseSpeedControlSP as InitialCruiseSpeedControl
 
 PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
@@ -42,6 +49,8 @@ DESCRIPTIONS = {
     "without a turn signal activated while driving over 31 mph (50 km/h)."
   ),
   "AlwaysOnDM": tr_noop("The driver monitoring system can be toggled on/off, but long-term activation is recommended"),
+  "CarrotDMPearlEyes": tr_noop(
+    "Replace the driver monitoring camera thumbnail with animated pearl cartoon eyes that mirror head pose and blinks."),
   "DistractionDetectionLevel": tr_noop(
     "Set how sensitive the driver distraction detection should be. " +
     "Strict: Very sensitive, warns on minor distractions. " +
@@ -93,6 +102,12 @@ class TogglesLayout(Widget):
         "monitoring.png",
         False,
       ),
+      "CarrotDMPearlEyes": (
+        lambda: tr("DM Pearl Eyes Display"),
+        DESCRIPTIONS["CarrotDMPearlEyes"],
+        "monitoring.png",
+        False,
+      ),
       "DisableDM": (
         lambda: tr("Disable Driver Monitoring"),
         DESCRIPTIONS["DisableDM"],
@@ -120,7 +135,7 @@ class TogglesLayout(Widget):
     }
 
     self._long_personality_setting = multiple_button_item(
-      lambda: tr("Driving Personality"),
+      lambda: tr("Following Distance"),
       lambda: tr(DESCRIPTIONS["LongitudinalPersonality"]),
       buttons=[lambda: tr("Aggressive"), lambda: tr("Standard"), lambda: tr("Relaxed")],
       button_width=300,
@@ -158,6 +173,14 @@ class TogglesLayout(Widget):
     )
 
     self._toggles = {}
+    self._initial_cruise_speed = ListItem(
+      title=lambda: tr("Initial Max Speed"),
+      description=lambda: tr("Max speed when engaging openpilot. If you are already driving faster, your current speed is used. " +
+                             "Resume restores the previous max speed. Changes apply the next time you engage."),
+      action_item=InitialCruiseSpeedControl(),
+      icon="speed_limit.png",
+    )
+    self._initial_cruise_speed.set_visible(lambda: ui_state.CP is not None and ui_state.has_longitudinal_control and not ui_state.CP.pcmCruise)
     self._locked_toggles = set()
 
     if LITE:
@@ -168,7 +191,7 @@ class TogglesLayout(Widget):
       toggle = toggle_item(
         title,
         desc,
-        self._params.get_bool(param),
+        self._toggle_state(param),
         callback=lambda state, p=param: self._toggle_callback(state, p),
         icon=icon,
       )
@@ -196,6 +219,7 @@ class TogglesLayout(Widget):
         self._toggles["LongitudinalPersonality"] = self._long_personality_setting
         self._toggles["AccelPersonalityEnabled"] = self._accel_controller_enabled
         self._toggles["AccelPersonality"] = self._accel_personality_setting
+        self._toggles["InitialCruiseSpeedKph"] = self._initial_cruise_speed
 
       if param == "AlwaysOnDM":
         self._toggles["DistractionDetectionLevel"] = self._distraction_detection_level
@@ -264,12 +288,13 @@ class TogglesLayout(Widget):
     else:
       self._toggles["ExperimentalMode"].set_description(e2e_description)
 
+    self._initial_cruise_speed.action_item.refresh()
     self._update_experimental_mode_icon()
 
     # TODO: make a param control list item so we don't need to manage internal state as much here
     # refresh toggles from params to mirror external changes
     for param in self._toggle_defs:
-      self._toggles[param].action_item.set_state(self._params.get_bool(param))
+      self._toggles[param].action_item.set_state(self._toggle_state(param))
     self._accel_controller_enabled.action_item.set_state(accel_controller_enabled)
     self._accel_personality_setting.action_item.set_selected_button(self._params.get("AccelPersonality", return_default=True))
 
@@ -291,6 +316,11 @@ class TogglesLayout(Widget):
         self._toggles[key].set_visible(not dm_disabled)
     if "DistractionDetectionLevel" in self._toggles:
       self._toggles["DistractionDetectionLevel"].set_visible(always_on_dm_enabled)
+
+  def _toggle_state(self, param: str) -> bool:
+    if param in DEFAULT_ON_PARAMS:
+      return self._params.get(param, return_default=True)
+    return self._params.get_bool(param)
 
   def _update_experimental_mode_icon(self):
     icon = "experimental.png" if self._toggles["ExperimentalMode"].action_item.get_state() else "experimental_white.png"
@@ -354,6 +384,9 @@ class TogglesLayout(Widget):
       return
 
     self._params.put_bool(param, state, block=True)
+    if param == "IsMetric":
+      self._update_toggles()
+
     if self._toggle_defs[param][3]:
       self._params.put_bool("OnroadCycleRequested", True, block=True)
 

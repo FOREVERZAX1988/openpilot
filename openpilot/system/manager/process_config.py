@@ -95,6 +95,9 @@ def builtin_display(started: bool, params: Params, CP: car.CarParams) -> bool:
 def only_onroad(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started
 
+def navigation(started: bool, params: Params, CP: car.CarParams) -> bool:
+  return started and params.get_bool("NavigationEnabled")
+
 def only_offroad(started: bool, params: Params, CP: car.CarParams) -> bool:
   return not started
 
@@ -105,6 +108,20 @@ def enable_webrtc(started: bool, params: Params, CP: car.CarParams) -> bool:
   # Cluster HUD and Carrot Vision can consume the road camera concurrently.
   # The web encoder remains idle until a Carrot Vision session requests it.
   return params.get_bool("CarrotVisionEnabled")
+
+def cluster_hud_active(params: Params) -> bool:
+  try:
+    return params.get_int("ClusterHud") == 1
+  except Exception:
+    return False
+
+def enable_cluster_hud(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # Optional external cluster screen (ported from CarrotPilot's cluster
+  # subsystem). Off by default; the sunnypilot onroad overlay stays the
+  # primary in-cabin presentation and this process only runs when the user
+  # explicitly enables the external display. Matches cp: cluster_autorun
+  # handles device checks internally.
+  return cluster_hud_active(params)
 
 def radar_tracks_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
   """Carrot radar stack: radarcan (CAN -> liveTracks) and the dPath radard.
@@ -120,6 +137,17 @@ def radar_tracks_disabled(started: bool, params: Params, CP: car.CarParams) -> b
 def signal_color_observer(started: bool, params: Params, CP: car.CarParams) -> bool:
   """Signal-light observation trial; opt-in through a local artifact install."""
   from openpilot.selfdrive.modeld.signal_color_shadow import requested
+  return started and requested()
+
+
+def signal_yolo_observer(started: bool, params: Params, CP: car.CarParams) -> bool:
+  """YOLO traffic-light detector observer; opt-in through a local artifact install.
+
+  This is a second, independent observation producer. It never writes the
+  transport the classical observer uses, so the two cannot fight over the same
+  file, and it holds no control permission at all.
+  """
+  from openpilot.selfdrive.modeld.signal_yolo_shadow import requested
   return started and requested()
 
 def onroad_preview(started: bool, params: Params, CP: car.CarParams) -> bool:
@@ -152,6 +180,24 @@ def speed_limit_vision_enabled(started: bool, params: Params, CP: car.CarParams)
   mode (passive car params), mirroring the StarPilot run_speed_limit_vision gate.
   """
   return started and params.get_bool("SpeedLimitVisionEnabled") and not CP.passive
+
+def bluetooth_audio_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  """Bluetooth audio manager (bluetooth_managerd, ported from StarPilot): opt-in
+  through BluetoothAudioEnabled (default off, code-level - not in params_keys.h).
+
+  The daemon itself further gates every radio operation behind its own
+  BluetoothEnabled param, mirroring StarPilot's bluetooth_enabled gate.
+
+  KNOWN LIMITATION (kept documented, mirrors the task's feasibility report): AGNOS
+  does not ship bluez/D-Bus or the bluez-alsa plugin, and sunnypilot does not
+  install StarPilot's /usr/comma/bluetooth-radio helper or its radio systemd
+  service. With the param on, the daemon starts, reports available=False and
+  every Bluetooth operation fails with "Bluetooth radio support is not
+  installed"; it never touches the Qualcomm stack (/dev/btpower, /dev/ttyHS1)
+  that AGNOS actually uses. This port is for forks/images that do ship bluez
+  (e.g. custom radio bring-up); keep the param off on stock devices.
+  """
+  return params.get_bool("BluetoothAudioEnabled")
 
 def sunnylink_ready_shim(started, params, CP: car.CarParams) -> bool:
   """Shim for sunnylink_ready to match the process manager signature."""
@@ -312,7 +358,11 @@ procs = [
   PythonProcess("preview_shimd", "openpilot.sunnypilot.onroad_preview_shim", onroad_preview_shim),
   # Signal-light colour observation (camera comparison only, never control).
   PythonProcess("signalcolord", "openpilot.selfdrive.modeld.signal_color_shadow", signal_color_observer, restart_if_crash=True),
+  # YOLO traffic-light detector observer (camera comparison only, never control).
+  PythonProcess("signalyolod", "openpilot.selfdrive.modeld.signal_yolo_shadow", signal_yolo_observer, restart_if_crash=True),
   PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", dm_process, enabled=(WEBCAM or not PC) and not LITE),
+  PythonProcess("navd", "openpilot.selfdrive.navigation.navd", navigation),
+  PythonProcess("mapsd", "openpilot.selfdrive.navigation.mapsd", navigation),
 
   PythonProcess("sensord", "openpilot.system.sensord.sensord", only_onroad, enabled=not PC),
   PythonProcess("ui", "openpilot.selfdrive.ui.ui", and_(always_run, builtin_display), restart_if_crash=True,
@@ -330,7 +380,8 @@ procs = [
   PythonProcess("card", "openpilot.selfdrive.car.card", only_onroad),
   PythonProcess("deleter", "openpilot.system.loggerd.deleter", always_run),
   PythonProcess("dmonitoringd", "openpilot.selfdrive.monitoring.dmonitoringd", dm_process, enabled=(WEBCAM or not PC) and not LITE),
-  PythonProcess("qcomgpsd", "openpilot.system.qcomgpsd.qcomgpsd", qcomgps, enabled=COMMA_HARDWARE),
+  # Restart GPS without forking the running manager's IPC state.
+  PythonProcess("qcomgpsd", "openpilot.system.qcomgpsd.qcomgpsd", qcomgps, enabled=COMMA_HARDWARE, spawn=True),
   PythonProcess("pandad", "openpilot.selfdrive.pandad.pandad", always_run),
   PythonProcess("paramsd", "openpilot.selfdrive.locationd.paramsd", only_onroad),
   PythonProcess("lagd", "openpilot.selfdrive.locationd.lagd", only_onroad),
@@ -405,6 +456,7 @@ procs += [
   # gated process cannot come up on demand, because the manager only re-evaluates
   # its gates on its own cycle, so the link would stay dead until a manager pass.
   PythonProcess("carrot_man", "openpilot.sunnypilot.carrot.carrot_man", always_run, restart_if_crash=True),
+  PythonProcess("carrot_cluster", "openpilot.sunnypilot.carrot.cluster_autorun", enable_cluster_hud, restart_if_crash=True),
   PythonProcess("carrot_navi", "openpilot.sunnypilot.carrot.carrot_navi", always_run, restart_if_crash=True),
   # CarrotPilot-compatible API server on port 7000: the parameter REST API plus, as they
   # are ported, the /ws raw and camera streams. The companion app (navipilot / CP 搭子)
@@ -461,6 +513,14 @@ procs += [
   # classifier ONNX pipeline). Off by default; opt-in through SpeedLimitVisionEnabled.
   # The process renices itself to 19 and throttles on CPU/memory pressure.
   PythonProcess("speed_limit_vision", "openpilot.sunnypilot.system.speed_limit_vision", speed_limit_vision_enabled),
+
+  # Bluetooth audio device manager (bluetooth_managerd), ported from StarPilot's
+  # starpilot/system/bluetooth (bluez D-Bus + bluez-alsa A2DP output). Opt-in through
+  # BluetoothAudioEnabled (default off). See the feasibility note on the gate function
+  # above: stock AGNOS has no bluez, so this is inert on comma hardware unless a
+  # custom image ships bluez + the radio helper. Distinct from carrot_bluetooth
+  # (HID remotes via evdev) - that one stays always_run.
+  PythonProcess("bluetooth_managerd", "openpilot.sunnypilot.system.bluetooth.daemon", bluetooth_audio_enabled),
 ]
 procs = extend_procs(procs)
 

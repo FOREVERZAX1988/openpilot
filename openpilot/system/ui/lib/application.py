@@ -409,10 +409,13 @@ class GuiApplication(GuiApplicationExt):
 
   def init_window(self, title: str, fps: int = _DEFAULT_FPS):
     with self._startup_profile_context():
+      self._closing = False
       def _close(sig, frame):
         self.close()
         sys.exit(0)
-      signal.signal(signal.SIGINT, _close)
+      for stop_signal in (signal.SIGINT, signal.SIGTERM, getattr(signal, 'SIGHUP', None)):
+        if stop_signal is not None:
+          signal.signal(stop_signal, _close)
       atexit.register(self.close)
 
       flags = rl.ConfigFlags.FLAG_MSAA_4X_HINT
@@ -623,6 +626,13 @@ class GuiApplication(GuiApplicationExt):
     """Load and resize an image, storing it for later automatic unloading."""
     image = rl.load_image(image_path)
 
+    # A missing/failed asset load returns a zero-sized image; dividing by its
+    # width below would ZeroDivisionError and take the whole ui down. Log it
+    # and hand back a blank 1x1 so the widget renders without the icon.
+    if image.width == 0 or image.height == 0:
+      cloudlog.error(f"failed to load asset image: {image_path}")
+      return rl.gen_image_color(1, 1, rl.BLANK)
+
     if alpha_premultiply:
       rl.image_alpha_premultiply(image)
 
@@ -687,8 +697,14 @@ class GuiApplication(GuiApplicationExt):
         self._ffmpeg_proc.wait()
 
   def close(self):
-    if not rl.is_window_ready():
+    if getattr(self, '_closing', False) or not rl.is_window_ready():
       return
+    self._closing = True
+
+    # EGL imports are not owned by the window's GL context. Widget reference
+    # cycles can keep their destructors from running before CloseWindow.
+    from openpilot.system.ui.lib.egl import destroy_all_egl_images
+    destroy_all_egl_images()
 
     for texture in self._textures.values():
       rl.unload_texture(texture)

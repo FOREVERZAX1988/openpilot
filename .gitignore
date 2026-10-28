@@ -131,8 +131,6 @@ sessions/
 
 # agent tool outputs (may contain secrets such as github PAT)
 tool_results/
-*.apk
-/jetlink_ci/
 
 # Screenshot output stays untracked because PNG files use an LFS remote unavailable to installers.
 openpilot/sunnypilot/selfdrive/ui/tests/screenshots/

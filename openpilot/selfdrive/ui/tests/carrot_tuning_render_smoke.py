@@ -301,6 +301,8 @@ class FakeGuiApp:
     # Widget._process_mouse_events iterates this every render; an empty list is
     # exactly the "no touch this frame" case.
     self._mouse_events: list = []
+    # widget stack (push_widget/pop_widget) - click-flow smoke tests assert on it
+    self.pushed_widgets: list = []
 
   @property
   def mouse_events(self):
@@ -342,6 +344,13 @@ class FakeGuiApp:
   def render(self):
     return iter(())
 
+  def push_widget(self, widget):
+    self.pushed_widgets.append(widget)
+
+  def pop_widget(self, widget=None):
+    if self.pushed_widgets and (widget is None or self.pushed_widgets[-1] is widget):
+      self.pushed_widgets.pop()
+
 
 def build_fake_application() -> types.ModuleType:
   m = _FakeModule("openpilot.system.ui.lib.application")
@@ -357,6 +366,7 @@ def build_fake_application() -> types.ModuleType:
   m.FONT_SCALE = 1.16
   m.DEFAULT_TEXT_SIZE = 60
   m.DEFAULT_TEXT_COLOR = Color(255, 255, 255, 230)
+  m.GL_VERSION = "#version 330 es\n"  # shader_polygon concatenates this at module scope
   m.MAX_TOUCH_SLOTS = 2
   m.MousePos = Vec2  # NamedTuple of (x, y) - a Vec2 is a faithful stand-in
   m.MouseEvent = types.SimpleNamespace
@@ -400,6 +410,9 @@ def build_fake_params() -> types.ModuleType:
   class Params:
     def __init__(self, *a, **k):
       pass
+
+    def all_keys(self):
+      return list(store.keys())
 
     def get(self, key, *a, **k):
       want_default = k.get("return_default", bool(a) and bool(a[0]))

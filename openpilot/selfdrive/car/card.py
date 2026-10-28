@@ -24,6 +24,7 @@ from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_cap
 
 from openpilot.sunnypilot.mads.helpers import set_alternative_experience, set_car_specific_params
 from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfaces
+from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
 from openpilot.sunnypilot.carrot.carrot_navi_fusion import merge_carrot_navi_lanes
 from openpilot.sunnypilot.carrot.xiaoge.xiaoge_vision import (
   apply_xiaoge_vision_result,
@@ -199,6 +200,7 @@ class Car:
 
     self.is_metric = self.params.get_bool("IsMetric")
     self.experimental_mode = experimental_mode_requested(self.params)
+    self.initial_cruise_speed = self.params.get("InitialCruiseSpeedKph", return_default=True)
     self.carrot_enabled = self.params.get_bool("CarrotEnabled")
     self.carrot_navi_v2_enabled = self.params.get_bool("CarrotNaviV2Enabled")
     self.carrot_nav_lane_guide_block = self.params.get_bool("CarrotNavLaneGuideBlockEnabled")
@@ -237,7 +239,9 @@ class Car:
       self._carrot_navi_cache_mono = time.monotonic()
     carrot_navi = self._carrot_navi_cache
     navi_fresh = carrot_navi is not None and time.monotonic() - self._carrot_navi_cache_mono <= 0.5
-    carrot_man = self.sm['carrotManSP'] if self.sm.valid.get('carrotManSP', False) else None
+    # Freshness gate (cp carrot_man_input): a stalled carrot_man must not keep
+    # feeding lane-blocking hints after its publisher died mid-route.
+    carrot_man = get_carrot_man(self.sm)
     nav_guide = getattr(carrot_man, 'navLaneGuide', "") if carrot_man is not None else ""
     nav_guide_cnt = int(getattr(carrot_man, 'navLaneGuideCnt', 0) or 0) if carrot_man is not None else 0
     if self.carrot_enabled:
@@ -310,7 +314,11 @@ class Car:
     self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric, self.sm, CS_SP)
     if self.sm['carControl'].enabled and not self.CC_prev.enabled:
       # Use CarState w/ buttons from the step selfdrived enables on
-      self.v_cruise_helper.initialize_v_cruise(self.CS_prev, self.experimental_mode)
+      # InitialCruiseSpeedKph (zp semantics): the second argument is the initial
+      # set-speed floor, re-read on the engage edge so a settings change applies
+      # without a reboot.
+      self.initial_cruise_speed = self.params.get("InitialCruiseSpeedKph", return_default=True)
+      self.v_cruise_helper.initialize_v_cruise(self.CS_prev, self.initial_cruise_speed)
     self.card_ext.update_v_cruise_post(CS, CS_SP)
 
     # TODO: mirror the carState.cruiseState struct?

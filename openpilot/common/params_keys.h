@@ -10,6 +10,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AdbEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"AdvancedLateralTune", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM advanced lateral master switch
     {"AlwaysOnDM", {PERSISTENT | BACKUP, BOOL}},
+    {"CarrotDMPearlEyes", {PERSISTENT | BACKUP, BOOL, "1"}},  // Pearl cartoon eyes replace the DM camera thumbnail (default on)
     {"ApiCache_Device", {PERSISTENT, STRING}},
     {"ApiCache_FirehoseStats", {PERSISTENT, JSON}},
     {"AssistNowToken", {PERSISTENT, STRING}},
@@ -41,8 +42,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"DriverTooDistracted", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, BOOL}},
     {"DriverLockoutCount", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, INT, "0"}},
     {"AlphaLongitudinalEnabled", {PERSISTENT | DEVELOPMENT_ONLY | BACKUP, BOOL}},
-    {"ExperimentalMode", {PERSISTENT | BACKUP, BOOL}},
-    {"ExperimentalModeConfirmed", {PERSISTENT | BACKUP, BOOL}},
     {"FirmwareQueryDone", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"ForcePowerDown", {PERSISTENT, BOOL}},
     {"FLMActiveOverrides", {PERSISTENT | BACKUP, JSON}},  // FLM active override blob (friction curves + vehicle knobs)
@@ -101,7 +100,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"JoystickDebugMode", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"LanguageSetting", {PERSISTENT | BACKUP, STRING, "en"}},
     {"LastAthenaPingTime", {CLEAR_ON_MANAGER_START, INT}},
-    {"LastGPSPosition", {PERSISTENT, STRING}},
+    {"LastGPSPosition", {PERSISTENT, BYTES}},
     {"LastManagerExitReason", {CLEAR_ON_MANAGER_START, STRING}},
     {"LastOffroadStatusPacket", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"LastAgnosPowerMonitorShutdown", {CLEAR_ON_MANAGER_START, STRING}},
@@ -157,8 +156,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"StockEcuHandBackRequest", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"StockEcuHandBackResult", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"TermsVersion", {PERSISTENT, STRING}},
-    {"TimezoneName", {PERSISTENT, STRING}},
-    {"TimezoneSource", {PERSISTENT, STRING}},
     {"TorqueBar", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrainingVersion", {PERSISTENT, STRING}},
     {"UbloxAvailable", {PERSISTENT, BOOL}},
@@ -177,6 +174,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"UptimeOnroad", {PERSISTENT, FLOAT, "0.0"}},
     {"ChestnutActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
     {"ChestnutLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"ChestnutRetry", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"InitialCruiseSpeedKph", {PERSISTENT, INT, "40"}},
+    {"NavigationEnabled", {PERSISTENT, BOOL, "0"}},
+    {"Offroad_ChestnutModelError", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_Pairing", {CLEAR_ON_MANAGER_START, JSON}},
+    {"Offroad_UploadsIgnored", {CLEAR_ON_MANAGER_START, JSON}},
+    {"PairingEmail", {PERSISTENT, STRING}},
+    {"PairingProvider", {PERSISTENT, STRING}},
     {"Version", {PERSISTENT, STRING}},
 
     // --- sunnypilot params --- //
@@ -206,6 +211,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"GithubRunnerSufficientVoltage", {CLEAR_ON_MANAGER_START , BOOL}},
     {"HasAcceptedTermsSP", {PERSISTENT, STRING, "0"}},
     {"HideVEgoUI", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HomeShowActiveModel", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"IntelligentCruiseButtonManagement", {PERSISTENT | BACKUP , BOOL}},
     {"InteractivityTimeout", {PERSISTENT | BACKUP, INT, "0"}},
     {"IsDevelopmentBranch", {CLEAR_ON_MANAGER_START, BOOL}},
@@ -224,7 +230,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"QuickBootToggle", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"QuietMode", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"RainbowMode", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"RoadEdgeLaneChangeEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"RoadEdgeLaneChangeEnabled", {PERSISTENT | BACKUP, INT, "0"}},
     {"RocketFuel", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ScreenSaverEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"ScreenSaverTimeout", {PERSISTENT | BACKUP, INT, "300"}},
@@ -298,21 +304,18 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TeslaMadsScreenButton", {PERSISTENT | BACKUP, INT, "0"}},
     {"ToyotaEnforceStockLongitudinal", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ToyotaStopAndGoHack", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ToyotaTSS2Smooth", {PERSISTENT | BACKUP, BOOL, "0"}},
 
-    {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
-    // Which situations may hand speed control to the driving model under DEC.
-    // All default on, which is the behaviour the controller had before these
-    // switches existed: they can only restrict a blend, never cause one.
-    {"DynamicExperimentalTriggerCurve", {PERSISTENT | BACKUP, BOOL, "1"}},
-    {"DynamicExperimentalTriggerLead", {PERSISTENT | BACKUP, BOOL, "1"}},
-    {"DynamicExperimentalTriggerSignal", {PERSISTENT | BACKUP, BOOL, "1"}},
-    {"DynamicExperimentalTriggerStopLight", {PERSISTENT | BACKUP, BOOL, "1"}},
-    {"DynamicExperimentalTriggerLowSpeed", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},
     // the model's lead forecast as the long MPC's obstacle; on by default, a hidden off switch
     {"LeadForecast", {PERSISTENT | BACKUP, BOOL, "1"}},
-    {"ExperimentalModeSetSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"ExperimentalModeLeadGap", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // zoompilot keeps the experimental mode switch (upstream removed it with chill);
+    // ExperimentalModeConfirmed is the explicit-acknowledgement bit used by the
+    // mode_state runtime (write_plan) and both settings UIs.
+    {"ExperimentalMode", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ExperimentalModeConfirmed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ExperimentalModeSetSpeed", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ExperimentalModeLeadGap", {PERSISTENT | BACKUP, BOOL, "1"}},
 
     // Accel Controller profiles (Eco / Normal / Sport)
     {"AccelPersonalityEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -333,7 +336,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MapdVersion", {PERSISTENT, STRING}},
     {"MapSpeedLimit", {CLEAR_ON_ONROAD_TRANSITION, FLOAT, "0.0"}},
     {"NextMapSpeedLimit", {CLEAR_ON_ONROAD_TRANSITION, JSON}},
-    {"NavDestination", {PERSISTENT, STRING}},
     {"Offroad_OSMUpdateRequired", {CLEAR_ON_MANAGER_START, JSON}},
     {"OsmDbUpdatesCheck", {CLEAR_ON_MANAGER_START, BOOL}},  // mapd database update happens with device ON, reset on boot
     {"OSMDownloadBounds", {PERSISTENT, STRING}},
@@ -358,6 +360,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // (map_data_priority) ignored the car limit entirely whenever map had one.
     {"SpeedLimitPolicy", {PERSISTENT | BACKUP, INT, "4"}},  // 0=car only, 1=map only, 2=car first, 3=map first, 4=combined (min)
     {"SpeedLimitValueOffset", {PERSISTENT | BACKUP, INT, "0"}},
+    {"PreviousSpeedLimit", {PERSISTENT, FLOAT, "0.0"}},  // m/s; last valid limit so the sign survives a reboot
+    {"SpeedLimitChangedAlert", {PERSISTENT | BACKUP, BOOL, "0"}},  // chime + alert whenever the displayed limit changes
 
     // Ask before taking a new speed limit, by direction. 0 = never, 1 = only
     // when the limit goes down, 2 = only when it goes up, 3 = both. Additive
@@ -384,6 +388,66 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"VisionSpeedLimitLowLimitFilter", {PERSISTENT | BACKUP, BOOL, "0"}},  // drop vision limits at or below the threshold (usually a misread sign)
     {"VisionSpeedLimitLowLimitThreshold", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // m/s
     {"VASMEnabled", {PERSISTENT, BOOL, "0"}},  // coexistence mode with the VASM detection stack
+
+    // Conditional Experimental Mode: auto-switch ExperimentalMode from driving context.
+    // All writers go through selfdrived; the flag itself is the existing ExperimentalMode param
+    // so planner/UI keep their single consumption path.
+    {"ConditionalExperimental", {PERSISTENT | BACKUP, BOOL, "0"}},  // master switch; off = manual-only (stock behaviour)
+    {"CECurves", {PERSISTENT | BACKUP, BOOL, "1"}},  // trigger EXP in demanding curves (lat-accel based)
+    {"CECurvesLead", {PERSISTENT | BACKUP, BOOL, "1"}},  // allow the curve trigger while following a lead
+    {"CELead", {PERSISTENT | BACKUP, BOOL, "1"}},  // trigger EXP when closing on a slower lead
+    {"CESignalSpeed", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // m/s; blinker + speed below this triggers EXP (0 = disabled)
+    {"CEStatus", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},  // 0=off 1=curves 2=lead 3=signal 4=manual; UI hint of why EXP is on
+
+    // Mapbox speed-limit filler: when car/map/vision/carrot sources are all empty, ask the Mapbox
+    // Driving-Match API for the segment maxspeed. Needs a user token; without one it stays inert.
+    {"SLCMapboxFiller", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"MapboxSecretKey", {PERSISTENT, STRING}},  // access token; PERSISTENT-only so it survives reinstalls
+    {"MapBoxRequests", {PERSISTENT, JSON, "{}"}},  // {total_requests, month} monthly quota bookkeeping
+
+    // Speed-limit change alert (ST-6): debounced >=5 kph jump held >2 s, one alert per change.
+    {"SpeedLimitChangedAlert", {PERSISTENT | BACKUP, BOOL, "0"}},
+
+    // Fork-gap alignment wave 6 params. Consumers fall back to in-code defaults when a key is
+    // unset, so registered defaults only feed UI discovery and stock_value reporting.
+    {"HyundaiCameraSccHint", {PERSISTENT | BACKUP, BOOL, "0"}},  // CP-3: hint on CAN error for hyundai cars without camera SCC
+    {"BluetoothAudioEnabled", {PERSISTENT, BOOL, "0"}},  // ST-7: bluez-based audio out; NOT available on AGNOS (qcom stack), kept inert
+    // Carrot Bluetooth daemon keys. The daemon (sunnypilot/system/bluetooth) reads and
+    // writes these on every tick, so an unregistered name is not "silently ignored" --
+    // Params raises UnknownKeyName and the process dies on its first line of work.
+    {"BluetoothEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // carrot_bluetooth master switch
+    {"BluetoothAudioAddress", {PERSISTENT, STRING}},  // selected A2DP sink, uppercase MAC
+    {"BluetoothAudioTestActive", {CLEAR_ON_MANAGER_START, BOOL, "0"}},  // a test session owns the sink
+    {"BluetoothDisconnectControllersOffroad", {PERSISTENT | BACKUP, BOOL, "0"}},  // drop gamepads when parked
+    {"TestAlert", {CLEAR_ON_MANAGER_START, STRING}},  // memory param: the bluetooth A2DP test asks for an audible alert
+    {"StoppingAccel", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // CP-4: m/s^2, 0 = per-car default, clamped [-4.0, -0.3]
+    {"BlinkerLatchedTurn", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // CP-1: kph gate for latched-stalk turn intent, 0 = off
+    {"AdjustLaneOffsetEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // CP-2: keep-away offset from the adjacent lane
+    {"AdjustLaneOffset", {PERSISTENT | BACKUP, FLOAT, "0.20"}},  // CP-2: full offset (m) at >=2.9 m lane width
+    {"KeepMinDistanceFromLane", {PERSISTENT | BACKUP, FLOAT, "1.35"}},  // CP-2: min clearance (m) to the offset-side edge line
+    {"ScreenBrightnessOnroad", {PERSISTENT | BACKUP, FLOAT}},  // ST-8: unset = ambient auto
+    {"ScreenBrightnessOnroadOffset", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // ST-8: percent, clamped [-30, 30]
+    {"ScreenBrightnessOffroad", {PERSISTENT | BACKUP, FLOAT}},  // ST-8: unset = stock offroad brightness
+    {"ScreenBrightnessOffroadOffset", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // ST-8: percent, clamped [-30, 30]
+    {"ShowStoppingPoint", {PERSISTENT | BACKUP, BOOL, "0"}},  // ST-10: draw the projected stop point on the path
+    {"ShowStoppingPointMetrics", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"ShowTorqueBar", {PERSISTENT | BACKUP, BOOL, "0"}},  // ST-10: lateral torque arc
+    {"ShowPersonalityButton", {PERSISTENT | BACKUP, BOOL, "0"}},  // ST-10: quick personality cycler under the exp button
+    {"ShowSpeedLimitSources", {PERSISTENT | BACKUP, BOOL, "0"}},  // ST-6: per-source limit values drawer next to the sign
+    {"DeveloperSidebar", {PERSISTENT | BACKUP, BOOL, "0"}},  // ST-9: onroad metrics sidebar
+    {"DeveloperSidebarMetric1", {PERSISTENT | BACKUP, INT, "0"}},  // 0 = slot off, 1..17 = metric id
+    {"DeveloperSidebarMetric2", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DeveloperSidebarMetric3", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DeveloperSidebarMetric4", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DeveloperSidebarMetric5", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DeveloperSidebarMetric6", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DeveloperSidebarMetric7", {PERSISTENT | BACKUP, INT, "0"}},
+    {"PIPPreviewEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // ST-10: side-cam PiP; needs the driver camera stream (Lite HW: inert)
+    {"PIPPreviewShowOnBlinker", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"PIPPreviewShowOnBSM", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"PIPPreviewInvert", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"PIPPreviewMask", {PERSISTENT, JSON, "{}"}},  // crop polygon for the PiP feed
+
     {"VisionSpeedLimit", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, FLOAT, "0.0"}},  // latest published vision limit in m/s
     {"VisionSpeedLimitAutoBookmark", {PERSISTENT, BOOL, "0"}},  // capture debug bookmarks on confirmed detections
     {"VisionSpeedLimitAutoPreserveSegment", {PERSISTENT, BOOL, "0"}},
@@ -437,12 +501,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"NegativeTargetCreepGuardEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot negative-target creep guard: bleed stale positive integrator and cap positive output on real decel
     {"CscCurvatureLearningEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot curve-speed self-learning: learns comfort lateral accel per curvature from the driver's manual driving
     {"CurvatureLearningData", {PERSISTENT | BACKUP, STRING}},  // JSON bucket data for CscCurvatureLearningEnabled
+    {"CscVisionEnvelopeEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot curve-speed control half: per-point distance envelope + far-field curvature correction replaces the 97th-percentile point estimate
+    {"AccelSmoothstepEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot smoothstep accel envelope: C2-continuous interpolation of the accel personality curves instead of linear np.interp
+    {"LaneChangeCloseGapEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot absolute lane-change headway: ramp t_follow toward a shorter absolute gap while signalling out; blindspot / braking-lead gated
     {"NNFFMode", {PERSISTENT | BACKUP, INT, "0"}},  // StarPilot NNFF lateral control: 0=off, 1=lite (jerk friction), 2=full NN feedforward
-    {"NNFFModelName", {PERSISTENT | BACKUP, STRING}},  // StarPilot NNFF model name shown in the UI border; was read by carrot_param_cache without being registered, which raises UnknownKeyName on device
     {"LaneCenteringEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot vision lane-centering: bounded curvature correction toward the lane center (not for use with LateralLaneCentering)
     {"LaneCenterOffset", {PERSISTENT | BACKUP, FLOAT, "0"}},  // Lane centering lateral offset in meters (-0.3..0.3)
     {"LaneCenteringE2EAuthority", {PERSISTENT | BACKUP, BOOL, "0"}},  // Attenuate lane-centering correction on large deliberate path errors unless near a boundary
-    {"WebPushVapid", {PERSISTENT | BACKUP, JSON}},
+    {"WebPushVapidKeys", {PERSISTENT | BACKUP, STRING}},
     {"WebPushSubscriptions", {PERSISTENT | BACKUP, JSON}},
     // Ensures steer-to-zero Mazda torque defaults are seeded once.
     {"MazdaTorqueDefaultsApplied", {PERSISTENT | BACKUP, BOOL}},
@@ -548,9 +614,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // cp tuning alignment: params present in CarrotPilot settings but newly
     // registered here so webui read/reset works and defaults match cp.
     {"CruiseGapLevels", {PERSISTENT | BACKUP, INT, "4"}},
-    // How many follow-gap levels the vehicle exposes (3 or 4). Read by
-    // sunnypilot CruiseHelper when the distance button cycles the gap; spans the
-    // cluster personality range. Same default as cp.
+    // How many follow-gap levels the vehicle exposes (3 or 4). Read by the
+    // carrot server (cruise_gap.py) when the distance button cycles the gap;
+    // spans the cluster personality range. Same default as cp.
     {"LongitudinalPersonalityMax", {PERSISTENT | BACKUP, INT, "3"}},
     // Restored with the VCruiseCarrot port (cp L7). These were removed in the dead-key
     // cleanup because nothing read them; VCruiseCarrot is their reader.
@@ -650,6 +716,15 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // carrot's copy only survived because of a broad except.
     // JSON type: writers must pass a dict, not a json.dumps() string.
     {"NavDestination", {PERSISTENT, JSON, "{}"}},
+    // Onroad navigation instruction card (StarPilot port). carrot_man folds navInstructionCarrotSP
+    // into this JSON every publish; the card renders it and long-press cancel clears it.
+    {"NavigationCardEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"NavInstructionState", {CLEAR_ON_OFFROAD_TRANSITION, JSON, "{}"}},
+    {"NavInstructionCollapsed", {PERSISTENT, BOOL, "0"}},
+
+    // Personality profiles: per-personality accel/following/jerk overrides (StarPilot port).
+    {"CustomPersonalities", {PERSISTENT | BACKUP, BOOL, "0"}},  // enable the profile overrides below
+    {"LongitudinalPersonalityProfiles", {PERSISTENT, JSON, "{}"}},  // {"0": {"accel": ..., ...}, "1": ..., "2": ...}
     // Timezone the phone pushed, plus who set it. carrot_serv writes them after
     // syncing the clock from the app so timed.py does not immediately overwrite
     // the app's value with the device's own guess.
@@ -884,6 +959,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ClusterHudRadarSourceColor", {PERSISTENT | BACKUP, INT, "0"}},
     {"ClusterHudScreenMode", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ClusterHudTheme", {PERSISTENT | BACKUP, INT, "0"}},
+    {"ClusterHudConnected", {CLEAR_ON_MANAGER_START, BOOL}},  // a USB cluster display is attached (carrot cluster autorun)
+    {"UsbGpuPresent", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
+    {"UsbGpuHardwareSeen", {PERSISTENT, BOOL}},
+    {"UsbGpuCompiled", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
+    {"UsbGpuLoading", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"UsbGpuActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | CLEAR_ON_IGNITION_ON, BOOL}},
+    {"UsbGpuStartupFailed", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, BOOL}},
     {"EnableRadarTracks", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"EnableCornerRadar", {PERSISTENT, INT, "0"}},  // corner-radar object groups (Hyundai)
     {"RadarTrackFlip", {PERSISTENT, BOOL, "0"}},  // invert frontRadar yRel/yvRel once per drive
@@ -925,6 +1007,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SoundLanguageSetting", {PERSISTENT | BACKUP, STRING, "auto"}},
     {"UseWideCamera", {PERSISTENT | BACKUP, BOOL, "1"}},
 
+    // one-time markers
+    {"ExperimentalAssistsDefaultOn", {PERSISTENT | BACKUP, BOOL}},  // Speed/Lead Follow Assist turned on once when they became default (params_migration_zp.py)
+
     // ---------------------------------------------------------------------
     // macan-long fork additions (must survive every upstream merge).
     // Restored 2026-10-23: the round-23 reorder onto upstream 9e002fb2 replaced
@@ -954,7 +1039,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoEnTurnNewLaneTimeH", {PERSISTENT | BACKUP, INT, "0"}},
     {"AutoEnTurnNewLaneTime", {PERSISTENT | BACKUP, INT, "0"}},
     {"DynamicTFollow", {PERSISTENT | BACKUP, FLOAT, "0"}},
-    {"StoppingAccel", {PERSISTENT | BACKUP, INT, "-50"}},
     {"CarrotCruiseAtcDecel", {PERSISTENT | BACKUP, INT, "-1"}},
     {"CarrotCruiseDecel", {PERSISTENT | BACKUP, INT, "-1"}},
     {"LaneChangeBsd", {PERSISTENT | BACKUP, INT, "0"}},
@@ -965,7 +1049,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomSteerMax", {PERSISTENT | BACKUP, INT, "0"}},
     {"VEgoStopping", {PERSISTENT | BACKUP, INT, "50"}},
     {"AChangeCostStarting", {PERSISTENT | BACKUP, INT, "10"}},
-    {"AdjustLaneOffset", {PERSISTENT | BACKUP, INT, "0"}},
     {"CanfdDebug", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotTireTrajectory", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CruiseButtonTest1", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -993,4 +1076,16 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MacanVerzBridge", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan verz桥主闸（开=1.25%百分比渐进缓冲缓急刹/治喘息；关=verz直通一帧到位。深刹<=-1.5与原厂刹车请求无论开关直通保安全）
     {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
     {"MacanFusionMode", {PERSISTENT | BACKUP, BOOL, "1"}},            // Macan 融合控制模式（1=原厂ACC与OP纵向融合控制(当前,恒开)；0=纯OP纵向(后续开发,暂不可设)）       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+
+    // ---- fork-only keys kept out of the block above (registered here so Params never
+    // raises UnknownKeyName). DEC keys: upstream retired DEC from the planner, but the fork
+    // still reads them; NNFFModelName: read by carrot_param_cache; WebPushVapid: carrot web.
+    {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DynamicExperimentalTriggerCurve", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerLead", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerSignal", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerStopLight", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerLowSpeed", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"NNFFModelName", {PERSISTENT | BACKUP, STRING}},  // StarPilot NNFF model name shown in the UI border; was read by carrot_param_cache without being registered, which raises UnknownKeyName on device
+    {"WebPushVapid", {PERSISTENT | BACKUP, JSON}},
 };

@@ -7,28 +7,35 @@ See the LICENSE.md file in the root directory for more details.
 """
 
 from collections.abc import Callable
+import gc
 import os
 os.environ['GMMU'] = '0'
+os.environ.setdefault('AM_POWER_LIMIT', '100')
+os.environ.setdefault('AM_PERF_LEVEL', 'high')
 from openpilot.common.hardware import COMMA_HARDWARE
 from openpilot.selfdrive.modeld.helpers import chestnut_present
+from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
 from openpilot.selfdrive.modeld.lane_width import LaneWidthEstimator
 CHESTNUT_PRESENT = chestnut_present()
 # tinygrad picks its default device by opening every backend until one works, 2.6 s of every start
 # on a comma 4. Without a chestnut that is QCOM, so name it; tinygrad reads DEV once, at import
 if COMMA_HARDWARE and not CHESTNUT_PRESENT:
   os.environ.setdefault('DEV', 'QCOM')
+from tinygrad.device import Device
 import numpy as np
 import threading
 import time
 from setproctitle import setproctitle
 
 import openpilot.cereal.messaging as messaging
+from openpilot.selfdrive.modeld.helpers import wait_for_chestnut
 from openpilot.cereal import log
 from opendbc.car.structs import car
 from openpilot.cereal.services import SERVICE_LIST
 from openpilot.cereal.messaging import PubMaster, SubMaster
 from openpilot.cereal.visionipc import VisionStreamType
 from msgq.visionipc import VisionIpcClient, VisionBuf
+from opendbc.car.car_helpers import get_demo_car_params
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
 from openpilot.common.dm import is_dm_disabled
@@ -185,6 +192,8 @@ class ModelState(ModelStateBase):
       self.numpy_inputs['big_tfm'][:, :] = transforms[self._wide_key].reshape(3, 3)
 
     raw_outputs = self.adapter.run()
+    if self.chestnut and (err := Device[self.DEV].error_state.host.view(fmt='q')[0]):
+      raise RuntimeError(f"chestnut failed with {err}")
 
     if after_enqueue is not None:
       after_enqueue()
@@ -321,9 +330,9 @@ def main(demo=False):
   cloudlog.bind(daemon=PROCESS_NAME)
   setproctitle(PROCESS_NAME)
 
-  CHESTNUT = CHESTNUT_PRESENT
+  CHESTNUT = _find_driving_pkl(get_active_bundle(chestnut=True)) is not None and \
+    (chestnut_present() or jetlink_adapter.chestnut_cable())
   if CHESTNUT:
-    os.environ['HCQDEV_WAIT_TIMEOUT_MS'] = '3000'
     from tinygrad.runtime.ops_amd import AMDDevice
     AMDDevice.wait_timeout_ms = 3000
   # before going realtime: prepare() starts tinygrad's device thread, which would inherit FIFO 54 on core 7.
@@ -331,11 +340,11 @@ def main(demo=False):
   # take the old wait timeout. prepare(chestnut) itself no-ops beside a chestnut, so call it unconditionally.
   jetlink_adapter.prepare(CHESTNUT)
 
-  config_realtime_process(7, 54)
-
   params = Params()
   params.put_bool("ChestnutLoading", CHESTNUT)
   params.remove("ChestnutActive")
+
+  gc.disable()
 
   # visionipc clients
   while True:
@@ -369,6 +378,7 @@ def main(demo=False):
     def load_big():
       nonlocal big_model
       try:
+        wait_for_chestnut()
         m = ModelState(cam_w=vipc_client_main.width, cam_h=vipc_client_main.height, chestnut=True)
         m.warmup()
         big_model = m
@@ -378,7 +388,13 @@ def main(demo=False):
     loader.start()
     loader.join(BIG_MODEL_TIMEOUT)
     model = big_model
-    params.put_bool("ChestnutActive", model is not None)
+    if model is None and not params.get_bool("ChestnutRetry"):
+      # a crank can cut the chestnut power during the load, retry once with an onroad cycle
+      cloudlog.error("big model load failed, cycling onroad to retry")
+      params.put_bool("ChestnutRetry", True)
+      params.put_bool("OnroadCycleRequested", True)
+    else:
+      params.put_bool("ChestnutActive", model is not None)
 
   small_model = ModelState(cam_w=vipc_client_main.width, cam_h=vipc_client_main.height, chestnut=False) if model is None or CHESTNUT else None
   if model is None:
@@ -387,6 +403,8 @@ def main(demo=False):
   params.put_bool("ChestnutLoading", False)
   assert model is not None
   cloudlog.warning(f"models loaded in {time.monotonic() - st:.1f}s, modeld starting")
+
+  config_realtime_process(7, 54)
 
   # messaging
   pub_socks = ["modelV2", "drivingModelData", "cameraOdometry", "modelDataV2SP"] + (["chestnutGpuState"] if CHESTNUT else [])
@@ -436,7 +454,6 @@ def main(demo=False):
 
 
   if demo:
-    from opendbc.car.car_helpers import get_demo_car_params
     CP = get_demo_car_params()
   else:
     CP = messaging.log_from_bytes(car_params(params), car.CarParams)
@@ -561,7 +578,7 @@ def main(demo=False):
                        run_count % round(model.constants.MODEL_FREQ / SERVICE_LIST['chestnutGpuState'].frequency) == 0)
       model_output = model.run(bufs, transforms, inputs, chestnut_state.send if send_chestnut else None)
     except Exception:
-      if not params.get_bool("ChestnutActive"):
+      if not model.chestnut:
         raise
       cloudlog.exception("big model failed, fall back to small")
       params.put_bool("ChestnutActive", False)
@@ -610,7 +627,7 @@ def main(demo=False):
       right_lane_line_blocked = cs_sp.carrotLaneValid and cs_sp.carrotRightLineBlocked
 
       left_edge, right_edge = RELC.update_and_fill(modelv2_send.modelV2, mdv2sp_send.modelDataV2SP, v_ego)
-      carrot_man = sm['carrotManSP'] if sm.alive['carrotManSP'] else None
+      carrot_man = get_carrot_man(sm)
       DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob, left_edge, right_edge,
                 left_lane_line_blocked=left_lane_line_blocked,
                 right_lane_line_blocked=right_lane_line_blocked,

@@ -13,7 +13,6 @@ from msgq.visionipc import VisionIpcClient
 
 from openpilot.common.dm import is_dm_disabled
 from openpilot.common.params import Params
-from openpilot.common.dm import is_dm_disabled
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.gps import get_gps_location_service
@@ -27,7 +26,6 @@ from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EmptyAlert
 from openpilot.sunnypilot.common.safety_guards import CommIssueGrace
-from openpilot.sunnypilot.common.mode_state import longitudinal_capable
 from openpilot.sunnypilot.common.mode_state_runtime import experimental_mode_requested
 
 from openpilot.common.version import get_build_metadata
@@ -35,13 +33,16 @@ from openpilot.common.hardware import HARDWARE
 
 from openpilot.sunnypilot.mads.mads import ModularAssistiveDrivingSystem
 from openpilot.sunnypilot import get_sanitize_int_param
+from openpilot.sunnypilot.common.param_read import read_bool
 from openpilot.sunnypilot.selfdrive.car.car_specific import CarSpecificEventsSP
-from openpilot.sunnypilot.selfdrive.car.cruise_helpers import CruiseHelper
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.controller import IntelligentCruiseButtonManagement
 from openpilot.sunnypilot.selfdrive.selfdrived.button_state_tracker import ButtonStateTracker
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 from openpilot.sunnypilot.selfdrive.selfdrived.model_events import ModelEventsSP
 from openpilot.sunnypilot.selfdrive.controls.lib.radar_only_warning import RadarOnlyWarning
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitChangedAlertTracker
+from openpilot.sunnypilot.selfdrive.selfdrived.conditional_experimental_mode import ConditionalExperimentalMode
+from openpilot.sunnypilot.selfdrive.selfdrived.selfdrived_zp import SelfdrivedZP, lateral_only_experimental_available
 
 REPLAY = "REPLAY" in os.environ
 SIMULATION = "SIMULATION" in os.environ or os.getenv("LITE") is not None
@@ -69,7 +70,7 @@ TurnDirection = custom.ModelDataV2SP.TurnDirection
 IGNORED_SAFETY_MODES = (SafetyModel.silent, SafetyModel.noOutput)
 
 
-class SelfdriveD(CruiseHelper):
+class SelfdriveD:
   def __init__(self, CP=None, CP_SP=None):
     self.params = Params()
 
@@ -143,13 +144,9 @@ class SelfdriveD(CruiseHelper):
     # cleanup old params
     if not self.CP.alphaLongitudinalAvailable:
       self.params.remove("AlphaLongitudinalEnabled")
-    # The settings UI asks this alpha-aware; asking only the stock flag here wiped the
-    # mode at every start on an alpha-longitudinal car, so a switch the UI had enabled
-    # came back off after each reboot.
-    if not longitudinal_capable(openpilot_longitudinal=self.CP.openpilotLongitudinalControl,
-                               alpha_available=self.CP.alphaLongitudinalAvailable,
-                               alpha_enabled=self.params.get_bool("AlphaLongitudinalEnabled")):
-      self.params.remove("ExperimentalMode")
+    # NOTE: the "wipe ExperimentalMode when longitudinal is unavailable" cleanup that used
+    # to live here is gone upstream (ConditionalExperimentalMode owns the mode now), so the
+    # alpha-longitudinal wipe this branch guarded against cannot happen at all.
 
     self.CS_prev = car.CarState.new_message()
     self.AM = AlertManager()
@@ -181,9 +178,15 @@ class SelfdriveD(CruiseHelper):
     # reported immediately.
     self.comm_issue_grace = CommIssueGrace()
     self.not_running_prev = None
+    # Not read on the update path any more (ConditionalExperimentalMode / SelfdrivedZP own
+    # it), but kept as a defined attribute so any external reader before the first
+    # params_thread tick sees False instead of AttributeError.
     self.experimental_mode = False
     # 车距档位自跟踪（与 carstate.stock_zeitluecke 同源：值1=拉近-1/值2=拉远+1，默认3格）
     self._zeitluecke = 3
+    # Macan(MLB) only: 车距档 ↔ LongitudinalPersonality 双向同步。其他车保持上游
+    # "按车距键循环递减" 的语义，避免我们的 Macan 行为改写别人的车。
+    self.macan_personality_sync = (getattr(self.CP, "carFingerprint", None) == "PORSCHE_MACAN_MK1")
     self.personality = get_sanitize_int_param(
       "LongitudinalPersonality",
       min(log.LongitudinalPersonality.schema.enumerants.values()),
@@ -200,13 +203,14 @@ class SelfdriveD(CruiseHelper):
       _gap_sync = self.params.get_bool("MacanStartupGapSync")
     except Exception:
       pass
-    if _gap_sync:
-      self._zeitluecke = {2: 4, 1: 3, 0: 1}.get(self.personality, 3)
-    else:
-      self._zeitluecke = 3
-      if self.personality != 1:
-        self.personality = 1
-        self.params.put("LongitudinalPersonality", 1)
+    if self.macan_personality_sync:
+      if _gap_sync:
+        self._zeitluecke = {2: 4, 1: 3, 0: 1}.get(self.personality, 3)
+      else:
+        self._zeitluecke = 3
+        if self.personality != 1:
+          self.personality = 1
+          self.params.put("LongitudinalPersonality", 1)
 
     self.recalibrating_seen = False
     self.dm_lockout_set = False
@@ -242,8 +246,16 @@ class SelfdriveD(CruiseHelper):
 
     self.car_events_sp = CarSpecificEventsSP(self.CP, self.CP_SP)
 
-    CruiseHelper.__init__(self, self.CP)
     self.button_state_tracker = ButtonStateTracker()
+    self.selfdrived_zp = SelfdrivedZP(self.CP, self.params)
+    self.conditional_experimental = ConditionalExperimentalMode(self.CP, self.params)
+
+    # Speed limit change announcement (default off): selfdrived owns the detection because the
+    # resolver's speedLimitLast is what moved, but the resolver has no events wire of its own
+    # and the SLA session machine is split between the planner (pcm) and card's arbiter
+    # (stock ACC). Reading the published speedLimitLast here covers every car the same way.
+    self._speed_limit_change_tracker = SpeedLimitChangedAlertTracker()
+    self.speed_limit_changed_alert_enabled = read_bool(self.params, "SpeedLimitChangedAlert")
 
   def update_events(self, CS):
     """Compute onroadEvents from carState"""
@@ -268,6 +280,7 @@ class SelfdriveD(CruiseHelper):
     big_failed = big_active is False or model_unavailable or (self.big_model_active and not chestnut_present)
     if big_failed and not self.big_model_failed:
       self.events.add(EventName.bigModelFailed)
+      self.big_model_ready_t = time.monotonic()
     self.big_model_failed = big_failed
 
     # soft disable if the big model fails
@@ -299,7 +312,9 @@ class SelfdriveD(CruiseHelper):
 
     # Check for user bookmark press
     if self.sm.updated['userBookmark']:
-      self.events.add(EventName.userBookmark)
+      prime_type = self.params.get("PrimeType")
+      paired = prime_type is not None and int(prime_type) >= 0
+      self.events.add(EventName.userBookmark if paired else EventName.userBookmarkNotPaired)
 
     # Don't add any more events while in dashcam mode
     if self.CP.passive:
@@ -452,6 +467,14 @@ class SelfdriveD(CruiseHelper):
       self.events_sp.add(custom.OnroadEventSP.EventName.laneTurnLeft)
     elif lane_turn_direction == TurnDirection.turnRight:
       self.events_sp.add(custom.OnroadEventSP.EventName.laneTurnRight)
+
+    # Speed limit change announcement (default off): the tracker consumes the resolver's
+    # published speedLimitLast and confirms the change only after the hold-time debounce,
+    # so a flickering source never reaches the driver.
+    if self.speed_limit_changed_alert_enabled:
+      limit_last = self.sm['longitudinalPlanSP'].speedLimit.resolver.speedLimitLast
+      if self._speed_limit_change_tracker.update(limit_last, DT_CTRL):
+        self.events_sp.add(custom.OnroadEventSP.EventName.speedLimitChangedAlert)
 
     for i, pandaState in enumerate(self.sm['pandaStates']):
       # All pandas must match the list of safetyConfigs, and if outside this list, must be silent or noOutput
@@ -620,7 +643,7 @@ class SelfdriveD(CruiseHelper):
       # climbs past MODEL_LAG_PERC within a second and soft-disables via
       # modeldLagging. See modeld_lag.py for the on-device measurements.
       severe, mild = self.modeld_lag_monitor.update(self.sm['modelV2'].frameDropPerc)
-      if severe:
+      if severe and not big_model_settling:
         self.events.add(EventName.modeldLagging)
       if mild:
         self.events.add(EventName.modeldLaggingMild)
@@ -629,20 +652,30 @@ class SelfdriveD(CruiseHelper):
     if CS.gearShifter == car.CarState.GearShifter.park and self.mads.enabled:
       self.events.remove(EventName.canBusMissing)
 
-    CruiseHelper.update(self, CS, self.events_sp, self.experimental_mode)
+    # Conditional experimental mode: may write the ExperimentalMode param when its master
+    # switch is on. Runs before selfdrived_zp so its 1 s param re-read picks the new value up.
+    self.conditional_experimental.update(CS, self.sm)
 
-    # Longitudinal personality is bound to stock ACC distance bars (zeitluecke, VW/MLB):
-    # 4 bars (farthest) -> relaxed(2), 3/2 -> standard(1), 1 (closest) -> aggressive(0).
-    # carState 是 capnp 消息无 stock_zeitluecke 字段，故从 buttonEvents 自跟踪推导：
-    # 值1(Dist-1/拉近)=gapAdjustCruise → -1格；值2(Dist+1/拉远)=altButton2 → +1格
-    # （与 carstate.stock_zeitluecke 同源同逻辑，启动默认 3 格）。
+    self.personality = self.selfdrived_zp.update(CS, self.sm['carStateSP'], self.events, self.events_sp, self.icbm, self.personality)
+
+    # Decrement personality on distance button press
     if self.CP.openpilotLongitudinalControl:
-      for be in CS.buttonEvents:
-        if be.pressed and be.type == ButtonType.gapAdjustCruise:
-          self._zeitluecke = max(1, self._zeitluecke - 1)
-        elif be.pressed and be.type == ButtonType.altButton2:
-          self._zeitluecke = min(4, self._zeitluecke + 1)
-      new_personality = {4: 2, 3: 1, 2: 1, 1: 0}.get(self._zeitluecke)
+      new_personality = None
+      if self.macan_personality_sync:
+        # Macan(MLB): Longitudinal personality is bound to stock ACC distance bars
+        # (zeitluecke, VW/MLB): 4 bars (farthest) -> relaxed(2), 3/2 -> standard(1),
+        # 1 (closest) -> aggressive(0).
+        # carState 是 capnp 消息无 stock_zeitluecke 字段，故从 buttonEvents 自跟踪推导：
+        # 值1(Dist-1/拉近)=gapAdjustCruise → -1格；值2(Dist+1/拉远)=altButton2 → +1格
+        # （与 carstate.stock_zeitluecke 同源同逻辑，启动默认 3 格）。
+        for be in CS.buttonEvents:
+          if be.pressed and be.type == ButtonType.gapAdjustCruise:
+            self._zeitluecke = max(1, self._zeitluecke - 1)
+          elif be.pressed and be.type == ButtonType.altButton2:
+            self._zeitluecke = min(4, self._zeitluecke + 1)
+        new_personality = {4: 2, 3: 1, 2: 1, 1: 0}.get(self._zeitluecke)
+      elif any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents) and self.selfdrived_zp.gap_release_steps:
+        new_personality = (self.personality - 1) % 3
       if new_personality is not None and new_personality != self.personality:
         self.personality = new_personality
         self.params.put('LongitudinalPersonality', self.personality)
@@ -747,7 +780,6 @@ class SelfdriveD(CruiseHelper):
     ss.active = self.active
     ss.state = self.state_machine.state
     ss.engageable = not self.events.contains(ET.NO_ENTRY)
-    ss.experimentalMode = self.experimental_mode
     ss.personality = self.personality
 
     ss.alertText1 = self.AM.current_alert.alert_text_1
@@ -780,6 +812,7 @@ class SelfdriveD(CruiseHelper):
     mads.lateralHeld = self.mads.lateral_held
     ss_sp.zoompilot.madsLateralHeld = self.mads.lateral_held
     ss_sp.zoompilot.icbmHold = self.icbm.fast_active
+    self.selfdrived_zp.publish(ss_sp)
 
     icbm = ss_sp.intelligentCruiseButtonManagement
     icbm.state = self.icbm.state
@@ -821,11 +854,17 @@ class SelfdriveD(CruiseHelper):
       self.disengage_on_accelerator = self.params.get_bool("DisengageOnAccelerator")
       # The switch alone is not a request: the confirmation bit is part of it,
       # so a writer that skipped the dialog cannot turn the mode on by itself.
-      self.experimental_mode = experimental_mode_requested(self.params) and self.CP.openpilotLongitudinalControl
+      self.experimental_mode = experimental_mode_requested(self.params) and self.experimental_mode_available()
+      self.speed_limit_changed_alert_enabled = read_bool(self.params, "SpeedLimitChangedAlert")
       self.personality = self.params.get("LongitudinalPersonality", return_default=True)
 
       self.mads.read_params()
       time.sleep(0.1)
+
+  def experimental_mode_available(self) -> bool:
+    """Whether Experimental Mode is valid for this car: openpilot long, or a
+    lateral-only whitelist car (selfdrived_zp.lateral_only_experimental_available)."""
+    return self.CP.openpilotLongitudinalControl or lateral_only_experimental_available(self.CP)
 
   def run(self):
     e = threading.Event()

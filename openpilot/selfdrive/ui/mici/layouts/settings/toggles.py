@@ -10,6 +10,7 @@ from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callba
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr
+from openpilot.selfdrive.ui.mici.layouts.settings.initial_cruise_speed import InitialCruiseSpeedButton
 
 PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
@@ -79,6 +80,9 @@ class TogglesLayoutMici(NavScroller):
                                                    "The path colors show acceleration and braking."))
     self._accel_controller_enabled = BigParamControl(tr("enable accel controller"), "AccelPersonalityEnabled")
     self._accel_personality_toggle = BigMultiParamToggle(tr("acceleration profile"), "AccelPersonality", [tr("eco"), tr("normal"), tr("sport")])
+    # zp: initial cruise speed on SET press, only meaningful with openpilot long
+    self._initial_cruise_speed = InitialCruiseSpeedButton()
+    self._initial_cruise_speed.set_visible(lambda: ui_state.CP is not None and ui_state.has_longitudinal_control and not ui_state.CP.pcmCruise)
     is_metric_toggle = BigParamControl(tr("use metric units"), "IsMetric")
     ldw_toggle = BigParamControl(tr("lane departure warnings"), "IsLdwEnabled",
                                  description=tr("Warn when you drift across a detected lane line.\n" +
@@ -115,6 +119,7 @@ class TogglesLayoutMici(NavScroller):
       self._accel_controller_enabled,
       self._accel_personality_toggle,
       self._experimental_btn,
+      self._initial_cruise_speed,
       is_metric_toggle,
       ldw_toggle,
       always_on_dm_toggle,
@@ -195,10 +200,14 @@ class TogglesLayoutMici(NavScroller):
     super().show_event()
     self._update_toggles()
 
+  def _on_metric_toggle(self, state: bool):
+    ui_state.params.put_bool("IsMetric", state, block=True)
+    self._update_toggles()
+
   def _update_toggles(self):
     ui_state.update_params()
+    self._initial_cruise_speed.refresh()
 
-    # CP gating for experimental mode
     if ui_state.CP is not None:
       if ui_state.has_longitudinal_control:
         self._experimental_btn.set_visible(True)
@@ -251,15 +260,23 @@ class TogglesLayoutMici(NavScroller):
     self._accel_personality_toggle.refresh()
 
   def _on_experimental_mode(self, state: bool):
+    from openpilot.sunnypilot.common.mode_state_runtime import ModeStateError, set_experimental_mode
+
     if state and not ui_state.params.get_bool("ExperimentalModeConfirmed"):
       # Don't show enabled state until confirm
       self._experimental_btn.set_checked(False)
 
       def on_confirm():
-        ui_state.params.put_bool("ExperimentalModeConfirmed", True)
-        ui_state.params.put_bool("ExperimentalMode", True)
-        self._experimental_btn.set_checked(True)
+        try:
+          set_experimental_mode(ui_state.params, True, acknowledged=True)
+          self._experimental_btn.set_checked(True)
+        except ModeStateError:
+          self._experimental_btn.set_checked(False)
 
       gui_app.push_widget(ExperimentalModeConfirmPage(on_confirm))
     else:
-      ui_state.params.put_bool("ExperimentalMode", state)
+      try:
+        set_experimental_mode(ui_state.params, state)
+        self._experimental_btn.set_checked(state)
+      except ModeStateError:
+        self._experimental_btn.set_checked(not state)

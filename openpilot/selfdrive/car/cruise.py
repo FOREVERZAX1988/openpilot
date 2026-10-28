@@ -7,10 +7,12 @@ from opendbc.car.structs import car
 from openpilot.common.constants import CV
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
+from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
 from openpilot.sunnypilot.selfdrive.car.cruise_ext import VCruiseHelperSP
-# The gap-cycle helpers live with the distance-button handling; VCruiseCarrot reuses them
+# The gap-cycle helpers live in carrot.cruise_gap (their policy home since the
+# DEC-era cruise_helpers.py was removed); VCruiseCarrot reuses them
 # so both paths agree on how many levels a car has.
-from openpilot.sunnypilot.selfdrive.car.cruise_helpers import (
+from openpilot.sunnypilot.carrot.cruise_gap import (
   cruise_gap_levels, next_gap_personality, supported_gap_levels,
 )
 # Bluetooth HID remote command reader (carrot_bluetooth daemon publishes to shared memory).
@@ -24,7 +26,6 @@ V_CRUISE_MIN = 8
 V_CRUISE_MAX = 145
 V_CRUISE_UNSET = 255
 V_CRUISE_INITIAL = 30
-V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 30
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
 ButtonEvent = car.CarState.ButtonEvent
@@ -261,17 +262,15 @@ class VCruiseHelper(VCruiseHelperSP):
         self.button_timers[b.type.raw] = 1 if b.pressed else 0
         self.button_change_states[b.type.raw] = {"standstill": CS.cruiseState.standstill, "enabled": enabled}
 
-  def initialize_v_cruise(self, CS, experimental_mode: bool) -> None:
+  def initialize_v_cruise(self, CS, initial_speed: int) -> None:
     # initializing is handled by the PCM
     if self.CP.pcmCruise:
       return
 
-    initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode else V_CRUISE_INITIAL
-
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
       self.v_cruise_kph = self.v_cruise_kph_last
     else:
-      self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+      self.v_cruise_kph = int(round(np.clip(max(CS.vEgo * CV.MS_TO_KPH, initial_speed), V_CRUISE_INITIAL, V_CRUISE_MAX)))
 
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
@@ -450,9 +449,12 @@ class VCruiseCarrot(VCruiseHelper):
 
   def _update_carrot_man(self, sm):
     # sunnypilot publishes the phone-projection state on carrotManSP; the legacy
-    # cp 'carrotMan' service is not registered in cereal/services.py.
-    if sm.valid.get('carrotManSP', False):
-      carrot_man = sm['carrotManSP']
+    # cp 'carrotMan' service is not registered in cereal/services.py. The gate
+    # also rejects frames older than 1 s or with an out-of-range desiredSpeed,
+    # so a stalled publisher cannot freeze nRoadLimitSpeed into the cruise
+    # speed table (ported from cp's carrot_man_input.get_carrot_man).
+    carrot_man = get_carrot_man(sm)
+    if carrot_man is not None:
       self.nRoadLimitSpeed = carrot_man.nRoadLimitSpeed
       self.desiredSpeed = carrot_man.desiredSpeed
       self.carrot_cmd_index = carrot_man.carrotCmdIndex
@@ -610,14 +612,35 @@ class VCruiseCarrot(VCruiseHelper):
     self.cruise_state_available_last = CS.cruiseState.available
     self.enabled_last = CC.enabled
 
-  def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool = False) -> None:
-    """No-op override; the inherited VCruiseHelper.initialize_v_cruise owns v_cruise.
+  def initialize_v_cruise(self, CS, initial_speed: int) -> None:
+    """Initial set speed at openpilot engagement (zp VCruiseHelper semantics).
 
-    card.py calls the helper polymorphically with (CS, experimental_mode). The extra
-    third argument is kept optional so out-of-tree callers that still pass it do not
-    raise `TypeError: takes 3 positional arguments but 4 were given` on every SET press.
+    The signature must stay identical to the base class because card.py calls the
+    helper polymorphically. It used to carry a third dynamic_experimental_control
+    argument; DEC was removed 2026-10 (upstream sunset #2056) and the zp base
+    dropped the flag too, so the chain is two arguments with the second one now
+    being the InitialCruiseSpeedKph floor (default 40).
+
+    For PCM-cruise cars the car owns the set speed and this is a no-op, same as
+    the zp base. For non-PCM cars carrot assigns the set speed in update_v_cruise
+    (which runs before this on the engage frame), so this override decides the
+    value that sticks for the frame openpilot engages, floored at initial_speed.
     """
-    return
+    if self.CP.pcmCruise:
+      return
+
+    # Macan(MLB) 融合控制：VCruiseCarrot.update_v_cruise 已把 v_cruise 镜像为原厂 ACC
+    # 设定速度（ACC_02.Wunschgeschw）。接合帧若再用 vEgo/initial_speed 覆盖，会重新制造
+    # "OP 内部 vCruise 与原厂 ACC 分裂"（突然加速/减速反复喘息，macan_fusion 存在的意义）。
+    # 因此融合模式下保持继承来的 no-op 语义：以原厂 ACC 为准。
+    if self.macan_fusion:
+      return
+
+    if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
+      self.v_cruise_kph = self.v_cruise_kph_last
+    else:
+      self.v_cruise_kph = int(round(np.clip(max(CS.vEgo * CV.MS_TO_KPH, initial_speed), V_CRUISE_INITIAL, V_CRUISE_MAX)))
+      self.v_cruise_cluster_kph = self.v_cruise_kph
 
   def _prepare_buttons(self, CS, v_cruise_kph, CS_SP=None, remote=None):
     button_kph = v_cruise_kph

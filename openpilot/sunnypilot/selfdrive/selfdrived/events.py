@@ -13,7 +13,9 @@ from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Pr
   NoEntryAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, AlertCallbackType, wrong_car_mode_alert
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import PCM_LONG_REQUIRED_MAX_SET_SPEED, CONFIRM_SPEED_THRESHOLD
 from openpilot.common.hardware import HARDWARE
+from openpilot.system.ui.lib.multilang import tr_noop
 from openpilot.sunnypilot.selfdrive.selfdrived.events_zp import EVENTS_SP_ZP, EventsWithZP
+from openpilot.sunnypilot.selfdrive.selfdrived.selfdrived_zp import SelfdrivedZP
 
 AlertSize = log.SelfdriveState.AlertSize
 AlertStatus = log.SelfdriveState.AlertStatus
@@ -34,6 +36,15 @@ def _set_speed_ms(CS: car.CarState, sm: messaging.SubMaster) -> float:
   set_speed = sm['controlsState'].deprecated.vCruise if v_cruise_cluster == 0.0 else v_cruise_cluster
   # vCruise/vCruiseCluster are kph; the resolver speeds are m/s
   return set_speed * CV.KPH_TO_MS
+
+
+def experimental_mode_switched_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+  # Two complete sentences rather than one f-string: potools can only extract a
+  # literal, so `f"实验模式已{'开启' if ... else '关闭'}"` reaches the po files as
+  # nothing at all and every non-Chinese UI shows the source text. alert_renderer
+  # translates the callback's output with tr().
+  text = tr_noop("实验模式已开启") if SelfdrivedZP.switched_to else tr_noop("实验模式已关闭")
+  return NormalPermanentAlert(text, duration=1.5)
 
 
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -58,6 +69,16 @@ def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.Sub
   return Alert("大模型已接管" if accelerator else "大模型已就绪", "",
                AlertStatus.normal, AlertSize.small,
                Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 2.)
+
+
+def speed_limit_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+  # StarPilot's speedLimitChanged standing alert: the posted limit moved and stayed moved.
+  # Detection lives in selfdrived (SpeedLimitChangedAlertTracker); this only presents it.
+  return Alert(
+    "限速已变化",
+    "",
+    AlertStatus.normal, AlertSize.small,
+    Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 3.0)
 
 
 def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -236,8 +257,10 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, .5),
   },
 
-  EventNameSP.experimentalModeSwitched: {
-    ET.WARNING: NormalPermanentAlert("实验模式已切换", duration=1.5)
+  # zoompilot renamed the event with the DEPRECATED suffix (custom.capnp @14);
+  # selfdrived_zp (the ex-CruiseHelper path, removed with DEC) now raises it.
+  EventNameSP.experimentalModeSwitchedDEPRECATED: {
+    ET.WARNING: experimental_mode_switched_alert,
   },
 
   EventNameSP.wrongCarModeAlertOnly: {
@@ -253,16 +276,16 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # tizi only its border.
   EventNameSP.stockLkasOff: {
     ET.NO_ENTRY: Alert(
-      "Lateral Disabled",
-      "LKAS is off",
+      "横向已停用",
+      "LKAS 已关闭",
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.refuse, 3.),
-    **({ET.PERMANENT: NormalPermanentAlert("Lateral Disabled", "LKAS is off", priority=Priority.LOW)} if IS_MICI else {}),
+    **({ET.PERMANENT: NormalPermanentAlert("横向已停用", "LKAS 已关闭", priority=Priority.LOW)} if IS_MICI else {}),
   },
 
   # LKA back on with lateral resuming, the EPS not delivering yet: still disabled to the driver.
   EventNameSP.stockLkasArming: {
-    ET.PERMANENT: NormalPermanentAlert("Lateral Disabled", "Waiting for steering", priority=Priority.LOW),
+    ET.PERMANENT: NormalPermanentAlert("横向已停用", "等待转向就绪", priority=Priority.LOW),
   } if IS_MICI else {},
 
   EventNameSP.laneTurnLeft: {
@@ -299,6 +322,13 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.),
+  },
+
+  # speed limit change announcement, opt-in (SpeedLimitChangedAlert, default off):
+  # a sustained speedLimitLast jump chimes once per change, the same shape as
+  # StarPilot's speedLimitChanged (standing PERMANENT alert, low priority, prompt chime)
+  EventNameSP.speedLimitChangedAlert: {
+    ET.PERMANENT: speed_limit_changed_alert,
   },
 
   EventNameSP.e2eChime: {

@@ -16,15 +16,11 @@ if gui_app.sunnypilot_ui():
 
 BIG_UI = gui_app.big_ui()
 
-# UI wants a big-cluster core of its own. Power save offlines that cluster
-# (4-7), so ask for one of them and fall back to whatever the kernel has online.
-#
-# Order 4 before 5, from the measured RT peer map (grep config_realtime_process):
-#   core 4 = radarcan at CTRL_LOW 51, nothing else   <- lightest big core
-#   core 5 = card at CTRL_HIGH 53, plus plannerd / radard / radard_dpath at 51
-#   core 6 = selfdrived at 53, core 7 = modeld at 54
-# The full-screen FIFO renderer must not sit on the same core as card: same
-# priority, and card is the peer whose jitter reaches the driving path first.
+# UI wants a big core to itself. The carrot layout owns the rest of the big
+# cluster: card/plannerd/radard on 5, controlsd/selfdrived on 6, modeld on 7.
+# Core 4 only hosts radarcan (CTRL_LOW), which this process outranks. Power
+# save offlines the big cluster when offroad with the screen off, so the
+# render loop re-affines once it is back online.
 UI_CORES = (4, 5)
 
 

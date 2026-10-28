@@ -374,7 +374,6 @@ msgid "Firehose Mode"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/firehose.py
-#: selfdrive/ui/mici/layouts/settings/firehose.py
 msgid ""
 "sunnypilot learns to drive by watching humans, like you, drive.\n"
 "\n"
@@ -489,6 +488,34 @@ msgstr ""
 #: selfdrive/ui/layouts/settings/imu_calibration.py
 #: selfdrive/ui/mici/layouts/settings/imu_calibration.py
 msgid "Disengage to reset calibration"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/mici/onroad/hud_renderer.py
+#: selfdrive/ui/onroad/hud_renderer.py
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+#: selfdrive/ui/sunnypilot/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py
+#: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
+#: selfdrive/ui/sunnypilot/onroad/chevron_metrics.py
+#: selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
+#: selfdrive/ui/sunnypilot/onroad/speed_renderer.py
+msgid "km/h"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/mici/onroad/hud_renderer.py
+#: selfdrive/ui/onroad/hud_renderer.py
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+#: selfdrive/ui/sunnypilot/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/steering.py
+#: selfdrive/ui/sunnypilot/onroad/chevron_metrics.py
+#: selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
+#: selfdrive/ui/sunnypilot/onroad/speed_renderer.py
+msgid "mph"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/settings.py
@@ -674,6 +701,10 @@ msgid "The driver monitoring system can be toggled on/off, but long-term activat
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
+msgid "Replace the driver monitoring camera thumbnail with animated pearl cartoon eyes that mirror head pose and blinks."
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py
 msgid "Set how sensitive the driver distraction detection should be. Strict: Very sensitive, warns on minor distractions. Moderate: Balanced between sensitivity and false positives. Lenient: Only alerts on clear distractions. "
 msgstr ""
 
@@ -698,7 +729,8 @@ msgid "sunnypilot defaults to driving in chill mode. Experimental mode enables a
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid "Driving Personality"
+#: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Following Distance"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
@@ -743,6 +775,10 @@ msgid "Always-On Driver Monitoring"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
+msgid "DM Pearl Eyes Display"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py
 msgid "Disable Driver Monitoring"
 msgstr ""
 
@@ -756,6 +792,14 @@ msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
 msgid "Use Metric System"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py
+msgid "Initial Max Speed"
+msgstr ""
+
+#: selfdrive/ui/layouts/settings/toggles.py
+msgid "Max speed when engaging openpilot. If you are already driving faster, your current speed is used. Resume restores the previous max speed. Changes apply the next time you engage."
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
@@ -1053,6 +1097,10 @@ msgid "alpha longitudinal"
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
+msgid "navigation (alpha)"
+msgstr ""
+
+#: selfdrive/ui/mici/layouts/settings/developer.py
 msgid "ui debug mode"
 msgstr ""
 
@@ -1097,6 +1145,10 @@ msgid "Run lateral maneuvers for testing steering control."
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
+msgid "Turn-by-turn navigation with a route map. Set a destination from comma connect."
+msgstr ""
+
+#: selfdrive/ui/mici/layouts/settings/developer.py
 msgid "Show touch locations and the UI frame rate."
 msgstr ""
 
@@ -1134,110 +1186,19 @@ msgstr ""
 msgid "Please connect to Wi-Fi to fetch your key."
 msgstr ""
 
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "Mount the device within 4° left or right and 5° up or 9° down. openpilot calibrates continuously; resetting is rarely needed. Resetting clears learned calibration."
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "device ID"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "serial"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
-msgid "pair"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "reset calibration"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "reset"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "reboot"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "power off"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "regulatory info"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid ""
-"driver\n"
-"camera preview"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid ""
-"onroad\n"
-"preview"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid ""
-"review\n"
-"training guide"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid ""
-"terms &\n"
-"conditions"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py
-msgid "KONIK"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py
-msgid "COMMA"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
-msgid "paired"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "Preview the cabin camera to check driver monitoring visibility. The vehicle must be off."
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "subscribed"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "upgrade to prime"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
+#: selfdrive/ui/mici/layouts/settings/device/device_layout.py
 msgid "Please connect to Wi-Fi to complete initial pairing."
 msgstr ""
 
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid ""
-"slide to\n"
-"{}"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
-msgid "Disengage to {}"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/device.py
+#: selfdrive/ui/mici/layouts/settings/device/device_layout.py
 msgid "Device must be registered with the comma.ai backend to pair."
+msgstr ""
+
+#: selfdrive/ui/mici/layouts/settings/firehose.py
+msgid ""
+"sunnypilot learns to drive by watching humans, like you, drive.\n"
+"\n"
+"Firehose Mode allows you to maximize your training data uploads to improve openpilot's driving models. More data means bigger models, which means better driving."
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/firehose.py
@@ -1331,6 +1292,19 @@ msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/imu_calibration.py
 msgid "Cancelled"
+msgstr ""
+
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
+msgid "KPH"
+msgstr ""
+
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
+msgid "MPH"
+msgstr ""
+
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
+msgid "kph"
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/network/__init__.py
@@ -1501,39 +1475,7 @@ msgid "imu calibration"
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/software.py
-msgid "version"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
-msgid "branch"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
-msgid "check for update"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
-msgid "install now"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
-msgid "target branch"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
-msgid "uninstall sunnypilot"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
-msgid "uninstall"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
 msgid "Please connect to Wi-Fi to update."
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/software.py
-msgid "Select the software branch to download on the next update check."
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/software.py
@@ -1822,29 +1764,6 @@ msgstr ""
 msgid "MAX"
 msgstr ""
 
-#: selfdrive/ui/mici/onroad/hud_renderer.py
-#: selfdrive/ui/onroad/hud_renderer.py
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-#: selfdrive/ui/sunnypilot/layouts/settings/steering.py
-#: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
-#: selfdrive/ui/sunnypilot/onroad/chevron_metrics.py
-#: selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
-#: selfdrive/ui/sunnypilot/onroad/speed_renderer.py
-msgid "km/h"
-msgstr ""
-
-#: selfdrive/ui/mici/onroad/hud_renderer.py
-#: selfdrive/ui/onroad/hud_renderer.py
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-#: selfdrive/ui/sunnypilot/layouts/settings/steering.py
-#: selfdrive/ui/sunnypilot/onroad/chevron_metrics.py
-#: selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
-#: selfdrive/ui/sunnypilot/onroad/speed_renderer.py
-msgid "mph"
-msgstr ""
-
 #: selfdrive/ui/mici/widgets/pairing_dialog.py
 msgid "pair with comma connect"
 msgstr ""
@@ -1918,7 +1837,47 @@ msgid "sunnylink is designed to be enabled as part of sunnypilot's core function
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "zoompilot defaults to driving in chill mode. Experimental mode enables alpha-level features that aren't ready for chill mode. Experimental features are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving model control the gas and brakes. zoompilot will drive as it thinks a human would, including stopping for red lights and stop signs. Since the driving model decides the speed to drive, the set speed will only act as an upper bound. This is an alpha quality feature; mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner."
+msgid "sunnypilot defaults to driving in chill mode. Experimental mode enables alpha-level features that aren't ready for chill mode. Experimental features are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving model control the gas and brakes. zoompilot will drive as it thinks a human would, including stopping for red lights and stop signs. Since the driving model decides the speed to drive, the set speed will only act as an upper bound. This is an alpha quality feature; mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Curves"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a curve ahead hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Slower Lead"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a slower or stopped car ahead hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Turn Signal"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let an active turn signal below the lane-change speed hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Stops Ahead"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a predicted stop for a light or sign hand speed control to the model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Low Speed Creep"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let creeping at very low speed hand speed control to the model."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
@@ -1926,19 +1885,11 @@ msgid "Alpha Longitudinal"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Dynamic Experimental Control"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Switches between chill and Experimental Mode on its own: experimental for stops and slowdowns ahead, chill otherwise."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
 msgid "Experimental Mode Speed Assist"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "In Experimental Mode, gently raise speed toward the set speed when nothing calls for slowing down. Has no effect while Dynamic Experimental Control is on."
+msgid "In Experimental Mode, gently raise speed toward the set speed when nothing calls for slowing down."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
@@ -1946,7 +1897,7 @@ msgid "Experimental Mode Lead Follow Assist"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Closes the gap to your driving personality's following distance behind a steady car. Never closer than chill mode. No effect while Dynamic Experimental Control is on."
+msgid "Closes the gap to your driving personality's following distance behind a steady car. Never closer than chill mode."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -2447,10 +2398,6 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Cruise Buttons & Speed"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid "Following Distance"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -3582,6 +3529,38 @@ msgid "Use map data to estimate the appropriate speed to drive through turns ahe
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Conditional Experimental Mode"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Automatically switch experimental mode on demanding curves, slow leads and low-speed turns. A manual switch keeps priority for a minute."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "  CEM: Curves"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Experimental mode follows lateral acceleration while cornering."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "  CEM: Curves While Following"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Allow the curve trigger while following a lead car."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "  CEM: Slow Leads"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Experimental mode follows when closing on a slower lead."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
 msgid "Custom ACC Speed Increments"
 msgstr ""
 
@@ -3711,6 +3690,26 @@ msgid "%"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Tiered"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Never"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Lower"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Higher"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Both"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Off: Disables the Speed Limit functions."
 msgstr ""
 
@@ -3739,11 +3738,35 @@ msgid "Percent: Adds a percent offset [Speed Limit + (Offset % Speed Limit)]"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Tiered: Adds a different offset for each speed limit range."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Customize Source"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Speed Limit Offset"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Confirm Limit Changes"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Ask before taking a new speed limit. Adds to the low-speed confirmation, never replaces it."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Manage Tiered Offsets"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Offset applied to the speed limit in this range."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Limit"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
@@ -3812,6 +3835,14 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Controls state of the device after boot/sleep."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "KONIK"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py
+msgid "COMMA"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -3981,6 +4012,14 @@ msgid "Hide the Firehose prompt on the home screen. The prompt will not be rende
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/display.py
+msgid "Show Driving Model on Home Screen"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py
+msgid "Name the active driving model on the offroad home screen."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py
 msgid "Screen Saver"
 msgstr ""
 
@@ -4003,6 +4042,56 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/display.py
 msgid "{} m"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Replace the single following distance per personality with a speed-dependent profile. The follow time is interpolated over speed, so the gap can be shorter in town and longer on the highway."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Following Profile"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Aggressive Personality"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Standard Personality"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Relaxed Personality"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Preset used for the aggressive driving personality: close (1.25 s -> 1.0 s), medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Preset used for the standard driving personality: close (1.25 s -> 1.0 s), medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Preset used for the relaxed driving personality: close (1.25 s -> 1.0 s), medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+#: selfdrive/ui/widgets/offroad_alerts.py
+msgid "Close"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+msgid "Medium"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Far"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Custom Following Profiles"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -4179,6 +4268,11 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "canceling..."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
 #: system/ui/mici_setup.py
 msgid "download failed"
 msgstr ""
@@ -4231,11 +4325,6 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Current"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-#: selfdrive/ui/sunnypilot/mici/layouts/models.py
-msgid "queued"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -4643,15 +4732,11 @@ msgid "Block Lane Change: Road Edge Detection"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid "Blocks the lane change if the model sees a road edge on your signaled side."
+msgid "Blocks the lane change if the model sees a road edge on your signaled side. Silent shows the alert without the chime."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
 msgid "Fast"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid "Medium"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
@@ -4660,6 +4745,14 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
 msgid "Extra Slow"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+msgid "Audible"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+msgid "Silent"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
@@ -5092,6 +5185,7 @@ msgid "Stop and Go for Manual Parking Brake (Beta)"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/subaru.py
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
 msgid "This feature is currently not available on this platform."
 msgstr ""
 
@@ -5189,6 +5283,10 @@ msgid "Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logi
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
+msgid "Enable smoother longitudinal control for TSS2 vehicles. Uses a custom speed-dependent integral gain curve for smoother traffic driving."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
 msgid "Enforce Factory Longitudinal Control"
 msgstr ""
 
@@ -5210,6 +5308,10 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
 msgid "Enable drive mode btn link"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
+msgid "TSS2 Smooth Longitudinal (Alpha)"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
@@ -5497,15 +5599,7 @@ msgid "exp."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/longitudinal_mode.py
-msgid "dynamic"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/longitudinal_mode.py
 msgid "experimental"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
-msgid "dynamic experimental control"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
@@ -5524,22 +5618,14 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
 msgid ""
-"Switches between chill and Experimental Mode on its own.\n"
-"Experimental for stops and slowdowns ahead, chill otherwise."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
-msgid ""
 "Experimental Mode often cruises below your set speed.\n"
-"It gently raises your speed toward it when the road ahead is clear.\n"
-"Does nothing while Dynamic Experimental Control is on."
+"It gently raises your speed toward it when the road ahead is clear."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
 msgid ""
 "Experimental Mode often follows farther back than your following distance.\n"
-"It closes the gap behind a steady car, never closer than chill mode.\n"
-"Does nothing while Dynamic Experimental Control is on."
+"It closes the gap behind a steady car, never closer than chill mode."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
@@ -5730,6 +5816,10 @@ msgid "ui timeout"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/display.py
+msgid "model on home"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/display.py
 msgid "screen saver"
 msgstr ""
 
@@ -5757,6 +5847,10 @@ msgid ""
 "How long settings stay open without a touch.\n"
 "Offroad, the screen then turns off, or the screen saver starts.\n"
 "Default keeps the stock timing."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/display.py
+msgid "Shows the driving model's name at the bottom of the home screen."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/display.py
@@ -5881,6 +5975,10 @@ msgstr ""
 msgid "progress"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "queued"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/onboarding.py
 msgid ""
 "enable\n"
@@ -5895,10 +5993,6 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/onboarding.py
 msgid "sunnylink enables secured remote access to your comma device from anywhere."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
-msgid "MPH"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
@@ -6033,6 +6127,14 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "extra slow"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
+msgid "audible"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
+msgid "silent"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
@@ -6201,7 +6303,9 @@ msgid "Waits an extra second after the blind spot clears."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
-msgid "Blocks a lane change toward a road edge the model sees."
+msgid ""
+"Blocks a lane change toward a road edge the model sees.\n"
+"Silent shows the alert without the chime."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
@@ -6422,6 +6526,14 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "sponsor"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
+msgid "paired"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
+msgid "pair"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
@@ -6708,12 +6820,8 @@ msgstr ""
 msgid "NW"
 msgstr ""
 
-#: selfdrive/ui/widgets/exp_mode_button.py
-msgid "EXPERIMENTAL MODE ON"
-msgstr ""
-
-#: selfdrive/ui/widgets/exp_mode_button.py
-msgid "CHILL MODE ON"
+#: selfdrive/ui/sunnypilot/onroad/navigation_card.py
+msgid "Then"
 msgstr ""
 
 #: selfdrive/ui/widgets/offroad_alerts.py
@@ -6783,10 +6891,6 @@ msgstr ""
 
 #: selfdrive/ui/widgets/offroad_alerts.py
 msgid "<b>Unsupported branch detected</b> - The current version of <b><u>%1</u></b> branch is no longer supported on the comma three. Please go to <b>[Device > Software]</b> and install a supported branch with <b><u>-tici</u></b> in the branch name for the comma three."
-msgstr ""
-
-#: selfdrive/ui/widgets/offroad_alerts.py
-msgid "Close"
 msgstr ""
 
 #: selfdrive/ui/widgets/offroad_alerts.py
@@ -7370,114 +7474,3 @@ msgstr ""
 msgid "Select"
 msgstr ""
 
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Curves"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Slower Lead"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Turn Signal"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Stops Ahead"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Low Speed Creep"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let a curve ahead hand speed control to the model."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let a slower or stopped car ahead hand speed control to the model."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let an active turn signal below the lane-change speed hand speed control to the model."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let a predicted stop for a light or sign hand speed control to the model."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let creeping at very low speed hand speed control to the model."
-msgstr ""
-
-#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
-msgid "joystick debug mode"
-msgstr ""
-
-#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
-msgid "record & upload driver camera"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\alpha_longitudinal_toggles.py
-msgid "Enable toggle to allow the model to determine when to use sunnypilot ACC or sunnypilot End to End Longitudinal."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid "This feature can only be used with sunnypilot longitudinal control enabled."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
-msgid "View the error log for sunnypilot crashes."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
-msgid "Are you sure you want to reset all sunnypilot settings to default? Once the settings are reset, there is no going back."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
-msgid "h"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "Run big models over a connected device running Jetlink. USB and iOS turn off ADB."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "Cancel Verification"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid "CLEARING..."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
-msgid "Enable this to enforce sunnypilot to steer with Torque lateral control."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
-msgid "Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in sunnypilot."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
-msgid "Torque Control Tune Version"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
-msgid "Select the version of Torque Control Tune to use."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
-msgid "Enable sunnylink uploader to allow sunnypilot to upload your driving data to sunnypilot servers. "
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
-msgid "This feature is unavailable because sunnypilot Longitudinal Control (Alpha) is not enabled."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
-msgid "intelligent cruise button management"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\tests\test_accelerator_ui.py
-msgid "USB and iOS turn off ADB."
-msgstr ""

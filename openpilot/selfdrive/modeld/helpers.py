@@ -2,10 +2,12 @@ import io
 import pickle
 import shutil
 import struct
+import sys
 import tempfile
+import time
 from pathlib import Path
 
-from openpilot.common.file_chunker import get_manifest_path
+from openpilot.common.hardware import AGNOS
 from openpilot.common.hardware.usb import CHESTNUT_USB_PRODUCT, USB_DEVICES_PATH, is_chestnut_usb_id
 
 MODELS_DIR = Path(__file__).resolve().parent / 'models'
@@ -34,7 +36,7 @@ def modeld_pkl_path(chestnut: bool):
   prefix = 'big_' if chestnut else ''
   return MODELS_DIR / f'{prefix}driving_tinygrad.pkl'
 
-def load_oob(f):
+def load_oob(path_or_f, chestnut=False):
   """Unpickle a model artifact: 8-byte opcode length, opcode stream, then weight buffers.
 
   Two layouts are in circulation and both have to load, because the two compilers in this
@@ -53,9 +55,20 @@ def load_oob(f):
   road edges at all. The 2026-10-24 restore to "upstream's form" only accounted for A --
   upstream builds its pkls with compile_modeld.py, this fork's SConscript does not.
 
-  Callers pass an open file object (open_file_chunked covers the big model's chunked
-  manifest).
+  path_or_f is either a path (modeld and dmonitoringmodeld at runtime; tinygrad's own loader
+  mmaps it, so it needs the real file) or an already-open file object (compile_modeld.py's
+  pickling round trip and the artifact tests).
   """
+  # The device the weights land on has to be selected up front: tinygrad's loader materializes
+  # them into whatever Device.DEFAULT happens to be, and for chestnut that is not DEFAULT yet.
+  if isinstance(path_or_f, (str, Path)):
+    from tinygrad import Context
+    device = 'USB+AMD:LLVM' if chestnut else 'QCOM' if AGNOS else 'METAL' if sys.platform == 'darwin' else 'CPU:LLVM'
+    with Context(DEV=device):
+      from tinygrad_repo.examples.openpilot.helpers import load_pickle
+      return load_pickle(path_or_f, out_of_band=True)
+
+  f = path_or_f
   opcodes = f.read(struct.unpack('<q', f.read(8))[0])
   rest = f.read()
 
@@ -122,7 +135,17 @@ def chestnut_present() -> bool:
       pass
   return False
 
+def wait_for_chestnut(timeout: float = 10.) -> None:
+  # the cable is detected before chestnut enumerates
+  st = time.monotonic()
+  while not chestnut_present():
+    if time.monotonic() - st > timeout:
+      raise TimeoutError("chestnut did not enumerate")
+    time.sleep(0.1)
+
 def chestnut_compiled() -> bool:
+  from openpilot.sunnypilot.models.big_model_source import is_lfs_pointer
   path = modeld_pkl_path(chestnut=True)
-  return (path.is_file() or Path(get_manifest_path(path)).is_file()) and all(
+  # zoompilot installs leave the big model a pointer (.lfsconfig); the big warps are tracked
+  return path.is_file() and not is_lfs_pointer(path) and all(
     (MODELS_DIR / f'big_driving_warp_{size}_tinygrad.pkl').is_file() for size in ('1344x760', '1928x1208'))
