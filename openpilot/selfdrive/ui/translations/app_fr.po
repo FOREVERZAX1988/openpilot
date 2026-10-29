@@ -225,6 +225,11 @@ msgstr "Accuser réception d'actionnement excessif"
 msgid "Actuator Delay:"
 msgstr "Retard de l'actionneur :"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. Not available with the Default model."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid ""
 "Adds an offset to the speed limit.\n"
@@ -424,7 +429,6 @@ msgid "Audible"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Auto"
 msgstr ""
 
@@ -642,6 +646,10 @@ msgstr "Grand modèle indisponible jusqu'au prochain trajet."
 msgid "Big model unavailable, {} is driving until the next drive."
 msgstr "Grand modèle indisponible, {} conduit jusqu'au prochain trajet."
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Blendful (Alpha)"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Blind Spot"
 msgstr ""
@@ -742,6 +750,7 @@ msgid "CHECK"
 msgstr "VÉRIFIER"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "CLEAR"
 msgstr "CLAIR"
 
@@ -765,6 +774,10 @@ msgstr "CONNECTER"
 #: system/ui/widgets/network.py
 msgid "CONNECTING..."
 msgstr "CONNEXION..."
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Calculating..."
+msgstr ""
 
 #: selfdrive/ui/layouts/settings/imu_calibration.py
 msgid "Calibration cancelled"
@@ -968,6 +981,7 @@ msgid "Choose your sponsorship tier and confirm your support"
 msgstr "Choisissez votre niveau de parrainage et confirmez votre soutien"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Clear Cache"
 msgstr "Vider le cache"
 
@@ -1515,6 +1529,7 @@ msgid "DEC: Turn Signal"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "DELETE"
 msgstr "SUPPRIMER"
 
@@ -1624,6 +1639,10 @@ msgstr "Interface utilisateur du développeur"
 #: selfdrive/ui/sunnypilot/layouts/settings/settings.py
 msgid "Device"
 msgstr "Appareil"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Device Storage"
+msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/device/device_layout.py
 msgid "Device must be registered with the comma.ai backend to pair."
@@ -1842,7 +1861,12 @@ msgstr "Télécharger"
 msgid "Download Failed"
 msgstr "Échec du téléchargement"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Downloaded Data"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Downloaded Maps"
 msgstr "Cartes téléchargées"
 
@@ -1905,6 +1929,10 @@ msgstr ""
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Driving Model"
 msgstr "Modèle de conduite"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Driving Model Cache"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Driving Right"
@@ -2300,6 +2328,13 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
 msgid "Experimental Mode Speed Assist"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
+msgid ""
+"Experimental Mode often cruises below your set speed and follows farther back.\n"
+"This drives as chill mode does whenever the model holds back.\n"
+"The model still makes every slowdown."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
@@ -2872,6 +2907,10 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Impossible Limit Threshold"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "In Experimental Mode, drive toward your set speed and following distance as chill mode does whenever the model holds back. The model still makes every slowdown."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
@@ -4925,6 +4964,10 @@ msgstr "Sélectionner une branche"
 msgid "Select a language"
 msgstr "Sélectionner une langue"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Select a non-Default model to use Blendful."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py
 msgid "Select a vehicle"
 msgstr "Sélectionnez un véhicule"
@@ -4970,6 +5013,10 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Server"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Set Speed Assist"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
@@ -5529,6 +5576,14 @@ msgstr ""
 msgid "Stops the model download in progress."
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py
+msgid "Storage"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Storage Used"
+msgstr ""
+
 #: selfdrive/ui/layouts/settings/toggles.py
 msgid "Strict"
 msgstr ""
@@ -5772,6 +5827,7 @@ msgid "This setting will take effect once the device enters offroad state."
 msgstr "Ce paramètre prendra effet une fois que l'appareil entrera en état tout-terrain."
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid ""
 "This will delete ALL downloaded maps\n"
 "\n"
@@ -5782,6 +5838,7 @@ msgstr ""
 "Etes-vous sûr de vouloir supprimer toutes les cartes ?"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "This will delete ALL downloaded models from the cache except the currently active model. Are you sure?"
 msgstr "Cela supprimera TOUS les modèles téléchargés du cache, à l'exception du modèle actuellement actif. Es-tu sûr?"
 
@@ -5951,6 +6008,10 @@ msgstr "Impossible de monter la partition de données. La partition est peut-êt
 msgid "Unable to restore the settings, try again later."
 msgstr "Impossible de restaurer les paramètres, réessayez plus tard."
 
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Unavailable"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Undo Safe Mode and put back the values it replaced?"
 msgstr ""
@@ -6090,6 +6151,10 @@ msgstr "Utilisez les prévisions de trajectoire de vision pour estimer la vitess
 msgid ""
 "Use your own lateral acceleration and friction as the starting tune.\n"
 "Self-tune still learns from there unless manual realtime is on."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Used Space"
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
@@ -6292,6 +6357,7 @@ msgid "Yes"
 msgstr "Oui"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Yes, delete all maps"
 msgstr "Oui, supprimez toutes les cartes"
 
@@ -6444,6 +6510,10 @@ msgstr "grand modèle"
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "big models"
 msgstr "grands modèles"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "blendful (alpha)"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/visuals.py
 msgid "blind spot"
@@ -6614,6 +6684,10 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid "custom increments"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "custom model only"
 msgstr ""
 
 #: system/ui/mici_setup.py
@@ -7593,6 +7667,10 @@ msgstr ""
 msgid "serial"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
+msgid "set speed assist"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "settings backed up"
 msgstr "paramètres sauvegardés"
@@ -8144,6 +8222,10 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "{} for now"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "{} free"
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/software.py

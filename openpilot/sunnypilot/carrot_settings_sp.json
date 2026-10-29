@@ -736,10 +736,15 @@
        "en": "Alpha longitudinal",
        "zh": "Alpha 纵向控制",
        "params": [
-        "ExperimentalModeSetSpeed",
-        "ExperimentalModeLeadGap",
         "AlphaLongitudinalEnabled",
         "ExperimentalMode",
+        "ExperimentalModeSetSpeed",
+        "ExperimentalModeLeadGap",
+        "DynamicExperimentalTriggerCurve",
+        "DynamicExperimentalTriggerLead",
+        "DynamicExperimentalTriggerSignal",
+        "DynamicExperimentalTriggerStopLight",
+        "DynamicExperimentalTriggerLowSpeed",
         "ExperimentalModeConfirmed"
        ]
       },
@@ -1063,10 +1068,13 @@
         "IntelligentCruiseButtonManagement",
         "SmartCruiseControlVision",
         "SmartCruiseControlMap",
+        "ConditionalExperimental",
+        "CECurves",
+        "CECurvesLead",
+        "CELead",
         "CustomAccIncrementsEnabled",
         "CustomAccShortPressIncrement",
         "CustomAccLongPressIncrement",
-        "MacanFusionMode",
         "LongitudinalMpcTuningComfortBrake",
         "LongitudinalMpcTuningStopDistance",
         "LongitudinalMpcTuningTFollowRelaxed",
@@ -1080,7 +1088,8 @@
         "SpeedLimitPolicy",
         "SpeedLimitMode",
         "SpeedLimitOffsetType",
-        "SpeedLimitValueOffset"
+        "SpeedLimitValueOffset",
+        "SpeedLimitConfirmOnChange"
        ]
       },
       {
@@ -1128,8 +1137,27 @@
         "OnroadScreenOffTimer",
         "InteractivityTimeout",
         "HideFirehosePrompt",
+        "HomeShowActiveModel",
         "ScreenSaverEnabled",
         "ScreenSaverTimeout"
+       ]
+      },
+      {
+       "id": "CARROT_SP_UI_FOLLOWING_PROFILE_TOGGLES",
+       "ko": "following_profile_toggles",
+       "en": "following_profile_toggles",
+       "zh": "following_profile_toggles",
+       "params": [
+        "LongitudinalFollowingProfileEnabled"
+       ]
+      },
+      {
+       "id": "CARROT_SP_UI_INITIAL_CRUISE_SPEED",
+       "ko": "initial_cruise_speed",
+       "en": "initial_cruise_speed",
+       "zh": "initial_cruise_speed",
+       "params": [
+        "InitialCruiseSpeedKph"
        ]
       },
       {
@@ -1144,14 +1172,13 @@
         "ModelManager_DownloadRef",
         "LaneTurnDesire",
         "LagdToggle",
+        "Blendful",
         "ModelManager_ClearCache",
         "CalibrationParams",
         "LiveTorqueParameters",
         "ModelManager_Favs",
         "ShowAdvancedControls",
-        "ModelManager_ActiveBundle",
-        "ModelManager_MirrorUrl",
-        "ModelManager_GithubProxy"
+        "ModelManager_ActiveBundle"
        ]
       },
       {
@@ -1176,10 +1203,9 @@
        "en": "OSM maps",
        "zh": "OSM 地图",
        "params": [
-        "OsmLocationName",
-        "MapdVersion",
         "OsmDownloadedDate",
         "OsmLocal",
+        "OsmLocationName",
         "OsmLocationTitle",
         "OsmStateName",
         "OsmStateTitle",
@@ -1187,6 +1213,7 @@
         "OSMDownloadLocations",
         "OSMDownloadBounds",
         "OsmDbUpdatesCheck",
+        "MapdVersion",
         "Mapd_ClearCache"
        ]
       },
@@ -1235,6 +1262,15 @@
        ]
       },
       {
+       "id": "CARROT_SP_UI_STORAGE",
+       "ko": "storage",
+       "en": "storage",
+       "zh": "storage",
+       "params": [
+        "ModelManager_ClearCache"
+       ]
+      },
+      {
        "id": "CARROT_SP_UI_SUNNYLINK",
        "ko": "sunnylink",
        "en": "Sunnylink",
@@ -1246,15 +1282,6 @@
         "BackupManager_CreateBackup",
         "BackupManager_RestoreVersion",
         "CompletedSunnylinkConsentVersion"
-       ]
-      },
-      {
-       "id": "CARROT_SP_UI_TOGGLES",
-       "ko": "토글",
-       "en": "Toggles",
-       "zh": "开关",
-       "params": [
-        "ExperimentalMode"
        ]
       },
       {
@@ -1286,6 +1313,7 @@
         "ToyotaEnhancedBsm",
         "ToyotaTSS2Long",
         "ToyotaDriveMode",
+        "ToyotaTSS2Smooth",
         "AlphaLongitudinalEnabled",
         "OnroadCycleRequested",
         "MacanStartStop",
@@ -5406,34 +5434,6 @@
   },
   {
    "group": "alpha_longitudinal_toggles",
-   "name": "ExperimentalModeSetSpeed",
-   "title": "Experimental Mode Set Speed",
-   "descr": "Activate experimental mode below a set speed.",
-   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
-   "etitle": "Experimental mode set speed",
-   "edescr": "Activate experimental mode below a set speed.",
-   "cgroup": "Alpha 纵向控制",
-   "ctitle": "实验模式速度条件",
-   "cdescr": "低于设定速度时自动进入实验模式。",
-   "default": false,
-   "type": "bool"
-  },
-  {
-   "group": "alpha_longitudinal_toggles",
-   "name": "ExperimentalModeLeadGap",
-   "title": "Experimental Mode Lead Gap",
-   "descr": "Activate experimental mode when following closely.",
-   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
-   "etitle": "Experimental mode lead gap",
-   "edescr": "Activate experimental mode when following closely.",
-   "cgroup": "Alpha 纵向控制",
-   "ctitle": "实验模式跟车条件",
-   "cdescr": "近距跟车时自动进入实验模式。",
-   "default": false,
-   "type": "bool"
-  },
-  {
-   "group": "alpha_longitudinal_toggles",
    "name": "AlphaLongitudinalEnabled",
    "title": "Alpha Longitudinal Enabled",
    "descr": "End-to-end longitudinal control for supported vehicles.",
@@ -5457,7 +5457,105 @@
    "cgroup": "Alpha 纵向控制",
    "ctitle": "实验模式",
    "cdescr": "启用实验（端到端）驾驶模式。",
-   "default": false,
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "ExperimentalModeSetSpeed",
+   "title": "Experimental Mode Set Speed",
+   "descr": "Activate experimental mode below a set speed.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Experimental mode set speed",
+   "edescr": "Activate experimental mode below a set speed.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "实验模式速度条件",
+   "cdescr": "低于设定速度时自动进入实验模式。",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "ExperimentalModeLeadGap",
+   "title": "Experimental Mode Lead Gap",
+   "descr": "Activate experimental mode when following closely.",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Experimental mode lead gap",
+   "edescr": "Activate experimental mode when following closely.",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "实验模式跟车条件",
+   "cdescr": "近距跟车时自动进入实验模式。",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "DynamicExperimentalTriggerCurve",
+   "title": "Dynamic Experimental Trigger Curve",
+   "descr": "sunnypilot",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Dynamic Experimental Trigger Curve",
+   "edescr": "sunnypilot",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "Dynamic Experimental Trigger Curve",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "DynamicExperimentalTriggerLead",
+   "title": "Dynamic Experimental Trigger Lead",
+   "descr": "sunnypilot",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Dynamic Experimental Trigger Lead",
+   "edescr": "sunnypilot",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "Dynamic Experimental Trigger Lead",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "DynamicExperimentalTriggerSignal",
+   "title": "Dynamic Experimental Trigger Signal",
+   "descr": "sunnypilot",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Dynamic Experimental Trigger Signal",
+   "edescr": "sunnypilot",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "Dynamic Experimental Trigger Signal",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "DynamicExperimentalTriggerStopLight",
+   "title": "Dynamic Experimental Trigger Stop Light",
+   "descr": "sunnypilot",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Dynamic Experimental Trigger Stop Light",
+   "edescr": "sunnypilot",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "Dynamic Experimental Trigger Stop Light",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "alpha_longitudinal_toggles",
+   "name": "DynamicExperimentalTriggerLowSpeed",
+   "title": "Dynamic Experimental Trigger Low Speed",
+   "descr": "sunnypilot",
+   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
+   "etitle": "Dynamic Experimental Trigger Low Speed",
+   "edescr": "sunnypilot",
+   "cgroup": "Alpha 纵向控制",
+   "ctitle": "Dynamic Experimental Trigger Low Speed",
+   "cdescr": "sunnypilot",
+   "default": true,
    "type": "bool"
   },
   {
@@ -5980,6 +6078,62 @@
   },
   {
    "group": "cruise",
+   "name": "ConditionalExperimental",
+   "title": "Conditional Experimental",
+   "descr": "sunnypilot",
+   "egroup": "CRUISE",
+   "etitle": "Conditional Experimental",
+   "edescr": "sunnypilot",
+   "cgroup": "巡航",
+   "ctitle": "Conditional Experimental",
+   "cdescr": "sunnypilot",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "cruise",
+   "name": "CECurves",
+   "title": "CECurves",
+   "descr": "sunnypilot",
+   "egroup": "CRUISE",
+   "etitle": "CECurves",
+   "edescr": "sunnypilot",
+   "cgroup": "巡航",
+   "ctitle": "CECurves",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "cruise",
+   "name": "CECurvesLead",
+   "title": "CECurves Lead",
+   "descr": "sunnypilot",
+   "egroup": "CRUISE",
+   "etitle": "CECurves Lead",
+   "edescr": "sunnypilot",
+   "cgroup": "巡航",
+   "ctitle": "CECurves Lead",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "cruise",
+   "name": "CELead",
+   "title": "CELead",
+   "descr": "sunnypilot",
+   "egroup": "CRUISE",
+   "etitle": "CELead",
+   "edescr": "sunnypilot",
+   "cgroup": "巡航",
+   "ctitle": "CELead",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "cruise",
    "name": "CustomAccIncrementsEnabled",
    "title": "Custom Acc Increments Enabled",
    "descr": "Use custom short/long-press speed steps instead of the stock ones.",
@@ -6019,20 +6173,6 @@
    "cdescr": "ACC 长按一次变化的速度（km/h）。",
    "default": 5,
    "type": "int"
-  },
-  {
-   "group": "cruise",
-   "name": "MacanFusionMode",
-   "title": "Macan Fusion Mode",
-   "descr": "sunnypilot",
-   "egroup": "CRUISE",
-   "etitle": "Macan Fusion Mode",
-   "edescr": "sunnypilot",
-   "cgroup": "巡航",
-   "ctitle": "Macan Fusion Mode",
-   "cdescr": "sunnypilot",
-   "default": true,
-   "type": "bool"
   },
   {
    "group": "cruise",
@@ -6227,6 +6367,20 @@
    "cgroup": "巡航",
    "ctitle": "限速偏移值",
    "cdescr": "在识别到的限速上叠加的偏移量。",
+   "default": 0,
+   "type": "int"
+  },
+  {
+   "group": "cruise",
+   "name": "SpeedLimitConfirmOnChange",
+   "title": "Speed Limit Confirm On Change",
+   "descr": "sunnypilot",
+   "egroup": "CRUISE",
+   "etitle": "Speed Limit Confirm On Change",
+   "edescr": "sunnypilot",
+   "cgroup": "巡航",
+   "ctitle": "Speed Limit Confirm On Change",
+   "cdescr": "sunnypilot",
    "default": 0,
    "type": "int"
   },
@@ -6554,6 +6708,20 @@
   },
   {
    "group": "display",
+   "name": "HomeShowActiveModel",
+   "title": "Home Show Active Model",
+   "descr": "sunnypilot",
+   "egroup": "DISPLAY",
+   "etitle": "Home Show Active Model",
+   "edescr": "sunnypilot",
+   "cgroup": "显示",
+   "ctitle": "Home Show Active Model",
+   "cdescr": "sunnypilot",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "display",
    "name": "ScreenSaverEnabled",
    "title": "Screen Saver Enabled",
    "descr": "Enable the offroad screen saver.",
@@ -6578,6 +6746,34 @@
    "ctitle": "屏保超时",
    "cdescr": "离路多少秒后启动屏保。",
    "default": 300,
+   "type": "int"
+  },
+  {
+   "group": "following_profile_toggles",
+   "name": "LongitudinalFollowingProfileEnabled",
+   "title": "Longitudinal Following Profile Enabled",
+   "descr": "sunnypilot",
+   "egroup": "FOLLOWING_PROFILE_TOGGLES",
+   "etitle": "Longitudinal Following Profile Enabled",
+   "edescr": "sunnypilot",
+   "cgroup": "following_profile_toggles",
+   "ctitle": "Longitudinal Following Profile Enabled",
+   "cdescr": "sunnypilot",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "initial_cruise_speed",
+   "name": "InitialCruiseSpeedKph",
+   "title": "Initial Cruise Speed Kph",
+   "descr": "sunnypilot",
+   "egroup": "INITIAL_CRUISE_SPEED",
+   "etitle": "Initial Cruise Speed Kph",
+   "edescr": "sunnypilot",
+   "cgroup": "initial_cruise_speed",
+   "ctitle": "Initial Cruise Speed Kph",
+   "cdescr": "sunnypilot",
+   "default": 40,
    "type": "int"
   },
   {
@@ -6662,6 +6858,20 @@
    "ctitle": "LaGD 开关",
    "cdescr": "启用车道线引导解码（LaGD）的模型输出。",
    "default": true,
+   "type": "bool"
+  },
+  {
+   "group": "models",
+   "name": "Blendful",
+   "title": "Blendful",
+   "descr": "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. Not available with the Default model.",
+   "egroup": "MODELS",
+   "etitle": "Blendful (Alpha)",
+   "edescr": "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. Not available with the Default model.",
+   "cgroup": "模型选择",
+   "ctitle": "融合车道（测试版）",
+   "cdescr": "在模型自身转向的基础上，轻柔地把车辆推回车道中央；车道线越清晰修正越强。遇到障碍会自动避让。默认模型不可用。",
+   "default": false,
    "type": "bool"
   },
   {
@@ -6834,34 +7044,6 @@
   },
   {
    "group": "osm",
-   "name": "OsmLocationName",
-   "title": "Osm Location Name",
-   "descr": "Resolved location name from the map (read-only).",
-   "egroup": "OSM",
-   "etitle": "Current location name",
-   "edescr": "Resolved location name from the map (read-only).",
-   "cgroup": "OSM 地图",
-   "ctitle": "当前位置名称",
-   "cdescr": "地图解析出的当前位置名（只读）。",
-   "default": "",
-   "type": "str"
-  },
-  {
-   "group": "osm",
-   "name": "MapdVersion",
-   "title": "Mapd Version",
-   "descr": "Version of the installed map daemon (read-only).",
-   "egroup": "OSM",
-   "etitle": "mapd version",
-   "edescr": "Version of the installed map daemon (read-only).",
-   "cgroup": "OSM 地图",
-   "ctitle": "mapd 版本",
-   "cdescr": "已安装地图守护进程版本（只读）。",
-   "default": "",
-   "type": "str"
-  },
-  {
-   "group": "osm",
    "name": "OsmDownloadedDate",
    "title": "Osm Downloaded Date",
    "descr": "When the current map set was downloaded (read-only).",
@@ -6887,6 +7069,20 @@
    "cdescr": "使用本地导入的地图文件而非在线下载。",
    "default": false,
    "type": "bool"
+  },
+  {
+   "group": "osm",
+   "name": "OsmLocationName",
+   "title": "Osm Location Name",
+   "descr": "Resolved location name from the map (read-only).",
+   "egroup": "OSM",
+   "etitle": "Current location name",
+   "edescr": "Resolved location name from the map (read-only).",
+   "cgroup": "OSM 地图",
+   "ctitle": "当前位置名称",
+   "cdescr": "地图解析出的当前位置名（只读）。",
+   "default": "",
+   "type": "str"
   },
   {
    "group": "osm",
@@ -6985,6 +7181,20 @@
    "cdescr": "检查地图数据库是否有更新。",
    "default": false,
    "type": "bool"
+  },
+  {
+   "group": "osm",
+   "name": "MapdVersion",
+   "title": "Mapd Version",
+   "descr": "Version of the installed map daemon (read-only).",
+   "egroup": "OSM",
+   "etitle": "mapd version",
+   "edescr": "Version of the installed map daemon (read-only).",
+   "cgroup": "OSM 地图",
+   "ctitle": "mapd 版本",
+   "cdescr": "已安装地图守护进程版本（只读）。",
+   "default": "",
+   "type": "str"
   },
   {
    "group": "osm",
@@ -7151,8 +7361,8 @@
    "cgroup": "转向",
    "ctitle": "路缘变道检测",
    "cdescr": "检测到路缘时阻止越界变道。",
-   "default": false,
-   "type": "bool"
+   "default": 0,
+   "type": "int"
   },
   {
    "group": "steering",
@@ -7590,6 +7800,20 @@
   },
   {
    "group": "vehicle",
+   "name": "ToyotaTSS2Smooth",
+   "title": "Toyota TSS2 Smooth",
+   "descr": "sunnypilot",
+   "egroup": "VEHICLE",
+   "etitle": "Toyota TSS2 Smooth",
+   "edescr": "sunnypilot",
+   "cgroup": "车辆",
+   "ctitle": "Toyota TSS2 Smooth",
+   "cdescr": "sunnypilot",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "vehicle",
    "name": "OnroadCycleRequested",
    "title": "Onroad Cycle Requested",
    "descr": "Request the onroad processes to cycle (action).",
@@ -7701,6 +7925,20 @@
    "type": "bool"
   },
   {
+   "group": "vehicle",
+   "name": "MacanFusionMode",
+   "title": "Macan Fusion Mode",
+   "descr": "sunnypilot",
+   "egroup": "VEHICLE",
+   "etitle": "Macan Fusion Mode",
+   "edescr": "sunnypilot",
+   "cgroup": "车辆",
+   "ctitle": "Macan Fusion Mode",
+   "cdescr": "sunnypilot",
+   "default": true,
+   "type": "bool"
+  },
+  {
    "group": "visuals",
    "name": "BlindSpot",
    "title": "Blind Spot",
@@ -7773,10 +8011,10 @@
   {
    "group": "visuals",
    "name": "E2EAlertsWhenEngaged",
-   "title": "E2E Alerts When Engaged",
+   "title": "E2 EAlerts When Engaged",
    "descr": "Play the green light and lead depart alerts even while cruise is engaged at a standstill.",
    "egroup": "VISUALS",
-   "etitle": "E2E alerts when engaged",
+   "etitle": "Alerts while engaged",
    "edescr": "Play the green light and lead depart alerts even while cruise is engaged at a standstill.",
    "cgroup": "视觉",
    "ctitle": "接管时也提醒",
@@ -7965,34 +8203,6 @@
    "cdescr": "计算得到的 3x3 旋转矩阵（只读）。",
    "default": "",
    "type": "str"
-  },
-  {
-   "group": "models",
-   "name": "ModelManager_MirrorUrl",
-   "title": "Model Manager Mirror Url",
-   "descr": "Prefix for big/small model artifact downloads (hf-mirror.com default; off = direct).",
-   "egroup": "MODELS",
-   "etitle": "Model download mirror",
-   "edescr": "Prefix for big/small model artifact downloads (hf-mirror.com default; off = direct).",
-   "cgroup": "模型选择",
-   "ctitle": "模型下载镜像",
-   "cdescr": "大/小模型 artifact 下载前缀（默认 hf-mirror.com；off = 直连）。",
-   "default": "",
-   "type": "str"
-  },
-  {
-   "group": "models",
-   "name": "ModelManager_GithubProxy",
-   "title": "Model Manager Github Proxy",
-   "descr": "How the model list JSON is fetched: direct, jsDelivr fallback, or a proxy prefix.",
-   "egroup": "MODELS",
-   "etitle": "Model list source",
-   "edescr": "How the model list JSON is fetched: direct, jsDelivr fallback, or a proxy prefix.",
-   "cgroup": "模型选择",
-   "ctitle": "模型列表源",
-   "cdescr": "模型目录 JSON 的获取方式：直连 / jsDelivr 兜底 / 代理前缀。",
-   "default": "",
-   "type": "str"
   }
  ],
  "_generated": {
@@ -8063,11 +8273,15 @@
    "AutoLaneChangeTimer",
    "BackupManager_CreateBackup",
    "BackupManager_RestoreVersion",
+   "Blendful",
    "BlindSpot",
    "BlinkerLateralReengageDelay",
    "BlinkerMinLateralControlSpeed",
    "BlinkerPauseLateralControl",
    "Brightness",
+   "CECurves",
+   "CECurvesLead",
+   "CELead",
    "CalibrationParams",
    "CameraOffset",
    "CarPlatformBundle",
@@ -8116,6 +8330,7 @@
    "CarrotWebEnabled",
    "ChevronInfo",
    "CompletedSunnylinkConsentVersion",
+   "ConditionalExperimental",
    "CustomAccIncrementsEnabled",
    "CustomAccLongPressIncrement",
    "CustomAccShortPressIncrement",
@@ -8129,13 +8344,16 @@
    "DoReboot",
    "DoReboot",
    "DongleId",
-   "DynamicExperimentalControl",
+   "DynamicExperimentalTriggerCurve",
+   "DynamicExperimentalTriggerLead",
+   "DynamicExperimentalTriggerLowSpeed",
+   "DynamicExperimentalTriggerSignal",
+   "DynamicExperimentalTriggerStopLight",
    "E2EAlertsWhenEngaged",
    "EnableCopyparty",
    "EnableGithubRunner",
    "EnableSunnylinkUploader",
    "EnforceTorqueControl",
-   "ExperimentalMode",
    "ExperimentalMode",
    "ExperimentalModeConfirmed",
    "ExperimentalModeLeadGap",
@@ -8146,7 +8364,9 @@
    "HardwareSerial",
    "HideFirehosePrompt",
    "HideVEgoUI",
+   "HomeShowActiveModel",
    "HyundaiLongitudinalTuning",
+   "InitialCruiseSpeedKph",
    "IntelligentCruiseButtonManagement",
    "InteractivityTimeout",
    "IsDevelopmentBranch",
@@ -8165,6 +8385,7 @@
    "LiveTorqueParamsRelaxedToggle",
    "LiveTorqueParamsToggle",
    "LocalDriveStats",
+   "LongitudinalFollowingProfileEnabled",
    "LongitudinalMpcTuningAChangeCost",
    "LongitudinalMpcTuningComfortBrake",
    "LongitudinalMpcTuningDangerZoneCost",
@@ -8175,7 +8396,6 @@
    "LongitudinalMpcTuningTFollowRelaxed",
    "LongitudinalMpcTuningTFollowStandard",
    "LongitudinalMpcTuningXEgoObstacleCost",
-   "MacanFusionMode",
    "MacanFusionMode",
    "MacanRadarFusion",
    "MacanSlopeComp",
@@ -8193,6 +8413,7 @@
    "MaxTimeOffroad",
    "MazdaTjaButton",
    "ModelManager_ActiveBundle",
+   "ModelManager_ClearCache",
    "ModelManager_ClearCache",
    "ModelManager_DownloadRef",
    "ModelManager_Favs",
@@ -8231,6 +8452,7 @@
    "SlcLeadDropRelaxationEnabled",
    "SmartCruiseControlMap",
    "SmartCruiseControlVision",
+   "SpeedLimitConfirmOnChange",
    "SpeedLimitMode",
    "SpeedLimitOffsetType",
    "SpeedLimitPolicy",
@@ -8255,6 +8477,7 @@
    "ToyotaEnhancedBsm",
    "ToyotaStopAndGoHack",
    "ToyotaTSS2Long",
+   "ToyotaTSS2Smooth",
    "TripsDataSource",
    "TrueVEgoUI",
    "UseKonikServer",
@@ -8291,17 +8514,19 @@
    "developer",
    "device",
    "display",
+   "following_profile_toggles",
+   "initial_cruise_speed",
    "models",
    "navigation",
    "osm",
    "software",
    "steering",
+   "storage",
    "sunnylink",
-   "toggles",
    "trips",
    "vehicle",
    "visuals"
   ],
-  "labelled_by_sp_param_labels": 275
+  "labelled_by_sp_param_labels": 286
  }
 }

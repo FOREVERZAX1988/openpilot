@@ -4,6 +4,18 @@ msgstr ""
 "Language: zh-CHT\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "  CEM: Curves"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "  CEM: Curves While Following"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "  CEM: Slow Leads"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid " (Default)"
 msgstr "(預設)"
@@ -25,9 +37,7 @@ msgid "%"
 msgstr "%"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-msgid ""
-"(Only for highest tiers, and does NOT bring ANY benefit to you yet. We are "
-"just testing data volume.)"
+msgid "(Only for highest tiers, and does NOT bring ANY benefit to you yet. We are just testing data volume.)"
 msgstr "（僅適用於最高階別，尚未為您帶來任何好處。我們只是測試資料量。）"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/display.py
@@ -67,13 +77,8 @@ msgid "1"
 msgstr "1"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"1 = take the ACC set speed from the car (PCM). Required on Toyota: its PCM "
-"consumes the +/- buttons itself, so openpilot would otherwise keep its own "
-"set speed while the cluster moves."
-msgstr ""
-"1 = 從車輛（PCM）取得 ACC 設定速度。豐田上必須開啟：其 PCM 會自行處理 +/- 按"
-"鍵，否則儀表變化時 openpilot 仍會保留自己的設定速度。"
+msgid "1 = take the ACC set speed from the car (PCM). Required on Toyota: its PCM consumes the +/- buttons itself, so openpilot would otherwise keep its own set speed while the cluster moves."
+msgstr "1 = 從車輛（PCM）取得 ACC 設定速度。豐田上必須開啟：其 PCM 會自行處理 +/- 按鍵，否則儀表變化時 openpilot 仍會保留自己的設定速度。"
 
 #: selfdrive/ui/widgets/prime.py
 msgid "1 year of drive storage"
@@ -128,30 +133,12 @@ msgid "5G"
 msgstr "5G"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"<b>Unsupported branch detected</b> - The current version of <b><u>%1</u></b> "
-"branch is no longer supported on the comma three. Please go to <b>[Device > "
-"Software]</b> and install a supported branch with <b><u>-tici</u></b> in the "
-"branch name for the comma three."
-msgstr ""
-"<b>偵測到不受支援的分支</b> - 當前 <b><u>%1</u></b> 分支版本已不再支援 comma "
-"three。請前往 <b>[裝置 > 軟體]</b> 安裝分支名稱包含 <b><u>-tici</u></b> 的受"
-"支援分支。"
+msgid "<b>Unsupported branch detected</b> - The current version of <b><u>%1</u></b> branch is no longer supported on the comma three. Please go to <b>[Device > Software]</b> and install a supported branch with <b><u>-tici</u></b> in the branch name for the comma three."
+msgstr "<b>偵測到不受支援的分支</b> - 當前 <b><u>%1</u></b> 分支版本已不再支援 comma three。請前往 <b>[裝置 > 軟體]</b> 安裝分支名稱包含 <b><u>-tici</u></b> 的受支援分支。"
 
 #: selfdrive/ui/layouts/settings/developer.py
-msgid ""
-"<b>WARNING: sunnypilot longitudinal control is in alpha for this car and may "
-"disable Automatic Emergency Braking (AEB).</b><br><br>On this car, "
-"sunnypilot defaults to the car's built-in ACC instead of sunnypilot's "
-"longitudinal control. Enable this to switch to sunnypilot longitudinal "
-"control. Enabling Experimental mode is recommended when enabling sunnypilot "
-"longitudinal control alpha. Changing this setting will restart sunnypilot if "
-"the car is powered on."
-msgstr ""
-"<b>警告：此車型的 sunnypilot 縱向控制為 Alpha 版，可能停用自動緊急制動 "
-"(AEB)。</b><br><br>此車型預設使用原廠 ACC 而非 sunnypilot 縱向控制。啟用此項"
-"可切換至 sunnypilot 縱向控制。啟用縱向控制 Alpha 時建議同時啟用實驗模式。若車"
-"輛通電，變更此設定將重啟 sunnypilot。"
+msgid "<b>WARNING: sunnypilot longitudinal control is in alpha for this car and may disable Automatic Emergency Braking (AEB).</b><br><br>On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. Enable this to switch to sunnypilot longitudinal control. Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. Changing this setting will restart sunnypilot if the car is powered on."
+msgstr "<b>警告：此車型的 sunnypilot 縱向控制為 Alpha 版，可能停用自動緊急制動 (AEB)。</b><br><br>此車型預設使用原廠 ACC 而非 sunnypilot 縱向控制。啟用此項可切換至 sunnypilot 縱向控制。啟用縱向控制 Alpha 時建議同時啟用實驗模式。若車輛通電，變更此設定將重啟 sunnypilot。"
 
 #: selfdrive/ui/layouts/settings/device.py
 msgid "<br><br>Steering lag calibration is complete."
@@ -162,36 +149,19 @@ msgid "<br><br>Steering lag calibration is {}% complete."
 msgstr "<br><br>轉向延遲校正已完成 {}%。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"A beautiful rainbow effect on the path the model wants to take. It does not "
-"affect driving in any way."
+msgid "A beautiful rainbow effect on the path the model wants to take. It does not affect driving in any way."
 msgstr "在模型規劃路徑上顯示彩虹效果，純視覺裝飾，不影響駕駛。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"A chime and on-screen alert will play when the traffic light you are waiting "
-"for turns green and you have no vehicle in front of you.<br>Note: This chime "
-"is only designed as a notification. It is the driver's responsibility to "
-"observe their environment and make decisions accordingly."
-msgstr ""
-"等待的紅燈變綠且前方無車時，將播放提示音並顯示螢幕警報。<br>注意：此提示音僅"
-"為通知，觀察環境並做出判斷仍是駕駛員的責任。"
+msgid "A chime and on-screen alert will play when the traffic light you are waiting for turns green and you have no vehicle in front of you.<br>Note: This chime is only designed as a notification. It is the driver's responsibility to observe their environment and make decisions accordingly."
+msgstr "等待的紅燈變綠且前方無車時，將播放提示音並顯示螢幕警報。<br>注意：此提示音僅為通知，觀察環境並做出判斷仍是駕駛員的責任。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"A chime and on-screen alert will play when you are stopped, and the vehicle "
-"in front of you start moving.<br>Note: This chime is only designed as a "
-"notification. It is the driver's responsibility to observe their environment "
-"and make decisions accordingly."
-msgstr ""
-"停車時前方車輛起步，將播放提示音並顯示螢幕警報。<br>注意：此提示音僅為通知，"
-"觀察環境並做出判斷仍是駕駛員的責任。"
+msgid "A chime and on-screen alert will play when you are stopped, and the vehicle in front of you start moving.<br>Note: This chime is only designed as a notification. It is the driver's responsibility to observe their environment and make decisions accordingly."
+msgstr "停車時前方車輛起步，將播放提示音並顯示螢幕警報。<br>注意：此提示音僅為通知，觀察環境並做出判斷仍是駕駛員的責任。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"A detected limit at or below this value is dropped as an impossible reading. "
-"Stored in m/s, shown in both; only read while the filter above is on. "
-"Applies within about five seconds."
+msgid "A detected limit at or below this value is dropped as an impossible reading. Stored in m/s, shown in both; only read while the filter above is on. Applies within about five seconds."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/accelerator_link.py
@@ -211,12 +181,8 @@ msgid "ACTUAL L.A."
 msgstr "實際洛杉磯"
 
 #: selfdrive/ui/layouts/settings/developer.py
-msgid ""
-"ADB (Android Debug Bridge) allows connecting to your device over USB or over "
-"the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
-msgstr ""
-"ADB（Android 偵錯橋）允許透過 USB 或網路連線裝置。詳見 https://docs.comma.ai/"
-"how-to/connect-to-comma"
+msgid "ADB (Android Debug Bridge) allows connecting to your device over USB or over the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
+msgstr "ADB（Android 偵錯橋）允許透過 USB 或網路連線裝置。詳見 https://docs.comma.ai/how-to/connect-to-comma"
 
 #: selfdrive/ui/widgets/ssh_key.py
 msgid "ADD"
@@ -271,6 +237,11 @@ msgstr "確認過度作動"
 msgid "Actuator Delay:"
 msgstr "執行器延遲："
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. Not available with the Default model."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid ""
 "Adds an offset to the speed limit.\n"
@@ -292,9 +263,7 @@ msgid "Adjust Software Delay"
 msgstr "調整軟體延遲"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"Adjust the software delay when Live Learning Steer Delay is toggled off. The "
-"default software delay value is 0.2"
+msgid "Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay value is 0.2"
 msgstr "當即時學習轉向延遲關閉時調整軟體延遲。預設軟體延遲值為0.2"
 
 msgid "Adjusting to Last Speed Limit"
@@ -319,6 +288,10 @@ msgstr "進階横向調參（FLM）"
 #: selfdrive/ui/layouts/settings/toggles.py
 msgid "Aggressive"
 msgstr "積極"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Aggressive Personality"
+msgstr ""
 
 #: selfdrive/ui/layouts/onboarding.py
 msgid "Agree"
@@ -356,10 +329,12 @@ msgstr "允許行動數據漫遊。"
 msgid "Allow other devices to find this device."
 msgstr "允許其他裝置發現本裝置。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Allow the curve trigger while following a lead car."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
-msgid ""
-"Allows the driver to provide limited steering input while openpilot is "
-"engaged."
+msgid "Allows the driver to provide limited steering input while openpilot is engaged."
 msgstr "允許駕駛員在 openpilot 接合時提供有限的轉向輸入。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
@@ -384,22 +359,15 @@ msgid "Always-On Driver Monitoring"
 msgstr "持續啟用駕駛監控"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"An alpha version of sunnypilot longitudinal control can be tested, along "
-"with Experimental mode, on non-release branches."
+msgid "An alpha version of sunnypilot longitudinal control can be tested, along with Experimental mode, on non-release branches."
 msgstr "在非釋出分支上可測試 sunnypilot 縱向控制 Alpha 版及實驗模式。"
 
 #: system/ui/tici_updater.py
-msgid ""
-"An operating system update is required. Connect your device to Wi-Fi for the "
-"fastest update experience. The download size is approximately 1GB."
-msgstr ""
-"需要更新作業系統。將裝置連上 Wi-Fi 可獲得最快的更新體驗。下載大小約為 1GB。"
+msgid "An operating system update is required. Connect your device to Wi-Fi for the fastest update experience. The download size is approximately 1GB."
+msgstr "需要更新作業系統。將裝置連上 Wi-Fi 可獲得最快的更新體驗。下載大小約為 1GB。"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"An update to your device's operating system is downloading in the "
-"background. You will be prompted to update when it's ready to install."
+msgid "An update to your device's operating system is downloading in the background. You will be prompted to update when it's ready to install."
 msgstr "裝置作業系統更新正在背景下載。準備就緒後將提示您安裝。"
 
 msgid "Angle offset too high (Offset: {offset}°)"
@@ -414,17 +382,11 @@ msgid "Apply Model Speed"
 msgstr "模型速度融合"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/display.py
-msgid ""
-"Apply a custom timeout for settings UI.<br>This is the time after which "
-"settings UI closes automatically if user is not interacting with the screen."
+msgid "Apply a custom timeout for settings UI.<br>This is the time after which settings UI closes automatically if user is not interacting with the screen."
 msgstr "為設定介面設定自定義超時。<br>使用者無操作後，設定介面將自動關閉。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Apply the friction curve and per-vehicle knobs from the FLM tool's applied "
-"profile to the lateral torque controller. Off keeps the override table empty "
-"and stock friction in force. With no profile applied the bundle is empty and "
-"this switch changes nothing; takes effect within a few seconds, no restart."
+msgid "Apply the friction curve and per-vehicle knobs from the FLM tool's applied profile to the lateral torque controller. Off keeps the override table empty and stock friction in force. With no profile applied the bundle is empty and this switch changes nothing; takes effect within a few seconds, no restart."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
@@ -452,16 +414,11 @@ msgid "Are you sure you want to reboot?"
 msgstr "確定要重新啟動嗎？"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
-msgid ""
-"Are you sure you want to reset all sunnypilot settings to default? Once the "
-"settings are reset, there is no going back."
-msgstr ""
-"您確定要將所有 sunnypilot 設定重設為預設值嗎？一旦重置設定，就無法返回。"
+msgid "Are you sure you want to reset all sunnypilot settings to default? Once the settings are reset, there is no going back."
+msgstr "您確定要將所有 sunnypilot 設定重設為預設值嗎？一旦重置設定，就無法返回。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
-msgid ""
-"Are you sure you want to reset all zoompilot settings to default? Once the "
-"settings are reset, there is no going back."
+msgid "Are you sure you want to reset all zoompilot settings to default? Once the settings are reset, there is no going back."
 msgstr "確定要將所有 zoompilot 設定恢復為預設值嗎？設定一旦重置將無法撤銷。"
 
 #: selfdrive/ui/layouts/settings/device.py
@@ -473,8 +430,7 @@ msgid "Are you sure you want to reset your device?"
 msgstr "您確定要重置您的裝置嗎？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-msgid ""
-"Are you sure you want to restore the last backed up sunnypilot settings?"
+msgid "Are you sure you want to restore the last backed up sunnypilot settings?"
 msgstr "您確定要還原上次備份的 sunnypilot 設定嗎？"
 
 #: selfdrive/ui/layouts/settings/software.py
@@ -482,21 +438,19 @@ msgid "Are you sure you want to uninstall?"
 msgstr "確定要解除安裝嗎？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Ask Open-Meteo for the conditions where the car is, instead of entering them "
-"by hand. Uses the mobile data connection while driving."
+msgid "Ask Open-Meteo for the conditions where the car is, instead of entering them by hand. Uses the mobile data connection while driving."
+msgstr "根據車輛所在位置向 Open-Meteo 查詢即時天氣，無需手動填寫。行駛中會使用行動數據網路。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Ask before taking a new speed limit. Adds to the low-speed confirmation, never replaces it."
 msgstr ""
-"根據車輛所在位置向 Open-Meteo 查詢即時天氣，無需手動填寫。行駛中會使用行動數"
-"據網路。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Assist"
 msgstr "協助"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid ""
-"Assist: Adjusts the vehicle's cruise speed based on the current road's speed "
-"limit when operating the +/- buttons."
+msgid "Assist: Adjusts the vehicle's cruise speed based on the current road's speed limit when operating the +/- buttons."
 msgstr "輔助：操作+/-按鈕​​時，依照目前道路的限速調整車輛的巡航速度。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
@@ -507,8 +461,11 @@ msgstr ""
 "輔助：限速變化時，按 - 或 + 讓設定速度與之匹配。\n"
 "提示與警告僅在 comma 3X 上顯示標誌。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+msgid "Audible"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Auto"
 msgstr "自動"
 
@@ -588,6 +545,10 @@ msgstr "自動提升道路限速"
 msgid "Automatic turn, fork / merge and curve speed control."
 msgstr "自動轉向、岔路/匯入與彎道速度控制。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Automatically switch experimental mode on demanding curves, slow leads and low-speed turns. A manual switch keeps priority for a minute."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Available devices"
 msgstr "可用裝置"
@@ -624,7 +585,8 @@ msgstr "僅比亞迪：把角雷達軌跡輸入雷達介面。"
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-#: system/ui/tici_setup.py system/ui/tici_updater.py
+#: system/ui/tici_setup.py
+#: system/ui/tici_updater.py
 #: system/ui/widgets/network.py
 msgid "Back"
 msgstr "返回"
@@ -658,25 +620,16 @@ msgid "Become a comma prime member at connect.comma.ai"
 msgstr "前往 connect.comma.ai 成為 comma prime 會員"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-msgid ""
-"Become a sponsor of sunnypilot to get early access to sunnylink features "
-"when they become available."
-msgstr ""
-"成為 sunnypilot 的贊助商，以便儘早使用 sunnylink 功能（當這些功能可用時）。"
+msgid "Become a sponsor of sunnypilot to get early access to sunnylink features when they become available."
+msgstr "成為 sunnypilot 的贊助商，以便儘早使用 sunnylink 功能（當這些功能可用時）。"
 
 #: system/ui/tici_setup.py
-msgid ""
-"Before we get on the road, let's finish installation and cover some details."
+msgid "Before we get on the road, let's finish installation and cover some details."
 msgstr "在我們上路之前，讓我們完成安裝並介紹一些細節。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Below this curve speed (km/h), the lane-line curvature correction is "
-"suppressed so tight bends rely on the map/vision curve speed alone. 0 "
-"disables the gate."
-msgstr ""
-"彎道速度低於該值（km/h）時抑制車道線曲率修正，急彎只依賴地圖/視覺彎道速度。0 "
-"表示不啟用。"
+msgid "Below this curve speed (km/h), the lane-line curvature correction is suppressed so tight bends rely on the map/vision curve speed alone. 0 disables the gate."
+msgstr "彎道速度低於該值（km/h）時抑制車道線曲率修正，急彎只依賴地圖/視覺彎道速度。0 表示不啟用。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "Below this speed, the blinker pauses steering."
@@ -706,6 +659,10 @@ msgstr "大模型不可用，下次行駛前無法使用。"
 msgid "Big model unavailable, {} is driving until the next drive."
 msgstr "大模型不可用，下次行駛前由 {} 駕駛。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Blendful (Alpha)"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Blind Spot"
 msgstr "盲點"
@@ -718,10 +675,19 @@ msgstr "阻止變道：道路邊緣檢測"
 msgid "Blocks a lane change toward a road edge the model sees."
 msgstr "模型檢測到目標側有道路邊緣時，阻止向該側變道。"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
-"Blocks the lane change if the model sees a road edge on your signaled side."
+"Blocks a lane change toward a road edge the model sees.\n"
+"Silent shows the alert without the chime."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+msgid "Blocks the lane change if the model sees a road edge on your signaled side."
 msgstr "若模型在打燈一側檢測到道路邊緣，則阻止該次變道。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+msgid "Blocks the lane change if the model sees a road edge on your signaled side. Silent shows the alert without the chime."
+msgstr ""
 
 #: selfdrive/ui/layouts/settings/settings.py
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -761,6 +727,10 @@ msgstr "藍牙服務已停止"
 msgid "Bookmark connect.comma.ai to your home screen to use it like an app"
 msgstr "將 connect.comma.ai 加到主畫面，像 App 一樣使用"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Both"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "Bottom"
 msgstr "底部"
@@ -785,6 +755,7 @@ msgid "CHILL MODE ON"
 msgstr "安穩模式已開啟"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "CLEAR"
 msgstr "清除"
 
@@ -792,7 +763,6 @@ msgstr "清除"
 msgid "CLEARING..."
 msgstr "清除中..."
 
-#: selfdrive/ui/mici/layouts/settings/device.py
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "COMMA"
 msgstr "COMMA"
@@ -801,13 +771,18 @@ msgstr "COMMA"
 msgid "CONFIGURE"
 msgstr "設定"
 
-#: selfdrive/ui/layouts/sidebar.py system/ui/widgets/network.py
+#: selfdrive/ui/layouts/sidebar.py
+#: system/ui/widgets/network.py
 msgid "CONNECT"
 msgstr "連線"
 
-#: openpilot\system\ui\widgets\network.py
+#: system/ui/widgets/network.py
 msgid "CONNECTING..."
 msgstr "連線中..."
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Calculating..."
+msgstr ""
 
 #: selfdrive/ui/layouts/settings/imu_calibration.py
 msgid "Calibration cancelled"
@@ -825,9 +800,12 @@ msgid "Calibration in progress: {progress}%"
 msgstr "校正進行中：{progress}%"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py system/ui/tici_reset.py
-#: system/ui/widgets/confirm_dialog.py system/ui/widgets/keyboard.py
-#: system/ui/widgets/network.py system/ui/widgets/option_dialog.py
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: system/ui/tici_reset.py
+#: system/ui/widgets/confirm_dialog.py
+#: system/ui/widgets/keyboard.py
+#: system/ui/widgets/network.py
+#: system/ui/widgets/option_dialog.py
 msgid "Cancel"
 msgstr "取消"
 
@@ -852,9 +830,7 @@ msgid "Cancelled"
 msgstr "已取消"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Cap the longitudinal acceleration allowed while the car is inside a curve. "
-"Read once when plannerd starts - restart to apply."
+msgid "Cap the longitudinal acceleration allowed while the car is inside a curve. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
@@ -862,12 +838,8 @@ msgid "Car First"
 msgstr "汽車優先"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
-msgid ""
-"Car First: Use Speed Limit data from Car if available, else use from "
-"OpenStreetMaps"
-msgstr ""
-"汽車優先：使用來自汽車的限速資料（如果有），否則使用來自 OpenStreetMaps 的資"
-"料"
+msgid "Car First: Use Speed Limit data from Car if available, else use from OpenStreetMaps"
+msgstr "汽車優先：使用來自汽車的限速資料（如果有），否則使用來自 OpenStreetMaps 的資料"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
 msgid "Car Only"
@@ -966,11 +938,8 @@ msgstr "Chestnut AI 加速器"
 msgid "Chestnut Status"
 msgstr "Chestnut 狀態"
 
-msgid ""
-"Chestnut detected! Switch to the release-chestnut branch to use chestnut-"
-"class models."
-msgstr ""
-"檢測到 Chestnut！請切換到 release-chestnut 分支以使用 chestnut 級模型。"
+msgid "Chestnut detected! Switch to the release-chestnut branch to use chestnut-class models."
+msgstr "檢測到 Chestnut！請切換到 release-chestnut 分支以使用 chestnut 級模型。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "Chime Alerts While Engaged (Beta)"
@@ -997,15 +966,11 @@ msgid "Choose Software to Use"
 msgstr "選擇要使用的軟體"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\mads_settings.py
-msgid ""
-"Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is "
-"manually pressed in sunnypilot."
+msgid "Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in sunnypilot."
 msgstr "選擇在 sunnypilot 中手動踩下煞車踏板後自動車道居中 (ALC) 的行為方式。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
-msgid ""
-"Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is "
-"manually pressed in zoompilot."
+msgid "Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in zoompilot."
 msgstr "選擇手動踩下剎車後，自動車道居中（ALC）在 zoompilot 中的行為。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
@@ -1021,6 +986,7 @@ msgid "Choose your sponsorship tier and confirm your support"
 msgstr "選擇您的贊助等級並確認您的支援"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Clear Cache"
 msgstr "清除快取"
 
@@ -1040,18 +1006,18 @@ msgstr "點選「新增裝置」，掃描右側 QR 碼"
 msgid "Click the Sponsor button for more details"
 msgstr "點選贊助按鈕瞭解更多詳情"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
 #: selfdrive/ui/widgets/offroad_alerts.py
 msgid "Close"
 msgstr "關閉"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"Closes the gap to your driving personality's following distance behind a "
-"steady car. Never closer than chill mode. No effect while Dynamic "
-"Experimental Control is on."
+msgid "Closes the gap to your driving personality's following distance behind a steady car. Never closer than chill mode."
 msgstr ""
-"在穩定跟車時縮短到符合您駕駛習慣的跟車距離，但不會近於輕鬆模式。動態實驗控制"
-"開啟時無效。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Closes the gap to your driving personality's following distance behind a steady car. Never closer than chill mode. No effect while Dynamic Experimental Control is on."
+msgstr "在穩定跟車時縮短到符合您駕駛習慣的跟車距離，但不會近於輕鬆模式。動態實驗控制開啟時無效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/trips.py
 msgid "Cloud"
@@ -1204,10 +1170,12 @@ msgstr "正在計算校正..."
 msgid "Computing..."
 msgstr "正在計算..."
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Conditional Experimental Mode"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Confidence threshold for ONNX blind-spot detection, in percent. Higher means "
-"fewer, more certain detections."
+msgid "Confidence threshold for ONNX blind-spot detection, in percent. Higher means fewer, more certain detections."
 msgstr "ONNX 盲區偵測的信心度閾值（%）。越高偵出越少但越確定。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -1221,6 +1189,10 @@ msgstr "ONNX 車道偵測的信心度閾值（%）。"
 msgid "Confirm"
 msgstr "確認"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Confirm Limit Changes"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Confirm pairing with \"{}\"?"
 msgstr "確認與「{}」配對？"
@@ -1232,20 +1204,16 @@ msgstr "確認前方路況並準備減速"
 msgid "Connect"
 msgstr "連線"
 
-#: system/ui/tici_setup.py system/ui/tici_updater.py
+#: system/ui/tici_setup.py
+#: system/ui/tici_updater.py
 msgid "Connect to Wi-Fi"
 msgstr "連線到 Wi-Fi"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"Connect to internet to check for updates. sunnypilot won't automatically "
-"start until it connects to internet to check for updates."
-msgstr ""
-"請連線網際網路以檢查更新。sunnypilot 在連線網際網路檢查更新之前不會自動啟動。"
+msgid "Connect to internet to check for updates. sunnypilot won't automatically start until it connects to internet to check for updates."
+msgstr "請連線網際網路以檢查更新。sunnypilot 在連線網際網路檢查更新之前不會自動啟動。"
 
-msgid ""
-"Connect to internet to check for updates. zoompilot won't automatically "
-"start until it connects to internet to check for updates."
+msgid "Connect to internet to check for updates. zoompilot won't automatically start until it connects to internet to check for updates."
 msgstr "連線網路以檢查更新。zoompilot 在聯網檢查更新前不會自動啟動。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -1293,10 +1261,7 @@ msgid "Country"
 msgstr "國家"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Creep the follow distance back out after something (a cut-in, a hard "
-"slowdown) squeezed it short. Read once when plannerd starts - restart to "
-"apply."
+msgid "Creep the follow distance back out after something (a cut-in, a hard slowdown) squeezed it short. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/settings.py
@@ -1423,6 +1388,10 @@ msgstr "自訂"
 msgid "Custom ACC Speed Increments"
 msgstr "自訂 ACC 速度增量"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Custom Following Profiles"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py
 msgid "Custom Longitudinal Tuning"
 msgstr "客製化縱向調整"
@@ -1463,7 +1432,28 @@ msgstr "切入提前減速"
 msgid "Cut-out Relief"
 msgstr "切出解除抑制"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Curves"
+msgstr "DEC: 彎道"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Low Speed Creep"
+msgstr "DEC: 低速蠕行"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Slower Lead"
+msgstr "DEC: 前車較慢"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Stops Ahead"
+msgstr "DEC: 前方停車"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "DEC: Turn Signal"
+msgstr "DEC: 方向燈"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "DELETE"
 msgstr "刪除"
 
@@ -1482,6 +1472,10 @@ msgstr "所需轉向"
 #: selfdrive/ui/sunnypilot/layouts/sidebar.py
 msgid "DISABLED"
 msgstr "停用"
+
+#: selfdrive/ui/layouts/settings/toggles.py
+msgid "DM Pearl Eyes Display"
+msgstr ""
 
 #: selfdrive/ui/layouts/settings/software.py
 msgid "DOWNLOAD"
@@ -1572,7 +1566,11 @@ msgstr "開發者介面"
 msgid "Device"
 msgstr "裝置"
 
-#: selfdrive/ui/mici/layouts/settings/device.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Device Storage"
+msgstr ""
+
+#: selfdrive/ui/mici/layouts/settings/device/device_layout.py
 msgid "Device must be registered with the comma.ai backend to pair."
 msgstr "裝置必須先註冊到 comma.ai 後端才能配對。"
 
@@ -1581,15 +1579,12 @@ msgid "Device name"
 msgstr "裝置名稱"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"Device temperature too high. System cooling down before starting. Current "
-"internal component temperature: %1"
+msgid "Device temperature too high. System cooling down before starting. Current internal component temperature: %1"
 msgstr "裝置溫度過高。系統正在降溫，完成後才能啟動。當前內部元件溫度：%1"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid ""
-"Device will automatically shutdown after set time once the engine is turned "
-"off.\n"
+"Device will automatically shutdown after set time once the engine is turned off.\n"
 "(30h is the default)"
 msgstr ""
 "一旦引擎關閉，裝置將在設定時間後自動關閉。\n"
@@ -1600,18 +1595,12 @@ msgid "Direct"
 msgstr "直連"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"Direct never falls back; Proxy always fetches through your own prefix. Press "
-"Refresh Model List to apply."
-msgstr ""
-"直連不會回退；代理一律透過你自己的前綴取得。按下「重新整理模型列表」後生效。"
+msgid "Direct never falls back; Proxy always fetches through your own prefix. Press Refresh Model List to apply."
+msgstr "直連不會回退；代理一律透過你自己的前綴取得。按下「重新整理模型列表」後生效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"Direct uses huggingface.co as-is; Custom lets you enter your own mirror. "
-"Applies to the next download."
-msgstr ""
-"直連依原樣使用 huggingface.co；自訂可填入你自己的鏡像。對下一次下載生效。"
+msgid "Direct uses huggingface.co as-is; Custom lets you enter your own mirror. Applies to the next download."
+msgstr "直連依原樣使用 huggingface.co；自訂可填入你自己的鏡像。對下一次下載生效。"
 
 #: selfdrive/ui/sunnypilot/layouts/onboarding.py
 msgid "Disable"
@@ -1630,26 +1619,19 @@ msgid "Disable Updates"
 msgstr "停用更新"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Disable driver monitoring (no cabin camera required). Similar to LITE mode."
+msgid "Disable driver monitoring (no cabin camera required). Similar to LITE mode."
 msgstr "禁用駕駛員監控（不需要車內攝像頭）。類似於 LITE 模式。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"Disable the Alpha Longitudinal toggle to allow Intelligent Cruise Button "
-"Management."
+msgid "Disable the Alpha Longitudinal toggle to allow Intelligent Cruise Button Management."
 msgstr "停用 Alpha 縱向控制切換，以啟用智慧巡航按鈕管理。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"Disable the sunnypilot Longitudinal Control (alpha) toggle to allow "
-"Intelligent Cruise Button Management."
+msgid "Disable the sunnypilot Longitudinal Control (alpha) toggle to allow Intelligent Cruise Button Management."
 msgstr "停用 sunnypilot 縱向控制 (alpha) 切換以允許智慧巡航按鈕管理。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Discard detected limits at or below the threshold below - usually a misread "
-"sign. Off means every reading the reader accepts is used."
+msgid "Discard detected limits at or below the threshold below - usually a misread sign. Off means every reading the reader accepts is used."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -1735,25 +1717,21 @@ msgid "Display speed in km/h instead of mph."
 msgstr "以 km/h 顯示速度（非 mph）。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Display steering arc on the driving screen when lateral control is enabled."
+msgid "Display steering arc on the driving screen when lateral control is enabled."
 msgstr "啟用橫向控制時，在駕駛畫面上顯示轉向弧線。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Display useful metrics below the chevron that tracks the lead car only "
-"applicable to cars with sunnypilot longitudinal control."
+msgid "Display useful metrics below the chevron that tracks the lead car only applicable to cars with sunnypilot longitudinal control."
+msgstr "在前車追蹤箭頭下方顯示有用指標，僅適用於啟用 sunnypilot 縱向控制的車輛。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
+msgid "Display useful metrics below the chevron that tracks the lead car only applicable to cars with zoompilot longitudinal control."
 msgstr ""
-"在前車追蹤箭頭下方顯示有用指標，僅適用於啟用 sunnypilot 縱向控制的車輛。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Displays the name of the road the car is traveling on.<br>The OpenStreetMap "
-"database of the location must be downloaded from the OSM panel to fetch the "
-"road name."
-msgstr ""
-"顯示車輛當前行駛道路名稱。<br>需先在開放街圖面板下載該位置的 OpenStreetMap 資"
-"料庫。"
+msgid "Displays the name of the road the car is traveling on.<br>The OpenStreetMap database of the location must be downloaded from the OSM panel to fetch the road name."
+msgstr "顯示車輛當前行駛道路名稱。<br>需先在開放街圖面板下載該位置的 OpenStreetMap 資料庫。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "Distance"
@@ -1772,9 +1750,7 @@ msgid "Distance before the turn to end control."
 msgstr "彎道前結束控制的距離。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Distance over which navigation speed control stays paused while the rear "
-"camera (reverse gear) is active, in centimetres."
+msgid "Distance over which navigation speed control stays paused while the rear camera (reverse gear) is active, in centimetres."
 msgstr "倒車影像（倒檔）啟用期間，導航限速控制暫停保持的距離，單位公分。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
@@ -1812,7 +1788,12 @@ msgstr "下載"
 msgid "Download Failed"
 msgstr "下載失敗"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Downloaded Data"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Downloaded Maps"
 msgstr "下載的地圖"
 
@@ -1824,35 +1805,22 @@ msgstr "下載地圖"
 msgid "Downloading Maps..."
 msgstr "正在下載地圖..."
 
-#: system/ui/tici_setup.py system/ui/tici_updater.py
+#: system/ui/tici_setup.py
+#: system/ui/tici_updater.py
 msgid "Downloading..."
 msgstr "正在下載..."
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Draw a ring on the HUD with the traffic light evidence the neural model "
-"currently sees.<br>The outer ring is what the model observes; the centre dot "
-"is what the planner actually applies, and only appears with SignalAssistMode "
-"set to 2.<br><br>Experimental and advisory only. Nothing here lets openpilot "
-"act on a traffic light on your behalf. Always check the light yourself."
-msgstr ""
-"在 HUD 上用圓環顯示神經模型當前識別到的紅綠燈證據。<br>外環是模型的觀測結果；"
-"中心點才是規劃器實際採用的結果，僅在 SignalAssistMode 設為 2 時出現。<br><br>"
-"實驗性功能，僅供參考。此處任何內容都不會讓 openpilot 代您響應訊號燈。請始終自"
-"行確認燈光。"
+msgid "Draw a ring on the HUD with the traffic light evidence the neural model currently sees.<br>The outer ring is what the model observes; the centre dot is what the planner actually applies, and only appears with SignalAssistMode set to 2.<br><br>Experimental and advisory only. Nothing here lets openpilot act on a traffic light on your behalf. Always check the light yourself."
+msgstr "在 HUD 上用圓環顯示神經模型當前識別到的紅綠燈證據。<br>外環是模型的觀測結果；中心點才是規劃器實際採用的結果，僅在 SignalAssistMode 設為 2 時出現。<br><br>實驗性功能，僅供參考。此處任何內容都不會讓 openpilot 代您響應訊號燈。請始終自行確認燈光。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Draw radar tracks on the external cluster."
 msgstr "在外接儀表上繪製雷達目標軌跡。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Draw the points the front radar is currently tracking in the road view, with "
-"their relative speed, lateral offset and distance.<br><br>Display only. It "
-"does not change how the car drives."
-msgstr ""
-"在道路檢視中繪製前置雷達當前跟蹤的點，並顯示其相對速度、橫向偏移和距離。"
-"<br><br>僅用於顯示，不會改變車輛行駛方式。"
+msgid "Draw the points the front radar is currently tracking in the road view, with their relative speed, lateral offset and distance.<br><br>Display only. It does not change how the car drives."
+msgstr "在道路檢視中繪製前置雷達當前跟蹤的點，並顯示其相對速度、橫向偏移和距離。<br><br>僅用於顯示，不會改變車輛行駛方式。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/visuals.py
 msgid ""
@@ -1903,6 +1871,10 @@ msgstr "駕駛模式"
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Driving Model"
 msgstr "駕駛模型"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Driving Model Cache"
+msgstr ""
 
 msgid "Driving Model Loading"
 msgstr "駕駛模型載入中"
@@ -1957,7 +1929,8 @@ msgstr "外星人"
 msgid "EDIT"
 msgstr "編輯"
 
-#: selfdrive/ui/layouts/sidebar.py selfdrive/ui/sunnypilot/layouts/sidebar.py
+#: selfdrive/ui/layouts/sidebar.py
+#: selfdrive/ui/sunnypilot/layouts/sidebar.py
 msgid "ERROR"
 msgstr "錯誤"
 
@@ -1974,16 +1947,11 @@ msgid "Early Access: Become a sunnypilot Sponsor"
 msgstr "搶先體驗：成為 sunnypilot 贊助商"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Ease off from the lead vehicle's own deceleration, before the gap starts "
-"closing. Read once when plannerd starts - restart to apply."
+msgid "Ease off from the lead vehicle's own deceleration, before the gap starts closing. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Ease off inside the overspeed band while cruising on the set speed. It can "
-"only ever reduce deceleration, never add acceleration. Read once when the "
-"longitudinal control process starts - restart to apply."
+msgid "Ease off inside the overspeed band while cruising on the set speed. It can only ever reduce deceleration, never add acceleration. Read once when the longitudinal control process starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
@@ -1995,9 +1963,7 @@ msgid "Eco Cruise Control"
 msgstr "經濟巡航控制"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Eco is gentlest, Normal balances a prompt start with smooth catch-up, and "
-"Sport is more responsive."
+msgid "Eco is gentlest, Normal balances a prompt start with smooth catch-up, and Sport is more responsive."
 msgstr "經濟最溫和，標準在迅速起步與平順跟上之間取得平衡，運動則更靈敏。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -2021,14 +1987,12 @@ msgid "Enable"
 msgstr "啟用"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
-msgid ""
-"Enable \"Always Offroad\" in Device panel, or turn vehicle off to change."
+msgid "Enable \"Always Offroad\" in Device panel, or turn vehicle off to change."
 msgstr "請在「裝置」面板啟用「永遠離路」，或熄火後再變更。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/subaru.py
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
-msgid ""
-"Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle."
+msgid "Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle."
 msgstr "請在裝置面板啟用「始終離路」，或熄火後再切換。"
 
 #: selfdrive/ui/layouts/settings/developer.py
@@ -2104,14 +2068,11 @@ msgid "Enable Tethering"
 msgstr "啟用網路共享"
 
 #: selfdrive/ui/layouts/settings/imu_calibration.py
-msgid ""
-"Enable auto-calibration for devices mounted at large or arbitrary angles."
+msgid "Enable auto-calibration for devices mounted at large or arbitrary angles."
 msgstr "為安裝角度較大或任意角度的裝置啟用自動校正。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"Enable custom Short & Long press increments for cruise speed increase/"
-"decrease."
+msgid "Enable custom Short & Long press increments for cruise speed increase/decrease."
 msgstr "啟用自訂短按和長按增量以增加/減少巡航速度。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
@@ -2119,10 +2080,12 @@ msgid "Enable drive mode btn link"
 msgstr "啟用駕駛模式按鍵連動"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid ""
-"Enable enhanced blind-spot monitoring behavior for certain Prius TSS2 and "
-"TSS-P Toyotas."
+msgid "Enable enhanced blind-spot monitoring behavior for certain Prius TSS2 and TSS-P Toyotas."
 msgstr "為部分 Prius TSS2 與 TSS-P 豐田車款啟用強化的盲點監控行為。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
+msgid "Enable smoother longitudinal control for TSS2 vehicles. Uses a custom speed-dependent integral gain curve for smoother traffic driving."
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "Enable sunnylink"
@@ -2133,29 +2096,19 @@ msgid "Enable sunnylink uploader (infrastructure test)"
 msgstr "啟用 sunnylink 上傳器（基礎架構測試）"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
-msgid ""
-"Enable sunnylink uploader to allow sunnypilot to upload your driving data to "
-"sunnypilot servers. "
-msgstr ""
-"啟用 sunnylink 上傳程式以允許 sunnypilot 將您的駕駛資料上傳到 sunnypilot 伺服"
-"器。"
+msgid "Enable sunnylink uploader to allow sunnypilot to upload your driving data to sunnypilot servers. "
+msgstr "啟用 sunnylink 上傳程式以允許 sunnypilot 將您的駕駛資料上傳到 sunnypilot 伺服器。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-msgid ""
-"Enable sunnylink uploader to allow zoompilot to upload your driving data to "
-"sunnylink servers. "
-msgstr ""
-"啟用 sunnylink 上傳器，允許 zoompilot 將您的駕駛資料上傳到 sunnylink 伺服"
-"器。 "
+msgid "Enable sunnylink uploader to allow zoompilot to upload your driving data to sunnylink servers. "
+msgstr "啟用 sunnylink 上傳器，允許 zoompilot 將您的駕駛資料上傳到 sunnylink 伺服器。 "
 
 #: selfdrive/ui/layouts/settings/toggles.py
 msgid "Enable sunnypilot"
 msgstr "啟用 sunnypilot"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering.py
-msgid ""
-"Enable the beloved MADS feature. Disable toggle to revert back to stock "
-"sunnypilot engagement/disengagement."
+msgid "Enable the beloved MADS feature. Disable toggle to revert back to stock sunnypilot engagement/disengagement."
 msgstr "啟用 MADS 功能。關閉開關可恢復預設 sunnypilot 接合/脫離行為。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -2163,19 +2116,12 @@ msgid "Enable the cluster map HUD profile overlay."
 msgstr "啟用外接儀表地圖 HUD 的 profile 疊加。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Enable the sunnypilot longitudinal control (alpha) toggle to allow "
-"Experimental mode."
+msgid "Enable the sunnypilot longitudinal control (alpha) toggle to allow Experimental mode."
 msgstr "啟用 sunnypilot 縱向控制 (alpha) 切換以允許實驗模式。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"Enable this for the car to learn and adapt its steering response time. "
-"Disable to use a fixed steering response time. Keeping this on provides the "
-"stock openpilot experience."
-msgstr ""
-"開啟後車輛會學習並自適應轉向回應延遲；關閉則使用固定延遲。保持開啟可獲得原版 "
-"openpilot 體驗。"
+msgid "Enable this for the car to learn and adapt its steering response time. Disable to use a fixed steering response time. Keeping this on provides the stock openpilot experience."
+msgstr "開啟後車輛會學習並自適應轉向回應延遲；關閉則使用固定延遲。保持開啟可獲得原版 openpilot 體驗。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Enable this to enforce sunnypilot to steer with Torque lateral control."
@@ -2194,37 +2140,23 @@ msgstr ""
 "關閉後使用原車自帶的駕駛輔助。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\alpha_longitudinal_toggles.py
-msgid ""
-"Enable toggle to allow the model to determine when to use sunnypilot ACC or "
-"sunnypilot End to End Longitudinal."
-msgstr ""
-"啟用切換以允許模型決定何時使用 sunnypilot ACC 或 sunnypilot 端對端縱向。"
+msgid "Enable toggle to allow the model to determine when to use sunnypilot ACC or sunnypilot End to End Longitudinal."
+msgstr "啟用切換以允許模型決定何時使用 sunnypilot ACC 或 sunnypilot 端對端縱向。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
-msgid ""
-"Enables custom tuning for Torque lateral control. Modifying Lateral "
-"Acceleration Factor and Friction below will override the offline values "
-"indicated in the YAML files within \"opendbc/car/torque_data\". The values "
-"will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
-msgstr ""
-"啟用扭矩橫向控制自定義調參。修改下方橫向加速度係數和摩擦係數將覆蓋 opendbc/"
-"car/torque_data 中 YAML 檔案的離線值。啟用「手動實時調參」時這些值也會實時生"
-"效。"
+msgid "Enables custom tuning for Torque lateral control. Modifying Lateral Acceleration Factor and Friction below will override the offline values indicated in the YAML files within \"opendbc/car/torque_data\". The values will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
+msgstr "啟用扭矩橫向控制自定義調參。修改下方橫向加速度係數和摩擦係數將覆蓋 opendbc/car/torque_data 中 YAML 檔案的離線值。啟用「手動實時調參」時這些值也會實時生效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
 msgid "Enables or disables the GitHub runner service."
 msgstr "啟用或停用 GitHub 執行程式服務。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
-msgid ""
-"Enables self-tune for Torque lateral control for platforms that do not use "
-"Torque lateral control by default."
+msgid "Enables self-tune for Torque lateral control for platforms that do not use Torque lateral control by default."
 msgstr "為預設不使用扭矩橫向控制的平臺啟用自學習調參。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Enabling this will display warnings when a vehicle is detected in your blind "
-"spot as long as your car has BSM supported."
+msgid "Enabling this will display warnings when a vehicle is detected in your blind spot as long as your car has BSM supported."
 msgstr "若車輛支援盲點監測 (BSM)，當盲點檢測到車輛時將顯示警告。"
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
@@ -2248,10 +2180,7 @@ msgid "Enforce Torque Lateral Control"
 msgstr "強制扭力橫向控制"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
-msgid ""
-"Enforces the torque lateral controller to use the fixed values instead of "
-"the learned values from Self-Tune. Enabling this toggle overrides Self-Tune "
-"values."
+msgid "Enforces the torque lateral controller to use the fixed values instead of the learned values from Self-Tune. Enabling this toggle overrides Self-Tune values."
 msgstr "強制扭矩橫向控制器使用固定值而非自學習值。啟用此開關將覆蓋自學習引數。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -2271,9 +2200,7 @@ msgstr ""
 "此後轉向會保持開啟，直到您手動關閉或熄火。"
 
 #: system/ui/tici_setup.py
-msgid ""
-"Ensure the entered URL is valid, and the device's internet connection is "
-"good."
+msgid "Ensure the entered URL is valid, and the device's internet connection is good."
 msgstr "確保輸入的 URL 有效，且裝置的網路連線良好。"
 
 #: selfdrive/ui/mici/layouts/settings/network/esim_ui.py
@@ -2341,21 +2268,11 @@ msgid "Error: Invalid download. Retry."
 msgstr "錯誤：下載無效。重試。"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"Excessive %1 actuation detected on your last drive. Please contact support "
-"at https://comma.ai/support and share your device's Dongle ID for "
-"troubleshooting."
-msgstr ""
-"偵測到上次駕駛中 %1 過度操控。請聯絡 https://comma.ai/support 支援並提供裝置 "
-"Dongle ID 以進行故障排除。"
+msgid "Excessive %1 actuation detected on your last drive. Please contact support at https://comma.ai/support and share your device's Dongle ID for troubleshooting."
+msgstr "偵測到上次駕駛中 %1 過度操控。請聯絡 https://comma.ai/support 支援並提供裝置 Dongle ID 以進行故障排除。"
 
-msgid ""
-"Excessive %1 actuation detected on your last drive. Please visit https://"
-"community.sunnypilot.ai/ and share your device's Dongle ID for "
-"troubleshooting."
-msgstr ""
-"上次駕駛中檢測到 %1 過度操作。請前往 https://community.sunnypilot.ai/ 並提供"
-"您裝置的 Dongle ID 以便排查。"
+msgid "Excessive %1 actuation detected on your last drive. Please visit https://community.sunnypilot.ai/ and share your device's Dongle ID for troubleshooting."
+msgstr "上次駕駛中檢測到 %1 過度操作。請前往 https://community.sunnypilot.ai/ 並提供您裝置的 Dongle ID 以便排查。"
 
 #: system/ui/text.py
 msgid "Exit"
@@ -2384,6 +2301,19 @@ msgstr "實驗模式速度輔助"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
 msgid ""
+"Experimental Mode often cruises below your set speed and follows farther back.\n"
+"This drives as chill mode does whenever the model holds back.\n"
+"The model still makes every slowdown."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
+msgid ""
+"Experimental Mode often cruises below your set speed.\n"
+"It gently raises your speed toward it when the road ahead is clear."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
+msgid ""
 "Experimental Mode often cruises below your set speed.\n"
 "It gently raises your speed toward it when the road ahead is clear.\n"
 "Does nothing while Dynamic Experimental Control is on."
@@ -2391,6 +2321,12 @@ msgstr ""
 "實驗模式常常以低於設定速度的車速巡航。\n"
 "前方道路暢通時，它會平緩地把車速提升到設定速度。\n"
 "動態實驗控制開啟時此項無效。"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
+msgid ""
+"Experimental Mode often follows farther back than your following distance.\n"
+"It closes the gap behind a steady car, never closer than chill mode."
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
 msgid ""
@@ -2403,30 +2339,27 @@ msgstr ""
 "動態實驗控制開啟時此項無效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/subaru.py
-msgid ""
-"Experimental feature to enable auto-resume during stop-and-go for certain "
-"supported Subaru platforms."
+msgid "Experimental feature to enable auto-resume during stop-and-go for certain supported Subaru platforms."
 msgstr "對於某些支援的斯巴魯平臺，實驗性功能可在走走停停期間啟用自動恢復。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/subaru.py
-msgid ""
-"Experimental feature to enable stop and go for Subaru Global models with "
-"manual handbrake. Models with electric parking brake should keep this "
-"disabled. Thanks to martinl for this implementation!"
-msgstr ""
-"實驗功能：為配備手動手剎的斯巴魯全球車型啟用走走停停。配備電子駐車制動的車型"
-"請保持關閉。感謝 martinl 的實現！"
+msgid "Experimental feature to enable stop and go for Subaru Global models with manual handbrake. Models with electric parking brake should keep this disabled. Thanks to martinl for this implementation!"
+msgstr "實驗功能：為配備手動手剎的斯巴魯全球車型啟用走走停停。配備電子駐車制動的車型請保持關閉。感謝 martinl 的實現！"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
-msgid ""
-"Experimental mode enables alpha-level features that aren't ready for chill "
-"mode."
+msgid "Experimental mode enables alpha-level features that aren't ready for chill mode."
 msgstr "實驗模式啟用尚未達到輕鬆模式成熟度的 alpha 級功能。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Experimental mode follows lateral acceleration while cornering."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
+msgid "Experimental mode follows when closing on a slower lead."
+msgstr ""
+
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Experimental mode is currently unavailable on this car since the car's stock "
-"ACC is used for longitudinal control."
+msgid "Experimental mode is currently unavailable on this car since the car's stock ACC is used for longitudinal control."
 msgstr "此車款目前無法使用實驗模式，因為縱向控制使用的是原廠 ACC。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -2467,24 +2400,20 @@ msgid "Failed"
 msgstr "失敗"
 
 #: selfdrive/ui/mici/layouts/settings/software.py
-msgid ""
-"Failed to get available branches. Ensure you're connected to the internet "
-"and try again."
+msgid "Failed to get available branches. Ensure you're connected to the internet and try again."
 msgstr "無法取得可用分支。請確認已連上網際網路後再試。"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"Failed to register with comma.ai backend. It will not connect or upload to "
-"comma.ai servers, and receives no support from comma.ai. If this is a device "
-"purchased at comma.ai/shop, open a ticket at https://comma.ai/support."
-msgstr ""
-"無法向 comma.ai 後端註冊。裝置不會連線或上傳到 comma.ai 伺服器，也不享有 "
-"comma.ai 支援。若從 comma.ai/shop 購買，請在 https://comma.ai/support 提交工"
-"單。"
+msgid "Failed to register with comma.ai backend. It will not connect or upload to comma.ai servers, and receives no support from comma.ai. If this is a device purchased at comma.ai/shop, open a ticket at https://comma.ai/support."
+msgstr "無法向 comma.ai 後端註冊。裝置不會連線或上傳到 comma.ai 伺服器，也不享有 comma.ai 支援。若從 comma.ai/shop 購買，請在 https://comma.ai/support 提交工單。"
 
 #: selfdrive/ui/layouts/settings/chestnut.py
 msgid "Fan Speed"
 msgstr "風扇轉速"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Far"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
 msgid "Fast"
@@ -2528,7 +2457,8 @@ msgid "Firehose"
 msgstr "資料洪流"
 
 #: selfdrive/ui/layouts/settings/firehose.py
-#: selfdrive/ui/mici/layouts/settings/firehose.py selfdrive/ui/widgets/setup.py
+#: selfdrive/ui/mici/layouts/settings/firehose.py
+#: selfdrive/ui/widgets/setup.py
 msgid "Firehose Mode"
 msgstr "Firehose 模式"
 
@@ -2537,35 +2467,23 @@ msgid "Fixed"
 msgstr "固定的"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering.py
-msgid ""
-"Fixed steering ratio in 0.1 units (e.g. 130 = 13.0). Overrides the live "
-"ratio when above 10. 0 uses the vehicle's ratio."
-msgstr ""
-"固定轉向比，0.1 單位（如 130 = 13.0）。大於 10 時覆蓋即時轉向比。0 使用車輛即"
-"時值。"
+msgid "Fixed steering ratio in 0.1 units (e.g. 130 = 13.0). Overrides the live ratio when above 10. 0 uses the vehicle's ratio."
+msgstr "固定轉向比，0.1 單位（如 130 = 13.0）。大於 10 時覆蓋即時轉向比。0 使用車輛即時值。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
 msgid "Fixed: Adds a fixed offset [Speed Limit + Offset]"
 msgstr "固定：新增固定偏移[速度限制+偏移]"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
-msgid ""
-"Flash an AGNOS with Bluetooth support or plug in a USB Bluetooth dongle."
+msgid "Flash an AGNOS with Bluetooth support or plug in a USB Bluetooth dongle."
 msgstr "請刷入支援藍牙的 AGNOS，或插入 USB 藍牙接收器。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Fold the phone app traffic congestion report into map-based cruise control. "
-"Only ever lowers the target speed. Needs Smart Cruise Control - Map to be on "
-"as well."
-msgstr ""
-"將手機 App 的路況壅塞資料併入地圖巡航控制，只會降低目標車速。需同時開啟「地圖"
-"智慧巡航」。"
+msgid "Fold the phone app traffic congestion report into map-based cruise control. Only ever lowers the target speed. Needs Smart Cruise Control - Map to be on as well."
+msgstr "將手機 App 的路況壅塞資料併入地圖巡航控制，只會降低目標車速。需同時開啟「地圖智慧巡航」。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Fold the phone app's traffic-light state into the longitudinal plan. Applies "
-"within about five seconds, no restart needed."
+msgid "Fold the phone app's traffic-light state into the longitudinal plan. Applies within about five seconds, no restart needed."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -2604,14 +2522,17 @@ msgstr "跟車時距 4"
 msgid "Follow the prompts to complete the pairing process"
 msgstr "依照提示完成配對過程"
 
+#: selfdrive/ui/layouts/settings/toggles.py
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Following Distance"
 msgstr "跟車距離"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Following Profile"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
-msgid ""
-"Following distance, longitudinal gains, acceleration limits and cruise "
-"behavior."
+msgid "Following distance, longitudinal gains, acceleration limits and cruise behavior."
 msgstr "跟車距離、縱向增益、加速度限制和巡航行為。"
 
 #: system/ui/mici_reset.py
@@ -2623,18 +2544,14 @@ msgstr ""
 "https://flash.comma.ai"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"For applicable vehicles, always display the true vehicle current speed from "
-"wheel speed sensors."
+msgid "For applicable vehicles, always display the true vehicle current speed from wheel speed sensors."
 msgstr "對於適用的車輛，始終顯示來自輪速感知器的真實車輛當前速度。"
 
 #: selfdrive/ui/mici/layouts/settings/firehose.py
 msgid ""
-"For maximum effectiveness, bring your device inside and connect to a good "
-"USB-C adapter and Wi-Fi weekly.\n"
+"For maximum effectiveness, bring your device inside and connect to a good USB-C adapter and Wi-Fi weekly.\n"
 "\n"
-"Firehose Mode can also work while you're driving if connected to a hotspot "
-"or unlimited SIM card."
+"Firehose Mode can also work while you're driving if connected to a hotspot or unlimited SIM card."
 msgstr ""
 "為達到最佳效果，請每週將裝置帶回室內，接上良好的 USB-C 電源與 Wi-Fi。\n"
 "\n"
@@ -2642,26 +2559,20 @@ msgstr ""
 
 #: selfdrive/ui/layouts/settings/firehose.py
 msgid ""
-"For maximum effectiveness, bring your device inside and connect to a good "
-"USB-C adapter and Wi-Fi weekly.\n"
+"For maximum effectiveness, bring your device inside and connect to a good USB-C adapter and Wi-Fi weekly.\n"
 "\n"
-"Firehose Mode can also work while you're driving if connected to a hotspot "
-"or unlimited SIM card.\n"
+"Firehose Mode can also work while you're driving if connected to a hotspot or unlimited SIM card.\n"
 "\n"
 "\n"
 "Frequently Asked Questions\n"
 "\n"
-"Does it matter how or where I drive? Nope, just drive as you normally "
-"would.\n"
+"Does it matter how or where I drive? Nope, just drive as you normally would.\n"
 "\n"
-"Do all of my segments get pulled in Firehose Mode? No, we selectively pull a "
-"subset of your segments.\n"
+"Do all of my segments get pulled in Firehose Mode? No, we selectively pull a subset of your segments.\n"
 "\n"
-"What's a good USB-C adapter? Any fast phone or laptop charger should be "
-"fine.\n"
+"What's a good USB-C adapter? Any fast phone or laptop charger should be fine.\n"
 "\n"
-"Does it matter which software I run? Yes, only upstream openpilot (and "
-"particular forks) are able to be used for training."
+"Does it matter which software I run? Yes, only upstream openpilot (and particular forks) are able to be used for training."
 msgstr ""
 "為獲得最佳效果，請每週將裝置帶回室內，並連線優質 USB-C 充電器與 Wi-Fi。\n"
 "\n"
@@ -2825,11 +2736,8 @@ msgid "Go to https://connect.comma.ai on your phone"
 msgstr "在手機上前往 https://connect.comma.ai"
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
-msgid ""
-"Grant SSH access to all public keys in your GitHub settings. Only enter your "
-"own username."
-msgstr ""
-"為 GitHub 設定中的全部公鑰授予 SSH 存取許可權。僅填寫您自己的使用者名稱。"
+msgid "Grant SSH access to all public keys in your GitHub settings. Only enter your own username."
+msgstr "為 GitHub 設定中的全部公鑰授予 SSH 存取許可權。僅填寫您自己的使用者名稱。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "Green Traffic Light Alert (Beta)"
@@ -2860,20 +2768,19 @@ msgid "Hide Firehose Prompt"
 msgstr "隱藏 Firehose 提示"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/display.py
-msgid ""
-"Hide the Firehose prompt on the home screen. The prompt will not be rendered "
-"when this is enabled."
+msgid "Hide the Firehose prompt on the home screen. The prompt will not be rendered when this is enabled."
 msgstr "隱藏主螢幕上的 Firehose 提示。啟用後將不再顯示該提示。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Higher"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Highway Curve Aggressiveness"
 msgstr "高速彎道激程序度"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Hold lateral actuation back from a standstill until lateral input and CAN "
-"are both ready. One-way latch per drive. Read once when the control process "
-"starts - restart to apply."
+msgid "Hold lateral actuation back from a standstill until lateral input and CAN are both ready. One-way latch per drive. Read once when the control process starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/trips.py
@@ -2885,20 +2792,12 @@ msgid "How aggressively the car reacts to lead car acceleration changes."
 msgstr "前車加減速時本車的反應積極程度。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"How early to react to curves on normal roads. Lower reacts to gentler "
-"curves. Only applies while Smart Cruise Control (Vision) is on."
-msgstr ""
-"一般道路上對彎道的反應早晚。數值越小，對越緩的彎也會反應。僅在「智慧巡航控制"
-"（視覺）」開啟時生效。"
+msgid "How early to react to curves on normal roads. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
+msgstr "一般道路上對彎道的反應早晚。數值越小，對越緩的彎也會反應。僅在「智慧巡航控制（視覺）」開啟時生效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"How early to react to curves on the highway. Lower reacts to gentler curves. "
-"Only applies while Smart Cruise Control (Vision) is on."
-msgstr ""
-"高速公路上對彎道的反應早晚。數值越小，對越緩的彎也會反應。僅在「智慧巡航控制"
-"（視覺）」開啟時生效。"
+msgid "How early to react to curves on the highway. Lower reacts to gentler curves. Only applies while Smart Cruise Control (Vision) is on."
+msgstr "高速公路上對彎道的反應早晚。數值越小，對越緩的彎也會反應。僅在「智慧巡航控制（視覺）」開啟時生效。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid "How far holding + or - moves your set speed at each step."
@@ -2936,34 +2835,20 @@ msgid "How long to wait before the brightness setting applies."
 msgstr "亮度設定生效前的等待時間。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"How much lateral acceleration to allow at or above 80 km/h, in percent. "
-"Higher slows more for curves. 100 is neutral."
-msgstr ""
-"80 km/h 及以上允許的橫向加速度，單位為百分比。數值越大過彎越慢。100 為中性"
-"值。"
+msgid "How much lateral acceleration to allow at or above 80 km/h, in percent. Higher slows more for curves. 100 is neutral."
+msgstr "80 km/h 及以上允許的橫向加速度，單位為百分比。數值越大過彎越慢。100 為中性值。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"How much lateral acceleration to allow at or above 80 km/h, in percent. "
-"Higher takes curves faster. 100 is neutral."
-msgstr ""
-"80 km/h 及以上允許的橫向加速度，單位為百分比。數值越大過彎越快。100 為中性"
-"值。"
+msgid "How much lateral acceleration to allow at or above 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
+msgstr "80 km/h 及以上允許的橫向加速度，單位為百分比。數值越大過彎越快。100 為中性值。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"How much lateral acceleration to allow below 80 km/h, in percent. Higher "
-"slows more for curves. 100 is neutral."
-msgstr ""
-"80 km/h 以下允許的橫向加速度，單位為百分比。數值越大過彎越慢。100 為中性值。"
+msgid "How much lateral acceleration to allow below 80 km/h, in percent. Higher slows more for curves. 100 is neutral."
+msgstr "80 km/h 以下允許的橫向加速度，單位為百分比。數值越大過彎越慢。100 為中性值。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"How much lateral acceleration to allow below 80 km/h, in percent. Higher "
-"takes curves faster. 100 is neutral."
-msgstr ""
-"80 km/h 以下允許的橫向加速度，單位為百分比。數值越大過彎越快。100 為中性值。"
+msgid "How much lateral acceleration to allow below 80 km/h, in percent. Higher takes curves faster. 100 is neutral."
+msgstr "80 km/h 以下允許的橫向加速度，單位為百分比。數值越大過彎越快。100 為中性值。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
@@ -2974,15 +2859,11 @@ msgstr ""
 "數值越大，小幅修正時施加的扭矩越大。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"How old a phone packet may be before the carrot source counts as gone; past "
-"this the source goes inactive instead of holding its last request. Only read "
-"while Carrot Longitudinal Source is on."
+msgid "How old a phone packet may be before the carrot source counts as gone; past this the source goes inactive instead of holding its last request. Only read while Carrot Longitudinal Source is on."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
-msgid ""
-"How openpilot engages cruise and which steering wheel buttons control it."
+msgid "How openpilot engages cruise and which steering wheel buttons control it."
 msgstr "openpilot 如何啟用巡航，以及方向盤上哪些按鈕控制它。"
 
 #: selfdrive/ui/layouts/settings/settings.py
@@ -3008,45 +2889,27 @@ msgid "Idle"
 msgstr "閒置"
 
 #: selfdrive/ui/mici/layouts/onboarding.py
-msgid ""
-"If it does not have a clear view of the driver, unplug and remount before "
-"continuing."
+msgid "If it does not have a clear view of the driver, unplug and remount before continuing."
 msgstr "如果無法清晰看到駕駛員，請在繼續前拔下並重新安裝裝置。"
 
 #: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
-msgid ""
-"If sponsorship status was not updated, please contact a moderator on the "
-"community forum at https://community.sunnypilot.ai"
-msgstr ""
-"如果贊助狀態未更新，請聯絡社群論壇的版主：https://community.sunnypilot.ai"
+msgid "If sponsorship status was not updated, please contact a moderator on the community forum at https://community.sunnypilot.ai"
+msgstr "如果贊助狀態未更新，請聯絡社群論壇的版主：https://community.sunnypilot.ai"
 
 #: system/ui/tici_setup.py
-msgid ""
-"If you'd like to proceed, use https://flash.comma.ai to restore your device "
-"to a factory state later."
+msgid "If you'd like to proceed, use https://flash.comma.ai to restore your device to a factory state later."
 msgstr "若您要繼續，日後可用 https://flash.comma.ai 將裝置還原至出廠狀態。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"If you're driving at 20 mph (32 km/h) or below and have your blinker on, the "
-"car will plan a turn in that direction at the nearest drivable path. This "
-"prevents situations (like at red lights) where the car might plan the wrong "
-"turn direction."
-msgstr ""
-"車速在 20 mph（32 km/h）及以下且開啟方向燈時，車輛會在最近可行駛路徑上規劃該"
-"方向轉彎，可避免紅燈等情境下規劃錯誤轉彎方向。"
+msgid "If you're driving at 20 mph (32 km/h) or below and have your blinker on, the car will plan a turn in that direction at the nearest drivable path. This prevents situations (like at red lights) where the car might plan the wrong turn direction."
+msgstr "車速在 20 mph（32 km/h）及以下且開啟方向燈時，車輛會在最近可行駛路徑上規劃該方向轉彎，可避免紅燈等情境下規劃錯誤轉彎方向。"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"Immediately connect to the internet to check for updates. If you do not "
-"connect to the internet, sunnypilot won't engage in %1"
-msgstr ""
-"請立即連線網際網路以檢查更新。若不連線網際網路，sunnypilot 將在 %1 後無法啟用"
+msgid "Immediately connect to the internet to check for updates. If you do not connect to the internet, sunnypilot won't engage in %1"
+msgstr "請立即連線網際網路以檢查更新。若不連線網際網路，sunnypilot 將在 %1 後無法啟用"
 
 # === i18n: onroad alerts + offroad notifications (op助手 2026-10-18) ===
-msgid ""
-"Immediately connect to the internet to check for updates. If you do not "
-"connect to the internet, zoompilot won't engage in %1"
+msgid "Immediately connect to the internet to check for updates. If you do not connect to the internet, zoompilot won't engage in %1"
 msgstr "請立即連線網路以檢查更新。若不連線網路，zoompilot 將在 %1 內無法啟用。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -3054,13 +2917,16 @@ msgid "Impossible Limit Threshold"
 msgstr "不合理限速閾值"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"In Experimental Mode, gently raise speed toward the set speed when nothing "
-"calls for slowing down. Has no effect while Dynamic Experimental Control is "
-"on."
+msgid "In Experimental Mode, drive toward your set speed and following distance as chill mode does whenever the model holds back. The model still makes every slowdown."
 msgstr ""
-"在實驗模式下，當無需減速時平緩地將車速提升至設定速度。動態實驗控制開啟時無"
-"效。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "In Experimental Mode, gently raise speed toward the set speed when nothing calls for slowing down."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "In Experimental Mode, gently raise speed toward the set speed when nothing calls for slowing down. Has no effect while Dynamic Experimental Control is on."
+msgstr "在實驗模式下，當無需減速時平緩地將車速提升至設定速度。動態實驗控制開啟時無效。"
 
 #: system/ui/mici_setup.py
 msgid "Incompatible sunnypilot version."
@@ -3074,14 +2940,13 @@ msgstr "資訊"
 msgid "Information: Displays the current road's speed limit."
 msgstr "資訊：顯示目前道路的速度限制。"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Inside a point-to-point average speed section, allow up to the cruise set "
-"speed while the running average stays under the limit. Time banked in "
-"congestion is spent over the next kilometre."
+#: selfdrive/ui/layouts/settings/toggles.py
+msgid "Initial Max Speed"
 msgstr ""
-"在點位式區間測速路段內，當平均速度低於限速時允許加速至巡航設定速度。擁堵中攢"
-"下的時間餘量會在隨後一公里內用掉。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Inside a point-to-point average speed section, allow up to the cruise set speed while the running average stays under the limit. Time banked in congestion is spent over the next kilometre."
+msgstr "在點位式區間測速路段內，當平均速度低於限速時允許加速至巡航設定速度。擁堵中攢下的時間餘量會在隨後一公里內用掉。"
 
 #: system/ui/tici_updater.py
 msgid "Install"
@@ -3108,9 +2973,7 @@ msgid "Intelligent Cruise Button Management (ICBM) (Alpha)"
 msgstr "智慧巡航按鈕管理 (ICBM)（Alpha）"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"Intelligent Cruise Button Management is currently unavailable on this "
-"platform."
+msgid "Intelligent Cruise Button Management is currently unavailable on this platform."
 msgstr "該平臺目前不支援智慧巡航按鈕管理。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/display.py
@@ -3157,11 +3020,8 @@ msgid "Jetlink unavailable: %1"
 msgstr "Jetlink 不可用：%1"
 
 #: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
-msgid ""
-"Join our Community Forum at https://community.sunnypilot.ai and reach out to "
-"a moderator if you have issues"
-msgstr ""
-"加入我們的社群論壇：https://community.sunnypilot.ai，如果您有問題，請聯絡版主"
+msgid "Join our Community Forum at https://community.sunnypilot.ai and reach out to a moderator if you have issues"
+msgstr "加入我們的社群論壇：https://community.sunnypilot.ai，如果您有問題，請聯絡版主"
 
 #: selfdrive/ui/sunnypilot/accelerator_link.py
 #: selfdrive/ui/sunnypilot/tests/test_usb_port.py
@@ -3176,10 +3036,13 @@ msgstr "搖桿除錯模式"
 msgid "KM"
 msgstr "公里"
 
-#: selfdrive/ui/mici/layouts/settings/device.py
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "KONIK"
 msgstr "KONIK"
+
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
+msgid "KPH"
+msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/imu_calibration.py
 msgid "Keep parked"
@@ -3194,12 +3057,8 @@ msgstr ""
 "可在此更改需要熄火才能修改的設定。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Km/h subtracted from the section limit as the target average. Higher = more "
-"headroom before the section cap lifts."
-msgstr ""
-"從區間限速中減去的 km/h，作為目標平均速度。數值越大，區間上限放開前預留的餘量"
-"越多。"
+msgid "Km/h subtracted from the section limit as the target average. Higher = more headroom before the section cap lifts."
+msgstr "從區間限速中減去的 km/h，作為目標平均速度。數值越大，區間上限放開前預留的餘量越多。"
 
 #: selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
 msgid "L.A.F."
@@ -3246,15 +3105,8 @@ msgid "LTE"
 msgstr "LTE"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Label what the front radar tracks on the road view.<br>Speed Only: relative "
-"speed on moving tracks. Speed + Distance: adds lateral offset and distance. "
-"Full: every measured point, plus a marker for static returns.<br><br>Display "
-"only. It does not change how the car drives."
-msgstr ""
-"在道路畫面上標註前向雷達追蹤的目標。<br>僅速度：只在移動目標上顯示相對速度；"
-"速度+距離：額外顯示橫向偏移與距離；全部：顯示所有測量點，靜止點以標記表示。"
-"<br><br>僅供顯示用途，不改變車輛的駕駛行為。"
+msgid "Label what the front radar tracks on the road view.<br>Speed Only: relative speed on moving tracks. Speed + Distance: adds lateral offset and distance. Full: every measured point, plus a marker for static returns.<br><br>Display only. It does not change how the car drives."
+msgstr "在道路畫面上標註前向雷達追蹤的目標。<br>僅速度：只在移動目標上顯示相對速度；速度+距離：額外顯示橫向偏移與距離；全部：顯示所有測量點，靜止點以標記表示。<br><br>僅供顯示用途，不改變車輛的駕駛行為。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
 msgid "Lane Change Smoothing"
@@ -3363,13 +3215,8 @@ msgstr ""
 "每個速度區間分別學習。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Lengthen the follow time, widen the stopped gap and lower the acceleration "
-"and lateral limits in bad weather. The weather is detected from the car's "
-"position; these offsets are what gets applied."
-msgstr ""
-"惡劣天氣下延長跟車時距、加大停車間距並降低加速度與橫向加速度上限。天氣根據車"
-"輛位置自動偵測；此處設定的是實際疊加的補償量。"
+msgid "Lengthen the follow time, widen the stopped gap and lower the acceleration and lateral limits in bad weather. The weather is detected from the car's position; these offsets are what gets applied."
+msgstr "惡劣天氣下延長跟車時距、加大停車間距並降低加速度與橫向加速度上限。天氣根據車輛位置自動偵測；此處設定的是實際疊加的補償量。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
 msgid "Lenient"
@@ -3380,32 +3227,39 @@ msgid "Less Restrict Settings for Self-Tune (Beta)"
 msgstr "自調整的限制設定較少（測試版）"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
-msgid ""
-"Less strict settings when using Self-Tune. This allows torqued to be more "
-"forgiving when learning values."
+msgid "Less strict settings when using Self-Tune. This allows torqued to be more forgiving when learning values."
 msgstr "自學習時使用較寬鬆設定，使 torqued 在學習引數時更寬容。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a curve ahead hand speed control to the model."
+msgstr "前方有彎道時，把速度控制交給模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a predicted stop for a light or sign hand speed control to the model."
+msgstr "預測前方號誌或標誌需要停車時，把速度控制交給模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let a slower or stopped car ahead hand speed control to the model."
+msgstr "前方有較慢或已停下的車輛時，把速度控制交給模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let an active turn signal below the lane-change speed hand speed control to the model."
+msgstr "車速低於變換車道速度且已打方向燈時，把速度控制交給模型。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Let creeping at very low speed hand speed control to the model."
+msgstr "極低速蠕行時，把速度控制交給模型。"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Let map speed limits slow the car; one of the three conditions Smart Cruise "
-"Control - Map needs. Read once when plannerd starts - restart to apply."
+msgid "Let map speed limits slow the car; one of the three conditions Smart Cruise Control - Map needs. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid ""
-"Let the Carrot app's turn instruction act as a turn signal. This reaches the "
-"car's real turn signal, so it is off by default."
-msgstr ""
-"讓 Carrot App 的轉彎指令充當方向燈。該信號會到達車輛真實方向燈，因此預設關"
-"閉。"
+msgid "Let the Carrot app's turn instruction act as a turn signal. This reaches the car's real turn signal, so it is off by default."
+msgstr "讓 Carrot App 的轉彎指令充當方向燈。該信號會到達車輛真實方向燈，因此預設關閉。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Let the FLM analyzer use the Steer Delay / Friction / Kp / Lat Accel / Ratio "
-"knobs instead of the values carParams already carries. Off keeps the "
-"analyzer reporting stock values, which is what the shipped tune compares "
-"against. Affects the analyzer only; nothing reaches the controller until "
-"runtime overrides are on and a profile is applied."
+msgid "Let the FLM analyzer use the Steer Delay / Friction / Kp / Lat Accel / Ratio knobs instead of the values carParams already carries. Off keeps the analyzer reporting stock values, which is what the shipped tune compares against. Affects the analyzer only; nothing reaches the controller until runtime overrides are on and a profile is applied."
 msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
@@ -3428,42 +3282,24 @@ msgid "Let the driving model control the gas and brakes."
 msgstr "讓駕駛模型控制油門和剎車。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Let the lead vehicle's comfort-deceleration limit enter the MPC as a soft "
-"bound, which softens closing speed. Read once when plannerd starts - restart "
-"to apply."
+msgid "Let the lead vehicle's comfort-deceleration limit enter the MPC as a soft bound, which softens closing speed. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Let the phone app drive the longitudinal plan: its target speed becomes a "
-"plan source, and its follow time, comfort braking and stop point reach the "
-"MPC. Off keeps stock sunnypilot behaviour. Needs a connected phone - without "
-"a fresh packet the source stays inactive."
-msgstr ""
-"讓手機 App 驅動縱向規劃：其目標速度成為一個規劃源，其跟車時距、舒適制動與停車"
-"點進入 MPC。關閉時保持 sunnypilot 原廠行為。需要手機保持連線——沒有新鮮資料時"
-"該源自動失效。"
+msgid "Let the phone app drive the longitudinal plan: its target speed becomes a plan source, and its follow time, comfort braking and stop point reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected phone - without a fresh packet the source stays inactive."
+msgstr "讓手機 App 驅動縱向規劃：其目標速度成為一個規劃源，其跟車時距、舒適制動與停車點進入 MPC。關閉時保持 sunnypilot 原廠行為。需要手機保持連線——沒有新鮮資料時該源自動失效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Let the phone app guided-lane arrows block lane changes toward non-guided "
-"lanes. Only ever adds blocking."
+msgid "Let the phone app guided-lane arrows block lane changes toward non-guided lanes. Only ever adds blocking."
 msgstr "允許手機 App 的車道引導箭頭封鎖往非引導車道的變道，只會增加封鎖。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Let the speed-limit resolver use the detected limit. It is folded into the "
-"map source, so a map limit stays authoritative and vision can only tighten "
-"it. Applies within about five seconds."
+msgid "Let the speed-limit resolver use the detected limit. It is folded into the map source, so a map limit stays authoritative and vision can only tighten it. Applies within about five seconds."
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Lets you choose how sunnypilot starts, catches up, and settles at the cruise "
-"speed. Emergency braking and stopping are unchanged."
-msgstr ""
-"讓您選擇 sunnypilot 如何起步、跟上並穩定在巡航速度。緊急煞車與停車行為不變。"
+msgid "Lets you choose how sunnypilot starts, catches up, and settles at the cruise speed. Emergency braking and stopping are unchanged."
+msgstr "讓您選擇 sunnypilot 如何起步、跟上並穩定在巡航速度。緊急煞車與停車行為不變。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
 msgid ""
@@ -3481,17 +3317,24 @@ msgstr ""
 "允許 zoompilot 在巡航關閉時仍可轉向。\n"
 "關閉後，轉向與巡航一同啟用和解除。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
+msgid "Lets zoompilot steer while cruise control is off. When off, steering and cruise engage and disengage together."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Light"
 msgstr "淺色"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Limit"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Linear"
 msgstr "線性"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid ""
-"Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logic."
+msgid "Link the Toyota drive-mode button (ECO/NORMAL/SPORT) into sunnypilot logic."
 msgstr "將豐田駕駛模式按鈕（ECO/NORMAL/SPORT）接入 sunnypilot 邏輯。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -3503,7 +3346,8 @@ msgid "Live Steer Delay:"
 msgstr "即時轉向延遲："
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
-#: selfdrive/ui/sunnypilot/layouts/settings/osm.py system/ui/tici_updater.py
+#: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: system/ui/tici_updater.py
 msgid "Loading..."
 msgstr "載入中..."
 
@@ -3545,13 +3389,8 @@ msgid "Longitudinal Maneuver Mode"
 msgstr "縱向操作模式"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
-msgid ""
-"Looks ahead at planned steering to reduce sudden corrections, so the wheel "
-"moves more smoothly through turns. Works with Self-Tune and custom tuning. "
-"Thanks to @twilsonco for the implementation."
-msgstr ""
-"提前參考規劃的轉向指令以減少突變修正，讓方向盤在彎中更平順。支援自學習與自定"
-"義調校。感謝 @twilsonco 的實現。"
+msgid "Looks ahead at planned steering to reduce sudden corrections, so the wheel moves more smoothly through turns. Works with Self-Tune and custom tuning. Thanks to @twilsonco for the implementation."
+msgstr "提前參考規劃的轉向指令以減少突變修正，讓方向盤在彎中更平順。支援自學習與自定義調校。感謝 @twilsonco 的實現。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
@@ -3561,11 +3400,16 @@ msgstr ""
 "提前參考規劃的轉向指令以減少突變修正。\n"
 "方向盤在彎中更平順。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Lower"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
 msgid "MADS Screen Activation"
 msgstr "MADS 螢幕啟用方式"
 
-#: selfdrive/ui/mici/onroad/hud_renderer.py selfdrive/ui/onroad/hud_renderer.py
+#: selfdrive/ui/mici/onroad/hud_renderer.py
+#: selfdrive/ui/onroad/hud_renderer.py
 #: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
 #: selfdrive/ui/sunnypilot/onroad/hud_renderer.py
 msgid "MAX"
@@ -3576,6 +3420,7 @@ msgstr "最大"
 msgid "MB"
 msgstr "MB"
 
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
 #: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
 msgid "MPH"
 msgstr "英里/時"
@@ -3590,48 +3435,24 @@ msgid "Macan Slope Comp Unlimited"
 msgstr "Macan 坡度補償放開限制"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"Macan Slope Comp Unlimited (sub-option): when Slope Compensation is ON, this "
-"removes the stock torque cap (option 2: min(max(stock_mom, 200))), giving "
-"small slopes room to act. When OFF, the stock cap applies (option 1: "
-"min(stock_mom))."
-msgstr ""
-"Macan 坡度補償放開限制（子選項）：當坡度補償開啟時，本選項移除原廠力矩上限"
-"（選項2：min(max(stock_mom,200))），給小坡度留出作用空間。關閉時套用原廠上限"
-"（選項1：min(stock_mom)）。"
+msgid "Macan Slope Comp Unlimited (sub-option): when Slope Compensation is ON, this removes the stock torque cap (option 2: min(max(stock_mom, 200))), giving small slopes room to act. When OFF, the stock cap applies (option 1: min(stock_mom))."
+msgstr "Macan 坡度補償放開限制（子選項）：當坡度補償開啟時，本選項移除原廠力矩上限（選項2：min(max(stock_mom,200))），給小坡度留出作用空間。關閉時套用原廠上限（選項1：min(stock_mom)）。"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "Macan Slope Compensation"
 msgstr "Macan 坡度補償"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"Macan Slope Compensation: when enabled, the IMU slope signal adds "
-"g*sin(slope) to the acceleration request - more torque uphill with a "
-"positive Verz request (declared acceleration, ~4.2*sin(slope)), a brief "
-"positive Verz ramp (+1.285 over 180ms) when overriding a deceleration with "
-"the gas pedal, and a brake tap downhill (prevents forward lurch). Default "
-"off = stock behavior. Onroad cycle restart is requested after toggling."
-msgstr ""
-"Macan 坡度補償：開啟後 IMU 坡度信號向加速度請求加入 g*sin(坡度)——上坡增加力矩"
-"並發出正向 Verz 請求（加速聲明，約 4.2×sin(坡度)）；減速中踩油門超馳時短暫發"
-"出正向 Verz 斜坡（+1.285/180ms，加速聲明儀式）；下坡輕點煞車（防止前衝）。預"
-"設關閉=原廠行為。切換後需重啟行程週期。"
+msgid "Macan Slope Compensation: when enabled, the IMU slope signal adds g*sin(slope) to the acceleration request - more torque uphill with a positive Verz request (declared acceleration, ~4.2*sin(slope)), a brief positive Verz ramp (+1.285 over 180ms) when overriding a deceleration with the gas pedal, and a brake tap downhill (prevents forward lurch). Default off = stock behavior. Onroad cycle restart is requested after toggling."
+msgstr "Macan 坡度補償：開啟後 IMU 坡度信號向加速度請求加入 g*sin(坡度)——上坡增加力矩並發出正向 Verz 請求（加速聲明，約 4.2×sin(坡度)）；減速中踩油門超馳時短暫發出正向 Verz 斜坡（+1.285/180ms，加速聲明儀式）；下坡輕點煞車（防止前衝）。預設關閉=原廠行為。切換後需重啟行程週期。"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "Macan Stop and Go"
 msgstr "Macan 跟停起步"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"Macan Stop and Go: when enabled, the vision model decides when to start, and "
-"openpilot sends the RESUME signal to release the stock parking hold (with a "
-"chime). When disabled, gently press the gas or SET/RESUME to resume (stock "
-"behavior)."
-msgstr ""
-"Macan 跟停起步：啟用後由視覺模型決定何時起步，openpilot 會傳送 RESUME 訊號解"
-"除原車駐車保持（並伴有提示音）。關閉時需輕踩油門或按 SET/RESUME 才起步（原廠"
-"行為）。"
+msgid "Macan Stop and Go: when enabled, the vision model decides when to start, and openpilot sends the RESUME signal to release the stock parking hold (with a chime). When disabled, gently press the gas or SET/RESUME to resume (stock behavior)."
+msgstr "Macan 跟停起步：啟用後由視覺模型決定何時起步，openpilot 會傳送 RESUME 訊號解除原車駐車保持（並伴有提示音）。關閉時需輕踩油門或按 SET/RESUME 才起步（原廠行為）。"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
@@ -3639,16 +3460,8 @@ msgid "Macan Verz Bridge"
 msgstr "Macan 減速橋接"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"Macan Verz Bridge: when ON, the bridge applies a percentage-based ramp to "
-"smooth the requested deceleration (step = 1.25% x |verz|) - softens abrupt "
-"OP-initiated braking and kills the breath/pulse. When OFF, the verz request "
-"passes through un-smoothed (one-frame, no ramp). Deep braking (<= -1.5) and "
-"OEM brake requests still pass through either way for safety."
-msgstr ""
-"Macan 減速橋接：啟用時，橋對減速請求施加基於百分比的緩升（步長 = 1.25% × |"
-"verz|），柔化 openpilot 自發的驟煞並消除喘氣感。關閉時減速請求不做平滑直接透"
-"傳。深煞（≤ -1.5）與原廠煞車請求無論開關均直通以保證安全。"
+msgid "Macan Verz Bridge: when ON, the bridge applies a percentage-based ramp to smooth the requested deceleration (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills the breath/pulse. When OFF, the verz request passes through un-smoothed (one-frame, no ramp). Deep braking (<= -1.5) and OEM brake requests still pass through either way for safety."
+msgstr "Macan 減速橋接：啟用時，橋對減速請求施加基於百分比的緩升（步長 = 1.25% × |verz|），柔化 openpilot 自發的驟煞並消除喘氣感。關閉時減速請求不做平滑直接透傳。深煞（≤ -1.5）與原廠煞車請求無論開關均直通以保證安全。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
@@ -3657,6 +3470,10 @@ msgid ""
 msgstr ""
 "讓變道更慢更平順。\n"
 "關閉即原廠。其他每個檔位都比原廠更慢。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Manage Tiered Offsets"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "Manage the mobile app(s) connected over Wi-Fi: pair a new app "
@@ -3675,12 +3492,8 @@ msgid "Map First"
 msgstr "地圖優先"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
-msgid ""
-"Map First: Use Speed Limit data from OpenStreetMaps if available, else use "
-"from Car"
-msgstr ""
-"地圖優先：使用來自 OpenStreetMaps 的速度限制資料（如果可用），否則使用來自 "
-"Car 的速度限制資料"
+msgid "Map First: Use Speed Limit data from OpenStreetMaps if available, else use from Car"
+msgstr "地圖優先：使用來自 OpenStreetMaps 的速度限制資料（如果可用），否則使用來自 Car 的速度限制資料"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
 msgid "Map Only"
@@ -3718,15 +3531,19 @@ msgstr "外接儀表 HUD 渲染的總開關。"
 msgid "Max Time Offroad"
 msgstr "熄火關機時限"
 
+#: selfdrive/ui/layouts/settings/toggles.py
+msgid "Max speed when engaging openpilot. If you are already driving faster, your current speed is used. Resume restores the previous max speed. Changes apply the next time you engage."
+msgstr ""
+
 #: selfdrive/ui/widgets/setup.py
-msgid ""
-"Maximize your training data uploads to improve openpilot's driving models."
+msgid "Maximize your training data uploads to improve openpilot's driving models."
 msgstr "最大化上傳訓練資料，以改進 openpilot 的駕駛模型。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
 msgid "Mazda TJA Button"
 msgstr "馬自達 TJA 按鍵"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
 msgid "Medium"
 msgstr "中"
@@ -3736,9 +3553,7 @@ msgid "Memory Temp"
 msgstr "記憶體溫度"
 
 #: selfdrive/ui/mici/layouts/settings/network/network_layout.py
-msgid ""
-"Metered prevents large uploads on this Wi-Fi connection. Default uses the "
-"network's detected setting."
+msgid "Metered prevents large uploads on this Wi-Fi connection. Default uses the network's detected setting."
 msgstr "按流量計費可防止在此 Wi-Fi 上進行大量上傳。預設使用檢測到的網路設定。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -3774,9 +3589,7 @@ msgid "Model Status"
 msgstr "模型狀態"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"Model download has started in the background. We suggest resetting "
-"calibration. Would you like to do that now?"
+msgid "Model download has started in the background. We suggest resetting calibration. Would you like to do that now?"
 msgstr "模型下載已在背景開始。我們建議重置校準。您現在願意這樣做嗎？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/settings.py
@@ -3799,22 +3612,12 @@ msgid "Monitoring Lane Departure"
 msgstr "正在監測車道偏離"
 
 #: selfdrive/ui/mici/layouts/settings/device.py
-msgid ""
-"Mount the device within 4° left or right and 5° up or 9° down. openpilot "
-"calibrates continuously; resetting is rarely needed. Resetting clears "
-"learned calibration."
-msgstr ""
-"請將裝置安裝在左右 4° 內、上仰 5° 內或下俯 9° 內。openpilot 會持續校準，通常"
-"無需重置。重置會清除已學習的校準資料。"
+msgid "Mount the device within 4° left or right and 5° up or 9° down. openpilot calibrates continuously; resetting is rarely needed. Resetting clears learned calibration."
+msgstr "請將裝置安裝在左右 4° 內、上仰 5° 內或下俯 9° 內。openpilot 會持續校準，通常無需重置。重置會清除已學習的校準資料。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Multiplies the lateral torque controller proportional gain. 1.00 is stock "
-"behaviour; the value only takes effect while it differs from 1.00. Applies "
-"within a few seconds, no restart needed."
-msgstr ""
-"乘在橫向扭矩控制器的比例增益上。1.00 為原廠行為；只有不等於 1.00 時才生效。數"
-"秒內生效，無需重啟。"
+msgid "Multiplies the lateral torque controller proportional gain. 1.00 is stock behaviour; the value only takes effect while it differs from 1.00. Applies within a few seconds, no restart needed."
+msgstr "乘在橫向扭矩控制器的比例增益上。1.00 為原廠行為；只有不等於 1.00 時才生效。數秒內生效，無需重啟。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "My Driving Mode"
@@ -3854,6 +3657,10 @@ msgstr "西北"
 msgid "Name shown to other Bluetooth devices."
 msgstr "顯示給其他藍牙裝置的名稱。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py
+msgid "Name the active driving model on the offroad home screen."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Navi"
 msgstr "導航"
@@ -3892,8 +3699,7 @@ msgid "Navigation Speed Safety Factor"
 msgstr "導航限速安全餘量"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
-msgid ""
-"Navigation-based speed control, speed cameras, road limits and speed bumps."
+msgid "Navigation-based speed control, speed cameras, road limits and speed bumps."
 msgstr "基於導航的限速控制、測速相機、道路限速和減速帶。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
@@ -3921,6 +3727,10 @@ msgstr ""
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "Neural Signal Assist Indicator (Experimental)"
 msgstr "神經訊號燈輔助指示（實驗性）"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Never"
+msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "New Driving Visualization"
@@ -3965,9 +3775,7 @@ msgstr "未選擇 eGPU（大模型）。目前執行預設模型。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
-msgid ""
-"No models are available for this hardware yet. Connect to the internet and "
-"refresh the model list."
+msgid "No models are available for this hardware yet. Connect to the internet and refresh the model list."
 msgstr "此硬體暫無可用的模型。請連線網際網路並重新整理模型列表。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
@@ -4043,18 +3851,12 @@ msgid "Not set"
 msgstr "未設定"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
-msgid ""
-"Note: For vehicles without LFA/LKAS button, disabling this will prevent "
-"lateral control engagement."
+msgid "Note: For vehicles without LFA/LKAS button, disabling this will prevent lateral control engagement."
 msgstr "注意：對於沒有 LFA/LKAS 按鈕的車輛，停用此按鈕將阻止橫向控制接合。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
-msgid ""
-"Note: Once lateral control is engaged via UEM, it will remain engaged until "
-"it is manually disabled via the MADS button or car shut off."
-msgstr ""
-"注意：一旦透過 UEM 啟用橫向控制，它將保持啟用狀態，直到透過 MADS 按鈕手動停用"
-"或汽車關閉。"
+msgid "Note: Once lateral control is engaged via UEM, it will remain engaged until it is manually disabled via the MADS button or car shut off."
+msgstr "注意：一旦透過 UEM 啟用橫向控制，它將保持啟用狀態，直到透過 MADS 按鈕手動停用或汽車關閉。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
 msgid "Note: Setting this to Off will reset your MADS settings to default."
@@ -4072,8 +3874,7 @@ msgstr "輕推"
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
 "Nudge: signal, then nudge the wheel to change lanes.\n"
-"Nudgeless changes lanes as soon as you signal. A time waits that long "
-"first.\n"
+"Nudgeless changes lanes as soon as you signal. A time waits that long first.\n"
 "Off: zoompilot never changes lanes."
 msgstr ""
 "輕推：打燈後輕推方向盤才變道。\n"
@@ -4093,14 +3894,16 @@ msgstr "N·m"
 msgid "OFF"
 msgstr "離開"
 
-#: selfdrive/ui/layouts/sidebar.py selfdrive/ui/sunnypilot/layouts/sidebar.py
+#: selfdrive/ui/layouts/sidebar.py
+#: selfdrive/ui/sunnypilot/layouts/sidebar.py
 msgid "OFFLINE"
 msgstr "離線"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 #: selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-#: system/ui/widgets/confirm_dialog.py system/ui/widgets/html_render.py
+#: system/ui/widgets/confirm_dialog.py
+#: system/ui/widgets/html_render.py
 msgid "OK"
 msgstr "確定"
 
@@ -4109,26 +3912,15 @@ msgid "ON"
 msgstr "開"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"ON: fusion control - OP longitudinal takes over while the stock ACC radar "
-"stays active and constrains braking. OFF: pure OP longitudinal - the stock "
-"ACC radar is deactivated (LS_01 bus2 stays standby) and OP self-generates "
-"ACC02/04/05 entirely."
-msgstr ""
-"開=融合控制：OP 縱向接管同時原廠 ACC 雷達保持激活並約束制動。關=純 OP 縱向："
-"原廠 ACC 雷達停用（LS_01 bus2 保持待命），由 OP 完全自行生成 ACC02/04/05。"
+msgid "ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking. OFF: pure OP longitudinal - the stock ACC radar is deactivated (LS_01 bus2 stays standby) and OP self-generates ACC02/04/05 entirely."
+msgstr "開=融合控制：OP 縱向接管同時原廠 ACC 雷達保持激活並約束制動。關=純 OP 縱向：原廠 ACC 雷達停用（LS_01 bus2 保持待命），由 OP 完全自行生成 ACC02/04/05。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"ON: openpilot style wins - after ignition send DIST +/- pulses so the stock "
-"ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins "
-"- openpilot resets its style to the car default (3 bars = Standard). "
-"Effective on Macan only."
-msgstr ""
-"開：OP主導——點火後發送距離鍵脈衝，讓原廠ACC跟隨你記憶的駕駛風格（如4格=從"
-"容）。關：車輛主導——OP重置為車輛預設（3格=標準）。僅Macan生效。"
+msgid "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
+msgstr "開：OP主導——點火後發送距離鍵脈衝，讓原廠ACC跟隨你記憶的駕駛風格（如4格=從容）。關：車輛主導——OP重置為車輛預設（3格=標準）。僅Macan生效。"
 
-#: selfdrive/ui/layouts/sidebar.py selfdrive/ui/sunnypilot/layouts/sidebar.py
+#: selfdrive/ui/layouts/sidebar.py
+#: selfdrive/ui/sunnypilot/layouts/sidebar.py
 msgid "ONLINE"
 msgstr "線上"
 
@@ -4168,7 +3960,8 @@ msgstr "離線策略模型"
 msgid "Off: Disables the Speed Limit functions."
 msgstr "關：停用速度限制功能。"
 
-#: selfdrive/ui/mici/layouts/home.py selfdrive/ui/widgets/carrot_web_dialog.py
+#: selfdrive/ui/mici/layouts/home.py
+#: selfdrive/ui/widgets/carrot_web_dialog.py
 msgid "Offline"
 msgstr "離線"
 
@@ -4183,6 +3976,10 @@ msgstr "離路"
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Offroad: Device will be in Always Offroad mode after boot/wake-up."
 msgstr "離路：裝置啟動/喚醒後將保持始終離路模式。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Offset applied to the speed limit in this range."
+msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
 msgid "On this car, openpilot defaults to the stock system's built-in ACC."
@@ -4227,14 +4024,11 @@ msgstr "開啟 5 分鐘的配對視窗，並將驗證碼顯示給 "
 
 #: selfdrive/ui/widgets/offroad_alerts.py
 msgid ""
-"OpenStreetMap database is out of date. New maps must be downloaded if you "
-"wish to continue using OpenStreetMap data for Enhanced Speed Control and "
-"road name display.\n"
+"OpenStreetMap database is out of date. New maps must be downloaded if you wish to continue using OpenStreetMap data for Enhanced Speed Control and road name display.\n"
 "\n"
 "%1"
 msgstr ""
-"OpenStreetMap 資料庫已過期。若需繼續使用開放街圖資料進行增強速度控制和道路名"
-"稱顯示，必須下載新地圖。\n"
+"OpenStreetMap 資料庫已過期。若需繼續使用開放街圖資料進行增強速度控制和道路名稱顯示，必須下載新地圖。\n"
 "\n"
 "%1"
 
@@ -4288,8 +4082,7 @@ msgid "Pair GitHub Account"
 msgstr "配對 GitHub 帳戶"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
-msgid ""
-"Pair and manage sunnylink apps on phones connected to the same Wi-Fi network."
+msgid "Pair and manage sunnylink apps on phones connected to the same Wi-Fi network."
 msgstr "配對並管理同一 Wi-Fi 網路下手機上的 sunnylink 應用。"
 
 #: selfdrive/ui/widgets/setup.py
@@ -4313,23 +4106,17 @@ msgid "Pair your GitHub account to give this device your sponsor benefits."
 msgstr "繫結 GitHub 賬號，讓本裝置獲得您的贊助權益。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-msgid ""
-"Pair your GitHub account to grant your device sponsor benefits, including "
-"API access on sunnylink."
-msgstr ""
-"配對您的 GitHub 帳戶以授予您的裝置贊助商權益，包括 sunnylink 上的 API 存取許"
-"可權。"
+msgid "Pair your GitHub account to grant your device sponsor benefits, including API access on sunnylink."
+msgstr "配對您的 GitHub 帳戶以授予您的裝置贊助商權益，包括 sunnylink 上的 API 存取許可權。"
 
 #: selfdrive/ui/widgets/pairing_dialog.py
 msgid "Pair your device to your comma account"
 msgstr "將裝置配對至您的 comma 帳號"
 
-#: selfdrive/ui/layouts/settings/device.py selfdrive/ui/widgets/setup.py
-msgid ""
-"Pair your device with comma connect (connect.comma.ai) and claim your comma "
-"prime offer."
-msgstr ""
-"將裝置與 comma connect（connect.comma.ai）配對，領取您的 comma prime 優惠。"
+#: selfdrive/ui/layouts/settings/device.py
+#: selfdrive/ui/widgets/setup.py
+msgid "Pair your device with comma connect (connect.comma.ai) and claim your comma prime offer."
+msgstr "將裝置與 comma connect（connect.comma.ai）配對，領取您的 comma prime 優惠。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
@@ -4345,9 +4132,7 @@ msgid "Pairing code: {}"
 msgstr "配對碼：{}"
 
 #: selfdrive/ui/layouts/settings/imu_calibration.py
-msgid ""
-"Park on level ground, then drive straight to calibrate the device "
-"orientation."
+msgid "Park on level ground, then drive straight to calibrate the device orientation."
 msgstr "將車輛停放在水平地面上，然後直線行駛以校正裝置安裝方向。"
 
 msgid "Park to Engage Longitudinal"
@@ -4366,9 +4151,7 @@ msgid "Pause Lateral Control with Blinker"
 msgstr "使用方向燈暫停橫向控制"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering.py
-msgid ""
-"Pause lateral control with blinker when traveling below the desired speed "
-"selected."
+msgid "Pause lateral control with blinker when traveling below the desired speed selected."
 msgstr "當行駛速度低於所選的所需速度時，使用方向指示燈暫停橫向控制。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
@@ -4392,9 +4175,7 @@ msgid "Percent taken off the acceleration ceiling in bad weather."
 msgstr "惡劣天氣下加速度上限降低的百分比。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Percent taken off the lateral acceleration ceiling in bad weather, so curves "
-"are taken slower."
+msgid "Percent taken off the lateral acceleration ceiling in bad weather, so curves are taken slower."
 msgstr "惡劣天氣下橫向加速度上限降低的百分比，使過彎更慢更穩。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
@@ -4413,20 +4194,14 @@ msgid ""
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Play the green traffic light and lead departure alerts even when cruise is "
-"engaged and holding the car at a standstill.<br>Without this, those alerts "
-"only chime while cruise is disengaged. ACC holding at a light never starts "
-"moving by itself.<br>Note: This chime is only designed as a notification. It "
-"is the driver's responsibility to observe their environment and make "
-"decisions accordingly."
+msgid "Play the green traffic light and lead departure alerts even when cruise is engaged and holding the car at a standstill.<br>Without this, those alerts only chime while cruise is disengaged. ACC holding at a light never starts moving by itself.<br>Note: This chime is only designed as a notification. It is the driver's responsibility to observe their environment and make decisions accordingly."
 msgstr ""
 
 #: selfdrive/ui/widgets/setup.py
 msgid "Please connect to Wi-Fi to complete initial pairing"
 msgstr "請連線至 Wi‑Fi 以完成初始化配對"
 
-#: selfdrive/ui/mici/layouts/settings/device.py
+#: selfdrive/ui/mici/layouts/settings/device/device_layout.py
 msgid "Please connect to Wi-Fi to complete initial pairing."
 msgstr "請連上 Wi-Fi 以完成初次配對。"
 
@@ -4439,9 +4214,7 @@ msgid "Please connect to Wi-Fi to update."
 msgstr "請連上 Wi-Fi 以更新。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/software.py
-msgid ""
-"Please enable \"Always Offroad\" mode or turn off the vehicle to adjust "
-"these toggles."
+msgid "Please enable \"Always Offroad\" mode or turn off the vehicle to adjust these toggles."
 msgstr "請啟用「始終離路」模式或熄火後再調整這些開關。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
@@ -4456,14 +4229,8 @@ msgid "Policy Model"
 msgstr "策略模型"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"Poor visibility detected for driver monitoring. Ensure the device has a "
-"clear view of the driver. This can be checked in the device settings. "
-"Extreme lighting conditions and/or unconventional mounting positions may "
-"also trigger this alert."
-msgstr ""
-"駕駛員監控能見度不佳。請確保裝置能清楚看到駕駛員。可在裝置設定中檢查。極端光"
-"照和/或非傳統安裝位置也可能觸發此警報。"
+msgid "Poor visibility detected for driver monitoring. Ensure the device has a clear view of the driver. This can be checked in the device settings. Extreme lighting conditions and/or unconventional mounting positions may also trigger this alert."
+msgstr "駕駛員監控能見度不佳。請確保裝置能清楚看到駕駛員。可在裝置設定中檢查。極端光照和/或非傳統安裝位置也可能觸發此警報。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
 msgid "Ported Longitudinal Hooks (default off)"
@@ -4482,7 +4249,8 @@ msgid "Power Limit"
 msgstr "功率上限"
 
 #: selfdrive/ui/layouts/settings/device.py
-#: selfdrive/ui/sunnypilot/layouts/settings/device.py system/ui/tici_setup.py
+#: selfdrive/ui/sunnypilot/layouts/settings/device.py
+#: system/ui/tici_setup.py
 msgid "Power Off"
 msgstr "關機"
 
@@ -4497,6 +4265,18 @@ msgstr "預測性"
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Prefix prepended to the catalog URL, e.g. https://gh-proxy.com"
 msgstr "前綴會加在列表 URL 之前，例如 https://gh-proxy.com"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Preset used for the aggressive driving personality: close (1.25 s -> 1.0 s), medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Preset used for the relaxed driving personality: close (1.25 s -> 1.0 s), medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Preset used for the standard driving personality: close (1.25 s -> 1.0 s), medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
+msgstr ""
 
 msgid ""
 "Press + to adjust to\n"
@@ -4528,15 +4308,11 @@ msgid "Prevent large uploads over the cellular connection."
 msgstr "禁止透過行動網路進行大量上傳。"
 
 #: selfdrive/ui/mici/layouts/settings/device.py
-msgid ""
-"Preview the cabin camera to check driver monitoring visibility. The vehicle "
-"must be off."
+msgid "Preview the cabin camera to check driver monitoring visibility. The vehicle must be off."
 msgstr "預覽車內攝影機以檢查駕駛員監測視野。車輛必須處於熄火狀態。"
 
 #: selfdrive/ui/layouts/settings/device.py
-msgid ""
-"Preview the driver facing camera to ensure that driver monitoring has good "
-"visibility. (vehicle must be off)"
+msgid "Preview the driver facing camera to ensure that driver monitoring has good visibility. (vehicle must be off)"
 msgstr "預覽車內鏡頭以確保駕駛監控視野良好。（車輛須熄火）"
 
 #: selfdrive/ui/layouts/settings/device.py
@@ -4569,9 +4345,7 @@ msgid "Quickboot Mode"
 msgstr "快速啟動模式"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
-msgid ""
-"Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' "
-"in the Software panel first."
+msgid "Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' in the Software panel first."
 msgstr "快速啟動模式需先停用更新。<br>請先在軟體面板中啟用「停用更新」。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -4622,11 +4396,8 @@ msgid "Radar Fusion (Macan)"
 msgstr "Macan雷達融合"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) "
-"to correct the vision lead, reduces follow jitter."
-msgstr ""
-"Macan雷達融合：用原廠ACC雷達（bus2距離+前車速度）修正視覺前車，減輕跟車抖動。"
+msgid "Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter."
+msgstr "Macan雷達融合：用原廠ACC雷達（bus2距離+前車速度）修正視覺前車，減輕跟車抖動。"
 
 msgid "Re-engage to switch"
 msgstr "重新接合以切換"
@@ -4657,8 +4428,10 @@ msgstr "倒車影像保持距離"
 
 #: selfdrive/ui/layouts/settings/device.py
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
-#: selfdrive/ui/sunnypilot/layouts/settings/software.py system/ui/text.py
-#: system/ui/tici_reset.py system/ui/tici_updater.py
+#: selfdrive/ui/sunnypilot/layouts/settings/software.py
+#: system/ui/text.py
+#: system/ui/tici_reset.py
+#: system/ui/tici_updater.py
 msgid "Reboot"
 msgstr "重新啟動"
 
@@ -4679,13 +4452,8 @@ msgid "Recalibrating in progress: {progress}%"
 msgstr "重新校正進行中：{progress}%"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Receive alerts to steer back into the lane when your vehicle drifts over a "
-"detected lane line without a turn signal activated while driving over 31 mph "
-"(50 km/h)."
-msgstr ""
-"車速超過 31 mph（50 km/h）且未打方向燈時，若車輛偏離偵測到的車道線，將發出提"
-"醒引導回到車道。"
+msgid "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line without a turn signal activated while driving over 31 mph (50 km/h)."
+msgstr "車速超過 31 mph（50 km/h）且未打方向燈時，若車輛偏離偵測到的車道線，將發出提醒引導回到車道。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Receiving input"
@@ -4700,11 +4468,8 @@ msgid "Record and Upload Microphone Audio"
 msgstr "錄製並上傳麥克風音訊"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Record and store microphone audio while driving. The audio will be included "
-"in the dashcam video in comma connect."
-msgstr ""
-"行車時錄製並儲存麥克風音訊。音訊將包含在 comma connect 的行車紀錄影片中。"
+msgid "Record and store microphone audio while driving. The audio will be included in the dashcam video in comma connect."
+msgstr "行車時錄製並儲存麥克風音訊。音訊將包含在 comma connect 的行車紀錄影片中。"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid ""
@@ -4723,9 +4488,7 @@ msgid "Refresh Model List"
 msgstr "重新整理模型列表"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Refresh an already-locked lead from a newer radar frame instead of promoting "
-"a new track."
+msgid "Refresh an already-locked lead from a newer radar frame instead of promoting a new track."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -4741,11 +4504,12 @@ msgstr "法規"
 msgid "Relaxed"
 msgstr "從容"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Relaxed Personality"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Release the follow suppression once the lead leaves the lane, so the car "
-"does not keep hanging back. Read once when plannerd starts - restart to "
-"apply."
+msgid "Release the follow suppression once the lead leaves the lane, so the car does not keep hanging back. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
@@ -4768,24 +4532,27 @@ msgid "Remote snapshots"
 msgstr "遠端擷圖"
 
 #: selfdrive/ui/mici/layouts/onboarding.py
-msgid ""
-"Remount if your face is blocked, or driver monitoring has difficulty "
-"tracking your face."
+msgid "Remount if your face is blocked, or driver monitoring has difficulty tracking your face."
 msgstr "如果面部被遮擋或駕駛員監測難以追蹤您的面部，請重新安裝裝置。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Remove all pairings and restart the Bluetooth service."
 msgstr "移除所有配對並重新啟動藍牙服務。"
 
+#: selfdrive/ui/layouts/settings/toggles.py
+msgid "Replace the driver monitoring camera thumbnail with animated pearl cartoon eyes that mirror head pose and blinks."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Replace the single following distance per personality with a speed-dependent profile. The follow time is interpolated over speed, so the gap can be shorter in town and longer on the highway."
+msgstr ""
+
 #: selfdrive/ui/widgets/ssh_key.py
 msgid "Request timed out"
 msgstr "要求逾時"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Require range evidence before a stopped lead counts as departed, so a "
-"stationary lead is not mistaken for an open gap. Read once when plannerd "
-"starts - restart to apply."
+msgid "Require range evidence before a stopped lead counts as departed, so a stationary lead is not mistaken for an open gap. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/layouts/settings/device.py
@@ -4913,9 +4680,7 @@ msgid "Run big models over a connected device running Jetlink. Turns off ADB."
 msgstr "透過執行 Jetlink 的外接裝置執行大模型。會關閉 ADB。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid ""
-"Run big models over a connected device running Jetlink. USB and iOS turn off "
-"ADB."
+msgid "Run big models over a connected device running Jetlink. USB and iOS turn off ADB."
 msgstr "在已連接的外接算力上執行大模型。USB 與 iOS 模式會關閉 ADB。"
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
@@ -4927,27 +4692,15 @@ msgid "Run longitudinal maneuvers for testing gas and brake control."
 msgstr "執行縱向測試動作，用於檢驗油門與剎車控制。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Run the ONNX blind-spot model on the camera image and report side obstacles "
-"in the UI. Off unloads the model and frees its memory; the thresholds below "
-"have no effect."
-msgstr ""
-"在攝影機畫面上執行 ONNX 盲區模型，並在 UI 中報告側方障礙物。關閉時卸載模型並"
-"釋放記憶體；下方閾值設定將不起作用。"
+msgid "Run the ONNX blind-spot model on the camera image and report side obstacles in the UI. Off unloads the model and frees its memory; the thresholds below have no effect."
+msgstr "在攝影機畫面上執行 ONNX 盲區模型，並在 UI 中報告側方障礙物。關閉時卸載模型並釋放記憶體；下方閾值設定將不起作用。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
-msgid ""
-"Run the big driving model on an attached accelerator: USB for a Jetson, a "
-"Linux PC, a Mac or an Android phone; iOS for an iPhone."
-msgstr ""
-"在已連接的外接算力上執行大模型：USB 支援 Jetson、Linux 電腦、Mac 或 Android "
-"手機；iOS 支援 iPhone。"
+msgid "Run the big driving model on an attached accelerator: USB for a Jetson, a Linux PC, a Mac or an Android phone; iOS for an iPhone."
+msgstr "在已連接的外接算力上執行大模型：USB 支援 Jetson、Linux 電腦、Mac 或 Android 手機；iOS 支援 iPhone。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Run the vision speed-limit reader: three ONNX models look at the road camera "
-"and publish the sign they read into shared memory. Started by the process "
-"manager, so restart to apply. Off by default."
+msgid "Run the vision speed-limit reader: three ONNX models look at the road camera and publish the sign they read into shared memory. Started by the process manager, so restart to apply. Off by default."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
@@ -5020,12 +4773,8 @@ msgid "SW"
 msgstr "SW"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
-msgid ""
-"Safe Mode forces every driving knob this fork adds back to a conservative "
-"value and remembers what it replaced. Continue?"
-msgstr ""
-"安全模式會把本分支新增的每個駕駛參數強制改回保守值，並記住被替換掉的原值。繼"
-"續？"
+msgid "Safe Mode forces every driving knob this fork adds back to a conservative value and remembers what it replaced. Continue?"
+msgstr "安全模式會把本分支新增的每個駕駛參數強制改回保守值，並記住被替換掉的原值。繼續？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Safe Mode is on. Reboot so every process picks up the forced values."
@@ -5052,8 +4801,7 @@ msgid "Scale the engage / disengage / reverse chimes, in percent."
 msgstr "按百分比縮放接管、退出接管與倒車提示音。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering.py
-msgid ""
-"Scales the live steering ratio, in percent. 100 keeps the vehicle's ratio."
+msgid "Scales the live steering ratio, in percent. 100 keeps the vehicle's ratio."
 msgstr "按百分比縮放車輛即時轉向比。100 保持原廠。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -5172,6 +4920,10 @@ msgstr "選取分支"
 msgid "Select a language"
 msgstr "選取語言"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Select a non-Default model to use Blendful."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py
 msgid "Select a vehicle"
 msgstr "選擇車輛"
@@ -5181,15 +4933,11 @@ msgid "Select the software branch to download on the next update check."
 msgstr "選擇下次檢查更新時要下載的軟體分支。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
-msgid ""
-"Select the version of Torque Control Tune to use while a big model is "
-"driving."
+msgid "Select the version of Torque Control Tune to use while a big model is driving."
 msgstr "選擇大模型駕駛時使用的扭矩控制調校版本。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
-msgid ""
-"Select the version of Torque Control Tune to use while the small model is "
-"driving."
+msgid "Select the version of Torque Control Tune to use while the small model is driving."
 msgstr "選擇小模型駕駛時使用的扭矩控制調校版本。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering_sub_layouts\torque_settings.py
@@ -5226,47 +4974,34 @@ msgid "Serial"
 msgstr "序號"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
-msgid ""
-"Serve the carrot tuning page (/nav_params) and four-corner radar "
-"visualisation (/radar) on port 8088."
-msgstr ""
-"在 8088 連接埠提供 Carrot 調參頁面（/nav_params）與四角雷達視覺化（/radar）。"
+msgid "Serve the carrot tuning page (/nav_params) and four-corner radar visualisation (/radar) on port 8088."
+msgstr "在 8088 連接埠提供 Carrot 調參頁面（/nav_params）與四角雷達視覺化（/radar）。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Server"
 msgstr "服务器"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "Set Speed Assist"
+msgstr ""
+
 msgid "Set Speed Changed"
 msgstr "設定速度已變更"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid ""
-"Set a timer to delay the auto lane change operation when the blinker is "
-"used. No nudge on the steering wheel is required to auto lane change if a "
-"timer is set. Default is Nudge.<br>Please use caution when using this "
-"feature. Only use the blinker when traffic and road conditions permit."
-msgstr ""
-"使用轉向燈時設定延遲計時器以延遲自動變道。設定計時器後無需輕推方向盤即可變"
-"道，預設為輕推。<br>請謹慎使用，僅在交通和路況允許時使用轉向燈。"
+msgid "Set a timer to delay the auto lane change operation when the blinker is used. No nudge on the steering wheel is required to auto lane change if a timer is set. Default is Nudge.<br>Please use caution when using this feature. Only use the blinker when traffic and road conditions permit."
+msgstr "使用轉向燈時設定延遲計時器以延遲自動變道。設定計時器後無需輕推方向盤即可變道，預設為輕推。<br>請謹慎使用，僅在交通和路況允許時使用轉向燈。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
-msgid ""
-"Set how far a short press and a long press of + or - move your set speed."
+msgid "Set how far a short press and a long press of + or - move your set speed."
 msgstr "設定短按和長按 + 或 - 時調整設定速度的幅度。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Set how sensitive the driver distraction detection should be. Strict: Very "
-"sensitive, warns on minor distractions. Moderate: Balanced between "
-"sensitivity and false positives. Lenient: Only alerts on clear distractions. "
-msgstr ""
-"設定駕駛員分心偵測的靈敏度。嚴格：非常靈敏，輕微分心也會警告。中等：在靈敏度"
-"與誤報之間平衡。寬鬆：僅在明顯分心時提醒。"
+msgid "Set how sensitive the driver distraction detection should be. Strict: Very sensitive, warns on minor distractions. Moderate: Balanced between sensitivity and false positives. Lenient: Only alerts on clear distractions. "
+msgstr "設定駕駛員分心偵測的靈敏度。嚴格：非常靈敏，輕微分心也會警告。中等：在靈敏度與誤報之間平衡。寬鬆：僅在明顯分心時提醒。"
 
 #: selfdrive/ui/mici/layouts/settings/network/network_layout.py
-msgid ""
-"Set the access point name required by your cellular carrier. Leave blank for "
-"automatic configuration."
+msgid "Set the access point name required by your cellular carrier. Leave blank for automatic configuration."
 msgstr "設定運營商要求的 APN 名稱。留空則自動配置。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -5286,9 +5021,7 @@ msgid "Share the device's internet connection through a Wi-Fi hotspot."
 msgstr "透過 Wi-Fi 熱點共享裝置的網路連線。"
 
 #: selfdrive/ui/mici/layouts/onboarding.py
-msgid ""
-"Sharing your data with comma helps improve openpilot and sunnypilot for "
-"everyone."
+msgid "Sharing your data with comma helps improve openpilot and sunnypilot for everyone."
 msgstr "與 comma 分享您的資料，能協助改善所有人的 openpilot 與 sunnypilot。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
@@ -5316,9 +5049,11 @@ msgid "Show Debug Log"
 msgstr "顯示除錯日誌"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/display.py
-msgid ""
-"Show a screen saver when the device is offroad and idle, instead of turning "
-"the screen off."
+msgid "Show Driving Model on Home Screen"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/display.py
+msgid "Show a screen saver when the device is offroad and idle, instead of turning the screen off."
 msgstr "裝置離車且空閒時顯示螢幕保護，而不是關閉螢幕。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
@@ -5326,12 +5061,8 @@ msgid "Show a timer on the HUD when the car is at a standstill."
 msgstr "當汽車處於靜止狀態時，HUD 上顯示計時器。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Show an indicator on the left side of the screen to display real-time "
-"vehicle acceleration and deceleration. This displays what the car is "
-"currently doing, not what the planner is requesting."
-msgstr ""
-"在螢幕左側顯示實時加減速指示條，反映車輛當前實際加減速，而非規劃器請求值。"
+msgid "Show an indicator on the left side of the screen to display real-time vehicle acceleration and deceleration. This displays what the car is currently doing, not what the planner is requesting."
+msgstr "在螢幕左側顯示實時加減速指示條，反映車輛當前實際加減速，而非規劃器請求值。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Show debug overlays on the external cluster."
@@ -5357,13 +5088,13 @@ msgstr "離車且空閒時顯示螢幕保護，而不是黑屏。"
 msgid "Shows a warning on screen when a car is in your blind spot."
 msgstr "盲區有車時在螢幕上顯示警告。"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Shrink the follow distance as speed rises. Off disables it; the three "
-"profiles differ in how far up the speed range the gap keeps tightening."
+#: selfdrive/ui/sunnypilot/mici/layouts/display.py
+msgid "Shows the driving model's name at the bottom of the home screen."
 msgstr ""
-"車速升高時縮短跟車距離。關閉則不啟用；三個設定的差別在於跟車距離持續收緊到多"
-"高的車速。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Shrink the follow distance as speed rises. Off disables it; the three profiles differ in how far up the speed range the gap keeps tightening."
+msgstr "車速升高時縮短跟車距離。關閉則不啟用；三個設定的差別在於跟車距離持續收緊到多高的車速。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Side Blind Spot Delay"
@@ -5376,6 +5107,10 @@ msgstr "側向相對距離時間"
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Side vRel Distance Time"
 msgstr "側向相對速度時間"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
+msgid "Silent"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
 msgid "Slope Comp Unlimited (Macan)"
@@ -5390,13 +5125,8 @@ msgid "Slow"
 msgstr "慢"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid ""
-"Slow automatic lane changes to a chosen pace. Off is stock; every pace is "
-"gentler than stock. The end-of-maneuver correction keeps its authority at "
-"every pace, so the car settles into the new lane without a wheel snap."
-msgstr ""
-"將自動變道放慢到選定節奏。關閉即原廠；每個檔位都比原廠更輕柔。變道末段的修正"
-"力在各檔位下保持不變，車輛可平穩進入新車道，不會出現方向盤猛回。"
+msgid "Slow automatic lane changes to a chosen pace. Off is stock; every pace is gentler than stock. The end-of-maneuver correction keeps its authority at every pace, so the car settles into the new lane without a wheel snap."
+msgstr "將自動變道放慢到選定節奏。關閉即原廠；每個檔位都比原廠更輕柔。變道末段的修正力在各檔位下保持不變，車輛可平穩進入新車道，不會出現方向盤猛回。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
 msgid "Slow for Curves: Map"
@@ -5547,6 +5277,10 @@ msgstr "運動"
 msgid "Standard"
 msgstr "標準"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
+msgid "Standard Personality"
+msgstr ""
+
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid ""
 "Standard is recommended.\n"
@@ -5560,19 +5294,11 @@ msgstr ""
 "支援的車型可用方向盤上的車距按鍵切換。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Standard is recommended. In aggressive mode, sunnypilot will follow lead "
-"cars closer and be more aggressive with the gas and brake. In relaxed mode "
-"sunnypilot will stay further away from lead cars. On supported cars, you can "
-"cycle through these personalities with your steering wheel distance button."
-msgstr ""
-"建議使用標準模式。激進模式下跟車更近、加減速更積極；從容模式下跟車更遠。部分"
-"車型可透過方向盤距離按鍵切換駕駛風格。"
+msgid "Standard is recommended. In aggressive mode, sunnypilot will follow lead cars closer and be more aggressive with the gas and brake. In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with your steering wheel distance button."
+msgstr "建議使用標準模式。激進模式下跟車更近、加減速更積極；從容模式下跟車更遠。部分車型可透過方向盤距離按鍵切換駕駛風格。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
-msgid ""
-"StarPilot's per-vehicle lateral torque network, replacing the stock torque "
-"math. Needs a torque model for this car."
+msgid "StarPilot's per-vehicle lateral torque network, replacing the stock torque math. Needs a torque model for this car."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
@@ -5592,10 +5318,7 @@ msgid "Start over"
 msgstr "重新開始"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Start slowing early for a vehicle cutting in from a neighbouring lane, "
-"instead of waiting for the gap to close. Read once when plannerd starts - "
-"restart to apply."
+msgid "Start slowing early for a vehicle cutting in from a neighbouring lane, instead of waiting for the gap to close. Read once when plannerd starts - restart to apply."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -5615,15 +5338,8 @@ msgid "Startup Safe Distance (Macan)"
 msgstr "起步安全距離（Macan）"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/volkswagen.py
-msgid ""
-"Startup Safe Distance (Macan): minimum bumper-to-lead distance (3-10 m, "
-"default 6 m) required before openpilot auto-resumes from a stop - the stock "
-"radar distance or the vision lead must exceed this value, which prevents "
-"phantom starts. Only effective when Stop and Go (Macan) is enabled."
-msgstr ""
-"Macan 起步安全距離：自動起步所需的車頭（前保險桿）到前車的最小距離（3~10 公"
-"尺，預設 6 公尺）。需原廠雷達距離(ab) 或視覺前車距離超過該閾值才自動起步——防"
-"誤起步。僅在開啟「起步跟停（Macan）」時生效。"
+msgid "Startup Safe Distance (Macan): minimum bumper-to-lead distance (3-10 m, default 6 m) required before openpilot auto-resumes from a stop - the stock radar distance or the vision lead must exceed this value, which prevents phantom starts. Only effective when Stop and Go (Macan) is enabled."
+msgstr "Macan 起步安全距離：自動起步所需的車頭（前保險桿）到前車的最小距離（3~10 公尺，預設 6 公尺）。需原廠雷達距離(ab) 或視覺前車距離超過該閾值才自動起步——防誤起步。僅在開啟「起步跟停（Macan）」時生效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
 msgid "State"
@@ -5665,22 +5381,14 @@ msgid "Steering Suspend"
 msgstr "轉向暫停"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Steering angle at which lateral control pauses while you steer. 300° "
-"effectively disables it. CarrotPilot stores 0.1-degree units for this "
-"parameter but its code, like this port, compares the raw value against the "
-"steering angle, so the number reads as degrees here."
-msgstr ""
-"轉向角超過該值時，橫向控制會在你轉向期間暫停。300° 實際上等於關閉。"
-"CarrotPilot 為此參數宣告了 0.1 度單位，但它的程式碼與本移植一樣，直接拿原始值"
-"與轉向角比較，所以這裡的數值按度理解。"
+msgid "Steering angle at which lateral control pauses while you steer. 300° effectively disables it. CarrotPilot stores 0.1-degree units for this parameter but its code, like this port, compares the raw value against the steering angle, so the number reads as degrees here."
+msgstr "轉向角超過該值時，橫向控制會在你轉向期間暫停。300° 實際上等於關閉。CarrotPilot 為此參數宣告了 0.1 度單位，但它的程式碼與本移植一樣，直接拿原始值與轉向角比較，所以這裡的數值按度理解。"
 
 msgid "Steering blocked by panda safety"
 msgstr "轉向被 panda 安全機制阻止"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
-msgid ""
-"Steering geometry, MPC costs, torque tuning, lane change and blind spot."
+msgid "Steering geometry, MPC costs, torque tuning, lane change and blind spot."
 msgstr "轉向幾何、MPC 代價、扭矩調校、變道與盲區。"
 
 msgid "Steering rack geometry may be off (Ratio: {ratio})"
@@ -5756,6 +5464,14 @@ msgstr "停車前车证据"
 msgid "Stops the model download in progress."
 msgstr "停止正在進行的模型下載。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py
+msgid "Storage"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Storage Used"
+msgstr ""
+
 #: selfdrive/ui/layouts/settings/toggles.py
 msgid "Strict"
 msgstr "嚴格"
@@ -5777,9 +5493,7 @@ msgid "Supply Voltage"
 msgstr "供電電壓"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
-msgid ""
-"Switch between Konik and Comma servers（Confirming the switch will cause the "
-"service to restart）"
+msgid "Switch between Konik and Comma servers（Confirming the switch will cause the service to restart）"
 msgstr "在 Konik 与 Comma 服务器之间切换（确认切换将导致服务重启）"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -5795,17 +5509,11 @@ msgstr ""
 "前方有停車或減速時用實驗模式，其餘情況用 chill。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"Switches between chill and Experimental Mode on its own: experimental for "
-"stops and slowdowns ahead, chill otherwise."
-msgstr ""
-"自動在 chill 與實驗模式之間切換：前方有停車或減速時用實驗模式，其餘情況用 "
-"chill。"
+msgid "Switches between chill and Experimental Mode on its own: experimental for stops and slowdowns ahead, chill otherwise."
+msgstr "自動在 chill 與實驗模式之間切換：前方有停車或減速時用實驗模式，其餘情況用 chill。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Synthesises a camera distance when the car sends only an enforcement speed. "
-"0.1 s units; 60 = 6.0 s."
+msgid "Synthesises a camera distance when the car sends only an enforcement speed. 0.1 s units; 60 = 6.0 s."
 msgstr "當車輛只送出執法測速值時的合成相機距離。單位為 0.1 秒；60 = 6.0 秒。"
 
 #: system/ui/tici_reset.py
@@ -5822,9 +5530,7 @@ msgid "System reboot required for changes to take effect. Reboot now?"
 msgstr "需要重新啟動系統才能使變更生效。現在重啟？"
 
 #: system/ui/tici_reset.py
-msgid ""
-"System reset triggered. Press confirm to erase all content and settings. "
-"Press cancel to resume boot."
+msgid "System reset triggered. Press confirm to erase all content and settings. Press cancel to resume boot."
 msgstr "系統重置被觸發。按確認刪除所有內容和設定。按取消恢復啟動。"
 
 #: selfdrive/ui/mici/onroad/alert_renderer.py
@@ -5847,6 +5553,10 @@ msgstr "測試中..."
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "THANKS ♥"
 msgstr "謝謝♥"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
+msgid "TSS2 Smooth Longitudinal (Alpha)"
+msgstr ""
 
 msgid "Take Control"
 msgstr "接管控制"
@@ -5892,39 +5602,27 @@ msgid "The big model"
 msgstr "大模型"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"The driver monitoring system can be toggled on/off, but long-term activation "
-"is recommended"
+msgid "The driver monitoring system can be toggled on/off, but long-term activation is recommended"
 msgstr "駕駛員監測系統可開關，建議保持長期開啟。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"The mirror must be an http(s) URL without spaces, e.g. https://hf-mirror.com"
+msgid "The mirror must be an http(s) URL without spaces, e.g. https://hf-mirror.com"
 msgstr "鏡像必須是不含空格的 http(s) URL，例如 https://hf-mirror.com"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"The model list lives on GitHub raw. Auto tries direct first and falls back "
-"to a CDN mirror when it fails; "
-msgstr ""
-"模型列表託管在 GitHub raw 上。自動會先嘗試直連，失敗時回退到 CDN 鏡像；"
+msgid "The model list lives on GitHub raw. Auto tries direct first and falls back to a CDN mirror when it fails; "
+msgstr "模型列表託管在 GitHub raw 上。自動會先嘗試直連，失敗時回退到 CDN 鏡像；"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "The path will change colors to communicate acceleration intent."
 msgstr "路徑會透過顏色變化傳達加速意圖。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
-msgid ""
-"The physical TJA button toggles Automatic Lane Centering and MRCC only "
-"controls cruise. Main Cruise and UEM no longer engage or disengage lateral "
-"control. Enable only if your car has the button."
-msgstr ""
-"由實體 TJA 按鍵開關自動車道居中，MRCC 僅控制巡航。主巡航鍵和 UEM 不再啟用或解"
-"除橫向控制。僅在您的車輛配有該按鍵時啟用。"
+msgid "The physical TJA button toggles Automatic Lane Centering and MRCC only controls cruise. Main Cruise and UEM no longer engage or disengage lateral control. Enable only if your car has the button."
+msgstr "由實體 TJA 按鍵開關自動車道居中，MRCC 僅控制巡航。主巡航鍵和 UEM 不再啟用或解除橫向控制。僅在您的車輛配有該按鍵時啟用。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"The proxy must be an http(s) URL without spaces, e.g. https://gh-proxy.com"
+msgid "The proxy must be an http(s) URL without spaces, e.g. https://gh-proxy.com"
 msgstr "代理必須是不含空格的 http(s) URL，例如 https://gh-proxy.com"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -5953,10 +5651,12 @@ msgstr ""
 "MRCC 主按鍵此後僅控制巡航。\n"
 "僅在您的車輛配有該按鍵時開啟。"
 
+#: selfdrive/ui/sunnypilot/onroad/navigation_card.py
+msgid "Then"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
-msgid ""
-"This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-"
-"capable AGNOS build."
+msgid "This AGNOS kernel does not expose /dev/ttyHS1. Reflash to a Bluetooth-capable AGNOS build."
 msgstr "此 AGNOS 核心未開放 /dev/ttyHS1。請刷入支援藍牙的 AGNOS 版本。"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
@@ -5972,39 +5672,32 @@ msgid "This device or AGNOS build lacks /dev/btpower."
 msgstr "此裝置或 AGNOS 版本缺少 /dev/btpower。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
-msgid ""
-"This device or AGNOS build lacks the required Bluetooth UART and power nodes."
+msgid "This device or AGNOS build lacks the required Bluetooth UART and power nodes."
 msgstr "此裝置或 AGNOS 版本缺少所需的藍牙 UART 與電源節點。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise.py
-msgid ""
-"This feature can only be used with sunnypilot longitudinal control enabled."
+msgid "This feature can only be used with sunnypilot longitudinal control enabled."
 msgstr "此功能只能在啟用 sunnypilot 縱向控制的情況下使用。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"This feature can only be used with zoompilot longitudinal control enabled."
+msgid "This feature can only be used with zoompilot longitudinal control enabled."
 msgstr "此功能僅在啟用 zoompilot 縱向控制時可用。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
-msgid ""
-"This feature defaults to OFF, and does not allow selection due to vehicle "
-"limitations."
+msgid "This feature defaults to OFF, and does not allow selection due to vehicle limitations."
 msgstr "此功能預設為關閉，並且由於車輛限制不允許選擇。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
-msgid ""
-"This feature defaults to ON, and does not allow selection due to vehicle "
-"limitations."
+msgid "This feature defaults to ON, and does not allow selection due to vehicle limitations."
 msgstr "此功能預設為開啟，由於車輛限制不允許選擇。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/subaru.py
+#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
 msgid "This feature is currently not available on this platform."
 msgstr "該功能目前在此平臺上不可用。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"This feature is not supported on this platform due to vehicle limitations."
+msgid "This feature is not supported on this platform due to vehicle limitations."
 msgstr "由於車輛限制，該平臺不支援此功能。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py
@@ -6012,9 +5705,7 @@ msgid "This feature is unavailable because Alpha Longitudinal is not enabled."
 msgstr "此功能不可用，因為未啟用 Alpha 縱向控制。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\vehicle\brands\hyundai.py
-msgid ""
-"This feature is unavailable because sunnypilot Longitudinal Control (Alpha) "
-"is not enabled."
+msgid "This feature is unavailable because sunnypilot Longitudinal Control (Alpha) is not enabled."
 msgstr "此功能不可用，因為 sunnypilot 縱向控制 (Alpha) 未啟用。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/hyundai.py
@@ -6025,19 +5716,21 @@ msgstr "當汽車在路上時，此功能不可用。"
 msgid "This feature requires sunnypilot longitudinal control to be available."
 msgstr "此功能需要 sunnypilot 縱向控制可用。"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
+#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
+msgid "This feature requires zoompilot longitudinal control to be available."
+msgstr ""
+
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "This is an alpha quality feature; mistakes should be expected."
 msgstr "這是 alpha 級功能，可能出現失誤。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-msgid ""
-"This is the master switch, it will allow you to cutoff any sunnylink "
-"requests should you want to do that."
+msgid "This is the master switch, it will allow you to cutoff any sunnylink requests should you want to do that."
 msgstr "這是主開關，如果您願意，它將允許您切斷任何 sunnylink 請求。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
-msgid ""
-"This may be due to weak internet connection or sunnylink registration issue. "
+msgid "This may be due to weak internet connection or sunnylink registration issue. "
 msgstr "這可能是由於網路連線較弱或 sunnylink 註冊問題造成的。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
@@ -6061,6 +5754,7 @@ msgid "This setting will take effect once the device enters offroad state."
 msgstr "此設定將在裝置進入離路狀態後生效。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid ""
 "This will delete ALL downloaded maps\n"
 "\n"
@@ -6071,18 +5765,24 @@ msgstr ""
 "您確定要刪除所有地圖嗎？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"This will delete ALL downloaded models from the cache except the currently "
-"active model. Are you sure?"
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "This will delete ALL downloaded models from the cache except the currently active model. Are you sure?"
 msgstr "這將從快取中刪除除當前活動模型之外的所有下載模型。你確定嗎？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
-msgid ""
-"This will start the download process and it might take a while to complete."
+msgid "This will start the download process and it might take a while to complete."
 msgstr "這將開始下載過程，可能需要一段時間才能完成。"
 
 msgid "Throttle: {throttle}%, Steering: {steering}%"
 msgstr "油門: {throttle}%, 轉向: {steering}%"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Tiered"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Tiered: Adds a different offset for each speed limit range."
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "Time"
@@ -6093,27 +5793,20 @@ msgid "Time between blind-spot inferences."
 msgstr "兩次盲區推理之間的時間。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Time between lane inferences. Values below 600 ms are raised by the server, "
-"which would saturate a CPU core."
-msgstr ""
-"兩次車道推理之間的時間。低於 600 ms 的值會被伺服器強制抬高，否則會佔滿一個 "
-"CPU 核心。"
+msgid "Time between lane inferences. Values below 600 ms are raised by the server, which would saturate a CPU core."
+msgstr "兩次車道推理之間的時間。低於 600 ms 的值會被伺服器強制抬高，否則會佔滿一個 CPU 核心。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid ""
-"Toggle to enable a delay timer for seamless lane changes when blind spot "
-"monitoring (BSM) detects a obstructing vehicle, ensuring safe maneuvering."
+msgid "Toggle to enable a delay timer for seamless lane changes when blind spot monitoring (BSM) detects a obstructing vehicle, ensuring safe maneuvering."
 msgstr "當盲點監測 (BSM) 檢測到障礙車輛時啟用延遲計時器，以確保安全變道。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
-msgid ""
-"Toggle visibility of advanced sunnypilot controls.<br>This only changes the "
-"visibility of the toggles; it does not change the actual enabled/disabled "
-"state."
+msgid "Toggle visibility of advanced sunnypilot controls.<br>This only changes the visibility of the toggles; it does not change the actual enabled/disabled state."
+msgstr "切換高階 sunnypilot 控制項的顯示。<br>僅改變開關可見性，不會改變實際啟用/停用狀態。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
+msgid "Toggle visibility of advanced zoompilot controls.<br>This only changes the visibility of the toggles; it does not change the actual enabled/disabled state."
 msgstr ""
-"切換高階 sunnypilot 控制項的顯示。<br>僅改變開關可見性，不會改變實際啟用/停用"
-"狀態。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
 msgid "Toggle with Main Cruise"
@@ -6195,6 +5888,10 @@ msgstr "轉彎速度"
 msgid "Turn Speed Control Mode"
 msgstr "彎道速度控制模式"
 
+#: selfdrive/ui/mici/layouts/settings/developer.py
+msgid "Turn-by-turn navigation with a route map. Set a destination from comma connect."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
 "Turning cruise main on also turns steering on.\n"
@@ -6219,7 +5916,8 @@ msgstr "解除安裝"
 msgid "UNPAIR"
 msgstr "取消配對"
 
-#: selfdrive/ui/layouts/home.py selfdrive/ui/sunnypilot/layouts/home.py
+#: selfdrive/ui/layouts/home.py
+#: selfdrive/ui/sunnypilot/layouts/home.py
 msgid "UPDATE"
 msgstr "更新"
 
@@ -6240,14 +5938,16 @@ msgstr ""
 "%1"
 
 #: system/ui/tici_reset.py
-msgid ""
-"Unable to mount data partition. Partition may be corrupted. Press confirm to "
-"erase and reset your device."
+msgid "Unable to mount data partition. Partition may be corrupted. Press confirm to erase and reset your device."
 msgstr "無法掛載資料分割區。分割槽可能已損壞。按確認以擦除並重置您的裝置。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "Unable to restore the settings, try again later."
 msgstr "無法恢復設定，請稍後重試。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Unavailable"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Undo Safe Mode and put back the values it replaced?"
@@ -6295,9 +5995,7 @@ msgid "Upload cabin camera data to help improve driver monitoring."
 msgstr "上傳車內攝影機資料，幫助改進駕駛員監測。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Upload data from the driver facing camera and help improve the driver "
-"monitoring algorithm."
+msgid "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
 msgstr "上傳車內鏡頭資料，協助改善駕駛監控演演算法。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
@@ -6341,20 +6039,15 @@ msgid "Use a multi-finger press on the infotainment screen to toggle MADS."
 msgstr "在車機螢幕上以多指點按來切換 MADS。"
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
-msgid ""
-"Use alpha openpilot longitudinal control instead of stock ACC. This may "
-"disable Automatic Emergency Braking (AEB)."
-msgstr ""
-"使用 alpha 版 openpilot 縱向控制取代原廠 ACC。這可能導致自動緊急制動（AEB）失"
-"效。"
+msgid "Use alpha openpilot longitudinal control instead of stock ACC. This may disable Automatic Emergency Braking (AEB)."
+msgstr "使用 alpha 版 openpilot 縱向控制取代原廠 ACC。這可能導致自動緊急制動（AEB）失效。"
 
 #: system/ui/tici_setup.py
 msgid "Use caution when installing third-party software."
 msgstr "安裝第三方軟體時請謹慎。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"Use map data to estimate the appropriate speed to drive through turns ahead."
+msgid "Use map data to estimate the appropriate speed to drive through turns ahead."
 msgstr "使用地圖資料來估計透過前方轉彎的適當速度。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/navigation.py
@@ -6362,39 +6055,23 @@ msgid "Use navigation desired speed to limit cruise speed."
 msgstr "使用導航建議速度限制巡航速度。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid ""
-"Use offline OSM map data for speed limits and road names. Turn off to ignore "
-"the offline map entirely - useful when navigation is the source you trust, "
-"since the offline data can be out of date."
-msgstr ""
-"使用離線 OSM 地圖資料取得限速與路名。關閉後完全忽略離線地圖——當你更信任導航資"
-"料時很有用，因為離線資料可能已過時。"
+msgid "Use offline OSM map data for speed limits and road names. Turn off to ignore the offline map entirely - useful when navigation is the source you trust, since the offline data can be out of date."
+msgstr "使用離線 OSM 地圖資料取得限速與路名。關閉後完全忽略離線地圖——當你更信任導航資料時很有用，因為離線資料可能已過時。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/navigation.py
-msgid ""
-"Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad "
-"images). The 7714 link always runs; this only decides whether its data is "
-"used."
-msgstr ""
-"使用 7714 WebSocket v2 豐富導航資料流（紅綠燈、車道、路口影像）。7714 連結始"
-"終執行，此處只決定是否使用其資料。"
+msgid "Use the 7714 WebSocket v2 rich navigation stream (traffic, lanes, crossroad images). The 7714 link always runs; this only decides whether its data is used."
+msgstr "使用 7714 WebSocket v2 豐富導航資料流（紅綠燈、車道、路口影像）。7714 連結始終執行，此處只決定是否使用其資料。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Use the sunnypilot system for adaptive cruise control and lane keep driver "
-"assistance. Your attention is required at all times to use this feature."
-msgstr ""
-"啟用 sunnypilot 的自適應巡航和車道保持輔助。使用時請始終保持注意力集中。"
+msgid "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. Your attention is required at all times to use this feature."
+msgstr "啟用 sunnypilot 的自適應巡航和車道保持輔助。使用時請始終保持注意力集中。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid ""
-"Use the vehicle's auto brake hold feature on supported TSS2 hybrid Toyotas."
+msgid "Use the vehicle's auto brake hold feature on supported TSS2 hybrid Toyotas."
 msgstr "在支援的 TSS2 油電豐田車款上使用車輛本身的 auto brake hold 功能。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"Use vision path predictions to estimate the appropriate speed to drive "
-"through turns ahead."
+msgid "Use vision path predictions to estimate the appropriate speed to drive through turns ahead."
 msgstr "使用視覺路徑預測來估計透過前方轉彎的適當速度。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
@@ -6405,13 +6082,15 @@ msgstr ""
 "以您設定的橫向加速度和摩擦作為初始調校。\n"
 "除非開啟手動實時調校，自學習會在此基礎上繼續學習。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Used Space"
+msgstr ""
+
 msgid "Used {percent}%"
 msgstr "已用 {percent}%"
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
-msgid ""
-"Using Experimental mode is recommended with openpilot longitudinal control "
-"alpha."
+msgid "Using Experimental mode is recommended with openpilot longitudinal control alpha."
 msgstr "使用 openpilot 縱向控制 alpha 時建議同時啟用實驗模式。"
 
 msgid "Using small model"
@@ -6462,9 +6141,7 @@ msgid "View the last navigation event summary handled by CarrotManager."
 msgstr "檢視 CarrotManager 處理的最後一次導航事件摘要。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"Virtually shift camera's perspective to move model's center to Left(+ "
-"values) or Right (- values)"
+msgid "Virtually shift camera's perspective to move model's center to Left(+ values) or Right (- values)"
 msgstr "虛擬移動相機視角，將模型中心向左（+ 數值）或向右（- 數值）移動。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -6496,9 +6173,7 @@ msgid "WARNING: Low Voltage"
 msgstr "警告：低電壓"
 
 #: selfdrive/ui/mici/layouts/settings/developer.py
-msgid ""
-"WARNING: alpha longitudinal control may disable Automatic Emergency Braking "
-"(AEB)"
+msgid "WARNING: alpha longitudinal control may disable Automatic Emergency Braking (AEB)"
 msgstr "警告：alpha 縱向控制可能會禁用自動緊急制動（AEB）"
 
 msgid "Wait for the radar takeover"
@@ -6541,26 +6216,16 @@ msgid "Warning"
 msgstr "警告"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py
-msgid ""
-"Warning: May experience steering oscillations below {speed} {unit} during "
-"turns, recommend disabling this feature if you experience these."
-msgstr ""
-"警告：在 {speed} {unit} 以下過彎時可能出現轉向震盪，若發生此情況建議停用本功"
-"能。"
+msgid "Warning: May experience steering oscillations below {speed} {unit} during turns, recommend disabling this feature if you experience these."
+msgstr "警告：在 {speed} {unit} 以下過彎時可能出現轉向震盪，若發生此情況建議停用本功能。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid ""
-"Warning: Provides a warning when exceeding the current road's speed limit."
+msgid "Warning: Provides a warning when exceeding the current road's speed limit."
 msgstr "警告：超過目前道路速度限制時提供警告。"
 
 #: selfdrive/ui/layouts/settings/developer.py
-msgid ""
-"Warning: This grants SSH access to all public keys in your GitHub settings. "
-"Never enter a GitHub username other than your own. A comma employee will "
-"NEVER ask you to add their GitHub username."
-msgstr ""
-"警告：這將授予您 GitHub 設定中所有公鑰的 SSH 存取許可權。切勿輸入非本人的 "
-"GitHub 使用者名稱。comma 員工絕不會要求您新增其 GitHub 使用者名稱。"
+msgid "Warning: This grants SSH access to all public keys in your GitHub settings. Never enter a GitHub username other than your own. A comma employee will NEVER ask you to add their GitHub username."
+msgstr "警告：這將授予您 GitHub 設定中所有公鑰的 SSH 存取許可權。切勿輸入非本人的 GitHub 使用者名稱。comma 員工絕不會要求您新增其 GitHub 使用者名稱。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Weather Adaptation"
@@ -6589,9 +6254,7 @@ msgid "What's a good USB-C adapter?"
 msgstr "什麼是好的 USB-C 充電器？"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/software.py
-msgid ""
-"When enabled, automatic software updates will be off.<br><b>This requires a "
-"reboot to take effect.</b>"
+msgid "When enabled, automatic software updates will be off.<br><b>This requires a reboot to take effect.</b>"
 msgstr "啟用後，自動軟體更新將關閉。 <br><b>這需要重新啟動才能生效。 </b>"
 
 #: selfdrive/ui/layouts/settings/toggles.py
@@ -6599,11 +6262,8 @@ msgid "When enabled, pressing the accelerator pedal will disengage sunnypilot."
 msgstr "啟用後，踩下油門踏板將脫離 sunnypilot。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"When enabled, sunnypilot will attempt to manage the built-in cruise control "
-"buttons by emulating button presses for limited longitudinal control."
-msgstr ""
-"啟用後，sunnypilot 將透過模擬按鍵來管理原車巡航控制按鈕，實現有限的縱向控制。"
+msgid "When enabled, sunnypilot will attempt to manage the built-in cruise control buttons by emulating button presses for limited longitudinal control."
+msgstr "啟用後，sunnypilot 將透過模擬按鍵來管理原車巡航控制按鈕，實現有限的縱向控制。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid "When enabled, the speedometer on the onroad screen is not displayed."
@@ -6614,20 +6274,12 @@ msgid "When enabled, visual turn indicators are drawn on the HUD."
 msgstr "啟用後，視覺轉向指示器將繪製在 HUD 上。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"When the speed limit drops sharply under a stable lead, ease the target down "
-"at a comfort rate instead of stepping it. Vetoed by a closing gap, lead "
-"braking, a driver override or a low speed. Applies within about five seconds."
+msgid "When the speed limit drops sharply under a stable lead, ease the target down at a comfort rate instead of stepping it. Vetoed by a closing gap, lead braking, a driver override or a low speed. Applies within about five seconds."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
-msgid ""
-"When toggled on, this creates a prebuilt file to allow accelerated boot "
-"times. When toggled off, it removes the prebuilt file so compilation of "
-"locally edited cpp files can be made."
-msgstr ""
-"開啟後建立預編譯檔案以加快啟動；關閉後刪除預編譯檔案，以便編譯本地修改的 C++ "
-"檔案。"
+msgid "When toggled on, this creates a prebuilt file to allow accelerated boot times. When toggled off, it removes the prebuilt file so compilation of locally edited cpp files can be made."
+msgstr "開啟後建立預編譯檔案以加快啟動；關閉後刪除預編譯檔案，以便編譯本地修改的 C++ 檔案。"
 
 #: selfdrive/ui/layouts/sidebar.py
 msgid "Wi-Fi"
@@ -6642,9 +6294,7 @@ msgid "Wide Camera"
 msgstr "廣角相機"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-msgid ""
-"Width of the coasting band, in percent. Only read while Cruise Coasting is "
-"on; 0 disables the relief without touching the toggle."
+msgid "Width of the coasting band, in percent. Only read while Cruise Coasting is on; 0 disables the relief without touching the toggle."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
@@ -6661,13 +6311,12 @@ msgid "Yes"
 msgstr "是的"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Yes, delete all maps"
 msgstr "是的，刪除所有地圖"
 
 #: selfdrive/ui/mici/layouts/settings/firehose.py
-msgid ""
-"Yes, only upstream openpilot (and particular forks) are able to be used for "
-"training."
+msgid "Yes, only upstream openpilot (and particular forks) are able to be used for training."
 msgstr "會，只有上游 openpilot（及特定分支）的資料能用於訓練。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
@@ -6683,12 +6332,8 @@ msgid "You must accept the Terms of Service to use sunnypilot."
 msgstr "您必須接受服務條款才能使用 sunnypilot。"
 
 #: selfdrive/ui/layouts/onboarding.py
-msgid ""
-"You must accept the Terms of Service to use sunnypilot. Read the latest "
-"terms at https://sunnypilot.ai/terms before continuing."
-msgstr ""
-"您必須接受服務條款才能使用 sunnypilot。在繼續之前，請閱讀 https://"
-"sunnypilot.ai/terms 上的最新條款。"
+msgid "You must accept the Terms of Service to use sunnypilot. Read the latest terms at https://sunnypilot.ai/terms before continuing."
+msgstr "您必須接受服務條款才能使用 sunnypilot。在繼續之前，請閱讀 https://sunnypilot.ai/terms 上的最新條款。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "You will need the pairing code again to reconnect it."
@@ -6772,6 +6417,10 @@ msgstr "APN 設定"
 msgid "assist"
 msgstr "輔助"
 
+#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
+msgid "audible"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/display.py
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "auto"
@@ -6817,6 +6466,10 @@ msgstr "大模型"
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "big models"
 msgstr "大模型"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "blendful (alpha)"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/visuals.py
 msgid "blind spot"
@@ -6876,6 +6529,11 @@ msgstr "取消下載"
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "cancel verification"
 msgstr "取消驗證"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "canceling..."
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid "car"
@@ -6981,13 +6639,8 @@ msgid "copyparty Service"
 msgstr "複製方服務"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
-msgid ""
-"copyparty is a very capable file server, you can use it to download your "
-"routes, view your logs and even make some edits on some files from your "
-"browser. Requires you to connect to your comma locally via its IP address."
-msgstr ""
-"copyparty 是功能強大的檔案伺服器，可透過瀏覽器下載路線、檢視日誌並編輯部分檔"
-"案。需透過 IP 地址在本地連線裝置。"
+msgid "copyparty is a very capable file server, you can use it to download your routes, view your logs and even make some edits on some files from your browser. Requires you to connect to your comma locally via its IP address."
+msgstr "copyparty 是功能強大的檔案伺服器，可透過瀏覽器下載路線、檢視日誌並編輯部分檔案。需透過 IP 地址在本地連線裝置。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "could not download the large model"
@@ -7004,6 +6657,10 @@ msgstr "自定義"
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid "custom increments"
 msgstr "自定義增量"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "custom model only"
+msgstr ""
 
 #: system/ui/mici_setup.py
 msgid "custom software URL..."
@@ -7097,7 +6754,8 @@ msgstr ""
 "並安裝"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-#: selfdrive/ui/sunnypilot/mici/layouts/models.py system/ui/mici_setup.py
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+#: system/ui/mici_setup.py
 msgid "download failed"
 msgstr "下載失敗"
 
@@ -7111,7 +6769,8 @@ msgstr "下載失敗 - {}"
 msgid "downloaded"
 msgstr "已下載"
 
-#: selfdrive/ui/sunnypilot/mici/layouts/models.py system/ui/mici_updater.py
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+#: system/ui/mici_updater.py
 msgid "downloading"
 msgstr "下載"
 
@@ -7119,7 +6778,8 @@ msgstr "下載"
 msgid "downloading the large model"
 msgstr "正在下載大模型"
 
-#: selfdrive/ui/layouts/settings/software.py system/ui/mici_setup.py
+#: selfdrive/ui/layouts/settings/software.py
+#: system/ui/mici_setup.py
 msgid "downloading..."
 msgstr "下載中..."
 
@@ -7200,9 +6860,7 @@ msgid "eGPU big model is running and healthy."
 msgstr "eGPU 大模型運作正常。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_egpu.py
-msgid ""
-"eGPU was selected but failed to start. Check device connection and model "
-"files."
+msgid "eGPU was selected but failed to start. Check device connection and model files."
 msgstr "已選擇 eGPU 但啟動失敗。請檢查裝置連線與模型檔案。"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
@@ -7443,9 +7101,7 @@ msgid "hrs"
 msgstr "小時"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"huggingface.co is unreachable on many networks. Mirror sends model downloads "
-"to a mirror site instead; "
+msgid "huggingface.co is unreachable on many networks. Mirror sends model downloads to a mirror site instead; "
 msgstr "huggingface.co 在不少網路下無法連線。鏡像會把模型下載改走鏡像站；"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
@@ -7501,8 +7157,11 @@ msgstr "搖桿除錯模式"
 msgid "km"
 msgstr "公里"
 
-#: selfdrive/ui/mici/onroad/hud_renderer.py selfdrive/ui/onroad/hud_renderer.py
+#: selfdrive/ui/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/mici/onroad/hud_renderer.py
+#: selfdrive/ui/onroad/hud_renderer.py
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+#: selfdrive/ui/sunnypilot/layouts/settings/initial_cruise_speed.py
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 #: selfdrive/ui/sunnypilot/layouts/settings/steering.py
 #: selfdrive/ui/sunnypilot/mici/layouts/onroad_info_panel.py
@@ -7511,6 +7170,10 @@ msgstr "公里"
 #: selfdrive/ui/sunnypilot/onroad/speed_renderer.py
 msgid "km/h"
 msgstr "km/h"
+
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
+msgid "kph"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "lane change"
@@ -7657,6 +7320,10 @@ msgstr "分鐘"
 msgid "minutes"
 msgstr "分鐘"
 
+#: selfdrive/ui/sunnypilot/mici/layouts/display.py
+msgid "model on home"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/settings.py
 msgid "models"
 msgstr "型號"
@@ -7665,8 +7332,12 @@ msgstr "型號"
 msgid "moderate"
 msgstr "中等"
 
-#: selfdrive/ui/mici/onroad/hud_renderer.py selfdrive/ui/onroad/hud_renderer.py
+#: selfdrive/ui/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
+#: selfdrive/ui/mici/onroad/hud_renderer.py
+#: selfdrive/ui/onroad/hud_renderer.py
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+#: selfdrive/ui/sunnypilot/layouts/settings/initial_cruise_speed.py
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 #: selfdrive/ui/sunnypilot/layouts/settings/steering.py
 #: selfdrive/ui/sunnypilot/onroad/chevron_metrics.py
@@ -7674,6 +7345,10 @@ msgstr "中等"
 #: selfdrive/ui/sunnypilot/onroad/speed_renderer.py
 msgid "mph"
 msgstr "mph"
+
+#: selfdrive/ui/mici/layouts/settings/developer.py
+msgid "navigation (alpha)"
+msgstr ""
 
 #: selfdrive/ui/mici/layouts/settings/settings.py
 msgid "network"
@@ -7687,7 +7362,8 @@ msgstr "網路用量"
 msgid "never"
 msgstr "從不"
 
-#: selfdrive/ui/mici/layouts/onboarding.py system/ui/mici_setup.py
+#: selfdrive/ui/mici/layouts/onboarding.py
+#: system/ui/mici_setup.py
 #: system/ui/mici_updater.py
 msgid "next"
 msgstr "下一個"
@@ -7774,9 +7450,7 @@ msgid "openpilot defaults to driving in chill mode."
 msgstr "openpilot 預設以輕鬆模式駕駛。"
 
 #: selfdrive/ui/mici/layouts/settings/toggles.py
-msgid ""
-"openpilot will drive as it thinks a human would, including stopping for red "
-"lights and stop signs."
+msgid "openpilot will drive as it thinks a human would, including stopping for red lights and stop signs."
 msgstr "openpilot 會像人類一樣駕駛，包括在紅燈和停止標誌前停車。"
 
 #: selfdrive/ui/mici/layouts/onboarding.py
@@ -7787,7 +7461,6 @@ msgstr "或前往 https://sunnypilot.ai/terms"
 msgid "or unpair existing ones."
 msgstr "或取消配對現有裝置。"
 
-#: selfdrive/ui/mici/layouts/settings/device.py
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "pair"
 msgstr "一對"
@@ -7808,7 +7481,6 @@ msgstr "與手機 App 配對"
 msgid "pair with sunnylink"
 msgstr "與 sunnylink 配對"
 
-#: selfdrive/ui/mici/layouts/settings/device.py
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "paired"
 msgstr "配對的"
@@ -7837,7 +7509,6 @@ msgstr "關機"
 msgid "progress"
 msgstr "進步"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "queued"
 msgstr "排隊中"
@@ -7867,7 +7538,8 @@ msgstr "實時"
 msgid "reboot"
 msgstr "重啟"
 
-#: system/ui/mici_reset.py system/ui/mici_setup.py
+#: system/ui/mici_reset.py
+#: system/ui/mici_setup.py
 msgid ""
 "reboot\n"
 "device"
@@ -8047,6 +7719,10 @@ msgstr "自學習調校"
 msgid "serial"
 msgstr "序列號"
 
+#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
+msgid "set speed assist"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "settings backed up"
 msgstr "設定已備份"
@@ -8054,6 +7730,10 @@ msgstr "設定已備份"
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid "short press"
 msgstr "短按"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
+msgid "silent"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "slide to"
@@ -8236,26 +7916,16 @@ msgid "sunnylink dongle id not found"
 msgstr "sunnylink 加密狗 ID 找不到"
 
 #: selfdrive/ui/sunnypilot/layouts/onboarding.py
-msgid ""
-"sunnylink enables secured remote access to your comma device from anywhere, "
-"including settings management, remote monitoring, real-time dashboard, etc."
-msgstr ""
-"sunnylink 讓您隨時隨地安全地遠端存取 comma 裝置，包括設定管理、遠端監控、即時"
-"儀表板等。"
+msgid "sunnylink enables secured remote access to your comma device from anywhere, including settings management, remote monitoring, real-time dashboard, etc."
+msgstr "sunnylink 讓您隨時隨地安全地遠端存取 comma 裝置，包括設定管理、遠端監控、即時儀表板等。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/onboarding.py
-msgid ""
-"sunnylink enables secured remote access to your comma device from anywhere."
+msgid "sunnylink enables secured remote access to your comma device from anywhere."
 msgstr "sunnylink 允許從任何地方安全地遠端存取您的 comma 裝置。"
 
 #: selfdrive/ui/sunnypilot/layouts/onboarding.py
-msgid ""
-"sunnylink is designed to be enabled as part of sunnypilot's core "
-"functionality. If sunnylink is disabled, features such as settings "
-"management, remote monitoring, real-time dashboards will be unavailable."
-msgstr ""
-"sunnylink 設計為 sunnypilot 核心功能的一部分。若停用 sunnylink，設定管理、遠"
-"端監控、即時儀表板等功能將無法使用。"
+msgid "sunnylink is designed to be enabled as part of sunnypilot's core functionality. If sunnylink is disabled, features such as settings management, remote monitoring, real-time dashboards will be unavailable."
+msgstr "sunnylink 設計為 sunnypilot 核心功能的一部分。若停用 sunnylink，設定管理、遠端監控、即時儀表板等功能將無法使用。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "sunnylink local"
@@ -8270,15 +7940,11 @@ msgid "sunnypilot Longitudinal Control (Alpha)"
 msgstr "sunnypilot 縱向控制（Alpha）"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"sunnypilot Longitudinal Control is the default longitudinal control for this "
-"platform."
+msgid "sunnypilot Longitudinal Control is the default longitudinal control for this platform."
 msgstr "sunnypilot 縱向控制是此平臺的預設縱向控制。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid ""
-"sunnypilot Longitudinal Control must be available and enabled for your "
-"vehicle to use this feature."
+msgid "sunnypilot Longitudinal Control must be available and enabled for your vehicle to use this feature."
 msgstr "sunnypilot 縱向控制必須可用並啟用，您的車輛才能使用此功能。"
 
 #: selfdrive/ui/mici/onroad/alert_renderer.py
@@ -8287,64 +7953,44 @@ msgid "sunnypilot Unavailable"
 msgstr "sunnypilot 不可用"
 
 #: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"sunnypilot defaults to driving in chill mode. Experimental mode enables "
-"alpha-level features that aren't ready for chill mode. Experimental features "
-"are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the "
-"driving model control the gas and brakes. sunnypilot will drive as it thinks "
-"a human would, including stopping for red lights and stop signs. Since the "
-"driving model decides the speed to drive, the set speed will only act as an "
-"upper bound. This is an alpha quality feature; mistakes should be expected."
-"<br><h4>New Driving Visualization</h4><br>The driving visualization will "
-"transition to the road-facing wide-angle camera at low speeds to better show "
-"some turns. The Experimental mode logo will also be shown in the top right "
-"corner."
+msgid "sunnypilot defaults to driving in chill mode. Experimental mode enables alpha-level features that aren't ready for chill mode. Experimental features are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving model control the gas and brakes. sunnypilot will drive as it thinks a human would, including stopping for red lights and stop signs. Since the driving model decides the speed to drive, the set speed will only act as an upper bound. This is an alpha quality feature; mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner."
+msgstr "sunnypilot 預設以安穩模式駕駛。實驗模式啟用尚未納入安穩模式的 Alpha 功能，如下：<br><h4>端到端縱向控制</h4><br>讓駕駛模型控制油門和煞車。sunnypilot 將像人類一樣駕駛，包括在紅燈和停車標誌前停車。由於駕駛模型決定行駛速度，設定速度僅作為上限。此為 Alpha 品質功能，可能出現失誤。<br><h4>新駕駛視覺化</h4><br>低速時駕駛視覺化將切換至前路廣角攝影機以更好顯示轉彎。實驗模式標誌也將顯示在右上角。"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
+msgid "sunnypilot defaults to driving in chill mode. Experimental mode enables alpha-level features that aren't ready for chill mode. Experimental features are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving model control the gas and brakes. zoompilot will drive as it thinks a human would, including stopping for red lights and stop signs. Since the driving model decides the speed to drive, the set speed will only act as an upper bound. This is an alpha quality feature; mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner."
 msgstr ""
-"sunnypilot 預設以安穩模式駕駛。實驗模式啟用尚未納入安穩模式的 Alpha 功能，如"
-"下：<br><h4>端到端縱向控制</h4><br>讓駕駛模型控制油門和煞車。sunnypilot 將像"
-"人類一樣駕駛，包括在紅燈和停車標誌前停車。由於駕駛模型決定行駛速度，設定速度"
-"僅作為上限。此為 Alpha 品質功能，可能出現失誤。<br><h4>新駕駛視覺化</h4><br>"
-"低速時駕駛視覺化將切換至前路廣角攝影機以更好顯示轉彎。實驗模式標誌也將顯示在"
-"右上角。"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"sunnypilot detected a change in the device's mounting position. Ensure the "
-"device is fully seated in the mount and the mount is firmly secured to the "
-"windshield."
-msgstr ""
-"sunnypilot 偵測到裝置安裝位置發生變化。請確保裝置完全安裝在支架中，且支架牢固"
-"固定在擋風玻璃上。"
+msgid "sunnypilot detected a change in the device's mounting position. Ensure the device is fully seated in the mount and the mount is firmly secured to the windshield."
+msgstr "sunnypilot 偵測到裝置安裝位置發生變化。請確保裝置完全安裝在支架中，且支架牢固固定在擋風玻璃上。"
 
 #: selfdrive/ui/layouts/settings/device.py
-msgid ""
-"sunnypilot is continuously calibrating, resetting is rarely required. "
-"Resetting calibration will restart sunnypilot if the car is powered on."
-msgstr ""
-"sunnypilot 會持續校準，通常無需重置。若車輛通電，重置校準將重啟 sunnypilot。"
+msgid "sunnypilot is continuously calibrating, resetting is rarely required. Resetting calibration will restart sunnypilot if the car is powered on."
+msgstr "sunnypilot 會持續校準，通常無需重置。若車輛通電，重置校準將重啟 sunnypilot。"
 
 #: selfdrive/ui/layouts/settings/firehose.py
+msgid ""
+"sunnypilot learns to drive by watching humans, like you, drive.\n"
+"\n"
+"Firehose Mode allows you to maximize your training data uploads to improve openpilot's driving models. More data means bigger models, which means better Experimental Mode."
+msgstr ""
+"sunnypilot 透過觀察像您這樣的真人駕駛來學習駕駛。\n"
+"\n"
+"洪流模式可最大化訓練資料上傳，以改進 openpilot 駕駛模型。資料越多，模型越大，實驗模式效果越好。"
+
 #: selfdrive/ui/mici/layouts/settings/firehose.py
 msgid ""
 "sunnypilot learns to drive by watching humans, like you, drive.\n"
 "\n"
-"Firehose Mode allows you to maximize your training data uploads to improve "
-"openpilot's driving models. More data means bigger models, which means "
-"better Experimental Mode."
+"Firehose Mode allows you to maximize your training data uploads to improve openpilot's driving models. More data means bigger models, which means better driving."
 msgstr ""
-"sunnypilot 透過觀察像您這樣的真人駕駛來學習駕駛。\n"
-"\n"
-"洪流模式可最大化訓練資料上傳，以改進 openpilot 駕駛模型。資料越多，模型越大，"
-"實驗模式效果越好。"
 
 #: selfdrive/ui/layouts/settings/toggles.py
 msgid "sunnypilot longitudinal control may come in a future update."
 msgstr "sunnypilot 縱向控制可能會在未來的更新中出現。"
 
 #: selfdrive/ui/layouts/settings/device.py
-msgid ""
-"sunnypilot requires the device to be mounted within 4° left or right and "
-"within 5° up or 9° down."
+msgid "sunnypilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."
 msgstr "sunnypilot 請裝置安裝在向左或向右 4° 以內、向上 5° 或向下 9° 以內。"
 
 #: selfdrive/ui/mici/layouts/onboarding.py
@@ -8352,27 +7998,15 @@ msgid "sunnypilot uses the cabin camera to check if the driver is distracted."
 msgstr "sunnypilot 使用車內攝像頭檢查駕駛員是否分心。"
 
 #: selfdrive/ui/widgets/offroad_alerts.py
-msgid ""
-"sunnypilot was unable to identify your car. Your car is either unsupported "
-"or its ECUs are not recognized. Please submit a pull request to add the "
-"firmware versions to the proper vehicle. Need help? Join discord.comma.ai."
-msgstr ""
-"sunnypilot 無法識別您的車輛。您的車輛可能不受支援，或 ECU 未被識別。請提交拉"
-"取請求新增韌體版本。需要幫助？加入 discord.comma.ai。"
+msgid "sunnypilot was unable to identify your car. Your car is either unsupported or its ECUs are not recognized. Please submit a pull request to add the firmware versions to the proper vehicle. Need help? Join discord.comma.ai."
+msgstr "sunnypilot 無法識別您的車輛。您的車輛可能不受支援，或 ECU 未被識別。請提交拉取請求新增韌體版本。需要幫助？加入 discord.comma.ai。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid ""
-"sunnypilot will allow some Toyota/Lexus cars to auto resume during stop and "
-"go traffic. This feature is only applicable to certain models that are able "
-"to use longitudinal control. This is an alpha feature. Use at your own risk."
-msgstr ""
-"sunnypilot 允許部分豐田/雷克薩斯車型在走走停停路況下自動恢復行駛。此功能僅適"
-"用於支援縱向控制的特定車型。此為 Alpha 功能，使用風險自負。"
+msgid "sunnypilot will allow some Toyota/Lexus cars to auto resume during stop and go traffic. This feature is only applicable to certain models that are able to use longitudinal control. This is an alpha feature. Use at your own risk."
+msgstr "sunnypilot 允許部分豐田/雷克薩斯車型在走走停停路況下自動恢復行駛。此功能僅適用於支援縱向控制的特定車型。此為 Alpha 功能，使用風險自負。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid ""
-"sunnypilot will not take over control of gas and brakes. Factory Toyota "
-"longitudinal control will be used."
+msgid "sunnypilot will not take over control of gas and brakes. Factory Toyota longitudinal control will be used."
 msgstr "sunnypilot 不會接管油門和煞車的控制。工廠將採用豐田縱向控制。"
 
 #: system/ui/mici_setup.py
@@ -8647,42 +8281,14 @@ msgid "wrong password"
 msgstr "密碼錯誤"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"zoompilot defaults to driving in chill mode. Experimental mode enables alpha-"
-"level features that aren't ready for chill mode. Experimental features are "
-"listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving "
-"model control the gas and brakes. zoompilot will drive as it thinks a human "
-"would, including stopping for red lights and stop signs. Since the driving "
-"model decides the speed to drive, the set speed will only act as an upper "
-"bound. This is an alpha quality feature; mistakes should be expected."
-"<br><h4>New Driving Visualization</h4><br>The driving visualization will "
-"transition to the road-facing wide-angle camera at low speeds to better show "
-"some turns. The Experimental mode logo will also be shown in the top right "
-"corner."
-msgstr ""
-"zoompilot 預設以 chill 模式駕駛。實驗模式會啟用尚未達到 chill 模式要求、處於 "
-"alpha 階段的特性。實驗性功能如下：<br><h4>端到端縱向控制</h4><br>由駕駛模型控"
-"制油門和剎車。zoompilot 會像真人一樣駕駛，包括紅燈和停車標誌前停車。由於車速"
-"由模型決定，設定速度僅作為上限。該功能為 alpha 質量，可能出現錯誤。<br><h4>全"
-"新駕駛視覺化</h4><br>低速時駕駛視覺化會切換到前視廣角攝影機，以便更好地展示部"
-"分轉彎。右上角還會顯示實驗模式標誌。"
+msgid "zoompilot defaults to driving in chill mode. Experimental mode enables alpha-level features that aren't ready for chill mode. Experimental features are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving model control the gas and brakes. zoompilot will drive as it thinks a human would, including stopping for red lights and stop signs. Since the driving model decides the speed to drive, the set speed will only act as an upper bound. This is an alpha quality feature; mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner."
+msgstr "zoompilot 預設以 chill 模式駕駛。實驗模式會啟用尚未達到 chill 模式要求、處於 alpha 階段的特性。實驗性功能如下：<br><h4>端到端縱向控制</h4><br>由駕駛模型控制油門和剎車。zoompilot 會像真人一樣駕駛，包括紅燈和停車標誌前停車。由於車速由模型決定，設定速度僅作為上限。該功能為 alpha 質量，可能出現錯誤。<br><h4>全新駕駛視覺化</h4><br>低速時駕駛視覺化會切換到前視廣角攝影機，以便更好地展示部分轉彎。右上角還會顯示實驗模式標誌。"
 
-msgid ""
-"zoompilot detected a change in the device's mounting position. Ensure the "
-"device is fully seated in the mount and the mount is firmly secured to the "
-"windshield."
-msgstr ""
-"zoompilot 檢測到裝置安裝位置發生變化。請確認裝置已完全卡入支架，且支架牢固固"
-"定在擋風玻璃上。"
+msgid "zoompilot detected a change in the device's mounting position. Ensure the device is fully seated in the mount and the mount is firmly secured to the windshield."
+msgstr "zoompilot 檢測到裝置安裝位置發生變化。請確認裝置已完全卡入支架，且支架牢固固定在擋風玻璃上。"
 
-msgid ""
-"zoompilot was unable to identify your car. Your car is either unsupported or "
-"its ECUs are not recognized. Please select your vehicle manually at https://"
-"www.sunnylink.ai/. Need help? Visit https://community.sunnypilot.ai/"
-msgstr ""
-"zoompilot 無法識別您的車輛。該車型可能不受支援，或其 ECU 未被識別。請在 "
-"https://www.sunnylink.ai/ 手動選擇車輛。需要幫助？請前往 https://"
-"community.sunnypilot.ai/"
+msgid "zoompilot was unable to identify your car. Your car is either unsupported or its ECUs are not recognized. Please select your vehicle manually at https://www.sunnylink.ai/. Need help? Visit https://community.sunnypilot.ai/"
+msgstr "zoompilot 無法識別您的車輛。該車型可能不受支援，或其 ECU 未被識別。請在 https://www.sunnylink.ai/ 手動選擇車輛。需要幫助？請前往 https://community.sunnypilot.ai/"
 
 msgid "{mins} min remaining"
 msgstr "剩餘 {mins} 分鐘"
@@ -8698,7 +8304,8 @@ msgstr "{} %"
 msgid "{} (Default)"
 msgstr "{}（預設）"
 
-#: selfdrive/ui/layouts/home.py selfdrive/ui/sunnypilot/layouts/home.py
+#: selfdrive/ui/layouts/home.py
+#: selfdrive/ui/sunnypilot/layouts/home.py
 msgid "{} ALERT"
 msgid_plural "{} ALERTS"
 msgstr[0] "{} 則警示"
@@ -8721,6 +8328,10 @@ msgstr "{} 先接管，直到 {} 就緒。"
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "{} for now"
 msgstr "暫用 {}"
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "{} free"
+msgstr ""
 
 #: selfdrive/ui/layouts/settings/software.py
 msgid "{} hour ago"
@@ -8777,9 +8388,7 @@ msgid "{} will drive."
 msgstr "{} 將接管行駛。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid ""
-"{} will drive. If it fails during a drive, {} takes over until the next "
-"drive."
+msgid "{} will drive. If it fails during a drive, {} takes over until the next drive."
 msgstr "{} 將參與駕駛。如果行駛中失敗，下次行駛前由 {} 接管。"
 
 #: selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
@@ -8823,349 +8432,3 @@ msgstr "✓ 已訂閱"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
 
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Curves"
-msgstr "DEC: 彎道"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Slower Lead"
-msgstr "DEC: 前車較慢"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Turn Signal"
-msgstr "DEC: 方向燈"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Stops Ahead"
-msgstr "DEC: 前方停車"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "DEC: Low Speed Creep"
-msgstr "DEC: 低速蠕行"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let a curve ahead hand speed control to the model."
-msgstr "前方有彎道時，把速度控制交給模型。"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let a slower or stopped car ahead hand speed control to the model."
-msgstr "前方有較慢或已停下的車輛時，把速度控制交給模型。"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"Let an active turn signal below the lane-change speed hand speed control to "
-"the model."
-msgstr "車速低於變換車道速度且已打方向燈時，把速度控制交給模型。"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"Let a predicted stop for a light or sign hand speed control to the model."
-msgstr "預測前方號誌或標誌需要停車時，把速度控制交給模型。"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Let creeping at very low speed hand speed control to the model."
-msgstr "極低速蠕行時，把速度控制交給模型。"
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid "  CEM: Curves"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid "  CEM: Curves While Following"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid "  CEM: Slow Leads"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid "Aggressive Personality"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid "Allow the curve trigger while following a lead car."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid ""
-"Ask before taking a new speed limit. Adds to the low-speed confirmation, "
-"never replaces it."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid "Audible"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid ""
-"Automatically switch experimental mode on demanding curves, slow leads and "
-"low-speed turns. A manual switch keeps priority for a minute."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
-msgid ""
-"Blocks a lane change toward a road edge the model sees.\n"
-"Silent shows the alert without the chime."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid ""
-"Blocks the lane change if the model sees a road edge on your signaled side. "
-"Silent shows the alert without the chime."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Both"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"Closes the gap to your driving personality's following distance behind a "
-"steady car. Never closer than chill mode."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid "Conditional Experimental Mode"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Confirm Limit Changes"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid "Custom Following Profiles"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/toggles.py
-msgid "DM Pearl Eyes Display"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
-#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid ""
-"Display useful metrics below the chevron that tracks the lead car only "
-"applicable to cars with zoompilot longitudinal control."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid ""
-"Enable smoother longitudinal control for TSS2 vehicles. Uses a custom speed-"
-"dependent integral gain curve for smoother traffic driving."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
-msgid ""
-"Experimental Mode often cruises below your set speed.\n"
-"It gently raises your speed toward it when the road ahead is clear."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
-msgid ""
-"Experimental Mode often follows farther back than your following distance.\n"
-"It closes the gap behind a steady car, never closer than chill mode."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid "Experimental mode follows lateral acceleration while cornering."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise.py
-msgid "Experimental mode follows when closing on a slower lead."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid "Far"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid "Following Profile"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Higher"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"In Experimental Mode, gently raise speed toward the set speed when nothing "
-"calls for slowing down."
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/toggles.py
-msgid "Initial Max Speed"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
-msgid "KPH"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
-msgid ""
-"Lets zoompilot steer while cruise control is off. When off, steering and "
-"cruise engage and disengage together."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Limit"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Lower"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Manage Tiered Offsets"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Max speed when engaging openpilot. If you are already driving faster, your "
-"current speed is used. Resume restores the previous max speed. Changes apply "
-"the next time you engage."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/display.py
-msgid "Name the active driving model on the offroad home screen."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Never"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Offset applied to the speed limit in this range."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid ""
-"Preset used for the aggressive driving personality: close (1.25 s -> 1.0 s), "
-"medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid ""
-"Preset used for the relaxed driving personality: close (1.25 s -> 1.0 s), "
-"medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid ""
-"Preset used for the standard driving personality: close (1.25 s -> 1.0 s), "
-"medium (1.45 s -> 1.2 s) or far (1.6 s -> 1.4 s), low speed -> highway speed."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid "Relaxed Personality"
-msgstr ""
-
-#: selfdrive/ui/layouts/settings/toggles.py
-msgid ""
-"Replace the driver monitoring camera thumbnail with animated pearl cartoon "
-"eyes that mirror head pose and blinks."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid ""
-"Replace the single following distance per personality with a speed-dependent "
-"profile. The follow time is interpolated over speed, so the gap can be "
-"shorter in town and longer on the highway."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/display.py
-msgid "Show Driving Model on Home Screen"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/display.py
-msgid "Shows the driving model's name at the bottom of the home screen."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
-msgid "Silent"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
-msgid "Standard Personality"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/toyota.py
-msgid "TSS2 Smooth Longitudinal (Alpha)"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/onroad/navigation_card.py
-msgid "Then"
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
-#: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
-msgid "This feature requires zoompilot longitudinal control to be available."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Tiered"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
-msgid "Tiered: Adds a different offset for each speed limit range."
-msgstr ""
-
-#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\developer.py
-msgid ""
-"Toggle visibility of advanced zoompilot controls.<br>This only changes the "
-"visibility of the toggles; it does not change the actual enabled/disabled "
-"state."
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/developer.py
-msgid ""
-"Turn-by-turn navigation with a route map. Set a destination from comma "
-"connect."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
-msgid "audible"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-#: selfdrive/ui/sunnypilot/mici/layouts/models.py
-msgid "canceling..."
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
-msgid "kph"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/display.py
-msgid "model on home"
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/developer.py
-msgid "navigation (alpha)"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/steering.py
-msgid "silent"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid ""
-"sunnypilot defaults to driving in chill mode. Experimental mode enables "
-"alpha-level features that aren't ready for chill mode. Experimental features "
-"are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the "
-"driving model control the gas and brakes. zoompilot will drive as it thinks "
-"a human would, including stopping for red lights and stop signs. Since the "
-"driving model decides the speed to drive, the set speed will only act as an "
-"upper bound. This is an alpha quality feature; mistakes should be expected."
-"<br><h4>New Driving Visualization</h4><br>The driving visualization will "
-"transition to the road-facing wide-angle camera at low speeds to better show "
-"some turns. The Experimental mode logo will also be shown in the top right "
-"corner."
-msgstr ""
-
-#: selfdrive/ui/mici/layouts/settings/firehose.py
-msgid ""
-"sunnypilot learns to drive by watching humans, like you, drive.\n"
-"\n"
-"Firehose Mode allows you to maximize your training data uploads to improve "
-"openpilot's driving models. More data means bigger models, which means "
-"better driving."
-msgstr ""

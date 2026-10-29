@@ -155,6 +155,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SshEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"StockEcuHandBackRequest", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"StockEcuHandBackResult", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
+    {"StockEcuHandBackFailed", {CLEAR_ON_IGNITION_ON, BOOL}},  // an onroad cycle went ahead on a failed hand-back: stock cruise is down until ignition
     {"TermsVersion", {PERSISTENT, STRING}},
     {"TorqueBar", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrainingVersion", {PERSISTENT, STRING}},
@@ -328,6 +329,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LagdValueCache", {PERSISTENT, FLOAT, "0.2"}},
     {"LaneTurnDesire", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"LaneTurnValue", {PERSISTENT | BACKUP, FLOAT, "19.0"}},
+    {"Blendful", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"PlanplusControl", {PERSISTENT | BACKUP, FLOAT, "1.0"}},
 
     // mapd
@@ -404,9 +406,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SLCMapboxFiller", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"MapboxSecretKey", {PERSISTENT, STRING}},  // access token; PERSISTENT-only so it survives reinstalls
     {"MapBoxRequests", {PERSISTENT, JSON, "{}"}},  // {total_requests, month} monthly quota bookkeeping
-
-    // Speed-limit change alert (ST-6): debounced >=5 kph jump held >2 s, one alert per change.
-    {"SpeedLimitChangedAlert", {PERSISTENT | BACKUP, BOOL, "0"}},
 
     // Fork-gap alignment wave 6 params. Consumers fall back to in-code defaults when a key is
     // unset, so registered defaults only feed UI discovery and stock_value reporting.

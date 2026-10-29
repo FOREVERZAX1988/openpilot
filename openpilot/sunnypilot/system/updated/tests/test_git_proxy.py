@@ -28,6 +28,7 @@ except Exception:
 from openpilot.sunnypilot.system.updated.git_proxy import (
   MAX_ACCEPTABLE_MS,
   PROBE_TIMEOUT_S,
+  PROXY_PREFIXES,
   ProbeResult,
   build_candidates,
   probe_once,
@@ -58,6 +59,19 @@ class TestBuildCandidates(unittest.TestCase):
       proxy_url_for("https://github.com/x/y.git", "https://gh-proxy.com/"),
       "https://gh-proxy.com/https://github.com/x/y.git",
     )
+
+  def test_only_git_speaking_proxies_are_listed(self):
+    # a proxy can serve raw files over HTTP and still not speak git's
+    # smart-http ("info/refs not valid: is this a git repository?").
+    # Those are useless here, so they are kept out of the table.
+    for http_only in ("https://ghproxy.cc/", "https://git.yylx.win/",
+                      "https://cors.isteed.cc/", "https://mirror.houlang.cloud/"):
+      self.assertNotIn(http_only, PROXY_PREFIXES, f"{http_only} does not speak git")
+
+  def test_every_listed_proxy_is_a_read_through_prefix(self):
+    for prefix in PROXY_PREFIXES:
+      self.assertTrue(prefix.startswith("https://"), prefix)
+      self.assertTrue(prefix.endswith("/"), prefix)
 
 
 class TestSelectBest(unittest.TestCase):
@@ -237,6 +251,72 @@ class TestMeasureAndSelect(unittest.TestCase):
 
     self.assertIsNone(best)
     self.assertEqual(prefix, "")
+
+
+class TestRankedSources(unittest.TestCase):
+  """The fetch walks the ranked list, so the order itself needs cover."""
+
+  OFFICIAL = "https://github.com/x/y.git"
+
+  def _rank_with(self, fake_probe):
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+    original = mod.probe_once
+    mod.probe_once = fake_probe
+    try:
+      return mod.measure_and_rank(".", self.OFFICIAL, budget_s=5)
+    finally:
+      mod.probe_once = original
+
+  def test_ranked_list_is_quickest_first(self):
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      # ghfast.top is quickest, official slowest but alive.
+      if "ghfast.top" in url:
+        return True, 500, ""
+      if url == self.OFFICIAL:
+        return True, 4000, ""
+      return True, 2000, ""
+
+    ranked = self._rank_with(fake_probe)
+    self.assertTrue(ranked)
+    self.assertEqual(ranked[0][1], "https://ghfast.top/")
+    prefixes = [prefix for _, prefix in ranked]
+    self.assertIn("", prefixes)
+
+  def test_ties_keep_the_official_first(self):
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      return True, 1000, ""
+
+    ranked = self._rank_with(fake_probe)
+    self.assertEqual(ranked[0], (ranked[0][0], ""))
+    self.assertEqual(ranked[0][0].url, self.OFFICIAL)
+
+  def test_dead_sources_are_not_ranked(self):
+    def fake_probe(url, cwd=None, timeout_s=PROBE_TIMEOUT_S):
+      return False, 30, "timeout"
+
+    self.assertEqual(self._rank_with(fake_probe), [])
+
+  def test_user_prefixes_are_probed_before_the_builtins(self):
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+
+    candidates = build_candidates(self.OFFICIAL, extra_prefixes=("https://my-proxy.example/",))
+    self.assertEqual(candidates[0], self.OFFICIAL)
+    self.assertEqual(candidates[1], "https://my-proxy.example/" + self.OFFICIAL)
+    # The builtin list still follows, so nothing is lost.
+    self.assertIn("https://gh-proxy.com/" + self.OFFICIAL, candidates)
+
+  def test_user_prefix_matching_a_builtin_is_not_duplicated(self):
+    candidates = build_candidates(self.OFFICIAL, extra_prefixes=("https://gh-proxy.com",))
+    self.assertEqual(candidates.count("https://gh-proxy.com/" + self.OFFICIAL), 1)
+
+  def test_prefix_for(self):
+    import openpilot.sunnypilot.system.updated.git_proxy as mod
+
+    self.assertEqual(mod.prefix_for(self.OFFICIAL, self.OFFICIAL), "")
+    self.assertEqual(
+      mod.prefix_for("https://gh-proxy.com/" + self.OFFICIAL, self.OFFICIAL),
+      "https://gh-proxy.com/",
+    )
 
 
 class TestGitmodulesParsing(unittest.TestCase):

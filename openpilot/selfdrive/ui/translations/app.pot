@@ -1885,11 +1885,11 @@ msgid "Alpha Longitudinal"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "Experimental Mode Speed Assist"
+msgid "Set Speed Assist"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
-msgid "In Experimental Mode, gently raise speed toward the set speed when nothing calls for slowing down."
+msgid "In Experimental Mode, drive toward your set speed and following distance as chill mode does whenever the model holds back. The model still makes every slowdown."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
@@ -3365,7 +3365,6 @@ msgid "Refresh an already-locked lead from a newer radar frame instead of promot
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Auto"
 msgstr ""
 
@@ -4095,6 +4094,11 @@ msgid "Custom Following Profiles"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. Not available with the Default model."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Run big models over a connected device running Jetlink. Turns off ADB."
 msgstr ""
 
@@ -4135,14 +4139,6 @@ msgid "Refresh Model List"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Model Download Mirror"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Model List Source"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Cancel Download"
 msgstr ""
 
@@ -4175,6 +4171,10 @@ msgid "Live Learning Steer Delay"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Blendful (Alpha)"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Adjust Camera Offset"
 msgstr ""
 
@@ -4183,10 +4183,12 @@ msgid "Virtually shift camera's perspective to move model's center to Left(+ val
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "This will delete ALL downloaded models from the cache except the currently active model. Are you sure?"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Clear Cache"
 msgstr ""
 
@@ -4212,38 +4214,6 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Big Model"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "huggingface.co is unreachable on many networks. Mirror sends model downloads to a mirror site instead; "
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Direct uses huggingface.co as-is; Custom lets you enter your own mirror. Applies to the next download."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Mirror"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Direct"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Custom"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "The model list lives on GitHub raw. Auto tries direct first and falls back to a CDN mirror when it fails; "
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Direct never falls back; Proxy always fetches through your own prefix. Press Refresh Model List to apply."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Proxy"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -4300,31 +4270,12 @@ msgid "REFRESH"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "CLEAR"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "Live Steer Delay:"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Custom Mirror"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Base URL replacing https://huggingface.co, e.g. https://hf-mirror.com"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Catalog Proxy Prefix"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Prefix prepended to the catalog URL, e.g. https://gh-proxy.com"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "Current"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -4350,6 +4301,10 @@ msgstr ""
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "No models are available for this hardware yet. Connect to the internet and refresh the model list."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Select a non-Default model to use Blendful."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -4387,14 +4342,6 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
 msgid "{} drives until {} is ready."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "The mirror must be an http(s) URL without spaces, e.g. https://hf-mirror.com"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/layouts/settings/models.py
-msgid "The proxy must be an http(s) URL without spaces, e.g. https://gh-proxy.com"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
@@ -4478,6 +4425,7 @@ msgid "Mapd Version"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Downloaded Maps"
 msgstr ""
 
@@ -4494,10 +4442,12 @@ msgid "Country"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "DELETE"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid ""
 "This will delete ALL downloaded maps\n"
 "\n"
@@ -4505,6 +4455,7 @@ msgid ""
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/osm.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Yes, delete all maps"
 msgstr ""
 
@@ -4570,6 +4521,10 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/settings.py
 msgid "Models"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/settings.py
+msgid "Storage"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/settings.py
@@ -4909,6 +4864,38 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
 msgid "Friction"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Storage Used"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Calculating..."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Used Space"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Driving Model Cache"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Device Storage"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Downloaded Data"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "Unavailable"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
+msgid "{} free"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
@@ -5603,11 +5590,7 @@ msgid "experimental"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
-msgid "speed assist"
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
-msgid "lead follow assist"
+msgid "set speed assist"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
@@ -5618,14 +5601,9 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
 msgid ""
-"Experimental Mode often cruises below your set speed.\n"
-"It gently raises your speed toward it when the road ahead is clear."
-msgstr ""
-
-#: selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
-msgid ""
-"Experimental Mode often follows farther back than your following distance.\n"
-"It closes the gap behind a steady car, never closer than chill mode."
+"Experimental Mode often cruises below your set speed and follows farther back.\n"
+"This drives as chill mode does whenever the model holds back.\n"
+"The model still makes every slowdown."
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
@@ -5895,6 +5873,14 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "clear cache"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "blendful (alpha)"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "custom model only"
 msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py

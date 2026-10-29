@@ -155,6 +155,7 @@ PARAM_LABELS: dict[str, tuple[str, str, str, str]] = {
   "ScreenSaverTimeout": ("Screen saver timeout", "Seconds offroad before the screen saver starts.", "屏保超时", "离路多少秒后启动屏保。"),
 
   # ---- on-device pages: models --------------------------------------------
+  "Blendful": ("Blendful (Alpha)", "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. Not available with the Default model.", "融合车道（测试版）", "在模型自身转向的基础上，轻柔地把车辆推回车道中央；车道线越清晰修正越强。遇到障碍会自动避让。默认模型不可用。"),
   "CameraOffset": ("Camera offset", "Lateral offset applied to the model's lane center.", "相机偏移", "对模型车道中心施加的横向偏移。"),
   "LagdToggle": ("LaGD", "Enable the lane-line guided decoder model output.", "LaGD 开关", "启用车道线引导解码（LaGD）的模型输出。"),
   "LagdToggleDelay": ("LaGD delay", "Blend time when switching into the LaGD output (s).", "LaGD 延迟", "切入 LaGD 输出时的混合过渡时间（秒）。"),
@@ -273,9 +274,11 @@ PARAM_LABELS: dict[str, tuple[str, str, str, str]] = {
   "ImuCalibrationRequested": ("Request IMU calibration", "Re-run IMU calibration on next boot (action).", "请求 IMU 校准", "下次启动时重新进行 IMU 校准（执行动作）。"),
   "ImuCalibrationStatus": ("IMU calibration status", "Current IMU calibration state (read-only).", "IMU 校准状态", "当前 IMU 校准状态（只读）。"),
 
-  # ---- model download mirrors (this fork's models/mirror.py) --------------
-  "ModelManager_GithubProxy": ("Model list source", "How the model list JSON is fetched: direct, jsDelivr fallback, or a proxy prefix.", "模型列表源", "模型目录 JSON 的获取方式：直连 / jsDelivr 兜底 / 代理前缀。"),
-  "ModelManager_MirrorUrl": ("Model download mirror", "Prefix for big/small model artifact downloads (hf-mirror.com default; off = direct).", "模型下载镜像", "大/小模型 artifact 下载前缀（默认 hf-mirror.com；off = 直连）。"),
+  # ---- model download mirrors ---------------------------------------------
+  # no longer surfaced in any settings UI: source selection is automatic
+  # (sunnypilot/models/http_probe.py). The params stay registered as an
+  # off-UI override for private mirrors, so they are deliberately absent
+  # from PARAM_LABELS and MODEL_MIRROR_PARAMS stays empty.
 
   # ---- map decel (carrot) -------------------------------------------------
   "CarrotMapDecelEnabled": ("Map-data decel", "Use map data to decelerate for curves and intersections ahead.", "地图数据减速", "利用地图数据对前方弯道/路口提前减速。"),
@@ -341,9 +344,10 @@ MAPS_PARAMS: tuple[str, ...] = (
   "ClusterNaviMapTheme", "ClusterNaviMapType", "ClusterNaviMapFps",
 )
 
-# Model download mirror keys live in the MISC family; surface them on the
-# models page group too, where a user looks for them.
-MODEL_MIRROR_PARAMS: tuple[str, ...] = ("ModelManager_MirrorUrl", "ModelManager_GithubProxy")
+# The model download mirror params (ModelManager_MirrorUrl / ModelManager_GithubProxy)
+# remain registered but are not surfaced anywhere: source selection is automatic
+# (sunnypilot/models/http_probe.py) and the keys are an off-UI override only.
+MODEL_MIRROR_PARAMS: tuple[str, ...] = ()
 
 
 def apply_param_labels(entry: dict) -> dict:

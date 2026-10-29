@@ -50,8 +50,9 @@ class AlphaLongitudinalToggles:
       sync_param="ExperimentalMode")
 
     self._set_speed_toggle = toggle_item_sp(
-      title=lambda: tr("Experimental Mode Speed Assist"),
-      description=lambda: tr("In Experimental Mode, gently raise speed toward the set speed when nothing calls for slowing down."),
+      title=lambda: tr("Set Speed Assist"),
+      description=lambda: tr("In Experimental Mode, drive toward your set speed and following distance as chill mode does " +
+                             "whenever the model holds back. The model still makes every slowdown."),
       param="ExperimentalModeSetSpeed")
 
     self._lead_gap_toggle = toggle_item_sp(
@@ -83,7 +84,6 @@ class AlphaLongitudinalToggles:
       ("AlphaLongitudinalEnabled", self._alpha_long_toggle),
       ("ExperimentalMode", self._experimental_toggle),
       ("ExperimentalModeSetSpeed", self._set_speed_toggle),
-      ("ExperimentalModeLeadGap", self._lead_gap_toggle),
     )
     self.items = [item for _, item in self._refresh_toggles]
 
