@@ -24,6 +24,7 @@ shared session.
 from __future__ import annotations
 
 import sys
+import time
 import types
 from collections import defaultdict
 from pathlib import Path
@@ -494,6 +495,44 @@ def main() -> int:
       layout.render(full)
 
     check(f"panel {panel_label} reopens cleanly", panel_reopens)
+
+  # The Initial Max Speed row keeps an index into the display-unit option list in
+  # current_value while the store holds km/h. With the key unset the base sync() reads
+  # None and nothing happens -- which is why the panel walk above stayed green -- but
+  # once a speed is stored, copying it into the index (145 into 15 entries) made the
+  # next label read an IndexError and took the ui down (2026-10-29, twice, .79).
+  def initial_max_speed_survives_a_stored_speed():
+    from openpilot.selfdrive.ui.ui_state import ui_state as _ui
+    toggles_key = next(k for k in layout._panels
+                       if "TOGGLES" in str(getattr(k, "name", k)).upper())
+    panel = layout._panels[toggles_key].instance
+    ctrl = panel._initial_cruise_speed.action_item
+
+    # through the control's own accessor: that is the store its sync() reads
+    ctrl.params.put("InitialCruiseSpeedKph", 145)
+    _ui.initial_cruise_speed = 145
+    # the row only renders on a car with openpilot longitudinal and no stock PCM cruise
+    _ui.CP = types.SimpleNamespace(pcmCruise=False, alphaLongitudinalAvailable=True)
+    _ui.has_longitudinal_control = True
+    try:
+      layout.set_current_panel(toggles_key)
+      panel.show_event()
+      # sync() is throttled to 2 Hz and the walk above just used its slot: push the
+      # clock past it so the store really is read here, deterministically.
+      ctrl.sync(now=time.monotonic() + 10.0)
+      layout.render(full)
+      layout.render(full)
+      assert ctrl.is_visible, "initial max speed row stayed hidden, the check proved nothing"
+      assert 0 <= ctrl.current_value < len(ctrl._options), (
+        f"current_value={ctrl.current_value} is outside the {len(ctrl._options)}-entry option list")
+      ctrl.get_displayed_value()
+    finally:
+      ctrl.params.remove("InitialCruiseSpeedKph")
+      _ui.initial_cruise_speed = 0
+      _ui.CP = None
+      _ui.has_longitudinal_control = False
+
+  check("initial max speed survives a stored km/h value (toggles panel)", initial_max_speed_survives_a_stored_speed)
 
   # Click-flow for the experimental mode switch (Cruise panel, the single home
   # after the zp sync): unconfirmed -> confirm dialog -> acknowledged state
