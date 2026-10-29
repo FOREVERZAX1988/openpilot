@@ -472,35 +472,36 @@ agnos_init() {
 
   [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
 
-  # Only ever move an existing Carrot install forward; never convert a stock comma
-  # image behind the user's back.
+  local agnos_py="$DIR/openpilot/common/hardware/comma/agnos.py"
+  local manifest="$DIR/openpilot/system/hardware/comma/agnos.json"
+
+  # 另一槽已经刷好目标镜像时，切槽是零风险的（不下载、不刷写），直接完成。
+  # 原来 stock 分支排在 --verify 之前就 return，于是「另一槽明明已就绪」也只能
+  # 去 WebUI -> Software -> AGNOS 手动点一次。mici 2026-10-29 就卡在这里：
+  # /VERSION=19.9、system_b=20.2-carrot-bt2 早已校验通过，却始终不切槽。
+  # 注意 --verify 成功时 agnos.py 内部已经做过 swap，这里只补 reboot。
+  if $agnos_py --verify "$manifest"; then
+    echo "[agnos] target slot already verified; swapped, rebooting into $AGNOS_VERSION" | tee -a /tmp/agnos_pending.log
+    sudo reboot
+  fi
+
+  # 走到这里说明另一槽没有可用镜像，需要下载 + 刷写 —— 这时才由屏幕上的
+  # updater 界面（openpilot/system/ui/mici_updater.py 的 "download & install"）
+  # 让用户滑动确认，确认后才真正刷写。这就是正常流程：装完 openpilot、
+  # 编译之前发现 AGNOS 落后，弹界面，用户确认，刷完重启，回来继续编译。
   #
-  # agnos.json carries 5 stock comma partitions but its boot and system come from
-  # cnb.cool as the 19.8-carrot-bt2 image, so on a stock device the updater has to
-  # download that image, flash it into the *other* slot, swap to it and reboot.
-  # A fresh install then comes back up on the installer screen instead of the UI --
-  # it looks exactly like the install never finished. (--verify itself cannot help
-  # here: it checks the other slot, which on a stock device is empty, so it exits 1
-  # and this function falls through to the updater.)
-  #
-  # Stock devices therefore skip the whole thing: no download, no flash, no slot
-  # swap, no reboot. Carrot's Bluetooth HID needs the Carrot image, so flash it on
-  # purpose (WebUI -> Software -> AGNOS, or `agnos.py --swap`) instead of on every
-  # boot. AGNOS_ENFORCE=1 restores the old "keep flashing until /VERSION matches".
-  if [ "${AGNOS_ENFORCE:-0}" != "1" ]; then
+  # stock → carrot 属于跨体系刷写：agnos.json 里 boot/system 来自 cnb.cool，
+  # 其余 5 个分区（xbl/xbl_config/abl/aop/devcfg）仍是 comma 的 stock 引导链，
+  # 历史上有刷完回到 installer 界面的记录。真要回到「stock 设备一律不动、
+  # 只走 WebUI 手动刷」，设 AGNOS_SKIP_STOCK_FLASH=1。
+  if [ "${AGNOS_SKIP_STOCK_FLASH:-0}" = "1" ]; then
     case "$(< /VERSION)" in
       *carrot*) ;;
       *)
-        echo "[agnos] stock OS $(cat /VERSION) left alone (wanted $AGNOS_VERSION); skipping the OS update. Bluetooth HID needs the Carrot image: flash it from WebUI -> Software -> AGNOS" | tee -a /tmp/agnos_pending.log
+        echo "[agnos] stock OS $(cat /VERSION) left alone (wanted $AGNOS_VERSION); AGNOS_SKIP_STOCK_FLASH=1. Flash it from WebUI -> Software -> AGNOS" | tee -a /tmp/agnos_pending.log
         return 0
         ;;
     esac
-  fi
-
-  local agnos_py="$DIR/openpilot/common/hardware/comma/agnos.py"
-  local manifest="$DIR/openpilot/system/hardware/comma/agnos.json"
-  if $agnos_py --verify $manifest; then
-    sudo reboot
   fi
 
   # The updater is a self-contained zipapp that runs with THIS interpreter and its
