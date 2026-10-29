@@ -758,7 +758,36 @@ ensure_bluez() {
       sudo systemctl stop carrot-bluetooth-radio >> /tmp/bluez_install.log 2>&1 || true
       return 0
     fi
-    sudo systemctl start carrot-bluetooth-radio >> /tmp/bluez_install.log 2>&1
+
+    # 镜像可能缺两样东西，缺哪一种蓝牙都起不来，而 systemd 分别只给一句
+    # 203/EXEC 和 "mount point does not exist"，launcher 这边以前又把返回码丢了，
+    # 于是现象只剩「蓝牙扫不到设备」，一条线索都没有。2026-10-29 在 tizi 上实测：
+    # /usr/comma/bluetooth-radio 是 644（同目录其他脚本都是 755），且
+    # /lib/firmware/qca 这个 bind mount 目标整个不存在 —— 前者让服务 203/EXEC
+    # 重启 42 次后放弃，后者让 prepare() 的固件挂载无处可挂。
+    # 根分区是 ext4 只读挂载（不是 squashfs），可以临时 remount 写，改完立刻改回。
+    local bt_fix=()
+    [ -x /usr/comma/bluetooth-radio ] || bt_fix+=("bluetooth-radio 执行位")
+    [ -d /lib/firmware/qca ] || bt_fix+=("/lib/firmware/qca 挂载点")
+    if [ ${#bt_fix[@]} -gt 0 ]; then
+      echo "[ensure_bluez] 修复镜像缺失项：${bt_fix[*]}" >> /tmp/bluez_install.log
+      sudo mount -o remount,rw / >> /tmp/bluez_install.log 2>&1
+      [ -x /usr/comma/bluetooth-radio ] || sudo chmod +x /usr/comma/bluetooth-radio >> /tmp/bluez_install.log 2>&1
+      if [ ! -d /lib/firmware/qca ]; then
+        sudo mkdir -p /lib/firmware/qca >> /tmp/bluez_install.log 2>&1
+        sudo chmod 755 /lib/firmware/qca >> /tmp/bluez_install.log 2>&1
+      fi
+      sync
+      sudo mount -o remount,ro / >> /tmp/bluez_install.log 2>&1
+    fi
+
+    if sudo systemctl start carrot-bluetooth-radio >> /tmp/bluez_install.log 2>&1; then
+      echo "[ensure_bluez] carrot-bluetooth-radio started" >> /tmp/bluez_install.log
+    else
+      # 失败必须留痕，否则下次还是只能靠猜
+      echo "[ensure_bluez] carrot-bluetooth-radio FAILED to start:" >> /tmp/bluez_install.log
+      sudo systemctl status carrot-bluetooth-radio --no-pager -l 2>&1 | tail -n 8 >> /tmp/bluez_install.log
+    fi
   }
 
   if command -v bluetoothctl >/dev/null 2>&1 && command -v bluetoothd >/dev/null 2>&1; then
