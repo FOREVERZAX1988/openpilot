@@ -807,7 +807,7 @@ class TestAcceleratorProgressRenders:
 
 
 class TestAcceleratorLinkToggle:
-  """off, usb or ios in one param, and the control is hidden on a device it means nothing to"""
+  """one of the jetlink modes in one param, and the control is hidden on a device it means nothing to"""
 
   PARAM = "JetlinkLink"
 
@@ -836,24 +836,26 @@ class TestAcceleratorLinkToggle:
         render(widget)
 
   def test_the_value_line_says_what_each_mode_is_for(self, params):
+    # every MODES entry is offered, so a stored value always has something to match
     params.remove(self.PARAM)
     toggle = self._toggle()
     assert toggle.get_value() == "off"
-    for index, value in enumerate(("off", "usb", "iOS")):
+    for index, value in enumerate(("off", "usb", "iOS", "wi-fi")):
       params.put(self.PARAM, index, block=True)
       toggle.refresh()
-      assert toggle.get_value() == value
+      assert toggle.get_value() == value, value
 
   def test_absent_reads_as_off(self, params):
     from openpilot.selfdrive.ui.sunnypilot.accelerator_link import link_mode
 
     params.remove(self.PARAM)
+    from openpilot.sunnypilot.jetlink_adapter import MODES
     assert link_mode() == "off"
-    for index, mode in enumerate(("off", "usb", "ios")):
+    for index, mode in enumerate(MODES):
       params.put(self.PARAM, index, block=True)
       assert link_mode() == mode
 
-  def test_tap_cycles_off_usb_ios(self, params):
+  def test_tap_cycles_every_mode(self, params):
     from openpilot.system.ui.lib.application import MousePos
 
     params.remove(self.PARAM)
@@ -862,7 +864,7 @@ class TestAcceleratorLinkToggle:
     # the small model is the model manager's: the toggle never touches the runner cache
     with mock.patch.object(params, "remove", wraps=params.remove) as remove, \
          mock.patch('openpilot.selfdrive.ui.sunnypilot.mici.layouts.models.ui_state.is_offroad', return_value=True):
-      for index in (1, 2, 0):
+      for index in (1, 2, 3, 0):
         toggle._handle_mouse_release(MousePos(0, 0))
         assert params.get(self.PARAM) == index
     assert "ModelRunnerTypeCache" not in {c.args[0] for c in remove.call_args_list}

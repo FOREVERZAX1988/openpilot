@@ -31,6 +31,16 @@ from openpilot.system.ui.widgets.scroller import NavScroller
 LINK_MODE_LABELS = {"off": "off", "usb": "usb", "ios": "iOS", "wifi": "wi-fi"}
 
 
+def link_toggle_options() -> tuple[list[str], list[int]]:
+  """(labels, values) for the link control: one line per MODES entry, each value
+  that entry's index. Every mode has to be offered. The stored param is an index
+  into MODES, so a mode left out leaves nothing to match: the control reads the
+  index back as 0, a Wi-Fi link shows as off, and the next tap cycles away from
+  off and overwrites it. Four pills fit the row: BigMultiParamToggleSP spaces
+  them 35 px apart inside a 180 px button."""
+  return [tr(LINK_MODE_LABELS[m]) for m in MODES], list(range(len(MODES)))
+
+
 def _model_info() -> tuple[str, str, str]:
   """(active model, info header, info text) for the panel. Runner-matched: the
   active line names what actually drives, and a notable big-model state takes
@@ -113,14 +123,13 @@ class ModelsLayoutMici(NavScroller):
     self.cancel_download_btn = BigButton(tr("cancel download"), description=tr("Stops the model download in progress."))
     self.cancel_download_btn.set_click_callback(lambda: ui_state.params.remove("ModelManager_DownloadRef"))
 
-    # the pills follow the param; locked onroad like the model buttons beside it: jetlink switches the link only parked.
-    # the small display exposes only USB/iOS (no Wi-Fi), and a tap cycles off -> USB -> iOS -> off.
-    mici_modes = [m for m in MODES if m != "wifi"]
-    self.link_toggle = BigMultiParamToggleSP(tr("jetlink"), KEYS.link, [tr(LINK_MODE_LABELS[m]) for m in mici_modes],
-                                             values=[MODES.index(m) for m in mici_modes],
-                                             description=tr("Runs big models on a computer or phone plugged into the comma.\n" +
+    # the pills follow the param; locked onroad like the model buttons beside it: jetlink switches the link only parked
+    self._link_options, self._link_values = link_toggle_options()
+    self.link_toggle = BigMultiParamToggleSP(tr("jetlink"), KEYS.link, self._link_options, values=self._link_values,
+                                             description=tr("Runs big models on a computer or phone joined to the comma.\n" +
                                                             "USB for a Mac, Jetson, Linux PC or Android. iOS for an iPhone or iPad.\n" +
-                                                            "Turns off ADB. The small model drives until the big model is ready."))
+                                                            "Wi-Fi for a computer or phone whose hotspot the comma joined.\n" +
+                                                            "USB and iOS take the port and turn ADB off. Wi-Fi leaves both alone."))
     self.link_toggle.set_enabled(lambda: ui_state.is_offroad())
     self.link_toggle.set_visible(link_toggle_meaningful())
 

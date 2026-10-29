@@ -121,6 +121,20 @@ class TestTheWifiMode(OpenpilotTestCase):
       self.assertIn(mode, LINK_MODE_TITLES, f"{mode} has no tici title")
       self.assertIn(mode, LINK_MODE_LABELS, f"{mode} has no mici label")
 
+  def test_the_small_panel_offers_every_mode(self):
+    """Every mode has to be offered, not merely labelled: LINK_MODE_LABELS naming
+    wifi changed nothing while the small panel dropped it, and this test passed.
+    The stored param is an index into MODES, so a mode no option matches reads
+    back as index 0 -- a Wi-Fi link showed as off, and the tap after it, cycling
+    from off, stored that instead."""
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.models import link_toggle_options
+    from openpilot.sunnypilot.jetlink_adapter import MODES
+
+    labels, values = link_toggle_options()
+    self.assertEqual(values, list(range(len(MODES))), "each stored value is an index into MODES")
+    self.assertEqual(len(labels), len(MODES), f"{labels}: {len(MODES) - len(labels)} mode(s) are off the panel")
+    self.assertEqual(len(set(labels)), len(MODES), f"{labels}: two modes share one line")
+
   def test_the_status_asks_for_the_hotspot_instead_of_the_port(self):
     # through tr: the device runs the translated UI, so an English literal would
     # only pass on a machine with no catalog
