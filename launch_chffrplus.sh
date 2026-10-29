@@ -699,7 +699,14 @@ bootstrap_deps_retry() {
 # webui falling back to dev/mock mode.
 ensure_params_build() {
   local so="$DIR/openpilot/common/libparams_c.so"
-  [ -f "$so" ] && return 0
+  local hdr="$DIR/openpilot/common/params_keys.h"
+  # 不要只判断 .so 存不存在。参数键表是编译期 ABI：合并或更新后 params_keys.h
+  # 会带来新的键（这次是 Blendful / StockEcuHandBackFailed），而旧的 .so 不认识
+  # 它们 —— 第一次被读取就 UnknownKeyName 崩掉，而且报错点在读取方，看起来
+  # 跟我们毫无关系。header 比 .so 新就必须重编。
+  if [ -f "$so" ] && { [ ! -f "$hdr" ] || [ "$so" -nt "$hdr" ]; }; then
+    return 0
+  fi
   # nproc counts CPUs in the CURRENT affinity mask with ONLINE status. Early in
   # AGNOS boot secondary CPUs are not yet hotplugged, so nproc can return 1 and
   # this build crawls at -j1 (minutes). /proc/cpuinfo lists all present CPUs.
