@@ -34,13 +34,11 @@ def test_moved_switches_appear_once(params):
   assert developer._alpha_long_toggle not in developer._scroller._items
 
   alpha = AlphaLongitudinalToggles()
-  # the five DEC trigger switches (upstream 29174dca7) are appended after the DEC toggle: they can
-  # only restrict a hand-over to the model, never cause one, so they follow the switch that owns DEC.
+  # three switches, and no more: the lead-follow assist went with e6baf0b50b and DEC (and its
+  # five trigger switches) with ca742c03d0. A key listed here that the panel no longer builds
+  # is how the Cruise panel came to read a switch __init__ had stopped creating.
   assert [key for key, _ in alpha._refresh_toggles] == [
-    "AlphaLongitudinalEnabled", "ExperimentalMode", "ExperimentalModeSetSpeed", "ExperimentalModeLeadGap",
-    "DynamicExperimentalControl",
-    "DynamicExperimentalTriggerCurve", "DynamicExperimentalTriggerLead", "DynamicExperimentalTriggerSignal",
-    "DynamicExperimentalTriggerStopLight", "DynamicExperimentalTriggerLowSpeed"]
+    "AlphaLongitudinalEnabled", "ExperimentalMode", "ExperimentalModeSetSpeed"]
 
 
 def test_alpha_longitudinal_heads_cruise(params, monkeypatch):

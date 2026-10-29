@@ -55,31 +55,6 @@ class AlphaLongitudinalToggles:
                              "whenever the model holds back. The model still makes every slowdown."),
       param="ExperimentalModeSetSpeed")
 
-    self._lead_gap_toggle = toggle_item_sp(
-      title=lambda: tr("Experimental Mode Lead Follow Assist"),
-      description=lambda: tr("Closes the gap to your driving personality's following distance behind a steady car. " +
-                             "Never closer than chill mode."),
-      param="ExperimentalModeLeadGap")
-
-    # Which situations may hand speed control to the model under DEC. All on by
-    # default; a switch that is off can only stop a hand-over, never cause one.
-    self._dec_trigger_specs = (
-      ("DynamicExperimentalTriggerCurve", tr_noop("DEC: Curves"),
-       tr_noop("Let a curve ahead hand speed control to the model.")),
-      ("DynamicExperimentalTriggerLead", tr_noop("DEC: Slower Lead"),
-       tr_noop("Let a slower or stopped car ahead hand speed control to the model.")),
-      ("DynamicExperimentalTriggerSignal", tr_noop("DEC: Turn Signal"),
-       tr_noop("Let an active turn signal below the lane-change speed hand speed control to the model.")),
-      ("DynamicExperimentalTriggerStopLight", tr_noop("DEC: Stops Ahead"),
-       tr_noop("Let a predicted stop for a light or sign hand speed control to the model.")),
-      ("DynamicExperimentalTriggerLowSpeed", tr_noop("DEC: Low Speed Creep"),
-       tr_noop("Let creeping at very low speed hand speed control to the model.")),
-    )
-    self._dec_trigger_toggles = [
-      toggle_item_sp(title=lambda t=title: tr(t), description=lambda d=desc: tr(d), param=param)
-      for param, title, desc in self._dec_trigger_specs
-    ]
-
     self._refresh_toggles = (
       ("AlphaLongitudinalEnabled", self._alpha_long_toggle),
       ("ExperimentalMode", self._experimental_toggle),
@@ -106,11 +81,9 @@ class AlphaLongitudinalToggles:
     # tap only to flip back -- which is what `CP is None or` allowed -- is a lie. has_long
     # is the same condition those two enforce.
     self._experimental_toggle.action_item.set_enabled(has_long)
-    self._dec_toggle.action_item.set_enabled(has_long)
-    # DEC decides the mode on its own, and the e2e assists never act under it
-    dec = self._dec_toggle.action_item.get_state()
-    self._set_speed_toggle.action_item.set_enabled(has_long and not dec)
-    self._lead_gap_toggle.action_item.set_enabled(has_long and not dec)
+    # Set Speed Assist only acts in experimental mode: locked without it, keeping its value
+    # (e6baf0b50b dropped the lead-follow assist and DEC, so this is the only e2e assist left)
+    self._set_speed_toggle.action_item.set_enabled(has_long and self._experimental_toggle.action_item.get_state())
 
   def refresh(self):
     for key, item in self._refresh_toggles:
