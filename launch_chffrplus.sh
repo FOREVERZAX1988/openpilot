@@ -838,7 +838,15 @@ launch() {
   [ -f "$DIR/.git/index.lock" ] && rm -f "$DIR/.git/index.lock"
 
   if [ -f "${DIR}/.overlay_init" ]; then
-    if find "${DIR}/.git" -newer "${DIR}/.overlay_init" | grep -q . 2>/dev/null; then
+    # 用 git 自己判断，而不是文件 mtime。旧写法 `find "${DIR}/.git" -newer
+    # .overlay_init` 有两个坑：updater 每轮 `git fetch` 都会刷新 .git/FETCH_HEAD
+    # 和 .git/objects（→ 永远判定「本地已修改」），而换成年月日的 mtime 比对又会被
+    # 目录自身的 mtime 带上（建/删文件都会动它）。后果一样：下载好的更新死活装不上，
+    # 版本停在旧的 → updater 又看到新更新 → 再下载 → 再跳过，无限循环。
+    # 2026-10-29 在 tizi 上实测：finalized 已是新 commit、git status 干净，但
+    # .git/FETCH_HEAD 比 .overlay_init 新 6 分钟，每轮都被跳过。
+    # --untracked-files=no：build 产物（prebuilt 等）不算「用户修改」。
+    if [ -n "$(git -C "${DIR}" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
       echo "${DIR} has been modified, skipping overlay update installation"
     elif [ -f "${STAGING_ROOT}/finalized/.overlay_consistent" ] && [ ! -d /data/safe_staging/old_openpilot ]; then
       echo "Valid overlay update found, installing"
