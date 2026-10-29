@@ -15,7 +15,10 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr_noop
 
 
-PING_TIMEOUT_NS = 80_000_000_000  # 80 seconds in nanoseconds
+# How stale LastSunnylinkPingTime may get before the link is called stale. sunnylinkd pings every
+# SUNNYLINK_PING_INTERVAL_S (20s) but its reconnect backoff alone reaches 128s, so a shorter window
+# flagged healthy-but-reconnecting links as dead. Keep in sync with webui/server/bridge/state_api.py.
+PING_TIMEOUT_NS = 180_000_000_000  # 180 seconds in nanoseconds
 METRIC_HEIGHT = 126
 METRIC_MARGIN = 30
 METRIC_START_Y = 300

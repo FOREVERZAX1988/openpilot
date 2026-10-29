@@ -10,6 +10,8 @@ Each `_build_*_items()` supplies the contents of one page in `carrot_tuning.py`.
 Groups inside a page are separated by `LineSeparatorSP`, matching how the rest of
 the sunnypilot settings pages express grouping (see steering.py, models.py).
 """
+from openpilot.sunnypilot.carrot import feature_support
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
   option_item_sp, section_heading_sp, toggle_item_sp,
@@ -19,8 +21,11 @@ def build_start_items():
   return [
     section_heading_sp(tr('Auto Start / Cruise')),
     section_heading_sp(tr('Auto Gas')),
+    # Tesla / BYD only: registered in feature_support, so on the Macan the row stays
+    # visible but grey and cannot be turned on (default is off either way).
     option_item_sp(title=tr('Auto Gas Sync Speed'), param='AutoGasSyncSpeed', min_value=0, max_value=200, value_change_step=5,
-                   description=tr('Speed at which cruise set speed is re-synchronized. Tesla BYD only.')),
+                   description=feature_support.describe('AutoGasSyncSpeed', tr('Speed at which cruise set speed is re-synchronized. Tesla BYD only.')),
+                   enabled=feature_support.ui_enabled('AutoGasSyncSpeed')),
     option_item_sp(title=tr('Eco Cruise Control'), param='CruiseEcoControl', min_value=0, max_value=3, value_change_step=1),
 
   ]
@@ -277,7 +282,8 @@ def build_vehicle_items():
   return [
     section_heading_sp(tr('Radar / Tracks')),
     toggle_item_sp(title=tr('Enable Radar Tracks'), param='EnableRadarTracks',
-                   description=tr('BYD only: feed corner-radar tracks into the radar interface.')),
+                   description=feature_support.describe('EnableRadarTracks', tr('BYD only: feed corner-radar tracks into the radar interface.')),
+                   enabled=feature_support.ui_enabled('EnableRadarTracks')),
     option_item_sp(title=tr('Alert Volume'), param='SoundVolumeAdjust', min_value=5, max_value=200, value_change_step=5,
                    description=tr('Scale every alert sound, in percent. 100 keeps the current loudness.')),
     option_item_sp(title=tr('Engage Chime Volume'), param='SoundVolumeAdjustEngage', min_value=5, max_value=200, value_change_step=5,
@@ -313,6 +319,99 @@ def build_dev_items():
                                    'a plan source, and its follow time, comfort braking and stop point ' +
                                    'reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected ' +
                                    'phone - without a fresh packet the source stays inactive.')),
+    option_item_sp(title=tr('Carrot Source Timeout'), param='CarrotSourceTimeoutMs', min_value=500, max_value=5000,
+                   value_change_step=100, use_registered_default=True,
+                   description=tr("How old a phone packet may be before the carrot source counts as gone; "
+                                   "past this the source goes inactive instead of holding its last request. "
+                                   "Only read while Carrot Longitudinal Source is on.")),
+    toggle_item_sp(title=tr('Lead Preview'), param='CarrotLeadPreviewEnabled',
+                   description=tr("Ease off from the lead vehicle's own deceleration, before the gap "
+                                   "starts closing. Read once when plannerd starts - restart to apply.")),
+    toggle_item_sp(title=tr('Comfort Speed Limit Drop'), param='SlcLeadDropRelaxationEnabled',
+                   description=tr('When the speed limit drops sharply under a stable lead, ease the target down ' +
+                                  'at a comfort rate instead of stepping it. Vetoed by a closing gap, lead ' +
+                                  'braking, a driver override or a low speed. Applies within about five seconds.')),
+    toggle_item_sp(title=tr('Vision Sign Reader'), param='SpeedLimitVisionEnabled',
+                   description=tr('Run the vision speed-limit reader: three ONNX models look at the road camera ' +
+                                  'and publish the sign they read into shared memory. Started by the process ' +
+                                  'manager, so restart to apply. Off by default.')),
+    toggle_item_sp(title=tr('Feed Vision Limit'), param='VisionSpeedLimitEnabled',
+                   description=tr('Let the speed-limit resolver use the detected limit. It is folded into the ' +
+                                  'map source, so a map limit stays authoritative and vision can only tighten ' +
+                                  'it. Applies within about five seconds.')),
+    toggle_item_sp(title=tr('Drop Impossible Vision Limits'), param='VisionSpeedLimitLowLimitFilter',
+                   description=tr('Discard detected limits at or below the threshold below - usually a misread ' +
+                                  'sign. Off means every reading the reader accepts is used.')),
+    option_item_sp(title=tr('Impossible Limit Threshold'), param='VisionSpeedLimitLowLimitThreshold',
+                   min_value=0, max_value=1000, value_change_step=50, use_float_scaling=True,
+                   label_callback=lambda v: f'{v / 100.0:.1f} m/s ({v * 0.036:.0f} km/h)',
+                   enabled=lambda: unified_params.get_bool('VisionSpeedLimitLowLimitFilter'),
+                   description=tr('A detected limit at or below this value is dropped as an impossible ' +
+                                  'reading. Stored in m/s, shown in both; only read while the filter ' +
+                                  'above is on. Applies within about five seconds.')),
+    toggle_item_sp(title=tr('Traffic Light Fusion'), param='CarrotTrafficLightFusionEnabled',
+                   description=tr("Fold the phone app's traffic-light state into the longitudinal plan. "
+                                   "Applies within about five seconds, no restart needed.")),
+    toggle_item_sp(title=tr('Curve Accel Limit'), param='CarrotTurnAccelEnabled',
+                   description=tr("Cap the longitudinal acceleration allowed while the car is inside a "
+                                   "curve. Read once when plannerd starts - restart to apply.")),
+    toggle_item_sp(title=tr('Gap Recovery'), param='CarrotGapRecoveryEnabled',
+                   description=tr("Creep the follow distance back out after something (a cut-in, a hard "
+                                   "slowdown) squeezed it short. Read once when plannerd starts - restart "
+                                   "to apply.")),
+    toggle_item_sp(title=tr('Cut-in Pre-decel'), param='CarrotCutinPredecelEnabled',
+                   description=tr("Start slowing early for a vehicle cutting in from a neighbouring lane, "
+                                   "instead of waiting for the gap to close. Read once when plannerd "
+                                   "starts - restart to apply.")),
+    toggle_item_sp(title=tr('Cut-out Relief'), param='CarrotCutoutReliefEnabled',
+                   description=tr("Release the follow suppression once the lead leaves the lane, so the "
+                                   "car does not keep hanging back. Read once when plannerd starts - "
+                                   "restart to apply.")),
+    toggle_item_sp(title=tr('Comfort Decel Bound'), param='CarrotBrakingGapEnabled',
+                   description=tr("Let the lead vehicle's comfort-deceleration limit enter the MPC as a "
+                                   "soft bound, which softens closing speed. Read once when plannerd "
+                                   "starts - restart to apply.")),
+    toggle_item_sp(title=tr('Cruise Coasting'), param='CarrotCruiseCoastingEnabled',
+                   description=tr("Ease off inside the overspeed band while cruising on the set speed. It "
+                                   "can only ever reduce deceleration, never add acceleration. Read once "
+                                   "when the longitudinal control process starts - restart to apply.")),
+    option_item_sp(title=tr('Coasting Band'), param='CarrotCruiseCoastingPercent', min_value=0, max_value=10,
+                   value_change_step=1, use_registered_default=True,
+                   description=tr("Width of the coasting band, in percent. Only read while Cruise Coasting "
+                                   "is on; 0 disables the relief without touching the toggle.")),
+    toggle_item_sp(title=tr('Stopped Lead Evidence'), param='CarrotStoppingLeadEnabled',
+                   description=tr("Require range evidence before a stopped lead counts as departed, so a "
+                                   "stationary lead is not mistaken for an open gap. Read once when "
+                                   "plannerd starts - restart to apply.")),
+    toggle_item_sp(title=tr('Lateral Readiness'), param='CarrotLateralReadinessEnabled',
+                   description=tr("Hold lateral actuation back from a standstill until lateral input and CAN "
+                                   "are both ready. One-way latch per drive. Read once when the control "
+                                   "process starts - restart to apply.")),
+    toggle_item_sp(title=tr('Map Speed Slowdown'), param='CarrotMapDecelEnabled',
+                   description=tr("Let map speed limits slow the car; one of the three conditions Smart "
+                                   "Cruise Control - Map needs. Read once when plannerd starts - restart "
+                                   "to apply.")),
+    toggle_item_sp(title=tr('Fast Radar Refresh'), param='CarrotFastRadarEnabled',
+                   description=feature_support.describe('CarrotFastRadarEnabled',
+                                                       tr("Refresh an already-locked lead from a newer radar "
+                                                          "frame instead of promoting a new track.")),
+                   enabled=feature_support.ui_enabled('CarrotFastRadarEnabled')),
+    option_item_sp(title=tr('Steering Kp Scale'), param='CustomKp', min_value=50, max_value=200, value_change_step=5,
+                   use_float_scaling=True, use_registered_default=True,
+                   description=tr('Multiplies the lateral torque controller proportional gain. ' +
+                                   '1.00 is stock behaviour; the value only takes effect while it differs ' +
+                                   'from 1.00. Applies within a few seconds, no restart needed.')),
+    toggle_item_sp(title=tr('Advanced Lateral Tune (FLM)'), param='AdvancedLateralTune',
+                   description=tr('Let the FLM analyzer use the Steer Delay / Friction / Kp / Lat Accel / ' +
+                                   'Ratio knobs instead of the values carParams already carries. Off keeps the ' +
+                                   'analyzer reporting stock values, which is what the shipped tune compares against. ' +
+                                   'Affects the analyzer only; nothing reaches the controller until runtime ' +
+                                   'overrides are on and a profile is applied.')),
+    toggle_item_sp(title=tr('FLM Runtime Overrides'), param='FlmRuntimeOverridesEnabled',
+                   description=tr('Apply the friction curve and per-vehicle knobs from the FLM tool\'s applied ' +
+                                   'profile to the lateral torque controller. Off keeps the override table empty ' +
+                                   'and stock friction in force. With no profile applied the bundle is empty and ' +
+                                   'this switch changes nothing; takes effect within a few seconds, no restart.')),
     section_heading_sp(tr('Navigation Control (advanced)')),
     toggle_item_sp(title=tr('Traffic Congestion Slowdown'), param='CarrotTrafficCongestionEnabled',
                    description=tr('Fold the phone app traffic congestion report into map-based cruise ' +

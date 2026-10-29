@@ -17,22 +17,21 @@ from openpilot.sunnypilot.carrot.gps_sources import (Fix, PHONE_MAX_ACCURACY_M, 
                                                      fresh, plausible, select, usable)
 
 
-def _real_module(name):
-  """True when ``name`` is importable for real, not stubbed by another test.
+def _serv_importable():
+  """True only when carrot_serv can be imported for real.
 
   Some carrot test modules install fake ``openpilot.common``/``cereal`` packages
   into ``sys.modules``, which also makes ``zstandard`` resolvable. Under
-  ``unittest discover`` that leakage would make this module importable by
-  accident and the result would then depend on collection order. A stub has no
-  string ``__file__``, so it is distinguishable from a really imported module.
+  ``unittest discover`` that leakage can make this module importable by accident
+  and the result would then depend on collection order. A stubbed module is
+  detectable: it has no real spec of its own.
   """
-  module = sys.modules.get(name)
-  if module is None:
-    return importlib.util.find_spec(name) is not None
-  return isinstance(getattr(module, '__file__', None), str)
+  if sys.modules.get('zstandard') is not None:
+    return False
+  return importlib.util.find_spec('zstandard') is not None and importlib.util.find_spec('opendbc') is not None
 
 
-HAVE_SERV = _real_module('zstandard') and _real_module('opendbc')
+HAVE_SERV = _serv_importable()
 CarrotServ = None
 if HAVE_SERV:
   try:

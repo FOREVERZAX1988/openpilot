@@ -412,6 +412,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // unset, so registered defaults only feed UI discovery and stock_value reporting.
     {"HyundaiCameraSccHint", {PERSISTENT | BACKUP, BOOL, "0"}},  // CP-3: hint on CAN error for hyundai cars without camera SCC
     {"BluetoothAudioEnabled", {PERSISTENT, BOOL, "0"}},  // ST-7: bluez-based audio out; NOT available on AGNOS (qcom stack), kept inert
+    // Carrot Bluetooth daemon keys. The daemon (sunnypilot/system/bluetooth) reads and
+    // writes these on every tick, so an unregistered name is not "silently ignored" --
+    // Params raises UnknownKeyName and the process dies on its first line of work.
+    {"BluetoothEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // carrot_bluetooth master switch
+    {"BluetoothAudioAddress", {PERSISTENT, STRING}},  // selected A2DP sink, uppercase MAC
+    {"BluetoothAudioTestActive", {CLEAR_ON_MANAGER_START, BOOL, "0"}},  // a test session owns the sink
+    {"BluetoothDisconnectControllersOffroad", {PERSISTENT | BACKUP, BOOL, "0"}},  // drop gamepads when parked
+    {"TestAlert", {CLEAR_ON_MANAGER_START, STRING}},  // memory param: the bluetooth A2DP test asks for an audible alert
     {"StoppingAccel", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // CP-4: m/s^2, 0 = per-car default, clamped [-4.0, -0.3]
     {"BlinkerLatchedTurn", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // CP-1: kph gate for latched-stalk turn intent, 0 = off
     {"AdjustLaneOffsetEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // CP-2: keep-away offset from the adjacent lane
@@ -501,7 +509,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LaneCenterOffset", {PERSISTENT | BACKUP, FLOAT, "0"}},  // Lane centering lateral offset in meters (-0.3..0.3)
     {"LaneCenteringE2EAuthority", {PERSISTENT | BACKUP, BOOL, "0"}},  // Attenuate lane-centering correction on large deliberate path errors unless near a boundary
     {"WebPushVapidKeys", {PERSISTENT | BACKUP, STRING}},
-    {"WebPushSubscriptions", {PERSISTENT | BACKUP, STRING}},
+    {"WebPushSubscriptions", {PERSISTENT | BACKUP, JSON}},
     // Ensures steer-to-zero Mazda torque defaults are seeded once.
     {"MazdaTorqueDefaultsApplied", {PERSISTENT | BACKUP, BOOL}},
     // Tune version last seeded for the steer-to-zero Mazda EPS; a bump re-seeds everyone once.
@@ -1001,4 +1009,83 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     // one-time markers
     {"ExperimentalAssistsDefaultOn", {PERSISTENT | BACKUP, BOOL}},  // Speed/Lead Follow Assist turned on once when they became default (params_migration_zp.py)
+
+    // ---------------------------------------------------------------------
+    // macan-long fork additions (must survive every upstream merge).
+    // Restored 2026-10-23: the round-23 reorder onto upstream 9e002fb2 replaced
+    // this file with upstream's, so none of these keys were registered any more.
+    // An unregistered key makes Params.get_bool/get raise UnknownKeyName, which
+    // the fork's readers swallow into "feature off" (slope comp / radar fusion /
+    // SnG) - i.e. the car silently drives without its Macan tuning - and crashes
+    // the readers that have no guard (UI panels, mads helpers).
+    // NOTE: the Macan accel-shaping knobs (JerkLimit / AccelDeadzone / CornerLimit /
+    // CruiseCoast / AccelLimit) were removed - that domain is owned by upstream
+    // "Acceleration Profile" (AccelPersonality[Enabled]) + AccelController.
+    // UsbGpu* / ModelManager_*_USBGPU are deliberately NOT restored: upstream
+    // renamed them to Chestnut*, which this file already registers.
+    // ---------------------------------------------------------------------
+    {"CarrotCurveSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"CarrotHudInfoEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"ATCMaxSpeedKph", {PERSISTENT | BACKUP, FLOAT, "35.0"}},               // auto-turn-control speed floor cap
+    {"CarrotSectionSpeedEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},        // section/avg-SDI speed enforcement
+    {"CarrotRoadWidthTurnEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},       // use nTBTNextRoadWidth for fork turn logic
+    {"CarrotTimeSyncEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},            // sync device clock to carrot epochTime
+    {"ExtBlinkerCtrlTest", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"BlinkerMode", {PERSISTENT | BACKUP, INT, "1"}},
+    {"LaneStabTime", {PERSISTENT | BACKUP, INT, "50"}},
+    {"ContinuousLaneChangeCnt", {PERSISTENT | BACKUP, INT, "4"}},
+    {"ContinuousLaneChangeInterval", {PERSISTENT | BACKUP, INT, "2"}},
+    {"AutoTurnLeft", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"AutoEnTurnNewLaneTimeH", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoEnTurnNewLaneTime", {PERSISTENT | BACKUP, INT, "0"}},
+    {"DynamicTFollow", {PERSISTENT | BACKUP, FLOAT, "0"}},
+    {"CarrotCruiseAtcDecel", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"CarrotCruiseDecel", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"LaneChangeBsd", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaDown", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaDownLC", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaUp", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerDeltaUpLC", {PERSISTENT | BACKUP, INT, "0"}},
+    {"CustomSteerMax", {PERSISTENT | BACKUP, INT, "0"}},
+    {"VEgoStopping", {PERSISTENT | BACKUP, INT, "50"}},
+    {"AChangeCostStarting", {PERSISTENT | BACKUP, INT, "10"}},
+    {"CanfdDebug", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotTireTrajectory", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest1", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest2", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseButtonTest3", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DisableMinSteerSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HDPuse", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"HardwareC3xLite", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"IsLdwsCar", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MaxAngleFrames", {PERSISTENT | BACKUP, INT, "89"}},
+    {"MaxTimeOffroadMin", {PERSISTENT | BACKUP, INT, "60"}},
+    {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
+    {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1.1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
+    // Carrot web writes these two through /api/param_set; an unregistered key
+    // makes that write raise UnknownKeyName, so the car-selection page and the
+    // screen-record button both failed.
+    {"CarSelected3", {PERSISTENT | BACKUP, STRING}},
+    {"ScreenRecord", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MacanStartStop", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 起步跟停（视觉决定起步，OP 代发 RESUME）
+    {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "6"}},  // Macan 起步安全距离（米；3~10，默认6，前保险杠到前车；需雷达ab或视觉>阈值才自动起步，防误起步。2026-10-07 取消 0=Off 语义）
+    {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）
+    {"MacanSlopeCompUnlimited", {PERSISTENT | BACKUP, BOOL, "0"}}, // 坡度补偿-放开原厂力矩限制（选项2）
+    {"MacanRadarFusion", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"MacanVerzBridge", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan verz桥主闸（开=1.25%百分比渐进缓冲缓急刹/治喘息；关=verz直通一帧到位。深刹<=-1.5与原厂刹车请求无论开关直通保安全）
+    {"MacanStartupGapSync", {PERSISTENT | BACKUP, BOOL, "0"}},       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+    {"MacanFusionMode", {PERSISTENT | BACKUP, BOOL, "1"}},            // Macan 融合控制模式（1=原厂ACC与OP纵向融合控制(当前,恒开)；0=纯OP纵向(后续开发,暂不可设)）       // Macan 开机距离档同步（停车+待机时代发 DIST 键，让原厂 ACC 内部档位与记忆对齐）
+
+    // ---- fork-only keys kept out of the block above (registered here so Params never
+    // raises UnknownKeyName). DEC keys: upstream retired DEC from the planner, but the fork
+    // still reads them; NNFFModelName: read by carrot_param_cache; WebPushVapid: carrot web.
+    {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"DynamicExperimentalTriggerCurve", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerLead", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerSignal", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerStopLight", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"DynamicExperimentalTriggerLowSpeed", {PERSISTENT | BACKUP, BOOL, "1"}},
+    {"NNFFModelName", {PERSISTENT | BACKUP, STRING}},  // StarPilot NNFF model name shown in the UI border; was read by carrot_param_cache without being registered, which raises UnknownKeyName on device
+    {"WebPushVapid", {PERSISTENT | BACKUP, JSON}},
 };

@@ -286,6 +286,12 @@ class CameraView(Widget):
       if egl_image:
         self.egl_images[idx] = egl_image
       else:
+        # VisionBuf.fd lives inside the client's buffer array and dies with it, so a
+        # frame kept across a camerad restart can never become a valid EGL image.
+        # Drop it and let the next render take a fresh buffer (see the same guard in
+        # selfdrive/ui/onroad/cameraview.py).
+        self.frame = None
+        self._texture_needs_update = True
         return
 
     # Update texture dimensions to match current frame

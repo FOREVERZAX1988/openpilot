@@ -129,8 +129,17 @@ sessions/
 *.apk
 /jetlink_ci/
 
+# agent tool outputs (may contain secrets such as github PAT)
+tool_results/
+
 # Screenshot output stays untracked because PNG files use an LFS remote unavailable to installers.
 openpilot/sunnypilot/selfdrive/ui/tests/screenshots/
 
-# Cython-generated radar_motion build artifact
+# 上游合并用的独立 clone（jetlink 那一侧的冲突裁决工作区），不入库
+.jl-sync/
+
+# carrot radar_motion 的 cython 编译产物（SConscript 每次构建重新生成）
 openpilot/sunnypilot/carrot/radar_motion/_motion_native.cpp
+
+# carrot server 运行时状态：参数变更历史写在这里，属于设备数据不是源码
+openpilot/sunnypilot/carrot/server/.state/

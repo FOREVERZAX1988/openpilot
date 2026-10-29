@@ -41,6 +41,15 @@ except ImportError:
 
 # ---- 7714 WebSocket v2 parsed control structures ------------------------- #
 
+#: Serialises the read-modify-write on CarrotNaviDebug. Two writers share that
+#: param -- `_write_navi_debug` (the 10 Hz snapshot, from the tick and from the
+#: broadcast loop) and `_write_navi_debug_param` (events, from the navi data
+#: dispatch) -- and both go through `_merge_navi_debug`. The merge only works if
+#: nothing writes between its get and its put: concurrent merges each start from
+#: the snapshot they read, so the later put drops the other's keys, which is the
+#: very symptom (event keys never surviving) the merge was added to fix.
+_NAVI_DEBUG_LOCK = threading.Lock()
+
 class _NaviControlBase:
   def __init__(self, present: bool, sequence: int):
     self.present = present
@@ -297,6 +306,12 @@ NAVI_HTTP_PORT = 7713
 # CarrotManUdpPort param was retired for this reason; params_migration clears any
 # stored value so it cannot look like a live setting.
 CARROT_MAN_UDP_PORT = 7706
+# Subscriptions of the 10 Hz tick. Everything carrot reads from cereal is here; the
+# broadcast thread gets its own instance of the same list (see _broadcast_submaster).
+CARROT_SERVICES = ['deviceState', 'carState', 'controlsState', 'modelV2', 'carParams',
+                   'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP',
+                   'selfdriveState', 'longitudinalPlan', 'liveLocationKalman']
+CARROT_PUBLISHED_SERVICES = ['carrotManSP', 'navInstructionCarrotSP', 'navRoute']
 NAVI_HTTP_MAX_BODY_SIZE = 16 * 1024 * 1024
 NAVI_EVENT_TYPES = ("complexCrossroad", "rgdata", "vrtx", "ssinf", "sinf", "route")
 NAVI_ROUTE_MAX_POINTS = 4096
@@ -617,10 +632,23 @@ class CarrotManager:
     # selfdriveState feeds `active`, longitudinalPlan feeds xState/trafficState; without
     # them the 7705 broadcast read `sm.alive.get('selfdriveState', False)` which is always
     # False for an unsubscribed service, so the app's ADAS indicator was permanently 0.
-    self.sm = messaging.SubMaster(['deviceState', 'carState', 'controlsState', 'modelV2', 'carParams',
-                                   'radarState', 'radarTracks', 'navInstruction', 'carrotNaviSP',
-                                   'selfdriveState', 'longitudinalPlan', 'liveLocationKalman'])
-    self.pm = messaging.PubMaster(['carrotManSP', 'navInstructionCarrotSP', 'navRoute'])
+    self.sm = messaging.SubMaster(CARROT_SERVICES)
+    self.pm = messaging.PubMaster(CARROT_PUBLISHED_SERVICES)
+
+    # One msgq Poller/SubSocket set is single-threaded C++ state. The 10 Hz tick and
+    # the broadcast thread used to share `self.sm` and both call `sm.update()`, i.e.
+    # two threads inside the same poller/socket at once; the same applied to `self.pm`
+    # (navRoute is published from the route server thread, carrotManSP from tick).
+    # That cross-thread use is the only path in this daemon that reaches msgq from more
+    # than one thread, and it matches the 2026-10-18 crash signature: seven faulthandler
+    # dumps and the 07:23 gdb core all died inside native code (glibc aborting with
+    # "malloc(): unaligned tcache chunk detected" in SubSocket::create <- Poller.poll <-
+    # SubMaster.update, plus two aborts inside _publish). The broadcast thread now owns a
+    # private SubMaster, and every publish is serialized here.
+    self._sm_bc: Any = None
+    self._pub_lock = threading.Lock()
+    self._pub_contention = 0
+    self._pub_contention_log_ts = 0.0
     self._car_name_synced = None
 
     # Sub-modules.
@@ -1200,10 +1228,32 @@ class CarrotManager:
         self._copy_maneuvers_from_7714(ni, guidance)
         self._copy_lanes(ni, guidance)
 
-    self._send_or_recreate('carrotManSP', carrot_msg)
-    self._send_or_recreate('navInstructionCarrotSP', navi_msg)
+    self._publish_msg('carrotManSP', carrot_msg)
+    self._publish_msg('navInstructionCarrotSP', navi_msg)
     self._sync_nav_instruction_state(ni, active_carrot)
     self._write_navi_debug()
+
+  def _broadcast_submaster(self):
+    """SubMaster owned by the broadcast thread (never shared with tick())."""
+    if self._sm_bc is None:
+      self._sm_bc = messaging.SubMaster(CARROT_SERVICES)
+    return self._sm_bc
+
+  def _publish_msg(self, service: str, msg) -> None:
+    """Publish through the shared PubMaster with the send path serialized."""
+    if not self._pub_lock.acquire(blocking=False):
+      self._pub_contention += 1
+      now = time.monotonic()
+      if now - self._pub_contention_log_ts >= 10.0:
+        self._pub_contention_log_ts = now
+        cloudlog.error(
+          f"carrot_man: publish of {service} from {threading.current_thread().name} collided with "
+          + f"another thread inside PubMaster.send ({self._pub_contention} collisions); serialized")
+      self._pub_lock.acquire()
+    try:
+      self._send_or_recreate(service, msg)
+    finally:
+      self._pub_lock.release()
 
   def _sync_nav_instruction_state(self, ni: Any, active_carrot: int) -> None:
     """Mirror the published navInstructionCarrotSP into the NavInstructionState param.
@@ -1302,6 +1352,7 @@ class CarrotManager:
       "points": [],
       "tracks": [],
       "leads": [],
+      # 手机侧按墙上时间消费这个字段，换成 monotonic 会让它对不上（故保留 time.time）。
       "timestamp": time.time(),  # noqa: TID251
     }
 
@@ -1450,10 +1501,11 @@ class CarrotManager:
       sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
       sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
+      sm = self._broadcast_submaster()
       frame = 0
       while self._is_running:
         try:
-          self.sm.update(0)
+          sm.update(0)
 
           # Get remote address
           remote_addr = self._remote_addr
@@ -1469,13 +1521,13 @@ class CarrotManager:
           # for the same reason - it is read from the navi packet, which changes.
           vturn_speed = 0.0
           vturn_dist = 0.0
-          if self.sm.valid.get('carState', False) and self.sm.valid.get('modelV2', False):
+          if sm.valid.get('carState', False) and sm.valid.get('modelV2', False):
             try:
               if self._curve_planner is None:
                 from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
                 self._curve_planner = CarrotPlanner(self._unified, roadcate=self._carrot_serv.roadcate)
               self._curve_planner.set_roadcate(self._carrot_serv.roadcate)
-              vturn_speed = self._curve_planner.carrot_curve_speed(self.sm)
+              vturn_speed = self._curve_planner.carrot_curve_speed(sm)
               # Read the distance the envelope chose for that speed. Published with it
               # so SCC-M does not have to substitute the navigation turn distance,
               # which is 0 whenever no maneuver is queued.
@@ -1488,7 +1540,7 @@ class CarrotManager:
           coords, distances, route_speed = self.carrot_navi_route()
 
           # Update navi
-          self._carrot_serv.update_navi(remote_ip, self.sm, self.pm, vturn_speed, coords, distances,
+          self._carrot_serv.update_navi(remote_ip, sm, self.pm, vturn_speed, coords, distances,
                                         route_speed, vturn_dist)
           self._write_navi_debug()
 
@@ -1510,7 +1562,7 @@ class CarrotManager:
                 self.params.put_nonblocking("NetworkAddress", ip_address)
 
               # Build and send message
-              msg = self.make_send_message()
+              msg = self.make_send_message(sm)
               if self._broadcast_ip:
                 data = msg.encode('utf-8')
                 try:
@@ -1536,7 +1588,7 @@ class CarrotManager:
     finally:
       self._is_running = False
 
-  def _refresh_broadcast_status(self, now: float) -> None:
+  def _refresh_broadcast_status(self, now: float, sm=None) -> None:
     """Recompute the values the UDP status broadcast carries, holding last-good on a lapse.
 
     Reads use `sm.valid` (msg.valid), not `sm.alive`: alive is a 10/freq = 0.1 s window and
@@ -1546,16 +1598,17 @@ class CarrotManager:
     hold below covers that gap. A genuinely stopped car still reports 0 because carState keeps
     publishing vEgoCluster == 0 with valid True.
     """
-    if self.sm.valid.get('carState', False):
-      cs = self.sm['carState']
+    sm = self.sm if sm is None else sm
+    if sm.valid.get('carState', False):
+      cs = sm['carState']
       self._bcast_v_ego_kph = _car_float(cs, 'vEgoCluster') * 3.6
       self._bcast_v_cruise_kph = _car_float(cs, 'vCruise')
       cruise_state = getattr(cs, 'cruiseState', None)
       self._bcast_cruise_speed = _car_float(cruise_state, 'speed') * 3.6
       self._bcast_fresh_ts = max(self._bcast_fresh_ts, now)
-    if self.sm.valid.get('selfdriveState', False):
+    if sm.valid.get('selfdriveState', False):
       try:
-        self._bcast_active = bool(self.sm['selfdriveState'].active)
+        self._bcast_active = bool(sm['selfdriveState'].active)
       except Exception:
         self._bcast_active = False
       self._bcast_fresh_ts = max(self._bcast_fresh_ts, now)
@@ -1568,11 +1621,12 @@ class CarrotManager:
       self._bcast_cruise_speed = 0.0
       self._bcast_active = False
 
-  def make_send_message(self) -> str:
+  def make_send_message(self, sm=None) -> str:
     """Build broadcast message for phone app."""
     import json
 
-    self._refresh_broadcast_status(self._mono_now())
+    sm = self.sm if sm is None else sm
+    self._refresh_broadcast_status(self._mono_now(), sm)
 
     msg = {}
     msg['Carrot2'] = self.params.get("Version", b'').decode() if isinstance(self.params.get("Version"), bytes) else (self.params.get("Version") or '')
@@ -1585,8 +1639,11 @@ class CarrotManager:
     v_ego_kph = int(round(self._bcast_v_ego_kph))
     v_cruise_kph = self._bcast_v_cruise_kph
     log_carrot = ""
-    if self.sm.valid.get('carState', False):
-      carState = self.sm['carState']
+    # 广播线程读自己的 SubMaster（上方 sm = self._broadcast_submaster()），
+    # 绝不碰共享的 self.sm —— 两个线程同时 update/send 同一个 msgq 就是堆损坏的根因。
+    # 保留上游把 getattr 默认值改成直读的那一处。
+    if sm.valid.get('carState', False):
+      carState = sm['carState']
       log_carrot = carState.logCarrot
 
     msg['v_ego_kph'] = v_ego_kph
@@ -1607,8 +1664,8 @@ class CarrotManager:
     active = self._bcast_active
     x_state = 0
     car_cruise_speed = self._bcast_cruise_speed
-    if self.sm.valid.get('longitudinalPlan', False):
-      lp = self.sm['longitudinalPlan']
+    if sm.valid.get('longitudinalPlan', False):
+      lp = sm['longitudinalPlan']
       x_state = int(getattr(lp, 'xState', 0) or 0)
       msg['trafficState'] = int(getattr(lp, 'trafficState', msg['trafficState']) or 0)
     msg['active'] = active
@@ -2742,19 +2799,26 @@ class CarrotManager:
     every ~100 ms, so the event keys never survived and the webui debug viewer
     (carrot_navi_api.py reads `debug["summary"]`) always rendered empty.
     Merging lets both writers coexist.
+
+    The merge holds `_NAVI_DEBUG_LOCK` across its get and its put. Two writers run
+    on different threads -- the tick publishes, the broadcast loop and the navi
+    dispatch fire on theirs -- so without the lock the second writer merges into the
+    snapshot it read *before* the first one wrote: the same loss the merge exists to
+    prevent, and two concurrent params.put() on one key besides.
     """
-    try:
-      existing = self.params.get(NAVI_DEBUG_PARAM)
-      # Params.get() decodes a JSON param to a dict, but tolerate a raw str/bytes
-      # too: an unset key reads back as "" and returning {} on an unexpected shape
-      # would erase the very keys this helper exists to preserve.
-      if isinstance(existing, (str, bytes, bytearray)):
-        existing = json.loads(existing) if len(existing) else {}
-      merged: dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
-      merged.update(updates)
-      self.params.put(NAVI_DEBUG_PARAM, merged)
-    except Exception as e:
-      cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
+    with _NAVI_DEBUG_LOCK:
+      try:
+        existing = self.params.get(NAVI_DEBUG_PARAM)
+        # Params.get() decodes a JSON param to a dict, but tolerate a raw str/bytes
+        # too: an unset key reads back as "" and returning {} on an unexpected shape
+        # would erase the very keys this helper exists to preserve.
+        if isinstance(existing, (str, bytes, bytearray)):
+          existing = json.loads(existing) if len(existing) else {}
+        merged: dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
+        merged.update(updates)
+        self.params.put(NAVI_DEBUG_PARAM, merged)
+      except Exception as e:
+        cloudlog.error(f"carrot_man: failed to write {NAVI_DEBUG_PARAM} param: {e}")
 
   def _put_navi_traffic_light(self, lamp: str | None, remain: Any, distance: Any,
                               location: Any = None) -> None:
@@ -3076,7 +3140,7 @@ class CarrotManager:
     for i, coord in enumerate(route_coords):
       nav_route_coords[i].latitude = coord["latitude"]
       nav_route_coords[i].longitude = coord["longitude"]
-    self.pm.send('navRoute', msg)
+    self._publish_msg('navRoute', msg)
 
   # ---- kisa app (P3-2) --------------------------------------------------- #
 
@@ -3298,9 +3362,35 @@ def _thread_excepthook(args):
   # root cause so the next "exits after CP navigation" report produces a real
   # traceback instead of silence.
   cloudlog.error(
-    f"carrot_man: unhandled exception in thread {args.thread.name!r}: " +
-    f"{''.join(args.exc_traceback) if args.exc_traceback else args.exc_value}"
+    f"carrot_man: unhandled exception in thread {args.thread.name!r}: "
+    + f"{''.join(args.exc_traceback) if args.exc_traceback else args.exc_value}"
   )
+
+
+_FAULT_LOG = None
+
+
+def _enable_fault_diagnostics() -> None:
+  """Keep a per-crash Python traceback of every thread of this daemon.
+
+  carrot_man dies on a fatal signal every few minutes (native heap corruption:
+  2026-10-18 gdb triage of the 07:23 SIGABRT core shows glibc aborting with
+  "malloc(): unaligned tcache chunk detected" inside msgq SubSocket::create,
+  reached from Poller.poll).  The faulting thread is in native code, so neither
+  swaglog nor the apport report names the Python frame; faulthandler dumps all
+  thread stacks on SIGSEGV/SIGABRT/SIGBUS, which is what pins the corruptor down.
+  """
+  global _FAULT_LOG
+  import faulthandler
+  path = '/data/log/carrot_man_faulthandler.log'
+  try:
+    if os.path.exists(path) and os.path.getsize(path) > (4 << 20):
+      os.replace(path, path + '.1')
+    _FAULT_LOG = open(path, 'a', buffering=1)
+    _FAULT_LOG.write(f"\n===== carrot_man start {time.strftime('%Y-%m-%d %H:%M:%S')} pid={os.getpid()} =====\n")
+    faulthandler.enable(file=_FAULT_LOG, all_threads=True)
+  except Exception:
+    cloudlog.exception("carrot_man: faulthandler setup failed")
 
 
 def main_thread():
@@ -3312,6 +3402,7 @@ def main_thread():
   # than silently killing that thread, so navigation-triggered crashes leave an
   # auditable cloudlog entry.
   threading.excepthook = _thread_excepthook
+  _enable_fault_diagnostics()
 
   manager = CarrotManager()
   rk = Ratekeeper(DEFAULT_RATE, print_delay_threshold=None)

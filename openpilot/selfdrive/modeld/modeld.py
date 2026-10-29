@@ -9,8 +9,8 @@ os.environ['GMMU'] = '0' # for chestnut fast loading, noop for qcom
 os.environ.setdefault('AM_POWER_LIMIT', '100')
 os.environ.setdefault('AM_PERF_LEVEL', 'high')
 from tinygrad.device import Buffer, Device
-from tinygrad.dtype import DType, dtypes
 from tinygrad.engine.realize import lower_and_compile
+from tinygrad.dtype import DType, dtypes
 from tinygrad.tensor import Tensor
 from tinygrad.helpers import round_up
 from tinygrad.uop.ops import UOp
@@ -143,6 +143,10 @@ class FrameMeta:
 
 
 def input_view(buffer: Buffer, shape: tuple[int, ...], dtype: DType, offset: int) -> Tensor:
+  # tinygrad's Buffer.view(nbytes, offset) has no dtype argument (the dtype belongs to the
+  # storage interpretation, not to the byte range), so passing it here raised
+  # "Buffer.view() takes 3 positional arguments but 4 were given" in ModelState.pack_inputs.
+  # View the byte range first, then build the storage UOp with the dtype.
   view = buffer.view(math.prod(shape) * dtype.itemsize, offset).ensure_allocated()
   return Tensor(UOp.from_buffer(view, dtype)).reshape(shape)
 
@@ -176,6 +180,17 @@ class ModelState(ModelStateBase):
       state = self.input_queues[name]
       self.outputs[next_name] = input_view(state._buffer(), state.shape, state.dtype, 0)
     self.parser = Parser()
+
+    # The observer is handed the packed host inputs. prev_feat is a state pair: it never reaches
+    # self.npy because next_prev_feat is written straight back into its device buffer. Handing
+    # self.npy over as-is made the first capture raise KeyError('prev_feat'), which the client
+    # turns into failed=True -- the comparison silently never produced a single sample. Mirror
+    # the state the model is about to consume into the dict instead.
+    self.shadow_inputs = None
+    if self.signal_shadow is not None and 'prev_feat' in self.input_queues:
+      self.prev_feat_host = np.zeros(self.input_shapes['prev_feat'][0], dtype=np.float32)
+      self.shadow_inputs = dict(self.npy)
+      self.shadow_inputs['prev_feat'] = self.prev_feat_host
 
   def pack_inputs(self) -> None:
     # Pack host inputs into one upload to reduce USB transfer overhead for the eGPU.
@@ -213,6 +228,9 @@ class ModelState(ModelStateBase):
     self.npy['action_t'][:] = inputs['action_t']
 
     self.input_device.copy_from(self.input_host)
+    if self.shadow_inputs is not None:
+      # read it before run_model overwrites the same buffer with next_prev_feat
+      self.prev_feat_host[:] = self.input_queues['prev_feat'].numpy().reshape(self.prev_feat_host.shape)
     self.input_queues['new_img'] = self.run_warp(**self.warp_inputs)
     self.run_model(output_buffers=self.outputs, **self.input_queues)
     if self.chestnut and (err := Device[self.outputs['outputs'].device].error_state.host.view(fmt='q')[0]):
@@ -220,7 +238,7 @@ class ModelState(ModelStateBase):
     if after_enqueue is not None:
       after_enqueue()
     model_output = self.outputs['outputs'].numpy()[0]
-    shadow_payload = self.signal_shadow.capture(model_output, self.npy) if self.signal_shadow is not None else None
+    shadow_payload = self.signal_shadow.capture(model_output, self.shadow_inputs) if self.shadow_inputs is not None else None
     if self.chestnut and not np.all(np.isfinite(model_output)):
       raise RuntimeError("model output not finite")
     outputs_dict = self.parser.parse_outputs(self.slice_outputs(model_output, self.output_slices))
@@ -240,6 +258,28 @@ class ModelState(ModelStateBase):
     for key in self.state_pairs:
       self.input_queues[key].assign(0).realize()
     self.prev_desire[:] = 0
+
+
+def car_params(params: Params) -> bytes:
+  """CarParams, or the car's own persisted one while the driving view is previewed.
+
+  CarParams is CLEAR_ON_MANAGER_START, and only card writes it, from the
+  fingerprint, at every start: offroad it is absent and the blocking read at the
+  end of this function never returns. That is what the preview used to do --
+  modeld alive, cameras connected, and no modelV2, so the driving view drew no
+  path at all.
+
+  CarParamsPersistent is the car's own last fingerprint: card copies it to
+  CarParamsPrevRoute for the same reason, and sunnypilot reads it for the car's
+  capabilities. So the preview reads that instead, and writes nothing. Offroad
+  without the preview nothing changes: the read blocks for card exactly as before.
+  """
+  cp = params.get("CarParams")
+  if cp is None and params.get_bool("IsOnroadPreview"):
+    cp = params.get("CarParamsPersistent")
+  if cp is None:
+    cp = params.get("CarParams", block=True)
+  return cp
 
 
 def main(demo=False):
@@ -342,7 +382,7 @@ def main(demo=False):
   if demo:
     CP = get_demo_car_params()
   else:
-    CP = messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams)
+    CP = messaging.log_from_bytes(car_params(params), car.CarParams)
   cloudlog.info("modeld got CarParams: %s", CP.brand)
 
   # TODO this needs more thought, use .2s extra for now to estimate other delays

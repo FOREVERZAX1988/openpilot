@@ -168,6 +168,18 @@ class CruiseLayout(Widget):
       has_icbm = ui_state.has_icbm
       has_long = ui_state.has_longitudinal_control
 
+      # Macan(MLB) 融合控制模式恒开，与 selfdrive/car/cruise.py 的 VCruiseHelper.macan_fusion
+      # 同口径（那里对 PORSCHE_MACAN_MK1 恒为 True，不再读 MacanFusionMode）：
+      # update_v_cruise 每帧用原厂 ACC 速度覆盖 v_cruise_kph，按键算出的自定义增量同一帧就被
+      # 抹掉，实际步进由原厂决定 —— 这个开关在该车上永不生效。
+      # 所以要把参数真正写回 0，而不是只把开关拨到"关"：ToggleSP.sync() 每 0.5s 从参数重读，
+      # 只 set_state(False) 会在半秒后被残留的 1 打回"开"（就是"灰着却显示开"的来源）。
+      # 放在分支外，是因为 macan 上 has_long/has_icbm 常为 False（VW 未开放 ICBM），
+      # 写在下面 has_long or has_icbm 里就永远轮不到。
+      macan_fusion_on = ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1"
+      if macan_fusion_on and ui_state.params.get_bool("CustomAccIncrementsEnabled"):
+        ui_state.params.put_bool("CustomAccIncrementsEnabled", False)
+
       if ui_state.CP_SP.intelligentCruiseButtonManagementAvailable and not has_long:
         self.icbm_toggle.action_item.set_enabled(ui_state.is_offroad())
         self.icbm_toggle.set_description(tr(ICBM_DESC))
@@ -189,7 +201,13 @@ class CruiseLayout(Widget):
 
       if has_long or has_icbm:
         software_cruise_speed = has_long and (not ui_state.CP.pcmCruise or not ui_state.CP_SP.pcmCruiseSpeed)
-        self.custom_acc_toggle.action_item.set_enabled((software_cruise_speed or has_icbm) and ui_state.is_offroad())
+        custom_acc_enabled = (software_cruise_speed or has_icbm) and ui_state.is_offroad() and not macan_fusion_on
+        self.custom_acc_toggle.action_item.set_enabled(custom_acc_enabled)
+        if macan_fusion_on:
+          self.custom_acc_toggle.action_item.set_state(False)  # 自动关闭自定义增量（参数已在上面清零）
+          _on = self.custom_acc_toggle.action_item.get_state()
+          self.custom_acc_short_increment.set_visible(_on)
+          self.custom_acc_long_increment.set_visible(_on)
         self.scc_v_toggle.action_item.set_enabled(True)
         self.scc_m_toggle.action_item.set_enabled(True)
       else:
@@ -199,6 +217,20 @@ class CruiseLayout(Widget):
 
     else:
       has_icbm = has_long = False
+      # CP is None: nothing has fingerprinted this car yet (fresh install, or /data
+      # rebuilt after a factory reset). Every set_enabled in the branch above is inside
+      # `if CP is not None`, so none of it runs and the rows keep the enabled default
+      # they were built with -- the whole panel looks usable on a car we know nothing
+      # about. Grey them out instead, and say why: offroad the description below is
+      # ONROAD_ONLY_DESCRIPTION, which asks for exactly the drive that fills CP in.
+      self.icbm_toggle.action_item.set_enabled(False)
+      self.custom_acc_toggle.action_item.set_enabled(False)
+      self.scc_v_toggle.action_item.set_enabled(False)
+      self.scc_m_toggle.action_item.set_enabled(False)
+      new_icbm_desc = "<b>" + tr(ONROAD_ONLY_DESCRIPTION) + "</b>\n\n" + tr(ICBM_DESC)
+      if self.icbm_toggle.description != new_icbm_desc:
+        self.icbm_toggle.set_description(new_icbm_desc)
+        self.icbm_toggle.show_description(True)
 
     show_custom_acc_desc = False
 

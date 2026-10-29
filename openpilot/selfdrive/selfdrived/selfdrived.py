@@ -11,8 +11,8 @@ from openpilot.cereal.visionipc import VisionStreamType
 from msgq.visionipc import VisionIpcClient
 
 
-from openpilot.common.params import Params
 from openpilot.common.dm import is_dm_disabled
+from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.gps import get_gps_location_service
@@ -144,6 +144,9 @@ class SelfdriveD:
     # cleanup old params
     if not self.CP.alphaLongitudinalAvailable:
       self.params.remove("AlphaLongitudinalEnabled")
+    # NOTE: the "wipe ExperimentalMode when longitudinal is unavailable" cleanup that used
+    # to live here is gone upstream (ConditionalExperimentalMode owns the mode now), so the
+    # alpha-longitudinal wipe this branch guarded against cannot happen at all.
 
     self.CS_prev = car.CarState.new_message()
     self.AM = AlertManager()
@@ -175,12 +178,40 @@ class SelfdriveD:
     # reported immediately.
     self.comm_issue_grace = CommIssueGrace()
     self.not_running_prev = None
+    # Not read on the update path any more (ConditionalExperimentalMode / SelfdrivedZP own
+    # it), but kept as a defined attribute so any external reader before the first
+    # params_thread tick sees False instead of AttributeError.
+    self.experimental_mode = False
+    # 车距档位自跟踪（与 carstate.stock_zeitluecke 同源：值1=拉近-1/值2=拉远+1，默认3格）
+    self._zeitluecke = 3
+    # Macan(MLB) only: 车距档 ↔ LongitudinalPersonality 双向同步。其他车保持上游
+    # "按车距键循环递减" 的语义，避免我们的 Macan 行为改写别人的车。
+    self.macan_personality_sync = (getattr(self.CP, "carFingerprint", None) == "PORSCHE_MACAN_MK1")
     self.personality = get_sanitize_int_param(
       "LongitudinalPersonality",
       min(log.LongitudinalPersonality.schema.enumerants.values()),
       max(log.LongitudinalPersonality.schema.enumerants.values()),
       self.params
     )
+    # 车距档与 personality 双向同步（MacanStartupGapSync 决定方向）：
+    # 开（OP主导）：记忆风格 → 车距档（4格→从容/3格→标准/1格→激进），保持首次
+    #   按键渐进，并代发 DIST 脉冲让原厂 ACC 内部档位对齐（StopAndGo/StartupGapSync）。
+    # 关（车辆主导）：跟随原厂点火默认 3 格 → OP 风格重置为标准并写回 param——
+    #   否则 params_thread 每 100ms 把旧记忆拉回，车辆主导被覆盖。
+    _gap_sync = False
+    try:
+      _gap_sync = self.params.get_bool("MacanStartupGapSync")
+    except Exception:
+      pass
+    if self.macan_personality_sync:
+      if _gap_sync:
+        self._zeitluecke = {2: 4, 1: 3, 0: 1}.get(self.personality, 3)
+      else:
+        self._zeitluecke = 3
+        if self.personality != 1:
+          self.personality = 1
+          self.params.put("LongitudinalPersonality", 1)
+
     self.recalibrating_seen = False
     self.dm_lockout_set = False
     self.dm_uncertain_alerted = False
@@ -239,7 +270,6 @@ class SelfdriveD:
     loading = self.params.get_bool("ChestnutLoading")
     if self.big_model_loading and not loading:
       self.big_model_ready_t = time.monotonic()
-      self.events_sp.add(custom.OnroadEventSP.EventName.bigModelReady)
     self.big_model_loading = loading
     if self.big_model_loading:
       self.events.add(EventName.bigModelLoading)
@@ -558,10 +588,17 @@ class SelfdriveD:
       self.events.add(EventName.sensorDataInvalid)
 
     if not REPLAY:
-      # Check for mismatch between openpilot and car's PCM
-      cruise_mismatch = CS.cruiseState.enabled and (not self.enabled or not self.CP.pcmCruise)
+      # Check for mismatch between openpilot and car's PCM.
+      # Macan 适配：原条件 `CS.cruiseState.enabled and (not enabled or not pcmCruise)` 是 pcm 语义，
+      # 非 pcm 车（Macan）`not pcmCruise` 恒真 → 车辆 TSK_04 回声=1 时永远满足 → 激活 6 秒后持续
+      # 误报 cruiseMismatch（0000003e seg3/5/6 各 54/83/68 次实锤）。恢复标准语义：
+      # 非 pcm 且 OP enabled 但车辆未激活（TSK_04=0）才算真异常（如 seg4 停车误激活场景）。
+      cruise_mismatch = not self.CP.pcmCruise and self.enabled and not CS.cruiseState.enabled
       self.cruise_mismatch_counter = self.cruise_mismatch_counter + 1 if cruise_mismatch else 0
-      if self.cruise_mismatch_counter > int(6. / DT_CTRL):
+      # 2026-08-12 00000041 实锤：6s 阈值 > panda pcm_cruise_check 撤控后 mismatch_counter 2s
+      # 触发 controlsMismatch——OP 从不跟随原厂退出（events.py cruiseMismatch 曾为空实现）。
+      # 缩到 1s（<2s）：原厂巡航退出后 OP 立即跟随退出，mismatch_counter 只数 <100 帧不触发。
+      if self.cruise_mismatch_counter > int(1. / DT_CTRL):
         self.events.add(EventName.cruiseMismatch)
 
     # Send a "steering required alert" if saturation count has reached the limit
@@ -623,8 +660,24 @@ class SelfdriveD:
 
     # Decrement personality on distance button press
     if self.CP.openpilotLongitudinalControl:
-      if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents) and self.selfdrived_zp.gap_release_steps:
-        self.personality = (self.personality - 1) % 3
+      new_personality = None
+      if self.macan_personality_sync:
+        # Macan(MLB): Longitudinal personality is bound to stock ACC distance bars
+        # (zeitluecke, VW/MLB): 4 bars (farthest) -> relaxed(2), 3/2 -> standard(1),
+        # 1 (closest) -> aggressive(0).
+        # carState 是 capnp 消息无 stock_zeitluecke 字段，故从 buttonEvents 自跟踪推导：
+        # 值1(Dist-1/拉近)=gapAdjustCruise → -1格；值2(Dist+1/拉远)=altButton2 → +1格
+        # （与 carstate.stock_zeitluecke 同源同逻辑，启动默认 3 格）。
+        for be in CS.buttonEvents:
+          if be.pressed and be.type == ButtonType.gapAdjustCruise:
+            self._zeitluecke = max(1, self._zeitluecke - 1)
+          elif be.pressed and be.type == ButtonType.altButton2:
+            self._zeitluecke = min(4, self._zeitluecke + 1)
+        new_personality = {4: 2, 3: 1, 2: 1, 1: 0}.get(self._zeitluecke)
+      elif any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents) and self.selfdrived_zp.gap_release_steps:
+        new_personality = (self.personality - 1) % 3
+      if new_personality is not None and new_personality != self.personality:
+        self.personality = new_personality
         self.params.put('LongitudinalPersonality', self.personality)
         self.events.add(EventName.personalityChanged)
 

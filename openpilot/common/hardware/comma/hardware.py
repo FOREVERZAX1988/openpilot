@@ -608,6 +608,9 @@ class HardwareComma(HardwareBase):
     ms = self.get_modem_state()
     return ms.get('tx_bytes', -1), ms.get('rx_bytes', -1)
 
+  def has_internal_panda(self):
+    return True
+
   def reset_internal_panda(self):
     gpio_init(GPIO.STM_RST_N, True)
     gpio_init(GPIO.STM_BOOT0, True)
@@ -630,8 +633,13 @@ class HardwareComma(HardwareBase):
 
   def booted(self):
     # this normally boots within 8s, but on rare occasions takes 30+s
+    # Past 2 minutes the check below can no longer return False, so skip the sudo_read:
+    # callers poll this (webui startup_blockers / hardwared), and every call used to spawn a
+    # `sudo cat /sys/kernel/debug/msm_vidc/core0/info` (was ~3/s -> 37 MB of auth.log per day).
+    if time.monotonic() >= 60*2:
+      return True
     encoder_state = sudo_read("/sys/kernel/debug/msm_vidc/core0/info")
-    if "Core state: 0" in encoder_state and (time.monotonic() < 60*2):
+    if "Core state: 0" in encoder_state:
       return False
     return True
 

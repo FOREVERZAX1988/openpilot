@@ -46,9 +46,15 @@ void Replay::setupServices(const std::vector<std::string> &allow, const std::vec
     bool is_blocked = std::find(block.begin(), block.end(), name) != block.end();
     bool is_allowed = allow.empty() || std::find(allow.begin(), allow.end(), name) != allow.end();
     if (is_allowed && !is_blocked) {
-      uint16_t which = event_schema.getFieldByName(name).getProto().getDiscriminantValue();
-      sockets_[which] = name.c_str();
-      active_services.push_back(name.c_str());
+      try {
+        uint16_t which = event_schema.getFieldByName(name).getProto().getDiscriminantValue();
+        sockets_[which] = name.c_str();
+        active_services.push_back(name.c_str());
+      } catch (const kj::Exception &e) {
+        // services.py may list services whose log.capnp field is deprecated/renamed
+        // (e.g. navRoute -> navRouteDEPRECATED); skip them instead of aborting.
+        rWarning("service %s not found in Event schema, skipping", name.c_str());
+      }
     }
   }
 

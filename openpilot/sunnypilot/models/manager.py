@@ -557,9 +557,12 @@ class ModelManagerSP:
           if model.artifact.fileName:
             active_files.append(model.artifact.fileName)
 
-    # Remove all files except active ones (including their chunk files)    model_dir = Paths.model_root()
+    # Remove all files except active ones (including their chunk files)
+    model_dir = Paths.model_root()
     try:
       for filename in os.listdir(model_dir):
+        # a chunk file belongs to its base name: "model.pkl.chunk0" is part of
+        # "model.pkl", so keep it whenever the base is still active
         base = filename.split('.chunk')[0] if '.chunk' in filename else filename
         if base not in active_files and filename not in active_files:
           file_path = os.path.join(model_dir, filename)

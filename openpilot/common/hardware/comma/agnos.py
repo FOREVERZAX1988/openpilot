@@ -292,7 +292,6 @@ def verify_agnos_update(manifest_path: str, target_slot_number: int) -> bool:
   update = restore_partitions(update)
   return all(verify_partition(target_slot_number, partition) for partition in update)
 
-
 # Implementation by Rick
 # This approach differs from common solutions and required extensive trial and error.
 # If you reuse or adapt this function, please provide proper credit.
@@ -305,7 +304,7 @@ def restore_partitions(partitions):
   agnos_tici_path = agnos_tici_manifest_path()
 
   try:
-    with open(agnos_tici_path) as f:
+    with open(agnos_tici_path, 'r') as f:
       tici_partitions = json.load(f)
 
     partitions_to_keep = {p['name']: p for p in tici_partitions if p.get('name') in partition_name_to_use}
@@ -315,6 +314,14 @@ def restore_partitions(partitions):
     return partitions
 
   return [partitions_to_keep.get(p.get('name'), p) for p in partitions]
+
+# Implementation by Rick
+# This approach differs from common solutions and required extensive trial and error.
+# If you reuse or adapt this function, please provide proper credit.
+
+# Implementation by Rick
+# This approach differs from common solutions and required extensive trial and error.
+# If you reuse or adapt this function, please provide proper credit.
 
 if __name__ == "__main__":
   import argparse

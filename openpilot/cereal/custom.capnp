@@ -599,6 +599,10 @@ struct OnroadEventSP @0xda96579883444c35 {
     # a sustained speedLimitLast jump (>= 5 kph holding > 2 s) fires this once per change,
     # mirroring StarPilot's speedLimitChanged standing alert
     speedLimitChangedAlert @37;
+
+    # Macan 起步跟停：OP 代发 RESUME（fork-only）。
+    # 原本占 @37，与上游本次新增的 speedLimitChangedAlert 撞号，故上移到 @38。
+    macanAutoResume @38;
   }
 }
 

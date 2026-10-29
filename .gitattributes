@@ -79,6 +79,7 @@ openpilot/sunnypilot/selfdrive/test/longitudinal_maneuvers/tests/__init__.py -fi
 # small icons/backgrounds. Keep them as plain Git blobs like the other imported resources
 # above - the upstream GitLab LFS server does not accept pushes from this fork.
 openpilot/sunnypilot/carrot/web/assets/** -filter -diff -merge binary
+openpilot/sunnypilot/carrot/web/icons/** -filter -diff -merge binary
 
 # Carrot web HUD / intro assets imported from cp (7000 panel): the panel renders the
 # selfdrive assets read-only over /shared-assets, so these files must exist in this

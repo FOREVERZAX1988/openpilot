@@ -1,4 +1,5 @@
 import math
+import platform
 import numpy as np
 
 from opendbc.car import structs
@@ -24,7 +25,7 @@ from openpilot.sunnypilot.carrot.bluetooth.model import BLUETOOTH_CANCEL, Comman
 V_CRUISE_MIN = 8
 V_CRUISE_MAX = 145
 V_CRUISE_UNSET = 255
-V_CRUISE_INITIAL = 40
+V_CRUISE_INITIAL = 30
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
 ButtonEvent = car.CarState.ButtonEvent
@@ -60,8 +61,14 @@ class VCruiseHelper(VCruiseHelperSP):
     self.v_cruise_kph = V_CRUISE_UNSET
     self.v_cruise_cluster_kph = V_CRUISE_UNSET
     self.v_cruise_kph_last = 0
-    self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
+    self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0, ButtonType.setCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
+    # Macan(MLB) 融合控制模式：OP 巡航速度直接取自原厂 ACC 巡航速度（ACC_02.Wunschgeschw），
+    # 使 OP 与原厂 ACC 巡航速度完全同步，消除"OP 内部 vCruise 与原厂分裂"（长按+5 vs 原厂+10 等）。
+    # 该模式下 OP 不再自行管理步进设定（UI 中自定义 ACC 增量被禁用）。
+    # 2026-09-20 重新锁定为恒开：纯 OP 纵向未通过路试，不再读 MacanFusionMode（恒走融合控制）。
+    # 解禁方式：改回 `... and self.params.get_bool("MacanFusionMode")`。
+    self.macan_fusion = (getattr(self.CP, "carFingerprint", None) == "PORSCHE_MACAN_MK1")
 
   @property
   def v_cruise_initialized(self):
@@ -98,7 +105,23 @@ class VCruiseHelper(VCruiseHelperSP):
 
     _enabled = self.update_enabled_state(CS, enabled)
 
-    if CS.cruiseState.available:
+    if CS.cruiseState.available and self.macan_fusion:
+      # ⚠️【勿在此处改】本函数在车上永远不执行：card.py 装的是子类 VCruiseCarrot，
+      # 它重写了 update_v_cruise 且从不回调 super()。生效的融合分支在
+      # VCruiseCarrot.update_v_cruise（同一份代码，下方第二个分支）。
+      # 2026-10-03：此处曾误导一次"干净重建"（改这里无任何效果，导致 5km/h 幽灵速度
+      # + 纵向双源争夺复发）。保留以对齐上游结构，改动前请确认改的是子类那份。
+      # Macan(MLB) 融合控制模式：OP 巡航速度直接读原厂 ACC 巡航速度（ACC_02.Wunschgeschw）。
+      # 即使 pcmCruise=False（OP 纵向接管），也强制走"跟随原厂设定"路径。
+      self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+      self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+      if CS.cruiseState.speed == 0:
+        self.v_cruise_kph = V_CRUISE_UNSET
+        self.v_cruise_cluster_kph = V_CRUISE_UNSET
+      elif CS.cruiseState.speed == -1:
+        self.v_cruise_kph = -1
+        self.v_cruise_cluster_kph = -1
+    elif CS.cruiseState.available:
       software_pcm_enabled = not self.CP_SP.pcmCruiseSpeed and _enabled
       if self.software_pcm_cruise_speed:
         software_pcm_enabled = software_pcm_enabled and self.software_pcm_cruise_initialized
@@ -156,6 +179,27 @@ class VCruiseHelper(VCruiseHelperSP):
 
     if button_type is None:
       return
+
+    # Macan: SET 与 + 同一物理键（bit16+17 同置位），carstate 只保留 setCruise 事件。
+    # 激活状态下 setCruise 按 accelCruise(+1) 语义调巡航速度（未激活时 setCruise=接合，不走此分支）
+    if button_type == ButtonType.setCruise:
+      # 00000045 实锤：超驰（gas 踩油门车速高于巡航）时按 SET，原厂把当前车速设为巡航速度。
+      # 旧代码 setCruise→accelCruise(+1) 转换先于 133 行 gas 锚定执行，锚定永不触发。
+      # 锚定必须在转换之前处理（enabled=激活中，未激活时 setCruise=接合不走此分支）。
+      if CS.gasPressed and self.button_change_states[button_type]["enabled"]:
+        # 2026-08-22 修复（00000052 seg11 实测：vEgo=42/cru=45 按SET没反应）：
+        # 旧公式 max(v_cruise_kph, vEgo) 只增不减，介入车速<旧巡航时 vCruise 不变。
+        # 改为以当前车速为锚、下限 30(公制)/20(英制)——>30 置当前车速、<30 置 30，
+        # 与原厂语义一致（避免用 V_CRUISE_MIN=8 触发原厂 ACC st=6，用户确认）。
+        anchor_min = 30.0 if is_metric else 20.0
+        self.v_cruise_kph = np.clip(round(max(CS.vEgo * CV.MS_TO_KPH, anchor_min), 1), anchor_min, V_CRUISE_MAX)
+        self.v_cruise_cluster_kph = self.v_cruise_kph
+        return
+      # 事件在 update_button_timers 中按 type.raw=setCruise 键存储 change state，
+      # 转换后必须同步到 accelCruise 键，否则下方 button_change_states[accelCruise]["enabled"]
+      # 读到初始 False 会直接 return，speed+ 永远无法调巡航速度（route 00000040 实锤）。
+      self.button_change_states[ButtonType.accelCruise] = self.button_change_states[ButtonType.setCruise]
+      button_type = ButtonType.accelCruise
 
     # Don't adjust speed when pressing resume to exit standstill
     cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
@@ -257,7 +301,7 @@ class VCruiseCarrot(VCruiseHelper):
     super().__init__(CP, CP_SP)
     self.CP = CP
     self.frame = 0
-    self.params_memory = Params("/dev/shm/params")
+    self.params_memory = Params("/tmp/params" if platform.system() == "Darwin" else "/dev/shm/params")
     self.params = Params()
     # Bluetooth HID remote commands (carrot_bluetooth daemon → /dev/shm/carrot-bluetooth/cruise.json).
     self.bluetooth_commands = CommandReader('cruise')
@@ -525,7 +569,21 @@ class VCruiseCarrot(VCruiseHelper):
       #self.events.append(EventName.buttonCancel)
       self._cruise_ready = True if self._activate_cruise == -2 else False
 
-    if CS.cruiseState.available:
+    if CS.cruiseState.available and self.macan_fusion:
+      # Macan(MLB) 融合控制：OP 巡航速度直接镜像原厂 ACC 设定速度（ACC_02.Wunschgeschw）。
+      # 该模式下 OP 纵向经 ACC_05 代发执行，但巡航设定必须跟随原厂 ACC，否则
+      # OP(VCruiseCarrot 自算 v_cruise) 与原厂 ACC 双控制器竞争 → 突然加速/减速反复喘息。
+      # 全程跳过下方 pcmCruise 通用分支，避免被低价剪裁覆盖。
+      # 回归网：openpilot/selfdrive/car/tests/test_vcruise_pcm_set_speed.py::TestMacanFusionSetSpeed
+      self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+      self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+      if CS.cruiseState.speed == 0:
+        self.v_cruise_kph = V_CRUISE_UNSET
+        self.v_cruise_cluster_kph = V_CRUISE_UNSET
+      elif CS.cruiseState.speed == -1:
+        self.v_cruise_kph = -1
+        self.v_cruise_cluster_kph = -1
+    elif CS.cruiseState.available:
       if not self.cruise_state_available_last:
         self._lat_enabled = True
         v_cruise_kph = self.v_ego_kph_set
@@ -569,6 +627,13 @@ class VCruiseCarrot(VCruiseHelper):
     value that sticks for the frame openpilot engages, floored at initial_speed.
     """
     if self.CP.pcmCruise:
+      return
+
+    # Macan(MLB) 融合控制：VCruiseCarrot.update_v_cruise 已把 v_cruise 镜像为原厂 ACC
+    # 设定速度（ACC_02.Wunschgeschw）。接合帧若再用 vEgo/initial_speed 覆盖，会重新制造
+    # "OP 内部 vCruise 与原厂 ACC 分裂"（突然加速/减速反复喘息，macan_fusion 存在的意义）。
+    # 因此融合模式下保持继承来的 no-op 语义：以原厂 ACC 为准。
+    if self.macan_fusion:
       return
 
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:

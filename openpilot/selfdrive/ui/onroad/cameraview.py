@@ -246,6 +246,16 @@ class CameraView(Widget):
       if egl_image:
         self.egl_images[idx] = egl_image
       else:
+        # The frame's fd is not ours to keep: VisionBuf.fd is a raw fd inside the
+        # client's own buffer array, so it dies with the client that produced it.
+        # After camerad restarts (an ignition cycle), recv() returns nothing until
+        # the camera pipeline is up again while self.frame still holds a buffer from
+        # the dead one -- every render then retries this dead fd and logs EBADF at
+        # frame rate (26 s of it, and the view stays on the placeholder) until a
+        # real frame finally arrives. Drop the frame so the next render takes a
+        # fresh buffer instead of retrying this one.
+        self.frame = None
+        self._texture_needs_update = True
         return
 
     # Update texture dimensions to match current frame

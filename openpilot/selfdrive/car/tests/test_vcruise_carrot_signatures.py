@@ -5,7 +5,7 @@ Why this exists
 card.py calls the cruise helper polymorphically:
 
     self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric, self.sm)
-    self.v_cruise_helper.initialize_v_cruise(self.CS_prev, self.experimental_mode)
+    self.v_cruise_helper.initialize_v_cruise(self.CS_prev, self.initial_cruise_speed)
 
 `self.v_cruise_helper` is VCruiseHelper at runtime but VCruiseCarrot in cp ports,
 so every override MUST keep a signature the base-class call site satisfies. Two
@@ -13,6 +13,7 @@ narrower overrides already shipped and both crashed on the device:
 
   * update_v_cruise(CS, sm, is_metric)          -> TypeError: 'bool' object is not subscriptable
   * initialize_v_cruise(CS, experimental_mode)  -> TypeError: takes 3 positional arguments but 4 were given
+    (historical: the fourth arg was `dynamic_experimental_control`, removed when DEC was sunset)
 
 Neither is visible to py_compile or to a source review of cruise.py alone - they
 only fire when the car enables, which is exactly when nobody is reading logs.
@@ -33,7 +34,7 @@ CRUISE_PATH = Path(__file__).resolve().parents[1] / 'cruise.py'
 # (method name, number of positional args card.py passes, excluding self)
 CARD_CALL_SITES = {
   'update_v_cruise': 3,        # CS, enabled, is_metric  (+ sm as the 4th for VCruiseCarrot)
-  'initialize_v_cruise': 2,    # CS, experimental_mode (DEC flag removed 2026-10)
+  'initialize_v_cruise': 2,    # CS, initial_cruise_speed (InitialCruiseSpeedKph floor; DEC flag removed 2026-10)
 }
 
 

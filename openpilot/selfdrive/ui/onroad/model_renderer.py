@@ -15,6 +15,54 @@ from openpilot.selfdrive.ui.sunnypilot.onroad.model_renderer import ChevronMetri
 CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
+# Lane lines and road edges are perception: they keep upstream's 100 m cap but are no longer
+# tied to the plan's own length, which is what made them stop mid-road when following a car.
+LANE_DRAW_DISTANCE = 100.0
+
+
+def camera_offset_for_drawing() -> float:
+  """Lateral shift the renderer still has to add to the model's geometry.
+
+  CameraOffset is a *virtual camera* shift: the tinygrad runner applies it inside the model
+  (sunnypilot/modeld_v2/camera_offset_helper shears the image warp), so the lane lines it
+  returns are already displaced by that many metres and the drawing has to add the
+  displacement back for them to land on the road.
+
+  The stock runner does not apply it at all. Adding the offset there nonetheless moved the
+  path, all four lane lines and both road edges sideways together -- which is exactly the
+  "trajectory line, lane lines and road edges all sit off the real road" report. Only
+  compensate when the model itself shifted.
+  """
+  if not getattr(ui_state, 'active_bundle', None) or not getattr(ui_state, 'model_runner_tinygrad', False):
+    return 0.0
+  return float(ui_state.params.get("CameraOffset", return_default=True) or 0.0)
+
+
+def extend_polyline(points: np.ndarray, max_distance: float) -> np.ndarray:
+  """The polyline, carried along its own tangent out to `max_distance`.
+
+  Only for the parked preview (see `_update_model`): while the ego is not moving
+  the model's plan horizon collapses to a few metres of forward travel, and every
+  one of those metres projects below the bottom edge of the road view (the ground
+  closer than ~6 m is off-screen at the view's zoom), so the path was drawn off
+  frame and the preview looked like it had lost it. The points the model did
+  produce are kept as they are; one point is appended on the last segment's
+  tangent, so the drawn line reaches the minimum draw distance.
+
+  Pure numpy, no pyray: pinned by tests/test_model_path_extend.py.
+  """
+  if points.shape[0] < 2 or points[-1, 0] >= max_distance:
+    return points
+
+  p0, p1 = points[-2], points[-1]
+  tangent = p1 - p0
+  if tangent[0] <= 1e-3:
+    # not heading anywhere in x: no tangent to extend along
+    return points
+
+  s = (max_distance - p1[0]) / tangent[0]
+  return np.concatenate((points, (p1 + s * tangent)[None, :]), axis=0).astype(points.dtype)
+
 
 STOCK_PATH_GRADIENT = Gradient(
   start=(0.0, 1.0),
@@ -48,7 +96,8 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._lead_vehicles = [LeadVehicle(), LeadVehicle()]
     self._path_offset_z = HEIGHT_INIT[0]
     self._counter = -1
-    self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+    self._preview = ui_state.params.get_bool("IsOnroadPreview")
+    self._camera_offset = camera_offset_for_drawing()
     # Initialize ModelPoints objects
     self._path = ModelPoints()
     self._lane_lines = [ModelPoints() for _ in range(4)]
@@ -94,7 +143,8 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._path_offset_z = extrinsics_calibration.height[0] if extrinsics_calibration.height else HEIGHT_INIT[0]
 
     if self._counter % 60 == 0:
-      self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+      self._camera_offset = camera_offset_for_drawing()
+      self._preview = ui_state.params.get_bool("IsOnroadPreview")
     self._counter += 1
 
     if sm.updated['carParams']:
@@ -162,27 +212,39 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
 
   def _update_model(self, lead, path_x_array):
     """Update model visualization data based on model message"""
-    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
-    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], max_distance)
+    # Lane lines and road edges are perception, not plan. They used to be cut at
+    # min(plan end, MAX_DRAW_DISTANCE), and the plan collapses when following a car: at
+    # 33 km/h behind a lead at 12 m, modelV2.position.x[-1] is only 54 m, so both lane lines
+    # and both road edges stopped in the middle of the road. Perspective has already brought
+    # them close together by then, so it read as "the lines converge mid-road and never reach
+    # the car ahead" instead of running along the markings to the horizon.
+    lane_distance = LANE_DRAW_DISTANCE
+    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], lane_distance)
 
     # Update lane lines using raw points
     for i, lane_line in enumerate(self._lane_lines):
       lane_line.projected_points = self._map_line_to_polygon(
-        lane_line.raw_points, 0.025 * self._lane_line_probs[i], 0.0, max_idx, max_distance
+        lane_line.raw_points, 0.025 * self._lane_line_probs[i], 0.0, max_idx, lane_distance
       )
 
     # Update road edges using raw points
     for road_edge in self._road_edges:
-      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, 0.025, 0.0, max_idx, max_distance)
+      road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, 0.025, 0.0, max_idx, lane_distance)
 
     # Update path using raw points
+    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
     if lead and lead.present:
       lead_d = lead.dRel * 2.0
       max_distance = np.clip(lead_d - min(lead_d * 0.35, 10.0), 0.0, max_distance)
 
-    max_idx = self._get_path_length_idx(path_x_array, max_distance)
+    # Parked preview only: the plan's own horizon is shorter than the minimum
+    # draw distance (v_ego is 0, so the plan is a few metres long and all of it
+    # projects below the frame). Carrying the line out to max_distance is what
+    # makes the preview show a path at all; onroad this is a no-op.
+    path_points = extend_polyline(self._path.raw_points, max_distance) if self._preview else self._path.raw_points
+    max_idx = self._get_path_length_idx(path_points[:, 0], max_distance)
     self._path.projected_points = self._map_line_to_polygon(
-      self._path.raw_points, self._get_path_half_width(), self._path_offset_z, max_idx, max_distance, allow_invert=False
+      path_points, self._get_path_half_width(), self._path_offset_z, max_idx, max_distance, allow_invert=False
     )
 
     self._update_path_gradient()

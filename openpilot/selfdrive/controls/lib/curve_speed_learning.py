@@ -33,6 +33,10 @@ CSC_OVERRIDE_WATCH_TIME = 6.0
 CSC_TRAINING_SETTLE_TIME = 2.0
 CSC_COMFORT_MARGIN = 1.0
 
+# StarPilot: 10 / DT_MDL (0.05 s model rate) — samples one bucket needs before it
+# counts as calibrated in the progress readout.
+CALIBRATION_PROGRESS_THRESHOLD = 200
+
 CRUISING_SPEED = 5.0  # m/s, StarPilot starpilot_variables
 DEFAULT_LATERAL_ACCELERATION = 2.0  # m/s^2, typical lateral accel in curves
 # Persistence cadence while actively sampling: model horizon length (10 s).
@@ -301,6 +305,21 @@ class CurvatureLearning:
     else:
       self.lateral_acceleration = DEFAULT_LATERAL_ACCELERATION
 
+  def calibration_progress(self) -> float:
+    """Percent of the curvature grid calibrated (StarPilot _calibration_progress).
+
+    A bucket counts fully at CALIBRATION_PROGRESS_THRESHOLD samples; the whole
+    curve reaches 100% only when every one of the 24 buckets is calibrated.
+    """
+    if not self.curvature_data:
+      return 0.0
+    progress = 0.0
+    for key in CURVATURE_GRID:
+      data = self.curvature_data.get(str(round(float(key), ROUNDING_PRECISION)))
+      if data:
+        progress += min(data["count"] / CALIBRATION_PROGRESS_THRESHOLD, 1.0)
+    return (progress / len(CURVATURE_GRID)) * 100
+
   def learned_lat_accel(self, curvature) -> float:
     """Comfort level learned for this curvature, before any control margin."""
     return float(np.interp(abs(curvature), self._curve_k, self._curve_a))
@@ -309,3 +328,23 @@ class CurvatureLearning:
     """Comfort level with the control margin applied (weather hooks omitted:
     this fork has no StarPilot weather toggle system)."""
     return float(np.interp(np.abs(curvature), self._curve_k, self._curve_a)) * CSC_COMFORT_MARGIN
+
+
+def learning_status_from_data(curvature_data) -> dict:
+  """Read-only view of the learning state, for UI consumers.
+
+  Pure function over the persisted bucket JSON (no Params, no running planner),
+  so the web settings page can show calibration progress and the current
+  calibrated lateral acceleration without new param keys: everything is derived
+  from CurvatureLearningData, which is already persistent.
+  """
+  normalized = normalize_curvature_data(curvature_data)
+  learning = CurvatureLearning()
+  learning.curvature_data = normalized
+  learning.rebuild()
+  return {
+    "progress_pct": round(learning.calibration_progress(), 1),
+    "lateral_acceleration": round(learning.lateral_acceleration, 2),
+    "buckets": len(normalized),
+    "total_count": int(sum(int(d["count"]) for d in normalized.values())),
+  }

@@ -110,8 +110,8 @@ class Setup(Widget):
                                                       text_padding=60)
     self._yellow_warning_icon = gui_app.texture("icons/yellow_warning.png", int(68 * FONT_SCALE), int(68 * FONT_SCALE))
     self._custom_software_warning_body_labels = [
-      Label(text, 68, text_alignment=TextAlignment.LEFT,
-            text_alignment_vertical=TextAlignmentVertical.TOP,
+      Label(text, 68, text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
+            text_alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_TOP,
             text_padding=60, icon=self._yellow_warning_icon if has_icon else None)
       for text, has_icon in [
         (tr("Use caution when installing third-party software."), False),

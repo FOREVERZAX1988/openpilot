@@ -25,6 +25,8 @@ class LatControlTorqueExtZP:
     self._speed_dep_speed_bp = []
     self._speed_dep_lat_accel_factor_bp = []
     self._speed_dep_friction_bp = []
+    # cached get_speed_dep_config_for_car(CP); None until the first bins arrive
+    self._speed_dep_car_cfg = None
     self._last_vego = 0.0
 
     # The manual override is typed on the scale upstream's tunes use (TUNE_STEER_MAX), which is

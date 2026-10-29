@@ -77,7 +77,11 @@ std::string ensure_params_path(const std::string &prefix, const std::string &pat
 class FileLock {
 public:
   FileLock(const std::string &fn) {
-    fd_ = HANDLE_EINTR(open(fn.c_str(), O_CREAT, 0775));
+    // O_CLOEXEC: without it, a child forked while this lock is held inherits the
+    // descriptor, and the flock then outlives the process that took it. On
+    // 2026-10-21 a dead pid still owned this lock and every blocking param
+    // write in the stack (UI, models, mapd, athenad) blocked for good.
+    fd_ = HANDLE_EINTR(open(fn.c_str(), O_CREAT | O_CLOEXEC, 0775));
     if (fd_ < 0 || HANDLE_EINTR(flock(fd_, LOCK_EX)) < 0) {
       LOGE("Failed to lock file %s, errno=%d", fn.c_str(), errno);
     }
@@ -245,6 +249,12 @@ void Params::clearAll(ParamKeyFlag key_flag) {
 void Params::putNonBlocking(const std::string &key, const std::string &val) {
    queue.push(std::make_pair(key, val));
   // start thread on demand
+  // The whole check-then-replace is one critical section: `future` is read,
+  // tested and assigned here, and every Python `params.put()` defaults to this
+  // path, so any process with two threads writing params races on it. The
+  // assignment destroys the previous state object, so an unguarded race makes
+  // one thread free what the other is using -- __cxa_pure_virtual, SIGABRT.
+  std::lock_guard<std::mutex> lk(future_lock);
   if (!future.valid() || future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
     future = std::async(std::launch::async, &Params::asyncWriteThread, this);
   }

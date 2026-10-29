@@ -15,6 +15,7 @@ Run from the repo root:
 """
 from __future__ import annotations
 
+import platform
 import sys
 import types
 from pathlib import Path
@@ -140,7 +141,7 @@ class _Paths:
     return '/tmp/op_sim'
   @staticmethod
   def params_root():
-    return '/dev/shm/params'
+    return '/tmp/params' if platform.system() == 'Darwin' else '/dev/shm/params'
 _hw_hw.Paths = _Paths
 _hw_hw.HardwareBase = object
 sys.modules['openpilot.common.hardware.hw'] = _hw_hw
@@ -178,7 +179,7 @@ _events_mod.EventsSP = _EventsSP
 _events_mod.EventNameSP = types.SimpleNamespace()
 sys.modules['openpilot.sunnypilot.selfdrive.selfdrived.events'] = _events_mod
 
-from openpilot.selfdrive.car.cruise import VCruiseCarrot, ButtonType, GearShifter
+from openpilot.selfdrive.car.cruise import VCruiseCarrot, ButtonType, GearShifter, V_CRUISE_UNSET
 
 # NO capnp.load() in this process, by design.
 #
@@ -325,7 +326,9 @@ def build_cp(pcm_cruise=False, openpilot_long=True):
 
 
 def build_cp_sp():
-  return types.SimpleNamespace(pcmCruiseSpeed=False)
+  # CarParamsSP carries the ICBM capability: IcbmLatch reads it in VCruiseCarrot's
+  # own constructor, before any tick, so the sim must build it as the car does.
+  return types.SimpleNamespace(pcmCruiseSpeed=False, intelligentCruiseButtonManagementAvailable=False)
 
 
 print('=== VCruiseCarrot onroad simulation ===')
@@ -465,6 +468,34 @@ def t_no_cs_sp():
 
 
 step('update_v_cruise with CS_SP=None', t_no_cs_sp)
+
+
+def t_acc_off_cluster_speed_is_unset():
+  """ACC off must not leak the [min, max] clamp into the cluster.
+
+  Logged on the drive of 2026-10-10 20:58 (route 00000095--254cbbd03a): while ACC was on,
+  vCruise/vCruiseCluster stayed at 255 (V_CRUISE_UNSET -> cluster renders "--"; the Macan
+  fusion branch mirrors a stock set speed of 0). Turning ACC off moved the helper into the
+  "cruise unavailable" branch, whose np.clip(v_cruise_kph, 5, 161) turned that very
+  V_CRUISE_UNSET into 161 - the cluster then showed 161 km/h with cruise inactive.
+  """
+  helper.v_cruise_kph = V_CRUISE_UNSET
+  helper.v_cruise_cluster_kph = V_CRUISE_UNSET
+
+  cs = make_cs(v_ego=15.0, available=True)
+  helper.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert helper.v_cruise_cluster_kph == V_CRUISE_UNSET, (
+    f'cruise available with no stock set speed leaked {helper.v_cruise_cluster_kph} to the cluster')
+
+  cs = make_cs(v_ego=15.0, available=False)
+  helper.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert helper.v_cruise_kph == V_CRUISE_UNSET, (
+    f'ACC off leaked {helper.v_cruise_kph} as the planner target (expected V_CRUISE_UNSET)')
+  assert helper.v_cruise_cluster_kph == V_CRUISE_UNSET, (
+    f'ACC off leaked {helper.v_cruise_cluster_kph} km/h to the cluster (expected V_CRUISE_UNSET = unset)')
+
+
+step('ACC off keeps the cluster set speed unset (no bogus 161)', t_acc_off_cluster_speed_is_unset)
 
 
 def t_long_soak():

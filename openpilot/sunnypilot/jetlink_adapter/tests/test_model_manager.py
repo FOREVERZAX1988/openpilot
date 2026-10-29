@@ -18,6 +18,7 @@ from unittest import mock
 
 import requests
 
+from jetlink.openpilot import status as status_module
 from jetlink.openpilot.settings import FileParams, Settings
 from jetlink.spec import ModelSpec
 
@@ -222,6 +223,9 @@ class RefreshTest(JetlinkTest):
     for patcher in (
       mock.patch('openpilot.sunnypilot.models.fetcher.requests.get', side_effect=self.serve),
       mock.patch('jetlink.registry.catalog.fetch_catalogs', side_effect=self.probe),
+      # readiness is the model records alone: no owner's status record off the device
+      # (a stale one from a link that ran once would read as `service stopped`)
+      mock.patch('jetlink.openpilot.status.owner_record', return_value=(None, None)),
       *chestnut(self.CHESTNUT),
     ):
       patcher.start()
@@ -300,7 +304,14 @@ class TestRefreshOnAJetlinkDevice(RefreshTest):
   def assert_pick_and_readiness_kept(self):
     self.assertEqual(self.params.get(KEYS.big_model), self.slot)
     self.assertEqual(self.params.get(KEYS.spec), self.spec)
-    status = jetlink_adapter.status()
+    # What is asserted here is the pick and its ready record surviving a refresh.
+    # Whether the link can run at all is the device's answer, not this test's:
+    # upstream's Status.read() answers `ready` only after `unavailable()` says the
+    # link could run (owner record alive, warp built), and on a real device a
+    # record left by the last session answers STOPPED -- which says nothing about
+    # the ready record this test writes, so it is neutralised here.
+    with mock.patch.object(status_module, 'unavailable', return_value=None):
+      status = jetlink_adapter.status()
     self.assertEqual(status.model, 'Cinque Terre V4')
     self.assertEqual(status.ready, status.enabled, "the pick's engine no longer counts as built")
     self.assertEqual(self.marks(), self.before, "the owner would start a provisioning run")

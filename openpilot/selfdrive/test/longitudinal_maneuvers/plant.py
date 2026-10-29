@@ -76,6 +76,7 @@ class Plant:
     ss = messaging.new_message('selfdriveState')
     ss_sp = messaging.new_message('selfdriveStateSP')
     car_state = messaging.new_message('carState')
+    vehicle_parameters = messaging.new_message('vehicleParameters')
     model = messaging.new_message('modelV2')
     car_state_sp = messaging.new_message('carStateSP')
     live_map_data_sp = messaging.new_message('liveMapDataSP')
@@ -143,6 +144,7 @@ class Plant:
           'carState': car_state.carState,
           'carControl': car_control.carControl,
           'controlsState': control.controlsState,
+          'vehicleParameters': vehicle_parameters.vehicleParameters,
           'selfdriveState': ss.selfdriveState,
           'selfdriveStateSP': ss_sp.selfdriveStateSP,
           'modelV2': model.modelV2,

@@ -13,6 +13,7 @@ from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Pr
   NoEntryAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, AlertCallbackType, wrong_car_mode_alert
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import PCM_LONG_REQUIRED_MAX_SET_SPEED, CONFIRM_SPEED_THRESHOLD
 from openpilot.common.hardware import HARDWARE
+from openpilot.system.ui.lib.multilang import tr_noop
 from openpilot.sunnypilot.selfdrive.selfdrived.events_zp import EVENTS_SP_ZP, EventsWithZP
 from openpilot.sunnypilot.selfdrive.selfdrived.selfdrived_zp import SelfdrivedZP
 
@@ -38,7 +39,12 @@ def _set_speed_ms(CS: car.CarState, sm: messaging.SubMaster) -> float:
 
 
 def experimental_mode_switched_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  return NormalPermanentAlert(f"实验模式已{'开启' if SelfdrivedZP.switched_to else '关闭'}", duration=1.5)
+  # Two complete sentences rather than one f-string: potools can only extract a
+  # literal, so `f"实验模式已{'开启' if ... else '关闭'}"` reaches the po files as
+  # nothing at all and every non-Chinese UI shows the source text. alert_renderer
+  # translates the callback's output with tr().
+  text = tr_noop("实验模式已开启") if SelfdrivedZP.switched_to else tr_noop("实验模式已关闭")
+  return NormalPermanentAlert(text, duration=1.5)
 
 
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
@@ -126,6 +132,10 @@ class EventsSP(EventsWithZP, EventsBase):
 
 EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # sunnypilot
+  EventNameSP.macanAutoResume: {
+    ET.ENABLE: EngagementAlert(AudibleAlert.engage),  # Macan Stop and Go: play engage sound, no state change
+  },
+
   EventNameSP.lkasEnable: {
     ET.ENABLE: EngagementAlert(AudibleAlert.engage),
   },

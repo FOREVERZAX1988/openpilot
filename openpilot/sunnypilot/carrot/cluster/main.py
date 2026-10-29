@@ -103,7 +103,8 @@ HUD_MIRROR_PARAM_POLL_SECONDS = 1.0
 HUD_OUTPUT_GATE_PARAM_POLL_SECONDS = 0.1
 
 try:
-  from openpilot.system.hardware import TICI
+  from openpilot.common.hardware import HARDWARE, PC
+  TICI = not PC and HARDWARE.get_device_type() in ('tici', 'tizi')
 except Exception:
   TICI = False
 

@@ -5,11 +5,219 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.vehicle.brands.base import BrandSettings
+from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.multilang import tr, tr_noop
+from openpilot.system.ui.widgets import DialogResult
+from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
+from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, option_item_sp
 
+DESCRIPTIONS = {
+  'start_stop_distance': tr_noop(
+    'Startup Safe Distance (Macan): minimum bumper-to-lead distance (3-10 m, '
+    'default 6 m) required before openpilot auto-resumes from a stop - the '
+    'stock radar distance or the vision lead must exceed this value, which '
+    'prevents phantom starts. Only effective when Stop and Go (Macan) is '
+    'enabled.'
+  ),
+  'start_stop': tr_noop(
+    'Macan Stop and Go: when enabled, the vision model decides when to start, '
+    'and openpilot sends the RESUME signal to release the stock parking hold '
+    '(with a chime). When disabled, gently press the gas or SET/RESUME to '
+    'resume (stock behavior).'
+  ),
+  'slope_comp': tr_noop(
+    'Macan Slope Compensation: when enabled, the IMU slope signal adds '
+    'g*sin(slope) to the acceleration request - more torque uphill with a '
+    'positive Verz request (declared acceleration, ~4.2*sin(slope)), a brief '
+    'positive Verz ramp (+1.285 over 180ms) when overriding a deceleration '
+    'with the gas pedal, and a brake tap downhill (prevents forward lurch). '
+    'Default off = stock behavior. Onroad cycle restart is requested after '
+    'toggling.'
+  ),
+  'slope_comp_unlimited': tr_noop(
+    'Macan Slope Comp Unlimited (sub-option): when Slope Compensation is ON, '
+    'this removes the stock torque cap (option 2: min(max(stock_mom, 200))), '
+    'giving small slopes room to act. When OFF, the stock cap applies '
+    '(option 1: min(stock_mom)).'
+  ),
+  'radar_fusion': tr_noop(
+    'Radar Fusion (Macan): uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead, reduces follow jitter.'
+  ),
+  'verz_bridge': tr_noop(
+    'Macan Verz Bridge: when ON, the bridge applies a percentage-based ramp to smooth the requested deceleration '
+    '(step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills the breath/pulse. When OFF, the verz '
+    'request passes through un-smoothed (one-frame, no ramp). Deep braking (<= -1.5) and OEM brake requests still '
+    'pass through either way for safety.'
+  ),
+
+}
 
 class VolkswagenSettings(BrandSettings):
   def __init__(self):
     super().__init__()
 
+    self.start_stop = toggle_item_sp(
+      lambda: tr("Stop and Go (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["start_stop"]),
+      initial_state=ui_state.params.get_bool("MacanStartStop"),
+      callback=self._on_enable_start_stop,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.start_stop_distance = option_item_sp(
+      lambda: tr("Startup Safe Distance (Macan)"),
+      "MacanStartStopDistance",
+      min_value=0, max_value=7,
+      description=lambda: tr(DESCRIPTIONS["start_stop_distance"]),
+      value_change_step=1,
+      value_map={0: 3, 1: 4, 2: 5, 3: 6, 4: 7, 5: 8, 6: 9, 7: 10},  # 显示档→存储米（3~10 米每 1 米；Off 已取消）
+      label_callback=lambda v: f"{v} m",  # v 是存储值(3-10)，直接显示米
+      enabled=lambda: not ui_state.engaged,
+    )
+    self.start_stop_distance.set_visible(ui_state.params.get_bool("MacanStartStop"))  # 仅 SnG 开启时可见
+
+    self.slope_comp = toggle_item_sp(
+      lambda: tr("Slope Compensation (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["slope_comp"]),
+      initial_state=ui_state.params.get_bool("MacanSlopeComp"),
+      callback=self._on_enable_slope_comp,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.slope_comp_unlimited = toggle_item_sp(
+      lambda: tr("Slope Comp Unlimited (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["slope_comp_unlimited"]),
+      initial_state=ui_state.params.get_bool("MacanSlopeCompUnlimited"),
+      callback=self._on_enable_slope_comp_unlimited,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.radar_fusion = toggle_item_sp(
+      lambda: tr("Radar Fusion (Macan)"),
+      description=lambda: tr(DESCRIPTIONS["radar_fusion"]),
+      initial_state=ui_state.params.get_bool("MacanRadarFusion"),
+      callback=self._on_enable_radar_fusion,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.verz_bridge = toggle_item_sp(
+      lambda: tr("Macan Verz Bridge"),
+      description=lambda: tr(DESCRIPTIONS["verz_bridge"]),
+      initial_state=ui_state.params.get_bool("MacanVerzBridge"),
+      callback=self._on_enable_verz_bridge,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.gap_sync = toggle_item_sp(
+      lambda: tr("Macan Distance Sync Direction"),
+      description=lambda: tr("ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."),
+      initial_state=ui_state.params.get_bool("MacanStartupGapSync"),
+      callback=self._on_enable_gap_sync,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.fusion_mode = toggle_item_sp(
+      lambda: tr("Fusion Control Mode (Macan)"),
+      description=lambda: tr("ON: fusion control - OP longitudinal takes over while the stock ACC radar stays active and constrains braking. OFF: pure OP longitudinal - the stock ACC radar is deactivated (LS_01 bus2 stays standby) and OP self-generates ACC02/04/05 entirely."),
+      initial_state=ui_state.params.get_bool("MacanFusionMode"),
+      callback=self._on_enable_fusion_mode,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.items = [
+      self.start_stop,
+      self.start_stop_distance,
+      self.slope_comp,
+      self.slope_comp_unlimited,
+      self.radar_fusion,
+      self.verz_bridge,
+      self.gap_sync,
+      self.fusion_mode,
+    ]
+
+  def _on_enable_radar_fusion(self, state: bool):
+    ui_state.params.put_bool("MacanRadarFusion", state)
+
+  def _on_enable_verz_bridge(self, state: bool):
+    ui_state.params.put_bool("MacanVerzBridge", state)
+
+  def _on_enable_gap_sync(self, state: bool):
+    ui_state.params.put_bool("MacanStartupGapSync", state)
+    ui_state.params.put_bool("OnroadCycleRequested", True)  # 方向开关重启生效（carstate/selfdrived 初始化时读取）
+
+  def _on_enable_fusion_mode(self, state: bool):
+    # 融合控制模式（2026-09-20 重新锁定）：纯 OP 纵向尚未路试通过，开关恒定开、锁定不可切。
+    # 即使被点/被代码触发，也强制保持 True——避免误关后掉进未验证的纯 OP 纵向。
+    #  ON=融合(原厂ACC雷达+OP纵向，唯一可用)；OFF=纯OP(代码保留, 暂不可设)。
+    ui_state.params.put_bool("MacanFusionMode", True)
+    ui_state.params.put_bool("OnroadCycleRequested", True)  # 若参数曾被改成 0，需重启生效
+    if not state:
+      self.fusion_mode.action_item.set_state(True)
+
+
+  def _on_enable_start_stop(self, state: bool):
+    if state:
+      def confirm_callback(result: int):
+        if result == DialogResult.CONFIRM:
+          ui_state.params.put_bool("MacanStartStop", True)
+          ui_state.params.put_bool("OnroadCycleRequested", True)
+          self.start_stop_distance.set_visible(True)  # SnG 开 → 显示距离子开关
+        else:
+          self.start_stop.action_item.set_state(False)
+
+      content = (f"<h1>{self.start_stop.title}</h1><br>" +
+                 f"<p>{self.start_stop.description}</p>")
+
+      dlg = ConfirmDialog(content, tr("Enable"), rich=True, callback=confirm_callback)
+      gui_app.push_widget(dlg)
+
+    else:
+      ui_state.params.put_bool("MacanStartStop", False)
+      ui_state.params.put_bool("OnroadCycleRequested", True)
+      self.start_stop_distance.set_visible(False)  # SnG 关 → 隐藏距离子开关
+
+  def _on_enable_slope_comp(self, state: bool):
+    ui_state.params.put_bool("MacanSlopeComp", state)
+    if not state:
+      ui_state.params.put_bool("MacanSlopeCompUnlimited", False)
+      self.slope_comp_unlimited.action_item.set_state(False)
+    ui_state.params.put_bool("OnroadCycleRequested", True)
+
+  def _on_enable_slope_comp_unlimited(self, state: bool):
+    ui_state.params.put_bool("MacanSlopeCompUnlimited", state)
+    ui_state.params.put_bool("OnroadCycleRequested", True)
+
   def update_settings(self):
-    pass
+    if ui_state.CP is not None:
+      # 仅 Macan(MLB) 支持；其他 VW 平台隐藏开关
+      is_macan = ui_state.CP.carFingerprint == "PORSCHE_MACAN_MK1"
+      slope_comp_on = ui_state.params.get_bool("MacanSlopeComp")
+      start_stop_on = ui_state.params.get_bool("MacanStartStop")
+      self.start_stop.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.start_stop.set_visible(is_macan)
+      self.start_stop_distance.action_item.set_enabled(is_macan and not ui_state.engaged and start_stop_on)
+      self.start_stop_distance.set_visible(is_macan and start_stop_on)
+      self.slope_comp.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.slope_comp.set_visible(is_macan)
+      # 子选项（放开限制）：仅坡度补偿开启时显示（联动，整行隐藏）
+      self.slope_comp_unlimited.action_item.set_enabled(is_macan and not ui_state.engaged and slope_comp_on)
+      self.slope_comp_unlimited.set_visible(is_macan and slope_comp_on)
+      self.radar_fusion.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.radar_fusion.set_visible(is_macan)
+      self.verz_bridge.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.verz_bridge.set_visible(is_macan)
+      self.gap_sync.action_item.set_enabled(is_macan and not ui_state.engaged)
+      self.gap_sync.set_visible(is_macan)
+      # 融合控制模式（Fusion Control)：仅 Macan 且 OP 纵向控制开启时可见。
+      # op 纵向控制开启判定：ui_state.has_longitudinal_control（聚合 alpha + openpilot long）。
+      op_long_on = ui_state.has_longitudinal_control
+      fusion_visible = is_macan and op_long_on
+      # 融合控制模式（2026-09-20 重新锁定）：纯 OP 纵向未通过路试，恢复"恒开+锁定"。
+      #  ON=融合(原厂ACC雷达+OP纵向，唯一可用)；OFF=纯OP(代码保留, 暂不可设)。
+      self.fusion_mode.action_item.set_enabled(False)  # 锁定：不能点击切换
+      self.fusion_mode.action_item.set_state(True)     # 恒显示"开"
+      # 参数自愈：历史遗留 MacanFusionMode=0(纯OP) 时强制回写 1，保证 UI / 巡航 / 车控三方一致。
+      if not ui_state.params.get_bool("MacanFusionMode"):
+        ui_state.params.put_bool("MacanFusionMode", True)
+      self.fusion_mode.set_visible(fusion_visible)

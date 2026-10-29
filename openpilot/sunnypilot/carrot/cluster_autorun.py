@@ -10,8 +10,14 @@ import time
 import traceback
 from pathlib import Path
 
+from openpilot.common.hardware import HARDWARE, PC
 from openpilot.common.params import Params
-from openpilot.system.hardware import TICI
+
+# comma three (tici) and three X (tizi) are the only devices with the on-SoC
+# H.264 encoder this daemon prefers. Upstream moved the hardware probe from the
+# `openpilot.system.hardware` namespace package into `openpilot.common.hardware`,
+# so ask the device type instead of importing the old TICI flag.
+TICI = not PC and HARDWARE.get_device_type() in ('tici', 'tizi')
 
 
 CARROT_DIR = Path(__file__).resolve().parent

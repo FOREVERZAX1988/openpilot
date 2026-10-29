@@ -97,9 +97,14 @@ def test_modeld_keeps_original_artifact_and_output():
   assert 'from openpilot.selfdrive.modeld.signal_shadow import ShadowClient' in source
   assert 'ShadowClient.optional' in source
   assert 'shadow_tinygrad' not in source
-  assert "self.npy['prev_feat'][:] = model_output[self.output_slices['hidden_state']]" in source
+  # prev_feat is a state pair: next_prev_feat is written straight back into its pinned device
+  # buffer, so it is not part of the packed host inputs. The observer is fed a host mirror of
+  # what the model is about to consume; handing it self.npy raised KeyError('prev_feat') on the
+  # very first capture, which the client turns into failed=True and never samples again.
+  assert "self.shadow_inputs['prev_feat'] = self.prev_feat_host" in source
+  assert 'self.signal_shadow.capture(model_output, self.shadow_inputs)' in source
   # Capture happens alongside the original inference and the comparison sample
   # is popped out of model_output before modelV2 is filled, so it cannot change
   # any published control value.
-  assert source.index('self.signal_shadow.capture(model_output, self.npy)') < source.index("self.npy['prev_feat'][:] = model_output")
+  assert source.index('self.signal_shadow.capture(model_output, self.shadow_inputs)') < source.index("outputs_dict['_signal_shadow']")
   assert "model_output.pop('_signal_shadow', None)" in source

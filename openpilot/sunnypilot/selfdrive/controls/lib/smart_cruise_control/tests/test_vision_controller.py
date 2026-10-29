@@ -6,9 +6,11 @@ See the LICENSE.md file in the root directory for more details.
 """
 
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 from typing import Any
 
 import numpy as np
+from opendbc.car import structs
 from openpilot.common.parameterized import parameterized
 
 import openpilot.cereal.messaging as messaging
@@ -114,6 +116,11 @@ def generate_carState():
   car_state.carState.vCruise = float(v_cruise * 3.6)
 
   return car_state
+
+
+def generate_carStateSP():
+  car_state_sp = messaging.new_message('carStateSP')
+  return car_state_sp.carStateSP
 
 
 def generate_controlsState():
@@ -369,7 +376,11 @@ class TestSmartCruiseControlVision(OpenpilotTestCase):
     self.update_lat_accels(0.5, 2.0, v_ego=v_ego, model_speed=model_speed)
     self.update_lat_accels(0.5, 2.0, v_ego=v_ego, model_speed=model_speed)
 
-    self.assert_approx(self.scc_v.v_target, 8.0)
+    # The curve target at a 2.0 m/s² predicted lat acc under the 1.8 m/s² ceiling is
+    # sqrt(1.8 / (2.0 / 8**2)) = 7.589, not the 8.0 a 2.0 ceiling would give. Derived
+    # here rather than hardcoded: upstream still carries the stale 8.0 and is red.
+    expected_v_target = (_A_LAT_REG_MAX / (2.0 / model_speed ** 2)) ** 0.5
+    self.assert_approx(self.scc_v.v_target, expected_v_target)
     self.assert_approx(self.scc_v.output_v_target, v_ego)
 
   def test_nonurgent_tightening_is_confirmed_and_rate_limited(self):
@@ -455,7 +466,21 @@ class TestSmartCruiseControlVision(OpenpilotTestCase):
     self.sm['carControl'] = car_control.carControl
     self.sm['carState'].vCruiseCluster = 108.0
 
-    planner: Any = LongitudinalPlannerSP.__new__(LongitudinalPlannerSP)
+    # Build the planner through its real ctor so every attribute added by later ports
+    # (ICBM gate 7f2671dafe, lead-drop relaxation, coasting, signal shadow) exists, then
+    # swap in only the pieces this test wants to control: SCC vision is driven by
+    # self.scc_v, SLA/resolver are inert. Openpilot long + passive ICBM keeps SCC
+    # actionable, which is what this test exercises.
+    CP = structs.CarParams(brand="mazda", pcmCruise=True, openpilotLongitudinalControl=True,
+                           longitudinalActuatorDelay=0.36)
+    CP_SP = structs.CarParamsSP(pcmCruiseSpeed=True)
+    planner: Any = LongitudinalPlannerSP(CP, CP_SP, MagicMock())
+    planner._params = SimpleNamespace(get_bool=lambda *_a, **_k: False)
+    planner._param_count = 0
+    planner._carrot_enabled = False
+    planner._fusion_enabled = False
+    planner._coasting_enabled = False
+    planner._lead_drop_enabled = False
     planner.scc = SimpleNamespace(
       vision=self.scc_v,
       map=SimpleNamespace(output_v_target=V_CRUISE_UNSET, output_a_target=0.0),
@@ -474,18 +499,10 @@ class TestSmartCruiseControlVision(OpenpilotTestCase):
       output_a_target=0.0,
       update=lambda *_args: None,
     )
+    planner.sla_machine = None
+    planner.sla_mirror = planner.sla
     planner.events_sp = SimpleNamespace()
-    # update_targets refreshes the carrot killswitches every 100 frames and reads them
-    # unconditionally; both default OFF so the carrot source / fusion paths stay out.
-    planner._param_count = 0
-    planner._params = SimpleNamespace(get_bool=lambda *_a, **_k: False)
-    planner._carrot_enabled = False
-    planner._fusion_enabled = False
-    planner.carrot_source = SimpleNamespace(active=False)
-    planner.traffic_fusion = SimpleNamespace()
-    planner.output_v_target = 0.0
-    planner.output_a_target = 0.0
-    planner.source = LongitudinalPlanSource.cruise
+    self.sm['carStateSP'] = generate_carStateSP()
 
     self.set_lat_accels(0.5, 2.2)
     planner.update_targets(self.sm, 20.0, -0.8, 30.0)

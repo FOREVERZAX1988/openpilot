@@ -9,9 +9,11 @@ from openpilot.selfdrive.controls.lib.curve_speed_learning import (
   CSC_LAT_ACCEL_MIN,
   CSC_NUDGE_WEIGHT,
   CURVATURE_BUCKETS,
+  CURVATURE_GRID,
   DEFAULT_LATERAL_ACCELERATION,
   CurvatureLearning,
   bucket_curvature,
+  learning_status_from_data,
   normalize_curvature_data,
   weighted_isotonic,
 )
@@ -197,3 +199,58 @@ class TestCurvatureLearning(unittest.TestCase):
 
 if __name__ == "__main__":
   unittest.main()
+
+
+class TestCalibrationProgress(unittest.TestCase):
+  """StarPilot _calibration_progress parity: per-bucket threshold, whole-grid percent."""
+
+  def test_empty_data_is_zero(self):
+    self.assertEqual(CurvatureLearning().calibration_progress(), 0.0)
+
+  def test_one_calibrated_bucket_is_grid_fraction(self):
+    learning = CurvatureLearning()
+    key = bucket_curvature(0.01)
+    learning.curvature_data[key] = {"average": 2.5, "count": 200}  # exactly at threshold
+    self.assertAlmostEqual(learning.calibration_progress(), 100.0 / CURVATURE_BUCKETS, places=6)
+
+  def test_progress_caps_per_bucket(self):
+    learning = CurvatureLearning()
+    learning.curvature_data[bucket_curvature(0.01)] = {"average": 2.5, "count": 200 * 10}
+    learning.curvature_data[bucket_curvature(0.005)] = {"average": 2.5, "count": 50}
+    expected = (1.0 + 50 / 200) / CURVATURE_BUCKETS * 100
+    self.assertAlmostEqual(learning.calibration_progress(), expected, places=6)
+
+  def test_all_buckets_calibrated_is_hundred(self):
+    learning = CurvatureLearning()
+    for key in CURVATURE_GRID:
+      learning.curvature_data[str(round(float(key), 6))] = {"average": 2.5, "count": 200}
+    self.assertAlmostEqual(learning.calibration_progress(), 100.0, places=6)
+
+
+class TestLearningStatusFromData(unittest.TestCase):
+  """The web UI's read-only view: derives everything from persisted bucket JSON."""
+
+  def test_none_and_garbage_yield_defaults(self):
+    for data in (None, {}, "not a dict", {"bad": "shape"}, {"0.01": {"average": float("nan"), "count": 5}}):
+      status = learning_status_from_data(data)
+      self.assertEqual(status["progress_pct"], 0.0)
+      self.assertEqual(status["buckets"], 0)
+      self.assertEqual(status["total_count"], 0)
+      self.assertEqual(status["lateral_acceleration"], DEFAULT_LATERAL_ACCELERATION)
+
+  def test_status_matches_instance_values(self):
+    learning = CurvatureLearning()
+    learning.curvature_data[bucket_curvature(0.01)] = {"average": 2.5, "count": 400}
+    learning.curvature_data[bucket_curvature(0.004)] = {"average": 2.2, "count": 60}
+    learning.rebuild()
+    status = learning_status_from_data(learning.curvature_data)
+    self.assertEqual(status["buckets"], 2)
+    self.assertEqual(status["total_count"], 460)
+    self.assertAlmostEqual(status["progress_pct"], round(learning.calibration_progress(), 1), places=6)
+    self.assertAlmostEqual(status["lateral_acceleration"], round(learning.lateral_acceleration, 2), places=6)
+
+  def test_status_accepts_raw_persisted_json_shape(self):
+    raw = {"0.01": {"average": 2.5, "count": 400}, "junk": [1, 2], "0.5": {"average": 9.9, "count": -3}}
+    status = learning_status_from_data(raw)
+    self.assertEqual(status["buckets"], 1)  # junk + non-positive count dropped by normalize
+    self.assertEqual(status["total_count"], 400)

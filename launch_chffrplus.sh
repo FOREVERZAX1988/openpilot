@@ -472,6 +472,31 @@ agnos_init() {
 
   [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
 
+  # Only ever move an existing Carrot install forward; never convert a stock comma
+  # image behind the user's back.
+  #
+  # agnos.json carries 5 stock comma partitions but its boot and system come from
+  # cnb.cool as the 19.8-carrot-bt2 image, so on a stock device the updater has to
+  # download that image, flash it into the *other* slot, swap to it and reboot.
+  # A fresh install then comes back up on the installer screen instead of the UI --
+  # it looks exactly like the install never finished. (--verify itself cannot help
+  # here: it checks the other slot, which on a stock device is empty, so it exits 1
+  # and this function falls through to the updater.)
+  #
+  # Stock devices therefore skip the whole thing: no download, no flash, no slot
+  # swap, no reboot. Carrot's Bluetooth HID needs the Carrot image, so flash it on
+  # purpose (WebUI -> Software -> AGNOS, or `agnos.py --swap`) instead of on every
+  # boot. AGNOS_ENFORCE=1 restores the old "keep flashing until /VERSION matches".
+  if [ "${AGNOS_ENFORCE:-0}" != "1" ]; then
+    case "$(< /VERSION)" in
+      *carrot*) ;;
+      *)
+        echo "[agnos] stock OS $(cat /VERSION) left alone (wanted $AGNOS_VERSION); skipping the OS update. Bluetooth HID needs the Carrot image: flash it from WebUI -> Software -> AGNOS" | tee -a /tmp/agnos_pending.log
+        return 0
+        ;;
+    esac
+  fi
+
   local agnos_py="$DIR/openpilot/common/hardware/comma/agnos.py"
   local manifest="$DIR/openpilot/system/hardware/comma/agnos.json"
   if $agnos_py --verify $manifest; then
@@ -492,12 +517,46 @@ agnos_init() {
     return 0
   fi
 
-  while true; do
+  # Try the updater a bounded number of times, then boot anyway.
+  #
+  # The old `while true` is right when AGNOS_VERSION is a stock comma version: the
+  # updater flashes the partitions, reboots, and the next boot matches. It never
+  # returns when the required version is a CUSTOM image the manifest cannot
+  # produce -- which is this fork: launch_env.sh asks for 19.8-carrot-bt2 while
+  # agnos.json carries comma's stock partitions, so the updater installs stock
+  # AGNOS, /VERSION stays stock, the check fails again, and manager/ui are never
+  # started. The screen then just sits on the comma logo with no update or build
+  # screen, which is indistinguishable from a bricked device.
+  #
+  # So: AGNOS_UPDATE_ATTEMPTS tries (default 2), then log loudly and continue
+  # booting. Set AGNOS_UPDATE_BLOCKING=1 to get the old "never boot without the
+  # matching AGNOS" behaviour back.
+  local attempts="${AGNOS_UPDATE_ATTEMPTS:-2}"
+  local i=1
+  while :; do
     # PYTHONPATH must explicitly carry $PYDEPS_DIR: the updater inherits this
     # environment, and the deps installed by bootstrap_deps (notably pyserial,
     # needed by the bundled snapshot above) live there.
-    PYTHONPATH="$PY_PATH" "$PY" "$DIR/openpilot/common/hardware/comma/updater" "$agnos_py" "$manifest"
+    PYTHONPATH="$PY_PATH" "$PY" "$DIR/openpilot/common/hardware/comma/updater" "$agnos_py" "$manifest" \
+      || echo "[agnos] updater exited $? (attempt $i/$attempts)" | tee -a /tmp/agnos_pending.log
+
+    # A successful flash normally reboots inside the updater. Reaching here means
+    # it did not, so re-check before deciding anything.
+    [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
+
+    if [ "${AGNOS_UPDATE_BLOCKING:-0}" = "1" ]; then
+      echo "[agnos] blocking: /VERSION $(cat /VERSION) != $AGNOS_VERSION, retrying" | tee -a /tmp/agnos_pending.log
+      continue
+    fi
+
+    [ "$i" -ge "$attempts" ] && break
+    i=$((i + 1))
+    sleep 20
   done
+
+  echo "[agnos] WARNING: /VERSION is still $(cat /VERSION), wanted $AGNOS_VERSION." | tee -a /tmp/agnos_pending.log
+  echo "[agnos] WARNING: booting anyway; OS features that need that AGNOS (bluetooth HID) stay off." | tee -a /tmp/agnos_pending.log
+  return 0
 }
 
 # Guarantees the AGNOS updater can start on a FIRST BOOT. The updater is a
@@ -764,6 +823,34 @@ launch() {
     fi
   fi
 
+  # The installer checks the submodules out as part of clone. When that clone is
+  # cut short (factory reset, power loss, timeout) the directories still exist
+  # but are empty, and the index can lose its gitlinks too. build.py then dies on
+  # a bare `import opendbc`, and on a fresh install there is no SSH yet, so all
+  # the user gets is a black screen. Say what is wrong and try to repair it here.
+  local empty_subs=()
+  for sub in msgq_repo opendbc_repo rednose_repo teleoprtc_repo tinygrad_repo jetlink_repo; do
+    [ -d "$sub" ] && [ -n "$(ls -A "$sub" 2>/dev/null)" ] || empty_subs+=("$sub")
+  done
+  if [ ${#empty_subs[@]} -gt 0 ]; then
+    echo "[warn] submodules not checked out: ${empty_subs[*]}"
+    # Bounded: a slow or blocked network must not hold the boot forever. The
+    # full set of submodules takes a few minutes on a C3X over wifi.
+    GIT_LFS_SKIP_SMUDGE=1 timeout 240 git submodule update --init "${empty_subs[@]}" >/dev/null 2>&1
+    local still_empty=()
+    for sub in "${empty_subs[@]}"; do
+      [ -n "$(ls -A "$sub" 2>/dev/null)" ] || still_empty+=("$sub")
+    done
+    if [ ${#still_empty[@]} -eq 0 ]; then
+      echo "[warn] submodules recovered"
+    else
+      echo "[error] submodules still empty: ${still_empty[*]}"
+      echo "[error] from a shell: cd $DIR && GIT_LFS_SKIP_SMUDGE=1 git submodule update --init --recursive"
+      echo "[error] if that reports no submodule mapping, the index lost its gitlinks:"
+      echo "[error]   git reset --mixed HEAD && git submodule update --init --recursive"
+    fi
+  fi
+
   ln -sfn "$(pwd)" /data/pythonpath
 
   # submodule package symlinks for bare `import opendbc`/`import jetlink` on device;
@@ -862,10 +949,27 @@ launch() {
 
   cd openpilot/system/manager
   if [ ! -f "$DIR/prebuilt" ]; then
-    if ! ./build.py; then
-      echo "[warn] build.py failed, UI resources may be missing"
-    else
+    # scons writes its objects and temporary output under TMPDIR, which defaults
+    # to /tmp on the root partition. On a C3X that partition is ~4.3G and has
+    # well under 500M free after an install, so a full build can die halfway
+    # through with "No space left on device". /data has tens of GB, and AGNOS's
+    # comma.sh has already recreated /data/tmp for us by this point.
+    if mountpoint -q /data; then
+      export TMPDIR=/data/tmp
+      mkdir -p "$TMPDIR"
+    fi
+    # Keep the build log on /data. A fresh install has no SSH, and the old
+    # one-line warning then left a black screen with no way to find out why.
+    # tee, not a redirect: build.py draws the 0-100% progress bar on the screen
+    # and swallowing it would leave the user staring at a frozen frame.
+    BUILD_LOG=/data/build.log
+    ./build.py 2>&1 | tee "$BUILD_LOG"
+    build_rc=${PIPESTATUS[0]}
+    if [ "$build_rc" -eq 0 ]; then
       touch "$DIR/prebuilt"
+    else
+      echo "[error] build.py failed (exit $build_rc), log: $BUILD_LOG"
+      tail -n 20 "$BUILD_LOG" 2>/dev/null | sed 's/^/[error] /'
     fi
   fi
   ./manager.py

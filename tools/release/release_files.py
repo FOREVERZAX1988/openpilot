@@ -16,7 +16,6 @@ blacklist = [
 
   # release scripts configure LFS for the big driving model and warps
   ".lfsconfig",
-  ".gitattributes",
   ".git$",
   ".gitmodules",
   ".run/",

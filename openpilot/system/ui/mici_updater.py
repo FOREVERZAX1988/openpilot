@@ -31,7 +31,7 @@ class ProgressPage(NavWidget):
                                               font_weight=FontWeight.DISPLAY, line_height=0.8)
     self._progress_percent_label = UnifiedLabel("", 132, text_color=rl.Color(255, 255, 255, int(255 * 0.9 * 0.65)),
                                                 font_weight=FontWeight.ROMAN,
-                                                alignment_vertical=TextAlignmentVertical.BOTTOM)
+                                                alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_BOTTOM)
 
   def _back_enabled(self) -> bool:
     return False

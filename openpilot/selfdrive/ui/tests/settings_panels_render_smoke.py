@@ -23,7 +23,6 @@ shared session.
 
 from __future__ import annotations
 
-import importlib
 import sys
 import types
 from collections import defaultdict
@@ -31,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from carrot_tuning_render_smoke import (  # noqa: E402
+from carrot_tuning_render_smoke import (
   build_fake_application, build_fake_multilang, build_fake_params, build_fake_pyray, install_stubs,
 )
 
@@ -415,8 +414,7 @@ def install() -> None:
 def main() -> int:
   install()
 
-  from openpilot.selfdrive.ui.layouts.settings.settings import PanelType  # noqa: E402
-  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.settings import SettingsLayoutSP as SettingsLayout  # noqa: E402
+  from openpilot.selfdrive.ui.sunnypilot.layouts.settings.settings import SettingsLayoutSP as SettingsLayout
 
   # On a PC without git-lfs smudging, car_list.json is a 61-byte pointer file
   # and the Vehicle panel would die on json.load. Point the selector at the
@@ -429,9 +427,9 @@ def main() -> int:
   except Exception:
     pass
 
-  from openpilot.system.ui.lib.application import gui_app  # noqa: E402
+  from openpilot.system.ui.lib.application import gui_app
 
-  from carrot_tuning_render_smoke import DRAWN  # noqa: E402
+  from carrot_tuning_render_smoke import DRAWN
 
   failures: list[str] = []
   checks = 0
@@ -446,7 +444,6 @@ def main() -> int:
       failures.append(f"{label}: {type(exc).__name__}: {exc}")
       print(f"  FAIL {label}: {type(exc).__name__}: {exc}")
 
-  content_rect = types.SimpleNamespace(x=460, y=0, width=1700, height=1080)
   full = types.SimpleNamespace(x=0, y=0, width=2160, height=1080)
 
   print("== settings layout + every sidebar panel ==")

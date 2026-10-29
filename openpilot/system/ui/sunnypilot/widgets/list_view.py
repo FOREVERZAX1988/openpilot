@@ -8,6 +8,7 @@ from collections.abc import Callable, Sequence
 
 import pyray as rl
 from openpilot.common.params import Params
+from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight, TextAlignment, TextAlignmentVertical, font_fallback
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.sunnypilot.widgets.toggle import ToggleSP
@@ -16,7 +17,7 @@ from openpilot.system.ui.widgets.button import Button, ButtonStyle
 from openpilot.system.ui.widgets.label import gui_label
 from openpilot.system.ui.widgets.list_view import ListItem, ToggleAction, ItemAction, MultipleButtonAction, ButtonAction, \
                                                   _resolve_value, BUTTON_WIDTH, BUTTON_HEIGHT, TEXT_PADDING, DualButtonAction
-from openpilot.system.ui.widgets.scroller_tici import LineSeparator, LINE_COLOR, LINE_PADDING
+from openpilot.system.ui.widgets.scroller_tici import LineSeparator, LINE_COLOR, LINE_PADDING, Scroller
 from openpilot.system.ui.sunnypilot.lib.styles import style
 from openpilot.system.ui.sunnypilot.widgets.option_control import OptionControlSP, LABEL_WIDTH
 
@@ -36,9 +37,10 @@ class Spacer(Widget):
 
 class ToggleActionSP(ToggleAction):
   def __init__(self, initial_state: bool = False, width: int = style.TOGGLE_WIDTH, enabled: bool | Callable[[], bool] = True,
-               callback: Callable[[bool], None] | None = None, param: str | None = None):
+               callback: Callable[[bool], None] | None = None, param: str | None = None,
+               sync_param: str | None = None):
     ToggleAction.__init__(self, initial_state, width, enabled, callback)
-    self.toggle = ToggleSP(initial_state=initial_state, callback=callback, param=param)
+    self.toggle = ToggleSP(initial_state=initial_state, callback=callback, param=param, sync_param=sync_param)
 
 
 class ButtonSP(Button):
@@ -135,9 +137,12 @@ class MultipleButtonActionSP(MultipleButtonAction):
                param: str | None = None):
     MultipleButtonAction.__init__(self, buttons, button_width, selected_index, callback)
     self.param_key = param
-    self.params = Params()
+    self.params = unified_params
     if self.param_key:
-      self.selected_button = int(self.params.get(self.param_key, return_default=True))
+      # A param that is not registered (or a Params binding returning None) must not blow up
+      # layout construction - fall back to the caller-provided selected_index.
+      value = self.params.get(self.param_key)
+      self.selected_button = int(value) if value is not None else selected_index
     self._anim_x: float | None = None
     self.enabled_buttons: set[int] | None = None
 
@@ -366,8 +371,11 @@ def simple_button_item_sp(button_text: str | Callable[[], str], callback: Callab
 
 
 def toggle_item_sp(title: str | Callable[[], str], description: str | Callable[[], str] | None = None, initial_state: bool = False,
-                   callback: Callable | None = None, icon: str = "", enabled: bool | Callable[[], bool] = True, param: str | None = None) -> ListItemSP:
-  action = ToggleActionSP(initial_state=initial_state, enabled=enabled, callback=callback, param=param)
+                   callback: Callable | None = None, icon: str = "", enabled: bool | Callable[[], bool] = True, param: str | None = None,
+                   sync_param: str | None = None) -> ListItemSP:
+  """`param`: the switch owns the write. `sync_param`: the switch only mirrors a store
+  key someone else writes (a callback-driven confirm gives the write to the callback)."""
+  action = ToggleActionSP(initial_state=initial_state, enabled=enabled, callback=callback, param=param, sync_param=sync_param)
   return ListItemSP(title=title, description=description, action_item=action, icon=icon)
 
 
@@ -383,10 +391,12 @@ def option_item_sp(title: str | Callable[[], str], param: str,
                    value_change_step: int = 1, on_value_changed: Callable[[int], None] | None = None,
                    enabled: bool | Callable[[], bool] = True,
                    icon: str = "", label_width: int = LABEL_WIDTH, value_map: dict[int, int] | None = None,
-                   use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None, inline: bool = False) -> ListItemSP:
+                   use_float_scaling: bool = False, label_callback: Callable[[int], str] | None = None, inline: bool = False,
+                   use_registered_default: bool = False) -> ListItemSP:
   action = OptionControlSP(
     param, min_value, max_value, value_change_step,
-    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback
+    enabled, on_value_changed, value_map, label_width, use_float_scaling, label_callback,
+    input_title=title, use_registered_default=use_registered_default,
   )
   return ListItemSP(title=title, description=description, action_item=action, icon=icon, inline=inline)
 

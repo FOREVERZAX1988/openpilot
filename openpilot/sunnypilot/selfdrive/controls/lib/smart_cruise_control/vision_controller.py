@@ -33,9 +33,13 @@ _URGENT_PRED_LAT_ACC_TH = 3.  # Predicted Lat Acc threshold that requires an imm
 _LEAVING_LAT_ACC_TH = 1.3  # Lat Acc threshold to trigger leaving turn state.
 _FINISH_LAT_ACC_TH = 1.1  # Lat Acc threshold to trigger the end of the turn cycle.
 
-# Maximum lateral acceleration. 1.8 m/s² matches zoompilot's Mazda curve planning
-# (vs 2.0 in sunnypilot); tighter ceiling means slower through curves but
-# safer lateral g on unfamiliar roads.
+# Maximum lateral acceleration. 1.8 m/s² is what upstream sunnypilot itself ships
+# (upstream/test, upstream/master-c3: all "= 1.8") and it is also the zoompilot-derived
+# ceiling from fork commit 852969b46a -- convention and preference agree here.
+# A brief "alignment to upstream 2.0" (f07bf1eacf) was backwards: it moved us 5%
+# quicker through curves than upstream. Upstream's own copy of the test below still
+# hardcodes 8.0 (the 2.0 answer) and is red; ours derives the expectation from this
+# constant instead (7.589), so the next ceiling change cannot leave a stale literal.
 _A_LAT_REG_MAX = 1.8
 
 # Minimum smooth deceleration during the ENTERING state: the car starts slowing

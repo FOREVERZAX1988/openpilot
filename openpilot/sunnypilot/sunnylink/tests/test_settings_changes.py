@@ -28,7 +28,6 @@ from openpilot.sunnypilot.sunnylink.tools.generate_settings_schema import (
 )
 from openpilot.sunnypilot.sunnylink.tools.validate_settings_ui import validate as validate_settings_ui
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.demand import CONSUMER_BY_KEY, CONSUMERS
 
 
 def _walk_items(schema: dict[str, Any]):

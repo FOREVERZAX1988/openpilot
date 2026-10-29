@@ -123,9 +123,14 @@ class TestExperimentalSwitch:
     assert msg.zoompilot.experimentalMode is True
 
   def test_alert_names_the_new_mode(self):
+    # The callback hands the UI the source string; openpilot/selfdrive/ui/onroad/
+    # alert_renderer.py:121 does the tr() lookup. So the contract to assert here is
+    # the source text, in the order the hold flips it -- the English wording lives
+    # in the po files, not in this callback ("Experimental Off" appears nowhere in
+    # the tree, which is why this test only ever failed).
     alert = EVENTS_SP[EventNameSP.experimentalModeSwitchedDEPRECATED][ET.WARNING]
     sd = Selfdrived()
-    for text in ("Experimental Off", "Experimental On"):
+    for text in ("实验模式已关闭", "实验模式已开启"):
       sd.hold_gap(DISTANCE_LONG_PRESS + 5)
       assert alert(None, None, None, False, 0, None).alert_text_1 == text
 

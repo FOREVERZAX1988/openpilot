@@ -50,7 +50,13 @@ rm -f panda/board/obj/panda_h7.bin.signed
 # Release branch must not contain LFS pointers; strip LFS tracking and commit files as regular content.
 sed -i '/filter=lfs/d' .gitattributes
 
-source "$SOURCE_DIR/tools/release/setup_lfs.sh"
+# Upstream keeps the big models in LFS; a device without git-lfs chunks them instead.
+if command -v git-lfs >/dev/null 2>&1; then
+  source "$SOURCE_DIR/tools/release/setup_lfs.sh"
+else
+  find openpilot/selfdrive/modeld/models -name '*.onnx' -size +95M -exec ./openpilot/common/file_chunker.py {} \;
+  find openpilot/selfdrive/modeld/models -name '*.pkl' -size +95M -exec ./openpilot/common/file_chunker.py {} \;
+fi
 
 # include source commit hash and build date in commit
 GIT_HASH=$(git --git-dir="$SOURCE_DIR/.git" rev-parse HEAD)

@@ -19,6 +19,26 @@ from openpilot.selfdrive.ui.sunnypilot.mici.onroad.model_renderer import LANE_LI
 CLIP_MARGIN = 500
 MIN_DRAW_DISTANCE = 10.0
 MAX_DRAW_DISTANCE = 100.0
+# Lane lines and road edges are perception: they keep upstream's 100 m cap but are no longer
+# tied to the plan's own length, which is what made them stop mid-road when following a car.
+LANE_DRAW_DISTANCE = 100.0
+
+
+def camera_offset_for_drawing() -> float:
+  """Lateral shift the renderer still has to add to the model's geometry.
+
+  CameraOffset is a *virtual camera* shift: the tinygrad runner applies it inside the model
+  (sunnypilot/modeld_v2/camera_offset_helper shears the image warp), so the lane lines it
+  returns are already displaced and the drawing has to add the displacement back for them to
+  land on the road. The stock runner does not apply it at all, and adding the offset there
+  moved the path, every lane line and both road edges sideways together -- the "trajectory,
+  lanes and road edges all sit off the real road" report. Only compensate when the model
+  itself shifted.
+  """
+  if not getattr(ui_state, 'active_bundle', None) or not getattr(ui_state, 'model_runner_tinygrad', False):
+    return 0.0
+  return float(ui_state.params.get("CameraOffset", return_default=True) or 0.0)
+
 LEAD_BAR_LENGTH = 12.0  # px
 LEAD_BAR_WIDTH = 1.8  # m
 
@@ -75,7 +95,7 @@ class ModelRenderer(Widget, ModelRendererSP):
     self._clip_region = None
 
     self._counter = -1
-    self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+    self._camera_offset = camera_offset_for_drawing()
 
     self._path_gradient = Gradient(
       start=(0.0, 1.0),  # Bottom of path
@@ -97,7 +117,7 @@ class ModelRenderer(Widget, ModelRendererSP):
     sm = ui_state.sm
 
     if self._counter % 180 == 0:  # This runs at 60fps, so we query every 3 seconds
-      self._camera_offset = ui_state.params.get("CameraOffset", return_default=True) if ui_state.active_bundle else 0.0
+      self._camera_offset = camera_offset_for_drawing()
     self._counter += 1
 
     self._torque_filter.update(-ui_state.torque_utilization)
@@ -204,8 +224,13 @@ class ModelRenderer(Widget, ModelRendererSP):
 
   def _update_model(self, lead, path_x_array):
     """Update model visualization data based on model message"""
-    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
-    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], max_distance)
+    # Lane lines and road edges are perception, not plan. They used to be cut at the plan end,
+    # and the plan collapses when following a car: at 33 km/h behind a lead at 12 m,
+    # modelV2.position.x[-1] is only 54 m, so every line stopped in the middle of the road.
+    # Perspective has already pulled them together by then, so it read as "lines converge
+    # mid-road and never reach the car ahead" instead of running to the horizon.
+    lane_distance = LANE_DRAW_DISTANCE
+    max_idx = self._get_path_length_idx(self._lane_lines[0].raw_points[:, 0], lane_distance)
 
     # Update lane lines using raw points
     line_width_factor = 0.12
@@ -221,6 +246,7 @@ class ModelRenderer(Widget, ModelRendererSP):
       road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, line_width_factor, 0.0, max_idx)
 
     # Update path using raw points
+    max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)
     if lead and lead.present:
       lead_d = lead.dRel * 2.0
       max_distance = np.clip(lead_d - min(lead_d * 0.35, 10.0), 0.0, max_distance)

@@ -36,12 +36,63 @@ def modeld_pkl_path(chestnut: bool):
   prefix = 'big_' if chestnut else ''
   return MODELS_DIR / f'{prefix}driving_tinygrad.pkl'
 
-def load_oob(path, chestnut=False):
-  from tinygrad import Context
-  device = 'USB+AMD:LLVM' if chestnut else 'QCOM' if AGNOS else 'METAL' if sys.platform == 'darwin' else 'CPU:LLVM'
-  with Context(DEV=device):
-    from tinygrad_repo.examples.openpilot.helpers import load_pickle
-    return load_pickle(path, out_of_band=True)
+def load_oob(path_or_f, chestnut=False):
+  """Unpickle a model artifact: 8-byte opcode length, opcode stream, then weight buffers.
+
+  Two layouts are in circulation and both have to load, because the two compilers in this
+  tree disagree on how out-of-band buffers are addressed:
+
+  A) openpilot's own dump_oob (compile_modeld.py, selfdrive/modeld): PEP 574 buffers, each
+     prefixed with its length, referenced by NEXT_BUFFER -- pickle.load(buffers=...) below.
+  B) tinygrad's examples/openpilot dump_pickle, which is what SConscript's compile_model()
+     actually runs (compile_onnx.py --out-of-band, for both Darwin and comma_arm64): one raw
+     device-buffer blob covering the rest of the file, referenced by BINPERSID with
+     (nbytes, offset) and resolved via Unpickler.persistent_load.
+
+  Reading a B-layout pkl with the A path raised "A load persistent id instruction was
+  encountered, but no persistent_load function was specified": modeld died in
+  ModelState.__init__ before the first frame, so the car drew no path, no lane lines and no
+  road edges at all. The 2026-10-24 restore to "upstream's form" only accounted for A --
+  upstream builds its pkls with compile_modeld.py, this fork's SConscript does not.
+
+  path_or_f is either a path (modeld and dmonitoringmodeld at runtime; tinygrad's own loader
+  mmaps it, so it needs the real file) or an already-open file object (compile_modeld.py's
+  pickling round trip and the artifact tests).
+  """
+  # The device the weights land on has to be selected up front: tinygrad's loader materializes
+  # them into whatever Device.DEFAULT happens to be, and for chestnut that is not DEFAULT yet.
+  if isinstance(path_or_f, (str, Path)):
+    from tinygrad import Context
+    device = 'USB+AMD:LLVM' if chestnut else 'QCOM' if AGNOS else 'METAL' if sys.platform == 'darwin' else 'CPU:LLVM'
+    with Context(DEV=device):
+      from tinygrad_repo.examples.openpilot.helpers import load_pickle
+      return load_pickle(path_or_f, out_of_band=True)
+
+  f = path_or_f
+  opcodes = f.read(struct.unpack('<q', f.read(8))[0])
+  rest = f.read()
+
+  def buffers():
+    r = io.BytesIO(rest)
+    while (h := r.read(8)):
+      pb = pickle.PickleBuffer(bytearray(struct.unpack('<q', h)[0]))
+      if r.readinto(pb) != pb.raw().nbytes:
+        raise EOFError("incomplete model buffer")
+      yield pb
+
+  try:
+    return pickle.load(io.BytesIO(opcodes), buffers=buffers())
+  except pickle.UnpicklingError as e:
+    if 'persistent' not in str(e):
+      raise
+
+  # B layout: the remaining bytes are the weight blob; a persistent id is (nbytes, offset) into it.
+  import numpy as np
+  from tinygrad import Device, Tensor
+  blob = Tensor(np.frombuffer(rest, dtype=np.uint8)).to(Device.DEFAULT).realize().uop.buffer
+  u = pickle.Unpickler(io.BytesIO(opcodes))
+  u.persistent_load = lambda pid: blob.view(*pid)
+  return u.load()
 
 # the top level of the pkl compile_modeld.py writes. checked at both ends: a pkl from another
 # compile_modeld.py unpickles fine and only fails on the first key it lacks, as a bare KeyError
@@ -71,6 +122,7 @@ def check_camera_jit(jits: dict, cam_w: int, cam_h: int, path) -> None:
   if (cam_w, cam_h) not in jits:
     compiled = ', '.join(f'{w}x{h}' for w, h in sorted(k for k in jits if isinstance(k, tuple)))
     raise _camera_mismatch(cam_w, cam_h, compiled, path)
+
 
 def chestnut_present() -> bool:
   for d in USB_DEVICES_PATH.glob("*"):

@@ -2,16 +2,19 @@
 Copyright (c) 2026-, Zeph Leggett.
 
 This file is part of zoompilot and is licensed under the MIT License.
-See the LICENSE.md file in the root directory of more details.
+See the LICENSE.md file in the root directory for more details.
 
-unittest, not pytest: the device has no pytest and the PC has no compiled msgq,
-so pytest-style files here never ran anywhere. That is how a planner-killing
-TypeError shipped behind a green suite (see
-openpilot/selfdrive/controls/lib/tests/test_lead_forecast_process_lead.py).
+Ported to stdlib unittest (2026-10): upstream ships this as pytest functions,
+and the device has neither pytest nor msgq, so the module had never been
+executed anywhere it mattered. The bodies are unchanged; only the discovery
+mechanism is (TestCase + assertAlmostEqual, in place of approx).
+
+    python -m unittest openpilot.sunnypilot.selfdrive.controls.lib.lead_forecast.tests.test_forecast
 """
-import unittest
+import pathlib
 
 import numpy as np
+import unittest
 
 import openpilot.cereal.messaging as messaging
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc, T_IDXS
@@ -151,7 +154,7 @@ class TestMpcHook(unittest.TestCase):
     mpc, forecast, upstream = build()
     sm = build_sm(model_v=SLOWING)
     run(forecast, mpc, sm, frames=1)
-    self.assertAlmostEqual(forecast.weights[0], BLEND_RATE * 0.05, delta=1e-12)
+    self.assertAlmostEqual(forecast.weights[0], BLEND_RATE * 0.05)
     run(forecast, mpc, sm)
     self.assertEqual(forecast.weights[0], 1.)
     rs = sm['radarState'].as_builder()
@@ -180,8 +183,8 @@ class TestMpcHook(unittest.TestCase):
     mpc, forecast, upstream = build()
     sm = build_sm(d_rel=2., v_lead=5.)
     lead_xv = run(forecast, mpc, sm)
-    self.assertAlmostEqual(float(lead_xv[0, 0]), float(upstream(sm['radarState'].leadOne)[0, 0]), delta=1e-6)
-    self.assertGreater(float(lead_xv[0, 0]), 2.)
+    self.assertAlmostEqual(lead_xv[0, 0], upstream(sm['radarState'].leadOne)[0, 0])
+    assert lead_xv[0, 0] > 2.
 
   def test_upstream_tau_unchanged(self):
     # the comparison in docs/zoompilot/lead-forecast.md assumes upstream's vision tau and fallback tau
@@ -257,8 +260,26 @@ class TestGuards(unittest.TestCase):
     rs.leadOne.dRel = 40.5
     sm['radarState'] = rs.as_reader()
     run(forecast, mpc, sm)
-    self.assertEqual(forecast.inhibits[0], Inhibit.none)
+    assert forecast.inhibits[0] == Inhibit.none
 
 
-if __name__ == "__main__":
+class TestRunnerContract(unittest.TestCase):
+  """Why this exists: these modules sat in the tree for weeks and never ran.
+
+  Upstream wrote them for pytest; the device has no pytest and no msgq, so the
+  suite was green only in the sense that nobody could run it. The runner is
+  therefore part of the contract, not a detail - if someone reintroduces the
+  import, this fails here rather than silently in the field.
+  """
+
+  def test_no_sibling_test_module_needs_pytest(self):
+    here = pathlib.Path(__file__).resolve().parent
+    # Built at runtime so this file does not match its own needle.
+    needle = 'import' + ' pytest'
+    offenders = [q.name for q in sorted(here.glob('test_*.py'))
+                 if q.name != pathlib.Path(__file__).name and needle in q.read_text()]
+    self.assertEqual(offenders, [], f'{offenders} need pytest; the device does not have it')
+
+
+if __name__ == '__main__':
   unittest.main()

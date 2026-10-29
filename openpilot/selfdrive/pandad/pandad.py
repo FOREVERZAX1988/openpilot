@@ -10,6 +10,7 @@ from panda import Panda, PandaDFU, PandaProtocolMismatch, FW_PATH
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
 from openpilot.common.hardware import HARDWARE
+from openpilot.common.hardware.comma.hardware import is_tici_dos
 from openpilot.common.swaglog import cloudlog
 
 from openpilot.sunnypilot.selfdrive.pandad.rivian_long_flasher import flash_rivian_long
@@ -26,14 +27,36 @@ def get_expected_signature(panda: Panda) -> bytes:
     cloudlog.exception("Error computing expected signature")
     return b""
 
+
+# C3 DOS carries an internal F4 panda; the H7 devices are the ones that can be
+# safely reset / re-flashed by the Python wrapper the way zp expects.
+H7_HW_TYPES = (
+  Panda.HW_TYPE_RED_PANDA,
+  Panda.HW_TYPE_RED_PANDA_V2,
+  Panda.HW_TYPE_TRES,
+  Panda.HW_TYPE_CUATRO,
+)
+
+
+def is_h7_panda_hw(hw_type: int) -> bool:
+  return hw_type in H7_HW_TYPES
+
+
+def should_launch_cpp_directly(panda_serials: list[str]) -> bool:
+  # C3 DOS: single internal F4 uses panda/ firmware; skip Python auto-flash.
+  return is_tici_dos() and len(panda_serials) == 1
+
+
 def flash_panda(panda_serial: str):
+  """Flash/verify one panda. Returns its hw type (or None if unsupported)."""
   panda = Panda(panda_serial)
+  hw_type = panda.get_type()
 
   # skip flashing if the detected panda is not supported
-  if panda.get_type() not in Panda.SUPPORTED_DEVICES:
-    cloudlog.warning(f"Panda {panda_serial} is not supported (hw_type: {panda.get_type()}), skipping flash...")
+  if hw_type not in Panda.SUPPORTED_DEVICES:
+    cloudlog.warning(f"Panda {panda_serial} is not supported (hw_type: {hw_type}), skipping flash...")
     panda.close()
-    return
+    return hw_type
 
   fw_signature = get_expected_signature(panda)
   internal_panda = panda.is_internal()
@@ -65,6 +88,7 @@ def flash_panda(panda_serial: str):
     raise AssertionError
 
   panda.close()
+  return hw_type
 
 
 def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -> tuple[list[str], str | None, bool]:
@@ -166,6 +190,17 @@ def main() -> None:
         time.sleep(1)
 
       panda_serials = Panda.list()
+
+      if should_launch_cpp_directly(panda_serials):
+        # C3 DOS: the internal F4 is flashed out of band and pandad.cc rejects its
+        # firmware through up_to_date(), so hand off to the C++ daemon immediately.
+        cloudlog.warning("DOS internal panda: skipping Python panda setup, launching pandad directly")
+        os.environ['MANAGER_DAEMON'] = 'pandad'
+        os.environ['BOARDD_SKIP_FW_CHECK'] = '1'
+        process = subprocess.Popen(["./pandad", *panda_serials], cwd=os.path.join(BASEDIR, "openpilot/selfdrive/pandad"))
+        process.wait()
+        continue
+
       if len(panda_serials):
         # custom flasher for xnor's Rivian Longitudinal Upgrade Kit
         flash_rivian_long(panda_serials)
@@ -182,8 +217,16 @@ def main() -> None:
         assert len(active_serials) == 1
         cloudlog.info(f"{len(active_serials)} active panda found, connecting - {active_serials}, aux (peripherals/fan) - {aux_serial}")
         to_flash = list(dict.fromkeys(active_serials + ([aux_serial] if aux_serial else [])))
+        # C3 DOS (internal F4) is not an H7 device and pandad.cc's up_to_date() gate
+        # rejects its firmware, so run the C++ daemon without the fw check for it.
+        has_non_h7_panda = False
         for serial in to_flash:
-          flash_panda(serial)
+          hw_type = flash_panda(serial)
+          has_non_h7_panda |= hw_type is not None and not is_h7_panda_hw(hw_type)
+        if has_non_h7_panda:
+          os.environ['BOARDD_SKIP_FW_CHECK'] = '1'
+        else:
+          os.environ.pop('BOARDD_SKIP_FW_CHECK', None)
 
         # comma three + external Red Panda: the dos gets false positive
         # ignitions from the harness box without a harness connector; tell the

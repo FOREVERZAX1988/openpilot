@@ -5,7 +5,8 @@ import numpy as np
 import requests
 
 import openpilot.cereal.messaging as messaging
-from openpilot.common.api import API_HOST, Api
+from openpilot.common.api import Api
+from openpilot.common.api.comma_connect import get_api_host
 from openpilot.common.params import Params
 from openpilot.common.realtime import Ratekeeper
 from openpilot.common.swaglog import cloudlog
@@ -52,7 +53,7 @@ class RouteEngine:
 
     self.mapbox_token = os.environ.get("MAPBOX_TOKEN")
     self.api = Api(self.params.get("DongleId")) if self.mapbox_token is None else None
-    self.mapbox_host = "https://api.mapbox.com" if self.mapbox_token is not None else API_HOST.rstrip('/') + '/v1/nav'
+    self.mapbox_host = "https://api.mapbox.com" if self.mapbox_token is not None else get_api_host().rstrip('/') + '/v1/nav'
 
   def update(self):
     self.sm.update(0)

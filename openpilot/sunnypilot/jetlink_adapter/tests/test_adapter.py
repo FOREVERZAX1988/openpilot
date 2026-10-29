@@ -103,7 +103,8 @@ class TestParams(OpenpilotTestCase):
     self.assertNotEqual(settings.marks()[KEYS.big_model], before)
 
   def test_every_key_is_declared_with_its_type(self):
-    types = {'link': ParamKeyType.INT, 'offroad': ParamKeyType.BOOL, 'charge_phone': ParamKeyType.BOOL}
+    types = {'link': ParamKeyType.INT, 'offroad': ParamKeyType.BOOL, 'charge_phone': ParamKeyType.BOOL,
+             'preview': ParamKeyType.BOOL}
     params = Params()
     for field, key in KEYS._asdict().items():
       self.assertEqual(params.get_type(key), types.get(field, ParamKeyType.JSON), key)
@@ -222,6 +223,23 @@ class TestModeld(OpenpilotTestCase):
     # a rule that fails on the frame thread holds the swap off, never modeld
     with mock.patch.object(messaging, 'SubMaster', side_effect=RuntimeError('no msgq')):
       self.assertIs(Adapter().in_control(), True)
+
+  def test_jetlinks_ask_never_raises_out_of_the_frame_loop(self):
+    # jetlink calls in_control() unguarded, on modeld's frame thread (joining),
+    # so a failure here would reach modeld's loop and take the process down
+    with mock.patch('openpilot.cereal.messaging.SubMaster', side_effect=OSError('no msgq')):
+      self.assertIs(Adapter().in_control(), True)
+
+  def test_the_ask_keeps_one_submaster_of_its_own(self):
+    # API 3, the joining model's ask: this process's own SubMaster over the
+    # three services modeld reads, made once, on the first ask
+    op = Adapter()
+    with mock.patch('openpilot.cereal.messaging.SubMaster', side_effect=messaging.SubMaster) as made:
+      # nothing is published in a test: a service late counts as in control
+      self.assertIs(op.in_control(), True)
+      self.assertIs(op.in_control(), True)
+    self.assertEqual(made.call_count, 1)
+    self.assertEqual(made.call_args, mock.call(list(jetlink_adapter.IN_CONTROL)))
 
   def test_telemetry_is_a_cloudlog_event(self):
     op = Adapter()

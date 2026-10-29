@@ -2,6 +2,7 @@
 
 #include <future>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -108,6 +109,12 @@ private:
   std::string params_prefix;
 
   // for nonblocking write
+  // future_lock guards future's check-and-replace in putNonBlocking. Without
+  // it two threads can race on the assignment: one replacing the future while
+  // the other is destroying the _Async_state_impl it points at, which ends in
+  // __cxa_pure_virtual -- SIGABRT with no Python traceback. The queue itself is
+  // already thread-safe; only this member was not.
+  std::mutex future_lock;
   std::future<void> future;
   SafeQueue<std::pair<std::string, std::string>> queue;
 };

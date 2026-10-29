@@ -37,12 +37,17 @@ class AlphaLongitudinalToggles:
       title=lambda: tr("Alpha Longitudinal"),
       description=lambda: tr(DEVELOPER_DESCRIPTIONS["alpha_longitudinal"]),
       callback=self._on_alpha_long,
-      enabled=lambda: not ui_state.engaged)
+      enabled=ui_state.is_offroad,
+      sync_param="AlphaLongitudinalEnabled")
 
     self._experimental_toggle = toggle_item_sp(
       title=lambda: tr("Experimental Mode"),
       description=lambda: tr(EXPERIMENTAL_MODE_DESCRIPTION),
-      callback=self._on_experimental_mode)
+      callback=self._on_experimental_mode,
+      # the write belongs to the callback (it may need the risk dialog first), so the
+      # switch only mirrors the key: a mode set from the web panel or the companion app
+      # shows here without waiting for the next offroad/engaged transition
+      sync_param="ExperimentalMode")
 
     self._set_speed_toggle = toggle_item_sp(
       title=lambda: tr("Experimental Mode Speed Assist"),
@@ -54,6 +59,25 @@ class AlphaLongitudinalToggles:
       description=lambda: tr("Closes the gap to your driving personality's following distance behind a steady car. " +
                              "Never closer than chill mode."),
       param="ExperimentalModeLeadGap")
+
+    # Which situations may hand speed control to the model under DEC. All on by
+    # default; a switch that is off can only stop a hand-over, never cause one.
+    self._dec_trigger_specs = (
+      ("DynamicExperimentalTriggerCurve", tr_noop("DEC: Curves"),
+       tr_noop("Let a curve ahead hand speed control to the model.")),
+      ("DynamicExperimentalTriggerLead", tr_noop("DEC: Slower Lead"),
+       tr_noop("Let a slower or stopped car ahead hand speed control to the model.")),
+      ("DynamicExperimentalTriggerSignal", tr_noop("DEC: Turn Signal"),
+       tr_noop("Let an active turn signal below the lane-change speed hand speed control to the model.")),
+      ("DynamicExperimentalTriggerStopLight", tr_noop("DEC: Stops Ahead"),
+       tr_noop("Let a predicted stop for a light or sign hand speed control to the model.")),
+      ("DynamicExperimentalTriggerLowSpeed", tr_noop("DEC: Low Speed Creep"),
+       tr_noop("Let creeping at very low speed hand speed control to the model.")),
+    )
+    self._dec_trigger_toggles = [
+      toggle_item_sp(title=lambda t=title: tr(t), description=lambda d=desc: tr(d), param=param)
+      for param, title, desc in self._dec_trigger_specs
+    ]
 
     self._refresh_toggles = (
       ("AlphaLongitudinalEnabled", self._alpha_long_toggle),
@@ -69,10 +93,24 @@ class AlphaLongitudinalToggles:
   def update_state(self):
     CP = ui_state.CP
     has_long = CP is not None and ui_state.has_longitudinal_control
-    self._alpha_long_toggle.set_visible(CP is not None and CP.alphaLongitudinalAvailable)
-    self._experimental_toggle.action_item.set_enabled(CP is None or has_long)
-    self._set_speed_toggle.action_item.set_enabled(has_long)
-    self._lead_gap_toggle.action_item.set_enabled(has_long)
+    # CP is None means nothing has fingerprinted this car yet (fresh install, or /data
+    # rebuilt after a factory reset). Hiding the row then reads as "the feature is gone",
+    # which is exactly how it looked after the rebuild, while the car may well support it.
+    # Keep it on screen and dead until a drive fills CP in; hide it only when a car we
+    # have actually seen does not offer alpha longitudinal.
+    alpha_available = CP is not None and CP.alphaLongitudinalAvailable
+    self._alpha_long_toggle.set_visible(alpha_available or CP is None)
+    self._alpha_long_toggle.action_item.set_enabled(alpha_available and ui_state.is_offroad())
+    # Experimental Mode runs on openpilot longitudinal control and both selfdrived and
+    # ui_state._enforce_constraints delete the key when there is none, so accepting the
+    # tap only to flip back -- which is what `CP is None or` allowed -- is a lie. has_long
+    # is the same condition those two enforce.
+    self._experimental_toggle.action_item.set_enabled(has_long)
+    self._dec_toggle.action_item.set_enabled(has_long)
+    # DEC decides the mode on its own, and the e2e assists never act under it
+    dec = self._dec_toggle.action_item.get_state()
+    self._set_speed_toggle.action_item.set_enabled(has_long and not dec)
+    self._lead_gap_toggle.action_item.set_enabled(has_long and not dec)
 
   def refresh(self):
     for key, item in self._refresh_toggles:
@@ -81,7 +119,17 @@ class AlphaLongitudinalToggles:
   @staticmethod
   def _confirm(item, callback) -> None:
     content = f"<h1>{item.title}</h1><br><p>{item.description}</p>"
-    gui_app.push_widget(ConfirmDialog(content, tr("Enable"), rich=True, callback=callback))
+    # The store still holds the old value until the driver answers, so a switch that
+    # follows the store would flip back behind the dialog. Paused for the dialog's life,
+    # then re-read through the callback's own set_state/refresh path.
+    toggle = item.action_item.toggle
+    toggle.set_sync_paused(True)
+
+    def on_result(result: DialogResult):
+      toggle.set_sync_paused(False)
+      callback(result)
+
+    gui_app.push_widget(ConfirmDialog(content, tr("Enable"), rich=True, callback=on_result))
 
   def _on_alpha_long(self, state: bool):
     if not state:

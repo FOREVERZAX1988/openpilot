@@ -121,6 +121,24 @@ def parse_params_keys() -> dict[str, str]:
   return out
 
 
+
+def parse_param_types() -> dict[str, str]:
+  """name -> declared type (BOOL/INT/FLOAT/STRING/JSON/BYTES).
+
+  Same walk as parse_params_keys so both agree on what an entry looks like; the
+  type is the first scalar-type token inside the attribute list, which is the
+  only place one can appear before the default string. Needed because a type
+  change (DynamicTFollowLC FLOAT -> INT) leaves values already on disk that no
+  longer cast, and every other check in this file compares defaults only.
+  """
+  out: dict[str, str] = {}
+  body = r'[^{}"]*(?:"[^"]*"[^{}"]*)*'
+  for m in re.finditer(r'\{"([A-Za-z_][A-Za-z0-9_]*)",\s*\{(' + body + r')\}', read(PARAMS_KEYS)):
+    t = re.search(r'\b(BOOL|INT|FLOAT|STRING|JSON|BYTES)\b', m.group(2))
+    if t:
+      out[m.group(1)] = t.group(1)
+  return out
+
 def parse_tuning_levels() -> dict[str, int]:
   """name -> declared tuning_level, for the keys that declare one.
 

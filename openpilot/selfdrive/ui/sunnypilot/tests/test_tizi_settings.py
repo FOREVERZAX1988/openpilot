@@ -33,8 +33,13 @@ def test_moved_switches_appear_once(params):
   assert developer._alpha_long_toggle not in developer._scroller._items
 
   alpha = AlphaLongitudinalToggles()
+  # the five DEC trigger switches (upstream 29174dca7) are appended after the DEC toggle: they can
+  # only restrict a hand-over to the model, never cause one, so they follow the switch that owns DEC.
   assert [key for key, _ in alpha._refresh_toggles] == [
-    "AlphaLongitudinalEnabled", "ExperimentalMode", "ExperimentalModeSetSpeed", "ExperimentalModeLeadGap"]
+    "AlphaLongitudinalEnabled", "ExperimentalMode", "ExperimentalModeSetSpeed", "ExperimentalModeLeadGap",
+    "DynamicExperimentalControl",
+    "DynamicExperimentalTriggerCurve", "DynamicExperimentalTriggerLead", "DynamicExperimentalTriggerSignal",
+    "DynamicExperimentalTriggerStopLight", "DynamicExperimentalTriggerLowSpeed"]
 
 
 def test_alpha_longitudinal_heads_cruise(params, monkeypatch):

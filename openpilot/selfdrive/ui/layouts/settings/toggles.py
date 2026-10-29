@@ -3,8 +3,10 @@ from openpilot.common.params import Params, UnknownKeyName
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.list_view import ListItem, multiple_button_item, toggle_item
 from openpilot.system.ui.widgets.scroller_tici import Scroller
+from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog, alert_dialog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr, tr_noop
+from openpilot.system.ui.widgets import DialogResult
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.layouts.settings.initial_cruise_speed import InitialCruiseSpeedControl
 
@@ -27,13 +29,13 @@ PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 # Description constants
 DESCRIPTIONS = {
   "OpenpilotEnabledToggle": tr_noop(
-    "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. " +
+    "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. "
     "Your attention is required at all times to use this feature."
   ),
   "DisengageOnAccelerator": tr_noop("When enabled, pressing the accelerator pedal will disengage sunnypilot."),
   "LongitudinalPersonality": tr_noop(
-    "Standard is recommended. In aggressive mode, sunnypilot will follow lead cars closer and be more aggressive with the gas and brake. " +
-    "In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with " +
+    "Standard is recommended. In aggressive mode, sunnypilot will follow lead cars closer and be more aggressive with the gas and brake. "
+    "In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with "
     "your steering wheel distance button."
   ),
   "AccelPersonalityEnabled": tr_noop(
@@ -43,7 +45,7 @@ DESCRIPTIONS = {
     "Eco is gentlest, Normal balances a prompt start with smooth catch-up, and Sport is more responsive."
   ),
   "IsLdwEnabled": tr_noop(
-    "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line " +
+    "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line "
     "without a turn signal activated while driving over 31 mph (50 km/h)."
   ),
   "AlwaysOnDM": tr_noop("The driver monitoring system can be toggled on/off, but long-term activation is recommended"),
@@ -66,6 +68,7 @@ class TogglesLayout(Widget):
   def __init__(self):
     super().__init__()
     self._params = Params()
+    self._is_release = False  # self._params.get_bool("IsReleaseBranch")
 
     # param, title, desc, icon, needs_restart
     self._toggle_defs = {
@@ -74,6 +77,12 @@ class TogglesLayout(Widget):
         DESCRIPTIONS["OpenpilotEnabledToggle"],
         "chffr_wheel.png",
         True,
+      ),
+      "ExperimentalMode": (
+        lambda: tr("Experimental Mode"),
+        "",
+        "experimental_white.png",
+        False,
       ),
       "DisengageOnAccelerator": (
         lambda: tr("Disengage on Accelerator Pedal"),
@@ -216,6 +225,7 @@ class TogglesLayout(Widget):
         self._toggles["DistractionDetectionLevel"] = self._distraction_detection_level
         self._update_distraction_detection_visibility()
 
+    self._update_experimental_mode_icon()
     self._scroller = Scroller(list(self._toggles.values()), line_separator=True, spacing=0)
 
     ui_state.add_engaged_transition_callback(self._update_toggles)
@@ -232,27 +242,54 @@ class TogglesLayout(Widget):
     self._scroller.show_event()
     self._update_toggles()
 
-  def _toggle_state(self, param: str) -> bool:
-    if param in DEFAULT_ON_PARAMS:
-      return self._params.get(param, return_default=True)
-    return self._params.get_bool(param)
-
   def _update_toggles(self):
     ui_state.update_params()
     accel_controller_enabled = self._params.get_bool("AccelPersonalityEnabled")
 
+    e2e_description = tr(
+      "sunnypilot defaults to driving in chill mode. Experimental mode enables alpha-level features that aren't ready for chill mode. "
+      "Experimental features are listed below:<br>"
+      "<h4>End-to-End Longitudinal Control</h4><br>"
+      "Let the driving model control the gas and brakes. sunnypilot will drive as it thinks a human would, including stopping for red lights and stop signs. "
+      "Since the driving model decides the speed to drive, the set speed will only act as an upper bound. This is an alpha quality feature; "
+      "mistakes should be expected.<br>"
+      "<h4>New Driving Visualization</h4><br>"
+      "The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. "
+      "The Experimental mode logo will also be shown in the top right corner."
+    )
+
     if ui_state.CP is not None:
       if ui_state.has_longitudinal_control:
+        self._toggles["ExperimentalMode"].action_item.set_enabled(True)
+        self._toggles["ExperimentalMode"].set_description(e2e_description)
         self._long_personality_setting.action_item.set_enabled(True)
         self._accel_controller_enabled.action_item.set_enabled(True)
         self._accel_personality_setting.action_item.set_enabled(True)
       else:
         # no long for now
+        self._toggles["ExperimentalMode"].action_item.set_enabled(False)
+        self._toggles["ExperimentalMode"].action_item.set_state(False)
         self._long_personality_setting.action_item.set_enabled(False)
         self._accel_controller_enabled.action_item.set_enabled(False)
         self._accel_personality_setting.action_item.set_enabled(False)
+        self._clear_experimental_mode()
+
+        unavailable = tr("Experimental mode is currently unavailable on this car since the car's stock ACC is used for longitudinal control.")
+
+        long_desc = unavailable + " " + tr("sunnypilot longitudinal control may come in a future update.")
+        if ui_state.CP.alphaLongitudinalAvailable:
+          if self._is_release:
+            long_desc = unavailable + " " + tr("An alpha version of sunnypilot longitudinal control can be tested, along with "
+                                               "Experimental mode, on non-release branches.")
+          else:
+            long_desc = tr("Enable the sunnypilot longitudinal control (alpha) toggle to allow Experimental mode.")
+
+        self._toggles["ExperimentalMode"].set_description("<b>" + long_desc + "</b><br><br>" + e2e_description)
+    else:
+      self._toggles["ExperimentalMode"].set_description(e2e_description)
 
     self._initial_cruise_speed.action_item.refresh()
+    self._update_experimental_mode_icon()
 
     # TODO: make a param control list item so we don't need to manage internal state as much here
     # refresh toggles from params to mirror external changes
@@ -280,7 +317,72 @@ class TogglesLayout(Widget):
     if "DistractionDetectionLevel" in self._toggles:
       self._toggles["DistractionDetectionLevel"].set_visible(always_on_dm_enabled)
 
+  def _toggle_state(self, param: str) -> bool:
+    if param in DEFAULT_ON_PARAMS:
+      return self._params.get(param, return_default=True)
+    return self._params.get_bool(param)
+
+  def _update_experimental_mode_icon(self):
+    icon = "experimental.png" if self._toggles["ExperimentalMode"].action_item.get_state() else "experimental_white.png"
+    self._toggles["ExperimentalMode"].set_icon(icon)
+
+  def _clear_experimental_mode(self):
+    """Turn the mode off and forget the acknowledgement with it.
+
+    This runs when the car turns out to have no openpilot longitudinal
+    control: leaving ExperimentalModeConfirmed set would mean the mode comes
+    back on without a dialog if the car is later swapped to one that does.
+    """
+    from openpilot.sunnypilot.common.mode_state import MODE_CONFIRMED_PARAM
+
+    self._params.remove("ExperimentalMode")
+    try:
+      self._params.remove(MODE_CONFIRMED_PARAM)
+    except UnknownKeyName:
+      pass
+
+  def _apply_experimental_mode(self, enabled: bool, acknowledged: bool):
+    """Write the mode through the state machine, not straight into the store.
+
+    The ui is one of three writers (the wheel buttons and carrot_server are the
+    others), and only the state machine knows about the Safe Mode lock, the
+    road-state prerequisite and the read-back check. A refusal is reported and
+    the drawn switch is put back, because the store did not change.
+    """
+    from openpilot.sunnypilot.common.mode_state_runtime import ModeStateError, set_experimental_mode
+
+    try:
+      set_experimental_mode(self._params, enabled, acknowledged=acknowledged)
+    except ModeStateError as exc:
+      self._toggles["ExperimentalMode"].action_item.set_state(not enabled)
+      gui_app.push_widget(alert_dialog(str(exc)))
+    finally:
+      self._update_experimental_mode_icon()
+
+  def _handle_experimental_mode_toggle(self, state: bool):
+    from openpilot.sunnypilot.common.mode_state import MODE_CONFIRMED_PARAM
+    confirmed = self._params.get_bool(MODE_CONFIRMED_PARAM)
+    if state and not confirmed:
+      def confirm_callback(result: DialogResult):
+        if result == DialogResult.CONFIRM:
+          self._apply_experimental_mode(True, True)
+        else:
+          self._toggles["ExperimentalMode"].action_item.set_state(False)
+        self._update_experimental_mode_icon()
+
+      # show confirmation dialog
+      content = (f"<h1>{self._toggles['ExperimentalMode'].title}</h1><br>" +
+                 f"<p>{self._toggles['ExperimentalMode'].description}</p>")
+      dlg = ConfirmDialog(content, tr("Enable"), rich=True, callback=confirm_callback)
+      gui_app.push_widget(dlg)
+    else:
+      self._apply_experimental_mode(state, True)
+
   def _toggle_callback(self, state: bool, param: str):
+    if param == "ExperimentalMode":
+      self._handle_experimental_mode_toggle(state)
+      return
+
     self._params.put_bool(param, state, block=True)
     if param == "IsMetric":
       self._update_toggles()

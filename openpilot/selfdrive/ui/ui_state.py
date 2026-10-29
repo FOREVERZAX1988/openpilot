@@ -7,6 +7,7 @@ from openpilot.cereal import messaging, log
 from opendbc.car.structs import car
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.sunnypilot.common.ignition import get_ignition_state
+from openpilot.sunnypilot.common.mode_state import longitudinal_capable
 from openpilot.common.params import Params
 from openpilot.common.realtime import drop_realtime
 from openpilot.common.swaglog import cloudlog
@@ -272,10 +273,13 @@ class UIState(UIStateSP):
     CP_bytes = self.params.get("CarParamsPersistent")
     if CP_bytes is not None:
       self.CP = messaging.log_from_bytes(CP_bytes, car.CarParams)
-      if self.CP.alphaLongitudinalAvailable:
-        self.has_longitudinal_control = self.params.get_bool("AlphaLongitudinalEnabled")
-      else:
-        self.has_longitudinal_control = self.CP.openpilotLongitudinalControl
+      # One definition of the capability, shared with selfdrived's startup cleanup:
+      # asked separately, the switch could be enabled here while selfdrived deleted
+      # the mode it sets.
+      self.has_longitudinal_control = longitudinal_capable(
+        openpilot_longitudinal=self.CP.openpilotLongitudinalControl,
+        alpha_available=self.CP.alphaLongitudinalAvailable,
+        alpha_enabled=self.params.get_bool("AlphaLongitudinalEnabled"))
 
     self.recording_audio = self.params.get_bool("RecordAudio") and self.started
     self.is_metric = self.params.get_bool("IsMetric")

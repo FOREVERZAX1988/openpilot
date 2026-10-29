@@ -5,14 +5,15 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 
-import time
 import os
+import time
 import requests
 from requests.exceptions import RequestException, HTTPError
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.file_chunker import get_chunk_name
 from openpilot.common.hardware.hw import Paths
+from openpilot.common.time_helpers import system_time_valid
 from openpilot.sunnypilot.models.helpers import is_bundle_version_compatible
 from openpilot.sunnypilot.models.mirror import catalog_fetch_candidates
 from openpilot.cereal import custom
@@ -169,6 +170,10 @@ class ModelFetcher:
   # stamped on the big-model catalog: whether it carries the newer catalogs' models
   EXTENDED_KEY = "extended"
 
+  # exponential backoff between failed catalog refreshes (per source)
+  RETRY_BASE_S = 30
+  RETRY_MAX_S = 600
+
   def __init__(self, params: Params):
     self.params = params
     self.model_parser = ModelParser()
@@ -177,6 +182,12 @@ class ModelFetcher:
       for source, (_, suffix) in self.MODEL_SOURCES.items()
     }
     self._refetched: set[str] = set()
+    # Boot-time storm guard. This hw cannot write its RTC (qpnp_rtc -> EINVAL), so every
+    # cold boot the clock reads 1970 until NTP lands; TLS then fails with "certificate is
+    # not yet valid" and each caller used to re-hit every mirror once a second.
+    self._retry_at: dict[str, float] = {}
+    self._failures: dict[str, int] = {}
+    self._time_invalid_logged = False
     self._last_active_json: dict[str, str] | None = None
     self._refetched_extends: bool | None = None
     self._update_active_json(extended=False)
@@ -301,17 +312,45 @@ class ModelFetcher:
         self._refetched.add(source)
         cloudlog.warning(f"Cached models for {source} not valid; refetching once")
 
+    if not system_time_valid():
+      # Do not attempt TLS with a 1970 clock: it can only fail. Hold off and serve the
+      # on-disk cache until NTP has set a plausible time.
+      if not self._time_invalid_logged:
+        cloudlog.warning(f"System time is not valid; holding off catalog fetch for {source}")
+        self._time_invalid_logged = True
+      return self._fallback_to_cache(source, cached_data)
+
+    if time.monotonic() < self._retry_at.get(source, 0.0):
+      return self._fallback_to_cache(source, cached_data, log=False)
+
     fetched_bundles = self._fetch_and_cache_models(source)
     if fetched_bundles is not None:
+      self._failures.pop(source, None)
+      self._retry_at.pop(source, None)
+      if self._time_invalid_logged:
+        cloudlog.info("System time became valid again; catalog fetching resumed")
+        self._time_invalid_logged = False
       return fetched_bundles
 
-    if not cached_data:
-      cloudlog.warning("Failed to fetch fresh data and no cache available")
+    fails = self._failures.get(source, 0) + 1
+    self._failures[source] = fails
+    delay = min(self.RETRY_MAX_S, self.RETRY_BASE_S * 2 ** (fails - 1))
+    self._retry_at[source] = time.monotonic() + delay
+    cloudlog.warning(f"Model catalog fetch for {source} failed ({fails}x); backing off {delay}s")
+    return self._fallback_to_cache(source, cached_data)
 
-    cloudlog.warning("Failed to fetch fresh data. Using expired cache as fallback")
+  def _fallback_to_cache(self, source: str, cached_data: dict, log: bool = True) -> list[custom.ModelManagerSP.ModelBundle]:
+    """Serve whatever is on disk; used both for backoff and for an unusable clock."""
+    if not cached_data:
+      if log:
+        cloudlog.warning(f"Failed to fetch fresh data and no cache available for {source}")
+      return []
+    if log:
+      cloudlog.warning(f"Failed to fetch fresh data. Using expired cache as fallback for {source}")
     try:
       return self.model_parser.parse_models(cached_data)
     except Exception:
+      cloudlog.warning(f"Failed to parse cached models for {source}", exc_info=True)
       return []
 
 
@@ -341,5 +380,3 @@ if __name__ == "__main__":
       model_overrides = {override.key: override.value for override in bundle.overrides}
       print(f"Bundle: {bundle.internalName}, Type: {model.type}, Status: {bundle.status}, Overrides: {model_overrides}")
       print(f"Artifact: {model.artifact.fileName}, Download URI: {model.artifact.downloadUri.uri}")
-      if model.artifact.chunks:
-        print(f"Contains {len(model.artifact.chunks)} chunks.")

@@ -59,7 +59,6 @@ from openpilot.sunnypilot.modeld_v2.frame_fusion import fused_with_warp
 from openpilot.sunnypilot.modeld_v2.model_adapters import get_model_adapter
 from openpilot.sunnypilot.models.helpers import get_active_bundle
 from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeLaneChangeController
-from openpilot.sunnypilot import jetlink_adapter
 
 PROCESS_NAME = "openpilot.selfdrive.modeld.modeld_tinygrad"
 BIG_MODEL_TIMEOUT = 60
@@ -307,6 +306,24 @@ class LoopTiming:
       cloudlog.warning("modeld loop timing: " + " ".join(parts))
 
 
+def car_params(params: Params) -> bytes:
+  """CarParams, or the car's own persisted one while the driving view is previewed.
+
+  Same contract as selfdrive/modeld/modeld.py: CarParams is CLEAR_ON_MANAGER_START
+  and only card writes it, so offroad the blocking read never returns. The stock
+  modeld already falls back to CarParamsPersistent for the preview; this runner
+  did not, so with the tinygrad runner selected the preview stayed on a bare
+  camera feed with no path drawn. Offroad without the preview nothing changes:
+  the read blocks for card exactly as before.
+  """
+  cp = params.get("CarParams")
+  if cp is None and params.get_bool("IsOnroadPreview"):
+    cp = params.get("CarParamsPersistent")
+  if cp is None:
+    cp = params.get("CarParams", block=True)
+  return cp
+
+
 def main(demo=False):
   cloudlog.warning("modeld init")
 
@@ -315,12 +332,12 @@ def main(demo=False):
 
   CHESTNUT = _find_driving_pkl(get_active_bundle(chestnut=True)) is not None and \
     (chestnut_present() or jetlink_adapter.chestnut_cable())
-  jetlink_adapter.prepare(CHESTNUT)  # before going realtime
   if CHESTNUT:
     from tinygrad.runtime.ops_amd import AMDDevice
     AMDDevice.wait_timeout_ms = 3000
   # before going realtime: prepare() starts tinygrad's device thread, which would inherit FIFO 54 on core 7.
-  # prepare(chestnut) itself no-ops beside a chestnut, so call it unconditionally.
+  # It must come after the AMDDevice settings above: prepare() starts that thread, which would otherwise
+  # take the old wait timeout. prepare(chestnut) itself no-ops beside a chestnut, so call it unconditionally.
   jetlink_adapter.prepare(CHESTNUT)
 
   params = Params()
@@ -439,7 +456,7 @@ def main(demo=False):
   if demo:
     CP = get_demo_car_params()
   else:
-    CP = messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams)
+    CP = messaging.log_from_bytes(car_params(params), car.CarParams)
   cloudlog.info("modeld got CarParams: %s", CP.brand)
 
   # TODO Move smooth seconds to action function

@@ -173,7 +173,6 @@ class Multilang:
       po_path = TRANSLATIONS_DIR.joinpath(f'app_{self._language}.po')
       self._translations, self._plurals = load_translations(po_path)
       self._plural_selector = PLURAL_SELECTORS.get(self._language, lambda n: 0)
-      cloudlog.debug(f"Loaded translations for language: {self._language}")
     except FileNotFoundError:
       cloudlog.error(f"No translation file found for language: {self._language}, using default.")
       self._translations = {}
@@ -183,6 +182,28 @@ class Multilang:
     self._params.put("LanguageSetting", language_code, block=True)
     self._language = language_code
     self.setup()
+
+  def param_language(self) -> str | None:
+    """The language currently stored in Params, or None if it can't be used.
+
+    Read-only: this is the "what should we be showing" probe used to resync a UI
+    that was started before the param was readable.
+    """
+    if self._params is None:
+      return None
+    try:
+      code = str(self._params.get("LanguageSetting")).removeprefix("main_")
+    except Exception:  # BROAD_EXCEPT_OK - a broken Params backend must not kill the UI
+      return None
+    return code if code in self.codes else None
+
+  def reload(self, language_code: str) -> bool:
+    """Apply a language without writing it back to Params. True if it changed."""
+    if language_code == self._language or language_code not in self.codes:
+      return False
+    self._language = language_code
+    self.setup()
+    return True
 
   def tr(self, text: str) -> str:
     return self._translations.get(text, text) or text
@@ -201,9 +222,16 @@ class Multilang:
     self.codes = {v: k for k, v in self.languages.items()}
 
     if self._params is not None:
-      lang = str(self._params.get("LanguageSetting")).removeprefix("main_")
+      raw = self._params.get("LanguageSetting")
+      lang = str(raw).removeprefix("main_")
       if lang in self.codes:
         self._language = lang
+      else:
+        # 静默回落会把整机 UI 变成英文且没人知道原因（开机那一瞬间参数目录还在
+        # swap/copy 时 get() 会返回 None）。留一条证据，别再哑掉。
+        cloudlog.warning(f"LanguageSetting={raw!r} unsupported -> UI language stays {self._language!r}")
+    else:
+      cloudlog.warning("Params backend unavailable at import -> UI language stays 'en'")
 
 
 multilang = Multilang()
