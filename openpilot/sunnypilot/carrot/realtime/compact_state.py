@@ -39,7 +39,7 @@ MODEL_LEAD_SCHEMA = (
 # liveTracks (Car.RadarData) points. This is the only source that tells the
 # browser which radar saw a target, so Drive Insights needs it to separate
 # front / SCC / corner returns instead of showing SCC leads alone.
-# livePose 의 XYZMeasurement. std 와 valid 로 품질 게이트를 건다.
+# deviceMotion 의 XYZMeasurement. std 와 valid 로 품질 게이트를 건다.
 XYZ_MEASUREMENT_SCHEMA = (
   ("x", "f32"),
   ("y", "f32"),
@@ -322,7 +322,7 @@ SERVICE_SCHEMAS: dict[str, tuple[int, tuple[tuple[Any, ...], ...]]] = {
     ("frameDropPerc", "f32"),
     ("modelExecutionTime", "f32"),
   )),
-  "liveCalibration": (10, (
+  "extrinsicsCalibration": (10, (
     ("calStatus", ("enum", ("uncalibrated", "calibrated", "invalid", "recalibrating"))),
     ("calCycle", "i32"),
     ("calPerc", "i8"),
@@ -330,14 +330,14 @@ SERVICE_SCHEMAS: dict[str, tuple[int, tuple[tuple[Any, ...], ...]]] = {
     ("rpyCalib", "f32_list"),
     ("height", "f32_list"),
   )),
-  "roadCameraState": (11, (
+  "narrowRoadCameraState": (11, (
     ("frameId", "u32"),
     ("sensor", ("enum", ("unknown", "ar0231", "ox03c10", "os04c10"))),
     # AR 정합의 최우선 필드. 이게 없으면 표시 중인 영상 프레임과 model /
     # odometry 를 "시간" 기준으로 묶을 수 없다(frameId 만으로는 부족).
     ("timestampEof", "u64"),
   )),
-  "lateralPlan": (12, (
+  "lateralPlanDEPRECATED": (12, (
     ("useLaneLines", "bool"),
     ("latDebugText", "text"),
     ("position", ("struct", XYZ_SCHEMA)),
@@ -368,17 +368,17 @@ SERVICE_SCHEMAS: dict[str, tuple[int, tuple[tuple[Any, ...], ...]]] = {
       ("curvature", "f32"),
     ))),
   )),
-  "liveDelay": (15, (
+  "lateralDelay": (15, (
     ("lateralDelay", "f32"),
     ("calPerc", "i8"),
   )),
-  "liveTorqueParameters": (16, (
+  "lateralTorqueParameters": (16, (
     ("liveValid", "bool"),
     ("latAccelFactorFiltered", "f32"),
     ("frictionCoefficientFiltered", "f32"),
     ("calPerc", "i8"),
   )),
-  "liveParameters": (17, (
+  "vehicleParameters": (17, (
     ("angleOffsetDeg", "f32"),
     ("steerRatio", "f32"),
   )),
@@ -416,7 +416,7 @@ SERVICE_SCHEMAS: dict[str, tuple[int, tuple[tuple[Any, ...], ...]]] = {
     ("route", ("struct", NAVI_ROUTE_SCHEMA)),
     ("navigationStatus", ("struct", NAVI_STATUS_SCHEMA)),
   )),
-  "livePose": (20, (
+  "deviceMotion": (20, (
     ("orientationNED", ("struct", XYZ_MEASUREMENT_SCHEMA)),
     ("velocityDevice", ("struct", XYZ_MEASUREMENT_SCHEMA)),
     ("accelerationDevice", ("struct", XYZ_MEASUREMENT_SCHEMA)),
@@ -448,20 +448,20 @@ COMPACT_SERVICE_INTERVALS = {
   # AR anchor inputs. Full 20Hz - anchor hold between frames needs every sample.
   # Only subscribed while an "ar" lease is held, so the cost is opt-in.
   "cameraOdometry": 0.05,
-  "livePose": 0.05,
+  "deviceMotion": 0.05,
   # Navi 는 원래 2Hz 발행이라 그대로 따른다.
   "carrotNavi": 0.5,
-  "lateralPlan": 0.05,
+  "lateralPlanDEPRECATED": 0.05,
   "carrotMan": 0.1,
-  "roadCameraState": 0.25,
+  "narrowRoadCameraState": 0.25,
   "deviceState": 0.5,
   "peripheralState": 0.5,
   "gpsLocationExternal": 0.5,
   "selfdriveState": 0.2,
-  "liveCalibration": 0.25,
-  "liveParameters": 0.25,
-  "liveTorqueParameters": 0.25,
-  "liveDelay": 0.25,
+  "extrinsicsCalibration": 0.25,
+  "vehicleParameters": 0.25,
+  "lateralTorqueParameters": 0.25,
+  "lateralDelay": 0.25,
 }
 COMPACT_SERVICE_INTERVAL_DEFAULT = 0.05
 COMPACT_BATCH_WINDOW_SECONDS = 0.006

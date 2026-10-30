@@ -363,6 +363,17 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("系统初始化中"),
   },
 
+  # cp impact dashcam: the global UI renders the cancellable countdown, including over settings.
+  EventName.impactDetected: {
+    ET.PERMANENT: Alert("", "", AlertStatus.normal, AlertSize.none, Priority.LOW,
+                        VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
+  EventName.impactDashcamReboot: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("重启进入行车记录仪模式"),
+    ET.NO_ENTRY: NoEntryAlert("行车记录仪模式"),
+    ET.PERMANENT: NormalPermanentAlert("重启进入行车记录仪模式", priority=Priority.LOW),
+  },
+
   EventName.startup: {
     ET.PERMANENT: StartupAlert("请随时准备接管您的车辆控制权")
   },
@@ -1007,6 +1018,10 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventName.userBookmark: {
     ET.PERMANENT: NormalPermanentAlert("书签已保存", duration=1.5),
+  },
+
+  EventName.userBookmarkNotPaired: {
+    ET.PERMANENT: NormalPermanentAlert("未配对设备", "书签需要先配对设备", duration=2.0),
   },
 }
 

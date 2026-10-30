@@ -53,12 +53,18 @@ MODES = ('off', 'usb', 'ios', 'wifi')
 # the params jetlink reads and writes, all declared in params_keys.h. big_model
 # and catalog are the model manager's big-model slot and catalog
 # (models.helpers.ACTIVE_BUNDLE_KEYS['chestnut'] and ModelFetcher's cache): the
-# owner cannot import the model manager, so they are written out here
-_Keys = namedtuple('_Keys', 'link offroad progress spec pointers big_model catalog charge_phone preview')
+# owner cannot import the model manager, so they are written out here.
+#
+# Both fork keys are carried at once: `preview` is ours (the fork is drawing the
+# onroad UI while parked), `select` is upstream's (where a newer pick made on the
+# server is written). jetlink reads only the ones its own version declares, so
+# keeping both lets this adapter drive either a v0.8.10 or a v0.8.12 package --
+# the submodule is held at v0.8.10 + the iOS NCM guard for now.
+_Keys = namedtuple('_Keys', 'link offroad progress spec pointers big_model catalog charge_phone preview select')
 KEYS = _Keys(link='JetlinkLink', offroad='IsOffroad', progress='AcceleratorProgress', spec='JetlinkSpec',
              pointers='JetlinkModelPointers', big_model='ModelManager_ActiveBundleChestnut',
              catalog='ModelManager_ModelsCache_Chestnut', charge_phone='JetlinkChargePhone',
-             preview='IsOnroadPreview')
+             preview='IsOnroadPreview', select='ModelManager_DownloadRef')
 
 _AGNOS = os.path.isfile('/AGNOS')
 
@@ -141,6 +147,21 @@ def _adapter_class():
       from openpilot.sunnypilot.jetlink_adapter import hevc_venus
       encoder = hevc_venus.make_encoder if hevc_venus.available() else None
       return dataclasses.replace(super().model_face(), hevc_encoder=encoder)
+
+    def action_function(self):
+      # modeld_v2 passes Blendful's correction as a callback on the raw curvature;
+      # stock modeld passes none. Stock's lateral smoothing is off (LAT_SMOOTH_SECONDS
+      # 0), so the correction added to its answer is the one modeld_v2 adds before smoothing
+      from openpilot.selfdrive.modeld.modeld import MIN_LAT_CONTROL_SPEED, get_action_from_model
+
+      def action(model_output, prev_action, lat_action_t, long_action_t, v_ego, blendful=None):
+        action = get_action_from_model(model_output, prev_action, lat_action_t, long_action_t, v_ego)
+        if blendful is not None:
+          correction = blendful(action.desiredCurvature)
+          if v_ego > MIN_LAT_CONTROL_SPEED:
+            action.desiredCurvature += correction
+        return action
+      return action
 
     def engaged(self, sm) -> bool:
       # selfdrived's enabled or mads.enabled, as controlsd republishes them.

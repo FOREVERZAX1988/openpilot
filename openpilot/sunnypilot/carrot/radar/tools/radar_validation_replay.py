@@ -304,6 +304,9 @@ class RadarFrame:
   lane_change_model_path: tuple[tuple[float, float], ...] = ()
   lane_change_device_yaw: float | None = None
   recorded_radar_track_mode: int | None = None
+  model_velocity: tuple[float, ...] = ()
+  model_lane_change_state: str = "unknown"
+  stopping_lane_geometry_valid: bool = False
 
 
 @dataclass(frozen=True)
@@ -991,7 +994,12 @@ def _controller_model(frame: RadarFrame) -> Any:
       )
       for lead in frame.model_leads
     ),
-    velocity=SimpleNamespace(x=(frame.v_ego,)),
+    velocity=SimpleNamespace(x=frame.model_velocity or (frame.v_ego,)),
+    meta=SimpleNamespace(laneChangeState=frame.model_lane_change_state),
+    laneLines=tuple(
+      SimpleNamespace(x=tuple(p[0] for p in line), y=tuple(p[1] for p in line))
+      for line in frame.lane_lines
+    ) if frame.stopping_lane_geometry_valid else (),
     laneLineProbs=frame.lane_probs,
   )
 
@@ -2993,7 +3001,7 @@ def _yaw_metadata(
   ):
     value = _finite(getattr(angular_velocity, "z", math.nan), math.nan)
     if math.isfinite(value):
-      return device_yaw_to_radar(value), False, "livePose"
+      return device_yaw_to_radar(value), False, "deviceMotion"
   ratio = max(abs(_finite(steer_ratio, 14.0)), 1.0)
   base = max(abs(_finite(wheelbase, 2.8)), 1.5)
   road_wheel_angle = math.radians(_finite(steering_angle_deg) / ratio)
@@ -3094,8 +3102,8 @@ def load_frames(log_path: Path, *, radar_track_flip: bool | None = None) -> list
     except Exception:
       continue
     event_ns = int(event.logMonoTime)
-    if which == "qRoadEncodeIdx" and qcamera_start_eof_ns == 0:
-      qcamera_start_eof_ns = int(event.qRoadEncodeIdx.timestampEof)
+    if which == "qNarrowRoadEncodeIdx" and qcamera_start_eof_ns == 0:
+      qcamera_start_eof_ns = int(event.qNarrowRoadEncodeIdx.timestampEof)
     elif which == "liveTracks":
       event_t = event_ns / 1e9
       reconstructed = corner_tracker.live_tracks_at(
@@ -3211,15 +3219,15 @@ def load_frames(log_path: Path, *, radar_track_flip: bool | None = None) -> list
       latest_left_blindspot, latest_right_blindspot = bool(event.carState.leftBlindspot), bool(event.carState.rightBlindspot)
       latest_steering_angle_deg = _finite(event.carState.steeringAngleDeg)
       latest_steering_rate_deg_s = _finite(event.carState.steeringRateDeg)
-    elif which == "livePose":
-      angular_velocity = event.livePose.angularVelocityDevice
+    elif which == "deviceMotion":
+      angular_velocity = event.deviceMotion.angularVelocityDevice
       latest_live_pose = SimpleNamespace(
         angularVelocityDevice=SimpleNamespace(
           valid=bool(angular_velocity.valid),
           z=_finite(angular_velocity.z, math.nan),
         ),
-        inputsOK=bool(event.livePose.inputsOK),
-        sensorsOK=bool(event.livePose.sensorsOK),
+        inputsOK=bool(event.deviceMotion.inputsOK),
+        sensorsOK=bool(event.deviceMotion.sensorsOK),
       )
       latest_live_pose_ns = event_ns
     elif which == "longitudinalPlan":
@@ -3284,6 +3292,19 @@ def load_frames(log_path: Path, *, radar_track_flip: bool | None = None) -> list
         video_time_s=aligned_video_time_s(qcamera_start_eof_ns, latest_model_eof_ns),
         path_y_stds=latest_path_y_stds,
         lane_stds=latest_lane_stds,
+        model_velocity=tuple(float(v) for v in event.modelV2.velocity.x),
+        model_lane_change_state=str(event.modelV2.meta.laneChangeState),
+        # _copy_model sanitizes display coordinates. Never let its substituted
+        # zeros turn invalid raw geometry into control corroboration.
+        stopping_lane_geometry_valid=all(
+          math.isfinite(float(value))
+          for values in (
+            event.modelV2.position.x, event.modelV2.position.y,
+            event.modelV2.laneLineProbs, event.modelV2.laneLineStds,
+            *(line.x for line in event.modelV2.laneLines),
+            *(line.y for line in event.modelV2.laneLines),
+          ) for value in values
+        ),
         steering_angle_deg=latest_steering_angle_deg,
         steering_rate_deg_s=latest_steering_rate_deg_s,
         yaw_rate_rad_s=yaw_rate,

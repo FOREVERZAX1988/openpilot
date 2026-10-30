@@ -238,7 +238,6 @@ msgid "Actuator Delay:"
 msgstr "執行器延遲："
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
-#: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. Not available with the Default model."
 msgstr ""
 
@@ -349,6 +348,12 @@ msgstr "Alpha 縱向控制將在下一個停車點接管"
 
 msgid "Alpha longitudinal waits for it"
 msgstr "Alpha 縱向控制會等待其關閉"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid ""
+"Alpha. Nudges the car toward the middle of the lane, more when the lines are clear.\n"
+"Yields around obstacles. Not with the Default model."
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Always On"
@@ -636,6 +641,7 @@ msgid "Below this speed, the blinker pauses steering."
 msgstr "低於此速度時，打轉向燈會暫停轉向。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Big Model"
 msgstr "大模型"
 
@@ -3108,6 +3114,10 @@ msgstr "LTE"
 msgid "Label what the front radar tracks on the road view.<br>Speed Only: relative speed on moving tracks. Speed + Distance: adds lateral offset and distance. Full: every measured point, plus a marker for static returns.<br><br>Display only. It does not change how the car drives."
 msgstr "在道路畫面上標註前向雷達追蹤的目標。<br>僅速度：只在移動目標上顯示相對速度；速度+距離：額外顯示橫向偏移與距離；全部：顯示所有測量點，靜止點以標記表示。<br><br>僅供顯示用途，不改變車輛的駕駛行為。"
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Lane Center Assist (Alpha)"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/lane_change_settings.py
 msgid "Lane Change Smoothing"
 msgstr "變道平滑"
@@ -3138,6 +3148,10 @@ msgstr "車道線曲率速度門檻"
 #: selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Lane Right"
 msgstr "向右變道"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "Lane turn desires work at or below this speed."
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/device.py
 msgid "Language changed. Restart the UI to apply."
@@ -3205,6 +3219,12 @@ msgstr "引匯出發警報（測試版）"
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Lead Preview"
 msgstr "前车預判"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid ""
+"Learns how long your car takes to respond to steering as you drive.\n"
+"On is stock openpilot."
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
@@ -4705,6 +4725,14 @@ msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid ""
+"Runs big models on a computer or phone joined to the comma.\n"
+"USB for a Mac, Jetson, Linux PC or Android. iOS for an iPhone or iPad.\n"
+"Wi-Fi for a computer or phone whose hotspot the comma joined.\n"
+"USB and iOS take the port and turn ADB off. Wi-Fi leaves both alone."
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid ""
 "Runs big models on a computer or phone plugged into the comma.\n"
 "USB for a Mac, Jetson, Linux PC or Android. iOS for an iPhone or iPad.\n"
 "Turns off ADB. The small model drives until the big model is ready."
@@ -4924,6 +4952,10 @@ msgstr "選取語言"
 msgid "Select a non-Default model to use Blendful."
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Select a non-Default model to use Lane Center Assist."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/vehicle/platform_selector.py
 msgid "Select a vehicle"
 msgstr "選擇車輛"
@@ -5027,6 +5059,12 @@ msgstr "與 comma 分享您的資料，能協助改善所有人的 openpilot 與
 #: selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Shift the auto turn trigger point earlier or later."
 msgstr "讓自動過彎觸發點提前或延後。"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid ""
+"Shifts where the model thinks the camera sits.\n"
+"Positive moves the car left, negative right. Not with the Default model."
+msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Short"
@@ -5153,6 +5191,7 @@ msgstr ""
 "可單獨使用，也可與“地圖彎道減速”配合。"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Small Model"
 msgstr "小模型"
 
@@ -5632,6 +5671,12 @@ msgstr "重置無法撤銷。你已被警告過。"
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "The set speed will only act as an upper bound."
 msgstr "設定速度僅作為上限。"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid ""
+"The software delay used while live steer delay is off.\n"
+"Default is 0.20 s."
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "The steering tune used while a big model drives."
@@ -6297,6 +6342,12 @@ msgstr "廣角相機"
 msgid "Width of the coasting band, in percent. Only read while Cruise Coasting is on; 0 disables the relief without touching the toggle."
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid ""
+"With the blinker on below the lane turn speed, plans the turn that way.\n"
+"Stops the car picking the wrong turn at a red light."
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/layouts/settings/developer.py
 msgid "Would you like to delete this log?"
 msgstr "您想刪除此日誌嗎？"
@@ -6510,6 +6561,10 @@ msgstr "盲區監測延遲"
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid "cache size"
 msgstr "快取大小"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "camera offset"
+msgstr ""
 
 #: selfdrive/ui/mici/layouts/onboarding.py
 #: selfdrive/ui/mici/layouts/settings/network/esim_ui.py
@@ -7175,6 +7230,10 @@ msgstr "km/h"
 msgid "kph"
 msgstr ""
 
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "lane center assist"
+msgstr ""
+
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "lane change"
 msgstr "變道"
@@ -7182,6 +7241,14 @@ msgstr "變道"
 #: selfdrive/ui/mici/layouts/settings/toggles.py
 msgid "lane departure warnings"
 msgstr "車道偏移警示"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "lane turn desires"
+msgstr ""
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "lane turn speed"
+msgstr ""
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/device.py
 msgid "language"
@@ -7226,6 +7293,10 @@ msgstr "較少限制"
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "less-restrict"
 msgstr "較少限制"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "live steer delay"
+msgstr ""
 
 #: system/ui/mici_updater.py
 msgid "loading"
@@ -7285,6 +7356,10 @@ msgstr ""
 #: selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "manual realtime"
 msgstr "手動實時"
+
+#: selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "manual steer delay"
+msgstr ""
 
 #: selfdrive/ui/sunnypilot/mici/layouts/cruise.py
 msgid "map"

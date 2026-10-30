@@ -13,15 +13,15 @@ THROTTLE_INTERVALS = {
   "carState": 1 / 30,
   "controlsState": 1 / 30,
   "carControl": 1 / 30,
-  "roadCameraState": 0.25,
+  "narrowRoadCameraState": 0.25,
   "deviceState": 0.5,
   "peripheralState": 0.5,
   "gpsLocationExternal": 0.5,
   "selfdriveState": 0.2,
-  "liveCalibration": 0.25,
-  "liveParameters": 0.25,
-  "liveTorqueParameters": 0.25,
-  "liveDelay": 0.25,
+  "extrinsicsCalibration": 0.25,
+  "vehicleParameters": 0.25,
+  "lateralTorqueParameters": 0.25,
+  "lateralDelay": 0.25,
 }
 
 

@@ -7,6 +7,7 @@ from openpilot.common.hardware import COMMA_HARDWARE
 from openpilot.common.realtime import Priority, config_realtime_process, pick_online_core, set_core_affinity
 from openpilot.common.watchdog import kick_watchdog
 from openpilot.system.ui.lib.application import gui_app
+from openpilot.selfdrive.ui.impact_dashcam import ImpactDashcamPrompt
 from openpilot.selfdrive.ui.layouts.main import MainLayout
 from openpilot.selfdrive.ui.mici.layouts.main import MiciMainLayout
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -45,6 +46,9 @@ def main():
     MiciMainLayout()
 
   next_affinity_check = 0.0
+  # Impact dashcam prompt (cp parity): touch-cancellable countdown overlay,
+  # drawn after the layouts so it stays on top of onroad content.
+  impact_prompt = ImpactDashcamPrompt()
   pm = messaging.PubMaster(['uiDebug'])
   for should_render, frame_time, cpu_time in gui_app.render():
     # Tell the manager this process is still making progress. A render loop
@@ -54,6 +58,7 @@ def main():
     ui_state.update()
 
     if should_render:
+      impact_prompt.render()
       # reaffine after power save offlines/onlines our core; rate limited so a
       # pending re-pin cannot turn into a per-frame syscall storm
       now = time.monotonic()

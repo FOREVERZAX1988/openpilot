@@ -324,6 +324,11 @@ class FakeGuiApp:
     # render, which silently drops the panel from the smoke suite entirely.
     return Texture()
 
+  def grayscale_texture(self, path, w=0, h=0):
+    # The pill controls tint their asset gray; the fake returns the same
+    # stand-in texture.
+    return Texture()
+
   def big_ui(self):
     return False
 
