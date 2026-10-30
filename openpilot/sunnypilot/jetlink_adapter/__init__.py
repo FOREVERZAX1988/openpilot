@@ -106,6 +106,13 @@ def chestnut_cable() -> bool:
 
 
 @functools.cache
+def _jetlink_key_fields(keys_cls) -> frozenset[str]:
+  """The param names this jetlink package's Keys declares (it is a dataclass)."""
+  import dataclasses
+  return frozenset(f.name for f in dataclasses.fields(keys_cls))
+
+
+@functools.cache
 def _adapter_class():
   from jetlink.openpilot.interface import Keys
   from jetlink.openpilot.stock import Stock
@@ -113,7 +120,10 @@ def _adapter_class():
   class Adapter(Stock):
     """jetlink.openpilot.interface.Openpilot over this fork: stock openpilot
     but for what follows."""
-    KEYS = Keys(**KEYS._asdict())
+    # Only the keys this jetlink package declares: ours carries `preview` and `select`
+    # together so one adapter can drive either a v0.8.10 (preview) or a v0.8.12 (select)
+    # package, and the dataclass rejects the field it does not know.
+    KEYS = Keys(**{k: v for k, v in KEYS._asdict().items() if k in _jetlink_key_fields(Keys)})
     # MADS's state rides on carControlSP
     IN_CONTROL_SERVICES = IN_CONTROL
     # WARP_DIR stays stock's (openpilot/selfdrive/modeld/models), where modeld's
