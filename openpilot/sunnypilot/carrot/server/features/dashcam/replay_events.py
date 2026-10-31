@@ -443,9 +443,6 @@ class ReplayEventIndexer:
       "carrot", "driving_mode_changed",
     )
 
-  # old route logs decode with the renamed field name
-  _ingest_lateralPlanDEPRECATED = _ingest_lateralPlan
-
   def _ingest_lateralPlan(self, value: Any, log_mono_ns: int) -> None:
     lane_state = _text(value, "laneChangeState").lower()
     direction = _text(value, "laneChangeDirection").lower()
@@ -467,6 +464,11 @@ class ReplayEventIndexer:
         dedupe_key=self._last_lane_direction,
       )
       self._last_lane_direction = ""
+
+  # old route logs decode with the renamed field name. Must bind AFTER the def above:
+  # a class body resolves names top-down, so an alias written before it raises NameError
+  # and takes the whole module down at import time.
+  _ingest_lateralPlanDEPRECATED = _ingest_lateralPlan
 
   @staticmethod
   def _guidance_key(guidance: Any) -> str:

@@ -22,6 +22,7 @@ The scanning and rendering helpers are pure so they can be tested without a Para
 from __future__ import annotations
 
 import html
+import json
 import os
 import re
 from collections.abc import Iterable

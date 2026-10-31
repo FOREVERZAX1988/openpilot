@@ -231,7 +231,9 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     # Update road edges using raw points
     for road_edge in self._road_edges:
       road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, 0.025, 0.0, max_idx, lane_distance)
-    self.blendful.update(self, max_idx, max_distance)
+    # Blendful draws a lane centre line from lanes[1]/[2], same perception data as above:
+    # it must use lane_distance, not the plan-derived max_distance below.
+    self.blendful.update(self, max_idx, lane_distance)
 
     # Update path using raw points
     max_distance = np.clip(path_x_array[-1], MIN_DRAW_DISTANCE, MAX_DRAW_DISTANCE)

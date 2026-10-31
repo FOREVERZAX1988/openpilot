@@ -78,8 +78,6 @@ class Plant:
     car_state = messaging.new_message('carState')
     # sp renamed LiveParameters -> vehicleParameters; the planner reads angleOffsetDeg from it
     vp = messaging.new_message('vehicleParameters')
-    # ICBM picks the gps service from UbloxAvailable, which differs PC vs device: feed both
-    gps_loc = messaging.new_message('gpsLocation')
     gps_ext = messaging.new_message('gpsLocationExternal')
     model = messaging.new_message('modelV2')
     car_state_sp = messaging.new_message('carStateSP')
@@ -149,12 +147,12 @@ class Plant:
           'vehicleParameters': vp.vehicleParameters,
           'carControl': car_control.carControl,
           'controlsState': control.controlsState,
-          'vehicleParameters': vehicle_parameters.vehicleParameters,
           'selfdriveState': ss.selfdriveState,
           'selfdriveStateSP': ss_sp.selfdriveStateSP,
           'modelV2': model.modelV2,
           'carStateSP': car_state_sp.carStateSP,
           'liveMapDataSP': live_map_data_sp.liveMapDataSP,
+          # ICBM picks the gps service from UbloxAvailable, which differs PC vs device: feed both
           'gpsLocation': gps_data.gpsLocation,
           'gpsLocationExternal': gps_ext.gpsLocationExternal})
     self.planner.update(sm)
