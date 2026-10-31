@@ -750,8 +750,8 @@ def render_models_page(state: dict[str, Any], *, saved: int | None = None) -> st
       f'<input type="submit" value="取消下载"></form></div>')
   else:
     download_html = (
-      f'<div class="card"><div class="t">模型状态</div>'
-      f'<div class="cur">没有正在进行的下载</div></div>')
+      '<div class="card"><div class="t">模型状态</div>'
+      '<div class="cur">没有正在进行的下载</div></div>')
 
   def checkbox(name: str, title: str, checked: bool, descr: str = "") -> str:
     d = f'<div class="d2">{html.escape(descr)}</div>' if descr else ""

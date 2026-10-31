@@ -69,10 +69,6 @@ class _Message:
   def narrowRoadEncodeData(self):
     return self._frame
 
-  @property
-  def narrowRoadEncodeData(self):
-    return self._frame
-
 
 class _FakeSock:
   def __init__(self, messages):

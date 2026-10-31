@@ -1,6 +1,5 @@
 from openpilot.common.constants import CV
 from openpilot.common.realtime import DT_MDL
-from .constants import BLINKER_LEFT, BLINKER_RIGHT
 
 def classify_maneuver_type(blinker_state: int,
                            carstate,
@@ -20,11 +19,11 @@ def classify_maneuver_type(blinker_state: int,
   elif v_kph < 40.0 and accel < -1.0:
     score_turn += 1
 
-  # Â÷·Î ¾ø°í edge ¿©À¯µµ ¾øÀ¸¸é turn °¡»ê
+  # ì°¨ë¡œ ì—†ê³  edge ì—¬ìœ ë„ ì—†ìœ¼ë©´ turn ê°€ì‚°
   if v_kph < 40.0 and (not side.lane_available) and (not side.edge_available):
     score_turn += 1
 
-  # Â÷¼±ÀÌ Àß ¾È º¸ÀÌ¸é(±³Â÷·Î µî)
+  # ì°¨ì„ ì´ ìž˜ ì•ˆ ë³´ì´ë©´(êµì°¨ë¡œ ë“±)
   if v_kph < 40.0 and side.lane_exist_count.counter < int(0.5 / DT_MDL):
     score_turn += 1
 

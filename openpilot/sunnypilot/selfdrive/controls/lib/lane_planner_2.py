@@ -129,12 +129,11 @@ class LanePlanner:
     # Find current lanewidth
     current_lane_width = abs(self.rll_y[0] - self.lll_y[0])
 
-    max_updated_count = 10.0 * DT_MDL
     both_lane_available = False
     #speed_lane_width = np.interp(v_ego*3.6, [0., 60.], [2.8, 3.5])
     if l_prob > 0.5 and r_prob > 0.5 and self.lane_change_multiplier > 0.5:
       both_lane_available = True
-      #self.lane_width_updated_count = max_updated_count
+      #self.lane_width_updated_count = 10.0 * DT_MDL
       self.lane_width_estimate.update(current_lane_width)
       self.lane_width_last = self.lane_width_estimate.x
     #elif self.lane_width_updated_count <= 0 and v_ego > 0.1:   # 양쪽차선이 없을때.... 일정시간후(10초)부터 speed차선폭 적용함.

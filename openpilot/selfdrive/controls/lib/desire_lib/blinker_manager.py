@@ -22,7 +22,7 @@ class BlinkerManager:
     self.carrot_cmd_index_last = 0
 
     self.atc_type = ""
-    self.atc_active = 0  # 0: ¾øÀ½, 1: ATC µ¿ÀÛ, 2: Ãæµ¹
+    self.atc_active = 0  # 0: ì—†ìŒ, 1: ATC ë™ì‘, 2: ì¶©ëŒ
     self.blinker_ignore = False
 
   def tick(self):
@@ -65,21 +65,21 @@ class BlinkerManager:
     else:
       self.atc_active = 0
 
-    # ¿îÀüÀÚ¿Í Ãæµ¹ÇÏ¸é ATC ¹«È¿
+    # ìš´ì „ìì™€ ì¶©ëŒí•˜ë©´ ATC ë¬´íš¨
     if driver_blinker_state != BLINKER_NONE and atc_blinker_state != BLINKER_NONE and driver_blinker_state != atc_blinker_state:
       atc_blinker_state = BLINKER_NONE
       self.atc_active = 2
 
     atc_desire_enabled = atc_blinker_state in (BLINKER_LEFT, BLINKER_RIGHT)
 
-    # ignore Ã³¸®
+    # ignore ì²˜ë¦¬
     if driver_blinker_state == BLINKER_NONE:
       self.blinker_ignore = False
     if self.blinker_ignore:
       atc_blinker_state = BLINKER_NONE
       atc_desire_enabled = False
 
-    # Å¸ÀÔ ¹Ù²î¸é 1ÇÁ·¹ÀÓ ¹«½Ã(¾ÈÁ¤È­)
+    # íƒ€ì… ë°”ë€Œë©´ 1í”„ë ˆì„ ë¬´ì‹œ(ì•ˆì •í™”)
     if self.atc_type != atc_type:
       atc_desire_enabled = False
     self.atc_type = atc_type
