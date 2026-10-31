@@ -144,6 +144,9 @@ class ModelsLayout(Widget):
     self._blendful_desc = tr("Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear." +
                              " Yields around obstacles. Not available with the Default model.")
     self.blendful_toggle = toggle_item_sp(tr("Lane Center Assist (Alpha)"), self._blendful_desc, param="Blendful")
+    # The switch owns param "Blendful" and re-reads it every SYNC_INTERVAL; while the
+    # runner cannot honour it we pause that sync (see _update_state) and remember it.
+    self._blendful_sync_paused = False
 
     self.camera_offset = option_item_sp(tr("Adjust Camera Offset"), "CameraOffset", -35, 35,
                                         tr("Virtually shift camera's perspective to move model's center to Left(+ values) or Right (- values)"),
@@ -490,9 +493,21 @@ class ModelsLayout(Widget):
 
     blendful_allowed = ui_state.active_runner_tinygrad
     if blendful_allowed:
+      if self._blendful_sync_paused:
+        self.blendful_toggle.action_item.toggle.set_sync_paused(False)
+        self._blendful_sync_paused = False
       self.blendful_toggle.action_item.set_state(ui_state.params.get_bool("Blendful"))
       self.blendful_toggle.action_item.set_enabled(True)
     else:
+      # The switch owns "Blendful" and re-reads the store every SYNC_INTERVAL (0.5s).
+      # Forcing it off on every frame while the store still said 1 made the two fight:
+      # off here, back on at the next sync, off again the frame after - a ~2 Hz flap on
+      # the panel whenever the Default model (stock runner, cannot run Blendful) is
+      # selected. Pause the sync instead: the greyed-out switch then reads off and stays
+      # off; resuming restores whatever the store holds.
+      if not self._blendful_sync_paused:
+        self.blendful_toggle.action_item.toggle.set_sync_paused(True)
+        self._blendful_sync_paused = True
       self.blendful_toggle.action_item.set_state(False)
       self.blendful_toggle.action_item.set_enabled(False)
 
