@@ -589,8 +589,15 @@ class VCruiseCarrot(VCruiseHelper):
         v_cruise_kph = self.v_ego_kph_set
       if not self.CP.pcmCruise:
         # if stock cruise is completely disabled, then we can use our own set speed logic
-        self.v_cruise_kph = np.clip(v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max)
-        self.v_cruise_cluster_kph = self.v_cruise_kph
+        # V_CRUISE_UNSET is a sentinel for "no set speed", not a speed: clamping it into
+        # [5, 161] publishes 161 km/h on a car that has no setpoint at all. Keep it as-is
+        # so the cluster keeps rendering "--"; every real value is still clamped.
+        if v_cruise_kph == V_CRUISE_UNSET:
+          self.v_cruise_kph = V_CRUISE_UNSET
+          self.v_cruise_cluster_kph = V_CRUISE_UNSET
+        else:
+          self.v_cruise_kph = np.clip(v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max)
+          self.v_cruise_cluster_kph = self.v_cruise_kph
       else:
         if self.speed_from_pcm == 1 or self.pcm_owns_set_speed:
           # The PCM is the source of truth for the set speed (see
@@ -604,8 +611,13 @@ class VCruiseCarrot(VCruiseHelper):
           self.v_cruise_kph = np.clip(v_cruise_kph, 30, self._cruise_speed_max)
           self.v_cruise_cluster_kph = self.v_cruise_kph
     else:
-      self.v_cruise_kph = np.clip(v_cruise_kph, self._cruise_speed_min, self._cruise_speed_max) #max(20, self.v_ego_kph_set) #V_CRUISE_UNSET
-      self.v_cruise_cluster_kph = self.v_cruise_kph #V_CRUISE_UNSET
+      # Cruise is unavailable, so there is no set speed to hold: hand back the sentinel
+      # instead of a clamped number. Clamping here is what put "161 km/h" on the cluster
+      # with cruise switched off (route 00000095, 2026-10-10) - V_CRUISE_UNSET is 255 and
+      # [min, max] is [5, 161]. Restored 2026-10-30; the cp clamp arrived with merge
+      # 564e8e93c8 and silently re-created the bug the docstring above this branch records.
+      self.v_cruise_kph = V_CRUISE_UNSET
+      self.v_cruise_cluster_kph = V_CRUISE_UNSET
       #if self.cruise_state_available_last: # 최초 한번이라도 cruiseState.available이 True였다면
       #  self._lat_enabled = False
 
