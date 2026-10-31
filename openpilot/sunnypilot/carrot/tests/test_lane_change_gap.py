@@ -12,7 +12,9 @@ Covers ``GapLead.read``, ``LaneChangeGapPlan.credit`` and
 ``CarrotPlanner._update_lane_change_gap`` wiring. Everything is mocked so no
 cereal runtime / zmq / SubMaster is required.
 """
+import time
 import unittest
+from collections import defaultdict
 from types import SimpleNamespace
 from typing import Any
 
@@ -121,8 +123,12 @@ class _FakeSM:
       "radarState": now_ns,
       "deviceMotion": now_ns,
     }
-    self.valid = dict.fromkeys(self._data, valid)
-    self.alive = dict.fromkeys(self._data, alive)
+    # Unsubscribed services answer False rather than KeyError: get_carrot_man()
+    # probes seen['carrotManSP'] first, and this planner does not subscribe to it.
+    self.seen = defaultdict(bool, dict.fromkeys(self._data, True))
+    self.valid = defaultdict(bool, dict.fromkeys(self._data, valid))
+    self.alive = defaultdict(bool, dict.fromkeys(self._data, alive))
+    self.recv_time = defaultdict(time.monotonic, dict.fromkeys(self._data, time.monotonic()))
 
   def __getitem__(self, key: str) -> Any:
     return self._data[key]

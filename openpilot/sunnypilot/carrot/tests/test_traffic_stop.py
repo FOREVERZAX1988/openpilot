@@ -6,8 +6,10 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import sys
+import time
 import types
 import unittest
+from collections import defaultdict
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -261,8 +263,12 @@ class _FakeSM:
 
   def __init__(self, data):
     self._data = data
-    self.valid = dict.fromkeys(data, True)
-    self.alive = dict.fromkeys(data, True)
+    # Unsubscribed services answer False rather than KeyError: get_carrot_man()
+    # probes seen['carrotManSP'] first, and this planner does not subscribe to it.
+    self.seen = defaultdict(bool, dict.fromkeys(data, True))
+    self.valid = defaultdict(bool, dict.fromkeys(data, True))
+    self.alive = defaultdict(bool, dict.fromkeys(data, True))
+    self.recv_time = defaultdict(time.monotonic, dict.fromkeys(data, time.monotonic()))
     self.logMonoTime = {"modelV2": 0, "radarState": 0, "deviceMotion": 0, "carState": 0}
 
   def __getitem__(self, key):

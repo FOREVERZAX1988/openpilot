@@ -15,6 +15,8 @@ Unit tests for the carrot planner control changes (Phase 1):
 These exercise ``CarrotPlanner`` internals directly so no cereal runtime and no
 full SubMaster are required.
 """
+import time
+
 import numpy as np
 from unittest.mock import MagicMock
 
@@ -132,6 +134,10 @@ class TestDesiredSpeedNoLongerLowersCruise(OpenpilotTestCase):
     sm = MagicMock()
     sm.valid.get = lambda k, d=None: k == "carrotManSP"
     sm.alive.get = lambda k, d=None: k == "carrotManSP"
+    # get_carrot_man() now rejects a stale publisher, so recv_time has to be a
+    # real timestamp that arithmetic tolerates -- a bare MagicMock makes
+    # `0.0 <= age <= timeout` raise TypeError before the planner ever runs.
+    sm.recv_time.__getitem__.side_effect = lambda k: time.monotonic()
     carrot = MagicMock()
     carrot.trafficState = 0
     carrot.activeCarrot = 2

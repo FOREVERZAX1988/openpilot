@@ -71,8 +71,14 @@ def _make_sm():
   }
 
   class SM:
-    alive = {'longitudinalPlan': True, 'radarState': True, 'drivingModelData': True}
-    valid = {'carrotManSP': False, 'carStateSP': True}
+    # A real SubMaster seeds alive/valid/seen/updated for every subscribed
+    # service. get_carrot_man() indexes seen, alive and valid directly to decide
+    # whether carrotManSP has ever published, so a missing key would surface as
+    # KeyError instead of the intended "no navigation cap" answer.
+    alive = {**dict.fromkeys(services, False),
+             'longitudinalPlan': True, 'radarState': True, 'drivingModelData': True}
+    valid = {**dict.fromkeys(services, False), 'carStateSP': True}
+    seen = dict.fromkeys(services, True)
     updated: dict = {}
     frame = 0
 

@@ -306,9 +306,13 @@ def make_sm(cs, cs_sp, enabled=False, alive=None):
 
   class SM:
     def __init__(self):
-      self.alive = alive_map
-      self.valid = {'carrotManSP': False, 'carStateSP': True}
-      self.updated = {}
+      # A real SubMaster seeds alive/valid/seen/updated for every subscribed
+      # service, so a missing key must never come out as KeyError: consumers
+      # (get_carrot_man) index these dicts directly to gate themselves off.
+      self.alive = {**dict.fromkeys(services, False), **alive_map}
+      self.valid = {**dict.fromkeys(services, False), 'carStateSP': True}
+      self.updated = dict.fromkeys(services, False)
+      self.seen = dict.fromkeys(services, True)
       self.frame = 0
 
     def __getitem__(self, k):
@@ -355,21 +359,28 @@ step('cruise becomes available', t_ignition_cruise_available)
 
 
 def t_set_engage():
-  """Exactly the card.py call that raised the reported TypeError."""
+  """Exactly the card.py call that raised the reported TypeError.
+
+  Signature moved from (CS, experimental, dynamic) to (CS, initial_speed) when
+  InitialCruiseSpeedKph landed; card.py now passes self.initial_cruise_speed.
+  """
   cs_prev = make_cs(v_ego=15.0, available=True)
-  helper.initialize_v_cruise(cs_prev, False, False)
+  helper.initialize_v_cruise(cs_prev, V_CRUISE_UNSET)
+  helper.initialize_v_cruise(cs_prev, 0)
+  helper.initialize_v_cruise(cs_prev, 90)
 
 
-step('initialize_v_cruise(CS, experimental, dynamic) [the reported crash]', t_set_engage)
+step('initialize_v_cruise(CS, initial_speed) [the card.py call shape]', t_set_engage)
 
 
 def t_engage_with_experimental():
-  helper.initialize_v_cruise(make_cs(v_ego=15.0), True, False)
-  helper.initialize_v_cruise(make_cs(v_ego=15.0), True, True)
-  helper.initialize_v_cruise(make_cs(v_ego=15.0), False, True)
+  """The initial_speed argument must survive every combination the UI can hand over."""
+  helper.initialize_v_cruise(make_cs(v_ego=15.0), V_CRUISE_UNSET)
+  helper.initialize_v_cruise(make_cs(v_ego=15.0), 0)
+  helper.initialize_v_cruise(make_cs(v_ego=15.0), 145)  # above any set-speed ceiling
 
 
-step('initialize_v_cruise across all experimental combinations', t_engage_with_experimental)
+step('initialize_v_cruise across every initial_speed shape', t_engage_with_experimental)
 
 
 def t_button_press_cycle():
@@ -471,14 +482,22 @@ step('update_v_cruise with CS_SP=None', t_no_cs_sp)
 
 
 def t_acc_off_cluster_speed_is_unset():
-  """ACC off must not leak the [min, max] clamp into the cluster.
+  """ACC available with no stock setpoint must not clip V_CRUISE_UNSET into 161.
 
   Logged on the drive of 2026-10-10 20:58 (route 00000095--254cbbd03a): while ACC was on,
   vCruise/vCruiseCluster stayed at 255 (V_CRUISE_UNSET -> cluster renders "--"; the Macan
-  fusion branch mirrors a stock set speed of 0). Turning ACC off moved the helper into the
-  "cruise unavailable" branch, whose np.clip(v_cruise_kph, 5, 161) turned that very
-  V_CRUISE_UNSET into 161 - the cluster then showed 161 km/h with cruise inactive.
+  fusion branch mirrors a stock set speed of 0). The helper then clamped that sentinel with
+  np.clip(v_cruise_kph, 5, 161), which turned "no set speed" into a real 161 km/h on the
+  cluster.
+
+  Warm up first: the clamp is only reached once cruise has already been available for a
+  frame (cruise_state_available_last). On the very first available tick the helper seeds
+  itself from v_ego instead, which is correct and not what this guard covers.
   """
+  warm = make_cs(v_ego=15.0, available=True)
+  helper.update_v_cruise(warm, False, True, make_sm(warm, make_cs_sp()), make_cs_sp())
+  assert helper.cruise_state_available_last, 'warm-up failed to reach the clamped branch'
+
   helper.v_cruise_kph = V_CRUISE_UNSET
   helper.v_cruise_cluster_kph = V_CRUISE_UNSET
 
