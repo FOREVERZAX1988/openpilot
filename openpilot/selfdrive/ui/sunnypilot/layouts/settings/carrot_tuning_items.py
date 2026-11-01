@@ -417,6 +417,10 @@ def build_dev_items():
                    description=tr('Fold the phone app traffic congestion report into map-based cruise ' +
                                    'control. Only ever lowers the target speed. Needs Smart Cruise ' +
                                    'Control - Map to be on as well.')),
+    toggle_item_sp(title=tr('Traffic Stop Profile'), param='CarrotTrafficStopProfileEnabled',
+                   description=tr('Envelope the traffic-light stop point with a smooth, jerk-limited '
+                                  'braking profile. It can only brake earlier or harder - it never '
+                                  'raises the target speed.')),
     toggle_item_sp(title=tr('Lane Guide Blocking'), param='CarrotNavLaneGuideBlockEnabled',
                    description=tr('Let the phone app guided-lane arrows block lane changes toward ' +
                                   'non-guided lanes. Only ever adds blocking.')),

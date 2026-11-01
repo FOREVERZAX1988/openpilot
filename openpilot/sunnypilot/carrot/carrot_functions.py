@@ -925,8 +925,9 @@ class CarrotPlanner:
     signal = bool(state.leftBlinker) != bool(state.rightBlinker)
     direction = ((-1 if state.leftBlinker else 1) if signal else self._lane_change_tracker.direction) \
         if self.lane_change_active else 0
-    now_ns = int(sm.logMonoTime["modelV2"])
-    valid = all(sm.valid[key] and sm.alive[key] for key in ("carState", "modelV2", "radarState"))
+    now_ns = int(sm.logMonoTime["modelV2"]) if "modelV2" in sm.logMonoTime else 0
+    valid = all(key in sm.valid and sm.alive[key] and sm.valid[key]
+                for key in ("carState", "modelV2", "radarState"))
     valid = valid and abs(now_ns - int(sm.logMonoTime["radarState"])) <= 200_000_000
     if not valid or direction == 0:
       self._lane_change_tracker.reset()
@@ -942,9 +943,9 @@ class CarrotPlanner:
     pose = sm["deviceMotion"]
     angular = pose.angularVelocityDevice
     pose_valid = (
-      sm.valid["deviceMotion"] and sm.alive["deviceMotion"]
+      sm.valid.get("deviceMotion", False) and sm.alive.get("deviceMotion", False)
       and pose.inputsOK and pose.sensorsOK and angular.valid
-      and abs(now_ns - int(sm.logMonoTime["deviceMotion"])) <= 150_000_000
+      and abs(now_ns - int(sm.logMonoTime.get("deviceMotion", 0))) <= 150_000_000
     )
     self.lane_change_gap = self._lane_change_tracker.update(
       now=now_ns * 1e-9,
@@ -1173,7 +1174,8 @@ class CarrotPlanner:
     """
     self.carrot_curve_speed_params()
 
-    if not sm.alive['carState'] or not sm.alive['modelV2']:
+    alive = getattr(sm, 'alive', None)
+    if not alive or not alive.get('carState') or not alive.get('modelV2'):
       return self._vision_curve_speed.update(None, time.monotonic())
 
     model_data = sm['modelV2']
