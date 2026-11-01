@@ -130,7 +130,7 @@ class TestExperimentalSwitch:
     # the tree, which is why this test only ever failed).
     alert = EVENTS_SP[EventNameSP.experimentalModeSwitchedDEPRECATED][ET.WARNING]
     sd = Selfdrived()
-    for text in ("实验模式已关闭", "实验模式已开启"):
+    for text in ("Chill 模式已关闭", "Chill 模式已开启"):
       sd.hold_gap(DISTANCE_LONG_PRESS + 5)
       assert alert(None, None, None, False, 0, None).alert_text_1 == text
 

@@ -39,11 +39,11 @@ def _set_speed_ms(CS: car.CarState, sm: messaging.SubMaster) -> float:
 
 
 def experimental_mode_switched_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  # Two complete sentences rather than one f-string: potools can only extract a
-  # literal, so `f"实验模式已{'开启' if ... else '关闭'}"` reaches the po files as
-  # nothing at all and every non-Chinese UI shows the source text. alert_renderer
-  # translates the callback's output with tr().
-  text = tr_noop("实验模式已开启") if SelfdrivedZP.switched_to else tr_noop("实验模式已关闭")
+  # switched_to is the driving model's state; the switch is named for legacy chill, its opposite.
+  # Two complete sentences rather than one f-string: potools can only extract a literal, so
+  # `f"Chill 模式已{...}"` reaches the po files as nothing and every non-Chinese UI shows the
+  # source text. alert_renderer translates the callback's output with tr().
+  text = tr_noop("Chill 模式已关闭") if SelfdrivedZP.switched_to else tr_noop("Chill 模式已开启")
   return NormalPermanentAlert(text, duration=1.5)
 
 

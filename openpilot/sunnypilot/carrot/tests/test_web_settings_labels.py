@@ -31,10 +31,15 @@ class TestParamLabels(unittest.TestCase):
     self.assertIn(">SomeRawKey<", html)
     self.assertNotIn('class="t"', html)
 
-  def test_blendful_is_scanned_under_the_models_page(self):
-    # the web panel auto-scans the on-device page sources, so Blendful needs no hand-added row
+  def test_blendful_no_longer_auto_scanned_after_three_state_button(self):
+    # 2026-11-01 zp chill rework: Lane Center Assist became a three-state button
+    # (Off / On / Debug UI) whose callback writes Blendful + BlendfulReadout, so the page
+    # source no longer declares `param="Blendful"` and the web panel's auto-scan has
+    # nothing to pick up. The on-device button (and sunnylink) are the way to set it now.
+    # Pinning the trade-off so a silent change shows up here rather than being noticed
+    # only when someone looks for the row in the web panel.
     pages = ws.scan_ui_pages(ws.ui_settings_dir())
-    self.assertIn("Blendful", pages.get("models", []))
+    self.assertNotIn("Blendful", pages.get("models", []))
 
 
 if __name__ == "__main__":
