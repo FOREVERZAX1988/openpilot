@@ -97,7 +97,10 @@ class OptionControlSP(ItemAction):
     value = self.params.get(self.param_key, return_default=self.use_registered_default)
     if value is None:
       return None
-    return int(float(value) * 100.0) if self.use_float_scaling else int(value)
+    raw = round(value * 100) if self.use_float_scaling else int(float(value))
+    # upstream clamps into the control's range, so a stored value outside it can never
+    # be rendered as a label the control cannot reach.
+    return min(max(raw, self.min_value), self.max_value)
 
   def sync(self, now: float | None = None) -> bool:
     """Adopt a value another surface wrote. True when the control moved.
@@ -109,6 +112,14 @@ class OptionControlSP(ItemAction):
     if now < self._next_sync:
       return False
     self._next_sync = now + SYNC_INTERVAL
+
+    # A control parked on its switch step has no number to adopt: the numeral param
+    # still holds the last number underneath it. Copying that back fights refresh(),
+    # which puts the control on the step again, and the two trade it every frame --
+    # the "jumping" the settings panels showed (models · Steer Delay, steering ·
+    # Pause Lateral Control with Blinker). Nothing to follow while switched.
+    if self.switch is not None and self.current_value == SWITCH_VALUE:
+      return False
 
     stored = self._stored_value()
     if stored is None:
@@ -130,9 +141,6 @@ class OptionControlSP(ItemAction):
     """Get the current value of the control"""
     return self.current_value
 
-  def _stored_value(self) -> int:
-    value = float(self.params.get(self.param_key, return_default=True))
-    return min(max(round(value * 100) if self.use_float_scaling else int(value), self.min_value), self.max_value)
 
   @property
   def switched(self) -> bool:

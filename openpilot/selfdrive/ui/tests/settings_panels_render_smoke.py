@@ -573,6 +573,39 @@ def main() -> int:
     assert not gui_app.pushed_widgets, "confirmed enable must not re-prompt"
     assert store.get("ExperimentalMode"), "confirmed enable did not write the mode"
 
+  def switch_step_survives_sync_frames():
+    """A control parked on its switch step must stay there across frames.
+
+    sync() runs from _render() every frame and copies the store straight into
+    current_value; refresh() runs from every layout's _update_state and puts a
+    switched control back on the step. The numeral param still holds the last
+    number underneath the step, so without the guard in sync() the two trade
+    the control every frame and the row flickers between "Off"/"Live" and its
+    number -- models · Steer Delay and steering · Pause Lateral Control with
+    Blinker both did this (2026-11-01).
+    """
+    from openpilot.system.ui.sunnypilot.lib.switch import SWITCH_VALUE, Switch
+    from openpilot.system.ui.sunnypilot.widgets.option_control import OptionControlSP
+
+    store = sys.modules["openpilot.common.params"].store
+    store["BlinkerPauseLateralControl"] = False
+    store["BlinkerMinLateralControlSpeed"] = 50
+    ctrl = OptionControlSP("BlinkerMinLateralControlSpeed", 5, 255, value_change_step=5,
+                           switch=Switch("BlinkerPauseLateralControl", False, "Off"))
+    ctrl.set_value(SWITCH_VALUE)
+    # set_value arms a pending window (the store echoes a write back a little
+    # later) and sync throttles itself; both hide the bug for the first second,
+    # which is why the flicker only starts once the pending write lapses. Test
+    # the contract itself: on the switch step, a render must adopt nothing.
+    ctrl._pending_value = None
+    ctrl._next_sync = 0.0
+    ctrl.sync()
+    assert ctrl.current_value == SWITCH_VALUE, (
+      f"sync() pulled it to {ctrl.current_value} off the switch step: once the "
+      "pending write lapses the row flickers between the switch label and the "
+      "number stored underneath it")
+
+  check("option control keeps its switch step across sync frames", switch_step_survives_sync_frames)
   check("experimental mode switch click flow (cruise panel)", exp_toggle_flow)
 
   print()
