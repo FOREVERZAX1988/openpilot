@@ -47,7 +47,11 @@ SHARED_WITH_CARROT = {
 # ended at @74 (a copy-pasted @95 actually broke the device build once — capnpc
 # aborts with "Skipped ordinal @75"). Lesson: cp's CarState ordinal space is
 # NOT ours; append from our own tail and never copy cp ordinals.
-CAR_STATE_LAST_ORDINAL = 79
+# 2026-11-01: it happened again — the cp final-state wave landed its turn-signal
+# lever/lamp block at cp's own @100-111, which capnp rejects outright (this fork's
+# CarState ended at @79, so @80-99 were holes). Renumbered to @80-90 here; the
+# fields are inert until a car port fills them, so no wire data depended on them.
+CAR_STATE_LAST_ORDINAL = 90
 
 # The carrot-ported appends, pinned so a later edit cannot renumber them onto an
 # existing field (which would read as a wrong value rather than fail).
