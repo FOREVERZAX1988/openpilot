@@ -202,8 +202,7 @@ ensure_pip_deps() {
   echo "[ensure_pip_deps] installed: ${requirements[*]}" >> /tmp/bootstrap.log
 }
 
-# Probe form is "<import>" or "<import>; assert <expr>". The assertion matters: a
-# present-but-wrong package must count as missing. `import cv2` happily accepts a cv2
+# Probe form is "<import>" or "<import>; assert <expr>". The assertion matters: a# present-but-wrong package must count as missing. `import cv2` happily accepts a cv2
 # built without dnn.readNetFromONNX, and that build cannot run xiaoge's inference -
 # which is exactly how the vision path stayed silently dead. CarrotPilot asserts the
 # same two properties.
@@ -579,6 +578,25 @@ ensure_updater_deps() {
     return 0
   fi
 
+  # The updater's wifi_manager also imports jeepney at module scope, and on the
+  # same frozen-boot scenario the network path cannot provide it (the updater
+  # loop blocks the network stage). Same bundled-wheel treatment as pyserial.
+  if ! PYTHONPATH="$py_path" "$py" -c "import jeepney" >/dev/null 2>&1; then
+    local jwheel=""
+    for w in "$WHEEL_DIR"/jeepney-*.whl; do
+      [ -f "$w" ] && jwheel="$w" && break
+    done
+    if [ -n "$jwheel" ]; then
+      mkdir -p "$pydeps" 2>/dev/null || true
+      local jtmp=$(pip_scratch_dir)
+      if TMPDIR="$jtmp" "$py" -m pip install --no-cache-dir --no-index --no-deps \
+           --disable-pip-version-check --target "$pydeps" "$jwheel" >> /tmp/bootstrap.log 2>&1; then
+        echo "[ensure_updater_deps] installed jeepney from bundled wheel" >> /tmp/bootstrap.log
+      fi
+      rm -rf "$jtmp"/pip-* 2>/dev/null || true
+    fi
+  fi
+
   echo "[ensure_updater_deps] pyserial missing; installing for the AGNOS updater" >> /tmp/bootstrap.log
   mkdir -p "$pydeps" 2>/dev/null || true
 
@@ -630,43 +648,95 @@ link_repos() {
   done
 }
 
-bootstrap_deps() {
-  # Bundled offline wheels first. These gate one fork feature each, and the device has
-  # no route to pypi.org, so they must not depend on the network.
-  #
-  #   cv2     - xiaoge's V-ASM vision server (carrot/xiaoge/v_asm_server.py) runs as a
-  #             thread of xiaoge_data and needs cv2.dnn.readNetFromONNX to load
-  #             xiaoge/assets/{lane,v_asm_model}.onnx and publish blind-spot / lane
-  #             results on customReservedRawData0 for card.py to merge into carState.
-  #             While it was missing, create_server() raised, the daemon thread died,
-  #             and because xiaoge_data itself keeps running (it also serves the 7711
-  #             stream) the manager still showed it healthy - no "进程未运行" alert.
-  #             Measured 2026-09-27 on the road: 16 segments, zero customReservedRawData0.
-  #   shapely - carrot_man resamples the 7714 route at 10 m intervals with
-  #             shapely.geometry.LineString to derive curvature and curve speed. Its
-  #             absence is guarded by SHAPELY_AVAILABLE, so it degrades silently rather
-  #             than raising: route curvature and curve-speed limiting are simply off.
-  #   psutil  - carrot_man.get_broadcast_address() enumerates interfaces with
-  #             psutil.net_if_addrs() to find the right UDP 7705 broadcast address, and
-  #             carrot_navi's discovery beacon does the same.
-  #   qrcode  - the Carrot Web pairing dialog.
-  #
-  # All optional: no feature may block startup. --no-deps keeps numpy from AGNOS.
-  ensure_wheel_package "cv2; assert cv2.__version__ == '4.13.0'; assert hasattr(cv2.dnn, 'readNetFromONNX')" \
-    "opencv-python-headless==4.13.0.92"
-  ensure_wheel_package "shapely" "shapely==2.1.2"
-  ensure_wheel_package "psutil" "psutil==7.2.2"
-  ensure_wheel_package "qrcode" "qrcode==8.2"
+# Every wheel bundled in third_party/wheels, as "probe|requirement" pairs.
+# This is the single source of truth: ensure_bundled_wheels installs the lot
+# offline (bootstrap_deps calls it before agnos_init, so the network pip path
+# below never has to save a boot), and the pip-group call at the bottom of
+# bootstrap_deps stays as a fuse for anything a future dependency forgets to
+# add here.
+#
+# Why each one rides along - ranked by what dies without it:
+#
+#   setproctitle - manager's process.py imports it at module scope: no manager,
+#                  no boot at all.
+#   pyzmq        - common/swaglog.py imports it at module scope; cloudlog backs
+#                  every daemon, so nothing starts without it either.
+#   jeepney      - the AGNOS updater's wifi_manager imports it at module scope,
+#                  and bootstrap_deps runs before agnos_init. Learned the hard
+#                  way 2026-11-01: a pending OS update sat on the splash screen
+#                  forever because jeepney only existed on the network path.
+#   pyserial     - the updater's bundled snapshot imports serial at module scope
+#                  (ensure_updater_deps also carries it for a wiped .pydeps).
+#   tqdm         - module-scope import in opendbc's fw_versions: the
+#                  fingerprinting card dies before it caches anything.
+#   cv2          - xiaoge's V-ASM vision server (carrot/xiaoge/v_asm_server.py)
+#                  needs cv2.dnn.readNetFromONNX to load the lane/BSM models and
+#                  publish on customReservedRawData0 for card.py. While it was
+#                  missing the thread died silently (xiaoge_data stayed "healthy"
+#                  on the manager) - measured 2026-09-27: 16 segments, zero
+#                  customReservedRawData0.
+#   shapely      - carrot_man resamples the 7714 route with LineString for
+#                  curvature/curve speed; guarded by SHAPELY_AVAILABLE, so its
+#                  absence degrades silently instead of raising.
+#   psutil       - carrot_man's UDP 7705 broadcast address lookup and carrot_navi's
+#                  discovery beacon enumerate interfaces with net_if_addrs().
+#   qrcode       - the Carrot Web pairing dialog.
+#   PyJWT        - athena and sunnylink import it at module scope; missing it only
+#                  takes down their own daemons, but it is 33 KB of insurance.
+#   requests / aiohttp / jinja2 / zstandard - the ai/, webui and carrot server
+#                  stacks (aid.py, webuid.py, carrot_man/navi, carrot/server).
+#                  These only matter after the network stage, but the fork ships
+#                  to cars that may never see a mirror, so the whole runtime is
+#                  bundled rather than downloaded on first boot.
+BUNDLED_WHEELS=(
+  "setproctitle|setproctitle==1.3.8"
+  "zmq|pyzmq==26.4.0"
+  "jeepney|jeepney==0.9.0"
+  "serial|pyserial==3.5"
+  "tqdm|tqdm==4.70.1"
+  "cv2; assert cv2.__version__ == '4.13.0'; assert hasattr(cv2.dnn, 'readNetFromONNX')|opencv-python-headless==4.13.0.92"
+  "shapely|shapely==2.1.2"
+  "psutil|psutil==7.2.2"
+  "qrcode|qrcode==8.2"
+  "jwt|PyJWT==2.15.1"
+  "requests|requests==2.34.2"
+  "urllib3|urllib3==2.8.0"
+  "charset_normalizer|charset-normalizer==3.5.2"
+  "idna|idna==3.20"
+  "certifi|certifi==2026.10.23"
+  "aiohttp|aiohttp==3.14.5"
+  "multidict|multidict==7.2.1"
+  "yarl|yarl==1.25.1"
+  "aiosignal|aiosignal==1.4.0"
+  "frozenlist|frozenlist==1.8.0"
+  "attrs|attrs==26.1.0"
+  "propcache|propcache==0.5.4"
+  "aiohappyeyeballs|aiohappyeyeballs==2.7.1"
+  "jinja2|jinja2==3.1.6"
+  "markupsafe|markupsafe==3.0.4"
+  "zstandard|zstandard==0.25.0"
+)
 
-  # Network group: needed by ai/aid.py and webui/webuid.py (and carrot_man /
-  # carrot_navi). Installed together so a single overlay update does not leave either
-  # service unable to import. These are not bundled as wheels.
-  #
-  # serial (pyserial) is included even though the fork's own runtime barely uses it:
-  # the FIRST-BOOT AGNOS updater is a self-contained zipapp that runs with this
-  # interpreter's environment, and its bundled snapshot imports serial at module
-  # scope. Without pyserial here the updater dies instantly (see ensure_updater_deps).
-  ensure_pip_deps aiohttp jinja2 zmq zstandard numpy requests tqdm jeepney serial
+ensure_bundled_wheels() {
+  local entry probe req
+  for entry in "${BUNDLED_WHEELS[@]}"; do
+    probe="${entry%%|*}"
+    req="${entry#*|}"
+    ensure_wheel_package "$probe" "$req"
+  done
+}
+
+bootstrap_deps() {
+  # All bundled, all offline: see BUNDLED_WHEELS above for the per-wheel
+  # rationale and the ranking by what dies without them.
+  ensure_bundled_wheels
+
+  # Fuse, not a path: every entry above is bundled, so these probes pass and
+  # the network install never runs. It only fires if a future dependency
+  # forgets its wheel entry - and even then the retry loop can self-heal over
+  # the pip mirror, which is exactly what did not exist during the 2026-11-01
+  # jeepney boot hang.
+  ensure_pip_deps numpy aiohttp jinja2 zstandard requests
 }
 
 # Retries bootstrap_deps() until it succeeds, because a single attempt at boot is
