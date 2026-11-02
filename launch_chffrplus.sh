@@ -6,6 +6,9 @@ PYDEPS_DIR="/data/.pydeps"    # outside $DIR so overlay updates do not wipe pip 
 # with SSL_ERROR_SYSCALL), so anything the fork needs at runtime ships here and is
 # installed with --no-index. Same layout as CarrotPilot's third_party/wheels.
 WHEEL_DIR="$DIR/third_party/wheels"
+# Progress lines for the boot spinner (see start_boot_spinner): tail -f streams
+# every appended line into the spinner's stdin, one per render frame.
+BOOT_SPINNER_TEXT="/tmp/.boot_spinner_lines"
 
 # AGNOS updates can drop /usr/local/venv/bin from PATH. Restore it so scons,
 # pip and the venv Python wrappers are reachable.
@@ -213,6 +216,69 @@ python_package_ok() {
   PYTHONPATH="$py_path" "$py" -c "import ${probe}" >/dev/null 2>&1
 }
 
+# Boot spinner: the same raylib loading screen manager's build.py uses (glow
+# logo + progress bar), started early so the wheel-install phase shows visible
+# progress instead of an apparently-frozen comma splash. spinner.py only needs
+# pyray (AGNOS venv) and the checkout, so it runs before /data/.pydeps exists.
+#
+# Transport is `tail -f` on a plain file rather than a FIFO: FIFO opens block
+# until both ends exist, which would hang the boot if spinner.py ever failed to
+# start (no display, import error). tail keeps the pipe open forever, so the
+# spinner's select() never sees EOF and nothing here can block: every step is
+# best-effort and boot proceeds identically if the spinner never comes up.
+start_boot_spinner() {
+  [ -n "$BOOT_SPINNER_PID" ] && return 0
+  local py=$(find_python python3.12) || return 0
+  : > "$BOOT_SPINNER_TEXT" 2>/dev/null || return 0
+  tail -f -n 0 "$BOOT_SPINNER_TEXT" 2>/dev/null | \
+    PYTHONPATH="$(setup_python_path "$DIR")" "$py" "$DIR/openpilot/system/ui/spinner.py" \
+    > /tmp/spinner.log 2>&1 &
+  BOOT_SPINNER_PID=$!
+  return 0
+}
+
+boot_spinner_text() {  # a message, rendered as wrapped text under the logo
+  [ -n "$BOOT_SPINNER_PID" ] || return 0
+  echo "$1" >> "$BOOT_SPINNER_TEXT" 2>/dev/null
+  return 0
+}
+
+boot_spinner_progress() {  # cur/total rendered as the rounded progress bar
+  [ -n "$BOOT_SPINNER_PID" ] || return 0
+  local cur=$1 total=$2
+  [ "$total" -gt 0 ] 2>/dev/null || return 0
+  echo $((100 * cur / total)) >> "$BOOT_SPINNER_TEXT" 2>/dev/null
+  return 0
+}
+
+stop_boot_spinner() {
+  [ -n "$BOOT_SPINNER_PID" ] || return 0
+  kill "$BOOT_SPINNER_PID" 2>/dev/null
+  wait "$BOOT_SPINNER_PID" 2>/dev/null
+  # tail exits on its own: the next appended line hits a pipe whose reader is
+  # gone (SIGPIPE). No pkill needed - a pattern-based kill here risks catching
+  # unrelated processes, which is exactly what a boot script must not do.
+  echo "__stop__" >> "$BOOT_SPINNER_TEXT" 2>/dev/null
+  rm -f "$BOOT_SPINNER_TEXT" 2>/dev/null
+  BOOT_SPINNER_PID=""
+  return 0
+}
+
+# Last-resort wheel install: unpack the wheel (it is a zip archive) straight
+# into the target dir with the stdlib zipfile module - no pip involved. What
+# this skips vs pip is only .dist-info metadata and entry-point scripts, which
+# imports do not need; binary payloads (.so files) sit at the wheel root and
+# land in place. Proven on-device 2026-11-02 when a crash-looping updater
+# blocked pip's normal preconditions and zipfile extraction of jeepney revived
+# it immediately.
+install_wheel_unpacked() {
+  local wheel="$1"   # absolute path to a .whl
+  local pydeps="$2"  # target dir
+  local py=$(find_python python3.12) || py=python3
+  mkdir -p "$pydeps" 2>/dev/null || return 1
+  "$py" -m zipfile -e "$wheel" "$pydeps/" >> /tmp/bootstrap.log 2>&1
+}
+
 # Installs one dependency from $WHEEL_DIR, preferring the bundled wheel over the
 # network. Returns non-zero when the probe still fails afterwards, so callers can
 # decide whether the package was required.
@@ -239,8 +305,28 @@ ensure_wheel_package() {
     echo "[wheels] installed $req" >> /tmp/bootstrap.log
     return 0
   fi
-
   rm -rf "$tmpdir"/pip-* 2>/dev/null || true
+
+  # pip failed (missing/corrupt pip, TMPDIR trouble, fresh image): unpack the
+  # wheel directly. A wrong-but-present package can still pass afterwards, so
+  # the probe below stays the arbiter either way. Wheel filenames are lowercase
+  # (PEP 427) while req spelling is not (PyJWT), so normalize to lowercase -
+  # the device glob is case-sensitive and PyJWT-* would silently miss pyjwt-*.
+  local pkg="${req%%==*}" ver="${req##*==}"
+  pkg=$(echo "${pkg//-/_}" | tr 'A-Z' 'a-z')
+  local fallback
+  for fallback in "$WHEEL_DIR"/${pkg}-*"${ver}"*.whl; do
+    [ -f "$fallback" ] || continue
+    install_wheel_unpacked "$fallback" "$pydeps" && \
+      echo "[wheels] $req: pip path failed, unpacked $(basename "$fallback") directly" >> /tmp/bootstrap.log
+    break
+  done
+
+  if python_package_ok "$probe"; then
+    echo "[wheels] installed $req (after fallback)" >> /tmp/bootstrap.log
+    return 0
+  fi
+
   echo "[wheels] $req unavailable from $WHEEL_DIR; treated as optional" >> /tmp/bootstrap.log
   return 1
 }
@@ -573,14 +659,12 @@ ensure_updater_deps() {
   local py=$(find_python python3.12) || py=python3
   local py_path=$(setup_python_path "$DIR")
 
-  # Fast path: already importable with the same path the updater will use.
-  if PYTHONPATH="$py_path" "$py" -c "import serial" >/dev/null 2>&1; then
-    return 0
-  fi
-
-  # The updater's wifi_manager also imports jeepney at module scope, and on the
-  # same frozen-boot scenario the network path cannot provide it (the updater
-  # loop blocks the network stage). Same bundled-wheel treatment as pyserial.
+  # Jeepney check MUST come before the pyserial fast path below. The updater's
+  # wifi_manager imports jeepney at module scope, and the fast path returns as
+  # soon as pyserial is importable - which it is on every image that ships it
+  # in the venv. That early return used to skip this block entirely, leaving
+  # jeepney uninstalled and the updater crash-looping on ModuleNotFoundError
+  # (observed on a freshly imaged 12.8 device, 2026-11-02).
   if ! PYTHONPATH="$py_path" "$py" -c "import jeepney" >/dev/null 2>&1; then
     local jwheel=""
     for w in "$WHEEL_DIR"/jeepney-*.whl; do
@@ -592,9 +676,30 @@ ensure_updater_deps() {
       if TMPDIR="$jtmp" "$py" -m pip install --no-cache-dir --no-index --no-deps \
            --disable-pip-version-check --target "$pydeps" "$jwheel" >> /tmp/bootstrap.log 2>&1; then
         echo "[ensure_updater_deps] installed jeepney from bundled wheel" >> /tmp/bootstrap.log
+      else
+        # pip itself failed (fresh image, broken pip): unpack directly. The
+        # updater crash-loops without jeepney, so this fallback is required,
+        # not optional - same technique used to hand-rescue the 2026-11-02
+        # freshly-imaged device over serial.
+        if install_wheel_unpacked "$jwheel" "$pydeps"; then
+          echo "[ensure_updater_deps] jeepney: pip failed, unpacked $(basename "$jwheel") directly" >> /tmp/bootstrap.log
+        fi
       fi
       rm -rf "$jtmp"/pip-* 2>/dev/null || true
+      # Re-probe with the exact PYTHONPATH the updater will use; a silent
+      # failed install here reproduced as an infinite updater crash-loop.
+      if ! PYTHONPATH="$py_path" "$py" -c "import jeepney" >/dev/null 2>&1; then
+        echo "[ensure_updater_deps] WARNING: jeepney still missing after install attempts; updater will crash-loop" >> /tmp/bootstrap.log
+      fi
+    else
+      echo "[ensure_updater_deps] WARNING: jeepney missing and no bundled wheel found" >> /tmp/bootstrap.log
     fi
+  fi
+
+  # Fast path: pyserial already importable with the same path the updater will
+  # use (it ships in the AGNOS venv on many images).
+  if PYTHONPATH="$py_path" "$py" -c "import serial" >/dev/null 2>&1; then
+    return 0
   fi
 
   echo "[ensure_updater_deps] pyserial missing; installing for the AGNOS updater" >> /tmp/bootstrap.log
@@ -719,17 +824,53 @@ BUNDLED_WHEELS=(
 
 ensure_bundled_wheels() {
   local entry probe req
+  local missing=()
   for entry in "${BUNDLED_WHEELS[@]}"; do
     probe="${entry%%|*}"
     req="${entry#*|}"
-    ensure_wheel_package "$probe" "$req"
+    python_package_ok "$probe" || missing+=("$req")
+  done
+
+  # One pip invocation for everything missing. 26 separate pip calls each pay
+  # interpreter startup, wheel discovery and per-package pyc compilation on the
+  # C3, which made a fresh boot sit on the splash for several minutes; batched
+  # with --no-compile it is roughly an order of magnitude faster (pyc files are
+  # then produced lazily on first import, which /data/.pydeps persists).
+  if [ ${#missing[@]} -gt 0 ]; then
+    local py=$(find_python python3.12) || return 1
+    local tmpdir=$(pip_scratch_dir)
+    mkdir -p "$PYDEPS_DIR" 2>/dev/null || return 1
+    boot_spinner_text "Installing offline packages (${#missing[@]} remaining)"
+    TMPDIR="$tmpdir" "$py" -m pip install --no-cache-dir --no-index --no-deps --no-compile \
+      --disable-pip-version-check --find-links "$WHEEL_DIR" --target "$PYDEPS_DIR" \
+      "${missing[@]}" >> /tmp/bootstrap.log 2>&1 || true
+    rm -rf "$tmpdir"/pip-* 2>/dev/null || true
+  fi
+
+  # Per-package verification; ensure_wheel_package's probe passes immediately
+  # for everything the batch install satisfied and runs the zipfile fallback
+  # for whatever pip missed, so nothing loses the robustness added 2026-11-02.
+  local done_count=0
+  local total=${#BUNDLED_WHEELS[@]}
+  for entry in "${BUNDLED_WHEELS[@]}"; do
+    probe="${entry%%|*}"
+    req="${entry#*|}"
+    ensure_wheel_package "$probe" "$req" || true
+    done_count=$((done_count + 1))
+    boot_spinner_progress "$done_count" "$total"
   done
 }
 
 bootstrap_deps() {
+  # Visible feedback for a phase that used to look like a frozen splash
+  # (several minutes of 26-wheel pip churn on a fresh image).
+  start_boot_spinner
+
   # All bundled, all offline: see BUNDLED_WHEELS above for the per-wheel
   # rationale and the ranking by what dies without them.
   ensure_bundled_wheels
+
+  boot_spinner_text "Finishing up"
 
   # Fuse, not a path: every entry above is bundled, so these probes pass and
   # the network install never runs. It only fires if a future dependency
@@ -737,6 +878,8 @@ bootstrap_deps() {
   # the pip mirror, which is exactly what did not exist during the 2026-11-01
   # jeepney boot hang.
   ensure_pip_deps numpy aiohttp jinja2 zstandard requests
+
+  stop_boot_spinner
 }
 
 # Retries bootstrap_deps() until it succeeds, because a single attempt at boot is
