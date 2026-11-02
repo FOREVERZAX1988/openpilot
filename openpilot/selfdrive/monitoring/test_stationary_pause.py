@@ -135,7 +135,7 @@ class TestStationaryPauseFailClosed(unittest.TestCase):
       ('wrong_control_state', _Sm(
         plan=base_plan,
         car_control=_car_control(
-          actuators=NS(longControlState=car.CarControl.Actuators.LongControlState.enabled)))),
+          actuators=NS(longControlState=car.CarControl.Actuators.LongControlState.pid)))),
       ('vtarget_too_high', _Sm(plan=self._plan_variant(vTargetNow=0.5), checks=True)),
       ('vtarget_missing_nan', _Sm(plan=self._plan_variant(vTargetNow=float('nan')))),
     ):
