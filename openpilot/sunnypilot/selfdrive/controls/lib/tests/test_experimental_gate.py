@@ -80,6 +80,11 @@ def build_planner(op_long: bool = True) -> LongitudinalPlanner:
   CP = structs.CarParams()
   CP.longitudinalActuatorDelay = 0.2
   CP.openpilotLongitudinalControl = op_long
+  # get_cruise_accel divides by CP.steerRatio * CP.wheelbase to recover lateral accel from
+  # the steering angle (upstream 2026-11-02). Both are always real on a car; the bare
+  # CarParams() defaults them to 0, which is a ZeroDivisionError.
+  CP.steerRatio = 15.0
+  CP.wheelbase = 2.8
   CP_SP = custom.CarParamsSP.new_message().as_reader()
   return LongitudinalPlanner(CP, CP_SP, init_v=V_EGO)
 
