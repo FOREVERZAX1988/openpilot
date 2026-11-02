@@ -52,6 +52,14 @@ def build_sm() -> MockSubMaster:
   selfdrive_state.selfdriveState.enabled = True
   services['selfdriveState'] = selfdrive_state.selfdriveState.as_reader()
 
+  # longitudinal_planner.is_e2e() still reads selfdriveStateSP.zoompilot.experimentalModeDEPRECATED
+  # (upstream 2026-11-02 dropped this mock along with the chill rename, but the planner keeps
+  # reading it) — without it every test here dies of KeyError. This car is on openpilot long,
+  # so the deprecated experimental-mode bit is what says "drive end to end".
+  selfdrive_state_sp = messaging.new_message('selfdriveStateSP')
+  selfdrive_state_sp.selfdriveStateSP.zoompilot.experimentalModeDEPRECATED = True
+  services['selfdriveStateSP'] = selfdrive_state_sp.selfdriveStateSP.as_reader()
+
   # longitudinal_planner reads sm['vehicleParameters'].angleOffsetDeg to strip the steering
   # offset before judging cornering (2026-11-02 upstream). Defaults to 0 in capnp, so the
   # service only has to exist; without it the planner raises KeyError.
