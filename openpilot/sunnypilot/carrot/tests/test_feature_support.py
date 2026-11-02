@@ -88,9 +88,15 @@ class TestSupportDecision(unittest.TestCase):
     self.assertIsNone(fs.row("SomeParamWeNeverListed"))
 
   def test_unknown_platform_does_not_disable_anything(self):
-    """No CarParams yet must not read as "unsupported" -- that would grey out the world."""
+    """An unknown platform must not read as "unsupported" -- that would grey out the world.
+
+    `fingerprint=None` cannot express "no CarParams yet": unsupported_row() treats it as
+    "this car" and falls back to current_fingerprint(). That reads as supported on a
+    machine with no car (the dev box, where this still passed) and as *unsupported* on a
+    device that really is one of the listed cars. Use a fingerprint no row lists instead.
+    """
     for row in fs.UNSUPPORTED:
-      self.assertTrue(fs.is_supported(row.param, None))
+      self.assertTrue(fs.is_supported(row.param, "NO_SUCH_PLATFORM"), row.param)
 
   def test_ui_enabled_returns_a_live_callable(self):
     row = fs.UNSUPPORTED[0]
