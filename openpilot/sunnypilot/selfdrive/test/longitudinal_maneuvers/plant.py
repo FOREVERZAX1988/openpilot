@@ -336,7 +336,7 @@ class PlantSP(Plant):
 
     control.controlsState.longControlState = self.long_control.long_control_state if self.long_control is not None else (
       LongCtrlState.pid if self.enabled else LongCtrlState.off)
-    ss.selfdriveState.experimentalMode = self.e2e if self.experimental_mode_fn is None else bool(self.experimental_mode_fn(self.current_time))
+    ss.selfdriveState.deprecated.experimentalMode = self.e2e if self.experimental_mode_fn is None else bool(self.experimental_mode_fn(self.current_time))
     ss.selfdriveState.personality = self.personality
     control.controlsState.forceDecel = self.force_decel
     true_v_ego = self.speed
