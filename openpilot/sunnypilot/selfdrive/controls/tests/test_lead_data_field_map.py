@@ -13,7 +13,7 @@ schema so the mistake fails here instead.
 """
 import unittest
 
-from cereal import custom, log
+from openpilot.cereal import custom, log
 
 
 class TestLeadDataFieldMap(unittest.TestCase):

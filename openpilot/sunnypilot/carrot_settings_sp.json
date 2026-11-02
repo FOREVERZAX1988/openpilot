@@ -888,6 +888,7 @@
         "AdvancedLateralTune",
         "FlmRuntimeOverridesEnabled",
         "CarrotTrafficCongestionEnabled",
+        "CarrotTrafficStopProfileEnabled",
         "CarrotNavLaneGuideBlockEnabled",
         "OnnxBsdEnabled",
         "OnnxBsdThreshold",
@@ -1043,6 +1044,7 @@
         "AdvancedLateralTune",
         "FlmRuntimeOverridesEnabled",
         "CarrotTrafficCongestionEnabled",
+        "CarrotTrafficStopProfileEnabled",
         "CarrotNavLaneGuideBlockEnabled",
         "OnnxBsdEnabled",
         "OnnxBsdThreshold",
@@ -5561,23 +5563,6 @@
   },
   {
    "group": "alpha_longitudinal_toggles",
-<<<<<<< HEAD
-=======
-   "name": "ExperimentalModeSetSpeed",
-   "title": "Set Speed Assist",
-   "descr": "Drive toward your set speed and following distance whenever the driving model holds back. The model still makes every slowdown. The onroad button and a long press of the distance button switch it too.",
-   "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
-   "etitle": "Set Speed Assist",
-   "edescr": "Drive toward your set speed and following distance whenever the driving model holds back. The model still makes every slowdown. The onroad button and a long press of the distance button switch it too.",
-   "cgroup": "Alpha 纵向控制",
-   "ctitle": "设定速度辅助",
-   "cdescr": "Drive toward your set speed and following distance whenever the driving model holds back. The model still makes every slowdown. The onroad button and a long press of the distance button switch it too.",
-   "default": true,
-   "type": "bool"
-  },
-  {
-   "group": "alpha_longitudinal_toggles",
->>>>>>> mouxa/test
    "name": "AlphaLongitudinalEnabled",
    "title": "Alpha Longitudinal Enabled",
    "descr": "End-to-end longitudinal control for supported vehicles.",
@@ -5594,13 +5579,13 @@
    "group": "alpha_longitudinal_toggles",
    "name": "ExperimentalModeSetSpeed",
    "title": "Set Speed Assist",
-   "descr": "Drive toward your set speed and following distance as legacy chill mode does whenever the driving model holds back. The model still makes every slowdown.",
+   "descr": "Drive toward your set speed and following distance whenever the driving model holds back. The model still makes every slowdown. The onroad button and a long press of the distance button switch it too.",
    "egroup": "ALPHA_LONGITUDINAL_TOGGLES",
    "etitle": "Set Speed Assist",
-   "edescr": "Drive toward your set speed and following distance as legacy chill mode does whenever the driving model holds back. The model still makes every slowdown.",
+   "edescr": "Drive toward your set speed and following distance whenever the driving model holds back. The model still makes every slowdown. The onroad button and a long press of the distance button switch it too.",
    "cgroup": "Alpha 纵向控制",
    "ctitle": "设定速度辅助",
-   "cdescr": "Drive toward your set speed and following distance as legacy chill mode does whenever the driving model holds back. The model still makes every slowdown.",
+   "cdescr": "Drive toward your set speed and following distance whenever the driving model holds back. The model still makes every slowdown. The onroad button and a long press of the distance button switch it too.",
    "default": true,
    "type": "bool"
   },
@@ -6072,6 +6057,20 @@
    "cgroup": "Carrot 调校",
    "ctitle": "路况拥堵降速",
    "cdescr": "将手机 App 的路况拥堵数据并入地图巡航控制，只会降低目标车速。需同时开启「地图智能巡航」。",
+   "default": false,
+   "type": "bool"
+  },
+  {
+   "group": "carrot_tuning",
+   "name": "CarrotTrafficStopProfileEnabled",
+   "title": "Traffic Stop Profile",
+   "descr": "Envelope the traffic-light stop point with a smooth, jerk-limited braking profile. It can only brake earlier or harder - it never raises the target speed.",
+   "egroup": "CARROT_TUNING",
+   "etitle": "Traffic Stop Profile",
+   "edescr": "Envelope the traffic-light stop point with a smooth, jerk-limited braking profile. It can only brake earlier or harder - it never raises the target speed.",
+   "cgroup": "Carrot 调校",
+   "ctitle": "Traffic Stop Profile",
+   "cdescr": "Envelope the traffic-light stop point with a smooth, jerk-limited braking profile. It can only brake earlier or harder - it never raises the target speed.",
    "default": false,
    "type": "bool"
   },
@@ -8609,6 +8608,8 @@
    "CarrotTrafficCongestionEnabled",
    "CarrotTrafficLightFusionEnabled",
    "CarrotTrafficLightFusionEnabled",
+   "CarrotTrafficStopProfileEnabled",
+   "CarrotTrafficStopProfileEnabled",
    "CarrotTurnAccelEnabled",
    "CarrotTurnAccelEnabled",
    "CarrotWebEnabled",
@@ -8806,12 +8807,7 @@
    "vehicle",
    "visuals"
   ],
-<<<<<<< HEAD
-  "labelled_by_sp_param_labels": 280,
-  "labelled_from_on_device_pages": 253
-=======
-  "labelled_by_sp_param_labels": 205,
-  "labelled_from_on_device_pages": 213
->>>>>>> mouxa/test
+  "labelled_by_sp_param_labels": 283,
+  "labelled_from_on_device_pages": 255
  }
 }

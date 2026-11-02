@@ -23,6 +23,10 @@ class TestEcoLeadBoost(OpenpilotTestCase):
     ac = AccelController.__new__(AccelController)
     ac._profile, ac._enabled, ac._boost = profile, True, 0.0
     ac._cruise_decel = ac._cruise_decel_target = None
+    # __new__ skips __init__, so every field get_max_accel touches must be set here.
+    # _smoothstep is new (AccelSmoothstepEnabled, 2026-11-03 upstream) and get_max_accel
+    # reads it on the first line -- leaving it out is an AttributeError, not a default.
+    ac._smoothstep = False
     return ac, SimpleNamespace
 
   def test_no_lead_unchanged(self):

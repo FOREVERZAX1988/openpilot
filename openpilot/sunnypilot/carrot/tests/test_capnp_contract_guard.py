@@ -51,8 +51,7 @@ SHARED_WITH_CARROT = {
 # lever/lamp block at cp's own @100-111, which capnp rejects outright (this fork's
 # CarState ended at @79, so @80-99 were holes). Renumbered to @80-90 here; the
 # fields are inert until a car port fills them, so no wire data depended on them.
-CAR_STATE_LAST_ORDINAL = 90
-CAR_STATE_LAST_ORDINAL = 90  # Wave 13: cp turn-signal fields @80-90 appended
+CAR_STATE_LAST_ORDINAL = 91  # Wave 13 turn-signal @80-90 + DM2 steeringTouch @91
 
 # The carrot-ported appends, pinned so a later edit cannot renumber them onto an
 # existing field (which would read as a wrong value rather than fail).

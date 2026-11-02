@@ -14,6 +14,7 @@ import pytest
 
 from openpilot.common.constants import CV
 from openpilot.common.realtime import DT_MDL as DT
+from opendbc.car import structs
 from openpilot.selfdrive.controls.lib.longitudinal_planner import get_cruise_accel
 from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed import controller as c
@@ -25,6 +26,10 @@ V_PREF = 20.  # m/s, the model's own pace
 V_CRUISE = V_PREF + 6 * CV.MPH_TO_MS  # set 6 mph above it, the median gap in the logs
 ACTUATOR_TAU = 0.5  # s
 
+# get_cruise_accel grew angle_steers/CP/dt/accel_coast/allow_throttle for the non-e2e
+# (comfort + lateral-limit) branch on 2026-11-03. These scenarios drive the e2e branch,
+# which never reads steerRatio/wheelbase, so an empty CarParams satisfies the call.
+_CP = structs.CarParams()
 
 def simulate(enabled, seconds=60., tau=50., brake_at=None):
   """Rows of (t, v_ego, a_model, e2e candidate). brake_at: the model brakes at -0.5 from then on."""
@@ -38,7 +43,7 @@ def simulate(enabled, seconds=60., tau=50., brake_at=None):
       a_model = -0.5
     # the host passes last frame's cruise candidate at the approach pace, then builds this frame's
     e2e = ctl.update(build_sm(v), a_model, min(a_cruise, c.approach_accel(v, V_CRUISE)), **ENGAGED)
-    a_cruise = get_cruise_accel(V_CRUISE, v, a_cruise, DT)
+    a_cruise = get_cruise_accel(True, V_CRUISE, v, a_cruise, 0.0, _CP, DT, 0.0, True)
     out = min(e2e, a_cruise)
     a_act += DT / ACTUATOR_TAU * (out - a_act)
     v += a_act * DT
@@ -51,7 +56,7 @@ def chill_peak(seconds=60.):
   v, a_act, a_cruise = V_PREF, 0., 0.
   peak = v
   for _ in range(int(seconds / DT)):
-    a_cruise = get_cruise_accel(V_CRUISE, v, a_cruise, DT)
+    a_cruise = get_cruise_accel(True, V_CRUISE, v, a_cruise, 0.0, _CP, DT, 0.0, True)
     a_act += DT / ACTUATOR_TAU * (a_cruise - a_act)
     v += a_act * DT
     peak = max(peak, v)

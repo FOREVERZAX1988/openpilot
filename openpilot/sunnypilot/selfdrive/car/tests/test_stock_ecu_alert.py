@@ -200,7 +200,9 @@ class TestStockCruiseFailed:
 
   def test_shape(self):
     alert = EVENTS_ZP[EventNameZP.stockCruiseFailed][ET.PERMANENT]
-    assert {alert.alert_text_1, alert.alert_text_2} == {"Stock Cruise Failed", "Restart the car"}
+    # The fork ships a Chinese UI: this alert's text is baked in Chinese in events_zp.py
+    # ("原厂巡航失败" / "请重启车辆"), not the English upstream wording.
+    assert {alert.alert_text_1, alert.alert_text_2} == {"原厂巡航失败", "请重启车辆"}
     assert alert.audible_alert == AudibleAlert.prompt
 
   def test_shows_with_nothing_engaged(self):
