@@ -56,6 +56,12 @@ def build_sm(experimental_mode: bool) -> MockSubMaster:
   selfdrive_state_sp.selfdriveStateSP.zoompilot.experimentalMode = experimental_mode
   services['selfdriveStateSP'] = selfdrive_state_sp.selfdriveStateSP.as_reader()
 
+  # longitudinal_planner reads sm['vehicleParameters'].angleOffsetDeg to strip the steering
+  # offset before judging cornering (2026-11-02 upstream). Defaults to 0 in capnp, so the
+  # service only has to exist; without it the planner raises KeyError.
+  vehicle_parameters = messaging.new_message('vehicleParameters')
+  services['vehicleParameters'] = vehicle_parameters.vehicleParameters.as_reader()
+
   car_control = messaging.new_message('carControl')
   car_control.carControl.enabled = True
   services['carControl'] = car_control.carControl.as_reader()
