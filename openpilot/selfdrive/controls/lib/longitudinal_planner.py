@@ -145,6 +145,11 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       accel_coast = ACCEL_MAX
 
     v_ego = sm['carState'].vEgo
+    # LongitudinalPlannerSP.__init__ exposes self.v_ego (it starts at 0. alongside the filter),
+    # but nothing ever wrote the live value back — only this local was used. Anything reading
+    # planner.v_ego (the e2e_set_speed tests compute approach_accel() from it) saw 0 m/s forever,
+    # which silently moves the approach curve to its 1.5 m/s^2 first breakpoint.
+    self.v_ego = v_ego
     v_cruise_kph = min(sm['carState'].vCruise, V_CRUISE_MAX)
     v_cruise = v_cruise_kph * CV.KPH_TO_MS
     force_decel = sm['controlsState'].forceDecel
