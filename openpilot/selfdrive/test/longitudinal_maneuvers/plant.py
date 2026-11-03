@@ -73,6 +73,10 @@ class Plant:
     radar = messaging.new_message('radarState')
     control = messaging.new_message('controlsState')
     ss = messaging.new_message('selfdriveState')
+    # longitudinal_planner.is_e2e() reads selfdriveStateSP.zoompilot.experimentalModeDEPRECATED
+    # (upstream moved the live e2e flag into the SP extension). This stock plant feeds PlannerSM
+    # below, so it has to carry that service too or every scenario dies of KeyError.
+    ss_sp = messaging.new_message('selfdriveStateSP')
     car_state = messaging.new_message('carState')
     # sp renamed LiveParameters -> vehicleParameters; the planner reads angleOffsetDeg from it
     vp = messaging.new_message('vehicleParameters')
@@ -133,6 +137,7 @@ class Plant:
 
     control.controlsState.longControlState = LongCtrlState.pid if self.enabled else LongCtrlState.off
     ss.selfdriveState.personality = self.personality
+    ss_sp.selfdriveStateSP.zoompilot.experimentalModeDEPRECATED = bool(getattr(self, 'e2e', False))
     control.controlsState.forceDecel = self.force_decel
     car_state.carState.vEgo = float(self.speed)
     car_state.carState.standstill = bool(self.speed < 0.01)
@@ -145,6 +150,7 @@ class Plant:
           'carControl': car_control.carControl,
           'controlsState': control.controlsState,
           'selfdriveState': ss.selfdriveState,
+          'selfdriveStateSP': ss_sp.selfdriveStateSP,
           'modelV2': model.modelV2,
           'carStateSP': car_state_sp.carStateSP,
           'liveMapDataSP': live_map_data_sp.liveMapDataSP,
