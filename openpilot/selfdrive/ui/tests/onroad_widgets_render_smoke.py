@@ -100,10 +100,22 @@ _hw_mod = _harness._FakeModule('openpilot.common.hardware')
 _hw_mod.HARDWARE = SimpleNamespace(get_device_type=lambda: 'pc')
 _hw_mod.COMMA_HARDWARE = SimpleNamespace()
 _hw_mod.PC = True
+class _StubPaths:
+  """Any Paths.<x>() resolves to a scratch path under REPO_ROOT."""
+  def __getattr__(self, name):
+    target = REPO_ROOT / '.smoke_paths' / name
+    return lambda: target
+
 _hw_hw = _harness._FakeModule('openpilot.common.hardware.hw')
-_hw_hw.Paths = SimpleNamespace(model_root=lambda: str(REPO_ROOT / '.smoke_models'))
+_hw_hw.Paths = _StubPaths()
+# modeld.helpers also imports the chestnut usb probe; stub it off (no chestnut on PC)
+_hw_usb = _harness._FakeModule('openpilot.common.hardware.usb')
+_hw_usb.CHESTNUT_USB_PRODUCT = 'custom stub-CLEAN'
+_hw_usb.USB_DEVICES_PATH = REPO_ROOT / '.smoke_no_usb'
+_hw_usb.is_chestnut_usb_id = lambda *vendor_product, include_bootloader=False: False
 sys.modules['openpilot.common.hardware'] = _hw_mod
 sys.modules['openpilot.common.hardware.hw'] = _hw_hw
+sys.modules['openpilot.common.hardware.usb'] = _hw_usb
 
 # msgq visionipc: pip_sidecam's transport; the fake client never connects
 # (faithful to Lite hardware, which has no driver camera to publish it).
@@ -230,10 +242,10 @@ SM_VALUES = {
 class FakeSubMaster:
   def __init__(self):
     self._values = dict(SM_VALUES)
-    self.valid = {k: True for k in self._values}
-    self.recv_frame = {k: 10 for k in self._values}
-    self.updated = {k: False for k in self._values}
-    self.alive = {k: True for k in self._values}
+    self.valid = dict.fromkeys(self._values, True)
+    self.recv_frame = dict.fromkeys(self._values, 10)
+    self.updated = dict.fromkeys(self._values, False)
+    self.alive = dict.fromkeys(self._values, True)
     self.seen = {}
     self.frame = 100
 
@@ -296,14 +308,14 @@ sys.modules['openpilot.selfdrive.ui.ui_state'] = _ui_mod
 # Imports under test (after stubbing)
 # ---------------------------------------------------------------------------
 
-from openpilot.selfdrive.ui.sunnypilot.onroad import (  # noqa: E402
+from openpilot.selfdrive.ui.sunnypilot.onroad import (
   developer_sidebar, personality_button, pip_sidecam, source_bubble_layout,
   speed_source_drawer, stopping_point, torque_bar,
 )
-from openpilot.selfdrive.ui.sunnypilot.onroad.hud_renderer import (  # noqa: E402
-  EXP_BUTTON_SIZE, HudRendererSP,
+from openpilot.selfdrive.ui.sunnypilot.onroad.hud_renderer import (
+  HudRendererSP,
 )
-from openpilot.selfdrive.ui.ui_state import ui_state  # noqa: E402  (the fake)
+from openpilot.selfdrive.ui.ui_state import ui_state
 
 PANEL = _harness.Rect(0, 0, 2160, 1080)
 
