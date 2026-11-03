@@ -22,7 +22,8 @@ def _run_constant_curve(*, scc_enabled: bool, cruise: float, duration: float = 7
   curvature = 0.005
   plant = Plant(lead_relevancy=False, speed=30.0)
   planner = plant.planner
-  planner.dec._enabled = False
+  # DEC was removed wholesale upstream in 2026-10; there is no planner.dec any more, so there is
+  # nothing to switch off here.
   planner.scc.map.enabled = False
   planner.scc.vision.enabled = scc_enabled
   solver_failures = 0
