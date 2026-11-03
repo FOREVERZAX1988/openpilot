@@ -140,7 +140,9 @@ class TestCongestionGating(OpenpilotTestCase):
   def setup_method(self):
     self.params = Params()
     self.params.put_bool("SmartCruiseControlMap", True, block=True)
-    self.params.put("LastGPSPosition", "{}", block=True)
+    # LastGPSPosition is BYTES in params_keys.h (mapd writes json.dumps(...).encode()); a str here
+    # raises TypeError: Type mismatch while writing param.
+    self.params.put("LastGPSPosition", b"{}", block=True)
     self.params.put("MapTargetVelocities", "{}", block=True)
     self.scc_m = SmartCruiseControlMap()
 
