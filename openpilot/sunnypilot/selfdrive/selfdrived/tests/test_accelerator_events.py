@@ -288,7 +288,8 @@ class TestOffer(AcceleratorEventsTest):
     alerts = EVENTS_ZP[EventNameZP.bigModelAvailable]
     self.assertEqual(set(alerts), {ET.PERMANENT})
     alert = alerts[ET.PERMANENT]
-    self.assertEqual((alert.alert_text_1, alert.alert_text_2), ('大模型已就绪', 'Re-engage to switch'))
+    # fork 的 UI 是中文，events_zp 里这句就是中文
+    self.assertEqual((alert.alert_text_1, alert.alert_text_2), ('大模型已就绪', '重新接管以切换'))
 
 
 class TestOptionalProcesses(OpenpilotTestCase):

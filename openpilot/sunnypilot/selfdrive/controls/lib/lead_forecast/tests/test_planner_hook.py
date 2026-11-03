@@ -8,7 +8,7 @@ The planner hooks: the forecast reaches the MPC through the planner and the plan
 the follow-distance assist reports from the same plan.
 """
 import numpy as np
-import pytest
+import math
 
 from openpilot.cereal import messaging
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS
@@ -75,7 +75,7 @@ def test_on_reaches_the_mpc():
   off, _ = run(False)
   planner, sm = run(True)
   lead = publish(planner, sm).leadForecast.leadOne
-  assert lead.inhibit == Inhibit.none and lead.weight == pytest.approx(1.)
+  assert lead.inhibit == Inhibit.none and math.isclose(lead.weight, 1.)
   assert len(lead.x) == len(T_IDXS)
   np.testing.assert_allclose(lead.v, forecast_trajectory(D_REL, SLOWING)[:, 1], rtol=1e-5)
   # a lead the model sees slowing hard: the plan brakes harder than upstream's extrapolation
