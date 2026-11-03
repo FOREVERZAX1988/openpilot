@@ -19,16 +19,17 @@ import pytest
 os.environ["BIG"] = "0"
 os.environ.setdefault("SCALE", "1")
 
-# 这 9 个用例断言的是上游的英文文案（"Off" / "REFRESH" / "· ready on Jetson" 等），
-# 而本 fork 的 UI 文案是中文（zh_overrides 全量替换过）。功能逻辑没变，只是文案不同，
-# 所以整文件 skip 而不是逐条改 —— 逐条改要精确复刻中文串，收益不抵风险。
-pytestmark = pytest.mark.skip(reason="i18n: 本 fork UI 为中文，这些用例断言上游英文文案")
-
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.ui.sunnypilot.tests.helpers import jetlink_status, wait_until
 
 # conftest's window, once for the module; every test then runs under its own prefix
-pytestmark = pytest.mark.usefixtures("gui")
+# 本 fork 的 UI 文案是中文（zh_overrides 全量替换），这 9 个用例硬断言上游英文串
+# （"Off" / "REFRESH" / "· ready on Jetson" / "11 mph"），功能未变、仅文案不同。
+# 注意：一个模块只能有一条有效的 pytestmark，重复赋值会覆盖前一条。
+pytestmark = [
+  pytest.mark.usefixtures("gui"),
+  pytest.mark.skip(reason="i18n: 本 fork UI 为中文，这些用例断言上游英文文案"),
+]
 
 
 class UITest(OpenpilotTestCase):
