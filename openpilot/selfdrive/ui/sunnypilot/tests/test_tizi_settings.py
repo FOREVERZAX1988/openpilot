@@ -17,12 +17,16 @@ os.environ["BIG"] = "1"
 os.environ.setdefault("SCALE", "0.5")  # a full-size 2160x1080 hidden window aborts on macOS
 
 
-@pytest.mark.parametrize("engaged", [True, False])
-def test_alpha_toggle_locks_only_while_engaged(params, monkeypatch, engaged):
+@pytest.mark.parametrize("offroad", [True, False])
+def test_alpha_toggle_locks_only_while_offroad(params, monkeypatch, offroad):
+  # This fork refuses alpha longitudinal changes unless the car is offroad
+  # (update_state gates on ui_state.is_offroad(), which is `not started`). Upstream's
+  # version of this test mocks `engaged` instead -- but engaged never feeds is_offroad,
+  # so mocking it proves nothing. Mock the input the guard actually reads.
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import AlphaLongitudinalToggles
   from openpilot.selfdrive.ui.ui_state import UIState
-  monkeypatch.setattr(UIState, "engaged", property(lambda _: engaged))
-  assert AlphaLongitudinalToggles()._alpha_long_toggle.action_item.enabled == (not engaged)
+  monkeypatch.setattr(UIState, "started", property(lambda _: not offroad))
+  assert AlphaLongitudinalToggles()._alpha_long_toggle.action_item.enabled == offroad
 
 
 def test_moved_switches_appear_once(params):
