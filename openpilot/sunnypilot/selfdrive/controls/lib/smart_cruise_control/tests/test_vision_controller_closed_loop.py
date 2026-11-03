@@ -29,7 +29,6 @@ def _run_constant_curve(*, scc_enabled: bool, cruise: float, duration: float = 7
   solver_failures = 0
 
   with ExitStack() as patches:
-    patches.enter_context(mock.patch.object(planner.dec, "_read_params", return_value=None))
     patches.enter_context(mock.patch.object(planner.scc.map, "update_params", return_value=None))
     patches.enter_context(mock.patch.object(planner.scc.vision, "_update_params", return_value=None))
 

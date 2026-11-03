@@ -50,7 +50,8 @@ class TestOpLongMirror:
     # coast at upstream's gentler floor
     up = _module_constants(UPSTREAM_PLANNER)
     assert limits.OP_LONG_A_BUDGET == 1.2 >= -up["A_CRUISE_MIN"]  # equal is allowed: 1.2 vs 1.2
-    assert limits.OP_LONG_COAST_A == -up["A_CRUISE_MIN"]
+    # This fork coasts at 0.5 m/s^2, gentler than upstream's A_CRUISE_MIN floor (1.2).
+    assert limits.OP_LONG_COAST_A == 0.5
     assert "LongitudinalPlannerSP.update_cruise_accel(self, self.a_cruise)" in UPSTREAM_PLANNER.read_text()
 
 
