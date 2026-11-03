@@ -23,8 +23,12 @@ def test_alpha_toggle_locks_only_while_offroad(params, monkeypatch, offroad):
   # (update_state gates on ui_state.is_offroad(), which is `not started`). Upstream's
   # version of this test mocks `engaged` instead -- but engaged never feeds is_offroad,
   # so mocking it proves nothing. Mock the input the guard actually reads.
+  from types import SimpleNamespace
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggles import AlphaLongitudinalToggles
   from openpilot.selfdrive.ui.ui_state import UIState
+  # enabled = alpha_available AND is_offroad(). alpha_available is False while CP is None
+  # (nothing fingerprinted), so the offroad half alone can never make it True.
+  monkeypatch.setattr(UIState, "CP", property(lambda _: SimpleNamespace(alphaLongitudinalAvailable=True)))
   monkeypatch.setattr(UIState, "started", property(lambda _: not offroad))
   assert AlphaLongitudinalToggles()._alpha_long_toggle.action_item.enabled == offroad
 
