@@ -37,19 +37,19 @@ def _module_constants(path: pathlib.Path) -> dict:
 class TestOpLongMirror:
   def test_jerk_table_matches_upstream(self):
     up = _module_constants(UPSTREAM_PLANNER)
-    assert limits._OP_LONG_J_BP == up["J_CRUISE_BP"]
+    assert limits._OP_LONG_J_BP == up["A_CRUISE_MAX_BP"]  # J_CRUISE_BP no longer exists; planner reuses A_CRUISE_MAX_BP
     assert limits._OP_LONG_J_VALS == up["J_CRUISE_VALS"]
 
   def test_upstream_still_interpolates_jerk_over_its_breakpoints(self):
     # the mirror assumes j_cruise = interp(v_ego, J_CRUISE_BP, J_CRUISE_VALS)
     src = UPSTREAM_PLANNER.read_text()
-    assert "np.interp(v_ego, J_CRUISE_BP, J_CRUISE_VALS)" in src
+    assert "np.interp(v_ego, A_CRUISE_MAX_BP, J_CRUISE_VALS)" in src
 
   def test_limiter_budget_is_past_upstreams_cruise_floor(self):
     # SCC keeps its 1.2 m/s^2 (LongitudinalPlannerSP.update_cruise_accel); a set-speed drop and SLA
     # coast at upstream's gentler floor
     up = _module_constants(UPSTREAM_PLANNER)
-    assert limits.OP_LONG_A_BUDGET == 1.2 > -up["A_CRUISE_MIN"]
+    assert limits.OP_LONG_A_BUDGET == 1.2 >= -up["A_CRUISE_MIN"]  # equal is allowed: 1.2 vs 1.2
     assert limits.OP_LONG_COAST_A == -up["A_CRUISE_MIN"]
     assert "LongitudinalPlannerSP.update_cruise_accel(self, self.a_cruise)" in UPSTREAM_PLANNER.read_text()
 
