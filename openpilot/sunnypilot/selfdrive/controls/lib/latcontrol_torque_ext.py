@@ -35,8 +35,6 @@ class LatControlTorqueExt(LatControlTorqueExtZP, NeuralNetworkLateralControl, La
     # what the carcontroller reported back, pushed by controlsd_ext after its classifier
     self._applied_torque = 0.0
     self._at_rail = False
-    # the car's TOML speed-dep seeds, built once by update_speed_dep_torque
-    self._speed_dep_car_cfg = None
 
   def adjust_desired_curvature(self, desired_curvature, CS, active):
     return self.lateral_lane_assist.update(desired_curvature, CS.vEgo, active, CS.steeringPressed, self.model_v2,
@@ -150,42 +148,22 @@ class LatControlTorqueExt(LatControlTorqueExtZP, NeuralNetworkLateralControl, La
     self.lac_torque.update_limits()
 
   def update_speed_dep_torque(self, tp, tp_sp):
-    """Apply torqued's per-bin values: learned values for valid bins, the car's TOML seeds or
-    the global filtered values for the rest. tp is upstream's lateralTorqueParameters (the
-    globals and useParams), tp_sp the fork's liveTorqueParametersSP published beside it
-    (the bins), or None when that service has not checked out. useParams off, no fork
-    message or no bins all mean torqued no longer stands behind the values (the manual
-    override flips useParams mid-drive), and each deactivates through
-    disable_speed_dep_torque rather than leaving stale tables."""
+    """Apply torqued's per-bin values exactly as published. The learner seeds every bin's
+    filter from the car's TOML entry before publishing, so an invalid bin already carries its
+    seed: the controller must not re-read the TOML or substitute the global values. tp is
+    upstream's lateralTorqueParameters (the globals and useParams), tp_sp the fork's
+    liveTorqueParametersSP published beside it (the bins), or None when that service has not
+    checked out. useParams off, no fork message or no bins all mean torqued no longer stands
+    behind the values (the manual override flips useParams mid-drive), and each deactivates
+    through disable_speed_dep_torque rather than leaving stale tables."""
     if not tp.useParams or tp_sp is None or not tp_sp.speedBinCenters:
       self.disable_speed_dep_torque()
       return
-    speed_bp = list(tp_sp.speedBinCenters)
-
-    factors = list(tp_sp.speedBinLatAccelFactors)
-    frictions = list(tp_sp.speedBinFrictions)
-    valid_bp = list(tp_sp.speedBinValid)
-
-    if self._speed_dep_car_cfg is None:
-      from opendbc.sunnypilot.car.interfaces import get_speed_dep_config_for_car
-      self._speed_dep_car_cfg = get_speed_dep_config_for_car(self.CP)
-    cfg = self._speed_dep_car_cfg
-    seed_lafs = cfg.get('laf_bp')
-    seed_frictions = cfg.get('friction_bp')
-    if (seed_lafs and seed_frictions and
-        len(seed_lafs) == len(speed_bp) and len(seed_frictions) == len(speed_bp)):
-      fallback_factors = seed_lafs
-      fallback_frictions = seed_frictions
-    else:
-      global_factor = tp.latAccelFactorFiltered
-      global_fric = tp.frictionCoefficientFiltered
-      fallback_factors = [global_factor] * len(speed_bp)
-      fallback_frictions = [global_fric] * len(speed_bp)
 
     self._speed_dep_active = True
-    self._speed_dep_speed_bp = speed_bp
-    self._speed_dep_lat_accel_factor_bp = [factors[i] if valid_bp[i] else fallback_factors[i] for i in range(len(speed_bp))]
-    self._speed_dep_friction_bp = [frictions[i] if valid_bp[i] else fallback_frictions[i] for i in range(len(speed_bp))]
+    self._speed_dep_speed_bp = list(tp_sp.speedBinCenters)
+    self._speed_dep_lat_accel_factor_bp = list(tp_sp.speedBinLatAccelFactors)
+    self._speed_dep_friction_bp = list(tp_sp.speedBinFrictions)
 
     # global filtered values as the PID-limits baseline; the per-frame interp overwrites next frame
     self.lac_torque.torque_params.latAccelFactor = tp.latAccelFactorFiltered
