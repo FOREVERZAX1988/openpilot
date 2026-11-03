@@ -22,7 +22,9 @@ MODEL_ACCEL = 0.
 
 def lead_mpc(mpc, accel: float) -> None:
   """The MPC holding a lead's gap at a steady accel, below the cruise candidate."""
-  def update(radarstate, personality=None):
+  def update(radarstate, personality=None, **kwargs):
+    # planner.update() now passes t_follow=... to the MPC (2026-11-03); this stub only needs to
+    # accept it, the solution it plants is fixed.
     mpc.v_solution = mpc.x0[1] + accel * T_IDXS_MPC
     mpc.a_solution = np.full(len(T_IDXS_MPC), accel)
     mpc.j_solution = np.zeros(len(T_IDXS_MPC) - 1)
