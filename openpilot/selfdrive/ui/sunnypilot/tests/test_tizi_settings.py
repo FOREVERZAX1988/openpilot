@@ -30,7 +30,8 @@ def test_alpha_toggle_locks_only_while_offroad(params, monkeypatch, offroad):
   # (nothing fingerprinted), so the offroad half alone can never make it True.
   # CP lives on the ui_state *instance*, not on UIState, hence raising=False + the singleton.
   monkeypatch.setattr(ui_state, "CP", SimpleNamespace(alphaLongitudinalAvailable=True), raising=False)
-  monkeypatch.setattr(UIState, "started", property(lambda _: not offroad))
+  # started is an instance attribute too (is_offroad() reads it), not a UIState class attr.
+  monkeypatch.setattr(ui_state, "started", not offroad, raising=False)
   assert AlphaLongitudinalToggles()._alpha_long_toggle.action_item.enabled == offroad
 
 
