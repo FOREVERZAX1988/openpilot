@@ -246,6 +246,10 @@ class PlantSP(Plant):
     radar = messaging.new_message('radarState')
     control = messaging.new_message('controlsState')
     ss = messaging.new_message('selfdriveState')
+    # longitudinal_planner.is_e2e() reads selfdriveStateSP.zoompilot.experimentalModeDEPRECATED
+    # (upstream moved the live e2e flag into the SP extension). PlannerSM below must carry it,
+    # otherwise every PlantSP scenario dies of KeyError: 'selfdriveStateSP'.
+    ss_sp = messaging.new_message('selfdriveStateSP')
     car_state = messaging.new_message('carState')
     vehicle_parameters = messaging.new_message('vehicleParameters')
     car_control = messaging.new_message('carControl')
@@ -337,6 +341,7 @@ class PlantSP(Plant):
     control.controlsState.longControlState = self.long_control.long_control_state if self.long_control is not None else (
       LongCtrlState.pid if self.enabled else LongCtrlState.off)
     ss.selfdriveState.deprecated.experimentalMode = self.e2e if self.experimental_mode_fn is None else bool(self.experimental_mode_fn(self.current_time))
+    ss_sp.selfdriveStateSP.zoompilot.experimentalModeDEPRECATED = self.e2e if self.experimental_mode_fn is None else bool(self.experimental_mode_fn(self.current_time))
     ss.selfdriveState.personality = self.personality
     control.controlsState.forceDecel = self.force_decel
     true_v_ego = self.speed
@@ -358,6 +363,7 @@ class PlantSP(Plant):
       'carControl': car_control.carControl,
       'controlsState': control.controlsState,
       'selfdriveState': ss.selfdriveState,
+      'selfdriveStateSP': ss_sp.selfdriveStateSP,
       'vehicleParameters': vehicle_parameters.vehicleParameters,
       'modelV2': model.modelV2,
       'carStateSP': car_state_sp.carStateSP,
