@@ -3,6 +3,7 @@
 import math
 import json
 import os
+import sys
 import shutil
 import subprocess
 import time
@@ -140,7 +141,7 @@ class TestOnroad(OpenpilotTestCase):
     try:
       manager_path = os.path.join(BASEDIR, "openpilot/system/manager/manager.py")
       cls.manager_st = time.monotonic()
-      proc = subprocess.Popen(["python", manager_path])
+      proc = subprocess.Popen([sys.executable, manager_path])
 
       sm = messaging.SubMaster(['carState'])
       with Timeout(30, "controls didn't start"):
