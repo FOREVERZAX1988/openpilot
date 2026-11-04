@@ -125,8 +125,12 @@ class SelfdriveD:
     # TODO: de-couple selfdrived with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
 
+    # carrotManSP is an observational-only input here (indicator layer's ATC
+    # mirror); controlsd/ui already treat it as optional. A transient msgq
+    # scheduling blip otherwise makes all_checks() fail on a live 10 Hz feed and
+    # raises the spurious "进程间通信问题: carrotManSP" comm issue mid-drive.
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan', 'liveTracks'] \
-             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP']
+             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP']
     disable_dm = is_dm_disabled(self.params)
     if SIMULATION or disable_dm:
       ignore += ['cabinCameraState', 'managerState']
@@ -708,7 +712,11 @@ class SelfdriveD:
 
     if not self.initialized:
       all_valid = CS.canValid and self.sm.all_checks()
-      timed_out = self.sm.frame * DT_CTRL > 6.
+      # On a cold boot (notably a fresh first install on a 3X) model load and
+      # camera bring-up can exceed the old 6 s budget. Match upstream cp
+      # (26c6fa54b): healthy services still finish immediately; this only
+      # widens the finite escape before missing camera streams are ignored.
+      timed_out = self.sm.frame * DT_CTRL > 10.
       if all_valid or timed_out or (SIMULATION and not REPLAY):
         available_streams = VisionIpcClient.available_streams("camerad", block=False)
         if VisionStreamType.VISION_STREAM_NARROW_ROAD not in available_streams:
