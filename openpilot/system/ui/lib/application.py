@@ -16,7 +16,7 @@ import subprocess
 from contextlib import contextmanager
 from collections.abc import Callable
 from collections import deque
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 from pathlib import Path
 from typing import NamedTuple
 from importlib.resources import as_file, files
@@ -26,6 +26,46 @@ from openpilot.system.ui.lib.multilang import TRANSLATIONS_DIR, multilang
 from openpilot.common.realtime import Ratekeeper
 
 from openpilot.system.ui.sunnypilot.lib.application import GuiApplicationExt
+
+
+# Newer AGNOS images ship a pyray/raylib build without raygui compiled in, so
+# the raygui global font/style bindings are absent. This UI draws every string
+# through its own widgets with an explicit font (draw_text_ex), so raygui's
+# global font and default style are not actually needed. Provide no-op shims so
+# startup (_load_fonts/_set_styles) keeps working on both images instead of
+# dying with "module 'pyray' has no attribute 'gui_set_font'".
+def _raygui_available() -> bool:
+  return all(hasattr(rl, name) for name in ("gui_set_font", "gui_get_font", "gui_set_style"))
+
+
+def gui_set_font(font) -> None:
+  fn = getattr(rl, "gui_set_font", None)
+  if fn is not None:
+    fn(font)
+
+
+def gui_get_font():
+  fn = getattr(rl, "gui_get_font", None)
+  return fn() if fn is not None else None
+
+
+def gui_set_style(control, prop, value) -> None:
+  fn = getattr(rl, "gui_set_style", None)
+  if fn is not None:
+    fn(control, prop, value)
+
+
+# Some drawing call sites still reference raygui's text-alignment enums
+# (rl.GuiTextAlignment / rl.GuiTextAlignmentVertical). Inject the fixed raygui
+# enum values into the pyray module when raygui is absent so those call sites
+# work unchanged on new AGNOS images. Values are the raygui ABI constants.
+if not all(hasattr(rl, name) for name in ("GuiTextAlignment", "GuiTextAlignmentVertical")):
+  for _name, _members in (
+    ("GuiTextAlignment", (("TEXT_ALIGN_LEFT", 0), ("TEXT_ALIGN_CENTER", 1), ("TEXT_ALIGN_RIGHT", 2))),
+    ("GuiTextAlignmentVertical", (("TEXT_ALIGN_TOP", 0), ("TEXT_ALIGN_MIDDLE", 1), ("TEXT_ALIGN_BOTTOM", 2))),
+  ):
+    if not hasattr(rl, _name):
+      setattr(rl, _name, IntEnum(_name, _members))
 
 _DEFAULT_FPS = int(os.getenv("FPS", {'tici': 20, 'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
 FPS_LOG_INTERVAL = 5  # Seconds between logging FPS drops
@@ -1009,8 +1049,11 @@ class GuiApplication(GuiApplicationExt):
       return
 
     # raygui stores the Font by value, so a copy of old_font outlives the unload below.
-    if rl.gui_get_font().texture.id == old_font.texture.id:
-      rl.gui_set_font(font)
+    # Without raygui (new AGNOS) there is no global font to keep in sync; widgets set
+    # their own font explicitly on every draw_text_ex, so just skip the global swap.
+    current_gui_font = gui_get_font()
+    if current_gui_font is not None and current_gui_font.texture.id == old_font.texture.id:
+      gui_set_font(font)
 
     self._fallback_fonts[language] = font
     rl.unload_font(old_font)
@@ -1037,7 +1080,7 @@ class GuiApplication(GuiApplicationExt):
     # here would bypass font()'s OpFont selection and render tofu for non-Latin
     # languages at startup.
     self._active_lang_code = multilang.language
-    rl.gui_set_font(self.font(FontWeight.NORMAL))
+    gui_set_font(self.font(FontWeight.NORMAL))
 
   def on_language_changed(self, lang_code: str):
     # Called from a click callback while a frame is being drawn. Only record the request;
@@ -1062,12 +1105,15 @@ class GuiApplication(GuiApplicationExt):
     # transparently remapped to the new same-weight font via current_font()/font_fallback().
     for f in old_fonts:
       rl.unload_font(f)
-    rl.gui_set_font(self.font(FontWeight.NORMAL))
+    gui_set_font(self.font(FontWeight.NORMAL))
     from openpilot.system.ui.lib import text_measure, wrap_text
     text_measure._cache.clear()
     wrap_text._cache.clear()
 
   def _set_styles(self):
+    # raygui only; no-op on AGNOS images whose pyray has no raygui compiled in.
+    if not _raygui_available():
+      return
     rl.gui_set_style(rl.GuiControl.DEFAULT, rl.GuiControlProperty.BORDER_WIDTH, 0)
     rl.gui_set_style(rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.TEXT_SIZE, DEFAULT_TEXT_SIZE)
     rl.gui_set_style(rl.GuiControl.DEFAULT, rl.GuiDefaultProperty.BACKGROUND_COLOR, rl.color_to_int(rl.BLACK))

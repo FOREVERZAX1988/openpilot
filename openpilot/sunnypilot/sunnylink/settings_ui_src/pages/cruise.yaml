@@ -77,6 +77,12 @@ sections:
       label: 运动
     enablement:
     - $ref: '#/macros/longitudinal'
+  - key: AccelBoostSP
+    widget: toggle
+    title: 加速助力
+    description: "在 sunnypilot 自身加速度之上叠加小幅助推，激进个性下更强、放松个性下更柔和。过弯以及减速、停车时会自动收力。永远不会超过你的设定车速，跟车避撞仍然优先。"
+    enablement:
+    - $ref: '#/macros/longitudinal'
   - key: IntelligentCruiseButtonManagement
     widget: toggle
     title: 智能巡航按键管理（ICBM）（Alpha）
