@@ -44,6 +44,18 @@ def _params_lib_path() -> Path:
   assistant's websocket, mid-answer) down with them.
   """
   src = Path(__file__).with_name(f"libparams_c{_suffix}")
+  if not src.is_file():
+    # Zipapp case: this module was imported from a self-contained zipapp
+    # (e.g. the updater), so __file__ lives inside an archive and cannot be
+    # dlopen'ed. Fall back to the real openpilot tree on sys.path
+    # (PYTHONPATH), which carries the compiled library.
+    for entry in sys.path:
+      if not entry:
+        continue
+      candidate = Path(entry) / "openpilot" / "common" / f"libparams_c{_suffix}"
+      if candidate.is_file():
+        src = candidate
+        break
   try:
     st = src.stat()
     cache_root = Path("/data/.cache/params_lib") if Path("/data").is_dir() else Path(tempfile.gettempdir()) / "op_params_lib"
