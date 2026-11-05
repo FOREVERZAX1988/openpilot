@@ -933,6 +933,14 @@ ensure_params_build() {
     # in /tmp/params_build.log).
     echo "[warn] ensure_params_build failed, webui may fall back to dev/mock mode"
     tail -5 /tmp/params_build.log
+  else
+    # scons restores a cache hit with the cache entry's original mtime (this box
+    # ends up with 1970-01-04), so the `-nt` test above keeps firing on every
+    # boot even though the .so is current -- a full scons pass on each start.
+    # Stamp the result with a real timestamp: the next boot compares against it
+    # and skips, while a later params_keys.h change still wins because its mtime
+    # moves past the stamp. A failed build skips the touch, so it is retried.
+    touch "$so"
   fi
 }
 
