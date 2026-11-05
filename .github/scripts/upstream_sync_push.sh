@@ -1,15 +1,33 @@
 #!/usr/bin/env bash
-# Push only master-c3-new — never push master-c3 from automation.
+# Push OUTPUT_BRANCH (current HEAD) to origin. Auth: SYNC_PAT > GITHUB_TOKEN.
 set -euo pipefail
 
-FORK_BRANCH="${FORK_BRANCH:-master-c3}"
-OUTPUT_BRANCH="${OUTPUT_BRANCH:-master-c3-new}"
+OUTPUT_BRANCH="${OUTPUT_BRANCH:?OUTPUT_BRANCH not set}"
+REMOTE_URL="$(git remote get-url origin)"
 
-current="$(git branch --show-current)"
-if [[ "$current" != "$OUTPUT_BRANCH" ]]; then
-  echo "::error::Refusing to push: on branch '$current', expected '$OUTPUT_BRANCH'"
-  exit 1
+if [ -n "${SYNC_PAT:-}" ]; then
+  # https://github.com/owner/repo.git -> https://x-access-token:<pat>@github.com/owner/repo.git
+  AUTH_URL="$(python - "${REMOTE_URL}" "${SYNC_PAT}" <<'PYEOF'
+import sys
+from urllib.parse import urlsplit, urlunsplit
+url, token = sys.argv[1], sys.argv[2]
+parts = urlsplit(url)
+netloc = f"x-access-token:{token}@{parts.netloc}"
+print(urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment)))
+PYEOF
+)"
+else
+  AUTH_URL="${REMOTE_URL}"
 fi
 
-echo "Pushing ${OUTPUT_BRANCH} only (base ${FORK_BRANCH} is not modified by CI)"
-git push origin "${OUTPUT_BRANCH}" --force-with-lease
+for i in 1 2 3; do
+  if git push "${AUTH_URL}" "HEAD:refs/heads/${OUTPUT_BRANCH}"; then
+    echo "Pushed ${OUTPUT_BRANCH}"
+    exit 0
+  fi
+  echo "Push attempt ${i} failed; retrying after fetch"
+  git fetch origin "${OUTPUT_BRANCH}" 2>/dev/null || true
+  sleep 5
+done
+echo "::error::Failed to push ${OUTPUT_BRANCH} after 3 attempts"
+exit 1

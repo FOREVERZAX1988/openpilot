@@ -1,74 +1,66 @@
 #!/usr/bin/env bash
-# Resolve merge conflicts in-place via OpenCode CLI (no dispatch branch / PR).
+# Resolve remaining merge conflicts with the OpenCode API (OpenAI-compatible).
+# Usage: upstream_sync_opencode.sh <prompt_file>
+# Env: OPENCODE_API_KEY, OPENCODE_MODEL, OPENCODE_BASE_URL (default https://api.opencode.ai/v1)
 set -euo pipefail
 
-PROMPT_FILE="${1:-}"
-FORK_BRANCH="${FORK_BRANCH:-master-c3}"
-MODEL="${OPENCODE_MODEL:-opencode/deepseek-v4-flash}"
-PROMPT_PATH="${RUNNER_TEMP:-/tmp}/upstream_oc_prompt.txt"
+PROMPT_FILE="${1:?usage: upstream_sync_opencode.sh <prompt_file>}"
+OPENCODE_BASE_URL="${OPENCODE_BASE_URL:-https://api.opencode.ai/v1}"
+OPENCODE_MODEL="${OPENCODE_MODEL:-opencode/deepseek-v4-flash}"
 
-if [[ -z "${OPENCODE_API_KEY:-}" ]]; then
-  echo "::error::OPENCODE_API_KEY is required"
-  exit 1
-fi
+[ -n "${OPENCODE_API_KEY:-}" ] || { echo "::warning::OPENCODE_API_KEY not set; cannot auto-resolve conflicts"; exit 1; }
+[ -f "${PROMPT_FILE}" ] || { echo "Prompt file ${PROMPT_FILE} missing"; exit 1; }
 
-git fetch origin "$FORK_BRANCH" --depth=1 2>/dev/null || git fetch origin "$FORK_BRANCH"
+UNMERGED="$(git diff --name-only --diff-filter=U || true)"
+[ -n "${UNMERGED}" ] || { echo "No unmerged files."; exit 0; }
 
-if [[ -n "$PROMPT_FILE" && -f "$PROMPT_FILE" ]]; then
-  cp "$PROMPT_FILE" "$PROMPT_PATH"
-elif git show "origin/${FORK_BRANCH}:.github/scripts/prompts/upstream_sync_panda.txt" >"$PROMPT_PATH" 2>/dev/null; then
-  :
-elif git show "origin/${FORK_BRANCH}:.github/scripts/prompts/upstream_sync_opendbc.txt" >"$PROMPT_PATH" 2>/dev/null; then
-  :
-elif git show "origin/${FORK_BRANCH}:.github/scripts/prompts/upstream_sync_openpilot.txt" >"$PROMPT_PATH" 2>/dev/null; then
-  :
-else
-  echo "::error::OpenCode prompt file not found"
-  exit 1
-fi
+SYSTEM_PROMPT="$(cat "${PROMPT_FILE}")"
 
-CONFLICT_LIST="$({
-  git diff --name-only --diff-filter=U 2>/dev/null || true
-  git grep -l -E '^(<{7}|>{7})' -- . 2>/dev/null || true
-} | sort -u | head -50)"
+opencode_complete() {
+  local user_content="$1"
+  local payload response
+  # Build payload via python for correct JSON escaping
+  payload="$(OC_SYSTEM_PROMPT="${SYSTEM_PROMPT}" OPENCODE_MODEL="${OPENCODE_MODEL}" python - "${user_content}" <<'PYEOF'
+import json, os, sys
+sys_prompt = os.environ.get("OC_SYSTEM_PROMPT", "")
+user = sys.argv[1]
+msgs = []
+if sys_prompt:
+    msgs.append({"role": "system", "content": sys_prompt})
+msgs.append({"role": "user", "content": user})
+print(json.dumps({"model": os.environ["OPENCODE_MODEL"], "messages": msgs, "temperature": 0.0}))
+PYEOF
+)"
 
-if [[ -n "$CONFLICT_LIST" ]]; then
-  {
-    echo ""
-    echo "以下文件仍有冲突，请全部处理："
-    echo "$CONFLICT_LIST"
-  } >>"$PROMPT_PATH"
-fi
+  response="$(curl -sS --max-time 300 \
+    -H "Authorization: Bearer ${OPENCODE_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "${payload}" \
+    "${OPENCODE_BASE_URL}/chat/completions")"
 
-cat >>"$PROMPT_PATH" <<'EOF'
-
----
-硬性约束（必须遵守）：
-- 只在当前 git 分支上修改文件，解决所有 <<<<<<< / ======= / >>>>>>> 冲突标记
-- 不要创建新分支，不要 git push，不要开 Pull Request
-- 完成后对修改过的文件执行 git add
-- 不要删除 C3 / DOS / tici / sunnypilot 适配目录来回避冲突
-EOF
-
-if ! command -v opencode >/dev/null 2>&1; then
-  curl -fsSL https://opencode.ai/install | bash
-  export PATH="$HOME/.opencode/bin:$PATH"
-fi
-
-mkdir -p "$HOME/.config/opencode"
-cat >"$HOME/.config/opencode/opencode.json" <<EOF
-{
-  "\$schema": "https://opencode.ai/config.json",
-  "model": "${MODEL}",
-  "provider": {
-    "opencode": {
-      "options": {
-        "apiKey": "${OPENCODE_API_KEY}"
-      }
-    }
-  }
+  python - "${response}" <<'PYEOF'
+import json, sys
+data = json.loads(sys.argv[1])
+try:
+    print(data["choices"][0]["message"]["content"])
+except (KeyError, IndexError):
+    sys.stderr.write(f"Unexpected OpenCode response: {json.dumps(data)[:500]}\n")
+    sys.exit(1)
+PYEOF
 }
-EOF
 
-echo "OpenCode resolving conflicts on branch: $(git branch --show-current)"
-timeout 900 opencode run --model "$MODEL" --auto "$(cat "$PROMPT_PATH")"
+while IFS= read -r file; do
+  [ -n "${file}" ] || continue
+  echo "Resolving conflicts in ${file} ..."
+  [ -f "${file}" ] && file_content="$(cat "${file}")" || file_content="(file was deleted on one side; decide keep/delete)"
+  user_content="Merge conflict in file: ${file}
+${file_content}
+
+Return ONLY the full resolved content of this file. No explanations, no markdown fences."
+  OC_SYSTEM_PROMPT="${SYSTEM_PROMPT}" RESOLVED="$(opencode_complete "${user_content}")" || exit 1
+  # Strip accidental markdown fences
+  printf '%s\n' "${RESOLVED}" | sed -e '/^```/d' > "${file}"
+  git add "${file}"
+done <<< "${UNMERGED}"
+
+echo "OpenCode conflict resolution finished."

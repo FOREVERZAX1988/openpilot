@@ -97,12 +97,14 @@ def link_on() -> bool:
 IN_CONTROL = ('carState', 'carControl', 'carControlSP')
 
 
-def chestnut_cable() -> bool:
-  """A cable on the port, for modeld's chestnut check. A Jetson or an iPhone
-  on the port is a cable too, so it counts only while Jetlink is off (jetlink
-  docs/porting.md)."""
-  from openpilot.common.hardware.usb import cable_connected
-  return cable_connected() and not link_on()
+def chestnut_cable(connected: bool | None = None) -> bool:
+  """A cable on the port, for modeld's and the UI's chestnut guess: `connected`,
+  or the port read now. A Jetson or an iPhone on the port is a cable too, so it
+  counts only while Jetlink is off (jetlink docs/porting.md)."""
+  if connected is None:
+    from openpilot.common.hardware.usb import cable_connected
+    connected = cable_connected()
+  return connected and not link_on()
 
 
 @functools.cache
@@ -163,6 +165,19 @@ def _adapter_class():
       from openpilot.selfdrive.modeld.modeld import MIN_LAT_CONTROL_SPEED, get_action_from_model
       from openpilot.sunnypilot.modeld_v2.model_settings import with_blendful
       return with_blendful(get_action_from_model, MIN_LAT_CONTROL_SPEED)
+
+    def model_face(self):
+      # Stock's face plus the comma's Venus HEVC encoder: interface.ModelFace's
+      # optional hevc_encoder is the builder the HEVC frame carrier needs, and
+      # a face without one never negotiates the codec (frames stay raw or
+      # lossless, at many times the bytes). The bitrate follows the Wi-Fi band
+      # inside hevc_venus. Imported here, so the modeld process pays for it
+      # only when it builds a face, and a machine with no Venus block still
+      # builds a face: the maker is only called once a link negotiated HEVC.
+      this = super().model_face()
+      from openpilot.sunnypilot.jetlink_adapter.hevc_venus import make_encoder
+      import dataclasses
+      return dataclasses.replace(this, hevc_encoder=make_encoder)
 
     def engaged(self, sm) -> bool:
       # selfdrived's enabled or mads.enabled, as controlsd republishes them.

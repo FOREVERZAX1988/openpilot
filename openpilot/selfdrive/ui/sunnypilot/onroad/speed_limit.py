@@ -142,7 +142,7 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
   def update(self):
     SpeedLimitAlertRenderer.update(self)
     sm = ui_state.sm
-    # Read CarrotPanelOpacity (0-100).
+    # CarrotPanelOpacity (0-100) scales the animation fade alpha.
     try:
       self._panel_opacity = max(10, min(100, int(ui_state.params.get("CarrotPanelOpacity", 100))))
     except Exception:

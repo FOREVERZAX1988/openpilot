@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
-# Verify merge conflicts resolved and complete the merge commit.
+# Verify merge-conflict resolution is complete: no unmerged paths, no conflict
+# markers in tracked files, and git's own conflict-marker check passes.
 set -euo pipefail
 
-unmerged="$(git diff --name-only --diff-filter=U 2>/dev/null || true)"
-if [[ -n "$unmerged" ]]; then
-  echo "::error::Unmerged files remain:"
-  echo "$unmerged"
-  exit 1
+FAILED=0
+
+UNMERGED="$(git diff --name-only --diff-filter=U || true)"
+if [ -n "${UNMERGED}" ]; then
+  echo "::error::Unmerged paths remain:"
+  echo "${UNMERGED}"
+  FAILED=1
 fi
 
-# Git conflict markers: <<<<<<< and >>>>>>> (avoid bare ======= false positives)
-markers="$(git grep -n -E '^(<{7}|>{7})' -- . 2>/dev/null | head -30 || true)"
-if [[ -n "$markers" ]]; then
-  echo "::error::Conflict markers remain:"
-  echo "$markers"
-  exit 1
+MARKERS='^(<<<<<<<|=======$|>>>>>>>)'
+while IFS= read -r file; do
+  [ -n "${file}" ] || continue
+  if [ -f "${file}" ] && grep -IlqE "${MARKERS}" "${file}" 2>/dev/null; then
+    echo "::error::Conflict markers found in ${file}"
+    grep -nE "${MARKERS}" "${file}" | head -5
+    FAILED=1
+  fi
+done < <(git diff --name-only HEAD || true)
+
+if ! git diff --check HEAD > /tmp/git_diff_check.log 2>&1; then
+  echo "::error::git diff --check reported problems:"
+  head -20 /tmp/git_diff_check.log
+  FAILED=1
 fi
 
-git add -A
-
-if ! git diff --cached --quiet; then
-  git commit -m "sync: resolve merge conflicts (OpenCode)"
-  echo "Merge commit created"
-elif [[ -f .git/MERGE_HEAD ]]; then
-  echo "::error::Merge still in progress but nothing staged to commit"
-  git status --short
-  exit 1
-else
-  echo "No staged changes; merge may already be complete"
-fi
+exit "${FAILED}"

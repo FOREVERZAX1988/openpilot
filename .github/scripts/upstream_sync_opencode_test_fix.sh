@@ -1,63 +1,69 @@
 #!/usr/bin/env bash
-# Ask OpenCode to fix CI test failures using the captured log.
+# Ask OpenCode to fix the failing test, applying its unified diff.
+# Usage: upstream_sync_opencode_test_fix.sh <log_file> <prompt_file>
+# Env: OPENCODE_API_KEY, OPENCODE_MODEL, OPENCODE_BASE_URL
 set -euo pipefail
 
-PROMPT_FILE="${1:?prompt file required}"
-TEST_LOG="${2:?test log required}"
-MODEL="${OPENCODE_MODEL:-opencode/deepseek-v4-flash}"
-PROMPT_PATH="${RUNNER_TEMP:-/tmp}/upstream_oc_test_prompt.txt"
+LOG_FILE="${1:?usage: upstream_sync_opencode_test_fix.sh <log> <prompt>}"
+PROMPT_FILE="${2:-}"
+OPENCODE_BASE_URL="${OPENCODE_BASE_URL:-https://api.opencode.ai/v1}"
+OPENCODE_MODEL="${OPENCODE_MODEL:-opencode/deepseek-v4-flash}"
 
-if [[ -z "${OPENCODE_API_KEY:-}" ]]; then
-  echo "::error::OPENCODE_API_KEY is required for test auto-fix"
-  exit 1
+[ -n "${OPENCODE_API_KEY:-}" ] || { echo "OPENCODE_API_KEY not set"; exit 1; }
+[ -f "${LOG_FILE}" ] || { echo "Log file missing: ${LOG_FILE}"; exit 1; }
+
+SYSTEM_PROMPT=""
+[ -n "${PROMPT_FILE}" ] && [ -f "${PROMPT_FILE}" ] && SYSTEM_PROMPT="$(cat "${PROMPT_FILE}")"
+
+# Keep prompt bounded: last 400 lines of the log
+LOG_TAIL="$(tail -400 "${LOG_FILE}")"
+STATUS="$(git status --porcelain | head -50 || true)"
+
+PAYLOAD="$(OC_SYSTEM_PROMPT="${SYSTEM_PROMPT}" LOG_TAIL="${LOG_TAIL}" STATUS="${STATUS}" OPENCODE_MODEL="${OPENCODE_MODEL}" python - <<'PYEOF'
+import json, os
+user = f"""Tests failed on a merged fork tree. Produce ONE unified diff (git format, paths relative to repo root) that fixes the failure. Do not weaken test assertions; prefer fixing product code. If the failure is caused by a genuine upstream behavior change that our fork must adopt, fix the fork side accordingly.
+
+Git status:
+{os.environ.get('STATUS', '')}
+
+Failing log (tail):
+{os.environ.get('LOG_TAIL', '')}
+
+Return ONLY the diff, no prose, no markdown fences."""
+msgs = []
+sp = os.environ.get("OC_SYSTEM_PROMPT", "")
+if sp:
+    msgs.append({"role": "system", "content": sp})
+msgs.append({"role": "user", "content": user})
+print(json.dumps({"model": os.environ["OPENCODE_MODEL"], "messages": msgs, "temperature": 0.0}))
+PYEOF
+)"
+
+RESPONSE="$(curl -sS --max-time 300 \
+  -H "Authorization: Bearer ${OPENCODE_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "${PAYLOAD}" \
+  "${OPENCODE_BASE_URL}/chat/completions")"
+
+DIFF_TEXT="$(python - "${RESPONSE}" <<'PYEOF'
+import json, re, sys
+data = json.loads(sys.argv[1])
+content = data["choices"][0]["message"]["content"]
+# strip markdown fences if present
+m = re.search(r"```(?:diff)?\s*\n(.*?)```", content, re.S)
+text = m.group(1) if m else content
+print(text.strip())
+PYEOF
+)"
+
+[ -n "${DIFF_TEXT}" ] || { echo "OpenCode returned empty diff"; exit 1; }
+
+printf '%s\n' "${DIFF_TEXT}" > /tmp/opencode_fix.diff
+if git apply --check /tmp/opencode_fix.diff 2>/dev/null; then
+  git apply /tmp/opencode_fix.diff
+elif git apply --3way /tmp/opencode_fix.diff 2>/dev/null; then
+  echo "Applied with 3way merge"
+else
+  echo "::error::OpenCode diff does not apply"; head -20 /tmp/opencode_fix.diff; exit 1
 fi
-
-if [[ ! -f "$PROMPT_FILE" ]]; then
-  echo "::error::Prompt file not found: $PROMPT_FILE"
-  exit 1
-fi
-
-cp "$PROMPT_FILE" "$PROMPT_PATH"
-{
-  echo ""
-  echo "## CI 测试失败日志（最近 250 行）"
-  tail -250 "$TEST_LOG" 2>/dev/null || cat "$TEST_LOG"
-  echo ""
-  echo "## 当前 git 状态"
-  git branch --show-current
-  git status --short | head -60
-} >>"$PROMPT_PATH"
-
-cat >>"$PROMPT_PATH" <<'EOF'
-
----
-硬性约束（必须遵守）：
-- 只修改当前 openpilot 仓库源码，使上述 CI 验证通过
-- 不要创建新分支，不要 git push，不要开 Pull Request
-- 保留 C3 构建、release/ci/、sunnypilot/ C3 适配、ai/ 子模块；F4/H7 固件统一来自 panda/
-- .gitmodules 中 opendbc/panda 保持指向 mouxangithub fork 的 master-c3
-- 修完后对修改过的文件执行 git add
-EOF
-
-if ! command -v opencode >/dev/null 2>&1; then
-  curl -fsSL https://opencode.ai/install | bash
-  export PATH="$HOME/.opencode/bin:$PATH"
-fi
-
-mkdir -p "$HOME/.config/opencode"
-cat >"$HOME/.config/opencode/opencode.json" <<EOF
-{
-  "\$schema": "https://opencode.ai/config.json",
-  "model": "${MODEL}",
-  "provider": {
-    "opencode": {
-      "options": {
-        "apiKey": "${OPENCODE_API_KEY}"
-      }
-    }
-  }
-}
-EOF
-
-echo "OpenCode fixing test failures on branch: $(git branch --show-current)"
-timeout 900 opencode run --model "$MODEL" --auto "$(cat "$PROMPT_PATH")"
+echo "Fix patch applied."
