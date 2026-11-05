@@ -677,18 +677,19 @@ class StorageLayout(Widget):
 
   def _legacy_clear(self, category: str) -> dict:
     """Fallback without the webui package: the two old actions only."""
-    import shutil
     freed = 0
     if category == "models_cache":
+      # The model manager owns this delete: it keeps every file the active
+      # bundles name (plus their .chunk parts) and removes the rest. Do not
+      # delete from here. model_root also holds directories, and a blind
+      # rmtree over os.listdir would take them out (models/jetlink/ alone is a
+      # 766 MB onnx) while every .pkl it was meant to remove survives, because
+      # rmtree cannot unlink a file. It also read "ActiveModel", a key nothing
+      # ever writes and params_keys.h never registered, so the call raised
+      # UnknownKeyName before any of it ran.
       self._mem_params.put_bool("ModelManager_ClearCache", True)
       model_root = str(Paths.model_root())
-      active = (ui_state.params.get("ActiveModel") or "").strip()
-      for name in os.listdir(model_root):
-        if name == active:
-          continue
-        fp = os.path.join(model_root, name)
-        freed += directory_size(fp)
-        shutil.rmtree(fp, ignore_errors=True)
+      freed = directory_size(model_root)
       self._compute_model_split()
     elif category == "maps":
       delete_downloaded_maps(ui_state.params, self._mem_params)

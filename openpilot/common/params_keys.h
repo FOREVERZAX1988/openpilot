@@ -150,6 +150,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"PandaHeartbeatLost", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"PrimeType", {PERSISTENT, INT}},
     {"RecordAudio", {PERSISTENT | BACKUP, BOOL}},
+    // comma removed the LKAS audio-feedback feature (765d6fff9b, #38401) but left the
+    // read behind an `if False` branch in feedback/feedbackd.py. Register it so the
+    // static key check stays clean; the default (unset -> false) matches the dead path.
+    {"RecordAudioFeedback", {PERSISTENT, BOOL}},
     {"RecordFront", {PERSISTENT | BACKUP, BOOL}},
     {"RecordFrontLock", {PERSISTENT, BOOL}},  // for the internal fleet
     {"SecOCKey", {PERSISTENT | DONT_LOG | BACKUP, STRING}},
