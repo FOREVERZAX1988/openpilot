@@ -32,20 +32,34 @@ jobs:
           # the kernel repo into a default compiler search path.
           git clone --depth 1 --filter=blob:none --sparse \
             https://github.com/StarPilotHQ/agnos-kernel-sdm845.git /tmp/kernel
-          cd /tmp/kernel && git sparse-checkout set include/uapi/media
+          cd /tmp/kernel && git sparse-checkout set --no-cone \
+            '/include/uapi/media/**' \
+            '/include/uapi/linux/v4l2-common.h' \
+            '/include/uapi/linux/v4l2-controls.h' \
+            '/include/uapi/linux/videodev2.h'
           sudo cp -r include/uapi/media /usr/local/include/
-          # strip kernel-only __user annotations (AGNOS ships these headers pre-stripped)
-          sudo sed -i 's/__user//g' /usr/local/include/media/*.h
+          # qcom VIDC controls live in the kernel's extended v4l2 headers; place
+          # them in /usr/local/include/linux which the compiler searches before
+          # the distro /usr/include/linux
+          sudo mkdir -p /usr/local/include/linux
+          sudo cp include/uapi/linux/v4l2-common.h include/uapi/linux/v4l2-controls.h include/uapi/linux/videodev2.h /usr/local/include/linux/
+          # strip kernel-only bits: __user annotations and the
+          # linux/compiler.h include (userspace never has it; the only user
+          # inside these headers is __user which the sed above removes)
+          sudo sed -i -e 's/__user//g' -e '/#include <linux\/compiler.h>/d' \
+            /usr/local/include/media/*.h /usr/local/include/linux/v4l2-controls.h /usr/local/include/linux/videodev2.h
 
       - name: Build camerad
         run: |
           uv sync --frozen --extra tools
-          uv run scons -j"$(nproc)" cache_dir=/tmp/scons_cache openpilot/system/camerad/camerad
-          file openpilot/system/camerad/camerad
+          uv run scons -j"$(nproc)" cache_dir=/tmp/scons_cache openpilot/system/camerad/camerad openpilot/system/loggerd/loggerd
+          file openpilot/system/camerad/camerad openpilot/system/loggerd/loggerd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: camerad-aarch64
-          path: openpilot/system/camerad/camerad
+          name: camerad-loggerd-aarch64
+          path: |
+            openpilot/system/camerad/camerad
+            openpilot/system/loggerd/loggerd
           if-no-files-found: error
