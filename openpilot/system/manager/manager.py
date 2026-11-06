@@ -76,7 +76,11 @@ def manager_init() -> None:
 
   # RecordingMode 0 (disable all): there is nothing to upload, so keep the
   # onroad-uploads switch off no matter how it was toggled externally.
-  if params.get_int("RecordingMode") == 0 and params.get_bool("OnroadUploads"):
+  # default=2 matters: get_int falls back to 0, not to params_keys.h's "2", so a
+  # bare get_int on a key that has not been written yet (first boot after this
+  # param landed) reads as "disable all" and would switch OnroadUploads off for
+  # a user who never asked for it.
+  if params.get_int("RecordingMode", default=2) == 0 and params.get_bool("OnroadUploads"):
     params.put_bool("OnroadUploads", False, block=True)
 
   if not PC:

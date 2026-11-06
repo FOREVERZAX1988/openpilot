@@ -120,8 +120,10 @@ class DeviceLayoutSP(DeviceLayout):
     self._onroad_uploads_and_reset_settings = dual_button_item_sp(
       left_text=lambda: tr("Onroad Uploads"),
       # disabled while RecordingMode is 0 (disable all): nothing is recorded,
-      # so there is nothing to upload; manager also forces the param off
-      left_callback=lambda: None if ui_state.params.get_int("RecordingMode") == 0 else ui_state.params.put_bool("OnroadUploads", not ui_state.params.get_bool("OnroadUploads")),
+      # so there is nothing to upload; manager also forces the param off.
+      # default=2: get_int falls back to 0, not to params_keys.h's "2", so an
+      # unwritten key would read as "disable all" and the button would be dead.
+      left_callback=lambda: None if ui_state.params.get_int("RecordingMode", default=2) == 0 else ui_state.params.put_bool("OnroadUploads", not ui_state.params.get_bool("OnroadUploads")),
       right_text=lambda: tr("Reset Settings"),
       right_callback=self._reset_settings
     )
