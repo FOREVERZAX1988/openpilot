@@ -138,16 +138,17 @@ if lib is not None:
       cloudlog.warning(f"params: {name} missing from the params library (stale libparams_c.so?)")
       return None
 
-def _bind(name, args, result=None):
-  function = _bind_raw(name, args, result)
+else:
+  def _bind(name, args, result=None):
+    """mock mode: libparams_c.so is missing, or scons is rewriting it in place.
 
-  def checked(*call_args):
-    value = function(*call_args)
-    if error := params_last_error():
-      raise RuntimeError(error.decode())
-    return value
-
-  return checked
+    Every table entry stays None (declared above); Params checks `lib` before each
+    call, so nothing ever reaches the value returned here. The stub exists so the
+    module-level _bind(...) calls below cannot raise NameError -- without it this
+    fallback turns "scons is rebuilding the library for a few seconds" into every
+    daemon dying on import, which is exactly when the rebuild happens.
+    """
+    return None
 
 
 params_create = _bind("params_create", [ctypes.c_char_p, ctypes.c_size_t], ParamsHandle)
