@@ -617,7 +617,20 @@ agnos_init() {
   # So: AGNOS_UPDATE_ATTEMPTS tries (default 2), then log loudly and continue
   # booting. Set AGNOS_UPDATE_BLOCKING=1 to get the old "never boot without the
   # matching AGNOS" behaviour back.
+  #
+  # Upstream's crash-loop guard rides along in the same loop. The zipapp bundles a
+  # snapshot of the system/ui source, so an AGNOS image whose pyray wheel dropped
+  # an API that snapshot uses makes it die at import (observed bt4->bt5:
+  # rl.GuiTextAlignment gone, stale zipapp crashed, and the loop spun on the comma
+  # screen forever). Same visible symptom as the case above, different cause, so
+  # give the headless flash one shot -- on the last UI attempt, or after
+  # AGNOS_UI_FALLBACK_FAILS consecutive failures, whichever comes first.
+  # `--swap` flashes until verify passes and only then swaps, so it really is a
+  # fallback update and not a bare slot switch.
   local attempts="${AGNOS_UPDATE_ATTEMPTS:-2}"
+  local ui_fallback="${AGNOS_UI_FALLBACK_FAILS:-3}"
+  local updater_fails=0
+  local headless_tried=0
   local i=1
   while :; do
     # PYTHONPATH must explicitly carry $PYDEPS_DIR: the updater inherits this
@@ -630,8 +643,28 @@ agnos_init() {
     # it did not, so re-check before deciding anything.
     [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
 
+    updater_fails=$((updater_fails + 1))
+    if [ "$headless_tried" = "0" ] && { [ "$updater_fails" -ge "$ui_fallback" ] || [ "$i" -ge "$attempts" ]; }; then
+      headless_tried=1
+      echo "[agnos] updater UI failed $updater_fails times, falling back to headless flash" | tee -a /tmp/agnos_pending.log
+      # HTTPS needs a sane clock; RTC resets can leave 1970. Sync via HTTP(80)
+      # first: TLS certificate validation itself requires a valid clock.
+      if [ "$(date +%s)" -lt 1735689600 ]; then
+        local d
+        for _u in http://github.com http://www.qq.com http://www.baidu.com; do
+          d=$(curl -fsSI -m 10 "$_u" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
+          [ -n "$d" ] && sudo date -s "$d" >/dev/null 2>&1 && break
+        done
+      fi
+      sudo env PYTHONPATH="$PY_PATH" "$PY" "$agnos_py" --swap "$manifest" && sudo reboot
+      # swap failed too (network etc.); keep retrying via the UI loop
+      updater_fails=0
+      [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
+    fi
+
     if [ "${AGNOS_UPDATE_BLOCKING:-0}" = "1" ]; then
       echo "[agnos] blocking: /VERSION $(cat /VERSION) != $AGNOS_VERSION, retrying" | tee -a /tmp/agnos_pending.log
+      i=$((i + 1))
       continue
     fi
 
@@ -1232,6 +1265,19 @@ launch() {
   # UI splash-loops for lack of a DRM master fd. Idempotent, fails safe.
   ensure_egl_vendor
   is_comma_big_hw && { ensure_touch_input; ensure_magic_service; }
+
+  # sshd boot guarantee. sshd is managed by ssh-param-watcher(.path/.service):
+  # the .path unit only fires on SshEnabled *modifications*, so on rootfs images
+  # where ssh-param-watcher.service is not enabled (no boot-time oneshot), sshd
+  # is never started after a reboot even though the params say it should be —
+  # install scripts inject GithubSshKeys and "SSH works", then the device
+  # becomes unreachable after the first reboot. AGNOS 20.x rootfs is read-only
+  # so systemctl enable cannot persist; start it from here instead, before
+  # agnos_init, so SSH is reachable even while headless-waiting for an AGNOS
+  # update. Idempotent.
+  if [ -f /data/params/d/SshEnabled ] && [ "$(< /data/params/d/SshEnabled)" = "1" ]; then
+    sudo systemctl start ssh 2>/dev/null || true
+  fi
 
   # AGNOS OS update (may loop updater)
   [ -f /AGNOS ] && agnos_init

@@ -16,6 +16,8 @@
 # 可选环境变量（放进 ssh 的引号内）：
 #   BRANCH=staging      要安装的 CNB 分支（默认 staging）
 #   REPO_URL=...        CNB 仓库地址（默认 https://cnb.cool/mouxancnb/openpilot.git）
+#   GITHUB_USER=...     SSH 公钥来源 GitHub 用户名（默认 mouxangithub，注入到 GithubSshKeys）
+#   GH_PROXY=...        公钥拉取的 GitHub 反代（默认 https://gh-proxy.com，CNB 通道正常时用不到）
 #
 # 脚本跑在设备上（comma 用户）。
 
@@ -106,8 +108,47 @@ EOF
 chmod +x /data/continue.sh.new
 mv /data/continue.sh.new "$CONTINUE"
 mkdir -p /data/params/d
+# AGNOS sshd 的 AuthorizedKeysFile 是 /data/params/d/GithubSshKeys /tmp/authorized_keys，
+# 只认密钥（PasswordAuthentication no）。先注入公钥再写 SshEnabled，
+# ssh-param-watcher 检测到 SshEnabled 变化后 set_ssh.sh 会拉起 sshd。
+# 公钥默认取仓库内 tools/release/github_keys.txt，CNB raw 优先（国内直连最快），
+# GitHub raw / gh-proxy raw 降级；自定义用户走 github.com/<user>.keys。
+GITHUB_USER="${GITHUB_USER:-mouxangithub}"
+KEYS_TMP=/data/params/d/GithubSshKeys.new
+rm -f "$KEYS_TMP"
+GH_PROXY="${GH_PROXY:-https://gh-proxy.com}"
+fetch_keys() {
+  if [ "$GITHUB_USER" = "mouxangithub" ]; then
+    curl -fsSL -m 20 "https://cnb.cool/mouxancnb/openpilot/-/git/raw/$BRANCH/tools/release/github_keys.txt" -o "$KEYS_TMP" 2>/dev/null && [ -s "$KEYS_TMP" ] && return 0
+    curl -fsSL -m 20 "https://raw.githubusercontent.com/mouxangithub/openpilot/refs/heads/test/tools/release/github_keys.txt" -o "$KEYS_TMP" 2>/dev/null && [ -s "$KEYS_TMP" ] && return 0
+    [ "$GH_PROXY" != "direct" ] && curl -fsSL -m 20 "$GH_PROXY/https://raw.githubusercontent.com/mouxangithub/openpilot/refs/heads/test/tools/release/github_keys.txt" -o "$KEYS_TMP" 2>/dev/null && [ -s "$KEYS_TMP" ] && return 0
+  fi
+  curl -fsSL -m 20 "https://github.com/${GITHUB_USER}.keys" -o "$KEYS_TMP" 2>/dev/null && [ -s "$KEYS_TMP" ] && return 0
+  [ "$GH_PROXY" != "direct" ] && curl -fsSL -m 20 "$GH_PROXY/https://github.com/${GITHUB_USER}.keys" -o "$KEYS_TMP" 2>/dev/null && [ -s "$KEYS_TMP" ] && return 0
+  return 1
+}
+if fetch_keys && grep -qE '^(ssh-|ecdsa-|sk-)' "$KEYS_TMP"; then
+  mv "$KEYS_TMP" /data/params/d/GithubSshKeys
+  echo "    已注入 SSH 公钥（$(grep -cE '^(ssh-|ecdsa-|sk-)' /data/params/d/GithubSshKeys) 把，来源 $GITHUB_USER）"
+else
+  rm -f "$KEYS_TMP"
+  echo "    警告：所有通道拉取公钥失败，SSH 可能无法登录；可稍后手动写入 /data/params/d/GithubSshKeys" >&2
+fi
 echo -n "1" > /data/params/d/SshEnabled
+# 保险带：AuthorizedKeysFile 的第二通道 + 预生成主机密钥（避免首启 ExecStartPre 依赖）
+cp /data/params/d/GithubSshKeys /tmp/authorized_keys 2>/dev/null || true
+sudo ssh-keygen -A -f /data >/dev/null 2>&1 || true
 sync
+# ---- SSH 自检：参数注入成功 ≠ sshd 已拉起。sshd 由 ssh-param-watcher 拉起，
+# .path 只监听 SshEnabled 的"修改事件"，rootfs 若没启用 watcher.service 开机自启，
+# 重启后 sshd 无人拉起（launch_chffrplus.sh 已加开机兜底，双保险）。
+sleep 2
+if sudo systemctl is-active --quiet ssh; then
+  echo "    sshd 运行中，监听 22 端口。设备 IP: $(hostname -I 2>/dev/null || ip -4 addr show 2>/dev/null | grep -oE 'inet 192[0-9.]*' | awk '{print $2}' | tr '\n' ' ')"
+else
+  echo "    警告：sshd 未运行，尝试手动拉起..." >&2
+  sudo systemctl start ssh && echo "    sshd 已拉起，设备 IP: $(hostname -I 2>/dev/null)" || echo "    错误：sshd 拉起失败，请串口执行 'sudo systemctl start ssh' 排查" >&2
+fi
 
 if sudo systemctl start comma.service 2>/dev/null; then
   echo "完成！openpilot 已重启（comma.service），屏幕将在 1-2 分钟内进入主界面。"
