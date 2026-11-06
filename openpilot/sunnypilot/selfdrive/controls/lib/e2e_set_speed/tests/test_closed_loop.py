@@ -12,6 +12,7 @@ on the set speed at the approach pace.
 import numpy as np
 import pytest
 
+from openpilot.cereal import log as cereal_log
 from openpilot.common.constants import CV
 from openpilot.common.realtime import DT_MDL as DT
 from opendbc.car import structs
@@ -24,6 +25,7 @@ from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.limits imp
 
 V_PREF = 20.  # m/s, the model's own pace
 V_CRUISE = V_PREF + 6 * CV.MPH_TO_MS  # set 6 mph above it, the median gap in the logs
+STANDARD = cereal_log.LongitudinalPersonality.standard
 ACTUATOR_TAU = 0.5  # s
 
 # get_cruise_accel grew angle_steers/CP/dt/accel_coast/allow_throttle for the non-e2e
@@ -42,7 +44,7 @@ def simulate(enabled, seconds=60., tau=50., brake_at=None):
     if brake_at is not None and t >= brake_at:
       a_model = -0.5
     # the host passes last frame's cruise candidate at the approach pace, then builds this frame's
-    e2e = ctl.update(build_sm(v), a_model, min(a_cruise, c.approach_accel(v, V_CRUISE)), **ENGAGED)
+    e2e = ctl.update(build_sm(v), a_model, min(a_cruise, c.approach_accel(v, V_CRUISE, STANDARD)), **ENGAGED)
     a_cruise = get_cruise_accel(True, V_CRUISE, v, a_cruise, 0.0, _CP, DT, 0.0, True)
     out = min(e2e, a_cruise)
     a_act += DT / ACTUATOR_TAU * (out - a_act)

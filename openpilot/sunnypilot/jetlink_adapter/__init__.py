@@ -32,14 +32,10 @@ from pathlib import Path
 
 # the version of jetlink.openpilot's API this adapter is written to; any other
 # is treated as jetlink being absent, with the reason as the offroad alert.
-# 2: modeld wrote in_control onto the joining model before every frame, where
-#    jetlink polled the adapter's engagement() (2026-10-05)
-# 3: the joining model asks Adapter.in_control() before every frame instead
-#    (2026-10-10), so the adapter reads a SubMaster of its own and modeld keeps
-#    one write; an adapter of API 2 has no in_control() at all. Moving the
-#    submodule pin past that commit without this constant leaves the link off
-#    everywhere, with the reason below as the offroad alert
-API = 3
+# 3: the joining model asks Adapter.in_control() before every frame (2026-10-10)
+# 4: model index — the pick is a ref jetlink writes to `select`, and the
+#    per-commit pointers are unread (jetlink.submodule's own API constant)
+API = 4
 
 # the gadget owner, as manager names the process and selfdrived lists it
 OWNER = 'jetlinkd'
@@ -52,19 +48,16 @@ MODES = ('off', 'usb', 'ios', 'wifi')
 
 # the params jetlink reads and writes, all declared in params_keys.h. big_model
 # and catalog are the model manager's big-model slot and catalog
-# (models.helpers.ACTIVE_BUNDLE_KEYS['chestnut'] and ModelFetcher's cache): the
-# owner cannot import the model manager, so they are written out here.
-#
-# Both fork keys are carried at once: `preview` is ours (the fork is drawing the
-# onroad UI while parked), `select` is upstream's (where a newer pick made on the
-# server is written). jetlink reads only the ones its own version declares, so
-# keeping both lets this adapter drive either a v0.8.10 or a v0.8.12 package --
-# the submodule is held at v0.8.10 + the iOS NCM guard for now.
-_Keys = namedtuple('_Keys', 'link offroad progress spec pointers big_model catalog charge_phone preview select')
+# (models.helpers.ACTIVE_BUNDLE_KEYS['chestnut'] and ModelFetcher's cache), and
+# select is where a pick is asked for by its ref, which jetlink writes for a
+# newer pick made on the server: the owner cannot import the model manager, so
+# they are written out here. Our fork's IsOnroadPreview is not a jetlink key --
+# ui_state reads it directly -- so it stays out of this tuple.
+_Keys = namedtuple('_Keys', 'link offroad progress spec big_model catalog charge_phone select')
 KEYS = _Keys(link='JetlinkLink', offroad='IsOffroad', progress='AcceleratorProgress', spec='JetlinkSpec',
-             pointers='JetlinkModelPointers', big_model='ModelManager_ActiveBundleChestnut',
+             big_model='ModelManager_ActiveBundleChestnut',
              catalog='ModelManager_ModelsCache_Chestnut', charge_phone='JetlinkChargePhone',
-             preview='IsOnroadPreview', select='ModelManager_DownloadRef')
+             select='ModelManager_DownloadRef')
 
 _AGNOS = os.path.isfile('/AGNOS')
 
@@ -132,11 +125,6 @@ def _adapter_class():
     # SConscript compiles the 2-input driving warp for every road camera. This
     # checkout's copy under openpilot/sunnypilot/modeld_v2/models is an LFS pointer
     # (132 bytes here), so pointing there would hand the link no warp at all.
-
-    @property
-    def catalog_selector(self) -> int:
-      from openpilot.sunnypilot.models.helpers import REQUIRED_JSON_VERSION
-      return REQUIRED_JSON_VERSION
 
     def chestnut_present(self) -> bool:
       # modeld's own test, the one it runs the big model on: a chestnut whose
@@ -266,6 +254,7 @@ class _Off:
   ANSWERS = {'should_run': False, 'status': None, 'prepare': False, 'attach': lambda model, *_: model,
              'handed_over': False, 'state': 'none', 'shutdown_step': lambda wanted, reason='': wanted,
              'model_state': None, 'should_extend_catalog': False, 'extend_catalog': lambda catalog: catalog,
+             'lists_big_models': False, 'big_catalog': None, 'listed_ref': None,
              'swap_events': None}
 
   def __init__(self, why: str = ''):
@@ -292,7 +281,8 @@ def _hook(name: str):
 # the call: jetlink.openpilot.hooks says what each does and answers
 HOOK_NAMES = (*_Off.ANSWERS, 'reason')
 (should_run, status, prepare, attach, handed_over, state, shutdown_step, model_state, should_extend_catalog,
- extend_catalog, swap_events, reason) = map(_hook, HOOK_NAMES)
+ extend_catalog, lists_big_models, big_catalog, listed_ref, swap_events,
+ reason) = map(_hook, HOOK_NAMES)
 
 
 def default_big_model(chestnut: bool, jetlink) -> str:
