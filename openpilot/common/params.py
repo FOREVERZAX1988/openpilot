@@ -64,8 +64,25 @@ def _params_lib_path() -> Path:
       cache_root.mkdir(parents=True, exist_ok=True)
       tmp = dst.with_name(f"{dst.name}.{os.getpid()}.tmp")
       shutil.copyfile(src, tmp)
+      if tmp.stat().st_size != st.st_size:
+        # scons rewrote the library while we were copying it: caching this torn
+        # copy would poison every later start under the same mtime-size key.
+        tmp.unlink(missing_ok=True)
+        return src
       os.replace(tmp, dst)  # atomic: concurrent starts cannot see a partial copy
-      for stale in sorted(cache_root.glob(f"libparams_c-*{_suffix}"))[:-3]:
+      # Keep dst and the two newest others. Sort by mtime, not by name: the name
+      # embeds the mtime, and a 10-digit one sorts *before* a 6-digit one, so a
+      # name sort put the copy just made first and unlinked it again -- every
+      # process then fell back to mock params (2026-11-06, device stuck on
+      # "Manager failed to start" because mock has no /mock/params dir).
+      def _age(p: Path) -> int:
+        try:
+          return p.stat().st_mtime_ns
+        except OSError:
+          return 0
+      others = sorted((p for p in cache_root.glob(f"libparams_c-*{_suffix}") if p != dst),
+                      key=_age, reverse=True)
+      for stale in others[2:]:
         try:
           stale.unlink()
         except OSError:
