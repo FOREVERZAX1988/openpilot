@@ -97,7 +97,7 @@ def run_sconscript(camera_configs=CAMERAS, prebuilt: bool = False, arch: str = '
 class TestWarpTargets(OpenpilotTestCase):
   def test_every_camera_modeld_builds_for_gets_a_warp_where_modeld_opens_it(self):
     targets = run_sconscript()
-    op = jetlink_adapter.Adapter()
+    op = jetlink_adapter._adapter_class()()
     self.assertEqual(set(targets), {str(op.warp_path(w, h, *MODEL)) for w, h in CAMERAS})
     for target in targets:
       # in the fork's tree: a file in the submodule leaves it dirty for the updater
@@ -166,7 +166,7 @@ class TestTheLosslessWarp(OpenpilotTestCase):
     from jetlink.openpilot.warp import lossless_path
     checkout = Path(jetlink.__file__).resolve().parents[1]
     w, h = CAMERAS[0]
-    plain = str(jetlink_adapter.Adapter().warp_path(w, h, *MODEL))
+    plain = str(jetlink_adapter._adapter_class()().warp_path(w, h, *MODEL))
     lossless = str(lossless_path(plain))
     targets = run_sconscript(CAMERAS[:1], jetlink=checkout)
     self.assertEqual(set(targets), {plain, lossless})

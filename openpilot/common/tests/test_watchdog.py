@@ -40,8 +40,15 @@ class TestKickAndRead(unittest.TestCase):
     self.assertIsNone(watchdog.watchdog_timed_out(os.getpid(), 10))
 
   def test_a_stale_heartbeat_is_a_timeout(self):
-    # Write a heartbeat that is one hour old.
-    stale_ns = watchdog._now_ns() - int(3600 * 1e9)
+    # Write a heartbeat that is one hour old. _now_ns() is CLOCK_BOOTTIME, which
+    # starts at 0 on boot, so on a host that came up less than an hour ago "an
+    # hour ago" is a negative instant and struct.pack("<Q") raises. dt below is
+    # compared against 3000 s, so the test genuinely needs that much uptime --
+    # skip rather than fail on a freshly booted device.
+    now_ns = watchdog._now_ns()
+    if now_ns < int(3600 * 1e9):
+      self.skipTest("needs >= 1 h uptime: heartbeats are CLOCK_BOOTTIME based")
+    stale_ns = now_ns - int(3600 * 1e9)
     with open(watchdog.watchdog_path(os.getpid()), "wb") as f:
       f.write(struct.pack("<Q", stale_ns))
     dt = watchdog.watchdog_timed_out(os.getpid(), 10)
