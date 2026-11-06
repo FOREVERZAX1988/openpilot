@@ -35,7 +35,12 @@ PARAM_UPDATE_TIME = 1 / 5.0
 # even with the panel controller kept powered (see hardware.py
 # set_display_power, the companion bl_power fix). Sleeping at ~2% instead keeps
 # the shared boost rail alive; the glow is imperceptible in a car.
+#
+# tizi (C3X) is the same panel family and reports the same `clone touch detected`
+# in dmesg, so it takes the same treatment: this fork's unit is a tizi, and
+# upstream's tici-only condition left it sleeping at a true 0.
 TSP_WAKE_SLEEP_BRIGHTNESS = 2  # percent; 2% of 1023 = ~20 raw steps
+TSP_WAKE_DEVICE_TYPES = ('tici', 'tizi')
 
 
 class UIStatus(Enum):
@@ -465,7 +470,7 @@ class Device(DeviceSP):
 
     if not self._awake:
       # True 0 kills touch-wake on C3 clone panels (see TSP_WAKE_SLEEP_BRIGHTNESS).
-      brightness = TSP_WAKE_SLEEP_BRIGHTNESS if "tici" in HARDWARE.get_device_type() else 0
+      brightness = TSP_WAKE_SLEEP_BRIGHTNESS if HARDWARE.get_device_type() in TSP_WAKE_DEVICE_TYPES else 0
 
     if brightness != self._last_brightness:
       self._brightness_target = int(brightness)
