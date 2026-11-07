@@ -98,6 +98,11 @@ class TestParams(OpenpilotTestCase):
     for charge in (True, False):
       params.put_bool(KEYS.charge_phone, charge, block=True)
       self.assertEqual(settings.charge_phone(), charge)
+    # the onroad preview: what jetlink reads to tell a preview from a drive, so
+    # a slow but answering host keeps the large model while parked
+    for preview in (True, False):
+      params.put_bool(KEYS.preview, preview, block=True)
+      self.assertEqual(settings.preview(), preview)
     before = settings.marks()[KEYS.big_model]
     params.put(KEYS.big_model, {'ref': 'a' * 40, 'displayName': 'x'}, block=True)
     self.assertNotEqual(settings.marks()[KEYS.big_model], before)

@@ -51,13 +51,15 @@ MODES = ('off', 'usb', 'ios', 'wifi')
 # (models.helpers.ACTIVE_BUNDLE_KEYS['chestnut'] and ModelFetcher's cache), and
 # select is where a pick is asked for by its ref, which jetlink writes for a
 # newer pick made on the server: the owner cannot import the model manager, so
-# they are written out here. Our fork's IsOnroadPreview is not a jetlink key --
-# ui_state reads it directly -- so it stays out of this tuple.
-_Keys = namedtuple('_Keys', 'link offroad progress spec big_model catalog charge_phone select')
+# they are written out here. preview is our fork's IsOnroadPreview: jetlink
+# reads it to know a preview from a drive, since a host that is slow but
+# answering is the feature there and its drop ratio hands back on the road
+# alone (jetlink joining.run).
+_Keys = namedtuple('_Keys', 'link offroad progress spec big_model catalog charge_phone select preview')
 KEYS = _Keys(link='JetlinkLink', offroad='IsOffroad', progress='AcceleratorProgress', spec='JetlinkSpec',
              big_model='ModelManager_ActiveBundleChestnut',
              catalog='ModelManager_ModelsCache_Chestnut', charge_phone='JetlinkChargePhone',
-             select='ModelManager_DownloadRef')
+             select='ModelManager_DownloadRef', preview='IsOnroadPreview')
 
 _AGNOS = os.path.isfile('/AGNOS')
 
