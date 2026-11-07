@@ -138,16 +138,6 @@ def _adapter_class():
       from openpilot.sunnypilot.modeld_v2.constants import ModelConstants
       return ModelConstants
 
-    def model_face(self):
-      # the Venus block is only reachable from the device, so the face carries a
-      # builder only where the block answers: a link with none keeps the frame
-      # carrier it had instead of negotiating a codec nothing can produce
-      import dataclasses
-
-      from openpilot.sunnypilot.jetlink_adapter import hevc_venus
-      encoder = hevc_venus.make_encoder if hevc_venus.available() else None
-      return dataclasses.replace(super().model_face(), hevc_encoder=encoder)
-
     def action_function(self):
       # modeld_v2 passes Blendful's correction as a callback on the raw curvature, as stock modeld now does
       from openpilot.selfdrive.modeld.modeld import MIN_LAT_CONTROL_SPEED, get_action_from_model
