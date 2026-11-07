@@ -217,7 +217,11 @@ class MultipleButtonActionSP(MultipleButtonAction):
           self.callback(i)
 
     if self.param_key:
-      self.params.put(self.param_key, self.selected_button, block=True)  # _update_state re-reads it next frame
+      # self.params is carrot's UnifiedParams, whose put is (key, value). Passing
+      # Params' block= keyword raised TypeError on every tap, killing the UI
+      # process before the choice was written; manager then restarted it with
+      # the old value still selected. _update_state re-reads it next frame.
+      self.params.put(self.param_key, self.selected_button)
 
 
 class ListItemSP(ListItem):

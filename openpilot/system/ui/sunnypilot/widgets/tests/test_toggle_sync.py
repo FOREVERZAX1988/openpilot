@@ -150,5 +150,48 @@ class TestOptionControlFollowsTheStore(unittest.TestCase):
     self.assertEqual(control.get_value(), 0)
 
 
+class UnifiedParamsLikeStore:
+  """What MultipleButtonActionSP actually writes through: carrot's UnifiedParams.
+
+  Its put is (key, value) -- it has no Params-only block= keyword. Passing that
+  keyword on every tap raised TypeError, which killed the UI process before the
+  choice was stored; manager restarted the UI with the old value still selected.
+  """
+
+  def __init__(self):
+    self.values = {"JetlinkLink": 0}
+    self.writes = []
+
+  def get(self, key, return_default=False):
+    return self.values.get(key)
+
+  def put(self, key, value):
+    self.writes.append((key, value))
+    self.values[key] = value
+
+
+class TestMultipleButtonWritesItsParam(unittest.TestCase):
+  def make(self, param="JetlinkLink"):
+    from openpilot.system.ui.sunnypilot.widgets.list_view import MultipleButtonActionSP
+
+    action = MultipleButtonActionSP(["Off", "USB", "iOS", "Wi-Fi"], 300, param=param)
+    action.params = self.store = UnifiedParamsLikeStore()
+    action.buttons = []  # the tap's hit-testing is not what this pins down
+    return action
+
+  def test_a_tap_writes_the_choice_without_the_params_only_keyword(self):
+    action = self.make()
+    action.selected_button = 2
+    action._handle_mouse_release(None)
+    self.assertEqual(self.store.writes, [("JetlinkLink", 2)])
+
+  def test_the_next_frame_reads_the_choice_back(self):
+    action = self.make()
+    action.selected_button = 3
+    action._handle_mouse_release(None)
+    action._update_state()
+    self.assertEqual(action.get_selected_button(), 3)
+
+
 if __name__ == "__main__":
   unittest.main()
