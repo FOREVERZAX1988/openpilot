@@ -64,7 +64,14 @@ class UIStateZP:
     self.lane_center = mode > 0
     self.blendful_readout = mode == 2
     self.confidence_ball = self.params.get_bool("ConfidenceBall")
-    self._steer_rail_schedule = get_steer_rail_schedule(self.CP) if self.CP is not None else None
+    # get_steer_rail_schedule() builds the brand's CarControllerParams, which loads
+    # the car's DBC and a CANParser. CP does not change within a drive, so keep the
+    # schedule and only rebuild when the object itself changes (2026-11-08: this ran
+    # twice a second and was 7 % of the UI process's CPU in a py-spy profile).
+    cp = self.CP
+    if getattr(self, "_steer_rail_cp", None) is not cp:
+      self._steer_rail_cp = cp
+      self._steer_rail_schedule = get_steer_rail_schedule(cp) if cp is not None else None
     # on the 5 Hz params pass, not per frame in a layout; a fitted chestnut owns chestnut_state
     self.jetlink = None if self.sm['deviceState'].chestnutPresent else jetlink_adapter.status()
     self._enforce_usb_port()
