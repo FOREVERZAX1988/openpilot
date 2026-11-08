@@ -1013,6 +1013,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MuteDoor", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"MuteSeatbelt", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"OnnxLaneIntervalMs", {PERSISTENT | BACKUP, INT, "400"}},
+    // xiaoge vision master switch. xiaoge_data.start_vision_server() returns before
+    // it ever imports v_asm_server when this is unset, so lane/BLIS/YOLO never run
+    // and customReservedRawData0 is never published. It was read but never registered
+    // here, so every write was rejected and the whole pipeline stayed dark
+    // (2026-11-08: YoloObstacleEnabled=1 but 0 messages, xiaoge_data at 3.5 % CPU).
+    {"CarrotXiaogeVisionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"YoloObstacleEnabled", {PERSISTENT | BACKUP, INT, "0"}},  // xiaoge YOLOv8n obstacle head: resident only while on (device-verified before enabling)
     {"OnnxLaneThreshold", {PERSISTENT | BACKUP, INT, "25"}},
     {"RecordRoadCam", {PERSISTENT | BACKUP, BOOL, "0"}},
