@@ -312,7 +312,7 @@ msgstr "進階横向調參（FLM）"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Aggressive"
-msgstr "積極"
+msgstr "激进"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\following_profile_toggles.py
 msgid "Aggressive Personality"
@@ -3173,7 +3173,7 @@ msgstr "Lateral Jerk Torque Controller"
 
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 msgid "Lateral Maneuver Mode"
-msgstr "橫向演習模式"
+msgstr "横向演习模式"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Lateral Readiness"
@@ -3403,7 +3403,7 @@ msgstr "縱向 MPC 調參"
 
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 msgid "Longitudinal Maneuver Mode"
-msgstr "縱向操作模式"
+msgstr "纵向操作模式"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/torque_settings.py
 msgid ""
@@ -3873,7 +3873,7 @@ msgstr "不用，照您平常的方式開就好。"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Normal"
-msgstr "標準"
+msgstr "标准"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Normal Road Curve Aggressiveness"
@@ -4596,7 +4596,7 @@ msgstr "法規"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Relaxed"
-msgstr "從容"
+msgstr "舒适"
 
 #: selfdrive\ui\sunnypilot\layouts\settings\following_profile_toggles.py
 msgid "Relaxed Personality"
@@ -5679,7 +5679,7 @@ msgstr "系統重置被觸發。按確認刪除所有內容和設定。按取消
 #: openpilot/selfdrive/ui/mici/onroad/alert_renderer.py
 #: openpilot/selfdrive/ui/onroad/alert_renderer.py
 msgid "TAKE CONTROL IMMEDIATELY"
-msgstr "請立刻接手控制"
+msgstr "立即接管控制"
 
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 msgid "TEMP"
@@ -7295,7 +7295,7 @@ msgstr "公里"
 #: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
 #: openpilot/selfdrive/ui/sunnypilot/onroad/speed_renderer.py
 msgid "km/h"
-msgstr "km/h"
+msgstr "公里/时"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/initial_cruise_speed.py
 msgid "kph"
@@ -7478,7 +7478,7 @@ msgstr "中等"
 #: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
 #: openpilot/selfdrive/ui/sunnypilot/onroad/speed_renderer.py
 msgid "mph"
-msgstr "mph"
+msgstr "英里/时"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
 msgid "navigation (alpha)"
@@ -7727,7 +7727,7 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "restore"
-msgstr "恢復"
+msgstr "恢复"
 
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid "restore settings"
@@ -9151,3 +9151,1164 @@ msgstr ""
 #: selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "extra lenient"
 msgstr "最寬鬆"
+# events i18n: 由 openpilot/selfdrive/ui/translations/events_i18n.py 维护
+
+#: events i18n migration
+msgid "30 Seconds Left. Press Again to Save Early."
+msgstr "剩余 30 秒。再次按下可提前保存。"
+
+
+#: events i18n migration
+msgid "AEB: Possible Collision"
+msgstr "AEB：可能发生碰撞"
+
+
+#: events i18n migration
+msgid "Abnormal tire stiffness"
+msgstr "轮胎刚度异常"
+
+
+#: events i18n migration
+msgid "Adaptive Cruise Disabled"
+msgstr "自适应巡航已禁用"
+
+
+#: events i18n migration
+msgid "Adjusting to Previous Speed Limit"
+msgstr "正在自动调整至上次限速"
+
+
+#: events i18n migration
+msgid "Adjusting to Speed Limit"
+msgstr "正在调整至限速"
+
+
+
+#: events i18n migration
+msgid "Always Be Ready to Take Control"
+msgstr "请随时准备接管您的车辆控制权"
+
+
+#: events i18n migration
+msgid "Always keep hands on wheel and eyes on road"
+msgstr "请始终将手放在方向盘上，眼睛注视道路"
+
+
+#: events i18n migration
+msgid "Angle offset too high"
+msgstr "角度偏移过大"
+
+
+#: events i18n migration
+msgid "Angle offset too high (Offset: {:.1f}°)"
+msgstr "角度偏移过大 (偏移量: {:.1f}度)"
+
+
+#: events i18n migration
+msgid "Auto Lane Centering Off"
+msgstr "自动车道居中已关闭"
+
+
+#: events i18n migration
+msgid "BRAKE!"
+msgstr "刹车！"
+
+
+#: events i18n migration
+msgid "Big Model Disconnected"
+msgstr "大模型已断开"
+
+
+#: events i18n migration
+msgid "Big Model Engaged"
+msgstr "大模型已接管"
+
+
+#: events i18n migration
+msgid "Big Model Ready"
+msgstr "大模型已就绪"
+
+
+#: events i18n migration
+msgid "Blind Spot Vehicle Detected"
+msgstr "盲点检测到车辆"
+
+
+#: events i18n migration
+msgid "Bookmark Requires Paired Device"
+msgstr "书签需要先配对设备"
+
+
+#: events i18n migration
+msgid "Bookmark Saved"
+msgstr "书签已保存"
+
+
+#: events i18n migration
+msgid "Brake Hold Active"
+msgstr "制动保持已激活"
+
+
+#: events i18n migration
+msgid "CAN Bus Disconnected"
+msgstr "CAN总线断开连接"
+
+
+#: events i18n migration
+msgid "CAN Bus Disconnected: Check Connections"
+msgstr "CAN总线断开连接：请检查连接"
+
+
+#: events i18n migration
+msgid "CAN Bus Disconnected: Likely Cable Fault"
+msgstr "CAN总线断开连接：可能电缆故障"
+
+
+#: events i18n migration
+msgid "CAN Error: Check Connections"
+msgstr "CAN总线错误：请检查连接"
+
+
+#: events i18n migration
+msgid "CAN Error: Enable CameraSCC"
+msgstr "CAN错误：请开启 CameraSCC"
+
+
+#: events i18n migration
+msgid "Calibrating"
+msgstr "校准中"
+
+
+#: events i18n migration
+msgid "Calibration"
+msgstr "校准"
+
+
+#: events i18n migration
+msgid "Calibration Incomplete"
+msgstr "校准未完成"
+
+
+#: events i18n migration
+msgid "Calibration Invalid"
+msgstr "校准无效"
+
+
+#: events i18n migration
+msgid "Calibration Invalid: Remount Device and Recalibrate"
+msgstr "校准无效：重新安装设备并重新校准"
+
+
+#: events i18n migration
+msgid "Calibration in Progress"
+msgstr "校准进行中"
+
+
+#: events i18n migration
+msgid "Camera Malfunction"
+msgstr "摄像头故障"
+
+
+#: events i18n migration
+msgid "Camera Malfunction: Restart Device"
+msgstr "摄像头故障：请重启设备"
+
+
+#: events i18n migration
+msgid "Cancel Button Pressed"
+msgstr "取消按钮被按下"
+
+
+#: events i18n migration
+msgid "Carrot: Green Light Detected"
+msgstr "Carrot：识别到绿灯"
+
+
+#: events i18n migration
+msgid "Carrot: Preparing to Stop"
+msgstr "Carrot：准备停车"
+
+
+#: events i18n migration
+msgid "Carrot: Traffic Light State Changed"
+msgstr "Carrot：信号灯状态变化"
+
+
+#: events i18n migration
+msgid "Changing Lanes"
+msgstr "正在变道"
+
+
+#: events i18n migration
+msgid "Check Hardware"
+msgstr "检查硬件"
+
+
+#: events i18n migration
+msgid "Check tires, pressure, or alignment"
+msgstr "请检查轮胎、胎压或定位"
+
+
+#: events i18n migration
+msgid "Check tires, pressure, or alignment (Factor: {:.1f})"
+msgstr "请检查轮胎、胎压或定位 (系数: {:.1f})"
+
+
+#: events i18n migration
+msgid "Chill Mode Off"
+msgstr "Chill 模式已关闭"
+
+
+#: events i18n migration
+msgid "Chill Mode On"
+msgstr "Chill 模式已开启"
+
+
+#: events i18n migration
+msgid "Communication Issue Between Processes"
+msgstr "进程间通信问题"
+
+
+#: events i18n migration
+msgid "Confirm Lane Change"
+msgstr "确认变道"
+
+
+#: events i18n migration
+msgid "Confirm Road Ahead and Prepare to Slow"
+msgstr "请确认前方并准备减速"
+
+
+#: events i18n migration
+msgid "Confirm Safe Before Left Lane Change"
+msgstr "请确认安全后进行左转变道"
+
+
+#: events i18n migration
+msgid "Confirm Safe Before Right Lane Change"
+msgstr "请确认安全后进行右转变道"
+
+
+#: events i18n migration
+msgid "Continue Driving Manually"
+msgstr "请手动继续驾驶"
+
+
+#: events i18n migration
+msgid "Controls Mismatch"
+msgstr "控制不匹配"
+
+
+#: events i18n migration
+msgid "Controls Mismatch: Lateral"
+msgstr "控制不匹配：横向"
+
+
+#: events i18n migration
+msgid "Cruise Fault: Restart Car"
+msgstr "巡航故障：请重启车辆"
+
+
+#: events i18n migration
+msgid "Cruise Fault: Restart Car to Engage"
+msgstr "巡航故障：重启车辆以启用"
+
+
+#: events i18n migration
+msgid "Cruise Off"
+msgstr "巡航已关闭"
+
+
+#: events i18n migration
+msgid "DISENGAGE IMMEDIATELY"
+msgstr "立即解除控制"
+
+
+#: events i18n migration
+msgid "Dashcam Mode"
+msgstr "行车记录仪模式"
+
+
+#: events i18n migration
+msgid "Dashcam Mode Only"
+msgstr "仅行车记录仪模式"
+
+
+#: events i18n migration
+msgid "Dashcam Mode Unsupported for Vehicle"
+msgstr "不支持车辆的行车记录仪模式"
+
+
+#: events i18n migration
+msgid "Device Fell Off Mount"
+msgstr "设备从支架掉落"
+
+
+#: events i18n migration
+msgid "Device Not Paired"
+msgstr "未配对设备"
+
+
+#: events i18n migration
+msgid "Device Remount Detected: Recalibrating"
+msgstr "设备重新安装检测到：重新校准中"
+
+
+#: events i18n migration
+msgid "Disable your car's stock LKAS to engage"
+msgstr "请禁用您的车辆原厂LKAS以启用"
+
+
+#: events i18n migration
+msgid "Door Open"
+msgstr "车门开启"
+
+
+#: events i18n migration
+msgid "Drive above {} to Calibrate"
+msgstr "请将时速提高至 {} 进行校准"
+
+
+#: events i18n migration
+msgid "Drive above {} to engage"
+msgstr "请将时速提高至 {} 来启用"
+
+
+#: events i18n migration
+msgid "Drive to Calibrate"
+msgstr "行驶以校准"
+
+
+#: events i18n migration
+msgid "Driver Distracted"
+msgstr "驾驶员分心"
+
+
+#: events i18n migration
+msgid "Driver Unresponsive"
+msgstr "驾驶员无响应"
+
+
+#: events i18n migration
+msgid "Driving Model Lagging"
+msgstr "驾驶模型滞后"
+
+
+#: events i18n migration
+msgid "Driving Personality"
+msgstr "驾驶风格"
+
+
+#: events i18n migration
+msgid "Driving Personality: {}"
+msgstr "驾驶风格: {}"
+
+
+#: events i18n migration
+msgid "Driving with Small Model"
+msgstr "使用小模型行驶"
+
+
+#: events i18n migration
+msgid "ESC Active"
+msgstr "电子稳定控制系统激活中"
+
+
+#: events i18n migration
+msgid "ESC Disabled"
+msgstr "电子稳定控制系统已禁用"
+
+
+#: events i18n migration
+msgid "Emergency Braking: Possible Collision"
+msgstr "紧急制动：可能发生碰撞"
+
+
+#: events i18n migration
+msgid "Enable Adaptive Cruise to Engage"
+msgstr "启用自适应巡航以接合"
+
+
+#: events i18n migration
+msgid "Enable Main Switch to Engage"
+msgstr "启用主开关以接合"
+
+
+#: events i18n migration
+msgid "Enable your car's LKAS to engage"
+msgstr "请启用您的车辆LKAS以启用"
+
+
+#: events i18n migration
+msgid "Ensure Road Ahead Is Clear"
+msgstr "确保前方道路畅通"
+
+
+#: events i18n migration
+msgid "Excessive Steering Input"
+msgstr "过度操作"
+
+
+#: events i18n migration
+msgid "Factor"
+msgstr "系数"
+
+
+#: events i18n migration
+msgid "Fan Malfunction"
+msgstr "风扇故障"
+
+
+#: events i18n migration
+msgid "Frames Dropped: {:.1f}%"
+msgstr "已丢帧 {:.1f}%"
+
+
+#: events i18n migration
+msgid "Fuzzy Model"
+msgstr "替代模型"
+
+
+#: events i18n migration
+msgid "Gas"
+msgstr "油门"
+
+
+#: events i18n migration
+msgid "Gas: {}%, Steer: {}%"
+msgstr "油门: {}%, 转向: {}%"
+
+
+#: events i18n migration
+msgid "Gear Not in Drive"
+msgstr "挡位不在D挡"
+
+
+#: events i18n migration
+msgid "Harness Relay Fault"
+msgstr "线束继电器故障"
+
+
+#: events i18n migration
+msgid "High CPU Usage"
+msgstr "CPU使用率过高"
+
+
+#: events i18n migration
+msgid "Invalid LKAS setting"
+msgstr "无效的LKAS设置"
+
+
+#: events i18n migration
+msgid "Joystick Mode"
+msgstr "操纵杆模式"
+
+
+#: events i18n migration
+msgid "LKAS Fault: Restart Car"
+msgstr "LKAS故障：请重启车辆"
+
+
+#: events i18n migration
+msgid "LKAS Fault: Restart Car to Engage"
+msgstr "LKAS故障：重启车辆以启用"
+
+
+#: events i18n migration
+msgid "LKAS Off"
+msgstr "LKAS 已关闭"
+
+
+#: events i18n migration
+msgid "Lane Change Unavailable: Road Edge"
+msgstr "变道不可用：道路边缘"
+
+
+#: events i18n migration
+msgid "Lane Departure Detected"
+msgstr "监测偏离车道"
+
+
+#: events i18n migration
+msgid "Lane Keeping Assist System (LKAS) Setting Invalid"
+msgstr "车道保持辅助系统（LKAS）设置无效"
+
+
+#: events i18n migration
+msgid "Lateral Disabled"
+msgstr "横向已停用"
+
+
+#: events i18n migration
+msgid "Left"
+msgstr "剩余"
+
+
+#: events i18n migration
+msgid "Likely Hardware Issue"
+msgstr "可能是硬件问题"
+
+
+#: events i18n migration
+msgid "Low Battery"
+msgstr "电池电量低"
+
+
+#: events i18n migration
+msgid "Low Camera Frame Rate"
+msgstr "摄像头帧率低"
+
+
+#: events i18n migration
+msgid "Low Camera Frame Rate: Restart Device"
+msgstr "摄像头帧率低：请重启设备"
+
+
+#: events i18n migration
+msgid "Low IPC Rate"
+msgstr "进程间通信速率低"
+
+
+#: events i18n migration
+msgid "Low Memory"
+msgstr "内存不足"
+
+
+#: events i18n migration
+msgid "Low Memory: Restart Device"
+msgstr "内存不足：请重启设备"
+
+
+#: events i18n migration
+msgid "Manual Speed Control Required"
+msgstr "需要手动控制车速"
+
+
+#: events i18n migration
+msgid "Manual Steering Required"
+msgstr "需要手动转向"
+
+
+#: events i18n migration
+msgid "Minutes"
+msgstr "分钟"
+
+
+#: events i18n migration
+msgid "Model Unstable at This Speed"
+msgstr "在此速度下模型不稳定"
+
+
+#: events i18n migration
+msgid "NNFF Torque Model Loaded"
+msgstr "NNFF 扭矩模型已加载"
+
+
+#: events i18n migration
+msgid "Object Ahead"
+msgstr "注意前方物体"
+
+
+#: events i18n migration
+msgid "Offset"
+msgstr "偏移量"
+
+
+#: events i18n migration
+msgid "Out of Storage"
+msgstr "存储空间不足"
+
+
+#: events i18n migration
+msgid "Park Brake Engaged"
+msgstr "停车制动已启用"
+
+
+#: events i18n migration
+msgid "Pay Attention"
+msgstr "请注意"
+
+
+#: events i18n migration
+msgid "Pay Attention to Engage"
+msgstr "请注意路况后再启用"
+
+
+#: events i18n migration
+msgid "Pedal Pressed"
+msgstr "踏板被按下"
+
+
+#: events i18n migration
+msgid "Pitch"
+msgstr "俯仰角"
+
+
+#: events i18n migration
+msgid "Please Take Control"
+msgstr "请接管控制"
+
+
+#: events i18n migration
+msgid "Please Take Over"
+msgstr "请接管"
+
+
+#: events i18n migration
+msgid "Posenet Speed Invalid"
+msgstr "Posenet速度无效"
+
+
+#: events i18n migration
+msgid "Possible Collision"
+msgstr "可能发生碰撞"
+
+
+#: events i18n migration
+msgid "Press + to Set"
+msgstr "按 + 键调至"
+
+
+#: events i18n migration
+msgid "Press + to Set\n{}"
+msgstr "按 + 键调至\n{}"
+
+
+#: events i18n migration
+msgid "Press - to Set"
+msgstr "按 - 键调至"
+
+
+#: events i18n migration
+msgid "Press - to Set\n{}"
+msgstr "按 - 键调至\n{}"
+
+
+#: events i18n migration
+msgid "Press Resume to Exit Stop State"
+msgstr "按恢复键以解除停止状态"
+
+
+#: events i18n migration
+msgid "Press Resume to Release Brake Hold"
+msgstr "按恢复键以解除制动保持"
+
+
+#: events i18n migration
+msgid "Press Set to Engage"
+msgstr "请按设定键以启用"
+
+
+#: events i18n migration
+msgid "Process Not Running"
+msgstr "进程未运行"
+
+
+#: events i18n migration
+msgid "Radar Error: Restart Car"
+msgstr "雷达错误：请重启车辆"
+
+
+#: events i18n migration
+msgid "Radar Temporarily Unavailable"
+msgstr "雷达暂时不可用"
+
+
+#: events i18n migration
+msgid "Ratio"
+msgstr "传动比"
+
+
+#: events i18n migration
+msgid "Reboot to Dashcam Mode"
+msgstr "重启进入行车记录仪模式"
+
+
+#: events i18n migration
+msgid "Recalibration"
+msgstr "重新校准"
+
+
+#: events i18n migration
+msgid "Recording Audio Feedback"
+msgstr "正在录制音频反馈"
+
+
+#: events i18n migration
+msgid "Release Brake to Engage"
+msgstr "释放制动以启用"
+
+
+#: events i18n migration
+msgid "Remount Device"
+msgstr "请重新安装设备"
+
+
+#: events i18n migration
+msgid "Remount Device (Pitch: {:.1f}°, Yaw: {:.1f}°)"
+msgstr "请重新安装设备 (俯仰角: {:.1f}度, 偏航角: {:.1f}度)"
+
+
+#: events i18n migration
+msgid "Restart Device"
+msgstr "请重启设备"
+
+
+#: events i18n migration
+msgid "Resume to Switch"
+msgstr "重新接管以切换"
+
+
+#: events i18n migration
+msgid "Reverse"
+msgstr "倒档"
+
+
+#: events i18n migration
+msgid "Reversing"
+msgstr "倒车中"
+
+
+#: events i18n migration
+msgid "SCC Detected on Camera Bus"
+msgstr "摄像头总线检测到 SCC"
+
+
+#: events i18n migration
+msgid "Safety Key Unavailable"
+msgstr "安全密钥不可用"
+
+
+#: events i18n migration
+msgid "Seatbelt Unfastened"
+msgstr "安全带未系"
+
+
+#: events i18n migration
+msgid "Sensor Data Invalid"
+msgstr "传感器数据无效"
+
+
+#: events i18n migration
+msgid "Slow Down to Engage"
+msgstr "减速以进行接合"
+
+
+#: events i18n migration
+msgid "Smart/Adaptive Cruise: Off"
+msgstr "智能/自适应巡航：已关闭"
+
+
+#: events i18n migration
+msgid "Speed Error"
+msgstr "速度误差"
+
+
+#: events i18n migration
+msgid "Speed Error: {:.1f} m/s"
+msgstr "速度误差: {:.1f} 米/秒"
+
+
+#: events i18n migration
+msgid "Speed Limit Assist: Set Speed to"
+msgstr "限速辅助：请将设定速度调至"
+
+
+#: events i18n migration
+msgid "Speed Limit Assist: Set Speed to {} {} to Enable"
+msgstr "限速辅助：请将设定速度调至 {} {} 以启用"
+
+
+#: events i18n migration
+msgid "Speed Limit Changed"
+msgstr "限速已变化"
+
+
+#: events i18n migration
+msgid "Speed Too High"
+msgstr "速度过高"
+
+
+#: events i18n migration
+msgid "Speed Too Low"
+msgstr "速度过低"
+
+
+#: events i18n migration
+msgid "Steer"
+msgstr "转向"
+
+
+#: events i18n migration
+msgid "Steer Beyond Limit"
+msgstr "转向超过限制"
+
+
+#: events i18n migration
+msgid "Steer Temporarily Unavailable"
+msgstr "转向暂时不可用"
+
+
+#: events i18n migration
+msgid "Steer Unavailable Below"
+msgstr "转向在"
+
+
+#: events i18n migration
+msgid "Steer Unavailable Below {}"
+msgstr "转向在 {} 以下不可用"
+
+
+#: events i18n migration
+msgid "Steer ratio mismatch"
+msgstr "转向传动比不匹配"
+
+
+#: events i18n migration
+msgid "Steering Blocked by panda Safety"
+msgstr "转向被 panda 安全机制阻止"
+
+
+#: events i18n migration
+msgid "Steering Exceeds Limit"
+msgstr "转向超出限制"
+
+
+#: events i18n migration
+msgid "Steering Wheel Turned"
+msgstr "方向盘被转动"
+
+
+#: events i18n migration
+msgid "Steering misalignment detected"
+msgstr "转向系统未对准"
+
+
+#: events i18n migration
+msgid "Steering rack geometry may be off"
+msgstr "转向齿条几何可能不正确"
+
+
+#: events i18n migration
+msgid "Steering rack geometry may be off (Ratio: {:.1f})"
+msgstr "转向齿条几何可能不正确 (传动比: {:.1f})"
+
+
+#: events i18n migration
+msgid "Stock AEB: Possible Collision"
+msgstr "原厂AEB：可能发生碰撞"
+
+
+#: events i18n migration
+msgid "Stock LKAS: Lane Departure Detection"
+msgstr "标准LKAS：车道偏离检测"
+
+
+#: events i18n migration
+msgid "Switch to Traffic-Aware Cruise Control to engage"
+msgstr "请切换到交通感知巡航控制以启用"
+
+
+#: events i18n migration
+msgid "System Initializing"
+msgstr "系统初始化中"
+
+
+#: events i18n migration
+msgid "System Lagging"
+msgstr "系统滞后"
+
+
+#: events i18n migration
+msgid "System Overheated"
+msgstr "系统过热"
+
+
+#: events i18n migration
+msgid "Take Control"
+msgstr "接管控制"
+
+
+#: events i18n migration
+msgid "Take Over"
+msgstr "接管"
+
+
+#: events i18n migration
+msgid "Toggle stock LKAS on or off to engage"
+msgstr "请切换原厂LKAS状态以启用"
+
+
+#: events i18n migration
+msgid "Too Distracted"
+msgstr "分心过度"
+
+
+#: events i18n migration
+msgid "Touch Steering Wheel"
+msgstr "触摸方向盘"
+
+
+#: events i18n migration
+msgid "Touch Steering Wheel: Face Not Detected"
+msgstr "触摸方向盘：未检测到面部"
+
+
+#: events i18n migration
+msgid "Turn Left"
+msgstr "左转"
+
+
+#: events i18n migration
+msgid "Turn Right"
+msgstr "右转"
+
+
+#: events i18n migration
+msgid "Turning Left"
+msgstr "正在左转"
+
+
+#: events i18n migration
+msgid "Turning Right"
+msgstr "正在右转"
+
+
+#: events i18n migration
+msgid "USB Error: Restart Device"
+msgstr "USB错误：请重启设备"
+
+
+#: events i18n migration
+msgid "Unavailable Below"
+msgstr "以下不可用"
+
+
+#: events i18n migration
+msgid "Used: {}%"
+msgstr "已用 {}%"
+
+
+#: events i18n migration
+msgid "Vehicle Not Recognized"
+msgstr "车辆未识别"
+
+
+#: events i18n migration
+msgid "Vehicle Sensors Calibrating"
+msgstr "车辆传感器校准中"
+
+
+#: events i18n migration
+msgid "Vehicle Sensors Invalid"
+msgstr "车辆传感器无效"
+
+
+#: events i18n migration
+msgid "Vehicle Steering Time Limit"
+msgstr "车辆转向时间限制"
+
+
+#: events i18n migration
+msgid "Vehicle in Blind Spot"
+msgstr "盲区检测到车辆"
+
+
+#: events i18n migration
+msgid "WARNING: This branch is not tested"
+msgstr "警告：此分支未经测试"
+
+
+#: events i18n migration
+msgid "Waiting for Steer Ready"
+msgstr "等待转向就绪"
+
+
+#: events i18n migration
+msgid "Yaw"
+msgstr "偏航角"
+
+
+#: events i18n migration
+msgid "frames dropped"
+msgstr "已丢帧"
+
+
+#: events i18n migration
+msgid "in Progress"
+msgstr "正在进行中"
+
+
+#: events i18n migration
+msgid "locationd Temporary Error"
+msgstr "locationd临时错误"
+
+
+#: events i18n migration
+msgid "m/s"
+msgstr "米/秒"
+
+
+#: events i18n migration
+msgid "paramsd Temporary Error"
+msgstr "paramsd 临时错误"
+
+
+#: events i18n migration
+msgid "selfdrive Processes Lagging: Restart Device"
+msgstr "自驾车进程滞后：请重启设备"
+
+
+#: events i18n migration
+msgid "sunnypilot Cancelled"
+msgstr "sunnypilot已取消"
+
+
+#: events i18n migration
+msgid "sunnypilot will disengage"
+msgstr "sunnypilot 将解除控制"
+
+
+#: events i18n migration
+msgid "to Calibrate"
+msgstr "进行校准"
+
+
+#: events i18n migration
+msgid "to Enable"
+msgstr "以启用"
+
+
+#: events i18n migration
+msgid "to engage"
+msgstr "来启用"
+
+
+#: events i18n migration
+msgid "used"
+msgstr "已用"
+
+
+#: events i18n migration
+msgid "{:.0f} °C"
+msgstr "{:.0f} 摄氏度"
+
+
+#: events i18n migration
+msgid "{} (Fuzzy Model)"
+msgstr "{}（替代模型）"
+
+
+#: events i18n migration
+msgid "{} Minutes Left"
+msgstr "剩余 {} 分钟"
+
+
+#: events i18n migration
+msgid "{} in Progress: {:.0f}%"
+msgstr "{}进行中：{:.0f}%"
+
+
+#: events i18n migration
+msgid "°"
+msgstr "度"
+
+
+#: events i18n migration
+msgid "°C"
+msgstr "摄氏度"
+# events i18n: 由 openpilot/selfdrive/ui/translations/events_i18n.py 维护
+
+#: events i18n migration
+msgid "Alpha Longitudinal Ready"
+msgstr "Alpha 纵向已就绪"
+
+
+#: events i18n migration
+msgid "Alpha Longitudinal Waiting"
+msgstr "Alpha 纵向正在等待"
+
+
+#: events i18n migration
+msgid "Alpha Longitudinal Will Engage at Next Stop"
+msgstr "Alpha 纵向将在下次停车时接管"
+
+
+#: events i18n migration
+msgid "Disable Stock Cruise Control"
+msgstr "请关闭原厂巡航"
+
+
+#: events i18n migration
+msgid "Lane Change Unavailable: Road Edge Ahead"
+msgstr "无法变道：前方路缘"
+
+
+#: events i18n migration
+msgid "Longitudinal Control Initialization Failed"
+msgstr "纵向控制初始化失败"
+
+
+#: events i18n migration
+msgid "Longitudinal Control Initializing"
+msgstr "纵向控制初始化中"
+
+
+#: events i18n migration
+msgid "Please Remain Stopped"
+msgstr "请保持停车"
+
+
+#: events i18n migration
+msgid "Press Gas to Maintain Current Speed"
+msgstr "踩油门保持当前速度"
+
+
+#: events i18n migration
+msgid "Restart Car"
+msgstr "请重启车辆"
+
+
+#: events i18n migration
+msgid "Restart Car to Retry"
+msgstr "重启车辆以重试"
+
+
+#: events i18n migration
+msgid "Returning Longitudinal Control"
+msgstr "纵向控制交还中"
+
+
+#: events i18n migration
+msgid "Road Edge Ahead"
+msgstr "前方路缘"
+
+
+#: events i18n migration
+msgid "Steering Intercepted by panda Safety"
+msgstr "转向被 Panda 安全机制拦截"
+
+
+#: events i18n migration
+msgid "Stock AEB Off"
+msgstr "原厂 AEB 已关闭"
+
+
+#: events i18n migration
+msgid "Stock Cruise Fault"
+msgstr "原厂巡航失败"
+
+
+#: events i18n migration
+msgid "Stock Cruise Will Resume When Complete"
+msgstr "完成后恢复原厂巡航"
+
+
+#: events i18n migration
+msgid "Stop to Enable Longitudinal Control"
+msgstr "停车以启用纵向控制"
+# events i18n: 由 openpilot/selfdrive/ui/translations/events_i18n.py 维护
+
+#: events i18n migration
+msgid "Adjusting to Speed Limit{}{}"
+msgstr "正在调整至限速{}{}"

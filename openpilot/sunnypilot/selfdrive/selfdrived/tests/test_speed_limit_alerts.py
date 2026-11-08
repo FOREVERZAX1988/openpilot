@@ -46,12 +46,12 @@ def mici(monkeypatch):
 
 
 class TestPreActivePrompt:
-  @pytest.mark.parametrize("set_speed, text", [(40, "按 + 键调至\n45 英里/时"), (55, "按 - 键调至\n45 英里/时")])
+  @pytest.mark.parametrize("set_speed, text", [(40, 'Press + to Set\n45 mph'), (55, 'Press - to Set\n45 mph')])
   def test_names_the_target(self, mici, set_speed, text):
     assert _alert(EventNameSP.speedLimitPreActive, 45, set_speed).alert_text_1 == text
 
   def test_metric(self, mici):
-    assert _alert(EventNameSP.speedLimitPreActive, 80, 100, metric=True).alert_text_1 == "按 - 键调至\n80 公里/时"
+    assert _alert(EventNameSP.speedLimitPreActive, 80, 100, metric=True).alert_text_1 == 'Press - to Set\n80 km/h'
 
   def test_tizi_draws_the_sign_instead(self):
     assert _alert(EventNameSP.speedLimitPreActive, 45, 40).alert_size == AlertSize.none
@@ -64,24 +64,22 @@ class TestActiveNotice:
   ])
   def test_names_the_speed_it_settles_at(self, target, set_speed, speed):
     alert = _alert(EventNameSP.speedLimitActive, target, set_speed)
-    assert alert.alert_text_1 == f"正在调整至限速 {speed} 英里/时"
+    assert alert.alert_text_1 == f'Adjusting to Speed Limit {speed} mph'
     assert alert.alert_size == AlertSize.small
 
   def test_metric(self):
-    assert _alert(EventNameSP.speedLimitActive, 80, 100, metric=True).alert_text_1 == "正在调整至限速 80 公里/时"
+    assert _alert(EventNameSP.speedLimitActive, 80, 100, metric=True).alert_text_1 == 'Adjusting to Speed Limit 80 km/h'
 
   def test_below_the_confirm_threshold_says_the_same(self):
-    assert _alert(EventNameSP.speedLimitChanged, 35, 45).alert_text_1 == "正在调整至限速 35 英里/时"
+    assert _alert(EventNameSP.speedLimitChanged, 35, 45).alert_text_1 == 'Adjusting to Speed Limit 35 mph'
 
   def test_mici_keeps_the_unit_with_its_number(self, mici):
-    assert _alert(EventNameSP.speedLimitActive, 45, 60).alert_text_1 == "正在调整至限速\n45 英里/时"
+    assert _alert(EventNameSP.speedLimitActive, 45, 60).alert_text_1 == 'Adjusting to Speed Limit\n45 mph'
 
   def test_unset_set_speed_falls_back_to_the_target(self):
     # vCruiseCluster 0 falls back to controlsState's vCruise, 0 when nothing published
-    assert _alert(EventNameSP.speedLimitActive, 45, 0).alert_text_1 == "正在调整至限速 45 英里/时"
-
-
-    assert _alert(EventNameSP.speedLimitActive, 45, 0).alert_text_1 == "正在调整至限速 45 mph"
+    # i18n 迁移前这里有一条互相矛盾的第二断言（中文单位 vs mph），已合并为一条。
+    assert _alert(EventNameSP.speedLimitActive, 45, 0).alert_text_1 == 'Adjusting to Speed Limit 45 mph'
 
 
 class TestGasCancel:
@@ -89,14 +87,14 @@ class TestGasCancel:
 
   def test_slowing_offers_the_gas(self):
     alert = _alert(EventNameSP.speedLimitChanged, 20, 60, pcm_long=True, adapting=True)
-    assert alert.alert_text_1 == "正在调整至限速 20 mph"
-    assert alert.alert_text_2 == "踩油门保持当前速度"
+    assert alert.alert_text_1 == 'Adjusting to Speed Limit 20 mph'
+    assert alert.alert_text_2 == 'Press Gas to Maintain Current Speed'
     assert alert.alert_size == AlertSize.mid  # tizi draws the second line only on mid
 
   def test_mici_keeps_both_lines(self, mici):
     alert = _alert(EventNameSP.speedLimitChanged, 20, 60, pcm_long=True, adapting=True)
-    assert alert.alert_text_1 == "正在调整至限速\n20 mph"
-    assert alert.alert_text_2 == "踩油门保持当前速度"
+    assert alert.alert_text_1 == 'Adjusting to Speed Limit\n20 mph'
+    assert alert.alert_text_2 == 'Press Gas to Maintain Current Speed'
 
   def test_not_slowing_stays_small(self):
     """A raise, or a limit the car is already at: the gas has nothing to decline."""

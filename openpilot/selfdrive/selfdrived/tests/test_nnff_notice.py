@@ -61,12 +61,12 @@ class TestNnffNoticeText(unittest.TestCase):
 
   def test_exact_match_names_the_model_plainly(self):
     alert = nnff_load_alert(MODEL_NAME, fuzzy=False)
-    self.assertEqual(alert.alert_text_1, "NNFF 扭矩模型已加载")
+    self.assertEqual(alert.alert_text_1, 'NNFF Torque Model Loaded')
     self.assertEqual(alert.alert_text_2, MODEL_NAME)
 
   def test_fuzzy_match_says_the_tune_is_a_substitute(self):
     alert = nnff_load_alert(MODEL_NAME, fuzzy=True)
-    self.assertIn("替代模型", alert.alert_text_2)
+    self.assertIn('Fuzzy Model', alert.alert_text_2)
     self.assertIn(MODEL_NAME, alert.alert_text_2)
 
   def test_placeholder_entry_stays_silent_about_any_model(self):
@@ -99,7 +99,7 @@ class TestNnffNoticeBinding(unittest.TestCase):
     # ET.PERMANENT's string value is lowercase, matching capnp's JSON name
     self.assertEqual(alerts[0].alert_type, "torqueNNLoad/permanent")
     self.assertEqual(alerts[0].event_type, ET.PERMANENT)
-    self.assertIn("替代模型", alerts[0].alert_text_2)
+    self.assertIn('Fuzzy Model', alerts[0].alert_text_2)
 
   def test_event_counters_survive_the_rebound_mapping(self):
     """event_counters is keyed at __init__; a rebound event must not KeyError."""
@@ -127,7 +127,7 @@ class TestNnffNoticeGate(unittest.TestCase):
     carrot = make_carrot(fuzzy=True)
     carrot.update_nnff_alert(CS_OK)
     notice = carrot.events.get_events_mapping()[EventName.torqueNNLoad][ET.PERMANENT]
-    self.assertIn("替代模型", notice.alert_text_2)
+    self.assertIn('Fuzzy Model', notice.alert_text_2)
 
   def test_never_fires_twice(self):
     carrot = make_carrot()

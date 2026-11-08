@@ -63,8 +63,8 @@ from opendbc.car.hyundai.values import HyundaiFlags
 from openpilot.cereal import log
 from openpilot.selfdrive.selfdrived.events import EVENTS, can_error_alert
 
-PLAIN_TEXT_1 = "CAN总线错误：请检查连接"
-HINT_TEXT_1 = "CAN错误：请开启 CameraSCC"
+PLAIN_TEXT_1 = 'CAN Error: Check Connections'
+HINT_TEXT_1 = 'CAN Error: Enable CameraSCC'
 
 _HYUNDAI_FLAGS_WITHOUT_CAMERA_SCC = 0
 
@@ -130,7 +130,7 @@ class TestCanErrorAlert:
     set_params(HyundaiCameraSCC=0, HyundaiCameraSccHint=True)
     hint = alert("hyundai")
     assert hint.alert_text_1 == HINT_TEXT_1
-    assert hint.alert_text_2 == "摄像头总线检测到 SCC"
+    assert hint.alert_text_2 == 'SCC Detected on Camera Bus'
 
   def test_camera_scc_flag_suppresses_the_hint(self):
     set_params(HyundaiCameraSCC=0, HyundaiCameraSccHint=True)

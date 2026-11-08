@@ -43,7 +43,7 @@ def experimental_mode_switched_alert(CP: car.CarParams, CS: car.CarState, sm: me
   # Two complete sentences rather than one f-string: potools can only extract a literal, so
   # `f"Chill 模式已{...}"` reaches the po files as nothing and every non-Chinese UI shows the
   # source text. alert_renderer translates the callback's output with tr().
-  text = tr_noop("Chill 模式已关闭") if SelfdrivedZP.switched_to else tr_noop("Chill 模式已开启")
+  text = tr_noop('Chill Mode Off') if SelfdrivedZP.switched_to else tr_noop('Chill Mode On')
   return NormalPermanentAlert(text, duration=1.5)
 
 
@@ -56,7 +56,7 @@ def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.
   # mici wraps the unit off its number; break before the speed instead
   sep = "\n" if IS_MICI else " "
   return Alert(
-    f'正在调整至限速{sep}{get_display_speed(speed, metric)}',
+    f'Adjusting to Speed Limit{sep}{get_display_speed(speed, metric)}',
     "",
     AlertStatus.normal, AlertSize.small,
     Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.)
@@ -66,7 +66,7 @@ def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.Sub
   # an accelerator's comes a second after its swap, when the driver can engage;
   # its offer to switch is the one titled "Big Model Ready"
   accelerator = sm['modelDataV2SP'].acceleratorState != custom.ModelDataV2SP.AcceleratorState.none
-  return Alert("大模型已接管" if accelerator else "大模型已就绪", "",
+  return Alert('Big Model Engaged' if accelerator else 'Big Model Ready', "",
                AlertStatus.normal, AlertSize.small,
                Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 2.)
 
@@ -75,7 +75,7 @@ def speed_limit_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
   # StarPilot's speedLimitChanged standing alert: the posted limit moved and stayed moved.
   # Detection lives in selfdrived (SpeedLimitChangedAlertTracker); this only presents it.
   return Alert(
-    "限速已变化",
+    'Speed Limit Changed',
     "",
     AlertStatus.normal, AlertSize.small,
     Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 3.0)
@@ -97,14 +97,14 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     pcm_long_required_max = cst_low if speed_limit_final_last_conv < CONFIRM_SPEED_THRESHOLD[metric] else cst_high
     pcm_long_required_max_set_speed_conv = round(pcm_long_required_max * speed_conv)
 
-    alert_1_str = f"限速辅助：请将设定速度调至 {pcm_long_required_max_set_speed_conv} {"公里/时" if metric else "英里/时"} 以启用"
+    alert_1_str = f"Speed Limit Assist: Set Speed to {pcm_long_required_max_set_speed_conv} {('km/h' if metric else 'mph')} to Enable"
   else:
     if IS_MICI:
       # the target is the limit plus any offset; the break keeps the unit with its number
       if set_speed_conv < speed_limit_final_last_conv:
-        alert_1_str = f"按 + 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
+        alert_1_str = f'Press + to Set\n{get_display_speed(speed_limit_final_last, metric)}'
       elif set_speed_conv > speed_limit_final_last_conv:
-        alert_1_str = f"按 - 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
+        alert_1_str = f'Press - to Set\n{get_display_speed(speed_limit_final_last, metric)}'
     else:
       alert_size = AlertSize.none
 
@@ -146,16 +146,16 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.manualSteeringRequired: {
     ET.USER_DISABLE: Alert(
-      "自动车道居中已关闭",
-      "需要手动转向",
+      'Auto Lane Centering Off',
+      'Manual Steering Required',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.disengage, 1.),
   },
 
   EventNameSP.manualLongitudinalRequired: {
     ET.WARNING: Alert(
-      "智能/自适应巡航：已关闭",
-      "需要手动控制车速",
+      'Smart/Adaptive Cruise: Off',
+      'Manual Speed Control Required',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
   },
@@ -180,7 +180,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.silentBrakeHold: {
     ET.WARNING: EngagementAlert(AudibleAlert.none),
-    ET.NO_ENTRY: NoEntryAlert("制动保持已激活"),
+    ET.NO_ENTRY: NoEntryAlert('Brake Hold Active'),
   },
 
   EventNameSP.silentWrongGear: {
@@ -190,19 +190,19 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
     ET.NO_ENTRY: Alert(
-      "挡位不在D挡",
-      "sunnypilot 不可用",
+      'Gear Not in Drive',
+      'sunnypilot Unavailable',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 0.),
   },
 
   EventNameSP.silentReverseGear: {
     ET.PERMANENT: Alert(
-      "倒车中",
+      'Reversing',
       "",
       AlertStatus.normal, AlertSize.full,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-    ET.NO_ENTRY: NoEntryAlert("倒档"),
+    ET.NO_ENTRY: NoEntryAlert('Reverse'),
   },
 
   EventNameSP.silentDoorOpen: {
@@ -211,7 +211,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("车门开启"),
+    ET.NO_ENTRY: NoEntryAlert('Door Open'),
   },
 
   EventNameSP.silentSeatbeltNotLatched: {
@@ -220,7 +220,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("安全带未系"),
+    ET.NO_ENTRY: NoEntryAlert('Seatbelt Unfastened'),
   },
 
   EventNameSP.silentParkBrake: {
@@ -229,7 +229,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, 0.),
-    ET.NO_ENTRY: NoEntryAlert("停车制动已启用"),
+    ET.NO_ENTRY: NoEntryAlert('Park Brake Engaged'),
   },
 
   # a brake already held at standstill raises no pedalPressed, so engage into paused on the
@@ -243,16 +243,16 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventNameSP.controlsMismatchLateral: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("控制不匹配：横向"),
-    ET.NO_ENTRY: NoEntryAlert("控制不匹配：横向"),
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert('Controls Mismatch: Lateral'),
+    ET.NO_ENTRY: NoEntryAlert('Controls Mismatch: Lateral'),
   },
 
   # unsteered from the first rejected frame, not from the disable 2 s later (Mazda routes
   # 00000116/117: 2 s of rejected 0x243 with the camera relay-blocked latched the EPS fault)
   EventNameSP.controlsMismatchLateralWarning: {
     ET.WARNING: Alert(
-      "请接管",
-      "转向被 panda 安全机制阻止",
+      'Please Take Over',
+      'Steering Blocked by panda Safety',
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, .5),
   },
@@ -268,7 +268,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventNameSP.pedalPressedAlertOnly: {
-    ET.WARNING: NoEntryAlert("踏板被按下")
+    ET.WARNING: NoEntryAlert('Pedal Pressed')
   },
 
   # Mazda: invalidLkasSetting is swapped for this when MADS is on (CarSpecificEventsSP);
@@ -276,21 +276,21 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # tizi only its border.
   EventNameSP.stockLkasOff: {
     ET.NO_ENTRY: Alert(
-      "横向已停用",
-      "LKAS 已关闭",
+      'Lateral Disabled',
+      'LKAS Off',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.refuse, 3.),
-    **({ET.PERMANENT: NormalPermanentAlert("横向已停用", "LKAS 已关闭", priority=Priority.LOW)} if IS_MICI else {}),
+    **({ET.PERMANENT: NormalPermanentAlert('Lateral Disabled', 'LKAS Off', priority=Priority.LOW)} if IS_MICI else {}),
   },
 
   # LKA back on with lateral resuming, the EPS not delivering yet: still disabled to the driver.
   EventNameSP.stockLkasArming: {
-    ET.PERMANENT: NormalPermanentAlert("横向已停用", "等待转向就绪", priority=Priority.LOW),
+    ET.PERMANENT: NormalPermanentAlert('Lateral Disabled', 'Waiting for Steer Ready', priority=Priority.LOW),
   } if IS_MICI else {},
 
   EventNameSP.laneTurnLeft: {
     ET.WARNING: Alert(
-      "正在左转",
+      'Turning Left',
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
@@ -298,7 +298,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.laneTurnRight: {
     ET.WARNING: Alert(
-      "正在右转",
+      'Turning Right',
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
@@ -318,7 +318,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.speedLimitPending: {
     ET.WARNING: Alert(
-      "正在自动调整至上次限速",
+      'Adjusting to Previous Speed Limit',
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.),
@@ -341,7 +341,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.laneChangeRoadEdge: {
     ET.WARNING: Alert(
-      "变道不可用：道路边缘",
+      'Lane Change Unavailable: Road Edge',
       "",
       AlertStatus.userPrompt, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.1),
@@ -356,8 +356,8 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # driver to re-engage to switch. Not as loud as the native ready.
   EventNameSP.bigModelAvailable: {
     ET.PERMANENT: Alert(
-      "大模型已就绪",
-      "重新接管以切换",
+      'Big Model Ready',
+      'Resume to Switch',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .2),
   },
@@ -369,8 +369,8 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # it as a disengage (2026-10-04). A disengage ends it
   EventNameSP.bigModelLinkLost: {
     ET.WARNING: Alert(
-      "大模型已断开",
-      "使用小模型行驶",
+      'Big Model Disconnected',
+      'Driving with Small Model',
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.MID, VisualAlert.steerRequired, AudibleAlert.warningSoft, .2),
   },
@@ -382,21 +382,21 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # from.  Kept as small / non-blocking so the planner can still react.
   EventNameSP.trafficSignGreen: {
     ET.WARNING: Alert(
-      "Carrot：识别到绿灯",
+      'Carrot: Green Light Detected',
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.5),
   },
   EventNameSP.trafficSignChanged: {
     ET.WARNING: Alert(
-      "Carrot：信号灯状态变化",
+      'Carrot: Traffic Light State Changed',
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
   },
   EventNameSP.trafficStopping: {
     ET.WARNING: Alert(
-      "Carrot：准备停车",
+      'Carrot: Preparing to Stop',
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),

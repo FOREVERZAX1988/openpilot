@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.swaglog import cloudlog
+from openpilot.selfdrive.ui.translations.events_i18n import TPL_MAP as EVENTS_TEMPLATES
 
 if TYPE_CHECKING:
   from openpilot.common.params import Params
@@ -160,6 +161,11 @@ class Multilang:
     self._translations: dict[str, str] = {}
     self._plurals: dict[str, list[str]] = {}
     self._plural_selector = PLURAL_SELECTORS.get('en', lambda n: 0)
+    # events 动态 alert 文案在 selfdrived 里就把数值拼进了字符串，UI 层拿到的
+    # 是 "Drive above 30 km/h to engage" 这种成品，精确查 po 必然 miss。只对
+    # events_i18n.TPL_MAP 里登记过的模板做一次反查，把数值代回中文 msgstr。
+    self._templates: list[tuple[re.Pattern, str]] = []
+    self._template_cache: dict[str, str] = {}
     self._load_languages()
 
   @property
@@ -178,6 +184,19 @@ class Multilang:
       cloudlog.error(f"No translation file found for language: {self._language}, using default.")
       self._translations = {}
       self._plurals = {}
+
+    # 语言切换后模板索引与缓存都必须重建，否则会拿旧语言译文响应新语言。
+    self._template_cache = {}
+    self._templates = []
+    for en_tpl in EVENTS_TEMPLATES.values():
+      msgstr = self._translations.get(en_tpl)
+      if not msgstr:
+        continue
+      parts = re.split(r'(\{[^}]*\})', en_tpl)
+      pattern = ''.join('(.+?)' if p.startswith('{') and p.endswith('}') else re.escape(p) for p in parts)
+      self._templates.append((re.compile(r'\A' + pattern + r'\Z', re.S), msgstr))
+    # 具体模板优先，避免 "{}" 之类的通用模板抢先命中
+    self._templates.sort(key=lambda item: -len(item[0].pattern))
 
   def change_language(self, language_code: str) -> None:
     self._params.put("LanguageSetting", language_code, block=True)
@@ -207,7 +226,32 @@ class Multilang:
     return True
 
   def tr(self, text: str) -> str:
-    return self._translations.get(text, text) or text
+    hit = self._translations.get(text)
+    if hit:
+      return hit
+    return self._tr_template(text)
+
+  def _tr_template(self, text: str) -> str:
+    """精确查表 miss 时，按 events 模板把已拼好的数值代回译文。"""
+    if not self._templates:
+      return text
+    cached = self._template_cache.get(text)
+    if cached is not None:
+      return cached
+    result = text
+    for pattern, msgstr in self._templates:
+      m = pattern.fullmatch(text)
+      if m is None:
+        continue
+      out = msgstr
+      for group in m.groups():
+        # 捕获组本身也可能是可翻译词，例如 "Calibration in Progress: 50%"
+        value = self._translations.get(group, group) or group
+        out = re.sub(r'\{[^}]*\}', lambda _m, v=value: v, out, count=1)
+      result = out
+      break
+    self._template_cache[text] = result
+    return result
 
   def trn(self, singular: str, plural: str, n: int) -> str:
     if singular in self._plurals:

@@ -40,11 +40,11 @@ EVENT_NAME_ZP = {v: k for k, v in EventNameZP.schema.enumerants.items()}
 # upstream's no-entry alerts ("Gear not D"). Main off has no entry: the cluster's MRCC
 # indicator is the car's own.
 STOCK_ECU_ALERT_TEXT = {
-  StockEcuState.STARTING: ("纵向控制初始化中", "请保持停车"),
-  StockEcuState.PARK_TO_TAKE_OVER: ("停车以启用纵向控制", "Alpha 纵向将在下次停车时接管"),
-  StockEcuState.STOCK_CRUISE_ON: ("请关闭原厂巡航", "Alpha 纵向正在等待"),
-  StockEcuState.RESTORING: ("纵向控制交还中", "完成后恢复原厂巡航"),
-  StockEcuState.FAILED: ("纵向控制初始化失败", "重启车辆以重试"),
+  StockEcuState.STARTING: ('Longitudinal Control Initializing', 'Please Remain Stopped'),
+  StockEcuState.PARK_TO_TAKE_OVER: ('Stop to Enable Longitudinal Control', 'Alpha Longitudinal Will Engage at Next Stop'),
+  StockEcuState.STOCK_CRUISE_ON: ('Disable Stock Cruise Control', 'Alpha Longitudinal Waiting'),
+  StockEcuState.RESTORING: ('Returning Longitudinal Control', 'Stock Cruise Will Resume When Complete'),
+  StockEcuState.FAILED: ('Longitudinal Control Initialization Failed', 'Restart Car to Retry'),
 }
 
 
@@ -52,7 +52,7 @@ def road_edge_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster
   # mici renders text1 above 16 chars at the smallest font and clips; silent mode keeps the
   # alert and drops its chime
   audible = AudibleAlert.none if SelfdrivedZP.road_edge_silent else AudibleAlert.prompt
-  return Alert("前方路缘" if IS_MICI else "无法变道：前方路缘", "",
+  return Alert('Road Edge Ahead' if IS_MICI else 'Lane Change Unavailable: Road Edge Ahead', "",
                AlertStatus.userPrompt, AlertSize.small,
                Priority.LOW, VisualAlert.none, audible, 0.1)
 
@@ -66,7 +66,7 @@ def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.Sub
   # an accelerator's comes a second after its swap, when the driver can engage;
   # its offer to switch is the one titled "Big Model Ready"
   accelerator = sm['modelDataV2SP'].zoompilot.acceleratorState != custom.ModelDataV2ZP.AcceleratorState.none
-  return Alert("大模型已接管" if accelerator else "大模型已就绪", "",
+  return Alert('Big Model Engaged' if accelerator else 'Big Model Ready', "",
                AlertStatus.normal, AlertSize.small,
                Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 2.)
 
@@ -98,9 +98,9 @@ def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.
   # the car (speed_limit_assist_zp); the arbiter confirms with the buttons instead
   planner_owns = pcm_machine_owns_sla(CP, sm['carStateSP'].zoompilot.icbmActivation == IcbmActivation.active)
   slowing = sm['longitudinalPlanSP'].speedLimit.assist.state == AssistState.adapting
-  keep = "踩油门保持当前速度" if planner_owns and slowing else ""
+  keep = 'Press Gas to Maintain Current Speed' if planner_owns and slowing else ""
   return Alert(
-    f'正在调整至限速{sep}{get_display_speed(speed, metric)}',
+    f'Adjusting to Speed Limit{sep}{get_display_speed(speed, metric)}',
     keep,
     AlertStatus.normal, AlertSize.mid if keep else AlertSize.small,
     Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 5.)
@@ -119,9 +119,9 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
   if IS_MICI:
     # the target is the limit plus any offset; the break keeps the unit with its number
     if set_speed_conv < speed_limit_final_last_conv:
-      alert_1_str = f"按 + 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
+      alert_1_str = f'Press + to Set\n{get_display_speed(speed_limit_final_last, metric)}'
     elif set_speed_conv > speed_limit_final_last_conv:
-      alert_1_str = f"按 - 键调至\n{get_display_speed(speed_limit_final_last, metric)}"
+      alert_1_str = f'Press - to Set\n{get_display_speed(speed_limit_final_last, metric)}'
   else:
     alert_size = AlertSize.none
 
@@ -161,16 +161,16 @@ EVENTS_ZP: dict[int, dict[str, Alert | AlertCallbackType]] = {
     # Mazda: invalidLkasSetting is swapped for this when MADS is on (CarSpecificEventsSP); MADS
     # holds lateral paused on it (mads.py). mici gets a standing alert, tizi only its border.
     ET.NO_ENTRY: Alert(
-      "横向已停用",
-      "LKAS 已关闭",
+      'Lateral Disabled',
+      'LKAS Off',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.refuse, 3.),
-    **({ET.PERMANENT: NormalPermanentAlert("横向已停用", "LKAS 已关闭", priority=Priority.LOW)} if IS_MICI else {}),
+    **({ET.PERMANENT: NormalPermanentAlert('Lateral Disabled', 'LKAS Off', priority=Priority.LOW)} if IS_MICI else {}),
   },
 
   # LKA back on with lateral resuming, the EPS not delivering yet: still disabled to the driver.
   EventNameZP.stockLkasArming: {
-    ET.PERMANENT: NormalPermanentAlert("横向已停用", "等待转向就绪", priority=Priority.LOW),
+    ET.PERMANENT: NormalPermanentAlert('Lateral Disabled', 'Waiting for Steer Ready', priority=Priority.LOW),
   } if IS_MICI else {},
 
   # Sound-only mirrors of the longitudinal selfdrive transitions while a declared MADS
@@ -199,8 +199,8 @@ EVENTS_ZP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # 00000116/117: 2 s of rejected 0x243 with the camera relay-blocked latched the EPS fault)
   EventNameZP.controlsMismatchLateralWarning: {
     ET.WARNING: Alert(
-      "请接管",
-      "转向被 Panda 安全机制拦截",
+      'Please Take Over',
+      'Steering Intercepted by panda Safety',
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, .5),
   },
@@ -222,15 +222,15 @@ EVENTS_ZP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   # the takeover landed: the car's own emergency braking went with the radar
   EventNameZP.stockEcuReady: {
-    ET.PERMANENT: NormalPermanentAlert("Alpha 纵向已就绪", "原厂 AEB 已关闭", duration=2.),
+    ET.PERMANENT: NormalPermanentAlert('Alpha Longitudinal Ready', 'Stock AEB Off', duration=2.),
   },
 
   # The last session's hand-back failed and its stop went ahead anyway: the radar is left to
   # recover on its own, which blocks stock cruise until the next ignition. Held the whole session.
   EventNameZP.stockCruiseFailed: {
     ET.PERMANENT: Alert(
-      "原厂巡航失败",
-      "请重启车辆",
+      'Stock Cruise Fault',
+      'Restart Car',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .2),
   },
@@ -245,8 +245,8 @@ EVENTS_ZP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # for 3 s (accelerator_events), and no longer than the wait for the swap
   EventNameZP.bigModelAvailable: {
     ET.PERMANENT: Alert(
-      "大模型已就绪",
-      "重新接管以切换",
+      'Big Model Ready',
+      'Resume to Switch',
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .2),
   },
@@ -258,8 +258,8 @@ EVENTS_ZP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # it as a disengage. A disengage ends it
   EventNameZP.bigModelLinkLost: {
     ET.WARNING: Alert(
-      "大模型已断开",
-      "使用小模型行驶",
+      'Big Model Disconnected',
+      'Driving with Small Model',
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.MID, VisualAlert.steerRequired, AudibleAlert.warningSoft, .2),
   },

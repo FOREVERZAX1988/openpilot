@@ -91,7 +91,7 @@ class TestHandBack(AcceleratorEventsTest):
     alerts = EVENTS_ZP[EventNameZP.bigModelLinkLost]
     self.assertEqual(set(alerts), {ET.WARNING})
     alert = alerts[ET.WARNING]
-    self.assertEqual((alert.alert_text_1, alert.alert_text_2), ("大模型已断开", "使用小模型行驶"))
+    self.assertEqual((alert.alert_text_1, alert.alert_text_2), ('Big Model Disconnected', 'Driving with Small Model'))
 
   def test_a_late_status_is_no_hand_back(self):
     # modelV2 alone says whether the big model drives: a modelDataV2SP late
@@ -137,18 +137,18 @@ class TestHandBackOnTheRealStateMachines(AcceleratorEventsTest):
   def test_engaged_it_stays_engaged_and_warns_for_five_seconds(self):
     main, madsm, shown = self.drive(HANDBACK_TICKS + 100, mads=True)
     self.assertEqual((main, madsm), (State.enabled, MadsState.enabled))
-    self.assertEqual(shown[:HANDBACK_TICKS], ["大模型已断开"] * HANDBACK_TICKS)
+    self.assertEqual(shown[:HANDBACK_TICKS], ['Big Model Disconnected'] * HANDBACK_TICKS)
     self.assertEqual(set(shown[HANDBACK_TICKS + 1:]), {""})
 
   def test_mads_only_it_keeps_steering_and_warns(self):
     main, madsm, shown = self.drive(HANDBACK_TICKS + 100, enabled=False, mads=True)
     self.assertEqual((main, madsm), (State.disabled, MadsState.enabled))
-    self.assertEqual(shown[:HANDBACK_TICKS], ["大模型已断开"] * HANDBACK_TICKS)
+    self.assertEqual(shown[:HANDBACK_TICKS], ['Big Model Disconnected'] * HANDBACK_TICKS)
     self.assertEqual(set(shown[HANDBACK_TICKS + 1:]), {""})
 
   def test_a_disengage_clears_it_at_once(self):
     _, _, shown = self.drive(300, mads=True, disengage_at=100)
-    self.assertEqual(set(shown[:100]), {"大模型已断开"})
+    self.assertEqual(set(shown[:100]), {'Big Model Disconnected'})
     self.assertEqual(set(shown[100:]), {""})
 
 
@@ -244,7 +244,7 @@ class TestOffer(AcceleratorEventsTest):
       am.add_many(frame, self.events_sp.create_alerts([ET.PERMANENT], [None, None, self.sm, False, 0, None]))
       am.process_alerts(frame, set())
       shown.append((am.current_alert.alert_text_1, am.current_alert.alert_text_2))
-    offer = ("大模型已就绪", "重新接管以切换")
+    offer = ('Big Model Ready', 'Resume to Switch')
     self.assertIn(offer, shown[:50])
     self.assertNotIn(offer, shown[int(0.2 / 0.01) + 50:])
 
@@ -278,18 +278,18 @@ class TestOffer(AcceleratorEventsTest):
     offer = EVENTS_ZP[EventNameZP.bigModelAvailable][ET.PERMANENT]
     chime = EVENTS_SP[EventNameSP.bigModelReady][ET.PERMANENT]
     self.sm['modelDataV2SP'].zoompilot.acceleratorState = 'running'
-    self.assertEqual(chime(None, None, self.sm, False, 0, None).alert_text_1, '大模型已接管')
-    self.assertNotEqual(offer.alert_text_1, '大模型已接管')
+    self.assertEqual(chime(None, None, self.sm, False, 0, None).alert_text_1, 'Big Model Engaged')
+    self.assertNotEqual(offer.alert_text_1, 'Big Model Engaged')
     # a chestnut's is still "大模型已就绪"
     self.sm['modelDataV2SP'].zoompilot.acceleratorState = 'none'
-    self.assertEqual(chime(None, None, self.sm, False, 0, None).alert_text_1, '大模型已就绪')
+    self.assertEqual(chime(None, None, self.sm, False, 0, None).alert_text_1, 'Big Model Ready')
 
   def test_notification_has_no_control_effect(self):
     alerts = EVENTS_ZP[EventNameZP.bigModelAvailable]
     self.assertEqual(set(alerts), {ET.PERMANENT})
     alert = alerts[ET.PERMANENT]
-    # fork 的 UI 是中文，events_zp 里这句就是中文
-    self.assertEqual((alert.alert_text_1, alert.alert_text_2), ('大模型已就绪', '重新接管以切换'))
+    # i18n 迁移后源码存英文 msgid，中文由 app_zh-CHS.po 提供（见 test_events_i18n.py）
+    self.assertEqual((alert.alert_text_1, alert.alert_text_2), ('Big Model Ready', 'Resume to Switch'))
 
 
 class TestOptionalProcesses(OpenpilotTestCase):

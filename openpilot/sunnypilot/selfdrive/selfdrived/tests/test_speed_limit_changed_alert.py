@@ -160,7 +160,7 @@ class TestEventWiring:
   def test_alert_is_visible_and_audible(self):
     entry = EVENTS_SP[EventNameSP.speedLimitChangedAlert]
     alert = entry[ET.PERMANENT](None, None, None, False, 0, None)
-    assert alert.alert_text_1 == "限速已变化"
+    assert alert.alert_text_1 == 'Speed Limit Changed'
     assert alert.alert_size != AlertSize.none  # visible: the alert occupies the screen
     assert alert.audible_alert != AudibleAlert.none  # audible: a chime plays
     assert alert.duration == int(3.0 / DT_CTRL)  # 3 s standing window, same as StarPilot
