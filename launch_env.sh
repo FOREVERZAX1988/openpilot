@@ -23,20 +23,29 @@ fi
 # athena, sunnylink, git) fails certificate validation until the clock is
 # sane, and nothing else syncs time this early. HTTP needs no TLS, so pull
 # the date from an HTTP response header. This is sourced before WiFi is up,
-# so poll briefly for DNS first; bounded at ~30s and only when the clock is
+# so poll briefly for DNS first; bounded and only when the clock is
 # actually implausible.
+#
+# This block runs on EVERY launcher invocation while the clock is bogus
+# (the overlay-install boot execs the launcher a second time), and a cold
+# python3 startup costs seconds on a freshly swapped tree, so the DNS
+# probe uses getent(1) first and only falls back to python3. The comma in
+# an HTTP Date header ("Sun, 09 Nov ...") makes `date -s` fail with
+# "Invalid argument", which silently kept the clock at 1970 for the whole
+# boot - and turned every boot into a ~2min sync timeout. Strip it.
 if [ "$(date +%s)" -lt 1735689600 ]; then
   _sync_tries=0
-  while [ "$_sync_tries" -lt 10 ]; do
-    if ! python3 -c "import socket; socket.getaddrinfo('www.baidu.com', None)" >/dev/null 2>&1; then
-      sleep 3
+  while [ "$_sync_tries" -lt 6 ]; do
+    if ! getent hosts www.baidu.com >/dev/null 2>&1 && \
+       ! python3 -c "import socket; socket.getaddrinfo('www.baidu.com', None)" >/dev/null 2>&1; then
+      sleep 2
       _sync_tries=$((_sync_tries + 1))
       continue
     fi
     for _sync_url in http://www.baidu.com http://www.qq.com http://github.com; do
-      _sync_date=$(curl -fsSI -m 10 "$_sync_url" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
+      _sync_date=$(curl -fsSI -m 8 "$_sync_url" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
       if [ -n "$_sync_date" ]; then
-        sudo date -s "$_sync_date" >/dev/null 2>&1 && break 2
+        sudo date -s "${_sync_date/, /}" >/dev/null 2>&1 && break 2
       fi
     done
     break

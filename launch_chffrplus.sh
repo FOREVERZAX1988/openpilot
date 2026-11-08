@@ -596,7 +596,8 @@ agnos_init() {
     local d
     for _u in http://www.baidu.com http://www.qq.com http://github.com; do
       d=$(curl -fsSI -m 10 "$_u" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
-      [ -n "$d" ] && sudo date -s "$d" >/dev/null 2>&1 && echo "[agnos] clock synced from $_u: $d" | tee -a /tmp/agnos_pending.log && break
+      # strip the comma: `date -s "Sun, 09 Nov ..."` fails with Invalid argument
+      [ -n "$d" ] && sudo date -s "${d/, /}" >/dev/null 2>&1 && echo "[agnos] clock synced from $_u: $d" | tee -a /tmp/agnos_pending.log && break
     done
   fi
 
@@ -626,7 +627,7 @@ agnos_init() {
         local d
         for _u in http://github.com http://www.qq.com http://www.baidu.com; do
           d=$(curl -fsSI -m 10 "$_u" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
-          [ -n "$d" ] && sudo date -s "$d" >/dev/null 2>&1 && break
+          [ -n "$d" ] && sudo date -s "${d/, /}" >/dev/null 2>&1 && break
         done
       fi
       sudo env PYTHONPATH="$PY_PATH" "$PY" "$agnos_py" --swap "$manifest" && sudo reboot
