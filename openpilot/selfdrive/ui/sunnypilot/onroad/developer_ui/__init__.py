@@ -92,6 +92,16 @@ class DeveloperUiRenderer(Widget):
   def _update_state(self) -> None:
     self.dev_ui_mode = ui_state.developer_ui
 
+  def _unit_texture(self, unit: str) -> rl.Texture:
+    # Units come through tr(), so the string can be any translation (e.g. zh
+    # "m/s^2" -> "m/s²"); render translated units on demand instead of
+    # crashing with KeyError on the prebuilt RIGHT_UNITS table.
+    texture = self._unit_textures.get(unit)
+    if texture is None:
+      texture = load_text_texture(self._font_bold, unit, RIGHT_UNIT_SIZE)
+      self._unit_textures[unit] = texture
+    return texture
+
   def _render(self, rect: rl.Rectangle) -> None:
     if self.dev_ui_mode == DeveloperUiState.OFF:
       return
@@ -154,7 +164,7 @@ class DeveloperUiRenderer(Widget):
     rl.draw_text_ex(self._font_bold, element.value, rl.Vector2(centered_value_x, y), value_size, 0, element.color)
 
     if element.unit:
-      unit_texture = self._unit_textures[element.unit]
+      unit_texture = self._unit_texture(element.unit)
       units_x = x + container_width
       units_y = y + (value_size / 2) + (unit_texture.width / 2)
       src = rl.Rectangle(0, 0, unit_texture.width, unit_texture.height)

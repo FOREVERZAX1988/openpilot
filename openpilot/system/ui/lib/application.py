@@ -820,8 +820,13 @@ class GuiApplication(GuiApplicationExt):
           # raylib_nb has no load_font shim; LoadFontEx with no codepoints is
           # the C LoadFont() equivalent (fontSize is ignored for .fnt atlases)
           font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
-          default_id = rl.get_font_default().texture.id
-          if font.texture.id <= 0 or font.texture.id == default_id:
+          # Detect LoadFontEx failure (raylib returns GetFontDefault() on
+          # failure). Texture ids get recycled by the GL driver, so id
+          # equality with the default font false-positives on loaded atlases;
+          # compare identity features instead (default font: 95 glyphs @ 10px,
+          # pre-baked OpFont atlases carry ~1000 glyphs).
+          default_font = rl.get_font_default()
+          if font.texture.id <= 0 or (font.glyphCount == default_font.glyphCount and font.baseSize == default_font.baseSize):
             cloudlog.error(f"Failed to load pre-baked font {filename}; texture id={font.texture.id}")
             if multilang.requires_font_fallback():
               cloudlog.warning(f"Baking CJK fallback for {active_lang} from {NOTO_FONTS[active_lang]}")
