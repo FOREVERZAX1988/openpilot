@@ -43,6 +43,35 @@ EventName = log.OnroadEvent.EventName
 carlog.addHandler(ForwardingHandler(cloudlog))
 
 
+def cached_car_params_bytes(params: Params) -> bytes | None:
+  """CarParams bytes to hand to fingerprint(), so a reboot/OTA does not re-query ECUs.
+
+  CarParamsCache is CLEAR_ON_MANAGER_START, so every reboot -- and therefore every
+  OTA -- drops it. card then takes fingerprint()'s "Getting VIN & FW versions"
+  branch and sends a full UDS query, including the EPS (0x712) on VAG. On MLB that
+  query lands in the ignition-on EPS self-check window: the EPS latches
+  EPS_HCA_Status=fault and openpilot shows "LKAS Fault: Restart Car to Engage"
+  until the car is power-cycled (2026-11-08 Macan: route 8 had 275 UDS frames and
+  HCA 3->2 at 0.56 s; route 7 with a warm cache had 0 UDS frames).
+
+  CarParamsPersistent survives reboots and carries carVin/carFw, which is exactly
+  what fingerprint()'s cached branch needs. Use it for VAG only; other brands keep
+  stock behaviour so a cache from a different vehicle cannot change their identity.
+  """
+  raw = params.get("CarParamsCache")
+  if raw is not None:
+    return raw
+
+  persistent = params.get("CarParamsPersistent")
+  if persistent is None:
+    return None
+  with car.CarParams.from_bytes(persistent) as cp:
+    if cp.brand != "volkswagen" or len(cp.carFw) == 0 or not cp.carVin:
+      return None
+    cloudlog.warning("card: reusing persistent CarParams, skipping VAG FW query after reboot")
+  return persistent
+
+
 def obd_callback(params: Params) -> ObdCallback:
   def set_obd_multiplexing(obd_multiplexing: bool):
     if params.get_bool("ObdMultiplexingEnabled") != obd_multiplexing:
@@ -122,7 +151,7 @@ class Car:
       num_pandas = len(messaging.recv_one_retry(self.sm.sock['pandaStates']).pandaStates)
 
       cached_params = None
-      cached_params_raw = self.params.get("CarParamsCache")
+      cached_params_raw = cached_car_params_bytes(self.params)
       if cached_params_raw is not None:
         with car.CarParams.from_bytes(cached_params_raw) as _cached_params:
           cached_params = _cached_params
