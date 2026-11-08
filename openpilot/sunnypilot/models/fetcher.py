@@ -274,6 +274,14 @@ class ModelFetcher:
       return any(bundle.get("is_big") is True for bundle in bundles)
     return not any(bundle.get("is_big") is True for bundle in bundles)
 
+  def clear_retry(self, source: str) -> None:
+    """Forget the backoff a failed fetch left. For a caller whose reason to fetch
+    changed (the hardware the catalog is for), which the backoff knows nothing
+    about: offline it would hold the old list for 30 s to 600 s, and that is the
+    moment the list has to be right. The failure count stays, so repeated
+    failures still back off further."""
+    self._retry_at.pop(source, None)
+
   def _extension_stale(self, cached_data: dict) -> bool:
     """Was the big-model catalog fetched for other hardware? A chestnut coming or going
     changes whether it is extended, and the cache would otherwise hide that for an hour.

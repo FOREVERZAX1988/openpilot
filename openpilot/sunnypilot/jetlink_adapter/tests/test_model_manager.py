@@ -136,6 +136,8 @@ class TestFetcherHook(OpenpilotTestCase):
     params = mock.MagicMock()
     params.get.return_value = None
     with mock.patch('openpilot.sunnypilot.models.fetcher.requests.get', return_value=response) as get, \
+         mock.patch('openpilot.sunnypilot.models.http_probe.probe_sorted', side_effect=lambda c: c), \
+         mock.patch('openpilot.sunnypilot.models.signing.fetch_catalog_signature', return_value=None), \
          mock.patch.object(jetlink_adapter, 'lists_big_models', return_value=jetlink) as asked, \
          mock.patch.object(jetlink_adapter, 'big_catalog', return_value={'bundles': INDEX_BUNDLES}) as hook:
       parsed = ModelFetcherZP(params)._fetch_and_cache_models(source)
@@ -144,23 +146,41 @@ class TestFetcherHook(OpenpilotTestCase):
 
   def fetch_extend(self, source, extends=True):
     """The chestnut catalog's jetlink-extension side-path: beside a chestnut the base
-    fetcher asks the hook once per fetch, and stamps the cache with the answer."""
+    fetcher asks the hook once per fetch, and stamps the cache with the answer.
+    A chestnut fitted is what puts the base fetcher on this path at all (the
+    ModelFetcherZP override takes jetlink's list when it lists big models).
+
+    The mirror probe and the signature sidecar are not what these tests are
+    about, and both go through the same `requests` module the fetch does: take
+    them out so `get` counts catalog fetches only."""
     response = mock.MagicMock(status_code=200)
     response.json.return_value = dict(PINNED)
     params = mock.MagicMock(**{'get.return_value': None})
     with mock.patch('openpilot.sunnypilot.models.fetcher.requests.get', return_value=response) as get, \
-         mock.patch('openpilot.sunnypilot.models.http_probe.requests.get', return_value=response), \
+         mock.patch('openpilot.sunnypilot.models.http_probe.probe_sorted', side_effect=lambda c: c), \
+         mock.patch('openpilot.sunnypilot.models.signing.fetch_catalog_signature', return_value=None), \
+         mock.patch.object(jetlink_adapter, 'lists_big_models', return_value=False), \
          mock.patch.object(jetlink_adapter, 'should_extend_catalog', return_value=extends) as asked, \
          mock.patch.object(jetlink_adapter, 'extend_catalog', side_effect=lambda c: c) as hook:
       ModelFetcherZP(params)._fetch_and_cache_models(source)
     cached = next((c.args[1] for c in params.put.call_args_list if c.args[0] == KEYS.catalog), None)
     return hook, asked, get, cached
 
-  def test_the_big_model_source_is_extended_and_says_so(self):
-    hook, asked, _, cached = self.fetch_extend('chestnut')
-    hook.assert_called_once_with(PINNED)
-    asked.assert_called_once_with()
-    self.assertIs(cached[ModelFetcher.EXTENDED_KEY], True)
+  def test_the_big_model_source_is_not_extended_any_more(self):
+    # API 4 lists big models through big_catalog() (jetlink's index), so the
+    # fetch-time extension of sunnypilot's catalog is a no-op: the hook is not
+    # asked to extend, and the cache still records that this is not one
+    response = mock.MagicMock(status_code=200)
+    response.json.return_value = dict(PINNED)
+    params = mock.MagicMock(**{'get.return_value': None})
+    with mock.patch('openpilot.sunnypilot.models.fetcher.requests.get', return_value=response), \
+         mock.patch('openpilot.sunnypilot.models.http_probe.requests.get', return_value=response), \
+         mock.patch.object(jetlink_adapter, 'lists_big_models', return_value=False), \
+         mock.patch.object(jetlink_adapter, 'extend_catalog') as hook:
+      ModelFetcherZP(params)._fetch_and_cache_models('chestnut')
+    cached = next((c.args[1] for c in params.put.call_args_list if c.args[0] == KEYS.catalog), None)
+    hook.assert_not_called()
+    self.assertIs(cached[ModelFetcher.EXTENDED_KEY], False)
 
   def test_beside_a_chestnut_it_is_cached_as_fetched(self):
     hook, _, get, cached = self.fetch_extend('chestnut', extends=False)
@@ -194,7 +214,8 @@ class TestFetcherHook(OpenpilotTestCase):
     hook, _, get, cached, _ = self.fetch('chestnut', jetlink=False)
     hook.assert_not_called()
     get.assert_called_once()
-    self.assertEqual(cached, PINNED)
+    # as fetched, with the stamp that says it was not extended (API 4 never does)
+    self.assertEqual(cached, {**PINNED, ModelFetcher.EXTENDED_KEY: False})
 
   def test_the_small_model_source_never_asks(self):
     hook, asked, _, _, _ = self.fetch('qcom')
@@ -433,7 +454,8 @@ class TestRefreshBesideAChestnut(RefreshTest):
     self.tick()
     self.refresh()
     self.assertTrue(all(self.stamps()))
-    self.assertEqual(self.params.get(KEYS.catalog), BIG)
+    # sunnypilot's catalog as fetched, stamped with the extension answer
+    self.assertEqual(self.params.get(KEYS.catalog), {**BIG, ModelFetcher.EXTENDED_KEY: False})
     self.assertEqual(self.params.get("ModelManager_ActiveJson"), {
       "qcom": ModelFetcherZP.MODEL_URL,
       "chestnut": ModelFetcherZP.MODEL_URL_CHESTNUT,

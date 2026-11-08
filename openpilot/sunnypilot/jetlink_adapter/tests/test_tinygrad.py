@@ -169,6 +169,10 @@ class Client:
     self.sent, self.last_timings, self.last_state, self.dead = [], (0, 0, 0), {'gpu_temp': 40.0}, False
     self.last_output, self.unanswered = None, 0
     self.t = SimpleNamespace(link_info=lambda: {'kind': 'usb'})
+    self.stage_reports = []
+  def report_stages(self, means):
+    # the comma's own half of the frame, once a second (jetlink client)
+    self.stage_reports.append(dict(means))
   def infer_begin(self, data, packed, frame_id, reset=False, want_state=False, skip_if_busy=False):
     self.sent.append((bytes(data), np.array(packed), reset, want_state))
     return frame_id

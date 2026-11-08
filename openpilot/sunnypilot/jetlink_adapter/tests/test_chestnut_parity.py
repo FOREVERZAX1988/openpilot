@@ -43,6 +43,9 @@ class TestLinkStaysOff(OpenpilotTestCase):
     super().setUp()
     Params().put(jetlink_adapter.KEYS.link, jetlink_adapter.MODES.index('usb'), block=True)
     for p in (mock.patch.object(gadget, 'gadget_error', return_value='not set up'),
+              # the real gadget is bound on a comma that runs the owner, so the
+              # error alone is not "cannot come up": say the link is not configured
+              mock.patch.object(gadget, 'link_configured', return_value=False),
               mock.patch.object(jetlink_adapter, '_hooks', None)):
       p.start()
       self.addCleanup(p.stop)

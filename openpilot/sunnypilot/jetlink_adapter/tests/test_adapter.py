@@ -338,7 +338,9 @@ class TestManagerStartsADeadOwnerAgain(OpenpilotTestCase):
     def make(**kwargs):
       made.append(FakeProc(**kwargs))
       return made[-1]
-    patches = [mock.patch.object(process, 'Process', side_effect=make), mock.patch.object(proc, 'proc', None),
+    # PythonProcess captures its factory per instance at construction (spawn or
+    # fork), so the fakes come from the process's own factory, not the module's name
+    patches = [mock.patch.object(proc, 'process_factory', side_effect=make), mock.patch.object(proc, 'proc', None),
                mock.patch.object(proc, 'shutting_down', False),
                mock.patch.object(proc, 'should_run', lambda started, params, CP: should_run),
                mock.patch.object(proc, 'now', lambda: self.clock), mock.patch.object(proc, 'started_at', 0.0),

@@ -24,10 +24,11 @@ class BigCatalogCache(ModelCache):
   coming or going changes whose list it is, and the cache would otherwise hide that for an hour.
   Once per change: offline, the refetch fails and the cache stands until it expires."""
 
-  def __init__(self, params: Params, suffix: str, fetcher: ModelFetcherZP):
+  def __init__(self, params: Params, suffix: str, fetcher: ModelFetcherZP, source: str = "chestnut"):
     super().__init__(params, suffix=suffix)
     self._refetched_for: bool | None = None
     self._fetcher = fetcher
+    self._source = source
 
   def get(self) -> tuple[dict, bool]:
     cached_data, is_expired = super().get()
@@ -36,6 +37,11 @@ class BigCatalogCache(ModelCache):
     if cached_data and not is_expired and _is_jetlinks(cached_data) != jetlink and self._refetched_for != jetlink:
       self._refetched_for = jetlink
       cloudlog.warning(f"big-model catalog was fetched for {'a chestnut' if jetlink else 'jetlink'}; refetching")
+      # A chestnut in or out is a new reason to fetch, and the backoff a failed
+      # fetch left behind is about the old one: offline it would hold the wrong
+      # list in place for its 30 s to 600 s, when the change is exactly when the
+      # list has to be right. Try once now; a failure backs off again from here.
+      self._fetcher.clear_retry(self._source)
       is_expired = True
     return cached_data, is_expired
 
@@ -47,7 +53,7 @@ class ModelFetcherZP(ModelFetcher):
 
   def __init__(self, params: Params):
     super().__init__(params)
-    cache = self.model_caches["chestnut"] = BigCatalogCache(params, self.MODEL_SOURCES["chestnut"][1], self)
+    cache = self.model_caches["chestnut"] = BigCatalogCache(params, self.MODEL_SOURCES["chestnut"][1], self, "chestnut")
     # what the base just put
     self._active_json: dict[str, str] | None = {"qcom": self.MODEL_URL, "chestnut": self.MODEL_URL_CHESTNUT}
     self.show_jetlink_list(_is_jetlinks(params.get(cache._CACHE_KEY)))
