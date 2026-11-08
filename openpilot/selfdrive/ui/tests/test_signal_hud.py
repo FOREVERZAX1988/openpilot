@@ -88,6 +88,8 @@ class TestSignalHudRender(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_state = None
     self.renderer._yolo_reader = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
 
   def tearDown(self):
     ui_state.carrot_signal_hud = self._orig_flag
@@ -140,6 +142,8 @@ class TestYoloDot(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_reader = None
     self.renderer._yolo_state = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
 
   def tearDown(self):
     ui_state.carrot_signal_hud = self._orig_flag
@@ -187,6 +191,8 @@ class TestYoloBoxes(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_reader = None
     self.renderer._yolo_state = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
     self.renderer._yolo_frame_size = (1344, 760)
 
   def tearDown(self):
@@ -243,6 +249,8 @@ class TestBrakeCaption(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_state = None
     self.renderer._yolo_reader = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
 
   def tearDown(self):
     ui_state.carrot_signal_hud = self._orig_flag
