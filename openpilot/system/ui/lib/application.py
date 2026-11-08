@@ -67,11 +67,12 @@ if not all(hasattr(rl, name) for name in ("GuiTextAlignment", "GuiTextAlignmentV
     if not hasattr(rl, _name):
       setattr(rl, _name, IntEnum(_name, _members))
 
-# tizi's frame costs ~34.5 ms and a compensated sleep costs a few ms of timer
-# slack on top, so 20 fps is not reachable here: asking for it measured 17-18.
-# Set the target to what the panel actually sustains. Getting to 20 needs the
-# render path itself trimmed (text measurement / texture churn), not a bigger ask.
-_DEFAULT_FPS = int(os.getenv("FPS", {'tici': 20, 'tizi': 17}.get(HARDWARE.get_device_type(), 60)))
+# Keep the upstream 20 fps target. Lowering it to 17 only hid the warning: the
+# panel still measures 12-13, because the frame is not render-bound at all --
+# py-spy puts the UI's CPU in its own workers (firehose 40 %, prime_state 20 %,
+# params_refresh 16 %, the last rebuilding a CANParser on every refresh) while
+# the render thread waits. Trim those before touching this number again.
+_DEFAULT_FPS = int(os.getenv("FPS", {'tici': 20, 'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
 FPS_LOG_INTERVAL = 5  # Seconds between logging FPS drops
 FPS_DROP_THRESHOLD = 0.9  # FPS drop threshold for triggering a warning
 FPS_CRITICAL_THRESHOLD = 0.5  # Critical threshold for triggering strict actions
