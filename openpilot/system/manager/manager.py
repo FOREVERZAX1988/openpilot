@@ -194,6 +194,11 @@ def manager_thread() -> None:
 
   started_prev = False
   ignition_prev = False
+  # print only when the running-set changes: a per-second print floods the
+  # launcher's startup-output capture (and with it the serial console and the
+  # 64 KiB startup-failure ring), wiping real startup diagnostics within a
+  # minute of boot.
+  running_prev = None
   # a stop with no cancel: proceeds on any hand-back answer, or after the bound with none
   stop_gate = StockEcuHandBackGate(params)
 
@@ -231,8 +236,10 @@ def manager_thread() -> None:
 
     running = ' '.join("{}{}\u001b[0m".format("\u001b[32m" if p.proc.is_alive() else "\u001b[31m", p.name)
                        for p in managed_processes.values() if p.proc)
-    print(running)
-    cloudlog.debug(running)
+    if running != running_prev:
+      print(running)
+      cloudlog.debug(running)
+      running_prev = running
 
     # send managerState
     msg = messaging.new_message('managerState', valid=True)

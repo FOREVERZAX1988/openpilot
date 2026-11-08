@@ -112,11 +112,14 @@ def pick_http_time(now: datetime.datetime, candidates: list[datetime.datetime]) 
 
 
 def set_system_time(new_time: datetime.datetime) -> None:
-  """Set the system clock. Needs root, so it is a no-op off the device."""
+  """Set the system clock. Needs root: `date -s` from an unprivileged user
+  fails silently, which is exactly what used to leave a dead-RTC device on
+  its 1970 boot clock forever (updated runs as `comma`, not root). Same
+  pattern as system/timed.py: go through passwordless sudo."""
   if os.name != "posix":
     raise OSError("setting the system clock is only supported on posix")
   subprocess.run(
-    ["date", "-s", new_time.strftime("%Y-%m-%d %H:%M:%S")],
+    ["sudo", "-n", "date", "-s", new_time.strftime("%Y-%m-%d %H:%M:%S")],
     env={"TZ": "UTC", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"},
     check=True,
   )
