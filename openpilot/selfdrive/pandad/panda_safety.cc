@@ -2,8 +2,20 @@
 #include "openpilot/cereal/messaging/messaging.h"
 #include "common/swaglog.h"
 
+// configureSafetyMode runs from the 10 Hz panda-state block; 30 ticks is ~3 s.
+static constexpr int SAFETY_CONFIG_RETRY_TICKS = 30;
+
 void PandaSafety::configureSafetyMode(bool is_onroad) {
   if (is_onroad && !safety_configured_) {
+    // Re-arm the multiplexing setup when the first attempt has not landed after
+    // ~3 s. A panda pinned in ELM327/noOutput never sends the LKAS heartbeat and
+    // VAG EPS latches EPS_HCA_Status=fault, which openpilot reports as "LKAS
+    // Fault: Restart Car to Engage" for the rest of the drive (2026-11-08 Macan:
+    // panda stayed noOutput from ignition, EPS went 3->2 after 0.69 s).
+    if (initialized_ && ++retry_ticks_ >= SAFETY_CONFIG_RETRY_TICKS) {
+      initialized_ = false;
+      retry_ticks_ = 0;
+    }
     updateMultiplexingMode();
 
     auto car_params = fetchCarParams();
@@ -11,11 +23,15 @@ void PandaSafety::configureSafetyMode(bool is_onroad) {
       LOGW("got %lu bytes CarParams", car_params[0].size());
       LOGW("got %lu bytes CarParamsSP", car_params[1].size());
       safety_configured_ = setSafetyMode(car_params);
+      if (safety_configured_) {
+        retry_ticks_ = 0;
+      }
     }
   } else if (!is_onroad) {
     initialized_ = false;
     safety_configured_ = false;
     log_once_ = false;
+    retry_ticks_ = 0;
   }
 }
 
@@ -36,17 +52,18 @@ void PandaSafety::updateMultiplexingMode() {
 }
 
 std::vector<std::string> PandaSafety::fetchCarParams() {
-  if (!params_.getBool("FirmwareQueryDone")) {
+  // ControlsReady implies card finished fingerprinting and wrote CarParams for
+  // this drive. FirmwareQueryDone carries CLEAR_ON_ONROAD_TRANSITION too, so the
+  // manager's onroad sweep can clear it *after* card's single write; gating on it
+  // then pins panda in ELM327/noOutput until the next reboot (2026-11-08 Macan:
+  // three ignition cycles with no safety model, EPS latched LKAS fault).
+  if (!params_.getBool("ControlsReady")) {
     return {};
   }
 
   if (!log_once_) {
-    LOGW("Finished FW query, Waiting for params to set safety model");
+    LOGW("Controls ready, taking CarParams for the safety model");
     log_once_ = true;
-  }
-
-  if (!params_.getBool("ControlsReady")) {
-    return {};
   }
   return {params_.get("CarParams"), params_.get("CarParamsSP")};
 }

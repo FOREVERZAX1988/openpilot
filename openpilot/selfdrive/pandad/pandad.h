@@ -35,6 +35,7 @@ private:
   bool log_once_ = false;
   bool safety_configured_ = false;
   bool prev_obd_multiplexing_ = false;
+  int retry_ticks_ = 0;
   Panda *panda_;
   Params params_;
 };
