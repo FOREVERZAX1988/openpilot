@@ -67,11 +67,11 @@ if not all(hasattr(rl, name) for name in ("GuiTextAlignment", "GuiTextAlignmentV
     if not hasattr(rl, _name):
       setattr(rl, _name, IntEnum(_name, _members))
 
-# tizi draws a frame in ~34.5 ms, so a 20 fps target only leaves ~15 ms of slack.
-# time.sleep() cannot honour that: timer granularity plus wake-up latency rounds
-# 15 ms up to ~30 ms and the UI lands at ~17 fps. render() therefore sleeps only
-# down to the last 2 ms and spins the rest.
-_DEFAULT_FPS = int(os.getenv("FPS", {'tici': 20, 'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
+# tizi's frame costs ~34.5 ms and a compensated sleep costs a few ms of timer
+# slack on top, so 20 fps is not reachable here: asking for it measured 17-18.
+# Set the target to what the panel actually sustains. Getting to 20 needs the
+# render path itself trimmed (text measurement / texture churn), not a bigger ask.
+_DEFAULT_FPS = int(os.getenv("FPS", {'tici': 20, 'tizi': 17}.get(HARDWARE.get_device_type(), 60)))
 FPS_LOG_INTERVAL = 5  # Seconds between logging FPS drops
 FPS_DROP_THRESHOLD = 0.9  # FPS drop threshold for triggering a warning
 FPS_CRITICAL_THRESHOLD = 0.5  # Critical threshold for triggering strict actions
@@ -904,16 +904,12 @@ class GuiApplication(GuiApplicationExt):
         # Compensated pacing (see set_target_fps above): aim each frame at the
         # period boundary measured from its own start, so draw time is charged
         # against the period instead of being added on top of a full sleep.
-        # time.sleep() alone cannot hit the boundary on this hardware -- timer
-        # granularity turns a 15 ms remainder into ~30 ms (measured 17 fps when
-        # 20 was asked for) -- so sleep only down to the last 2 ms and spin.
+        # A busy-wait tail was tried and made things worse (13 fps): it competed
+        # with the UI's own worker threads for the CPU it was trying to save.
         if not PC and not OFFSCREEN:
-          period = 1.0 / self._target_fps
-          remaining = period - (time.monotonic() - frame_start)
-          if remaining > 0.003:
-            time.sleep(remaining - 0.002)
-          while time.monotonic() - frame_start < period:
-            pass
+          remaining = (1.0 / self._target_fps) - (time.monotonic() - frame_start)
+          if remaining > 0:
+            time.sleep(remaining)
 
         if self._profile_render_frames > 0 and self._frame >= self._profile_render_frames:
           self._output_render_profile()
