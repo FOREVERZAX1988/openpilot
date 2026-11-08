@@ -10,6 +10,7 @@ from enum import IntEnum
 import numpy as np
 import raylib_nb as rl
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.sunnypilot.onroad.developer_ui.elements import (
   UiElement, RelDistElement, RelSpeedElement, SteeringAngleElement,
   DesiredLateralAccelElement, ActualLateralAccelElement, DesiredSteeringAngleElement,
@@ -70,8 +71,15 @@ class DeveloperUiRenderer(Widget):
     self._font_bold: rl.Font = gui_app.font(FontWeight.BOLD)
     self._font_semi_bold: rl.Font = gui_app.font(FontWeight.SEMI_BOLD)
     self.dev_ui_mode = DeveloperUiState.OFF
-    # rotated units (raylib_nb has no draw_text_pro), built outside the frame since onroad renders inside a scissor
-    self._unit_textures = {unit: load_text_texture(self._font_bold, unit, RIGHT_UNIT_SIZE) for unit in RIGHT_UNITS}
+    # Rotated units (raylib_nb has no draw_text_pro), built outside the frame since onroad
+    # renders inside a scissor. Elements store their unit as a tr(...) result, so the cache
+    # keys MUST be translated too: on zh-CHS, tr("m/s^2") == "m/s²" and tr("km/h") ==
+    # "公里/时". Keying by raw English msgids made Chinese devices KeyError as soon as the
+    # right-hand dev UI rendered an acceleration row (onroad preview) -> UI restart loop.
+    self._unit_textures = {}
+    for unit in RIGHT_UNITS:
+      translated = tr(unit)
+      self._unit_textures[translated] = load_text_texture(self._font_bold, translated, RIGHT_UNIT_SIZE)
 
     self.rel_dist_elem = RelDistElement()
     self.rel_speed_elem = RelSpeedElement()
@@ -154,7 +162,11 @@ class DeveloperUiRenderer(Widget):
     rl.draw_text_ex(self._font_bold, element.value, rl.Vector2(centered_value_x, y), value_size, 0, element.color)
 
     if element.unit:
-      unit_texture = self._unit_textures[element.unit]
+      # Never let an unregistered unit take down the UI process -- e.g. right after a
+      # language switch, while the cache still holds the previous language's keys.
+      unit_texture = self._unit_textures.get(element.unit)
+      if unit_texture is None:
+        return 130
       units_x = x + container_width
       units_y = y + (value_size / 2) + (unit_texture.width / 2)
       src = rl.Rectangle(0, 0, unit_texture.width, unit_texture.height)
