@@ -400,6 +400,13 @@ class GuiApplication(GuiApplicationExt):
     self._textures: dict[str, rl.Texture] = {}
     self._target_fps: int = _DEFAULT_FPS
     self._last_fps_log_time: float = time.monotonic()
+    # FPS is measured here, not read from rl.get_fps(): raylib only advances its
+    # own counter while set_target_fps() has a target, so with the limiter off
+    # (init_window) the value freezes at whatever it was -- 13 on tizi -- and
+    # every FPS_LOG_INTERVAL turned that stale number into a fresh "drop".
+    self._fps_window_start: float = time.monotonic()
+    self._fps_window_frames = 0
+    self._fps_measured: float = float(_DEFAULT_FPS)
     # Render-stall tracking; see _watch_for_render_stall.
     self._render_stall_since: float | None = None
     self._fps_healthy = False
@@ -1183,7 +1190,16 @@ class GuiApplication(GuiApplicationExt):
     rl.set_trace_log_callback(self._trace_log_callback)
 
   def _monitor_fps(self):
-    fps = rl.get_fps()
+    # Measured over a 1 s window (see __init__); rl.get_fps() is not usable
+    # while the frame limiter is off.
+    now = time.monotonic()
+    self._fps_window_frames += 1
+    elapsed = now - self._fps_window_start
+    if elapsed >= 1.0:
+      self._fps_measured = self._fps_window_frames / elapsed
+      self._fps_window_frames = 0
+      self._fps_window_start = now
+    fps = self._fps_measured
 
     # Log FPS drop below threshold at regular intervals
     if fps < self._target_fps * FPS_DROP_THRESHOLD:
