@@ -503,9 +503,12 @@ class GuiApplication(GuiApplicationExt):
         self._ffmpeg_thread = threading.Thread(target=self._ffmpeg_writer_thread, daemon=True)
         self._ffmpeg_thread.start()
 
-      # four display runs slightly faster than 60 FPS, let it dictate rate so we don't drift and drop frames
+      # raylib's own limiter sleeps a whole period *after* the frame instead of
+      # aiming at a period boundary: a 20 fps target measured 13 fps on tizi
+      # (77 ms/frame = 27 ms draw + 50 ms sleep; 877 "FPS dropped" entries since
+      # 2026-11-05). Leave it off and pace against frame_start in render().
       vblank_control = HARDWARE.get_device_type() == 'mici'
-      rl.set_target_fps(0 if OFFSCREEN or vblank_control else fps)
+      rl.set_target_fps(0)
 
       self._target_fps = fps
       self._set_styles()
@@ -880,6 +883,14 @@ class GuiApplication(GuiApplicationExt):
 
         self._monitor_fps()
         self._frame += 1
+
+        # Compensated pacing (see set_target_fps above): aim each frame at the
+        # period boundary measured from its own start, so draw time is charged
+        # against the period instead of being added on top of a full sleep.
+        if not PC and not OFFSCREEN:
+          remaining = (1.0 / self._target_fps) - (time.monotonic() - frame_start)
+          if remaining > 0:
+            time.sleep(remaining)
 
         if self._profile_render_frames > 0 and self._frame >= self._profile_render_frames:
           self._output_render_profile()
