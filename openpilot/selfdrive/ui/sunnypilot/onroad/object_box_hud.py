@@ -109,7 +109,12 @@ class ObjectBoxRenderer:
       return
     self._next_read = now + READ_INTERVAL_S
     try:
-      self._sm.update()
+      # SubMaster.update() defaults to a 100 ms poll timeout. This runs on the
+      # UI render thread and customReservedRawData0 is a 0 Hz channel while the
+      # xiaoge vision server is off, so the default blocked every 0.2 s read for
+      # a full 100 ms: measured 22/50/155 ms frame cycle (13 fps, visible camera
+      # judder). update(0) is non-blocking; a missed frame is fine at 5 Hz.
+      self._sm.update(0)
       if not self._sm.updated[SERVICE]:
         return
       self._dets, self._frame_ns = parse_yolo_dets(bytes(self._sm[SERVICE].customReservedRawData0))
