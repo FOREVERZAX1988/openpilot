@@ -25,7 +25,9 @@ class _FakeRL:
 
   @staticmethod
   def Rectangle(*args):
-    return ('rect',) + args
+    # The real raylib_nb Rectangle carries .x/.y/.width/.height, and the HUD
+    # reads them back off constructed rects - mirror that here.
+    return NS(x=float(args[0]), y=float(args[1]), width=float(args[2]), height=float(args[3]))
 
   @staticmethod
   def Vector2(x, y=0.0):
