@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from opendbc.can.parser import CANParser
 from opendbc.car import create_button_events
@@ -186,6 +187,17 @@ class TestToyotaVirtualCruiseSpeed(OpenpilotTestCase):
     CP_SP = custom.CarParamsSP(pcmCruiseSpeed=False)
     self.v_cruise_helper = VCruiseHelper(CP, CP_SP)
     self.v_cruise_helper.read_custom_set_speed_params()
+    # This suite came from the SP upstream tree, where pcmCruiseSpeed is a static
+    # CarParamsSP field. In this fork VCruiseHelperSP redefines it as
+    # `not icbm_latch.active`, refreshed every frame by update_icbm_latch(). Left
+    # alone it stays True, update_v_cruise() never calls update_button_timers(),
+    # and no button event is ever recorded -- every virtual-cruise case below would
+    # fail with the target frozen at its seed value. Pin the latch to the state the
+    # suite is actually testing so the software-PCM increment path is exercised.
+    latch_patch = patch.object(self.v_cruise_helper, "update_icbm_latch")
+    latch_patch.start()
+    self.addCleanup(latch_patch.stop)
+    self.v_cruise_helper.icbm_latch.active = True
     self.route_parser = CANParser("toyota_nodsu_pt_generated", [("CLUTCH", 16)], 0)
     self.route_button = 0
 
