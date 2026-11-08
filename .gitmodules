@@ -3,13 +3,13 @@
 # sunnypilot/msgq#36 merge; go back to sunnyhaibin/panda and sunnypilot/msgq then.
 [submodule "panda"]
   path = panda
-  url = https://github.com/mouxangithub/panda.git
+  url = https://cnb.cool/mouxancnb/panda.git
 [submodule "opendbc"]
   path = opendbc_repo
-  url = https://github.com/mouxangithub/opendbc.git
+  url = https://cnb.cool/mouxancnb/opendbc.git
 [submodule "jetlink"]
   path = jetlink_repo
-  url = https://github.com/mouxangithub/jetlink.git
+  url = https://cnb.cool/mouxancnb/jetlink.git
 [submodule "msgq"]
   path = msgq_repo
   url = https://github.com/zoompilot/msgq.git
@@ -24,10 +24,10 @@
   url = https://github.com/sunnypilot/tinygrad.git
 [submodule "sunnypilot/neural_network_data"]
 	path = openpilot/sunnypilot/neural_network_data
-  url = https://github.com/mouxangithub/neural-network-data.git
+  url = https://cnb.cool/mouxancnb/neural-network-data.git
 [submodule "ai"]
 	path = ai
-	url = https://github.com/mouxangithub/ai.git
+	url = https://cnb.cool/mouxancnb/ai.git
 [submodule "webui"]
 	path = webui
-	url = https://github.com/mouxangithub/webui.git
+	url = https://cnb.cool/mouxancnb/webui.git
