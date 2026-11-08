@@ -35,7 +35,14 @@ class XiaogeStartupGate:
       (p.safetyModel == configs[i].safetyModel and p.safetyParam == configs[i].safetyParam)
       if i < len(configs) else str(p.safetyModel) in ('silent', 'noOutput')
       for i, p in enumerate(pandas))
-    healthy = (controls_ready and fresh and safety_ready and sm['selfdriveState'].engageable
+    # engageable is False whenever the car is in P (or otherwise not ready to be
+    # taken over), so gating on it kept xiaoge_data out of the process set for the
+    # entire parked session: no v_asm_server, no customReservedRawData0, no object
+    # boxes while the driver is looking at the preview (2026-11-08 Macan: P 档,
+    # engageable False, shouldBeRunning False, xiaoge_data never started).
+    # The session is already known to be onroad and its safety model to match;
+    # CAN validity still guards against a dead bus.
+    healthy = (controls_ready and fresh and safety_ready
                and sm['carState'].canValid and not sm['carState'].canTimeout)
     if not healthy:
       self.ready_since = None

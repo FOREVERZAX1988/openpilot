@@ -81,11 +81,9 @@ def test_previous_session_messages_cannot_release_startup(setup, service):
   assert update(setup, 11.5)
 
 
-@pytest.mark.parametrize('case', ['controls', 'engageable', 'can_valid', 'safety_model', 'safety_param', 'missing_panda', 'missing_config', 'extra_elm'])
+@pytest.mark.parametrize('case', ['controls', 'can_valid', 'safety_model', 'safety_param', 'missing_panda', 'missing_config', 'extra_elm'])
 def test_incomplete_initialization_is_not_ready(setup, case):
   _, sm, cp = setup
-  if case == 'engageable':
-    sm['selfdriveState'].engageable = False
   if case == 'can_valid':
     sm['carState'].canValid = False
   if case == 'safety_model':
@@ -107,14 +105,21 @@ def test_latch_avoids_restart_on_later_fault_but_resets_offroad(setup):
   assert not update(setup, 0)
   assert update(setup, 0.5)
   sm.bad.add('modelV2')
-  sm['selfdriveState'].engageable = False
   assert update(setup, 1)
   assert not update(setup, 2, started=False)
   assert not update(setup, 3)
   sm.bad.clear()
-  sm['selfdriveState'].engageable = True
   assert not update(setup, 3.5)
   assert update(setup, 4)
+
+
+def test_parked_session_starts_the_gate(setup):
+  """P 档 engageable=False 也必须放行：xiaoge_data 只在 onroad 服务就绪后启动，
+  YOLO/lane 的显示与能否接管无关（2026-11-08 Macan 实车，停车时永远没有框）。"""
+  _, sm, _ = setup
+  sm['selfdriveState'].engageable = False
+  assert not update(setup, 0)
+  assert update(setup, 0.5)
 
 
 def test_missing_observations_do_not_count_as_settling(setup):
