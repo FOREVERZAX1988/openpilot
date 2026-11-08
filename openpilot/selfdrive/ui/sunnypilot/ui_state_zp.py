@@ -65,12 +65,13 @@ class UIStateZP:
     self.blendful_readout = mode == 2
     self.confidence_ball = self.params.get_bool("ConfidenceBall")
     # get_steer_rail_schedule() builds the brand's CarControllerParams, which loads
-    # the car's DBC and a CANParser. CP does not change within a drive, so keep the
-    # schedule and only rebuild when the object itself changes (2026-11-08: this ran
-    # twice a second and was 7 % of the UI process's CPU in a py-spy profile).
+    # the car's DBC and a CANParser. CP is re-read from the message on every access,
+    # so an identity check never matched and the schedule was rebuilt twice a second
+    # (7 % of the UI process in a py-spy profile). Compare the fingerprint instead.
     cp = self.CP
-    if getattr(self, "_steer_rail_cp", None) is not cp:
-      self._steer_rail_cp = cp
+    fp = cp.carFingerprint if cp is not None else None
+    if getattr(self, "_steer_rail_fp", None) != fp:
+      self._steer_rail_fp = fp
       self._steer_rail_schedule = get_steer_rail_schedule(cp) if cp is not None else None
     # on the 5 Hz params pass, not per frame in a layout; a fitted chestnut owns chestnut_state
     self.jetlink = None if self.sm['deviceState'].chestnutPresent else jetlink_adapter.status()
