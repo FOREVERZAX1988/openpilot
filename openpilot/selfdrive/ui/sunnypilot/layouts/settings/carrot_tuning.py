@@ -18,7 +18,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum
 
-import pyray as rl
+import raylib_nb as rl
+import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims on raylib_nb)
 
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings import carrot_tuning_items as carrot_items
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -41,7 +42,7 @@ class CarrotNavRow(ListItemSP):
   def _handle_mouse_release(self, mouse_pos):
     if not self.is_visible or self.callback is None:
       return
-    if rl.check_collision_point_rec(mouse_pos, self._rect):
+    if rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), self._rect):
       self.callback()
 
 

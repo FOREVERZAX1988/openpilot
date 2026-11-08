@@ -206,8 +206,6 @@ class CruiseLayout(Widget):
           self.icbm_toggle.set_description(new_desc)
           self.icbm_toggle.show_description(True)
 
-      self.accel_boost_toggle.action_item.set_enabled(has_long)
-
       if has_long or has_icbm:
         software_cruise_speed = has_long and (not ui_state.CP.pcmCruise or not ui_state.CP_SP.pcmCruiseSpeed)
         custom_acc_enabled = (software_cruise_speed or has_icbm) and ui_state.is_offroad() and not macan_fusion_on

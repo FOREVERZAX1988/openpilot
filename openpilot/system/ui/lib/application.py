@@ -1,5 +1,4 @@
 import atexit
-import cffi
 import faulthandler
 import math
 import os
@@ -9,7 +8,8 @@ import time
 import signal
 import re
 import sys
-import pyray as rl
+import raylib_nb as rl
+import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims on raylib_nb)
 import threading
 import platform
 import subprocess
@@ -799,8 +799,10 @@ class GuiApplication(GuiApplicationExt):
 
         # Store all mouse events for the current frame
         self._mouse_events = self._mouse.get_events()
-        if len(self._mouse_events) > 0:
-          self._last_mouse_event = self._mouse_events[-1]
+        # ignore additional fingers to avoid jumping
+        for mouse_event in self._mouse_events:
+          if mouse_event.slot == 0:
+            self._last_mouse_event = mouse_event
 
         # Skip rendering when screen is off
         if not self._should_render:
@@ -872,7 +874,7 @@ class GuiApplication(GuiApplicationExt):
         if RECORD:
           image = rl.load_image_from_texture(self._render_texture.texture)
           data_size = image.width * image.height * 4
-          data = bytes(rl.ffi.buffer(image.data, data_size))
+          data = image.to_bytes(data_size)
           self._ffmpeg_queue.put(data)  # Async write via background thread
           rl.unload_image(image)
 
@@ -899,7 +901,9 @@ class GuiApplication(GuiApplicationExt):
           filename = f"OpFont-Regular-{active_lang}.fnt"
           fnt_path = fspath / filename
         if fnt_path.exists():
-          font = rl.load_font(fnt_path.as_posix())
+          # raylib_nb has no load_font shim; LoadFontEx with no codepoints is
+          # the C LoadFont() equivalent (fontSize is ignored for .fnt atlases)
+          font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
           default_id = rl.get_font_default().texture.id
           if font.texture.id <= 0 or font.texture.id == default_id:
             cloudlog.error(f"Failed to load pre-baked font {filename}; texture id={font.texture.id}")
@@ -912,7 +916,7 @@ class GuiApplication(GuiApplicationExt):
           cloudlog.warning(f"OpFont atlas missing for {active_lang}; baking fallback from {NOTO_FONTS[active_lang]}")
           font = self._load_or_bake_cjk_font(active_lang)
         else:
-          font = rl.load_font(fnt_path.as_posix())
+          font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
         rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
         self._fonts[font_weight] = font
         self._weight_by_object[id(font)] = font_weight
@@ -1148,30 +1152,7 @@ class GuiApplication(GuiApplicationExt):
     rl.begin_scissor_mode = _begin_scissor_mode_scaled
 
   def _set_log_callback(self):
-    ffi_libc = cffi.FFI()
-    ffi_libc.cdef("""
-      int vasprintf(char **strp, const char *fmt, void *ap);
-      void free(void *ptr);
-    """)
-    libc = ffi_libc.dlopen(None)
-
-    @rl.ffi.callback("void(int, char *, void *)")
-    def trace_log_callback(log_level, text, args):
-      try:
-        text_addr = int(rl.ffi.cast("uintptr_t", text))
-        args_addr = int(rl.ffi.cast("uintptr_t", args))
-        text_libc = ffi_libc.cast("char *", text_addr)
-        args_libc = ffi_libc.cast("void *", args_addr)
-
-        out = ffi_libc.new("char **")
-        if libc.vasprintf(out, text_libc, args_libc) >= 0 and out[0] != ffi_libc.NULL:
-          text_str = ffi_libc.string(out[0]).decode("utf-8", "replace")
-          libc.free(out[0])
-        else:
-          text_str = rl.ffi.string(text).decode("utf-8", "replace")
-      except Exception as e:
-        text_str = f"[Log decode error: {e}]"
-
+    def trace_log_callback(log_level, text_str):
       if log_level == rl.TraceLogLevel.LOG_ERROR:
         cloudlog.error(f"raylib: {text_str}")
       elif log_level == rl.TraceLogLevel.LOG_WARNING:

@@ -361,5 +361,110 @@ class TestFlashPandaGuards(unittest.TestCase):
     assert second.closed
 
 
+class TestSpiRecoveryChain(unittest.TestCase):
+  def tearDown(self):
+    mock.patch.stopall()
+
+  def test_recover_internal_spi_panda_no_device_raises(self):
+    # without a SPI device answering the ST ROM bootloader (the normal case on
+    # tici / non-SPI hosts), the recovery must give up after the configured
+    # attempts, pulsing the GPIO lines each round
+    with mock.patch.object(pandad.HARDWARE, "recover_internal_panda") as recover, \
+         mock.patch.object(pandad.HARDWARE, "reset_internal_panda"), \
+         mock.patch.object(pandad, "STBootloaderSPIHandle", side_effect=pandad.PandaSpiException("no spi")), \
+         mock.patch.object(pandad, "cloudlog"), \
+         mock.patch.object(pandad.time, "sleep"):
+      with self.assertRaises(RuntimeError):
+        pandad.recover_internal_spi_panda(None)
+    assert recover.call_count == 3
+
+  def test_recover_internal_panda_any_falls_back_to_spi(self):
+    # USB DFU chain fails (no DFU enumeration) -> SPI ROM chain must run and
+    # its result is used for the app flash
+    FakePanda.devices = {"sp1": (HW_RED, True, True, False)}
+    FakePanda.instances = []
+
+    def fake_flash(self):
+      # only the initial (unrecovered) panda fails to flash
+      if len(FakePanda.instances) == 1:
+        raise Exception("flasher busy")
+      self.flashed = True
+      self.bootstub = False
+
+    def fake_spi_recover(serial):
+      p = FakePanda(serial)
+      p.bootstub = False  # fresh bootstub, ready for the app flash
+      return p
+
+    with mock.patch.object(pandad, "Panda", FakePanda), \
+         mock.patch.object(FakePanda, "flash", fake_flash), \
+         mock.patch.object(pandad, "get_expected_signature", return_value=b"\xaa" * 128), \
+         mock.patch.object(pandad, "cloudlog"), \
+         mock.patch.object(pandad, "recover_internal_usb_panda", side_effect=RuntimeError("no DFU")), \
+         mock.patch.object(pandad, "recover_internal_spi_panda", side_effect=fake_spi_recover) as spi_recover:
+      pandad.flash_panda("sp1")
+    spi_recover.assert_called_once_with("sp1")
+    initial, recovered = FakePanda.instances
+    assert initial.closed  # failed panda must be closed before recovery
+    assert recovered.flashed
+    assert recovered.closed
+
+
+class TestRecoverPandaViaDfu(unittest.TestCase):
+  # a bootstub reporting HW_TYPE_UNKNOWN (clone built-in panda): must enter
+  # the ROM DFU, identify the MCU from the flash layout, and flash both
+  # bootstub and app over DFU without ever touching sectors >= 7
+  def tearDown(self):
+    mock.patch.stopall()
+
+  def _run(self, code, wait_for_dfu=True):
+    fake_mcu = mock.Mock()
+    fake_mcu.config.sector_sizes = [0x4000] * 4 + [0x10000] + [0x20000] * 11
+    fake_mcu.config.sector_count = 16
+    fake_mcu.config.bootstub_fn = "bootstub.panda.bin"
+    fake_mcu.config.app_fn = "panda.bin.signed"
+    fake_mcu.config.bootstub_address = 0x08000000
+    fake_mcu.config.app_address = 0x08004000
+
+    handle = mock.Mock()
+    dfu_instance = mock.Mock()
+    dfu_instance.get_mcu_type.return_value = fake_mcu
+    dfu_cls = mock.Mock()
+    dfu_cls.list.return_value = ["dfu1"]
+    dfu_cls.return_value = dfu_instance
+
+    mock.patch.object(pandad.Panda, "usb_connect", classmethod(lambda cls, serial, **kw: (mock.Mock(), handle, "s", True, None))).start()
+    mock.patch.object(pandad.Panda, "wait_for_dfu", classmethod(lambda cls, serial, **kw: wait_for_dfu)).start()
+    mock.patch.object(pandad, "cloudlog").start()
+    dfu_patch = mock.patch.object(pandad, "PandaDFU", dfu_cls)
+    dfu_patch.start()
+    open_patch = mock.patch("builtins.open", mock.mock_open(read_data=code))
+    open_patch.start()
+
+    pandad.recover_panda_via_dfu("2e0047001651323238343935")
+    return handle, dfu_instance
+
+  def test_full_flash_over_dfu(self):
+    # 256KB+1 app: lands in sector 6 with this sector layout
+    code = b"\xaa" * (0x40000 + 1)
+    handle, dfu = self._run(code)
+
+    # enter DFU command sent to the bootstub (0xd1, wValue=0)
+    enter_calls = [c for c in handle.controlWrite.call_args_list if c.args[1] == 0xd1 and c.args[2] == 0]
+    assert len(enter_calls) == 1
+    # all erase/program/reset went through the DFU handle
+    erased = [c.args[0] for c in dfu._handle.erase_sector.call_args_list]
+    assert erased == list(range(7))  # never touches provisioning (>= 7)
+    programmed = dfu._handle.program.call_args_list
+    assert programmed[0].args == (0x08000000, code)  # bootstub
+    assert programmed[1].args == (0x08004000, code)  # app
+    dfu.reset.assert_called_once()
+    dfu.close.assert_called_once()
+
+  def test_gives_up_when_dfu_never_appears(self):
+    with self.assertRaises(RuntimeError):
+      self._run(b"\xaa" * 0x40000, wait_for_dfu=False)
+
+
 if __name__ == "__main__":
   unittest.main()

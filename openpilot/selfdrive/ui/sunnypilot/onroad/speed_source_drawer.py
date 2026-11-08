@@ -23,7 +23,8 @@ sign's rect is recomputed with the same layout rules SpeedLimitRenderer uses
 """
 import math
 
-import pyray as rl
+import raylib_nb as rl
+import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims on raylib_nb)
 
 from openpilot.common.params import Params
 from openpilot.common.constants import CV
@@ -388,4 +389,4 @@ class SpeedSourceDrawerRenderer(Widget):
 
   def is_pressed_in(self, mouse_pos) -> bool:
     """Whether a press landed on the open drawer (keeps taps off the sidebar)."""
-    return self._drawer_hit_rect is not None and rl.check_collision_point_rec(mouse_pos, self._drawer_hit_rect)
+    return self._drawer_hit_rect is not None and rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), self._drawer_hit_rect)

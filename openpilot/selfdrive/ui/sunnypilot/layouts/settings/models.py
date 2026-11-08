@@ -7,7 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 import os
 import re
 import time
-import pyray as rl
+import raylib_nb as rl
 
 from openpilot.cereal import custom
 from openpilot.sunnypilot.models.default_model import DEFAULT_MODEL

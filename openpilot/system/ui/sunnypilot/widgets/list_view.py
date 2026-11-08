@@ -6,7 +6,7 @@ See the LICENSE.md file in the root directory for more details.
 """
 from collections.abc import Callable, Sequence
 
-import pyray as rl
+import raylib_nb as rl
 from openpilot.common.params import Params
 from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight, TextAlignment, TextAlignmentVertical, font_fallback
@@ -207,7 +207,7 @@ class MultipleButtonActionSP(MultipleButtonAction):
       button_x = self._rect.x + i * self.button_width
       button_rect = rl.Rectangle(button_x, button_y, self.button_width, style.BUTTON_HEIGHT)
 
-      if rl.check_collision_point_rec(mouse_pos, button_rect):
+      if rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), button_rect):
         # Check if this specific button is enabled
         if self.enabled_buttons is not None and i not in self.enabled_buttons:
           return

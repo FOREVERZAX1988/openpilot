@@ -172,6 +172,7 @@ class TogglesLayoutMici(NavScroller):
     macan_start_stop_distance.set_enabled(lambda: not ui_state.engaged)
     macan_slope_comp.set_enabled(lambda: not ui_state.engaged)
     macan_slope_comp_unlimited.set_enabled(lambda: not ui_state.engaged)
+    always_on_dm_toggle.set_enabled(not ui_state.params.get_bool("AlwaysOnDMLock"))
     record_front.set_enabled(False if ui_state.params.get_bool("RecordFrontLock") else (lambda: not ui_state.engaged))
     record_mic.set_enabled(lambda: not ui_state.engaged)
 

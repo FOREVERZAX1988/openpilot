@@ -1,6 +1,7 @@
 import time
 
-import pyray as rl
+import raylib_nb as rl
+import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims on raylib_nb)
 from collections.abc import Callable
 from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
@@ -324,14 +325,14 @@ class OptionControlSP(ItemAction):
     rl.draw_text_ex(self._font, text, rl.Vector2(text_x, text_y), VALUE_FONT_SIZE, 0, text_color)
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
-    if self._minus_enabled and rl.check_collision_point_rec(mouse_pos, self.minus_btn_rect):
+    if self._minus_enabled and rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), self.minus_btn_rect):
       if self.switch is not None and self.current_value <= self.min_value:
         self.set_value(SWITCH_VALUE)
         return
       new_value = self.current_value - self.value_change_step
       new_value = max(self.min_value, new_value)
       self.set_value(new_value)
-    elif self._plus_enabled and rl.check_collision_point_rec(mouse_pos, self.plus_btn_rect):
+    elif self._plus_enabled and rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), self.plus_btn_rect):
       if self.switched:
         # back on at the value it was switched off with
         self.set_value(self._stored_value())

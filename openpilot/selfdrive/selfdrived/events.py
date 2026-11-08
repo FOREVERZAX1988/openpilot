@@ -331,7 +331,6 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventName.noGps: {},
   EventName.stockFcw: {},
-  EventName.actuatorsApiUnavailable: {},
 
   # ********** events only containing alerts displayed in all states **********
 
@@ -605,12 +604,6 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.SOFT_DISABLE: soft_disable_alert("locationd临时错误"),
   },
 
-  EventName.locationdPermanentError: {
-    ET.NO_ENTRY: NoEntryAlert("locationd永久错误"),
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("locationd永久错误"),
-    ET.PERMANENT: NormalPermanentAlert("locationd永久错误"),
-  },
-
   # openpilot tries to learn certain parameters about your car by observing
   # how the car behaves to steering inputs from both human and openpilot driving.
   # This includes:
@@ -622,12 +615,6 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.paramsdTemporaryError: {
     ET.NO_ENTRY: paramsd_invalid_alert,
     ET.SOFT_DISABLE: soft_disable_alert("paramsd 临时错误"),
-  },
-
-  EventName.paramsdPermanentError: {
-    ET.NO_ENTRY: NoEntryAlert("paramsd永久错误"),
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("paramsd永久错误"),
-    ET.PERMANENT: NormalPermanentAlert("paramsd永久错误"),
   },
 
   # ********** events that affect controls state transitions **********
@@ -642,6 +629,14 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventName.pcmDisable: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
+  },
+
+  EventName.startupCruiseCanceled: {
+    ET.PERMANENT: Alert(
+      "Cruise Canceled",
+      "Cruise was on at startup",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.MID, VisualAlert.none, AudibleAlert.disengage, 3.),
   },
 
   EventName.buttonCancel: {

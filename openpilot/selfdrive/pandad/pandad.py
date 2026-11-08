@@ -5,10 +5,12 @@ import re
 import usb1
 import time
 import signal
+import itertools
 import subprocess
 from pathlib import Path
 
 from panda import Panda, PandaDFU, PandaProtocolMismatch, FW_PATH
+from panda.python.spi import STBootloaderSPIHandle, PandaSpiException
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
 from openpilot.common.hardware import HARDWARE
@@ -127,6 +129,137 @@ def recover_internal_usb_panda(panda_serial: str) -> Panda:
 
   raise RuntimeError("internal USB panda bootstub did not enumerate")
 
+def recover_internal_spi_panda(panda_serial: str | None) -> Panda:
+  # An SPI-attached internal panda (comma 3X) never appears on USB DFU. If its
+  # app is broken or its bootstub speaks an incompatible protocol, the only
+  # recovery is the ST ROM SPI bootloader: pulse BOOT0/RST on the host side,
+  # write a fresh bootstub over the ROM protocol (which works regardless of
+  # the firmware state), then let the caller flash the app through the normal
+  # panda SPI interface. Port of mr-one's flash_bootstub.sh, automated.
+  last_error: Exception | None = None
+  for attempt in range(3):
+    cloudlog.info(f"Internal SPI panda recovery attempt {attempt + 1}")
+    HARDWARE.recover_internal_panda()  # RST pulse with BOOT0 latched high, released last
+    time.sleep(1)
+
+    boot = None
+    try:
+      boot = STBootloaderSPIHandle()
+      mcu_type = boot.get_mcu_type()
+    except PandaSpiException:
+      last_error = RuntimeError("SPI ROM bootloader not answering")
+      cloudlog.exception("SPI ROM bootloader not answering")
+      continue
+
+    try:
+      with open(os.path.join(FW_PATH, mcu_type.config.bootstub_fn), "rb") as f:
+        code = f.read()
+      BS = 256
+      nblocks = (len(code) + BS - 1) // BS
+      cloudlog.info(f"flashing {mcu_type} bootstub over SPI ROM: {len(code)} bytes, {nblocks} blocks")
+      boot.erase_sector(0)
+      boot.erase_sector(1)
+      for i in range(nblocks):
+        block = code[i * BS:(i + 1) * BS].ljust(BS, b"\xff")
+        addr = 0x08000000 + i * BS
+        for _ in range(6):
+          try:
+            boot.program(addr, block)
+            if boot.read(addr, BS) == block:
+              break
+          except PandaSpiException:
+            pass
+        else:
+          raise PandaSpiException(f"bootstub block {i} failed to program")
+    except PandaSpiException:
+      last_error = RuntimeError("SPI ROM bootstub flashing failed")
+      cloudlog.exception("SPI ROM bootstub flashing failed")
+      boot.close()
+      continue
+
+    boot.close()
+
+    # boot the fresh bootstub (BOOT0 is already low after the recovery pulse)
+    HARDWARE.reset_internal_panda()
+    for _ in range(60):
+      time.sleep(0.5)
+      try:
+        panda = Panda(panda_serial)
+        if panda.bootstub:
+          return panda
+        panda.close()
+      except Exception:
+        pass
+    last_error = RuntimeError("fresh SPI bootstub did not come up")
+
+  raise RuntimeError(f"internal SPI panda recovery failed: {last_error}")
+
+def recover_internal_panda_any(panda_serial: str) -> Panda:
+  # USB DFU first (comma three family); fall back to the SPI ROM bootloader
+  # for SPI-attached internal pandas (comma 3X), which never enumerate on USB
+  try:
+    return recover_internal_usb_panda(panda_serial)
+  except Exception:
+    cloudlog.exception("USB DFU recovery unavailable, trying SPI ROM bootloader")
+  return recover_internal_spi_panda(panda_serial)
+
+def recover_panda_via_dfu(panda_serial: str) -> None:
+  # A bootstub whose board detection fails (domestic C3XL built-in pandas with
+  # non-standard ID straps) reports HW_TYPE_UNKNOWN, so Panda.__init__ raises
+  # and the normal flasher cannot determine which firmware to write. Enter the
+  # ST ROM DFU over USB, identify the MCU from the DFU flash layout, then
+  # flash bootstub + app entirely over DFU. Requires firmware whose
+  # detect_board_type() has the matching fallback, otherwise the app
+  # assert_fatal()s again before usb_init().
+  cloudlog.warning(f"recovering panda {panda_serial} with unknown HW type via DFU")
+  context, handle, _, bootstub, _bcd = Panda.usb_connect(panda_serial)
+  if handle is None:
+    raise RuntimeError(f"could not open panda {panda_serial}")
+  try:
+    if not bootstub:
+      # an app that reports unknown HW cannot be ours (it asserts before
+      # usb_init), so this is unexpected; try to force bootstub first
+      try:
+        handle.controlWrite(Panda.REQUEST_IN, 0xd1, 1, 0, b'', timeout=15000, expect_disconnect=True)
+      except Exception:
+        pass
+      time.sleep(2)
+    # ask the bootstub to jump into the ST ROM DFU; the device disconnects
+    try:
+      handle.controlWrite(Panda.REQUEST_IN, 0xd1, 0, 0, b'', timeout=15000, expect_disconnect=True)
+    except Exception:
+      pass  # expected: the reset kills the connection mid-write
+  finally:
+    handle.close()
+    context.close()
+
+  if not Panda.wait_for_dfu(None, timeout=30):
+    raise RuntimeError("panda did not enter DFU mode")
+
+  for dfu_serial in PandaDFU.list():
+    cloudlog.info(f"DFU full flash for {dfu_serial}")
+    dfu = PandaDFU(dfu_serial)
+    try:
+      mcu = dfu.get_mcu_type()
+      cloudlog.info(f"DFU identified MCU: {mcu}")
+      with open(os.path.join(FW_PATH, mcu.config.bootstub_fn), "rb") as f:
+        bootstub_code = f.read()
+      with open(os.path.join(FW_PATH, mcu.config.app_fn), "rb") as f:
+        app_code = f.read()
+      # determine app sectors exactly like Panda.flash_static, and never
+      # erase beyond sector 6 - higher sectors hold the provisioning chunk
+      apps_sectors_cumsum = itertools.accumulate(mcu.config.sector_sizes[1:])
+      last_sector = next((i + 1 for i, v in enumerate(apps_sectors_cumsum) if v > len(app_code)), -1)
+      if not (1 <= last_sector < 7):
+        raise RuntimeError(f"app size out of range for DFU flash: {last_sector=}")
+      for i in range(last_sector + 1):
+        dfu._handle.erase_sector(i)
+      dfu._handle.program(mcu.config.bootstub_address, bootstub_code)
+      dfu._handle.program(mcu.config.app_address, app_code)
+      dfu.reset()
+      cloudlog.info(f"DFU full flash done for {dfu_serial} ({mcu})")
+    finally:
+      dfu.close()
 
 def flash_panda(panda_serial: str):
   """Flash/verify one panda. Returns its hw type (or None if unsupported)."""
@@ -165,7 +298,7 @@ def flash_panda(panda_serial: str):
       except Exception:
         pass
       if internal_panda:
-        panda = recover_internal_usb_panda(panda_serial)
+        panda = recover_internal_panda_any(panda_serial)
         panda.flash()
       else:
         panda = Panda(panda_serial)
@@ -180,7 +313,7 @@ def flash_panda(panda_serial: str):
     except Exception:
       pass
     if internal_panda:
-      panda = recover_internal_usb_panda(panda_serial)
+      panda = recover_internal_panda_any(panda_serial)
       panda.flash()
     else:
       panda = Panda(panda_serial)
@@ -382,6 +515,13 @@ def main() -> None:
             cloudlog.info("Panda missing after normal resets, entering ROM bootloader (recover)...")
             HARDWARE.recover_internal_panda()
             time.sleep(2)
+            # SPI-attached internal pandas (comma 3X) never show up on USB or
+            # DFU; give the SPI ROM bootloader path a shot before looping
+            # around. Cheap no-op when no SPI device exists (PandaSpiUnavailable).
+            try:
+              recover_internal_spi_panda(None)
+            except Exception:
+              cloudlog.exception("internal SPI panda recovery failed")
       else:
         panda_serials = Panda.list()
 
@@ -421,6 +561,22 @@ def main() -> None:
           # e.g. only an external panda is visible while the internal one is
           # mid-reset; retry instead of crashing so the loop stays calm
           cloudlog.warning("no supported panda found, retrying...")
+          # a bootstub reporting HW_TYPE_UNKNOWN (clone built-in pandas with
+          # non-standard ID straps) cannot be identified over the normal
+          # interface; identify the MCU via the ROM DFU flash layout and
+          # flash bootstub + app entirely over DFU
+          for serial in panda_serials:
+            try:
+              probe = Panda(serial)
+              probe.close()
+            except ValueError:
+              try:
+                recover_panda_via_dfu(serial)
+              except Exception:
+                cloudlog.exception("DFU full-flash recovery failed")
+              break
+            except Exception:
+              continue
           no_internal_panda_count += 1
           continue
 

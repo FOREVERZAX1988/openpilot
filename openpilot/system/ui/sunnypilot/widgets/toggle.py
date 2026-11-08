@@ -7,7 +7,8 @@ See the LICENSE.md file in the root directory for more details.
 import time
 from collections.abc import Callable
 
-import pyray as rl
+import raylib_nb as rl
+import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims on raylib_nb)
 from openpilot.sunnypilot.carrot.config import unified_params
 from openpilot.system.ui.lib.application import MousePos
 from openpilot.system.ui.widgets.toggle import Toggle

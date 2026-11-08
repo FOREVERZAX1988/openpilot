@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import pyray as rl
+import raylib_nb as rl
+import openpilot.system.ui.lib.raylib_compat  # noqa: F401
 from openpilot.system.ui.lib.application import (FONT_SCALE, FALLBACK_FONT_SCALE, PRIMARY_FONT, fallback_font_key,
                                                  font_fallback, gui_app)
 from openpilot.system.ui.lib.emoji import find_emoji
