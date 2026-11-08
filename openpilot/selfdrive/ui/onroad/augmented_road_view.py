@@ -26,7 +26,17 @@ if gui_app.sunnypilot_ui():
   from openpilot.selfdrive.ui.sunnypilot.onroad.driver_state import DriverStateRendererSP as DriverStateRenderer
   from openpilot.selfdrive.ui.sunnypilot.onroad.hud_renderer import HudRendererSP as HudRenderer
   from openpilot.selfdrive.ui.sunnypilot.ui_state import OnroadTimerStatus
+  from openpilot.selfdrive.ui.sunnypilot.onroad.object_box_hud import ObjectBoxRenderer
 else:
+  class ObjectBoxRenderer:
+    """No-op on the stock UI: the object overlay is a sunnypilot feature."""
+
+    def __init__(self) -> None:
+      pass
+
+    def render(self, rect) -> None:
+      pass
+
   def get_bottom_dev_ui_offset() -> int:
     return 0
 
@@ -102,6 +112,7 @@ class AugmentedRoadView(CameraView, AugmentedRoadViewSP):
                                             alignment_vertical=rl.GuiTextAlignmentVertical.TEXT_ALIGN_MIDDLE)
 
     self.model_renderer = ModelRenderer()
+    self.object_box_renderer = ObjectBoxRenderer()
     self._hud_renderer = HudRenderer()
     self.alert_renderer = AlertRenderer()
     self.driver_state_renderer = DriverStateRenderer()
@@ -140,6 +151,7 @@ class AugmentedRoadView(CameraView, AugmentedRoadViewSP):
 
     # Draw all UI overlays
     self.model_renderer.render(self._content_rect)
+    self.object_box_renderer.render(self._content_rect)
     AugmentedRoadViewSP.update_fade_out_bottom_overlay(self, self._content_rect)
     self._hud_renderer.render(self._content_rect)
     self.alert_renderer.render(self._content_rect)
