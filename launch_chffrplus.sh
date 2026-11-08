@@ -1153,6 +1153,17 @@ launch() {
 
   tmux capture-pane -pq -S-1000 > /tmp/launch_log
 
+  # Font atlases are produced by the ui SConscript, but with prebuilt present
+  # scons is skipped entirely. An overlay-update swap replaces the tree with a
+  # copy whose untracked atlases were whiteouted by the updater's git clean,
+  # leaving no pre-baked fonts: every boot then re-bakes CJK fallbacks and
+  # crawls through startup. Regenerate just the atlases in that case.
+  if ! ls "$DIR"/openpilot/selfdrive/assets/fonts/OpFont-*-*.* >/dev/null 2>&1; then
+    echo "[fonts] font atlases missing, regenerating"
+    (cd "$DIR" && "$PY" openpilot/selfdrive/assets/fonts/process.py >> /tmp/font_bake.log 2>&1) ||
+      echo "[warn] font atlas regeneration failed; UI will bake fallbacks at startup"
+  fi
+
   cd openpilot/system/manager
   if [ ! -f "$DIR/prebuilt" ]; then
     if ! ./build.py; then
