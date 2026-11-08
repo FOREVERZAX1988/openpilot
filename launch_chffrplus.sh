@@ -1152,7 +1152,13 @@ launch() {
     # 2026-10-29 在 tizi 上实测：finalized 已是新 commit、git status 干净，但
     # .git/FETCH_HEAD 比 .overlay_init 新 6 分钟，每轮都被跳过。
     # --untracked-files=no：build 产物（prebuilt 等）不算「用户修改」。
-    if [ -n "$(git -C "${DIR}" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+    # --ignore-submodules=all：子模块里的编译产物同样不算。scons 会重写 panda 的
+    # 4 个 board/obj 固件（bootstub/panda.bin.signed 等），父仓随即显示
+    # `panda 948072db...-dirty`，旧判据每轮启动都判成「本地已修改」→ finalized
+    # 永远装不上 → updater 又看到远端更新 → 再下载 → 再跳过，形成「一直提示
+    # 更新、一直跳更新」的死循环（2026-11-08 在 tizi 上实测：finalized 已是
+    # 9fc35f63a、.overlay_consistent 齐全、old_openpilot 不存在，只差这行）。
+    if [ -n "$(git -C "${DIR}" status --porcelain --untracked-files=no --ignore-submodules=all 2>/dev/null)" ]; then
       echo "${DIR} has been modified, skipping overlay update installation"
     elif [ -f "${STAGING_ROOT}/finalized/.overlay_consistent" ] && [ ! -d /data/safe_staging/old_openpilot ]; then
       echo "Valid overlay update found, installing"
