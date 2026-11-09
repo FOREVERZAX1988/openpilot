@@ -92,10 +92,12 @@ class TestCurvatureLearning(unittest.TestCase):
 
   def test_settle_time_before_sampling(self):
     learning = self.make_learning()
-    # 2s settle: 40 frames at 20Hz minus one frame
-    self.sample_frames(learning, 38)
+    # the settle timer only accrues on eligible frames, and the lead-clear
+    # gate (CSC_LEAD_CLEAR_TIME = 1 s = 20 frames) blocks the first 20, so
+    # sampling starts after 20 + 40 = 60 frames at 20 Hz
+    self.sample_frames(learning, 58)
     self.assertFalse(learning.enable_training)
-    self.sample_frames(learning, 5)
+    self.sample_frames(learning, 2)
     self.assertTrue(learning.enable_training)
 
   def test_tracking_lead_blocks_sampling(self):
@@ -197,3 +199,108 @@ class TestCurvatureLearning(unittest.TestCase):
 
 if __name__ == "__main__":
   unittest.main()
+
+
+class TestSamplingGatingGaps(unittest.TestCase):
+  """StarPilot runtime gating ported with the B1-4 persistence/trigger work:
+  the lead-clear cooldown and the post-control silence the original port
+  never wired up."""
+
+  def _frames(self, learning, n, **kw):
+    base = {"v_ego": 15.0, "tracking_lead": False, "manual_speed_control": True,
+            "driving_in_curve": True, "blinker": False,
+            "lateral_acceleration": 2.5, "road_curvature": 0.01}
+    base.update(kw)
+    for _ in range(n):
+      learning.log_data(**base)
+
+  def test_lead_clear_cooldown(self):
+    learning = CurvatureLearning(dt=0.05)
+    # lead visible through the settle period
+    self._frames(learning, 60, tracking_lead=True)
+    self.assertFalse(learning.enable_training)
+    # lead dropped: sampling must stay silent for CSC_LEAD_CLEAR_TIME (1 s)
+    self._frames(learning, 60)
+    self.assertFalse(learning.enable_training)
+    # 1 s of clear frames (20 at 20 Hz) on top of the settled timer
+    self._frames(learning, 21)
+    self.assertTrue(learning.enable_training)
+
+  def test_lead_reappear_resets_cooldown(self):
+    learning = CurvatureLearning(dt=0.05)
+    self._frames(learning, 60, tracking_lead=True)
+    self._frames(learning, 25)   # cooldown nearly done
+    self._frames(learning, 1, tracking_lead=True)  # lead flashes back
+    self._frames(learning, 10)
+    self.assertFalse(learning.enable_training)
+
+  def test_control_silence_after_openpilot_ownership(self):
+    learning = CurvatureLearning(dt=0.05)
+    # openpilot owns the speed: the quiet timer is pinned
+    self._frames(learning, 100, manual_speed_control=False, long_control_active=True)
+    self._frames(learning, 100)  # driver takes over, quiet timer 5 s
+    self.assertFalse(learning.enable_training)
+    self._frames(learning, 81)   # 4.05 s < CSC_CONTROL_QUIET_TIME
+    self.assertFalse(learning.enable_training)
+    self._frames(learning, 20)   # past 5 s + settle already elapsed
+    self.assertTrue(learning.enable_training)
+
+  def test_pure_manual_driving_has_no_silence(self):
+    learning = CurvatureLearning(dt=0.05)
+    self._frames(learning, 100, long_control_active=False)
+    self.assertTrue(learning.enable_training)
+
+
+class TestAsyncPersistenceContract(unittest.TestCase):
+  """flush() three-state put_fn contract: async accepted (stay dirty until
+  ack), rejected (retry later), legacy sync hook (saved immediately)."""
+
+  def test_async_accepted_stays_dirty_until_ack(self):
+    learning = CurvatureLearning(dt=0.05)
+    learning.data_dirty = True
+    learning.dirty_revision = 7
+    learning.put_fn = lambda data: True
+    learning.flush()
+    self.assertTrue(learning.data_dirty)
+    self.assertEqual(learning.pending_revision, 7)
+
+    learning.acknowledge_saved(7)
+    self.assertFalse(learning.data_dirty)
+    self.assertIsNone(learning.pending_revision)
+
+  def test_async_rejected_keeps_dirty(self):
+    learning = CurvatureLearning(dt=0.05)
+    learning.data_dirty = True
+    learning.dirty_revision = 3
+    learning.put_fn = lambda data: False
+    learning.flush()
+    self.assertTrue(learning.data_dirty)
+    self.assertIsNone(learning.pending_revision)
+
+  def test_async_in_flight_drop_then_late_ack_does_not_clear_newer_data(self):
+    learning = CurvatureLearning(dt=0.05)
+    learning.data_dirty = True
+    learning.dirty_revision = 5
+    learning.put_fn = lambda data: True
+    learning.flush()              # submission covering rev 5 accepted
+    learning.dirty_revision = 9   # more samples while the write is in flight
+    learning.data_dirty = True
+    learning.put_fn = lambda data: False  # second flush dropped (in flight)
+    learning.flush()
+    learning.acknowledge_saved(5)  # first write lands: revs 6-9 not in it
+    self.assertTrue(learning.data_dirty)
+
+    learning.pending_revision = 9
+    learning.put_fn = lambda data: True
+    learning.flush()
+    learning.acknowledge_saved(9)
+    self.assertFalse(learning.data_dirty)
+
+  def test_sync_hook_saved_immediately(self):
+    learning = CurvatureLearning(dt=0.05)
+    learning.data_dirty = True
+    stored = {}
+    learning.put_fn = lambda data: stored.update(data) or None
+    learning.flush()
+    self.assertFalse(learning.data_dirty)
+    self.assertTrue(stored)

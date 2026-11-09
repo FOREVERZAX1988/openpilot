@@ -10,7 +10,9 @@ import openpilot.cereal.messaging as messaging
 from openpilot.cereal import custom
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
+from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.car.cruise import V_CRUISE_UNSET
+from openpilot.selfdrive.controls.lib.curve_speed_learning import CSC_IN_CURVE_LAT_ACCEL
 from openpilot.selfdrive.controls.lib.weather_offsets import WeatherOffsets
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
 from openpilot.sunnypilot.common.param_read import read_bool, read_float, read_str
@@ -122,6 +124,12 @@ class SmartCruiseControlVision:
     # factor scale still applies). Data persists through CurvatureLearningData.
     from openpilot.selfdrive.controls.lib.curve_speed_learning import CurvatureLearning
     self.learning = CurvatureLearning()
+    # Device persistence (StarPilot preferences.py port): bounded async
+    # writer + external-edit conflict detection + read-back verification.
+    from openpilot.selfdrive.controls.lib.curve_speed_persistence import LearningPersistence
+    self.learning_persistence = LearningPersistence(self.params)
+    self._learning_submissions: dict[int, int] = {}  # submission id -> covered learner revision
+    self._learning_conflict_warned = False  # one-shot: avoid a log flood every frame
     self.learning.load_fn = self._load_learning_data
     self.learning.put_fn = self._put_learning_data
     self.learning_enabled = False
@@ -138,19 +146,26 @@ class SmartCruiseControlVision:
     self.envelope = EnvelopeController(dt=DT_MDL)
 
   def _load_learning_data(self):
-    try:
-      raw = self.params.get("CurvatureLearningData")
-      import json as _json
-      return _json.loads(raw) if raw else None
-    except Exception:
-      return None
+    return self.learning_persistence.load_data()
 
-  def _put_learning_data(self, data):
-    try:
-      import json as _json
-      self.params.put("CurvatureLearningData", _json.dumps(data))
-    except Exception:
-      pass
+  def _put_learning_data(self, data) -> bool:
+    """Submit one async write; True when accepted for the covered revision."""
+    covers = self.learning.dirty_revision
+    submission = self.learning_persistence.submit(data)
+    if submission is None:
+      return False
+    self._learning_submissions[submission] = covers
+    return True
+
+  def _poll_learning_persistence(self) -> None:
+    """Drain writer completions: acknowledge saved revisions, surface conflicts."""
+    for submission, status in self.learning_persistence.poll():
+      covers = self._learning_submissions.pop(submission, None)
+      if status == 'saved' and covers is not None:
+        self.learning.acknowledge_saved(covers)
+      elif status == 'external_edit' and not self._learning_conflict_warned:
+        self._learning_conflict_warned = True
+        cloudlog.warning("curve learning: document edited externally; persistence suspended for this session")
 
   def _load_curve_tuning(self) -> None:
     """Read carrot's curve parameters and derive this controller's setpoints.
@@ -287,28 +302,37 @@ class SmartCruiseControlVision:
   def _update_learning(self, sm: messaging.SubMaster, long_enabled: bool) -> None:
     """Feed the StarPilot curvature learner (sampling + override watch)."""
     cs = sm['carState']
-    manual = (not long_enabled) or bool(cs.gasPressed) or bool(cs.brakePressed)
+    gas_pressed = bool(cs.gasPressed)
+    brake_pressed = bool(cs.brakePressed)
+    manual = (not long_enabled) or gas_pressed or brake_pressed
+    # openpilot owns the speed without pedal interference: silences sampling
+    # for CSC_CONTROL_QUIET_TIME after it ends (StarPilot control silence)
+    long_control_active = long_enabled and not (gas_pressed or brake_pressed)
     tracking_lead = bool(sm['radarState'].leadOne.status or sm['radarState'].leadTwo.status)
-    driving_in_curve = self.state == VisionState.turning
+    # StarPilot in-curve criterion: measured lateral acceleration |k|*v^2,
+    # independent of the control state machine (which only turns when the
+    # controller owns the curve - the learner samples manual driving).
+    in_curve = abs(self.v_ego ** 2 * float(sm['controlsState'].curvature)) >= CSC_IN_CURVE_LAT_ACCEL
     blinker = bool(cs.leftBlinker or cs.rightBlinker)
     road_curvature = float(sm['controlsState'].curvature)
 
     self.learning.log_data(
       v_ego=self.v_ego, tracking_lead=tracking_lead, manual_speed_control=manual,
-      driving_in_curve=driving_in_curve, blinker=blinker,
-      lateral_acceleration=self.current_lat_acc, road_curvature=road_curvature)
+      driving_in_curve=in_curve, blinker=blinker,
+      lateral_acceleration=self.current_lat_acc, road_curvature=road_curvature,
+      long_control_active=long_control_active)
 
     # Override watch: driver pushes through a curve faster than the learned
     # comfort -> raise it; driver brakes in a curve -> nudge it down.
     if self.learning.override_watch_key is None:
-      if (long_enabled and driving_in_curve and cs.gasPressed and
+      if (long_enabled and in_curve and gas_pressed and
               self.output_v_target < self.v_ego - 0.5):
         self.learning.start_override_watch(road_curvature, self.current_lat_acc)
-      elif bool(cs.brakePressed) and driving_in_curve:
+      elif brake_pressed and in_curve:
         self.learning.apply_brake_nudge(road_curvature)
     else:
       self.learning.handle_override_watch(
-        overriding_or_in_curve=bool(manual or driving_in_curve),
+        overriding_or_in_curve=bool(manual or in_curve),
         lateral_acceleration=self.current_lat_acc, road_curvature=road_curvature)
 
   def _update_calculations(self, sm: messaging.SubMaster) -> None:
@@ -447,6 +471,7 @@ class SmartCruiseControlVision:
     # StarPilot curve-speed learning sampler (gated; no-op when disabled).
     if self.learning_enabled:
       self._update_learning(sm, long_enabled)
+      self._poll_learning_persistence()
 
     self.is_enabled, self.is_active = self._update_state_machine()
 
