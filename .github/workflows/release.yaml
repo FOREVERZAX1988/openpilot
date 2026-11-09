@@ -2,6 +2,8 @@ name: 打包预编译分支
 
 # 手动触发：把 master 分支精简打包后推送到 staging 分支（GitHub + CNB 双端）。
 # 不再监听 push 自动打包；master-c3 相关打包路径已移除。
+# 2026-11-09: comment re-added to re-trigger Actions workflow registration
+# after the repo history rebuild (release.yaml returned 404 from the Actions API).
 on:
   workflow_dispatch:
     inputs:
