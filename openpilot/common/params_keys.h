@@ -872,6 +872,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SoundVolumeAdjust", {PERSISTENT | BACKUP, INT, "100"}},
     {"SoundVolumeAdjustEngage", {PERSISTENT | BACKUP, INT, "100"}},
     {"CarrotException", {PERSISTENT | BACKUP, STRING, ""}},
+    // Discord destination for the exception upload chain (carrot_man). Privacy
+    // contract: no baked-in URL in this fork; empty until the operator supplies
+    // one via param or CARROT_* / DISCORD_WEBHOOK_URL env.
+    {"CarrotExceptionDiscordWebhookUrl", {PERSISTENT | BACKUP, STRING, ""}},
+    // CWeb push (remote reachability beacon). URL sources: CWEB_PUSH_REPORT_URL
+    // env, then this param. No baked-in third-party endpoint (privacy-first).
+    {"CwebPushReportUrl", {PERSISTENT | BACKUP, STRING, ""}},
+    {"CwebPushRecoveryBoot", {PERSISTENT, BOOL, "0"}},
     {"JLeadFactor3", {PERSISTENT | BACKUP, FLOAT, "0"}},
     {"CruiseEcoControl", {PERSISTENT | BACKUP, INT, "2"}},
     {"MyDrivingModeAuto", {PERSISTENT | BACKUP, INT, "0"}},

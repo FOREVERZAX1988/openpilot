@@ -309,6 +309,15 @@ def main() -> None:
   except Exception:
     traceback.print_exc()
     cloudlog.exception("crash")
+    # Queue the carrot exception-upload chain (tmux + web + Discord webhook, see
+    # sunnypilot/carrot/carrot_man.py). cp did this from its per-process sentry
+    # hook; this fork dropped sentry, so the manager-level crash is the hook
+    # point. carrot_man only sends when the network is up and clears the flag
+    # once one destination accepts, so a failed upload retries on its loop.
+    try:
+      Params().put("CarrotException", "exception")
+    except Exception:
+      pass
   finally:
     manager_cleanup()
 

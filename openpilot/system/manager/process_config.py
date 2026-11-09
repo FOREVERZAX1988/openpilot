@@ -444,6 +444,12 @@ procs += [
   PythonProcess("carrot_server", "openpilot.sunnypilot.carrot.carrot_server", always_run,
                 enabled=not CARROT_WEB_EXTERNAL, restart_if_crash=True),
 
+  # CWeb push reporter (cp parity): keeps a Carrot Web Push endpoint informed of
+  # {deviceId, ip, port} so the device web UI (7000) stays reachable remotely.
+  # Idles at a low poll rate until a URL is supplied via CWEB_PUSH_REPORT_URL env
+  # or the CwebPushReportUrl param - no baked-in third-party endpoint (privacy).
+  PythonProcess("cweb_push", "openpilot.sunnypilot.carrot.cweb_push", always_run, enabled=not PC),
+
   # Support terminal on 6999 (CarrotPilot's recovery/server.py): a standalone, stdlib-only
   # shell that keeps working when the rest of the web stack is broken. Gated on
   # CarrotRecoveryEnabled (default "0") because it is an unauthenticated shell reachable
