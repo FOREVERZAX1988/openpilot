@@ -16,8 +16,10 @@ MAX_LATERAL_ACCEL_NO_ROLL = 3.0  # m/s^2
 STOPPING_SPEED = 0.25  # m/s, speed at which the car goes into the stopping state
 
 
-def should_stop(v_ego: float, a_target: float) -> bool:
-  return bool(v_ego < STOPPING_SPEED and a_target < 0.1)
+def should_stop(v_ego: float, a_target: float, stopping_speed: float = STOPPING_SPEED) -> bool:
+  # stopping_speed comes from common/stopping_params (VEgoStopping) when the
+  # caller has a Params handle; the default preserves the historical constant.
+  return bool(v_ego < stopping_speed and a_target < 0.1)
 
 def clamp(val, min_val, max_val):
   clamped_val = float(np.clip(val, min_val, max_val))

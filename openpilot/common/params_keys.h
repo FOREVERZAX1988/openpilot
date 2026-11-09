@@ -882,6 +882,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CwebPushRecoveryBoot", {PERSISTENT, BOOL, "0"}},
     {"JLeadFactor3", {PERSISTENT | BACKUP, FLOAT, "0"}},
     {"CruiseEcoControl", {PERSISTENT | BACKUP, INT, "2"}},
+    // Planner stop threshold in hundredths of m/s (cp stopping_params). cp
+    // default 50 (0.5); this fork keeps its historical 0.25 m/s default so the
+    // knob changes nothing until tuned. get_stopping_speed repairs values
+    // below 10 on read.
+    {"VEgoStopping", {PERSISTENT | BACKUP, INT, "25"}},
     {"MyDrivingModeAuto", {PERSISTENT | BACKUP, INT, "0"}},
     // Integer percent, like TFollowGap*: the consumer divides by 100. It was
     // declared FLOAT, which made the settings row unable to save - an int
