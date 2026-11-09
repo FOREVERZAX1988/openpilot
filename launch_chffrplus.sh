@@ -1309,6 +1309,19 @@ launch() {
 
   tmux capture-pane -pq -S-1000 > /tmp/launch_log
 
+  # Font atlases are produced by the ui SConscript, but with prebuilt present
+  # scons is skipped entirely. An overlay-update swap replaces the tree with a
+  # copy whose untracked atlases were whiteouted by the updater's git clean,
+  # leaving no pre-baked fonts: every boot then re-bakes CJK fallbacks and
+  # crawls through startup. Regenerate just the atlases in that case.
+  # Upstream master 736fcd0951. PYTHONPATH is explicit here because $PY resolves
+  # to the system python3.12 on AGNOS, while pyray lives in /usr/local/venv.
+  if ! ls "$DIR"/openpilot/selfdrive/assets/fonts/OpFont-*-*.* >/dev/null 2>&1; then
+    echo "[fonts] font atlases missing, regenerating"
+    (cd "$DIR" && PYTHONPATH="$PY_PATH" "$PY" openpilot/selfdrive/assets/fonts/process.py >> /tmp/font_bake.log 2>&1) ||
+      echo "[warn] font atlas regeneration failed; UI will bake fallbacks at startup"
+  fi
+
   cd openpilot/system/manager
   if [ ! -f "$DIR/prebuilt" ]; then
     # scons writes its objects and temporary output under TMPDIR, which defaults

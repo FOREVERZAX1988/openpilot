@@ -155,6 +155,12 @@ _FALLBACK_SCALE_CACHE: dict[int, float] = {}
 
 ASSETS_DIR = files("openpilot.selfdrive").joinpath("assets")
 FONT_DIR = ASSETS_DIR.joinpath("fonts")
+# raylib_nb only exposes load_font_ex(); the large CJK BMFont atlases
+# (OpFont-*-zh-CHS.fnt, 1780 glyphs) are rejected and load_font_ex returns the
+# default font instead. Remember each rejected atlas so a font-cache rebuild
+# goes straight to the working on-demand bake instead of retrying the failed
+# load and emitting an ERROR every time (378 per day on the zh-CHS device).
+_PREBAKED_FONT_FAILURES: set[str] = set()
 EXTRA_FONT_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
 # fallback_font_key() 的哨兵值：不换字体，保留调用方自己的字体。
 PRIMARY_FONT = ""
@@ -931,20 +937,24 @@ class GuiApplication(GuiApplicationExt):
         if not fnt_path.exists() and multilang.requires_font_fallback():
           filename = f"OpFont-Regular-{active_lang}.fnt"
           fnt_path = fspath / filename
-        if fnt_path.exists():
+        if fnt_path.exists() and filename not in _PREBAKED_FONT_FAILURES:
           # raylib_nb has no load_font shim; LoadFontEx with no codepoints is
           # the C LoadFont() equivalent (fontSize is ignored for .fnt atlases)
           font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
           default_id = rl.get_font_default().texture.id
           if font.texture.id <= 0 or font.texture.id == default_id:
+            # The atlas exists but this loader cannot use it. Record the failure
+            # once per atlas: every later font-cache rebuild bakes directly.
+            _PREBAKED_FONT_FAILURES.add(filename)
             cloudlog.error(f"Failed to load pre-baked font {filename}; texture id={font.texture.id}")
             if multilang.requires_font_fallback():
               cloudlog.warning(f"Baking CJK fallback for {active_lang} from {NOTO_FONTS[active_lang]}")
               font = self._load_or_bake_cjk_font(active_lang)
         elif multilang.requires_font_fallback():
-          # Pre-baked OpFont atlas is missing (e.g. first install before scons runs).
-          # Bake the CJK font on-demand from the source TTF/OTF so the UI remains usable.
-          cloudlog.warning(f"OpFont atlas missing for {active_lang}; baking fallback from {NOTO_FONTS[active_lang]}")
+          # Atlas missing, or already known to be unloadable on this build.
+          # Bake on-demand from the source TTF/OTF so the UI remains usable.
+          if not fnt_path.exists():
+            cloudlog.warning(f"OpFont atlas missing for {active_lang}; baking fallback from {NOTO_FONTS[active_lang]}")
           font = self._load_or_bake_cjk_font(active_lang)
         else:
           font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
