@@ -58,6 +58,7 @@ SAFE_MODE_MANAGED_KEYS: tuple[str, ...] = (
   "LeadDuplicateGuardEnabled",
   "ModelLeadTrajectoryEnabled",
   "CscCurvatureLearningEnabled",
+  "CscVisionEnvelopeEnabled",
 )
 
 # The values Safe Mode forces. Anything not listed here falls back to its
@@ -81,6 +82,7 @@ SAFE_MODE_FIXED_VALUES: dict[str, str] = {
   "LeadDuplicateGuardEnabled": "0",
   "ModelLeadTrajectoryEnabled": "0",
   "CscCurvatureLearningEnabled": "0",
+  "CscVisionEnvelopeEnabled": "0",
 }
 
 # The steer knobs are "0.0 means not set" parameters: every consumer falls
