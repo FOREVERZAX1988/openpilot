@@ -676,6 +676,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // validation. Defaults match stock openpilot's envelope at the endpoints but are
     // stronger mid-range (1.2 vs 0.8 m/s² near 40 kph).
     {"CarrotCruiseAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},
+    // Traffic Mode (StarPilot port): gesture-toggled low-speed follow profile
+    // with dedicated curves. Curve math lives in sunnypilot/carrot/traffic_mode.py;
+    // defaults are verbatim StarPilot param defaults.
+    {"TrafficModeEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"TrafficFollow", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
+    {"RelaxedFollow", {PERSISTENT | BACKUP, FLOAT, "1.6"}},
+    {"TrafficJerkAcceleration", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
+    {"RelaxedJerkAcceleration", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
     // Display-only overlays. Neither one is read anywhere on the control path.
     {"CarrotRadarPointsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw measured front-radar points in the road view
     {"CarrotSignalHudEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw the neural signal evidence ring (needs SignalAssistMode > 0)

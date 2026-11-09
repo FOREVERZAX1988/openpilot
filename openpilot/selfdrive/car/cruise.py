@@ -273,6 +273,15 @@ class VCruiseCarrot(VCruiseHelper):
     self.long_pressed = False
     self.button_cnt = 0
     self.button_prev = ButtonType.unknown
+    # Traffic Mode gesture (StarPilot port): a gap-adjust press held past the
+    # very-long threshold toggles Traffic Mode on release; a plain long press
+    # still cycles MyDrivingMode. Latched at release, consumed by the
+    # gap-adjust handler in the same update tick.
+    self.traffic_toggle_frame = False
+    # One-frame latch so the release-routed long gap-adjust action still
+    # returns long_pressed=True without leaving the sticky long-press state
+    # set for the following frames.
+    self.long_release_latch = False
     self.button_long_time = 40
     self.button_big_step = False  # VW stage-2 (swipe) press -> immediate +10 (round) on release
 
@@ -628,6 +637,7 @@ class VCruiseCarrot(VCruiseHelper):
       ]:
         self.button_cnt = 1
         self.button_prev = bt
+        self.traffic_toggle_frame = False
         # VW 쓸어올리기(2단): 누르기 시작 시점의 GRA_Tip_Stufe_2 샘플 (이후 유지 중 래치로 보강)
         self.button_big_step = bt in [ButtonType.accelCruise, ButtonType.decelCruise] and big_step_available
         self.button_long_time = self._cruise_button_long_delay if bt in [ButtonType.accelCruise, ButtonType.decelCruise] else self._cruise_button_long_delay + 30  # noqa: E501
@@ -652,6 +662,17 @@ class VCruiseCarrot(VCruiseHelper):
             unit = SPEED_DOWN_UNIT if is_metric else SPEED_DOWN_UNIT * CV.MPH_TO_KPH
             button_kph = math.floor((button_kph - 0.01) / unit) * unit
           button_type = bt
+        elif bt == ButtonType.gapAdjustCruise:
+          # Traffic Mode gesture: fire the long gap-adjust action on release
+          # (not at the long threshold) so a very-long hold can be told apart.
+          # long_pressed is reported for this frame only via the release latch;
+          # the sticky state is cleared so the next press starts fresh.
+          button_type = bt
+          self.traffic_toggle_frame = self.button_cnt >= self.button_long_time * 2
+          self.button_cnt = 0
+          self.long_pressed = False
+          self.long_release_latch = True
+          continue
         self.long_pressed = False
         self.button_cnt = 0
         self.button_big_step = False
@@ -673,11 +694,15 @@ class VCruiseCarrot(VCruiseHelper):
         button_type = bt
         self.button_cnt %= self.button_long_time
       else: #if bt in [ButtonType.gapAdjustCruise, ButtonType.lfaButton]:
-        if self.button_cnt < self.button_long_time + 2:
+        # gap-adjust fires on release (Traffic Mode gesture disambiguation,
+        # see the release branch); only the lfa button still fires here.
+        if bt == ButtonType.lfaButton and self.button_cnt < self.button_long_time + 2:
           button_type = bt
         #self.button_cnt %= self.button_long_time
 
-    return button_kph, button_type, self.long_pressed
+    long_out = self.long_pressed or self.long_release_latch
+    self.long_release_latch = False
+    return button_kph, button_type, long_out
 
   def _carrot_command(self, v_cruise_kph, button_type, long_pressed):
     if self.carrot_cmd_index_last != self.carrot_cmd_index:
@@ -840,7 +865,15 @@ class VCruiseCarrot(VCruiseHelper):
         v_cruise_kph = button_kph
         self._v_cruise_kph_at_brake = 0
       elif button_type == ButtonType.gapAdjustCruise:
-        self.params.put_nonblocking("MyDrivingMode", self._param("MyDrivingMode") % 4 + 1) # 1,2,3,4 (1:eco, 2:safe, 3:normal, 4:high speed)
+        if self.traffic_toggle_frame:
+          # StarPilot Traffic Mode gesture: very-long gap-adjust press toggles
+          # the dedicated low-speed traffic profile instead of cycling modes.
+          self.traffic_toggle_frame = False
+          enabled = bool(int(self._param("TrafficModeEnabled") or 0))
+          self.params.put_bool_nonblocking("TrafficModeEnabled", not enabled)
+          self._add_log(f"Traffic Mode {'disabled' if enabled else 'enabled'} (gap-adjust very-long press)")
+        else:
+          self.params.put_nonblocking("MyDrivingMode", self._param("MyDrivingMode") % 4 + 1) # 1,2,3,4 (1:eco, 2:safe, 3:normal, 4:high speed)
       elif button_type == ButtonType.lfaButton:
         useLaneLineSpeed = max(1, self.useLaneLineSpeed)
         self.useLaneLineSpeedApply = useLaneLineSpeed if self.useLaneLineSpeedApply == 0 else 0

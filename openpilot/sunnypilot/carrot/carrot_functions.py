@@ -58,6 +58,9 @@ from openpilot.sunnypilot.carrot.t_follow import (
   ramp_t_follow,
 )
 from openpilot.sunnypilot.carrot.traffic_stop import TrafficStopModelLeadMatcher, is_traffic_stop_entry_allowed
+from openpilot.sunnypilot.carrot.traffic_mode import (
+  TRAFFIC_COMFORT_BRAKE_FACTOR, TrafficProfile,
+)
 from openpilot.sunnypilot.carrot.signal_assist import SignalAssist
 from openpilot.sunnypilot.carrot.signal_assist_runtime import SignalAssistRuntime
 
@@ -448,6 +451,11 @@ class CarrotPlanner:
     # fixed rates instead of stepping; see DrivingModeSmoother.
     self._mode_smoother = DrivingModeSmoother()
     self._mode_comfort_brake_factor = 1.0
+    # Traffic Mode (StarPilot port): gesture-toggled dedicated low-speed
+    # follow/jerk curves plus the Traffic acceleration profile.
+    self._traffic_mode_enabled = False
+    self._traffic_profile = TrafficProfile(self._params)
+    self._traffic_curve = None
     self._apply_driving_mode_factors()
 
     # Follow-distance breakpoints (seconds) - one per LongitudinalPersonality.
@@ -785,6 +793,13 @@ class CarrotPlanner:
       comfort_brake = p.get_float("LongitudinalMpcTuningComfortBrake")
       if comfort_brake > 0:
         self._comfort_brake_base = comfort_brake
+    elif self._params_count == 40:
+      # Traffic Mode curve endpoints (StarPilot TrafficFollow/RelaxedFollow
+      # and the Traffic/Relaxed jerk percentages; see carrot/traffic_mode.py).
+      # The toggle itself is read at == 50 so a button gesture lands within 2.5 s.
+      self._traffic_curve = self._traffic_profile.read()
+    elif self._params_count == 50:
+      self._traffic_mode_enabled = p.get_bool("TrafficModeEnabled", False)
     elif self._params_count >= 100:
       self._params_count = 0
 
@@ -810,8 +825,15 @@ class CarrotPlanner:
     """
     accel_target = {DrivingMode.Eco: self._my_eco_factor,
                     DrivingMode.Safe: self._my_safe_mode_factor}.get(self._my_driving_mode, 1.0)
+    if self._traffic_mode_enabled:
+      # StarPilot traffic cruise-brake magnitude (|A_CRUISE_MIN| * 0.35 vs a
+      # standard of 1.2) as a comfort-brake multiplier; the accel envelope is
+      # owned by the traffic profile, so the mode factor target is stock.
+      accel_target, comfort_target = 1.0, TRAFFIC_COMFORT_BRAKE_FACTOR
+    else:
+      comfort_target = get_driving_mode_comfort_brake_factor(self._my_driving_mode)
     tuning = self._mode_smoother.sample(
-      ModeComfortFactors(accel_target, get_driving_mode_comfort_brake_factor(self._my_driving_mode)), DT_MDL)
+      ModeComfortFactors(accel_target, comfort_target), DT_MDL)
     self._my_safe_factor = tuning.accel_factor
     if lead_slow:
       self._my_safe_factor = min(self._my_safe_factor, self._my_safe_mode_factor)
@@ -826,12 +848,23 @@ class CarrotPlanner:
   # get_carrot_max_accel channel as the turn-accel / cutin-predecel contributors,
   # so it can only ever lower the cap - never raise it.
   def get_carrot_accel(self, v_ego: float) -> float:
+    if self._traffic_mode_enabled:
+      # StarPilot traffic acceleration profile replaces the envelope; the
+      # consumer channel only ever tightens the positive-accel cap.
+      return self._traffic_profile.accel_cap(v_ego)
     factor = self._my_high_mode_factor if self._my_driving_mode == DrivingMode.High else self._my_safe_factor
     return float(np.interp(v_ego, _A_CRUISE_MAX_BP, self._cruise_max_vals) * factor)
 
   def _get_base_t_follow(self, personality: int, v_ego: float,
                          use_speed_tf: bool = True) -> float:
     """Return the unscaled following-time target for this personality."""
+    if self._traffic_mode_enabled and self._traffic_curve is not None:
+      # StarPilot traffic profile: the dedicated follow curve replaces the
+      # personality table entirely; the Traffic jerk channel becomes the
+      # MPC jerk target (faded by the planner-side jerk ramp).
+      follow_low, follow_high, jerk_low, jerk_high = self._traffic_curve
+      self._jerk_factor = self._traffic_profile.jerk((jerk_low, jerk_high), v_ego)
+      return self._traffic_profile.follow((follow_low, follow_high), v_ego)
     if use_speed_tf and self._enable_speed_tf < 0:
       tf_speed_bps = {
         -1: [0, 30, 60, 90],
