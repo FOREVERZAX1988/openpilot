@@ -153,7 +153,7 @@ def build_speed_items():
   return [
     section_heading_sp(tr('ATC Turn Control')),
     option_item_sp(title=tr('Auto Turn Control'), param='AutoTurnControl', min_value=0, max_value=3, value_change_step=1,
-                   description=tr('0=Off, 1=Speed only, 2=Speed + steering.')),
+                   description=tr('0=Off, 1=Steering only, 2=Speed + steering (default), 3=Speed only.')),
     option_item_sp(title=tr('Auto Turn Speed Threshold'), param='AutoTurnControlSpeedTurn', min_value=0, max_value=200, value_change_step=5,
                    description=tr('Speed below which auto turn activates.')),
     option_item_sp(title=tr('Auto Turn End Distance'), param='AutoTurnControlTurnEnd', min_value=0, max_value=500, value_change_step=10,
@@ -299,6 +299,13 @@ def build_vehicle_items():
     section_heading_sp(tr('Driving Mode')),
     option_item_sp(title=tr('My Driving Mode'), param='MyDrivingMode', min_value=1, max_value=4, value_change_step=1),
     option_item_sp(title=tr('My Driving Mode Auto'), param='MyDrivingModeAuto', min_value=0, max_value=2, value_change_step=1),
+    section_heading_sp(tr('Alerts')),
+    toggle_item_sp(title=tr('Mute Seatbelt Alert'), param='MuteSeatbelt',
+                   description=tr('Suppress the seatbelt-not-latched engage block. The car still shows ' +
+                                  'its own warning; use only where the belt is genuinely fastened.')),
+    toggle_item_sp(title=tr('Mute Door Alert'), param='MuteDoor',
+                   description=tr('Suppress the door-open engage block. The car still shows its own ' +
+                                  'warning; use only if a sensor falsely reports an open door.')),
   ]
 
 def build_dev_items():

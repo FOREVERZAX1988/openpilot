@@ -1134,16 +1134,39 @@ class CarrotServ:
     # contract), so seed them ON exactly once here; each stays independently offable
     # afterwards. Without this, enabling carrot silently did nothing until the user
     # found and flipped three more switches.
+    #
+    # ATC (navigation-steered ramps / intersection turns) is seeded ON too: it is the
+    # behavior cp shipped by default and the one users report as "navigation used to
+    # steer". Seeding only fires before CarrotNavFeaturesSeeded exists, so an explicit
+    # later change wins; the desire_helper read side additionally defaults a missing
+    # key to enabled, covering devices seeded before ATC was added here.
     if (self._params.get_bool("CarrotEnabled")
         and not self._params.get_bool("CarrotNavFeaturesSeeded")):
       try:
-        for _p in ("CarrotTrafficCongestionEnabled", "CarrotMapDecelEnabled"):
+        for _p in ("CarrotTrafficCongestionEnabled", "CarrotMapDecelEnabled",
+                   "CarrotAtcBlinkerEnabled"):
           self._params.put_bool(_p, True)
+        if self._params.get("AutoTurnControl") is None:
+          self._params.put_int("AutoTurnControl", 2)  # cp full ATC: steering + turn-speed control
         self._params.put_bool("CarrotNavFeaturesSeeded", True)
       except Exception:
         # Seeding is a convenience; a store that cannot write (tests, read-only
         # mounts) must not take down the control loop. The flag stays unset, so the
         # next run retries.
+        pass
+
+    # One-shot legacy migration: devices that ran carrot before AutoTurnControl was
+    # default-on carry config.py's old seeded 0 (ATC fully off), and the seeding block
+    # above cannot fix them - CarrotNavFeaturesSeeded is already set, so it never
+    # re-fires. Bump a stored 0 to full ATC exactly once under CarrotAtcMigrated; any
+    # explicit user choice made afterwards (including 0 via the tuning UI) wins forever.
+    if (self._params.get_bool("CarrotEnabled")
+        and not self._params.get_bool("CarrotAtcMigrated")):
+      try:
+        if self._params.get("AutoTurnControl") is None or self._params.get_int("AutoTurnControl") == 0:
+          self._params.put_int("AutoTurnControl", 2)  # cp full ATC: steering + turn-speed control
+        self._params.put_bool("CarrotAtcMigrated", True)
+      except Exception:
         pass
 
     """Refresh tuning parameters from UnifiedParams (throttled to 10 Hz)."""
@@ -1158,7 +1181,7 @@ class CarrotServ:
     self.auto_navi_speed_safety_factor = float(p.get_int("AutoNaviSpeedSafetyFactor", 105)) * 0.01
     self.auto_navi_speed_bump_speed = float(p.get_int("AutoNaviSpeedBumpSpeed", 35))
     self.auto_navi_speed_bump_time = float(p.get_int("AutoNaviSpeedBumpTime", 1))
-    self.auto_navi_speed_ctrl_mode = p.get_int("AutoNaviSpeedCtrlMode", 0)
+    self.auto_navi_speed_ctrl_mode = p.get_int("AutoNaviSpeedCtrlMode", 2)  # keys default 2 (cp); a missing key must not read as "off"
     self.auto_navi_count_down_mode = p.get_int("AutoNaviCountDownMode", 0)
     self.turn_speed_control_mode = p.get_int("TurnSpeedControlMode", 1)
     self.map_turn_speed_factor = float(p.get_int("MapTurnSpeedFactor", 90)) * 0.01

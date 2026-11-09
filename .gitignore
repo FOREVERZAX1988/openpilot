@@ -142,3 +142,13 @@ openpilot/sunnypilot/carrot/radar_motion/_motion_native.cpp
 
 # carrot server 运行时状态：参数变更历史写在这里，属于设备数据不是源码
 openpilot/sunnypilot/carrot/server/.state/
+
+# Panda firmware binaries are rebuilt on-device by scons from the checked-out
+# panda sources, so the tree-shipped copies (packaged from the panda fork for
+# DFU rescue) can never stay byte-identical: on-device they must be ignored
+# build artifacts, carried across updates by the updater like any other.
+panda/board/obj/*.bin
+panda/board/obj/*.bin.signed
+
+# Per-boot launcher cache stamp (keyed by git_src_commit)
+.params_registry_ok

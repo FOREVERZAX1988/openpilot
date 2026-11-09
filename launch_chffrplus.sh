@@ -154,6 +154,18 @@ ensure_pip_deps() {
   exec 200>"$lockfile"
   flock 200 || return 1
 
+  # Fast path: one interpreter probes every module in a single import. N separate
+  # `python -c` startups each pay C3 interpreter+venv init (~0.3s each), which
+  # added ~15s to EVERY boot; the combined probe costs one interpreter (~3s, cv2
+  # dominated). Only when the batch fails do we fall back to per-module probing
+  # to name the culprits, so missing-package reporting is unchanged.
+  local joined
+  joined=$(printf '%s,' "$@")
+  joined="${joined%,}"
+  if PYTHONPATH="$py_path" "$py" -c "import $joined" 2>/dev/null; then
+    return 0
+  fi
+
   local missing=()
   for module in "$@"; do
     if ! PYTHONPATH="$py_path" "$py" -c "import $module" 2>/dev/null; then
@@ -162,6 +174,8 @@ ensure_pip_deps() {
   done
 
   if [ ${#missing[@]} -eq 0 ]; then
+    # Batch import failed but every module imports alone (e.g. a conflicting
+    # module-level side effect); treat as satisfied rather than reinstalling.
     return 0
   fi
 
@@ -498,7 +512,7 @@ set_tici_hw() {
   fi
 
   if [ "$mcu" = "F4" ]; then
-    echo "TICI (DOS) detected"; mount_nvme; export TICI_DOS=1; set_aux_panda
+    echo "TICI (DOS) detected"; mount_nvme; export TICI_DOS=1; set_aux_panda &
   else
     echo "TICI (TRES) detected"; export TICI_TRES=1
   fi
@@ -608,7 +622,8 @@ agnos_init() {
     local d
     for _u in http://www.baidu.com http://www.qq.com http://github.com; do
       d=$(curl -fsSI -m 10 "$_u" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
-      [ -n "$d" ] && sudo date -s "$d" >/dev/null 2>&1 && echo "[agnos] clock synced from $_u: $d" | tee -a /tmp/agnos_pending.log && break
+      # strip the comma: `date -s "Sun, 09 Nov ..."` fails with Invalid argument
+      [ -n "$d" ] && sudo date -s "${d/, /}" >/dev/null 2>&1 && echo "[agnos] clock synced from $_u: $d" | tee -a /tmp/agnos_pending.log && break
     done
   fi
 
@@ -667,7 +682,7 @@ agnos_init() {
         local d
         for _u in http://github.com http://www.qq.com http://www.baidu.com; do
           d=$(curl -fsSI -m 10 "$_u" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
-          [ -n "$d" ] && sudo date -s "$d" >/dev/null 2>&1 && break
+          [ -n "$d" ] && sudo date -s "${d/, /}" >/dev/null 2>&1 && break
         done
       fi
       sudo env PYTHONPATH="$PY_PATH" "$PY" "$agnos_py" --swap "$manifest" && sudo reboot
@@ -872,6 +887,27 @@ BUNDLED_WHEELS=(
 ensure_bundled_wheels() {
   local entry probe req
   local missing=()
+
+  # Fast path: verify all probes in ONE interpreter. 26 separate `python -c`
+  # startups cost ~0.3-0.5s each on the C3 (~10s every boot); a single combined
+  # import costs ~3s (cv2 dominates). The cv2 probe's asserts are valid python
+  # statements, so they fold into the same -c body via ';'. Only when the
+  # combined probe fails do we drop to the per-package loop below, which
+  # individually identifies and repairs whatever is missing - identical
+  # verification strength, one interpreter instead of 26.
+  local probe_stmts=()
+  for entry in "${BUNDLED_WHEELS[@]}"; do
+    probe="${entry%%|*}"
+    probe_stmts+=("import ${probe%%;*}")
+    local rest="${probe#*;}"
+    [ "$rest" != "$probe" ] && probe_stmts+=("$rest")
+  done
+  local combined_probe
+  combined_probe=$(printf '%s; ' "${probe_stmts[@]}")
+  if python_package_ok "$combined_probe"; then
+    return 0
+  fi
+
   for entry in "${BUNDLED_WHEELS[@]}"; do
     probe="${entry%%|*}"
     req="${entry#*|}"
@@ -1011,14 +1047,28 @@ function run_startup_command {
 }
 
 function ensure_params_registry {
+  # Per-boot skip: the check spawns a python that imports capnp+params (~3-5s
+  # on the C3) EVERY boot. The registry can only disagree with the checkout
+  # when the checkout or libparams_c.so changed, so cache a pass keyed by the
+  # packaged source commit (git_src_commit is written by build_stripped.sh; dev
+  # checkouts without it always re-check, keeping dev behavior identical).
+  local stamp="$DIR/.params_registry_ok"
+  local src_commit=""
+  [ -f "$DIR/git_src_commit" ] && src_commit="$(cat "$DIR/git_src_commit" 2>/dev/null)"
+  if [ -n "$src_commit" ] && [ -f "$stamp" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$src_commit" ]; then
+    return 0
+  fi
   if ! PYTHONPATH="$PY_PATH" python3 "$DIR/openpilot/system/manager/params_check.py"; then
     echo "[warn] Native Params do not match this checkout; rebuilding libparams_c.so"
     rm -f "$DIR"/openpilot/common/params.*.os "$DIR"/openpilot/common/params_pyx.*.os \
-          "$DIR"/openpilot/common/libparams_c.so "$DIR"/openpilot/common/libparams_c.a
+          "$DIR"/openpilot/common/libparams_c.so "$DIR"/openpilot/common/libparams_c.a \
+          "$stamp"
     if ! (cd "$DIR" && PYTHONPATH="$PY_PATH" scons -j"$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || echo 4)" openpilot/common/libparams_c.so >> /tmp/params_build.log 2>&1); then
       echo "[warn] libparams_c.so rebuild failed; booting best-effort (see /tmp/params_build.log)"
+      return 0
     fi
   fi
+  [ -n "$src_commit" ] && echo "$src_commit" > "$stamp"
 }
 
 # BlueZ is not shipped on C3, but the Carrot Bluetooth HID remote feature needs
@@ -1140,7 +1190,17 @@ ensure_bluez() {
   ) &
 }
 
+# Per-stage boot timing: append "HH:MM:SS.nanos stage" lines to /tmp/launch_ts.log
+# so a slow boot can be attributed to its exact stage over serial/ssh without
+# re-running anything. Cost is one date(1) spawn per stage, ~1ms.
+launch_stage() {
+  echo "$(date '+%H:%M:%S.%N') $*" >> /tmp/launch_ts.log 2>/dev/null
+  return 0
+}
+
 launch() {
+  : > /tmp/launch_ts.log 2>/dev/null
+  launch_stage "launch enter"
   [ -f "$DIR/.git/index.lock" ] && rm -f "$DIR/.git/index.lock"
 
   if [ -f "${DIR}/.overlay_init" ]; then
@@ -1163,9 +1223,18 @@ launch() {
     elif [ -f "${STAGING_ROOT}/finalized/.overlay_consistent" ] && [ ! -d /data/safe_staging/old_openpilot ]; then
       echo "Valid overlay update found, installing"
       local launcher="${BASH_SOURCE[0]}"
+      # The finalized tree carries a prebuilt from the running tree. It is
+      # only valid for the same source commit: when the update actually
+      # changes code, drop it so build.py runs once against the new tree.
+      # Same-version swaps keep it and skip the build entirely.
+      if ! cmp -s "${STAGING_ROOT}/finalized/git_src_commit" "$DIR/git_src_commit"; then
+        echo "overlay update changes the source commit; dropping carried prebuilt"
+        rm -f "${STAGING_ROOT}/finalized/prebuilt"
+      fi
       mv "$DIR" /data/safe_staging/old_openpilot
       mv "${STAGING_ROOT}/finalized" "$DIR"
       cd "$DIR"
+      launch_stage "overlay update swapped in"
       echo "Restarting launch script ${launcher}"
       unset AGNOS_VERSION
       exec "${launcher}"
@@ -1217,12 +1286,14 @@ launch() {
   PY=$(find_python python3.12) || PY=python3
   PY_PATH=$(setup_python_path "$DIR")
   export PY PY_PATH
+  launch_stage "env ready"
 
   # hardware specific init
   if [ -f /AGNOS ]; then
     # with Jetlink on, draw nothing from its USB-C port from boot (docs/porting.md in jetlink)
     sudo -n bash jetlink/comma/jetlink-root.sh boot /data/params/d/JetlinkLink &
     agnos_init
+    launch_stage "agnos_init done"
 
     # PYTHONPATH must be the SAME set as PY_PATH, not just $PWD.
     #
@@ -1254,6 +1325,7 @@ launch() {
       echo "[bootstrap_deps] not satisfied at boot; retrying in background" >> /tmp/bootstrap.log
       bootstrap_deps_retry >> /tmp/bootstrap.log 2>&1 &
     fi
+    launch_stage "bootstrap_deps done"
   fi
 
   sudo mkdir -p /cache/tsk
@@ -1261,10 +1333,12 @@ launch() {
 
   # AGNOS-specific hardware detection (slow on first boot, cached afterwards)
   [ -f /AGNOS ] && { set_tici_hw; set_lite_hw; }
+  launch_stage "hw detection done"
 
   # Build Params .so before services need it; after an overlay update it is
   # missing and would cause webui to fall back to dev/mock mode.
   ensure_params_build
+  launch_stage "params .so ready"
 
   # BlueZ is required for the Carrot Bluetooth HID remote panel. It is not
   # present on a fresh C3 image, so install it on first boot if missing.
@@ -1274,6 +1348,7 @@ launch() {
   # ensure_updater_deps). Do it here too so the dependency is satisfied even when
   # AGNOS is already current and agnos_init returns early.
   ensure_updater_deps
+  launch_stage "bluez/updater deps done"
 
   # Start AI and WebUI before the AGNOS OS update so they stay reachable even
   # if the updater loops waiting for user confirmation.
@@ -1290,6 +1365,7 @@ launch() {
   # UI splash-loops for lack of a DRM master fd. Idempotent, fails safe.
   ensure_egl_vendor
   is_comma_big_hw && { ensure_touch_input; ensure_magic_service; }
+  launch_stage "egl/touch/magic ready"
 
   # sshd boot guarantee. sshd is managed by ssh-param-watcher(.path/.service):
   # the .path unit only fires on SshEnabled *modifications*, so on rootfs images
@@ -1308,18 +1384,26 @@ launch() {
   [ -f /AGNOS ] && agnos_init
 
   tmux capture-pane -pq -S-1000 > /tmp/launch_log
+  launch_stage "pre-build stages done"
 
   # Font atlases are produced by the ui SConscript, but with prebuilt present
   # scons is skipped entirely. An overlay-update swap replaces the tree with a
   # copy whose untracked atlases were whiteouted by the updater's git clean,
   # leaving no pre-baked fonts: every boot then re-bakes CJK fallbacks and
   # crawls through startup. Regenerate just the atlases in that case.
+  #
   # Upstream master 736fcd0951. PYTHONPATH is explicit here because $PY resolves
   # to the system python3.12 on AGNOS, while pyray lives in /usr/local/venv.
+  #
+  # The bake is pure-CPU raylib rasterization with no shared state with the
+  # scons build below, so on an OTA-install boot the two run CONCURRENTLY:
+  # ~40s of font baking hides inside the ~50s build instead of stacking in
+  # front of it (fonts only matter once the UI renders, after both finish).
+  local font_pid=""
   if ! ls "$DIR"/openpilot/selfdrive/assets/fonts/OpFont-*-*.* >/dev/null 2>&1; then
-    echo "[fonts] font atlases missing, regenerating"
-    (cd "$DIR" && PYTHONPATH="$PY_PATH" "$PY" openpilot/selfdrive/assets/fonts/process.py >> /tmp/font_bake.log 2>&1) ||
-      echo "[warn] font atlas regeneration failed; UI will bake fallbacks at startup"
+    echo "[fonts] font atlases missing, regenerating (parallel with build)"
+    (cd "$DIR" && PYTHONPATH="$PY_PATH" "$PY" openpilot/selfdrive/assets/fonts/process.py >> /tmp/font_bake.log 2>&1) &
+    font_pid=$!
   fi
 
   cd openpilot/system/manager
@@ -1347,8 +1431,16 @@ launch() {
       tail -n 20 "$BUILD_LOG" 2>/dev/null | sed 's/^/[error] /'
     fi
   fi
+  if [ -n "$font_pid" ]; then
+    if ! wait "$font_pid"; then
+      echo "[warn] font atlas regeneration failed; UI will bake fallbacks at startup"
+    fi
+  fi
+  launch_stage "fonts+build done"
   ensure_params_registry
+  launch_stage "params registry ok"
   run_startup_command ./manager.py
+  launch_stage "manager exited"
 
   while true; do sleep 1; done
 }

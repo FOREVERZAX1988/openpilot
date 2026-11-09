@@ -941,8 +941,13 @@ class GuiApplication(GuiApplicationExt):
           # raylib_nb has no load_font shim; LoadFontEx with no codepoints is
           # the C LoadFont() equivalent (fontSize is ignored for .fnt atlases)
           font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
-          default_id = rl.get_font_default().texture.id
-          if font.texture.id <= 0 or font.texture.id == default_id:
+          # Detect LoadFontEx failure (raylib returns GetFontDefault() on
+          # failure). Texture ids get recycled by the GL driver, so id
+          # equality with the default font false-positives on loaded atlases;
+          # compare identity features instead (default font: 95 glyphs @ 10px,
+          # pre-baked OpFont atlases carry ~1000 glyphs).
+          default_font = rl.get_font_default()
+          if font.texture.id <= 0 or (font.glyphCount == default_font.glyphCount and font.baseSize == default_font.baseSize):
             # The atlas exists but this loader cannot use it. Record the failure
             # once per atlas: every later font-cache rebuild bakes directly.
             _PREBAKED_FONT_FAILURES.add(filename)

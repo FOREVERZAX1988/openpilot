@@ -146,6 +146,9 @@ class LongitudinalPlannerSP:
     self._fusion_enabled = self._params.get_bool("CarrotTrafficLightFusionEnabled")
     self._turn_accel_enabled = self._params.get_bool("CarrotTurnAccelEnabled")
     self._cutin_predecel_enabled = self._params.get_bool("CarrotCutinPredecelEnabled")
+    # cp CruiseMaxVals0-6 cruise-acceleration envelope (default OFF until device
+    # A/B validation): gates get_carrot_max_accel's third contributor below.
+    self._cruise_accel_enabled = self._params.get_bool("CarrotCruiseAccelEnabled")
     self._lead_preview_enabled = self._params.get_bool("CarrotLeadPreviewEnabled")
     self._lead_preview = 0.0
     self._lead_preview_accel = 0.0
@@ -257,6 +260,17 @@ class LongitudinalPlannerSP:
           cap = limit if cap is None else min(cap, limit)
       except (AttributeError, KeyError, TypeError, ValueError):
         pass
+    if self._cruise_accel_enabled:
+      # cp CruiseMaxVals envelope: a deliberate acceleration character curve, so
+      # unlike the two safety-flavored contributors above it takes its own opt-in
+      # switch and is scaled by the driving-mode factor. Same channel, same rule:
+      # it can only tighten the cap, never loosen it.
+      try:
+        envelope = self.carrot_source.carrot.get_carrot_accel(v_ego)
+        if math.isfinite(envelope):
+          cap = envelope if cap is None else min(cap, envelope)
+      except (AttributeError, TypeError, ValueError):
+        pass
     return cap
 
   def get_cruise_target_override(self, v_ego: float, v_target: float, force_decel: bool, accel_coast: float | None = None) -> float:
@@ -344,6 +358,7 @@ class LongitudinalPlannerSP:
       self._carrot_enabled = self._params.get_bool("CarrotLongitudinalSourceEnabled")
       self._fusion_enabled = self._params.get_bool("CarrotTrafficLightFusionEnabled")
       self._lead_drop_enabled = self._params.get_bool("SlcLeadDropRelaxationEnabled")
+      self._cruise_accel_enabled = self._params.get_bool("CarrotCruiseAccelEnabled")
 
     # Smart Cruise Control
     # SCC has nothing to act through without openpilot long or ICBM, the same condition

@@ -17,6 +17,7 @@ class _FakeRL:
 
   def __init__(self):
     self.calls = []
+    self.color_args = []
 
   @staticmethod
   def Color(*args):
@@ -24,7 +25,9 @@ class _FakeRL:
 
   @staticmethod
   def Rectangle(*args):
-    return ('rect',) + args
+    # The real raylib_nb Rectangle carries .x/.y/.width/.height, and the HUD
+    # reads them back off constructed rects - mirror that here.
+    return NS(x=float(args[0]), y=float(args[1]), width=float(args[2]), height=float(args[3]))
 
   @staticmethod
   def Vector2(x, y=0.0):
@@ -34,20 +37,32 @@ class _FakeRL:
   def WHITE(self):
     return ('white',)
 
+  def _color(self, arg):
+    # FakeRL.Color tags its products with a leading 'color'; record every
+    # colour a draw call receives so tests can reject raw tuples (which
+    # raylib_nb rejects).
+    self.calls.append('color-arg')
+    self.color_args.append(arg)
+
   def draw_circle(self, *_args):
     self.calls.append('circle')
+    self._color(_args[-1])
 
   def draw_circle_lines(self, *_args):
     self.calls.append('ring')
+    self._color(_args[-1])
 
   def draw_rectangle_rounded(self, *_args):
     self.calls.append('box')
+    self._color(_args[-1])
 
   def draw_rectangle_rounded_lines_ex(self, *_args):
     self.calls.append('boxline')
+    self._color(_args[-1])
 
   def draw_text_ex(self, *_args):
     self.calls.append('text')
+    self._color(_args[-1])
 
 
 def _plan(action=0, suspended=False):
@@ -75,6 +90,8 @@ class TestSignalHudRender(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_state = None
     self.renderer._yolo_reader = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
 
   def tearDown(self):
     ui_state.carrot_signal_hud = self._orig_flag
@@ -127,6 +144,8 @@ class TestYoloDot(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_reader = None
     self.renderer._yolo_state = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
 
   def tearDown(self):
     ui_state.carrot_signal_hud = self._orig_flag
@@ -174,6 +193,8 @@ class TestYoloBoxes(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_reader = None
     self.renderer._yolo_state = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
     self.renderer._yolo_frame_size = (1344, 760)
 
   def tearDown(self):
@@ -183,6 +204,17 @@ class TestYoloBoxes(unittest.TestCase):
   def _render_tracks(self, tracks):
     self.renderer._yolo_tracks = tracks
     self.renderer.render(_rect(), {'longitudinalPlanSP': _plan(action=0)})
+
+  def test_every_drawn_color_is_a_raylib_color(self):
+    # raylib_nb rejects a plain tuple where a Color is expected
+    # ("Invoked with types: ..., tuple") - the crash that took the UI
+    # down mid-drive. A FakeRL.Color product starts with the 'color' tag;
+    # a raw YOLO_BOX_COLORS tuple starts with an int.
+    self._render_tracks([{'box': [500., 180., 620., 220.], 'state': 'red', 'lamps': []}])
+    self.assertTrue(self._fake.color_args)
+    for arg in self._fake.color_args:
+      self.assertIsInstance(arg, tuple)
+      self.assertEqual(arg[0], 'color', f"raw colour reached a draw call: {arg!r}")
 
   def test_unknown_track_draws_no_box(self):
     # The tail-lamp case: a housing with a red lamp demoted to unknown.
@@ -219,6 +251,8 @@ class TestBrakeCaption(unittest.TestCase):
     self.renderer._yolo_next_read = float('inf')
     self.renderer._yolo_state = None
     self.renderer._yolo_reader = None
+    self.renderer._yolo_tracks = []
+    self.renderer._yolo_frame_size = (0, 0)
 
   def tearDown(self):
     ui_state.carrot_signal_hud = self._orig_flag

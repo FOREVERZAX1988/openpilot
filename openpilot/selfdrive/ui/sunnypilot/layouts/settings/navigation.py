@@ -55,12 +55,13 @@ class NavigationLayout(Widget):
       param="CarrotNaviV2Enabled",
     )
 
-    # OFF by default: this lets a navigation packet synthesise a turn signal, and the
-    # synthetic blinker reaches the vehicle's own turn-signal CAN message.
+    # Default ON (cp parity): the navigation packet synthesises a turn signal, and the
+    # synthetic blinker reaches the vehicle's own turn-signal CAN message. BSD /
+    # obstacle / driver-cancel gates stay active; switch off here to opt out.
     self._carrot_atc_blinker = toggle_item_sp(
       title=tr("Carrot ATC Turn Signal"),
-      description=tr("Let the Carrot app's turn instruction act as a turn signal. " +
-                     "This reaches the car's real turn signal, so it is off by default."),
+      description=tr("Let the Carrot app's turn instruction act as a turn signal and steer for exits and turns. " +
+                     "On by default; turn off if you don't want navigation to actuate the signal."),
       param="CarrotAtcBlinkerEnabled",
     )
 

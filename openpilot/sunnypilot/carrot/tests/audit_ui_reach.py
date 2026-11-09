@@ -115,7 +115,9 @@ NOTES = {
   'VisionSpeedLimitEnabled': '视觉识别的限速并入地图源，只降不升',
   'VisionSpeedLimitLowLimitFilter': '丢弃低于阈值的识别结果（多为误读）',
   'VisionSpeedLimitLowLimitThreshold': '上一条的阈值，m/s',
-  'FlmRuntimeOverridesEnabled': '把 FLMActiveOverrides 里的摩擦曲线/车辆旋钮注入扭矩控制器',}
+  'FlmRuntimeOverridesEnabled': '把 FLMActiveOverrides 里的摩擦曲线/车辆旋钮注入扭矩控制器',
+  'CarrotCruiseAccelEnabled': 'cp CruiseMaxVals0-6 加速曲线包络，经 get_carrot_max_accel 只降不升；上车 A/B 前保持默认关',
+}
 
 
 def _rel(path: str) -> str:

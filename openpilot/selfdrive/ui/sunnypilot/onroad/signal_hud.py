@@ -239,7 +239,7 @@ class SignalHudRenderer:
       label = YOLO_SIGNAL_LABELS[state]
 
       srect = self._yolo_box_screen_rect((x1, y1, x2, y2), rect, frame_w, frame_h)
-      color = YOLO_BOX_COLORS[state]
+      color = rl.Color(*YOLO_BOX_COLORS[state])
       shadow = rl.Color(0, 0, 0, 140)
       # Shadowed stroke for legibility over the bright road scene.
       rl.draw_rectangle_rounded_lines_ex(

@@ -1931,9 +1931,10 @@ class CarrotManager:
               web_ok = web_response is not None and getattr(web_response, "ok", False)
               carrot_logs_response = self.send_tmux_carrot_logs(pending_tmux_reason, send_settings = False)
               carrot_logs_ok = carrot_logs_response is not None and getattr(carrot_logs_response, "ok", False)
+              discord_ok = self.send_tmux_discord(pending_tmux_reason, web_ok, carrot_logs_ok)
               # Only clear the flag once one destination accepted the upload,
               # so a failed send retries on the next loop (cp semantics).
-              if web_ok or carrot_logs_ok:
+              if web_ok or carrot_logs_ok or discord_ok:
                 self.params.put_bool("CarrotException", False)
 
           elif 'echo_cmd' in json_obj:
@@ -3396,6 +3397,128 @@ class CarrotManager:
       import traceback
       traceback.print_exc()
       return None
+
+  # ---- Discord webhook destination (cp parity, privacy-first) -------------
+  #
+  # cp baked its operator's Discord webhook into the binary XOR-obfuscated;
+  # this fork ships no endpoint (same contract as recovery/server.py and
+  # send_tmux_web): the URL comes from CARROT_EXCEPTION_DISCORD_WEBHOOK_URL /
+  # CARROT_DISCORD_WEBHOOK_URL / DISCORD_WEBHOOK_URL env, or the
+  # CarrotExceptionDiscordWebhookUrl param. Unconfigured = skipped.
+
+  DISCORD_TMUX_FILE_MAX_BYTES = 8 * 1024 * 1024
+
+  def _discord_webhook_url(self) -> str:
+    disabled = os.environ.get("CARROT_EXCEPTION_DISCORD_WEBHOOK_DISABLE", "").strip().lower()
+    if disabled in ("1", "true", "yes", "on"):
+      return ""
+    for key in ("CARROT_EXCEPTION_DISCORD_WEBHOOK_URL", "CARROT_DISCORD_WEBHOOK_URL", "DISCORD_WEBHOOK_URL"):
+      value = os.environ.get(key, "").strip()
+      if value:
+        return value
+    value = self.params.get("CarrotExceptionDiscordWebhookUrl")
+    if isinstance(value, bytes):
+      value = value.decode("utf-8", errors="replace")
+    return str(value or "").strip()
+
+  def _discord_content(self, tmux_why: str, web_ok: bool, carrot_logs_ok: bool) -> str:
+    from datetime import datetime
+
+    def _pstr(key, default="unknown"):
+      v = self.params.get(key) or ""
+      v = v.decode("utf-8", errors="ignore") if isinstance(v, bytes) else v
+      return str(v).strip() or default
+
+    commit = _pstr("GitCommit")
+    repo = _pstr("GitRemote")
+    if repo.startswith("git@github.com:"):
+      repo = "https://github.com/" + repo[len("git@github.com:"):]
+    repo = repo.removesuffix(".git") or "unknown"
+    commit_text = f"[{commit[:8]}]({repo}/commit/{commit})" if commit != "unknown" else "unknown"
+    lines = [
+      "# Carrot Exception",
+      "### Upload",
+      f"- Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+      f"- Reason: {tmux_why}",
+      f"- Web: {'ok' if web_ok else 'failed'}",
+      f"- carrot_logs: {'ok' if carrot_logs_ok else 'failed'}",
+      "### Device",
+      f"- Car name: {_pstr('CarName', 'none')}",
+      f"- DongleId: {_pstr('DongleId')}",
+      f"- Serial: {_pstr('HardwareSerial')}",
+      f"- GitHub: {repo}",
+      f"- Branch: {_pstr('GitBranch')}",
+      f"- Commit: {commit_text} ({_pstr('GitCommitDate')})",
+    ]
+    return "\n".join(lines)[:1900]
+
+  def send_tmux_discord(self, tmux_why: str, web_ok: bool = False, carrot_logs_ok: bool = False,
+                        send_settings: bool = False) -> bool:
+    """Post the exception summary + tmux capture to a Discord webhook (cp parity).
+
+    Returns True only when the webhook accepted the message, so the caller can
+    include it in the "some destination accepted" retry/clear condition.
+    """
+    import json as _json
+    from datetime import datetime
+
+    import requests
+
+    url = self._discord_webhook_url()
+    if not url:
+      return False
+    if not url.startswith(("http://", "https://")):
+      print("[carrot_man] discord skipped: invalid webhook url")
+      return False
+
+    payload = {
+      "username": "Carrot Exception",
+      "content": self._discord_content(tmux_why, web_ok, carrot_logs_ok),
+      "allowed_mentions": {"parse": []},
+      "flags": 4,  # suppress embeds; the content is the message
+    }
+
+    tmux_path = "/data/media/tmux.log"
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    branch = (self.params.get("GitBranch") or b"unknown")
+    branch = branch.decode("utf-8", errors="ignore") if isinstance(branch, bytes) else branch
+    branch = str(branch).strip() or "unknown"
+
+    files: list[tuple[str, tuple[str, Any, str]]] = []
+    try:
+      if os.path.exists(tmux_path):
+        tmux_size = os.path.getsize(tmux_path)
+        max_bytes = self.DISCORD_TMUX_FILE_MAX_BYTES
+        if tmux_size <= max_bytes:
+          with open(tmux_path, "rb") as f:
+            tmux_bytes = f.read()
+          files.append(("files[0]", (f"{tmux_why}-{stamp}-{branch}.txt", tmux_bytes, "text/plain")))
+        else:
+          with open(tmux_path, "rb") as f:
+            head = f.read(max_bytes // 2)
+            f.seek(max(0, tmux_size - max_bytes // 2))
+            tail = f.read(max_bytes // 2)
+          truncated = head + b"\n\n===== DISCORD TMUX TRUNCATED =====\n\n" + tail
+          files.append(("files[0]", (f"{tmux_why}-{stamp}-{branch}-truncated.txt", truncated, "text/plain")))
+
+      toggle_path = "/data/toggle_values.json"
+      if send_settings and os.path.exists(toggle_path) and os.path.getsize(toggle_path) <= self.DISCORD_TMUX_FILE_MAX_BYTES:
+        with open(toggle_path, "rb") as f:
+          toggle_bytes = f.read()
+        files.append(("files[1]", (f"toggles-{stamp}.json", toggle_bytes, "application/json")))
+
+      if files:
+        response = requests.post(url, data={"payload_json": _json.dumps(payload, ensure_ascii=False)},
+                                 files=files, timeout=12)
+      else:
+        response = requests.post(url, json=payload, timeout=12)
+
+      ok = 200 <= response.status_code < 300
+      print(f"[carrot_man] discord tmux {'sent' if ok else 'failed'}: status={response.status_code} reason={tmux_why}")
+      return ok
+    except Exception as e:
+      print(f"[carrot_man] discord tmux error: {e}")
+      return False
 
 
 def _thread_excepthook(args):

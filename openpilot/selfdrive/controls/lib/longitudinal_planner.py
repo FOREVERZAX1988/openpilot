@@ -17,7 +17,8 @@ from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import (
   STOP_DISTANCE,
   desired_follow_distance,
 )
-from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan, should_stop
+from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan, should_stop, STOPPING_SPEED
+from openpilot.common.stopping_params import get_stopping_speed
 from openpilot.selfdrive.controls.lib.lead_follow_policy import apply as apply_follow_policy
 from openpilot.selfdrive.controls.lib.longitudinal_uncertainty import (
   UncertaintyTracker,
@@ -100,6 +101,11 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.allow_throttle = True
     self.accel_boost = AccelBoost()
     self._params = Params()
+    # VEgoStopping (cp stopping_params): tunable stop threshold, hundredths of
+    # m/s. Refreshed with the other low-rate params below; until the first
+    # refresh this is the historical STOPPING_SPEED, so behavior is unchanged
+    # for anyone who never touches the new param.
+    self.stopping_speed = STOPPING_SPEED
     self._policy_frame = 0
     self.lead_follow_policy_enabled = self._params.get_bool("LeadFollowPolicyEnabled")
     self._stop_depart_frame = 0
@@ -333,7 +339,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     # apply only a bounded early deceleration. Never adds acceleration.
     action_t, output_a_target_mpc = self.apply_lead_preview(
       sm, action_t, output_a_target_mpc, reset_state, v_ego)
-    output_should_stop_mpc = should_stop(v_ego, output_a_target_mpc)
+    output_should_stop_mpc = should_stop(v_ego, output_a_target_mpc, self.stopping_speed)
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
@@ -356,7 +362,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       sm, gated_cruise, ungated_cruise, output_a_target_mpc, self.mpc.source,
       allow_throttle=self.allow_throttle, e2e=is_e2e, force_decel=force_decel,
     )
-    cruise_should_stop = should_stop(v_ego, self.a_cruise)
+    cruise_should_stop = should_stop(v_ego, self.a_cruise, self.stopping_speed)
 
     output_a_target_e2e = self.accel_boost.update(sm, output_a_target_e2e, output_a_target_mpc, self.a_cruise)
 
@@ -378,6 +384,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       self.lane_change_close_gap_enabled = read_bool(self._params, "LaneChangeCloseGapEnabled")
       self.lane_change_merge_assist_enabled = read_bool(self._params, "LaneChangeMergeAssistEnabled")
       self.traffic_stop_profile_enabled = self._params.get_bool("CarrotTrafficStopProfileEnabled")
+      self.stopping_speed = get_stopping_speed(self._params)
     if self.lead_follow_policy_enabled and self.mpc.source in (LongitudinalPlanSource.lead0, LongitudinalPlanSource.lead1):
       follow_result = apply_follow_policy(
         sm['radarState'].leadOne, sm['radarState'].leadTwo,

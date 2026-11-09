@@ -170,6 +170,83 @@ def init_overlay() -> None:
   cloudlog.info(f"git diff output:\n{git_diff}")
 
 
+# Untracked build artifacts that must not be carried into a finalized tree.
+# `prebuilt` IS carried: the launcher skips build.py entirely when it exists,
+# and on C3 even a cache-hot scons pass costs ~50s. The launcher drops a
+# carried prebuilt when the update's git_src_commit differs from the running
+# tree's, so real code changes still get one rebuild. The overlay canaries
+# belong to the updater.
+NON_CARRIED_ARTIFACTS = {".overlay_init", ".overlay_consistent"}
+
+
+def _ignored_paths(root: str) -> list[str]:
+  """Untracked+ignored file paths in the git repo at `root`, relative to it.
+
+  -z keeps paths raw (no quoting), which pairs with tar --null below."""
+  out = run(["git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z"], root)
+  return [p for p in out.split("\0") if p]
+
+
+def _submodule_paths(basedir: str) -> list[str]:
+  """Top-level submodule worktree paths; build outputs inside them are
+  invisible to the parent repo's git ls-files."""
+  try:
+    out = run(["git", "config", "-f", ".gitmodules", "--get-regexp",
+               r"^submodule\..+\.path$"], basedir)
+  except subprocess.CalledProcessError:
+    return []  # no .gitmodules / no submodules
+  paths = []
+  for line in out.splitlines():
+    _, _, value = line.partition(" ")
+    value = value.strip()
+    if value and os.path.isdir(os.path.join(basedir, value)):
+      paths.append(value)
+  return paths
+
+
+def carry_build_artifacts(basedir: str, finalized: str, staging_root: str) -> None:
+  """Copy build artifacts from the running tree into the finalized update.
+
+  The staging `git clean -xdff` whiteouts every untracked build artifact in
+  the overlay (scons outputs, baked font atlases, .sconsign), so a finalized
+  tree swapped in at boot pays a full scons rebuild plus a ~45s font re-bake
+  on every update. Carrying the running tree's artifacts over lets the first
+  post-update boot rebuild only what the update invalidated, and keeps boots
+  fast for DisableUpdates devices from then on.
+
+  Best-effort: any failure here means a slower next boot, never a broken
+  update, so exceptions are logged and swallowed.
+  """
+  try:
+    paths: list[str] = list(_ignored_paths(basedir))
+    for sm in _submodule_paths(basedir):
+      sm_dir = os.path.join(basedir, sm)
+      try:
+        paths.extend(os.path.join(sm, p) for p in _ignored_paths(sm_dir))
+      except subprocess.CalledProcessError:
+        cloudlog.exception("skipping uncarriable submodule %s", sm)
+    paths = sorted({p for p in paths if p not in NON_CARRIED_ARTIFACTS})
+    if not paths:
+      cloudlog.info("no build artifacts to carry into the finalized tree")
+      return
+    list_file = os.path.join(staging_root, "build_artifacts.paths")
+    tar_file = os.path.join(staging_root, "build_artifacts.tar")
+    try:
+      with open(list_file, "w", encoding="utf-8") as f:
+        f.write("\0".join(paths))
+      run(["tar", "-cf", tar_file, "--null", "-T", list_file], basedir)
+      run(["tar", "-xf", tar_file, "-C", finalized])
+      cloudlog.info("carried %d build artifacts into the finalized tree", len(paths))
+    finally:
+      for f in (list_file, tar_file):
+        try:
+          os.unlink(f)
+        except OSError:
+          pass
+  except Exception:
+    cloudlog.exception("failed carrying build artifacts into the finalized tree")
+
+
 def finalize_update() -> None:
   """Take the current OverlayFS merged view and finalize a copy outside of
   OverlayFS, ready to be swapped-in at BASEDIR. Copy using shutil.copytree"""
@@ -185,6 +262,11 @@ def finalize_update() -> None:
 
   run(["git", "reset", "--hard"], FINALIZED)
   run(["git", "submodule", "foreach", "--recursive", "git", "reset", "--hard"], FINALIZED)
+
+  # The staging git clean whiteouts all untracked build artifacts; restore
+  # them from the running tree so the swapped-in boot doesn't rebuild from
+  # scratch. Must happen before the consistent flag goes up.
+  carry_build_artifacts(BASEDIR, FINALIZED, STAGING_ROOT)
 
   set_consistent_flag(True)
   cloudlog.info("done finalizing overlay")
@@ -415,8 +497,8 @@ class Updater:
 
     best, best_prefix = ranked[0]
     if best_prefix:
-      cloudlog.info(f"git_proxy: using proxy {best_prefix} ({best.median_ms}ms), "
-                    f"{len(ranked) - 1} more source(s) in reserve")
+      reserve = len(ranked) - 1
+      cloudlog.info(f"git_proxy: using proxy {best_prefix} ({best.median_ms}ms), {reserve} more source(s) in reserve")
     else:
       cloudlog.info(f"git_proxy: using the official origin ({best.median_ms}ms)")
 

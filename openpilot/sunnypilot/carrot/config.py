@@ -69,7 +69,11 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "AutoCurveSpeedLowerLimit": 30,
   "AutoCurveSpeedFactor": 100,
   "AutoCurveSpeedAggressiveness": 100,
-  "AutoTurnControl": 0,
+  # cp full ATC (steering + turn-speed control). Was 0 - carrot's own legacy
+  # default - which silently kept ATC off on every device that ever ran this
+  # table; devices carrying that seeded 0 are bumped once by CarrotServ's
+  # CarrotAtcMigrated migration (see carrot_serv.update_params).
+  "AutoTurnControl": 2,
   "AutoTurnControlSpeedTurn": 20,
   "AutoTurnControlTurnEnd": 6,
   "AutoTurnMapChange": 0,

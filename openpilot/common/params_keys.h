@@ -679,6 +679,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotTurnAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // cap positive accel by future model curvature in turns
     {"CarrotCutinPredecelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // bounded pre-decel for strong early corner-radar cut-in risk
     {"CarrotLeadPreviewEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // early-decel preview from radar lead deceleration
+    // cp CruiseMaxVals0-6 cruise-acceleration envelope (CarrotPlanner.get_carrot_accel),
+    // wired through get_carrot_max_accel as a third only-lowers-the-cap contributor.
+    // A comfort/character curve, not a safety gate: keep OFF until device A/B
+    // validation. Defaults match stock openpilot's envelope at the endpoints but are
+    // stronger mid-range (1.2 vs 0.8 m/s² near 40 kph).
+    {"CarrotCruiseAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},
     // Display-only overlays. Neither one is read anywhere on the control path.
     {"CarrotRadarPointsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw measured front-radar points in the road view
     {"CarrotSignalHudEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw the neural signal evidence ring (needs SignalAssistMode > 0)
@@ -702,9 +708,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // makes desire_helper treat a blinker as pressed, which reaches the vehicle: the
     // synthetic blinker drives LaneChangeState.preLaneChange -> modelV2 laneChangeState
     // -> controlsd CC.left/rightBlinker -> the car's own turn-signal CAN message. That is
-    // a navigation intent becoming a vehicle actuation, so it has to be an explicit
-    // choice rather than the default.
-    {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},
+    // Navigation-driven actuation gate (synthetic blinker + ATC auto steering).
+    // Product decision 2026-11: default ON to match cp's out-of-the-box behavior;
+    // desire_helper also treats a missing key as enabled, so wiping /data/params
+    // restores the default. BSD / obstacle / driver-cancel sub-gates stay active.
+    {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "1", std::nullopt, 1, SETTINGS_SIMPLE}},
     // Traffic-light YOLO observer (signalyolod): display-only road-scene reading
     // drawn as boxes + labels on the driving view. Never feeds control; the
     // file-based /data/signal-yolo-shadow opt-in still ORs in for CLI users.
@@ -720,6 +728,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // does not have to find three more switches. Each stays independently offable
     // afterwards - they are killswitches, not prerequisites.
     {"CarrotNavFeaturesSeeded", {PERSISTENT, BOOL, "0"}},
+    // One-shot legacy migration: devices that ran carrot before AutoTurnControl
+    // was default-on carry config.py's old seeded 0, and the seeding block above
+    // cannot fix them (CarrotNavFeaturesSeeded is already set). CarrotServ bumps
+    // a stored 0 to full ATC (2) exactly once under this flag; any explicit user
+    // choice made afterwards - including 0 - is respected forever.
+    {"CarrotAtcMigrated", {PERSISTENT, BOOL, "0"}},
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
     // Published by networkd; the Carrot web dialog reads it for the QR link.
     {"NetworkAddress", {CLEAR_ON_MANAGER_START, STRING}},
@@ -777,7 +791,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},
     {"AutoCurveSpeedFactor", {PERSISTENT | BACKUP, INT, "100"}},
     {"AutoCurveSpeedAggressiveness", {PERSISTENT | BACKUP, INT, "100"}},
-    {"AutoTurnControl", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoTurnControl", {PERSISTENT | BACKUP, INT, "2"}},  // cp ATC: 0 off, 1 steering only, 2 speed+steering, 3 speed only; default full
     {"AutoTurnControlRightLaneChange", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp 32ed45b2e: independent right-fork TBT physical-indicator admission
     {"ManualLaneChangeIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp boundary_indicator add-on: manual lamp feedback isolation
     {"ModelDesireIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp indicator_observer: lamp-only model desire intent observation
@@ -883,8 +897,27 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SoundVolumeAdjust", {PERSISTENT | BACKUP, INT, "100"}},
     {"SoundVolumeAdjustEngage", {PERSISTENT | BACKUP, INT, "100"}},
     {"CarrotException", {PERSISTENT | BACKUP, STRING, ""}},
+    // Discord destination for the exception upload chain (carrot_man). Privacy
+    // contract: no baked-in URL in this fork; empty until the operator supplies
+    // one via param or CARROT_* / DISCORD_WEBHOOK_URL env.
+    {"CarrotExceptionDiscordWebhookUrl", {PERSISTENT | BACKUP, STRING, ""}},
+    // Hyundai 0x1EA physical blinker hold lease (cp parity). 0=off, 1/2=lease
+    // modes; the consumer side (capnp field + hyundaicanfd cluster forward +
+    // B1 writer) is a separate hardware-gated port on this fork.
+    // Tire-track overlay on the driving view (cp parity): gradient ribbons at
+    // +/-0.9 m along the predicted path plus an L/R/C drift readout. Display
+    // only; 0 = off.
+    {"CarrotTireTrajectory", {PERSISTENT | BACKUP, INT, "0"}},
+    // CWeb push (remote reachability beacon). URL sources: CWEB_PUSH_REPORT_URL
+    // env, then this param. No baked-in third-party endpoint (privacy-first).
+    {"CwebPushReportUrl", {PERSISTENT | BACKUP, STRING, ""}},
+    {"CwebPushRecoveryBoot", {PERSISTENT, BOOL, "0"}},
     {"JLeadFactor3", {PERSISTENT | BACKUP, FLOAT, "0"}},
     {"CruiseEcoControl", {PERSISTENT | BACKUP, INT, "2"}},
+    // Planner stop threshold in hundredths of m/s (cp stopping_params). cp
+    // default 50 (0.5); this fork keeps its historical 0.25 m/s default so the
+    // knob changes nothing until tuned. get_stopping_speed repairs values
+    // below 10 on read.
     {"MyDrivingModeAuto", {PERSISTENT | BACKUP, INT, "0"}},
     // Integer percent, like TFollowGap*: the consumer divides by 100. It was
     // declared FLOAT, which made the settings row unable to save - an int
@@ -1098,7 +1131,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"DynamicTFollow", {PERSISTENT | BACKUP, FLOAT, "0"}},
     {"CarrotCruiseAtcDecel", {PERSISTENT | BACKUP, INT, "-1"}},
     {"CarrotCruiseDecel", {PERSISTENT | BACKUP, INT, "-1"}},
-    {"LaneChangeBsd", {PERSISTENT | BACKUP, INT, "0"}},
     {"CustomSteerDeltaDown", {PERSISTENT | BACKUP, INT, "0"}},
     {"CustomSteerDeltaDownLC", {PERSISTENT | BACKUP, INT, "0"}},
     {"CustomSteerDeltaUp", {PERSISTENT | BACKUP, INT, "0"}},
@@ -1107,7 +1139,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"VEgoStopping", {PERSISTENT | BACKUP, INT, "50"}},
     {"AChangeCostStarting", {PERSISTENT | BACKUP, INT, "10"}},
     {"CanfdDebug", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"CarrotTireTrajectory", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CruiseButtonTest1", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CruiseButtonTest2", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CruiseButtonTest3", {PERSISTENT | BACKUP, BOOL, "0"}},
