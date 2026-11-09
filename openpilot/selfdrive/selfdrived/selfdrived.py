@@ -583,10 +583,22 @@ class SelfdriveD:
         else:
           self.events.add(EventName.commIssue)
 
+        # Only services that actually participate in all_checks() belong in this
+        # report. The raw dicts also include ignore_alive / ignore_avg_freq /
+        # ignore_valid entries (alertDebug, lateralManeuverPlan, liveTracks, ...),
+        # which made a transient startup blip look like a system-wide IPC failure.
+        # Record why the check failed too: "not_alive" is a dead publisher,
+        # "invalid_only" is merely stale data that the grace period tolerated.
         logs = {
-          'invalid': [s for s, valid in self.sm.valid.items() if not valid],
-          'not_alive': [s for s, alive in self.sm.alive.items() if not alive],
-          'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok],
+          'reason': 'not_alive' if not all_alive else ('not_freq_ok' if not all_freq_ok else 'invalid_only'),
+          'invalid': [s for s, valid in self.sm.valid.items()
+                      if not valid and s not in self.sm.ignore_valid],
+          'not_alive': [s for s, alive in self.sm.alive.items()
+                        if not alive and s not in self.sm.ignore_alive],
+          'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items()
+                          if not freq_ok and s not in self.sm.ignore_alive
+                          and s not in self.sm.ignore_average_freq
+                          and messaging.SERVICE_LIST[s].frequency > 0.99],
         }
         if logs != self.logged_comm_issue:
           cloudlog.event("commIssue", error=True, **logs)
