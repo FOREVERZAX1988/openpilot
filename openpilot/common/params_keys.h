@@ -401,6 +401,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // All writers go through selfdrived; the flag itself is the existing ExperimentalMode param
     // so planner/UI keep their single consumption path.
     {"ConditionalExperimental", {PERSISTENT | BACKUP, BOOL, "0"}},  // master switch; off = manual-only (stock behaviour)
+    {"ConditionalChill", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot CCM: reverse conditional - chill on the open road, experimental in complex scenes; takes precedence over ConditionalExperimental
     {"CECurves", {PERSISTENT | BACKUP, BOOL, "1"}},  // trigger EXP in demanding curves (lat-accel based)
     {"CECurvesLead", {PERSISTENT | BACKUP, BOOL, "1"}},  // allow the curve trigger while following a lead
     {"CELead", {PERSISTENT | BACKUP, BOOL, "1"}},  // trigger EXP when closing on a slower lead

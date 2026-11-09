@@ -16,6 +16,7 @@ Priority model: when the master switch is on, conditions own the mode; a manual 
 press or onroad button) takes over for MANUAL_HOLD_SECONDS, after which conditions resume. At
 standstill the current mode is frozen rather than re-evaluated.
 """
+import math
 import time
 
 import numpy as np
@@ -34,6 +35,9 @@ CE_CURVES = 1
 CE_LEAD = 2
 CE_SIGNAL = 3
 CE_MANUAL = 4
+CE_CCM_SPEED = 5   # CCM chill: open road at cruise speed, no lead
+CE_CCM_LEAD = 6    # CCM chill: stable lead at highway speed
+CE_CCM_VETO = 7    # CCM veto: complex scene, experimental forced on
 
 # --- curve trigger ------------------------------------------------------------
 CURVE_LAT_ACC = 2.0            # m/s^2 of lateral acceleration that counts as "demanding"
@@ -56,6 +60,17 @@ TRANSITION_BUFFER_TIME = 0.25  # after the hold, this grace keeps the mode throu
 MANUAL_HOLD_SECONDS = 60.0     # a manual switch muzzles the conditions for this long
 PARAMS_READ_PERIOD = 1.0       # s; matches SelfdrivedZP's PARAMS_READ_FRAMES cadence
 
+# --- Conditional Chill Mode (StarPilot conditional_mode/policy.py _ccm port) -----
+# CCM is the reverse conditional: chill on the fast/open road, experimental again
+# the moment the scene turns complex (curves, blinkers, slow leads, standstill).
+CCM_SPEED_MPS = 45 * 0.44704          # no-lead chill needs this ego speed (verbatim default)
+CCM_SPEED_WITH_LEAD_MPS = 35 * 0.44704  # stable-lead chill threshold (verbatim default)
+CCM_SET_SPEED_MARGIN_MPS = 3 * 0.44704  # cruise set speed must exceed ego by this (verbatim)
+CCM_SPEED_CONFIRM_S = 0.35    # StarPilot CCM_SPEED_CONFIRM_S
+CCM_LEAD_CONFIRM_S = 1.0      # StarPilot CCM_LEAD_CONFIRM_S
+CCM_MIN_DWELL_S = 1.2         # StarPilot CCM_MIN_DWELL_S
+CCM_EXIT_BUFFER_S = 0.35      # StarPilot CCM_EXIT_BUFFER_S
+
 
 def _scale_threshold(v_ego: float) -> float:
   """Speed-scaled lead filter threshold, from StarPilot: harder to trip with speed."""
@@ -74,6 +89,7 @@ class ConditionalExperimentalMode:
     self._params_read_frame = 0
 
     self.enabled = False
+    self.ccm_enabled = False
     self.curves_enabled = True
     self.curves_lead_enabled = True
     self.lead_enabled = True
@@ -91,12 +107,20 @@ class ConditionalExperimentalMode:
     self.mode_false_since = 0.0
     self.manual_hold_until = 0.0
 
+    # CCM state (StarPilot ConditionalModePolicy._ccm counterparts)
+    self.ccm_chill = False
+    self.ccm_hold_until = 0.0
+    self.ccm_candidate_reason = None
+    self.ccm_candidate_since = 0.0
+    self.ccm_false_since = 0.0
+
     # initial read so toggles/configure values apply from the first frame, not after the
     # first 1 s refresh tick
     self._read_params()
 
   def _read_params(self) -> None:
     self.enabled = self.CP.openpilotLongitudinalControl and self.params.get_bool("ConditionalExperimental")
+    self.ccm_enabled = self.CP.openpilotLongitudinalControl and self.params.get_bool("ConditionalChill")
     # get_bool never consults the registered default, so default-on keys must go through
     # get(..., return_default=True) or an untouched install reads them as False.
     self.curves_enabled = bool(self.params.get("CECurves", return_default=True))
@@ -136,12 +160,17 @@ class ConditionalExperimentalMode:
       self._publish(self.experimental_mode, CE_MANUAL)
       return self.experimental_mode
 
-    if not self.enabled:
-      # Master switch off: pure manual behaviour, nothing to do. One publish so a stale
-      # CEStatus gets cleared, then go quiet.
+    if not self.enabled and not self.ccm_enabled:
+      # Both master switches off: pure manual behaviour, nothing to do. One publish so a
+      # stale CEStatus gets cleared, then go quiet.
       self._publish(self.params.get_bool("ExperimentalMode"), CE_OFF)
       self._reset_holds()
       return self.experimental_mode
+
+    if self.ccm_enabled:
+      # Conditional Chill (StarPilot CCM): the reverse conditional owns the mode
+      # when its master switch is on; the CEM triggers double as its vetoes.
+      return self._update_ccm(CS, sm, now)
 
     if standstill:
       # Freeze: neither evaluate conditions nor drop the mode while stopped.
@@ -163,6 +192,106 @@ class ConditionalExperimentalMode:
 
     ce_value = status if self.experimental_mode else CE_OFF
     self._publish(self.experimental_mode, ce_value)
+    return self.experimental_mode
+
+  # ---- Conditional Chill Mode (StarPilot _ccm port) ------------------------ #
+
+  def _ccm_veto(self, CS, sm, v_ego: float) -> tuple[bool, int]:
+    """Complex-scene vetoes: experimental is forced back on immediately.
+
+    StarPilot additionally vetoes on stop lights/signs and its planner's
+    forcing-stop latch - evidence selfdrived does not subscribe to, so those
+    fields are absent here rather than assumed negative.
+    """
+    following_lead = self._following_lead(sm)
+    if self.curves_enabled and (self.curves_lead_enabled or not following_lead):
+      if self._curve_detected(sm, v_ego):
+        return True, CE_CURVES
+    if self._slow_lead(sm, v_ego):
+      return True, CE_LEAD
+    if CS.leftBlinker or CS.rightBlinker:
+      # StarPilot vetoes on any blinker regardless of speed.
+      return True, CE_SIGNAL
+    return False, CE_OFF
+
+  def _ccm_candidate(self, CS, sm, v_ego: float) -> tuple[bool, int]:
+    """Open-road / stable-lead chill candidates (StarPilot CCM_SPEED / CCM_LEAD)."""
+    lead_status = self._following_lead(sm)
+    if not lead_status:
+      try:
+        v_cruise = float(CS.vCruise)
+      except (AttributeError, TypeError, ValueError):
+        v_cruise = 0.0
+      if v_ego >= CCM_SPEED_MPS and v_cruise - v_ego >= CCM_SET_SPEED_MARGIN_MPS:
+        return True, CE_CCM_SPEED
+      return False, CE_OFF
+    if v_ego >= CCM_SPEED_WITH_LEAD_MPS and self._stable_lead(sm, v_ego):
+      return True, CE_CCM_LEAD
+    return False, CE_OFF
+
+  def _stable_lead(self, sm, v_ego: float) -> bool:
+    """StarPilot _stable_lead verbatim math on the radarState lead."""
+    try:
+      lead = sm["radarState"].leadOne
+      distance = float(lead.dRel)
+      lead_speed = float(lead.vLead)
+      accel = float(lead.aLeadK)
+    except (KeyError, TypeError, AttributeError):
+      return False
+    if not bool(lead.status):
+      return False
+    # radar presence is authoritative; vision-only leads need model confidence
+    radar = bool(getattr(lead, "radar", True))
+    probability = getattr(lead, "modelProb", None)
+    confident = radar or (probability is not None and math.isfinite(float(probability)) and float(probability) >= 0.9)
+    if not confident:
+      return False
+    max_distance = min(90.0, max(35.0, v_ego * 4.5))
+    max_closing = max(1.25, 0.05 * v_ego)
+    return bool(distance < max_distance and lead_speed > 1.5
+                and max(0.0, -accel) <= 0.2 and max(0.0, v_ego - lead_speed) <= max_closing)
+
+  def _update_ccm(self, CS, sm, now: float) -> bool:
+    v_ego = float(CS.vEgo)
+
+    veto, veto_status = self._ccm_veto(CS, sm, v_ego)
+    if veto or CS.standstill:
+      # StarPilot hard veto (standstill included): chill drops, experimental on.
+      self.ccm_chill = False
+      self.ccm_candidate_reason = None
+      self.ccm_candidate_since = 0.0
+      self.ccm_false_since = 0.0
+      self.experimental_mode = True
+      self._publish(True, veto_status or CE_CCM_VETO)
+      return True
+
+    candidate, candidate_status = self._ccm_candidate(CS, sm, v_ego)
+    if candidate:
+      if candidate_status != self.ccm_candidate_reason:
+        self.ccm_candidate_reason = candidate_status
+        self.ccm_candidate_since = now
+      self.ccm_false_since = 0.0
+      confirm = CCM_SPEED_CONFIRM_S if candidate_status == CE_CCM_SPEED else CCM_LEAD_CONFIRM_S
+      if self.ccm_chill or now - self.ccm_candidate_since >= confirm:
+        self.ccm_chill = True
+        self.ccm_hold_until = max(self.ccm_hold_until, now + CCM_MIN_DWELL_S)
+    else:
+      self.ccm_candidate_reason = None
+      if self.ccm_chill and self.ccm_false_since == 0.0:
+        self.ccm_false_since = now
+      hold = now < self.ccm_hold_until
+      buffer = self.ccm_false_since != 0.0 and (now - self.ccm_false_since) < CCM_EXIT_BUFFER_S
+      if self.ccm_chill and not (hold or buffer):
+        self.ccm_chill = False
+
+    self.experimental_mode = not self.ccm_chill
+    if self.ccm_chill:
+      status = candidate_status if candidate else CE_OFF
+    elif veto_status != CE_OFF:
+      status = veto_status
+    else:
+      status = CE_OFF
+    self._publish(self.experimental_mode, status)
     return self.experimental_mode
 
   def _evaluate(self, CS, sm) -> tuple[int, bool]:
