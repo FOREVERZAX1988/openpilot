@@ -6,14 +6,18 @@ layered learning core, never the 344-file live subsystem) and task B3-3. Everyth
 in this package is **inert offline math**: no process imports it yet, nothing here
 reads Params, writes native parameters, or touches a torque/PID output.
 
-## Ported (verbatim, import domain rewritten only)
+## Ported (verbatim unless noted)
+
+Two modules carry documented adaptations beyond the import-domain rewrite,
+disclosed per verification-audit erratum (they are runtime-safe; only the
+wording "verbatim" needed correcting):
 
 | Module | Source | Role |
 |---|---|---|
-| `adaptive_profile.py` | `starpilot/flm/adaptive_profile.py` | Block/Sample provenance contract, train/heldout split, excitation + confound gates, ridge fit, cohort-wise T95 heldout acceptance, `ProfileOwner` slew-limited admission, `readmit_profile` |
+| `adaptive_profile.py` | `starpilot/flm/adaptive_profile.py` | **ADAPTED (7 lines)**: `FullSurfaceEnvelope` runtime import replaced with `from __future__ import annotations` + TYPE_CHECKING guard (full_surface_profile is restore/store wiring-batch scope; the annotation is never evaluated at runtime). Block/Sample provenance contract, train/heldout split, excitation + confound gates, ridge fit, cohort-wise T95 heldout acceptance, `ProfileOwner` slew-limited admission, `readmit_profile` |
 | `event_bounded_ridge.py` | `starpilot/flm/event_bounded_ridge.py` | Deterministic box-constrained ridge solve (≤3⁴ face enumeration), not componentwise clamping |
 | `canonical_surface_adapter.py` | `starpilot/flm/canonical_surface_adapter.py` | full30 coordinate catalog (NAMES/GROUPS/RAW_DOMAINS), coordinate bounds, manifest/anchor digests, `validate_trial`, `CanonicalSurfaceEffects` admission + envelope |
-| `automatic.py` | `starpilot/flm/automatic.py` | linear `latAccelFactor` identification from bank-corrected physical windows, `admit_linear_factor` envelope (±30 % step, 0.7–1.3× vehicle factor) |
+| `automatic.py` | `starpilot/flm/automatic.py` | **ADAPTED (4 lines)**: `FLMSample` imported from `evidence_types` (a byte-identical copy of the frozen dataclass) instead of gm_evidence, whose 1350-line live-collection body is wiring-batch scope. Linear `latAccelFactor` identification from bank-corrected physical windows, `admit_linear_factor` envelope (±30 % step, 0.7–1.3× vehicle factor) |
 | `torque_surface.py` | carved from `starpilot/flm/torque_surface.py` | GM universal surface stage math (`GmSurface`, `_gm_get_flm_full_surface_*`), frozen `_gm_*` constants, `SurfaceInput` |
 | `evidence_types.py` | `starpilot/flm/gm_evidence.py` | frozen `FLMSample` record contract only |
 
