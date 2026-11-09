@@ -13,6 +13,7 @@ from openpilot.cereal import log, custom
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
+from openpilot.sunnypilot.selfdrive.locationd import bin_fit_acceptance
 
 # Speed bins for cars without a speed_dependent.toml entry
 DEFAULT_SPEED_BIN_BOUNDS = [(5, 8), (8, 12), (12, 18), (18, 24), (24, 29), (29, 35), (35, 40)]
@@ -96,10 +97,16 @@ class SpeedBinLearner:
     # a bin with points since its last fit: a full bin's length stops changing while its ring
     # buffers keep turning over, so the length cannot mark new data
     self._speed_bin_dirty = [True] * n_bins
+    # rejection latch per bin: a rejected fit is not adopted and not re-litigated
+    # until new points arrive; the log fires on the transition, not every frame
+    self._speed_bin_rejected = [False] * n_bins
 
     # seeds from the TOML entry, else the global offline values for every bin
     ref_lafs = cfg.get('laf_bp', [self.offline_latAccelFactor] * n_bins)
     ref_frictions = cfg.get('friction_bp', [self.offline_friction] * n_bins)
+    # per-bin seed values: the baseline the heldout acceptance compares
+    # against (bin_fit_acceptance) and what an invalid bin falls back to
+    self.speed_bin_seeds = list(zip(ref_lafs, ref_frictions, strict=True))
     self.speed_bin_decays = [_torqued().MIN_FILTER_DECAY] * n_bins
     # a bin fit since its last reseed: what the restore keys on, since a learned bin can drop
     # below its point minimums (the minimum rose, or the points cache failed) and keep its value
@@ -312,15 +319,32 @@ class SpeedBinLearner:
       try:
         slope, _, friction_coeff = fit_torque_points(points)  # slope = latAccelFactor
         if not any(np.isnan(val) for val in [slope, friction_coeff]):
-          factor_lo, factor_hi = self.speed_bin_lat_accel_factor_bounds[i]
-          fric_lo, fric_hi = self.speed_bin_friction_bounds[i]
-          self.speed_bin_decays[i] = min(self.speed_bin_decays[i] + DT_MDL, torqued.MAX_FILTER_DECAY)  # slow down filter over time
-          self.speed_bin_filtered[i]['latAccelFactor'].update(np.clip(slope, factor_lo, factor_hi))
-          self.speed_bin_filtered[i]['latAccelFactor'].update_alpha(self.speed_bin_decays[i])
-          self.speed_bin_filtered[i]['frictionCoefficient'].update(np.clip(friction_coeff, fric_lo, fric_hi))
-          self.speed_bin_filtered[i]['frictionCoefficient'].update_alpha(self.speed_bin_decays[i])
-          self.speed_bin_learned[i] = True
+          # StarPilot heldout acceptance (bin_fit_acceptance): the candidate is
+          # only adopted when it generalizes better than the seed on data it
+          # was not fit on (two-fold cross-fit, T95 significance margin)
+          seed_slope = self.speed_bin_seeds[i][0]
+          accepted, improvements, reason = bin_fit_acceptance.cross_validate_improvement(
+            points, fit_torque_points, seed_slope)
+          if accepted:
+            factor_lo, factor_hi = self.speed_bin_lat_accel_factor_bounds[i]
+            fric_lo, fric_hi = self.speed_bin_friction_bounds[i]
+            self.speed_bin_decays[i] = min(self.speed_bin_decays[i] + DT_MDL, torqued.MAX_FILTER_DECAY)  # slow down filter over time
+            self.speed_bin_filtered[i]['latAccelFactor'].update(np.clip(slope, factor_lo, factor_hi))
+            self.speed_bin_filtered[i]['latAccelFactor'].update_alpha(self.speed_bin_decays[i])
+            self.speed_bin_filtered[i]['frictionCoefficient'].update(np.clip(friction_coeff, fric_lo, fric_hi))
+            self.speed_bin_filtered[i]['frictionCoefficient'].update_alpha(self.speed_bin_decays[i])
+            self.speed_bin_learned[i] = True
+            self._speed_bin_dirty[i] = False
+            self._speed_bin_rejected[i] = False
+            results.append((i, True))
+            continue
+
+          # rejected: keep the bin at its current value and the points in
+          # place (more data can settle the estimate); refit on new points
           self._speed_bin_dirty[i] = False
+          if not self._speed_bin_rejected[i]:
+            self._speed_bin_rejected[i] = True
+            cloudlog.warning(f"speed-dep: bin {i} fit rejected ({reason}, improvements={np.round(improvements, 6).tolist()}), keeping seed value")
           results.append((i, True))
           continue
       except np.linalg.LinAlgError:
