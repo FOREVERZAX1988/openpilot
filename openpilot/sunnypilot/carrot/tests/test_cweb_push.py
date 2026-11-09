@@ -19,31 +19,12 @@ if 'fcntl' not in sys.modules or not hasattr(sys.modules.get('fcntl'), 'flock'):
 # only exercises get/put through the Params facade, so a dict store is enough.
 try:
   from openpilot.common.params import Params
-except OSError:
-  class Params:
-    _store: dict[str, str] = {}
-
-    def __init__(self, *args, **kwargs):
-      pass
-
-    def get(self, key, *args, **kwargs):
-      value = self._store.get(key)
-      if value is None:
-        return None
-      try:
-        return int(value)
-      except (TypeError, ValueError):
-        return value
-
-    def put(self, key, value, *args, **kwargs):
-      self._store[key] = str(value)
-
-    def remove(self, key, *args, **kwargs):
-      self._store.pop(key, None)
-
-  _params_mod = types.ModuleType('openpilot.common.params')
-  _params_mod.Params = Params
-  sys.modules['openpilot.common.params'] = _params_mod
+except (OSError, ModuleNotFoundError):
+  # PC: no native libparams. Use the shared stub so every suite in a combined
+  # unittest run sees identical Params behavior regardless of load order.
+  from openpilot.common.tests import params_pc_stub
+  params_pc_stub.register()
+  Params = params_pc_stub.Params
 from openpilot.sunnypilot.carrot.cweb_push import (
   CwebPushReporter, build_payload, device_id, resolve_report_url,
 )

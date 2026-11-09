@@ -19,13 +19,11 @@ if 'fcntl' not in sys.modules or not hasattr(sys.modules.get('fcntl'), 'flock'):
 try:
   from openpilot.common.params import Params
 except (OSError, ModuleNotFoundError):
-  _m = types.ModuleType('openpilot.common.params')
-
-  class Params:
-    _store: dict[str, str] = {}
-    def __init__(self, *args, **kwargs): pass
-  _m.Params = Params
-  sys.modules['openpilot.common.params'] = _m
+  # PC: no native libparams. Use the shared stub so every suite in a combined
+  # unittest run sees identical Params behavior regardless of load order.
+  from openpilot.common.tests import params_pc_stub
+  params_pc_stub.register()
+  Params = params_pc_stub.Params
 
 from openpilot.selfdrive.controls.lib.desire_lib.assistant_lane import (
   IDENTITY, AssistantLane,

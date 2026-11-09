@@ -19,24 +19,11 @@ if 'fcntl' not in sys.modules or not hasattr(sys.modules.get('fcntl'), 'flock'):
 try:
   from openpilot.common.params import Params
 except (OSError, ModuleNotFoundError):
-  class Params:
-    _store: dict[str, str] = {}
-
-    def __init__(self, *args, **kwargs):
-      pass
-
-    def get_int(self, key, *args, **kwargs):
-      try:
-        return int(self._store.get(key, "0"))
-      except (TypeError, ValueError):
-        return 0
-
-    def put_int(self, key, value, *args, **kwargs):
-      self._store[key] = str(int(value))
-
-  _m = types.ModuleType('openpilot.common.params')
-  _m.Params = Params
-  sys.modules['openpilot.common.params'] = _m
+  # PC: no native libparams. Use the shared stub so every suite in a combined
+  # unittest run sees identical Params behavior regardless of load order.
+  from openpilot.common.tests import params_pc_stub
+  params_pc_stub.register()
+  Params = params_pc_stub.Params
 
 from openpilot.sunnypilot.carrot.bluetooth.physical import (
   FINGERPRINT, HoldReader, lease_value,

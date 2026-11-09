@@ -19,51 +19,12 @@ if 'fcntl' not in sys.modules or not hasattr(sys.modules.get('fcntl'), 'flock'):
 
 try:
   from openpilot.common.params import Params
-except Exception:
-  class Params:
-    _store: dict[str, str] = {}
-
-    def __init__(self, *args, **kwargs):
-      pass
-
-    @classmethod
-    def _reset(cls):
-      cls._store = {}
-
-    def get_bool(self, key, return_default=False, **kwargs):
-      return self._store.get(key, "0") == "1"
-
-    def get_int(self, key, return_default=False, **kwargs):
-      try:
-        return int(self._store.get(key, "0"))
-      except (TypeError, ValueError):
-        return 0
-
-    def get(self, key, encoding=None, return_default=False, **kwargs):
-      # real Params casts INT-typed keys to int (common/params.py ParamKeyType.INT);
-      # mirror that so int comparisons like lane_change_set_timer in (OFF, NUDGE) hold.
-      value = self._store.get(key)
-      if value is None:
-        return 0 if return_default else None
-      try:
-        return int(value)
-      except (TypeError, ValueError):
-        return value
-
-    def put(self, key, value, **kwargs):
-      if value is True or value == "1":
-        value = "1"
-      elif value is False or value == "0":
-        value = "0"
-      else:
-        value = str(value)
-      self._store[key] = value
-
-  # The real module raises during its own import (CDLL at module level), so it is
-  # not left in sys.modules: install the stub module wholesale.
-  _params_mod = types.ModuleType('openpilot.common.params')
-  _params_mod.Params = Params
-  sys.modules['openpilot.common.params'] = _params_mod
+except (OSError, ModuleNotFoundError):
+  # PC: no native libparams. Use the shared stub so every suite in a combined
+  # unittest run sees identical Params behavior regardless of load order.
+  from openpilot.common.tests import params_pc_stub
+  params_pc_stub.register()
+  Params = params_pc_stub.Params
 
 from openpilot.cereal import log, custom
 
