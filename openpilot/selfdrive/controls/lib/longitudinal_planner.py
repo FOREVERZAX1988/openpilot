@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
 import numpy as np
+import time
 
 import openpilot.cereal.messaging as messaging
 from opendbc.car.interfaces import ACCEL_MIN, ACCEL_MAX
@@ -90,6 +91,7 @@ from openpilot.sunnypilot.common.param_read import read_bool
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_mpc_lib.jerk_channels import split_five_channels
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_close_gap import LaneChangeCloseGap
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_merge_floor import get_lane_change_merge_accel_floor
+from openpilot.sunnypilot.selfdrive.controls.lib.throttle_gate import ModelThrottleGate
 
 
 class LongitudinalPlanner(LongitudinalPlannerSP):
@@ -135,6 +137,12 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     # StarPilot lane-change merge assist (default off until the key is
     # registered; read fault-tolerantly like close_gap).
     self.lane_change_merge_assist_enabled = read_bool(self._params, "LaneChangeMergeAssistEnabled")
+    # StarPilot ModelThrottleGate (default off): source-time-held throttle
+    # comfort hysteresis replacing the single-frame 0.4 probability threshold.
+    # The gate steps on modelV2 timestamps (250ms confirm hold, stale/future/gap
+    # fail-closed) and is reset whenever the stock path runs.
+    self.throttle_gate = ModelThrottleGate()
+    self._throttle_gate_enabled = read_bool(self._params, "ModelThrottleGateEnabled")
     self._lc_close_gap = LaneChangeCloseGap(dt=dt)
 
     self.v_desired_filter = FirstOrderFilter(init_v, 2.0, self.dt)
@@ -172,7 +180,19 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
     throttle_probs = sm['modelV2'].meta.disengagePredictions.gasPressProbs
     throttle_prob = throttle_probs[1] if len(throttle_probs) > 1 else 1.0
-    self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
+    if self._throttle_gate_enabled and sm['carControl'].longActive and not reset_state:
+      # StarPilot Ioniq 6 active path: the gate holds the current allow state
+      # until a crossing probability persists 250ms in source (modelV2) time.
+      # Stale, future, gapped or invalid model frames fail closed (no throttle).
+      self.allow_throttle = self.throttle_gate.step(
+        throttle_prob if len(throttle_probs) > 1 else float('nan'),
+        v_ego, low_speed_mps=MIN_ALLOW_THROTTLE_SPEED,
+        model_ns=sm.logMonoTime['modelV2'], now_ns=time.monotonic_ns(),
+        model_valid=(getattr(sm, 'valid', {}).get('modelV2', False) is True and
+                     getattr(sm, 'alive', {}).get('modelV2', False) is True))
+    else:
+      self.throttle_gate.reset()
+      self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
 
     steer_angle_without_offset = sm['carState'].steeringAngleDeg - sm['vehicleParameters'].angleOffsetDeg
 
@@ -315,6 +335,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       self.duplicate_guard_enabled = self._params.get_bool("LeadDuplicateGuardEnabled")
       self.model_lead_enabled = self._params.get_bool("ModelLeadTrajectoryEnabled")
       self._jerk_channels_enabled = self._params.get_bool("MPCJerkChannelsEnabled")
+      self._throttle_gate_enabled = read_bool(self._params, "ModelThrottleGateEnabled")
     panic_bypass = False
     if self.uncertainty_policy_enabled:
       if self._uncert_tracker is None:

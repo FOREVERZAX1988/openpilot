@@ -688,6 +688,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // OFF keeps the planner byte-identical; ON can only lower the cruise target
     // and add a virtual stop obstacle - never raise accel. Needs safety review.
     {"ForceStopEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // StarPilot ModelThrottleGate (source-timed 250ms throttle comfort hysteresis).
+    // A/B gate: OFF keeps the single-frame 0.4 probability threshold untouched.
+    {"ModelThrottleGateEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrafficFollow", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
     {"RelaxedFollow", {PERSISTENT | BACKUP, FLOAT, "1.6"}},
     {"TrafficJerkAcceleration", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
