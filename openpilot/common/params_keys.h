@@ -681,6 +681,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // with dedicated curves. Curve math lives in sunnypilot/carrot/traffic_mode.py;
     // defaults are verbatim StarPilot param defaults.
     {"TrafficModeEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // StarPilot five-channel MPC jerk split (direction-selected at the planner).
+    // A/B-gated: OFF keeps the single-factor carrot path byte-identical.
+    {"MPCJerkChannelsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrafficFollow", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
     {"RelaxedFollow", {PERSISTENT | BACKUP, FLOAT, "1.6"}},
     {"TrafficJerkAcceleration", {PERSISTENT | BACKUP, FLOAT, "100.0"}},

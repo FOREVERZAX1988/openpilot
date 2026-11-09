@@ -87,6 +87,7 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
 
 
 from openpilot.sunnypilot.common.param_read import read_bool
+from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_mpc_lib.jerk_channels import split_five_channels
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_close_gap import LaneChangeCloseGap
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_merge_floor import get_lane_change_merge_accel_floor
 
@@ -123,6 +124,10 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.uncertainty_policy_enabled = self._params.get_bool("UncertaintyPanicBypassEnabled")
     self.duplicate_guard_enabled = self._params.get_bool("LeadDuplicateGuardEnabled")
     self.model_lead_enabled = self._params.get_bool("ModelLeadTrajectoryEnabled")
+    # StarPilot five-channel jerk split (acceleration/deceleration and
+    # speed/speed_decrease selected by aEgo direction). Gated OFF until device
+    # A/B validation; with the gate off the single-factor path is untouched.
+    self._jerk_channels_enabled = self._params.get_bool("MPCJerkChannelsEnabled")
     self._uncert_tracker = None  # lazy: UncertaintyTracker(self.dt)
     # Absolute lane-change headway (default off until the key is registered;
     # read fault-tolerantly so an unregistered key cannot kill the planner).
@@ -187,8 +192,19 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
                                                                           self.output_a_target, v_cruise,
                                                                           reset_state=reset_state)
 
-    self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
-                         jerk_factor=self.carrot_jerk_factor if self.carrot_source_active else None)
+    if self._jerk_channels_enabled and self.carrot_source_active:
+      # StarPilot five-channel split (planner-side, verbatim rule: aEgo >= 0
+      # selects the acceleration/speed channels, else deceleration/speed_decrease;
+      # danger is direction-independent). The carrot source owns the values;
+      # split_five_channels clamps each into the MPC's usable range so a bad
+      # value cannot reach the solver, then the explicit three-channel
+      # precedence applies inside set_weights.
+      channels = split_five_channels(self.carrot_source.carrot.jerk_channels, float(sm['carState'].aEgo))
+      self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
+                           jerk_factors=channels)
+    else:
+      self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
+                           jerk_factor=self.carrot_jerk_factor if self.carrot_source_active else None)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.output_a_target)
 
     # The follow time Carrot contributes, scaled by how far the user moved
@@ -282,6 +298,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       self.uncertainty_policy_enabled = self._params.get_bool("UncertaintyPanicBypassEnabled")
       self.duplicate_guard_enabled = self._params.get_bool("LeadDuplicateGuardEnabled")
       self.model_lead_enabled = self._params.get_bool("ModelLeadTrajectoryEnabled")
+      self._jerk_channels_enabled = self._params.get_bool("MPCJerkChannelsEnabled")
     panic_bypass = False
     if self.uncertainty_policy_enabled:
       if self._uncert_tracker is None:

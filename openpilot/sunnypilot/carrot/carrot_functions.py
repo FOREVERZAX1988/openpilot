@@ -702,6 +702,15 @@ class CarrotPlanner:
     return float(self._jerk_factor_apply)
 
   @property
+  def jerk_channels(self) -> tuple[float, float, float, float, float]:
+    """StarPilot five-channel jerk tuple: (acceleration, deceleration, speed,
+    speed_decrease, danger). All channels currently carry the faded single
+    factor, so the planner's direction split is behaviour-neutral until
+    per-channel tuning lands (MPCJerkChannelsEnabled A/B gate)."""
+    value = self.jerk_factor
+    return (value, value, value, value, value)
+
+  @property
   def comfort_brake(self) -> float:
     """Comfort deceleration value used by the MPC for obstacle distance."""
     return float(self._comfort_brake)
