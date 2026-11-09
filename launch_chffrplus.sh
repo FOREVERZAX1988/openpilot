@@ -1095,6 +1095,14 @@ launch() {
     elif [ -f "${STAGING_ROOT}/finalized/.overlay_consistent" ] && [ ! -d /data/safe_staging/old_openpilot ]; then
       echo "Valid overlay update found, installing"
       local launcher="${BASH_SOURCE[0]}"
+      # The finalized tree carries a prebuilt from the running tree. It is
+      # only valid for the same source commit: when the update actually
+      # changes code, drop it so build.py runs once against the new tree.
+      # Same-version swaps keep it and skip the build entirely.
+      if ! cmp -s "${STAGING_ROOT}/finalized/git_src_commit" "$DIR/git_src_commit"; then
+        echo "overlay update changes the source commit; dropping carried prebuilt"
+        rm -f "${STAGING_ROOT}/finalized/prebuilt"
+      fi
       mv "$DIR" /data/safe_staging/old_openpilot
       mv "${STAGING_ROOT}/finalized" "$DIR"
       cd "$DIR"

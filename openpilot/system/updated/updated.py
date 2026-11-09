@@ -171,10 +171,12 @@ def init_overlay() -> None:
 
 
 # Untracked build artifacts that must not be carried into a finalized tree.
-# `prebuilt` is deliberately excluded: the launcher must still run build.py on
-# the first boot after an update so scons content-decides which outputs the
-# update actually invalidated. The overlay canaries belong to the updater.
-NON_CARRIED_ARTIFACTS = {"prebuilt", ".overlay_init", ".overlay_consistent"}
+# `prebuilt` IS carried: the launcher skips build.py entirely when it exists,
+# and on C3 even a cache-hot scons pass costs ~50s. The launcher drops a
+# carried prebuilt when the update's git_src_commit differs from the running
+# tree's, so real code changes still get one rebuild. The overlay canaries
+# belong to the updater.
+NON_CARRIED_ARTIFACTS = {".overlay_init", ".overlay_consistent"}
 
 
 def _ignored_paths(root: str) -> list[str]:
