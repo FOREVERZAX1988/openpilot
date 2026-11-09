@@ -133,3 +133,13 @@ openpilot/sunnypilot/selfdrive/ui/tests/screenshots/
 
 # Cython-generated radar_motion build artifact
 openpilot/sunnypilot/carrot/radar_motion/_motion_native.cpp
+
+# Panda firmware binaries are rebuilt on-device by scons from the checked-out
+# panda sources, so the tree-shipped copies (packaged from the panda fork for
+# DFU rescue) can never stay byte-identical: on-device they must be ignored
+# build artifacts, carried across updates by the updater like any other.
+panda/board/obj/*.bin
+panda/board/obj/*.bin.signed
+
+# Per-boot launcher cache stamp (keyed by git_src_commit)
+.params_registry_ok

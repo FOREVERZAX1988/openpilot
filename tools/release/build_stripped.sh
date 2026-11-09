@@ -44,9 +44,19 @@ cd "$SOURCE_DIR"
 # in the directory
 cd "$TARGET_DIR"
 rm -rf .git/modules/
-# NOTE: do not strip panda/board/obj here - the signed firmware is tracked in
-# the panda fork and ships via submodule recursion; pandad needs it to flash
-# pandas stuck in bootstub.
+# Ship the panda firmware binaries untracked, not as tree content. They stay
+# tracked in the panda fork (pandad needs them to flash pandas stuck in
+# bootstub), but the device rebuilds them from the checked-out panda sources
+# whenever an update invalidates them, and that rebuild never matches the
+# packaged bytes: a tracked copy shows up as a permanent `modified` in the
+# on-device git status and dirties every update cycle (four conflicts on every
+# staging sync). The .gitignore this tree carries covers the paths, so the
+# first boot rebuilds them like any other build artifact and the updater
+# carries the device build into every later update.
+rm -f panda/board/obj/bootstub.panda.bin \
+      panda/board/obj/bootstub.panda_h7.bin \
+      panda/board/obj/panda.bin.signed \
+      panda/board/obj/panda_h7.bin.signed
 
 # Release branch must not contain LFS pointers; strip LFS tracking and commit files as regular content.
 # release_files.py deliberately excludes .gitattributes from the stripped tree, so it is
