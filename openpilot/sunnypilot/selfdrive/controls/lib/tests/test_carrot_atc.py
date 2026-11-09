@@ -127,9 +127,20 @@ class TestCarrotAtc(unittest.TestCase):
     dh.alc.lane_change_set_timer = AutoLaneChangeMode.NUDGE  # default: ATC lamp may act alone
     return dh
 
-  def test_killswitch_off_no_synthetic_blinker(self):
-    dh = DesireHelper()  # CarrotAtcBlinkerEnabled defaults off
+  def test_default_missing_param_atc_enabled(self):
+    """缺省（无 CarrotAtcBlinkerEnabled 键）= 开启：与 cp 出厂行为一致， wiping /data/params 不会静默关掉导航打方向。"""
+    dh = DesireHelper()  # param key absent -> default ON (and materialized True)
     frames(dh, 3, carrot_man=make_carrot_man("fork right"))
+    self.assertTrue(dh.carrot_atc_blinker_enabled)
+    self.assertEqual(dh.carrot_virtual_blinker, BLINKER_RIGHT)
+    self.assertTrue(dh.carrot_atc_active)
+
+  def test_explicit_off_no_synthetic_blinker(self):
+    """显式 CarrotAtcBlinkerEnabled=0：尊重用户关闭，无合成转向灯、无 ATC 起步。"""
+    Params().put("CarrotAtcBlinkerEnabled", False)
+    dh = DesireHelper()
+    frames(dh, 3, carrot_man=make_carrot_man("fork right"))
+    self.assertFalse(dh.carrot_atc_blinker_enabled)
     self.assertEqual(dh.carrot_virtual_blinker, 0)
     self.assertFalse(dh.carrot_atc_active)
     self.assertEqual(dh.lane_change_state, log.LaneChangeState.off)

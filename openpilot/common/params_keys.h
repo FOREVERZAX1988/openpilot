@@ -689,9 +689,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // makes desire_helper treat a blinker as pressed, which reaches the vehicle: the
     // synthetic blinker drives LaneChangeState.preLaneChange -> modelV2 laneChangeState
     // -> controlsd CC.left/rightBlinker -> the car's own turn-signal CAN message. That is
-    // a navigation intent becoming a vehicle actuation, so it has to be an explicit
-    // choice rather than the default.
-    {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},
+    // Navigation-driven actuation gate (synthetic blinker + ATC auto steering).
+    // Product decision 2026-11: default ON to match cp's out-of-the-box behavior;
+    // desire_helper also treats a missing key as enabled, so wiping /data/params
+    // restores the default. BSD / obstacle / driver-cancel sub-gates stay active.
+    {"CarrotAtcBlinkerEnabled", {PERSISTENT | BACKUP, BOOL, "1", std::nullopt, 1, SETTINGS_SIMPLE}},
     // Traffic-light YOLO observer (signalyolod): display-only road-scene reading
     // drawn as boxes + labels on the driving view. Never feeds control; the
     // file-based /data/signal-yolo-shadow opt-in still ORs in for CLI users.
@@ -764,7 +766,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},
     {"AutoCurveSpeedFactor", {PERSISTENT | BACKUP, INT, "100"}},
     {"AutoCurveSpeedAggressiveness", {PERSISTENT | BACKUP, INT, "100"}},
-    {"AutoTurnControl", {PERSISTENT | BACKUP, INT, "0"}},
+    {"AutoTurnControl", {PERSISTENT | BACKUP, INT, "2"}},  // cp ATC: 0 off, 1 steering only, 2 speed+steering, 3 speed only; default full
     {"AutoTurnControlRightLaneChange", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp 32ed45b2e: independent right-fork TBT physical-indicator admission
     {"ManualLaneChangeIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp boundary_indicator add-on: manual lamp feedback isolation
     {"ModelDesireIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp indicator_observer: lamp-only model desire intent observation

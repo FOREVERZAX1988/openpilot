@@ -70,15 +70,15 @@ class DesireHelper:
     self.bluetooth_commands = CommandReader('lane')
     self._bt_lane_count = 0  # frames remaining for a Bluetooth lane command
 
-    # Killswitch for the synthetic-blinker path, OFF by default.
-    #
-    # Not just a UI convenience: a carrot packet saying "turn left" used to make this
-    # class treat a blinker as pressed with no switch at all. That synthetic blinker
-    # reaches the vehicle - one_blinker -> LaneChangeState.preLaneChange ->
-    # modelV2.meta.laneChangeState -> controlsd CC.leftBlinker/rightBlinker -> the car's
-    # own turn-signal CAN message (opendbc hyundai carcontroller create_spas_messages).
-    # A navigation intent driving a vehicle actuation has to be opt-in.
-    self.carrot_atc_blinker_enabled = self._params.get_bool("CarrotAtcBlinkerEnabled")
+    # Default-ON actuation gate (product decision 2026-11: carrot ATC matches cp's
+    # out-of-the-box behavior). Missing key -> enabled and materialized once below so
+    # the settings toggle reflects it; an explicit "0" still disables.
+    self.carrot_atc_blinker_enabled = self._read_atc_blinker_param()
+    if self._params.get("CarrotAtcBlinkerEnabled") is None:
+      try:
+        self._params.put("CarrotAtcBlinkerEnabled", True)
+      except Exception:
+        pass  # read-only store (tests): the read-side default above still applies
     self._carrot_atc_blinker_param_t = 0.0
 
     # Unified lateral arbiter (default OFF; preserves historical behavior when disabled).
@@ -157,6 +157,22 @@ class DesireHelper:
     self.carrot_virtual_blinker = atc_blinker_state
     return atc_blinker_state, atc_desire_enabled
 
+  def _read_atc_blinker_param(self) -> bool:
+    """CarrotAtcBlinkerEnabled: default ON, an explicit falsey value disables.
+
+    Params.get() casts BOOL keys to bool on device, but test stubs and raw
+    stores can surface "1"/"0"/1/0, so judge by truthiness of the raw value.
+    """
+    raw = self._params.get("CarrotAtcBlinkerEnabled")
+    if raw is None:
+      return True
+    if isinstance(raw, bool):
+      return raw
+    try:
+      return bool(int(raw))
+    except (TypeError, ValueError):
+      return str(raw).strip().lower() in ("1", "true", "on")
+
   def get_lane_change_direction(self, blinker_state: int):
     return LaneChangeDirection.left if blinker_state == BLINKER_LEFT else LaneChangeDirection.right
 
@@ -178,11 +194,13 @@ class DesireHelper:
     if self._bt_lane_count > 0:
       self._bt_lane_count -= 1
 
-    # Refresh the ATC killswitch at most once a second (update() runs at 100 Hz).
+    # Refresh the ATC gate at most once a second (update() runs at 100 Hz).
+    # A missing key means enabled here too, so a wipe of /data/params cannot
+    # silently turn navigation steering off; only an explicit "0" does.
     self._carrot_atc_blinker_param_t += DT_MDL
     if self._carrot_atc_blinker_param_t >= 1.0:
       self._carrot_atc_blinker_param_t = 0.0
-      self.carrot_atc_blinker_enabled = self._params.get_bool("CarrotAtcBlinkerEnabled")
+      self.carrot_atc_blinker_enabled = self._read_atc_blinker_param()
 
     driver_st, driver_enabled = self._driver_blinker_state(carstate)
 
