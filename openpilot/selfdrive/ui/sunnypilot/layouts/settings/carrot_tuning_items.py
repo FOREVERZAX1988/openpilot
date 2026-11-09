@@ -293,6 +293,13 @@ def build_vehicle_items():
     section_heading_sp(tr('Driving Mode')),
     option_item_sp(title=tr('My Driving Mode'), param='MyDrivingMode', min_value=1, max_value=4, value_change_step=1),
     option_item_sp(title=tr('My Driving Mode Auto'), param='MyDrivingModeAuto', min_value=0, max_value=2, value_change_step=1),
+    section_heading_sp(tr('Alerts')),
+    toggle_item_sp(title=tr('Mute Seatbelt Alert'), param='MuteSeatbelt',
+                   description=tr('Suppress the seatbelt-not-latched engage block. The car still shows ' +
+                                  'its own warning; use only where the belt is genuinely fastened.')),
+    toggle_item_sp(title=tr('Mute Door Alert'), param='MuteDoor',
+                   description=tr('Suppress the door-open engage block. The car still shows its own ' +
+                                  'warning; use only if a sensor falsely reports an open door.')),
   ]
 
 def build_dev_items():

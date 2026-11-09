@@ -666,6 +666,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotTurnAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // cap positive accel by future model curvature in turns
     {"CarrotCutinPredecelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // bounded pre-decel for strong early corner-radar cut-in risk
     {"CarrotLeadPreviewEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // early-decel preview from radar lead deceleration
+    // cp CruiseMaxVals0-6 cruise-acceleration envelope (CarrotPlanner.get_carrot_accel),
+    // wired through get_carrot_max_accel as a third only-lowers-the-cap contributor.
+    // A comfort/character curve, not a safety gate: keep OFF until device A/B
+    // validation. Defaults match stock openpilot's envelope at the endpoints but are
+    // stronger mid-range (1.2 vs 0.8 m/s² near 40 kph).
+    {"CarrotCruiseAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},
     // Display-only overlays. Neither one is read anywhere on the control path.
     {"CarrotRadarPointsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw measured front-radar points in the road view
     {"CarrotSignalHudEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw the neural signal evidence ring (needs SignalAssistMode > 0)
@@ -709,6 +715,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // does not have to find three more switches. Each stays independently offable
     // afterwards - they are killswitches, not prerequisites.
     {"CarrotNavFeaturesSeeded", {PERSISTENT, BOOL, "0"}},
+    // One-shot legacy migration: devices that ran carrot before AutoTurnControl
+    // was default-on carry config.py's old seeded 0, and the seeding block above
+    // cannot fix them (CarrotNavFeaturesSeeded is already set). CarrotServ bumps
+    // a stored 0 to full ATC (2) exactly once under this flag; any explicit user
+    // choice made afterwards - including 0 - is respected forever.
+    {"CarrotAtcMigrated", {PERSISTENT, BOOL, "0"}},
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
     // Published by networkd; the Carrot web dialog reads it for the QR link.
     {"NetworkAddress", {CLEAR_ON_MANAGER_START, STRING}},

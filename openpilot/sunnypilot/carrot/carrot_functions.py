@@ -722,15 +722,16 @@ class CarrotPlanner:
 
   # ---- cruise envelope helpers ------------------------------------------ #
 
-  # NOTE: no caller, and the CruiseMaxVals0-6 rows are no longer shown in either UI
-  # (they are in CARROT_TUNING_UNAVAILABLE). Carrot's cruise-acceleration envelope was
-  # never wired in: feeding it through would also need CarrotLongitudinalSource.a_target
-  # to be consumed by the MPC, which today only publishes it as an observability field
-  # (carrot_plan.aTarget). openpilot's own hardcoded A_CRUISE_MAX_VALS / A_CRUISE_MAX_BP
-  # (longitudinal_planner.py:23-24) is what actually governs, and it is a coarser version
-  # of the same curve. Wiring this would replace that envelope, so it needs device
-  # validation; the params stay registered so it can be finished later.
-# Removed: _get_carrot_accel() had no caller anywhere in the tree (verified by AST/grep).
+  # cp parity: the 7-point CruiseMaxVals0-6 cruise-acceleration envelope (hundredths
+  # of m/s² in params, m/s² here), scaled by the driving-mode factor exactly like
+  # cp's _get_carrot_accel. Consumed by the longitudinal planner as an optional
+  # positive-accel cap (CarrotCruiseAccelEnabled) through the same
+  # get_carrot_max_accel channel as the turn-accel / cutin-predecel contributors,
+  # so it can only ever lower the cap - never raise it.
+  def get_carrot_accel(self, v_ego: float) -> float:
+    factor = self._my_high_mode_factor if self._my_driving_mode == DrivingMode.High else self._my_safe_factor
+    return float(np.interp(v_ego, _A_CRUISE_MAX_BP, self._cruise_max_vals) * factor)
+
   def _get_base_t_follow(self, personality: int, v_ego: float,
                          use_speed_tf: bool = True) -> float:
     """Return the unscaled following-time target for this personality."""

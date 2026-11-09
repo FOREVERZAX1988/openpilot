@@ -1155,6 +1155,20 @@ class CarrotServ:
         # next run retries.
         pass
 
+    # One-shot legacy migration: devices that ran carrot before AutoTurnControl was
+    # default-on carry config.py's old seeded 0 (ATC fully off), and the seeding block
+    # above cannot fix them - CarrotNavFeaturesSeeded is already set, so it never
+    # re-fires. Bump a stored 0 to full ATC exactly once under CarrotAtcMigrated; any
+    # explicit user choice made afterwards (including 0 via the tuning UI) wins forever.
+    if (self._params.get_bool("CarrotEnabled")
+        and not self._params.get_bool("CarrotAtcMigrated")):
+      try:
+        if self._params.get("AutoTurnControl") is None or self._params.get_int("AutoTurnControl") == 0:
+          self._params.put_int("AutoTurnControl", 2)  # cp full ATC: steering + turn-speed control
+        self._params.put_bool("CarrotAtcMigrated", True)
+      except Exception:
+        pass
+
     """Refresh tuning parameters from UnifiedParams (throttled to 10 Hz)."""
     if (self._param_frame % 10) != 0:
       self._param_frame += 1

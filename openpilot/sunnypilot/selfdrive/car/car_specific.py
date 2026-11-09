@@ -41,8 +41,23 @@ class CarSpecificEventsSP:
     # set by the stop that ended the last session; selfdrived starts fresh every session
     self.stock_cruise_failed = (params or Params()).get_bool(FAILED_KEY)
 
+    # cp-parity alert muting (MuteSeatbelt / MuteDoor): the params were registered
+    # in params_keys.h and seeded by config.py but never consumed. The stock event
+    # engine (card.create_common_events) always emits doorOpen / seatbeltNotLatched,
+    # so the overlay removes them here - the same remove-after-generate pattern the
+    # brand blocks below already use. Read on a slow cadence like cp did.
+    self._params = params or Params()
+    self._frame = 0
+    self._mute_seatbelt = self._params.get_bool("MuteSeatbelt")
+    self._mute_door = self._params.get_bool("MuteDoor")
+
   def update(self, CS: structs.CarState, events: Events, CS_SP, mads_enabled_toggle: bool = False, mads_enabled: bool = False):
     events_sp = CarEventsSP()
+
+    self._frame += 1
+    if self._frame % 100 == 0:
+      self._mute_seatbelt = self._params.get_bool("MuteSeatbelt")
+      self._mute_door = self._params.get_bool("MuteDoor")
 
     if self.CP.brand == 'chrysler':
       if self.CP.carFingerprint in RAM_DT:
@@ -83,6 +98,11 @@ class CarSpecificEventsSP:
       if mads_enabled and CS_SP.zoompilot.lkasArming:
         # LKA back on with lateral coming back, the EPS not delivering yet
         events_sp.zp.add(EventNameZP.stockLkasArming)
+
+    if self._mute_door and events.has(EventName.doorOpen):
+      events.remove(EventName.doorOpen)
+    if self._mute_seatbelt and events.has(EventName.seatbeltNotLatched):
+      events.remove(EventName.seatbeltNotLatched)
 
     self.update_stock_ecu(CS, CS_SP, events_sp)
     return events_sp

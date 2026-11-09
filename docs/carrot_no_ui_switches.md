@@ -9,7 +9,7 @@
 或 webui 的 `panel_catalog.py` 里出现过。8088 网页面板靠扫描车机设置页生成控件，不额外增加可达性。
 `carrot_tuning_api.py` 的白名单不算入口，那是通用编辑器。
 
-共 20 个：**5 个有 UI 入口，15 个没有**。
+共 21 个：**5 个有 UI 入口，16 个没有**。
 
 没有入口的那些，仍然可以通过 carrot_server 写参数（`params_keys.h` 注册即允许，不走白名单）：
 
@@ -23,23 +23,24 @@ curl "http://<device>:7000/api/params_bulk?names=CarrotMapDecelEnabled,CarrotTur
 
 读点只给文件不给行号：行号一改就漂，用参数名 grep 定位。
 
-没有入口的 14 个声明了层级，**没有一个是 level 1（日常）**：都只适合脚本或 App。
+没有入口的 15 个声明了层级，**没有一个是 level 1（日常）**：都只适合脚本或 App。
 
 ## 有 UI 入口（5）
 
 | 参数 | 默认 | 层级 | 读点 | 作用 |
 | --- | --- | --- | --- | --- |
-| `CarrotAtcBlinkerEnabled` | `0` | 1 | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
+| `CarrotAtcBlinkerEnabled` | `1` | 1 | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
 | `CarrotEnabled` | `0` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | carrot 导航总开关，地图类功能的前提 |
 | `CarrotLongitudinalSourceEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 手机目标速度成为第 5 个纵向源；跟车时距、舒适制动与停车点进 MPC |
 | `CarrotNavCruiseSpeedEnabled` | `1` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 导航目标速度限制巡航速度 |
 | `CarrotTrafficCongestionEnabled` | `0` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 拥堵报告折进地图巡航，只降不升 |
 
-## 没有 UI 入口（15），只能走 7000 的 `POST /api/param_set`
+## 没有 UI 入口（16），只能走 7000 的 `POST /api/param_set`
 
 | 参数 | 默认 | 层级 | 读点 | 作用 |
 | --- | --- | --- | --- | --- |
 | `CarrotBrakingGapEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车舒适制动项（lead_comfort）进 MPC |
+| `CarrotCruiseAccelEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | cp CruiseMaxVals0-6 加速曲线包络，经 get_carrot_max_accel 只降不升；上车 A/B 前保持默认关 |
 | `CarrotCruiseCoastingEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py`, `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 巡航超速带内松刹车滑行 |
 | `CarrotCruiseCoastingPercent` | `10` | 3 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 滑行带的宽度，按百分比 |
 | `CarrotCutinPredecelEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 旁车切入的提前减速 |

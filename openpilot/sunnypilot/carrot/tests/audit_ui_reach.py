@@ -93,6 +93,7 @@ NOTES = {
   'CarrotTrafficStopProfileEnabled': '红绿灯停点外面再包一层闭式刹停包络（延迟+jerk 受限），只提前/加强刹车，永不抬速',
   'CarrotTrafficLightFusionEnabled': '红绿灯状态融合进纵向计划',
   'CarrotTurnAccelEnabled': '弯道内限制纵向加速度',
+  'CarrotCruiseAccelEnabled': 'cp CruiseMaxVals0-6 加速曲线包络，经 get_carrot_max_accel 只降不升；上车 A/B 前保持默认关',
 }
 
 
