@@ -497,7 +497,7 @@ def hardware_thread(end_event, hw_queue) -> None:
       # 「health packet cleanup」之前的旧链接产物，health_t 字段偏移与本仓 panda/board/
       # health.h 不一致，fault_status_pkt 被读成越界值（实测 210）→ PandaState.FaultStatus
       # 枚举越界 → 本 to_dict() 抛错。修法是重新链接 pandad，不是改这段代码；
-      # 详见 DAY_LOG_2026-10-03-PANDAD_HEALTH_STRUCT_SKEW.md。此处 try/except 保留为兜底。
+      # 详见 macan_log/DAY_LOG_2026-10-03-PANDAD_HEALTH_STRUCT_SKEW.md。此处 try/except 保留为兜底。
       try:
         dat = {
           'count': count,
