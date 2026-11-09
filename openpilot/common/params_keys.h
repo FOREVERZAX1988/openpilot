@@ -880,6 +880,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // modes; the consumer side (capnp field + hyundaicanfd cluster forward +
     // B1 writer) is a separate hardware-gated port on this fork.
     {"AutoBlinkerControl", {PERSISTENT, INT, "0"}},
+    // Tire-track overlay on the driving view (cp parity): gradient ribbons at
+    // +/-0.9 m along the predicted path plus an L/R/C drift readout. Display
+    // only; 0 = off.
+    {"CarrotTireTrajectory", {PERSISTENT | BACKUP, INT, "0"}},
     // CWeb push (remote reachability beacon). URL sources: CWEB_PUSH_REPORT_URL
     // env, then this param. No baked-in third-party endpoint (privacy-first).
     {"CwebPushReportUrl", {PERSISTENT | BACKUP, STRING, ""}},

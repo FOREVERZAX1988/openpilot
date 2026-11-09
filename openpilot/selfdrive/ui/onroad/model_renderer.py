@@ -7,7 +7,9 @@ from dataclasses import dataclass, field
 from openpilot.common.params import Params
 from openpilot.selfdrive.locationd.calibrationd import HEIGHT_INIT
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.shader_polygon import draw_polygon, Gradient
+from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 
 from openpilot.selfdrive.ui.sunnypilot.onroad.model_renderer import ChevronMetrics, ModelRendererSP
@@ -52,6 +54,9 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._path_offset_z = HEIGHT_INIT[0]
     self._counter = -1
     self._camera_offset = ui_state.params.get("CameraOffset", return_default=True)
+    # Tire-track overlay (cp parity, CarrotTireTrajectory): refresh in the 60-frame param block.
+    self._carrot_tire_trajectory = 0
+    self._tire_font = gui_app.font(FontWeight.BOLD)
     # Initialize ModelPoints objects
     self._path = ModelPoints()
     self._lane_lines = [ModelPoints() for _ in range(4)]
@@ -101,6 +106,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
 
     if self._counter % 60 == 0:
       self._camera_offset = ui_state.params.get("CameraOffset", return_default=True)
+      self._carrot_tire_trajectory = ui_state.params.get_int("CarrotTireTrajectory")
     self._counter += 1
 
     if sm.updated['carParams']:
@@ -130,6 +136,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._draw_lane_lines()
     self._draw_path()
     self.blendful.draw(self._rect)
+    self._draw_tire_trajectory_carrot(sm)
 
     if render_lead_indicator and radar_state:
       self._draw_lead_indicator()
@@ -330,7 +337,8 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
 
     return (x, y)
 
-  def _map_line_to_polygon(self, line: np.ndarray, y_off: float, z_off: float, max_idx: int, max_distance: float, allow_invert: bool = True) -> np.ndarray:
+  def _map_line_to_polygon(self, line: np.ndarray, y_off: float, z_off: float, max_idx: int, max_distance: float,
+                           allow_invert: bool = True, y_shift: float = 0.0) -> np.ndarray:
     """Convert 3D line to 2D polygon for rendering."""
     if line.shape[0] == 0:
       return np.empty((0, 2), dtype=np.float32)
@@ -354,7 +362,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
 
     N = points.shape[0]
     # Generate left and right 3D points in one array using broadcasting
-    offsets = np.array([[0, -y_off, z_off], [0, y_off, z_off]], dtype=np.float32)
+    offsets = np.array([[0, -y_off + y_shift, z_off], [0, y_off + y_shift, z_off]], dtype=np.float32)
     points_3d = points[None, :, :] + offsets[:, None, :]  # Shape: 2xNx3
     points_3d = points_3d.reshape(2 * N, 3)  # Shape: (2*N)x3
 
@@ -416,3 +424,120 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
       int(rgb[2] * 255),
       int(a * 255)
     )
+
+  @staticmethod
+  def _tire_grad_color(d: float, a: int) -> rl.Color:
+    """Danger 0 (centered) -> 1.5 (on the line): green -> yellow -> red (cp parity)."""
+    d = max(0.0, min(1.5, d))
+    if d <= 0.10:
+      r, g = 0.0, 200.0
+    elif d <= 0.60:
+      f = (d - 0.10) / 0.50
+      r, g = f * 255.0, 200.0
+    elif d <= 1.00:
+      f = (d - 0.60) / 0.40
+      r, g = 255.0, 200.0 - f * 200.0
+    else:
+      r, g = 255.0, 0.0
+    return rl.Color(int(r), int(g), 0, a)
+
+  def _draw_tire_trajectory_carrot(self, sm):
+    """Tire-track overlay (cp parity, gated on CarrotTireTrajectory > 0).
+
+    Draws ±0.9 m tire tracks along the predicted path as gradient ribbons,
+    colored by lateral drift vs the lane center (green -> red, pulsing near
+    the line), plus an L/R/C direction and drift(m) readout near the path
+    origin. Display only - no control effect.
+    """
+    if self._carrot_tire_trajectory <= 0:
+      return
+    if not sm.valid['modelV2']:
+      return
+
+    model = sm['modelV2']
+    lane_lines = model.laneLines
+    probs = model.laneLineProbs
+    if len(lane_lines) < 3 or len(probs) < 3:
+      return
+
+    left_y, right_y = lane_lines[1].y, lane_lines[2].y
+    if len(left_y) == 0 or len(right_y) == 0:
+      return
+
+    # Distance (m) from the car center to each lane line. Model +Y = left, so the right is negated.
+    left_m = float(left_y[0])
+    right_m = -float(right_y[0])
+    # Assume the default lane width (3.0 m) when one side is weakly detected.
+    if probs[1] < 0.3 and probs[2] > 0.3:
+      left_m = 3.0 - right_m
+    elif probs[2] < 0.3 and probs[1] > 0.3:
+      right_m = 3.0 - left_m
+    total = left_m + right_m
+    if total < 0.5:
+      total = 3.0
+
+    # drift > 0 => leaning toward the left line.
+    drift = (right_m - left_m) / 2.0
+    limit = max(0.1, total / 2.0 - 0.9)
+    danger = abs(drift) / limit
+
+    if drift > 0.02:
+      dir_label = "L"
+    elif drift < -0.02:
+      dir_label = "R"
+    else:
+      dir_label = "C"
+    dist_str = f"{abs(drift):.2f}"
+
+    path = self._path.raw_points
+    if path.shape[0] < 5:
+      return
+    max_dist = 40.0
+    radar_state = sm['radarState'] if sm.valid['radarState'] else None
+    if radar_state is not None and radar_state.leadOne.status:
+      d_rel = float(radar_state.leadOne.dRel)
+      if 3.0 < d_rel < max_dist:
+        max_dist = d_rel
+    max_idx = self._get_path_length_idx(path[:, 0], max_dist)
+    if max_idx < 5:
+      return
+
+    green = rl.Color(0, 200, 0, 255)
+    warn = abs(drift) >= 0.5
+    pulse = warn and (int(rl.get_time() * 1000) % 800 < 400)
+    if warn:
+      side = rl.Color(255, 0, 0, 255) if pulse else rl.Color(255, 100, 0, 220)
+      color_left = side if drift > 0.0 else green
+      color_right = side if drift < 0.0 else green
+    elif drift > 0.02:
+      color_left, color_right = self._tire_grad_color(danger, 255), green
+    elif drift < -0.02:
+      color_left, color_right = green, self._tire_grad_color(danger, 255)
+    else:
+      color_left = color_right = green
+
+    # Thin ribbons at ±0.9 m from the path center; perspective shrinks them naturally.
+    band_half = 0.16
+    for y_shift, col in ((0.9, color_left), (-0.9, color_right)):
+      ribbon = self._map_line_to_polygon(path, band_half, 1.22, max_idx, max_dist, True, y_shift)
+      if ribbon.size == 0:
+        continue
+      grad = Gradient(
+        start=(0.0, 1.0),
+        end=(0.0, 0.0),
+        colors=[rl.Color(col.r, col.g, col.b, col.a), rl.Color(col.r, col.g, col.b, 0)],
+        stops=[0.0, 1.0],
+      )
+      draw_polygon(self._rect, ribbon, gradient=grad)
+
+    # L/R/C direction + drift(m) near the path origin.
+    if danger < 1.5:
+      base = self._map_to_screen(3.0, float(path[0, 1]), float(path[0, 2]) + self._path_offset_z)
+      if base is not None:
+        tx, ty = base
+        white = rl.Color(255, 255, 255, 255)
+        for text, offset, size in ((dir_label, -56.0, 72), (dist_str, 18.0, 52)):
+          text_size = measure_text_cached(self._tire_font, text, size)
+          rl.draw_text_ex(self._tire_font, text,
+                          rl.Vector2(tx - text_size.x / 2, ty + offset - text_size.y / 2),
+                          size, 0, white)
