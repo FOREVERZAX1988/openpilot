@@ -876,6 +876,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // contract: no baked-in URL in this fork; empty until the operator supplies
     // one via param or CARROT_* / DISCORD_WEBHOOK_URL env.
     {"CarrotExceptionDiscordWebhookUrl", {PERSISTENT | BACKUP, STRING, ""}},
+    // Hyundai 0x1EA physical blinker hold lease (cp parity). 0=off, 1/2=lease
+    // modes; the consumer side (capnp field + hyundaicanfd cluster forward +
+    // B1 writer) is a separate hardware-gated port on this fork.
+    {"AutoBlinkerControl", {PERSISTENT, INT, "0"}},
     // CWeb push (remote reachability beacon). URL sources: CWEB_PUSH_REPORT_URL
     // env, then this param. No baked-in third-party endpoint (privacy-first).
     {"CwebPushReportUrl", {PERSISTENT | BACKUP, STRING, ""}},
