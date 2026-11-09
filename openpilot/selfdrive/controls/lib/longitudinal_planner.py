@@ -192,6 +192,10 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
                                                                           self.output_a_target, v_cruise,
                                                                           reset_state=reset_state)
 
+    # StarPilot Force Stop 2.0: committed/approach frames scale the jerk cost
+    # down (StopTune.jerk_scale, 0.32 or the vehicle tune) for a gentler,
+    # held deceleration; the scale is 1.0 on every other frame.
+    fs_jerk_scale = getattr(self, '_force_stop_jerk_scale', 1.0)
     if self._jerk_channels_enabled and self.carrot_source_active:
       # StarPilot five-channel split (planner-side, verbatim rule: aEgo >= 0
       # selects the acceleration/speed channels, else deceleration/speed_decrease;
@@ -201,10 +205,10 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       # precedence applies inside set_weights.
       channels = split_five_channels(self.carrot_source.carrot.jerk_channels, float(sm['carState'].aEgo))
       self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
-                           jerk_factors=channels)
+                           jerk_factors=tuple(value * fs_jerk_scale for value in channels))
     else:
       self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
-                           jerk_factor=self.carrot_jerk_factor if self.carrot_source_active else None)
+                           jerk_factor=(self.carrot_jerk_factor * fs_jerk_scale) if self.carrot_source_active else None)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.output_a_target)
 
     # The follow time Carrot contributes, scaled by how far the user moved
@@ -278,6 +282,18 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
         )
         if credit is not None and np.any(credit):
           mpc_carrot_kwargs['lane_change_credit'] = credit
+
+    # StarPilot Force Stop 2.0 (ForceStopEnabled gate): the committed stop
+    # line enters as a virtual obstacle, folded into the same min() floor as
+    # the carrot stop point; a closer real lead still wins.
+    self._force_stop_jerk_scale = 1.0
+    fs_plan = getattr(self, 'force_stop_plan', None)
+    if fs_plan is not None and getattr(fs_plan, 'obstacle_m', None) is not None:
+      self._force_stop_jerk_scale = float(fs_plan.jerk_scale)
+      fs_stop = float(fs_plan.obstacle_m) + STOP_DISTANCE
+      if 0.0 < fs_stop < 1e5:
+        existing_stop = mpc_carrot_kwargs.get('stop_obstacle_distance')
+        mpc_carrot_kwargs['stop_obstacle_distance'] = fs_stop if existing_stop is None else min(existing_stop, fs_stop)
 
     # Carrot gap/comfort refinements (each default off; only passed when on so
     # the stock solver input is byte-identical while they are disabled).
@@ -384,7 +400,12 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       candidates.append((output_a_target_e2e, LongitudinalPlanSource.e2e, output_should_stop_e2e))
 
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
-    self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
+    # StarPilot Force Stop 2.0: a committed stop asserts should_stop (a fresh
+    # resume request suspends the assertion for its 6 s override window).
+    fs_plan = getattr(self, 'force_stop_plan', None)
+    force_stop_stop = bool(fs_plan is not None and fs_plan.should_stop
+                           and not getattr(fs_plan, 'resume_override', False))
+    self.output_should_stop = any(should_stop for _, _, should_stop in candidates) or force_stop_stop
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
 
     # StarPilot lead_follow_policy: shape only the non-urgent follow output of

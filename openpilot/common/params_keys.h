@@ -684,6 +684,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // StarPilot five-channel MPC jerk split (direction-selected at the planner).
     // A/B-gated: OFF keeps the single-factor carrot path byte-identical.
     {"MPCJerkChannelsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // StarPilot Force Stop 2.0 (commitment/hold/release state machine). A/B gate:
+    // OFF keeps the planner byte-identical; ON can only lower the cruise target
+    // and add a virtual stop obstacle - never raise accel. Needs safety review.
+    {"ForceStopEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrafficFollow", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
     {"RelaxedFollow", {PERSISTENT | BACKUP, FLOAT, "1.6"}},
     {"TrafficJerkAcceleration", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
