@@ -413,6 +413,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MapboxSecretKey", {PERSISTENT, STRING}},  // access token; PERSISTENT-only so it survives reinstalls
     {"MapBoxRequests", {PERSISTENT, JSON, "{}"}},  // {total_requests, month} monthly quota bookkeeping
 
+    // StarPilot SLC advance: how many seconds of travel ahead of the braking envelope an upcoming
+    // lower map speed limit may already be offered (0-10; 0 = braking distance only).
+    {"SLCAdvanceSeconds", {PERSISTENT | BACKUP, INT, "0"}},
+
     // Fork-gap alignment wave 6 params. Consumers fall back to in-code defaults when a key is
     // unset, so registered defaults only feed UI discovery and stock_value reporting.
     {"HyundaiCameraSccHint", {PERSISTENT | BACKUP, BOOL, "0"}},  // CP-3: hint on CAN error for hyundai cars without camera SCC

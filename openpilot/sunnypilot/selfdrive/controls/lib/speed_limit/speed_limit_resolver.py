@@ -5,6 +5,7 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import datetime
+import math
 import platform
 import time
 
@@ -122,6 +123,104 @@ def _carrot_limit_ms(kph) -> float:
   return 0.
 
 
+# StarPilot SLC advance (speed_limits/advance.py): how far ahead of the braking
+# envelope an upcoming lower boundary may already be offered, in seconds of
+# travel. 0 keeps the physics-only window (the braking distance itself).
+_SLC_ADVANCE_SECONDS_MIN, _SLC_ADVANCE_SECONDS_MAX = 0, 10
+_SLC_ADVANCE_SECONDS_DEFAULT = 0
+
+# Tolerance when comparing map limits across frames: mapd republishes the same
+# OSM value as float32 through capnp, so exact equality is fragile.
+_LIMIT_MATCH_TOL = 0.05  # m/s
+
+
+class _GpsFixAge:
+  """Monotonic age of the GPS fix, tracked by fix-identity change.
+
+  unixTimestampMillis is epoch wall-clock (qcomgpsd/ubloxd writers); it can
+  never be compared against time.monotonic(). The resolver used to subtract
+  the two, which made ``distance_since_fix`` a ~ -1.7e9 m number - the
+  ahead-limit advance condition could never fire (the long-standing
+  FIXME-SP). Instead of converting between clocks we detect a *new* fix by
+  its timestamp changing and measure its age monotonically from there:
+  immune to wall-clock jumps, system-time invalidity and stale fixes (a fix
+  that stops updating keeps its timestamp, so its age keeps growing).
+  """
+
+  def __init__(self):
+    self.age = 0.  # s, monotonically measured since the fix was first seen
+    self._last_fix_ts: float | None = None
+    self._first_seen_mono = 0.
+
+  def update(self, unix_timestamp_millis, now_mono: float) -> float:
+    try:
+      ts = float(unix_timestamp_millis)
+    except (TypeError, ValueError):
+      ts = 0.
+    if not math.isfinite(ts) or ts <= 0.:
+      # no usable fix identity: treat as no data
+      self.age = 0.
+      return self.age
+    if self._last_fix_ts is None or ts != self._last_fix_ts:
+      self._last_fix_ts = ts
+      self._first_seen_mono = now_mono
+    self.age = max(0., now_mono - self._first_seen_mono)
+    return self.age
+
+
+class MapLimitAdvance:
+  """One mapped boundary offered ahead of the braking envelope.
+
+  Ported from StarPilot's speed_limits/advance.py encounter lifecycle,
+  adapted to the resolver architecture: there is no acceptance owner here
+  (SpeedLimitAssist owns the driver-facing confirm/adapt state machine), so
+  what is ported is the part that keeps a proposed ahead-limit stable:
+
+  - propose: the upcoming lower boundary is offered while the car is inside
+    the advance window (braking distance the platform can deliver, widened
+    by the user's SLCAdvanceSeconds).
+  - latch: once offered, GPS distance jitter must not retract the offer.
+    The previous frame-by-frame condition flipped the solution back and
+    forth whenever the distance estimate wobbled.
+  - crossed: the current map limit became the offered value; the encounter
+    is done and the plain pipeline takes over.
+  - withdrawn: the current map limit moved to something that is neither the
+    offered value nor the value it came from (a new section, or a
+    carrot/vision merge replaced it); the offer is void.
+
+  Direction is restricted to lower boundaries: StarPilot gates raise/lower
+  through its acceptance layer, which the resolver does not have, and the
+  resolver's merged sources are lower-only by design - offering an upcoming
+  higher limit here would let the map source raise the target speed.
+  """
+
+  def __init__(self):
+    self.speed = 0.      # m/s, the offered ahead limit
+    self.from_speed = 0.  # m/s, the map limit at proposal time
+    self.active = False
+
+  def propose(self, current_limit: float, next_limit: float, next_distance: float,
+              v_ego: float, standstill: bool, advance_window_m: float) -> tuple[float, float]:
+    if self.active:
+      if math.isclose(current_limit, self.speed, abs_tol=_LIMIT_MATCH_TOL):
+        self.active = False  # crossed: the plain pipeline now reports it
+      elif not math.isclose(current_limit, self.from_speed, abs_tol=_LIMIT_MATCH_TOL):
+        self.active = False  # withdrawn: the map source moved elsewhere
+
+    eligible = (next_limit > 0. and not standstill and v_ego > 1. and
+                next_distance <= advance_window_m and
+                next_limit < current_limit - _LIMIT_MATCH_TOL)
+    if eligible and (not self.active or
+                     not math.isclose(next_limit, self.speed, abs_tol=_LIMIT_MATCH_TOL)):
+      self.speed = next_limit
+      self.from_speed = current_limit
+      self.active = True
+
+    if self.active:
+      return self.speed, next_distance
+    return 0., 0.
+
+
 class SpeedLimitResolver:
   limit_solutions: dict[custom.LongitudinalPlanSP.SpeedLimit.Source, float]
   distance_solutions: dict[custom.LongitudinalPlanSP.SpeedLimit.Source, float]
@@ -148,6 +247,13 @@ class SpeedLimitResolver:
     self._car_reports = car_shows_limit(CP, CP_SP)
     self._car_hold = CarLimitHold()
     self._auto = AutoSource()
+
+    # StarPilot SLC advance: monotonic GPS fix age + the ahead-boundary
+    # encounter latch (see _GpsFixAge / MapLimitAdvance).
+    self._gps_fix_age = _GpsFixAge()
+    self._advance = MapLimitAdvance()
+    self.advance_seconds = float(get_sanitize_int_param(
+      "SLCAdvanceSeconds", _SLC_ADVANCE_SECONDS_MIN, _SLC_ADVANCE_SECONDS_MAX, self.params))
 
     self._gps_location_service = get_gps_location_service(self.params)
     # The vision limit daemon publishes to the shared-memory params, so the
@@ -266,6 +372,8 @@ class SpeedLimitResolver:
       self.offset_value = self.params.get("SpeedLimitValueOffset", return_default=True)
       self.use_carrot_limits = self.params.get_bool("CarrotNavCruiseSpeedEnabled")
       self.use_mapbox_filler = read_bool(self.params, "SLCMapboxFiller")
+      self.advance_seconds = float(get_sanitize_int_param(
+        "SLCAdvanceSeconds", _SLC_ADVANCE_SECONDS_MIN, _SLC_ADVANCE_SECONDS_MAX, self.params))
       self.tier_offsets = self._read_tier_offsets()
 
   def _read_tier_offsets(self) -> list[float]:
@@ -552,8 +660,12 @@ class SpeedLimitResolver:
     gps_data = sm[self._gps_location_service]
     map_data = sm['liveMapDataSP']
 
-    gps_fix_age = time.monotonic() - gps_data.unixTimestampMillis * 1e-3
-    if gps_fix_age > LIMIT_MAX_MAP_DATA_AGE:
+    # Monotonic fix age (see _GpsFixAge). The previous epoch-minus-monotonic
+    # expression could never exceed the age limit, so stale fixes were held
+    # forever; now a fix older than LIMIT_MAX_MAP_DATA_AGE invalidates the
+    # map source, which is what that constant always documented.
+    fix_age = self._gps_fix_age.update(gps_data.unixTimestampMillis, time.monotonic())
+    if fix_age > LIMIT_MAX_MAP_DATA_AGE:
       return
 
     speed_limit = map_data.speedLimit if map_data.speedLimitValid else 0.
@@ -562,23 +674,37 @@ class SpeedLimitResolver:
     self._calculate_map_data_limits(sm, speed_limit, next_speed_limit)
 
   def _calculate_map_data_limits(self, sm: messaging.SubMaster, speed_limit: float, next_speed_limit: float) -> None:
-    gps_data = sm[self._gps_location_service]
     map_data = sm['liveMapDataSP']
 
-    distance_since_fix = self.v_ego * (time.monotonic() - gps_data.unixTimestampMillis * 1e-3)
+    # Distance covered since the GPS fix mapd based its ahead-distance on.
+    # The epoch-minus-monotonic clock mixing here is what kept the ahead-limit
+    # advance dead on device (FIXME-SP): distance_since_fix evaluated to a
+    # ~ -1.7e9 m number, so the adapt condition never fired.
+    distance_since_fix = self.v_ego * self._gps_fix_age.age
     distance_to_speed_limit_ahead = max(0., map_data.speedLimitAheadDistance - distance_since_fix)
 
     self.limit_solutions[SpeedLimitSource.map] = speed_limit
     self.distance_solutions[SpeedLimitSource.map] = 0.
 
-    # FIXME-SP: this is not working as expected
+    # Advance window: the braking distance the platform can actually deliver
+    # (openpilot long coasts down to the upcoming limit - see LIMIT_ADAPT_ACC
+    # and the commit-fractured budget in __init__), widened by the user's
+    # SLCAdvanceSeconds time window. Only computed for a lower boundary; a
+    # higher upcoming limit needs no braking and the plain pipeline switches
+    # at the boundary anyway.
+    braking_distance = 0.
     if 0. < next_speed_limit < self.v_ego:
       adapt_time = (next_speed_limit - self.v_ego) / self._adapt_acc
-      adapt_distance = self.v_ego * adapt_time + 0.5 * self._adapt_acc * adapt_time ** 2
+      braking_distance = self.v_ego * adapt_time + 0.5 * self._adapt_acc * adapt_time ** 2
+    advance_window = max(braking_distance, self.v_ego * self.advance_seconds)
 
-      if distance_to_speed_limit_ahead <= adapt_distance:
-        self.limit_solutions[SpeedLimitSource.map] = next_speed_limit
-        self.distance_solutions[SpeedLimitSource.map] = distance_to_speed_limit_ahead
+    standstill = bool(sm['carState'].standstill)
+    proposed_limit, proposed_distance = self._advance.propose(
+      speed_limit, next_speed_limit, distance_to_speed_limit_ahead,
+      self.v_ego, standstill, advance_window)
+    if proposed_limit > 0.:
+      self.limit_solutions[SpeedLimitSource.map] = proposed_limit
+      self.distance_solutions[SpeedLimitSource.map] = proposed_distance
 
   def _get_source_solution_according_to_policy(self) -> custom.LongitudinalPlanSP.SpeedLimit.Source:
     # Auto (source_auto.py) takes every policy but car-only and map-only, so below runs only for those two
