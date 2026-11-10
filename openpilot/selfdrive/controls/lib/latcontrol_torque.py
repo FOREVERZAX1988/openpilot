@@ -1,4 +1,5 @@
 import math
+import time
 import numpy as np
 from collections import deque
 
@@ -14,9 +15,14 @@ from openpilot.sunnypilot.common.param_read import read_bool
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext import LatControlTorqueExt
 from openpilot.sunnypilot.selfdrive.controls.lib.vehicle_tune_dispatch import resolve_vehicle_tune
 from openpilot.selfdrive.controls.lib.latcontrol_vehicle_tunes import (
+  FLM_FRICTION_SPEED_KNOTS,
   flm_runtime_overrides_active,
   get_standard_friction_threshold,
   set_flm_runtime_overrides,
+)
+from openpilot.sunnypilot.flm.runtime_overrides import (
+  FlmOverrideOwner,
+  identity_for_fingerprint,
 )
 
 # At higher speeds (25+mph) we can assume:
@@ -60,6 +66,34 @@ CUSTOM_KP_SCALE_LIMITS = (0.5, 2.0)
 # applies a new FLM profile.
 FLM_OVERRIDE_REFRESH_FRAMES = 150
 
+
+def _flm_baseline_curves() -> dict:
+  """Stock friction curves sampled at the FLM speed knots.
+
+  The FLM override owner works in relative deltas against the stock
+  baseline, so the baseline has to be expressed as a curve over the same
+  speed knots the override bundle uses. Each family is sampled with its own
+  default function, which is what the controller falls back to when no
+  override is active.
+  """
+  from openpilot.selfdrive.controls.lib.latcontrol_vehicle_tunes import (
+    _gm_base_friction_threshold_default,
+    _hkg_canfd_base_friction_threshold_default,
+    _standard_friction_threshold_default,
+  )
+
+  curves = {}
+  for family, fn in (
+    ("gm", _gm_base_friction_threshold_default),
+    ("standard", _standard_friction_threshold_default),
+    ("hkg_canfd", _hkg_canfd_base_friction_threshold_default),
+  ):
+    try:
+      curves[family] = [float(fn(float(knot))) for knot in FLM_FRICTION_SPEED_KNOTS]
+    except Exception:
+      continue
+  return curves
+
 class LatControlTorque(LatControl):
   def __init__(self, CP, CP_SP, CI, dt):
     super().__init__(CP, CP_SP, CI, dt)
@@ -86,6 +120,13 @@ class LatControlTorque(LatControl):
     self.vehicle_tunes_enabled = self.params.get_bool("VehicleTunesEnabled")
     self._flm_frame = -1
     self._flm_enabled = read_bool(self.params, "FlmRuntimeOverridesEnabled")
+    # The FLM override admission owner. It binds the bundle to this car's
+    # fingerprint identity and slews the friction curve toward the learned
+    # profile instead of applying it in one frame.
+    self._flm_owner = FlmOverrideOwner(
+      identity=identity_for_fingerprint(getattr(CP, "carFingerprint", None)),
+      baselines=_flm_baseline_curves(),
+    )
     self._refresh_flm_overrides()
 
   def _refresh_flm_overrides(self) -> None:
@@ -95,35 +136,49 @@ class LatControlTorque(LatControl):
     unless the user applied an FLM profile, in which case it carries a
     friction curve and per-vehicle knobs.
 
+    The bundle is not published directly. It is admitted through the FLM
+    ProfileOwner (controls-safety-engineer Seam B adjudication), which adds
+    the three properties the direct read path lacked:
+
+    - slew limiting, so the friction curve can never step in one frame
+    - fail-closed zeroing, so an invalid or stale bundle restores the stock
+      friction curve instead of staying active
+    - identity binding, so a bundle produced for another car is refused
+
     Failures are swallowed on purpose: an unparsable bundle must not take
-    down the lateral controller. The previous overrides stay in effect, which
-    is safer than silently reverting to stock friction mid-corner.
+    down the lateral controller.
     """
     self._flm_frame += 1
-    if self._flm_frame % FLM_OVERRIDE_REFRESH_FRAMES != 0:
-      return
+    now_ns = time.monotonic_ns()
 
     if not self._flm_enabled:
+      self._flm_owner.withdraw()
       set_flm_runtime_overrides({})
       return
 
-    try:
-      raw = self.params.get("FLMActiveOverrides", encoding="utf-8") or ""
-    except Exception:
-      raw = ""
+    if self._flm_frame % FLM_OVERRIDE_REFRESH_FRAMES == 0:
+      try:
+        raw = self.params.get("FLMActiveOverrides", encoding="utf-8") or ""
+      except Exception:
+        raw = ""
 
-    if not raw:
-      set_flm_runtime_overrides({})
-      return
+      overrides = {}
+      if raw:
+        try:
+          import json
+          parsed = json.loads(raw)
+          if isinstance(parsed, dict):
+            overrides = parsed
+        except Exception:
+          overrides = {}
 
-    try:
-      import json
-      overrides = json.loads(raw)
-    except Exception:
-      return
+      # The owner only accepts a curve that is inside the conservative band
+      # around the stock baseline; a rejected bundle leaves the owner
+      # slewing back to stock instead of applying it.
+      self._flm_owner.admit(overrides, now_ns=now_ns)
 
-    if isinstance(overrides, dict):
-      set_flm_runtime_overrides(overrides)
+    bundle = self._flm_owner.tick(now_ns=now_ns, enabled=True)
+    set_flm_runtime_overrides(bundle)
 
   def _read_custom_kp_scale(self) -> float:
     scale = float(self.params.get("CustomKp", return_default=True))
