@@ -16,6 +16,7 @@ from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.controls.lib.tests.test_experimental_gate import build_planner, build_sm
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.approach import approach_accel
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.controller import E2ESetSpeedController, Inhibit
+import unittest
 
 MODEL_ACCEL = 0.
 
@@ -60,45 +61,12 @@ def run_planner(enabled: bool, frames: int = 200) -> LongitudinalPlanner:
   return planner
 
 
-def test_off_is_upstream():
-  planner = run_planner(False)
-  assert planner.mpc.source == LongitudinalPlanSource.e2e
-  # upstream's boost starts at its aggressive minimum (the fixture's personality)
-  assert planner.output_a_target == approx(MODEL_ACCEL + planner.accel_boost.total_boost)
-  assert planner.e2e_set_speed.inhibit == Inhibit.disabled
 
 
-def test_on_raises_the_e2e_candidate():
-  planner = run_planner(True)
-  assert planner.e2e_set_speed.inhibit == Inhibit.none
-  # the model holding at 0 under the set speed: lifted at the approach pace, below the cruise law's
-  approach = approach_accel(planner.v_ego, planner.output_v_target, planner_sm()['selfdriveState'].personality.raw)
-  assert planner.e2e_set_speed.lift == approx(approach)
-  assert planner.output_a_target == approx(approach)
-  assert planner.a_cruise > 1. > approach
 
 
-def test_behind_a_lead_follows_as_chill():
-  # the model hanging back behind a lead the MPC would close on: lifted to the MPC, not past it
-  planner = run_planner(True, frames=0)
-  lead_mpc(planner.mpc, 0.3)
-  sm = planner_sm()
-  for _ in range(200):
-    planner.update(sm)
-  assert planner.e2e_set_speed.lift == approx(0.3)
-  assert planner.output_a_target == approx(0.3)
 
 
-def test_plan_reports_the_floor():
-  planner = run_planner(True)
-  pm = messaging.PubMaster(['longitudinalPlanSP'])
-  sent = {}
-  pm.send = lambda service, msg: sent.update({service: msg})
-  planner.publish_longitudinal_plan_sp(planner_sm(), pm)
-  report = sent['longitudinalPlanSP'].longitudinalPlanSP.zoompilot.e2eSetSpeed
-  assert report.inhibit == Inhibit.none
-  assert report.boost == approx(planner.e2e_set_speed.lift)
-  assert (report.gain, report.fade) == (1., 1.)
 
 
 def gas_pressed_planner(enabled: bool) -> LongitudinalPlanner:
@@ -115,10 +83,48 @@ def gas_pressed_planner(enabled: bool) -> LongitudinalPlanner:
   return planner
 
 
-def test_gas_boost_only_without_the_floor():
-  # the fixture drives on aggressive, where upstream's boost starts at 0.1 without any gas press
-  assert planner_sm()['selfdriveState'].personality == log.LongitudinalPersonality.aggressive
-  assert gas_pressed_planner(False).accel_boost.total_boost > 0.1
-  on = gas_pressed_planner(True)
-  assert (on.accel_boost.total_boost, on.accel_boost.boost_eligible) == (0., False)
-  assert on.output_a_target == approx(on.e2e_set_speed.lift + MODEL_ACCEL)
+class TestPlannerHook(unittest.TestCase):
+  def test_off_is_upstream(self):
+    planner = run_planner(False)
+    assert planner.mpc.source == LongitudinalPlanSource.e2e
+    # upstream's boost starts at its aggressive minimum (the fixture's personality)
+    assert planner.output_a_target == approx(MODEL_ACCEL + planner.accel_boost.total_boost)
+    assert planner.e2e_set_speed.inhibit == Inhibit.disabled
+
+  def test_on_raises_the_e2e_candidate(self):
+    planner = run_planner(True)
+    assert planner.e2e_set_speed.inhibit == Inhibit.none
+    # the model holding at 0 under the set speed: lifted at the approach pace, below the cruise law's
+    approach = approach_accel(planner.v_ego, planner.output_v_target, planner_sm()['selfdriveState'].personality.raw)
+    assert planner.e2e_set_speed.lift == approx(approach)
+    assert planner.output_a_target == approx(approach)
+    assert planner.a_cruise > 1. > approach
+
+  def test_behind_a_lead_follows_as_chill(self):
+    # the model hanging back behind a lead the MPC would close on: lifted to the MPC, not past it
+    planner = run_planner(True, frames=0)
+    lead_mpc(planner.mpc, 0.3)
+    sm = planner_sm()
+    for _ in range(200):
+      planner.update(sm)
+    assert planner.e2e_set_speed.lift == approx(0.3)
+    assert planner.output_a_target == approx(0.3)
+
+  def test_plan_reports_the_floor(self):
+    planner = run_planner(True)
+    pm = messaging.PubMaster(['longitudinalPlanSP'])
+    sent = {}
+    pm.send = lambda service, msg: sent.update({service: msg})
+    planner.publish_longitudinal_plan_sp(planner_sm(), pm)
+    report = sent['longitudinalPlanSP'].longitudinalPlanSP.zoompilot.e2eSetSpeed
+    assert report.inhibit == Inhibit.none
+    assert report.boost == approx(planner.e2e_set_speed.lift)
+    assert (report.gain, report.fade) == (1., 1.)
+
+  def test_gas_boost_only_without_the_floor(self):
+    # the fixture drives on aggressive, where upstream's boost starts at 0.1 without any gas press
+    assert planner_sm()['selfdriveState'].personality == log.LongitudinalPersonality.aggressive
+    assert gas_pressed_planner(False).accel_boost.total_boost > 0.1
+    on = gas_pressed_planner(True)
+    assert (on.accel_boost.total_boost, on.accel_boost.boost_eligible) == (0., False)
+    assert on.output_a_target == approx(on.e2e_set_speed.lift + MODEL_ACCEL)
