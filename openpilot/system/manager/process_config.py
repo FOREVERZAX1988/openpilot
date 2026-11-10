@@ -101,6 +101,12 @@ def navigation(started: bool, params: Params, CP: car.CarParams) -> bool:
 def only_offroad(started: bool, params: Params, CP: car.CarParams) -> bool:
   return not started
 
+def sentry_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # Parked watch daemon (StarPilot sentry_mode concept, scope narrowed by the
+  # architecture adjudication). It only runs while the device is parked and
+  # the user opted in; with the default off it never starts.
+  return not started and params.get_bool("SentryEnabled")
+
 def livestream(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("IsLiveStreaming")
 
@@ -366,6 +372,9 @@ procs = [
   PythonProcess("mapsd", "openpilot.selfdrive.navigation.mapsd", navigation),
 
   PythonProcess("sensord", "openpilot.system.sensord.sensord", only_onroad, enabled=not PC),
+  # Parked watch (StarPilot sentry_mode, narrowed scope): offroad only and
+  # gated on SentryEnabled (default off => the process never starts).
+  PythonProcess("sentryd", "openpilot.sunnypilot.sentry.sentryd", sentry_enabled, enabled=not PC),
   PythonProcess("ui", "openpilot.selfdrive.ui.ui", and_(always_run, builtin_display), restart_if_crash=True,
                 watchdog_max_dt=UI_WATCHDOG_MAX_DT),
   AudioProcess("soundd", "openpilot.selfdrive.ui.soundd", driverview, enabled=not LITE),
