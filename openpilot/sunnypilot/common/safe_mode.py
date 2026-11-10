@@ -61,6 +61,7 @@ SAFE_MODE_MANAGED_KEYS: tuple[str, ...] = (
   "LeadDuplicateGuardEnabled",
   "ModelLeadTrajectoryEnabled",
   "CscCurvatureLearningEnabled",
+  "CscVisionEnvelopeEnabled",
 )
 
 # The values Safe Mode forces. Anything not listed here falls back to its
@@ -85,6 +86,7 @@ SAFE_MODE_FIXED_VALUES: dict[str, str] = {
   "LeadDuplicateGuardEnabled": "0",
   "ModelLeadTrajectoryEnabled": "0",
   "CscCurvatureLearningEnabled": "0",
+  "CscVisionEnvelopeEnabled": "0",
 }
 
 # The steer knobs are "0.0 means not set" parameters: every consumer falls
@@ -187,17 +189,26 @@ def can_enter(is_onroad: bool | None) -> bool:
   return is_onroad is False
 
 
-def can_restore(is_onroad: bool, is_offroad: bool) -> bool:
+def can_restore(is_onroad: bool, is_offroad: bool, fresh_parked: bool | None = None) -> bool:
   """Whether the backup may be restored now.
 
   Restoring rewrites the steering parameters, so it has to happen while the
   car is parked. Both flags have to be known and not contradictory; a
   missing pair of flags means the state is unknown and the answer is no.
+
+  fresh_parked: the dual-clock parked evidence verdict
+  (sunnypilot.common.parked_evidence.fresh_parked) when the caller can
+  produce one. None means no evidence is available - the flags-only
+  decision stands; False refuses the restore even when the flags look
+  parked, which is what catches a resume-in-between that the flags miss.
   """
-  return (not is_onroad) and bool(is_offroad)
+  if not ((not is_onroad) and bool(is_offroad)):
+    return False
+  return True if fresh_parked is None else bool(fresh_parked)
 
 
-def transition_block_reason(active: bool, is_onroad: bool | None, is_offroad: bool | None) -> str | None:
+def transition_block_reason(active: bool, is_onroad: bool | None, is_offroad: bool | None,
+                            fresh_parked: bool | None = None) -> str | None:
   """Why a Safe Mode transition is refused right now, or None when it is allowed.
 
   Kept here rather than in the runtime so the wording, the gate and the
@@ -206,7 +217,9 @@ def transition_block_reason(active: bool, is_onroad: bool | None, is_offroad: bo
   if active:
     if is_onroad is None or is_offroad is None:
       return "The road state is unknown; Safe Mode can only be undone while parked."
-    if not can_restore(is_onroad, is_offroad):
+    if not can_restore(is_onroad, is_offroad, fresh_parked):
+      if fresh_parked is False:
+        return "Parked evidence is stale; park the car and wait a moment before undoing Safe Mode."
       return "Safe Mode rewrites the steering knobs; park the car before undoing it."
     return None
   if is_onroad is None:

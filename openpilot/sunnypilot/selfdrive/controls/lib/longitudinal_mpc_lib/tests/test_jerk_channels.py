@@ -16,6 +16,7 @@ import unittest
 
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_mpc_lib.jerk_channels import (
   CHANNELS,
+  split_five_channels,
   MAX_FACTOR,
   MIN_FACTOR,
   STOCK_FACTORS,
@@ -168,3 +169,52 @@ class TestCarrotFactorPrecedence(unittest.TestCase):
 
 if __name__ == "__main__":
   unittest.main()
+
+
+class TestFiveChannelSplit(unittest.TestCase):
+  """StarPilot five-channel direction split (MPCJerkChannelsEnabled A/B)."""
+
+  def test_accelerating_selects_acceleration_and_speed(self):
+    result = split_five_channels((0.8, 1.2, 0.9, 1.4, 1.1), 0.5)
+    self.assertEqual(result, (0.8, 1.1, 0.9))
+
+  def test_decelerating_selects_deceleration_and_speed_decrease(self):
+    result = split_five_channels((0.8, 1.2, 0.9, 1.4, 1.1), -0.5)
+    self.assertEqual(result, (1.2, 1.1, 1.4))
+
+  def test_zero_a_ego_counts_as_accelerating(self):
+    self.assertEqual(split_five_channels((0.8, 1.2, 0.9, 1.4, 1.1), 0.0)[0], 0.8)
+
+  def test_out_of_range_channels_are_clamped(self):
+    # decelerating: deceleration 99 -> MAX, speed_decrease 1.4 kept; the NaN
+    # acceleration-side speed channel is not selected by this direction
+    result = split_five_channels((0.0, 99.0, float("nan"), 1.4, 1.1), -0.1)
+    self.assertEqual(result, (MAX_FACTOR, 1.1, 1.4))
+    # accelerating: the NaN speed channel IS selected and falls back to the default
+    result = split_five_channels((0.0, 99.0, float("nan"), 1.4, 1.1), 0.1)
+    self.assertEqual(result, (MIN_FACTOR, 1.1, 1.0))
+
+  def test_carrot_jerk_channels_property_is_five_wide(self):
+    import sys, types
+    try:
+      import fcntl
+    except ImportError:
+      sys.modules.setdefault('fcntl', types.ModuleType('fcntl'))
+    try:
+      from openpilot.common.params import Params  # noqa: F401
+    except (OSError, FileNotFoundError):
+      pm = types.ModuleType('openpilot.common.params')
+      class _P:
+        def __init__(self, *a, **k): pass
+        def get_bool(self, k, default=None): return default
+        def get_int(self, k, default=None): return default
+        def get_float(self, k, default=None): return default
+        def get(self, k, block=None, return_default=False): return None
+      pm.Params, pm.UnknownKeyName = _P, type('UnknownKeyName', (Exception,), {})
+      sys.modules.setdefault('openpilot.common.params', pm)
+    from openpilot.sunnypilot.carrot.carrot_functions import CarrotPlanner
+    from openpilot.sunnypilot.carrot.config import UnifiedParams
+    planner = CarrotPlanner(UnifiedParams())
+    channels = planner.jerk_channels
+    self.assertEqual(len(channels), 5)
+    self.assertEqual(channels, (planner.jerk_factor,) * 5)

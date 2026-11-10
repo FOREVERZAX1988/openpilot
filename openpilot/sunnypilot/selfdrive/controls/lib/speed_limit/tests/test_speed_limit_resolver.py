@@ -13,6 +13,7 @@ from openpilot.common.parameterized import parameterized
 from openpilot.cereal import custom
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import LIMIT_MAX_MAP_DATA_AGE
 
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import speed_limit_resolver as resolver_module
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitResolver, ALL_SOURCES
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Policy
 from openpilot.common.test import OpenpilotTestCase
@@ -130,7 +131,13 @@ class TestSpeedLimitResolverValidation(OpenpilotTestCase):
     resolver = resolver_class()
     resolver.policy = policy
     sm_mock = mocker.MagicMock()
-    sm_mock['gpsLocation'].unixTimestampMillis = (time.monotonic() - 2 * LIMIT_MAX_MAP_DATA_AGE) * 1e3
+    sm_mock['gpsLocation'].unixTimestampMillis = 1_700_000_000_000  # epoch ms; identity only
+    # Fix age is measured monotonically from the first sighting of a fix
+    # identity (_GpsFixAge) - epoch timestamps can never be compared against
+    # time.monotonic(). Register the fix, then pretend that sighting happened
+    # twice the age limit ago.
+    now = time.monotonic()
+    resolver._gps_fix_age.update(sm_mock['gpsLocation'].unixTimestampMillis, now - 2 * LIMIT_MAX_MAP_DATA_AGE)
     resolver._get_from_map_data(sm_mock)
     assert resolver.limit_solutions[SpeedLimitSource.map] == 0.
     assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
@@ -352,3 +359,175 @@ class TestCarrotSpeedLimitMerge(OpenpilotTestCase):
     sm2 = carrot_sm(mocker, nRoadLimitSpeed=60, desiredSpeed=30)
     resolver2._get_from_map_data(sm2)
     assert abs(resolver2.limit_solutions[SpeedLimitSource.map] - 60 * CV.KPH_TO_MS) < 1e-6
+
+
+def map_sm(mocker, *, current: float, ahead: float, ahead_distance: float,
+           standstill: bool = False, fix_ts_ms: float = 1_700_000_000_000):
+  """SubMaster stub for the map-source pipeline: liveMapDataSP + GPS fix + carState."""
+  car_state = create_mock({'standstill': standstill}, mocker)
+  live_map_data = create_mock({
+    'speedLimit': current,
+    'speedLimitValid': current > 0.,
+    'speedLimitAhead': ahead,
+    'speedLimitAheadValid': ahead > 0.,
+    'speedLimitAheadDistance': ahead_distance,
+  }, mocker)
+  gps_data = create_mock({'unixTimestampMillis': fix_ts_ms}, mocker)
+  carrot = create_mock({'activeCarrot': 0}, mocker)
+  sm = mocker.MagicMock()
+  sm.__getitem__.side_effect = lambda key: {
+    'carState': car_state,
+    'liveMapDataSP': live_map_data,
+    'gpsLocation': gps_data,
+    'carrotManSP': carrot,
+  }[key]
+  sm.valid.get = lambda key: False
+  return sm
+
+
+class TestMapLimitAdvance(OpenpilotTestCase):
+  """StarPilot SLC advance port: the upcoming lower map boundary is offered
+  inside the advance window and held stably by an encounter latch
+  (speed_limit_resolver._GpsFixAge / MapLimitAdvance).
+
+  Regression note: the previous implementation compared the GPS fix's epoch
+  timestamp against time.monotonic(), so distance_since_fix evaluated to a
+  ~ -1.7e9 m number and the advance condition could never fire on device.
+  """
+
+  KPH = CV.KPH_TO_MS
+
+  def _resolver(self):
+    resolver = SpeedLimitResolver()
+    resolver.policy = Policy.map_data_only
+    resolver.advance_seconds = 0.
+    return resolver
+
+  # ---- the fixed clock -----------------------------------------------------
+
+  def test_advance_fires_within_braking_distance(self, mocker):
+    """90→60 kph boundary: braking distance at LIMIT_ADAPT_ACC ≈ 124 m, so
+    300 m is too far but 100 m offers the boundary."""
+    resolver = self._resolver()
+    resolver.v_ego = 90 * self.KPH
+
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=300.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 90 * self.KPH) < 1e-6
+    assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
+
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=100.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+    assert abs(resolver.distance_solutions[SpeedLimitSource.map] - 100.) < 0.1
+
+  def test_advance_seconds_widens_window(self, mocker):
+    """SLCAdvanceSeconds: 10 s at 70 kph widens the 70→60 kph window from the
+    ~ 50 m braking distance to v * 10 s = 194 m."""
+    resolver = self._resolver()
+    resolver.v_ego = 70 * self.KPH
+
+    resolver._get_from_map_data(map_sm(mocker, current=70 * self.KPH, ahead=60 * self.KPH, ahead_distance=150.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 70 * self.KPH) < 1e-6
+
+    resolver.advance_seconds = 10.
+    resolver._get_from_map_data(map_sm(mocker, current=70 * self.KPH, ahead=60 * self.KPH, ahead_distance=150.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+    assert abs(resolver.distance_solutions[SpeedLimitSource.map] - 150.) < 0.1
+
+  def test_stale_fix_does_not_extend_distance(self, mocker):
+    """distance_since_fix must be real metres, not an epoch-minus-monotonic
+    artifact: with a fix held for 9.5 s at 90 kph (25 m/s), 237.5 m of travel
+    is already subtracted from the ahead distance, bringing a 400 m boundary
+    into the ~ 124 m + 500 m range the old code could never reach."""
+    resolver = self._resolver()
+    resolver.v_ego = 90 * self.KPH
+    fake_clock = {'t': 1000.0}
+    mocker.patch.object(resolver_module.time, 'monotonic', side_effect=lambda: fake_clock['t'])
+
+    # same fix identity across frames: age grows monotonically with the clock
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=400.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 90 * self.KPH) < 1e-6
+
+    # 400 m boundary minus 237.5 m already covered leaves 162.5 m → inside the window
+    fake_clock['t'] += 9.5
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=400.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+    assert abs(resolver.distance_solutions[SpeedLimitSource.map] - 162.5) < 0.1
+
+  # ---- encounter lifecycle -------------------------------------------------
+
+  def test_latch_holds_offer_against_gps_jitter(self, mocker):
+    """Once offered, a distance estimate that jumps back beyond the window
+    must not retract the offer (the pre-port frame-by-frame flip)."""
+    resolver = self._resolver()
+    resolver.v_ego = 90 * self.KPH
+
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=100.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+
+    # distance jittered beyond the window: the offer holds
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=300.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+    assert abs(resolver.distance_solutions[SpeedLimitSource.map] - 300.) < 0.1
+
+  def test_crossed_when_current_limit_becomes_offered_value(self, mocker):
+    resolver = self._resolver()
+    resolver.v_ego = 90 * self.KPH
+
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=100.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+
+    # boundary crossed: the plain pipeline reports the new limit, distance 0
+    resolver._get_from_map_data(map_sm(mocker, current=60 * self.KPH, ahead=0., ahead_distance=0.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+    assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
+
+  def test_withdrawn_when_current_limit_moves_elsewhere(self, mocker):
+    resolver = self._resolver()
+    resolver.v_ego = 90 * self.KPH
+
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=100.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+
+    # the map source moved to an unrelated section value: offer voided
+    resolver._get_from_map_data(map_sm(mocker, current=75 * self.KPH, ahead=60 * self.KPH, ahead_distance=5000.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 75 * self.KPH) < 1e-6
+    assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
+
+  def test_encounter_tracks_a_changing_boundary(self, mocker):
+    """Two boundaries inside the window: the encounter follows the newest
+    upcoming value."""
+    resolver = self._resolver()
+    resolver.v_ego = 90 * self.KPH
+
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=70 * self.KPH, ahead_distance=100.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 70 * self.KPH) < 1e-6
+
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=80.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+
+    # and the latch now guards the new encounter value
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=200.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+
+  # ---- guards --------------------------------------------------------------
+
+  def test_upcoming_higher_limit_is_never_offered(self, mocker):
+    """Direction is restricted to lower boundaries: the resolver has no
+    acceptance owner to gate a raise, and its merged sources are lower-only."""
+    resolver = self._resolver()
+    resolver.v_ego = 60 * self.KPH
+
+    resolver._get_from_map_data(map_sm(mocker, current=60 * self.KPH, ahead=90 * self.KPH, ahead_distance=50.))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 60 * self.KPH) < 1e-6
+    assert resolver.distance_solutions[SpeedLimitSource.map] == 0.
+
+  def test_standstill_and_stopped_ego_not_eligible(self, mocker):
+    resolver = self._resolver()
+    resolver.v_ego = 90 * self.KPH
+    resolver._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=50., standstill=True))
+    assert abs(resolver.limit_solutions[SpeedLimitSource.map] - 90 * self.KPH) < 1e-6
+
+    moving = self._resolver()
+    moving.v_ego = 0.5
+    moving._get_from_map_data(map_sm(mocker, current=90 * self.KPH, ahead=60 * self.KPH, ahead_distance=50.))
+    assert abs(moving.limit_solutions[SpeedLimitSource.map] - 90 * self.KPH) < 1e-6

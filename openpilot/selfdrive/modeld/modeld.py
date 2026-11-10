@@ -48,6 +48,8 @@ from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, che
 from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.modeld_v2.model_settings import ModelSettings, with_blendful
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
+from openpilot.sunnypilot.models.receipt import ModelReceiptOwner
+from openpilot.sunnypilot.models.status import ModelVariant
 from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeLaneChangeController
 
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')
@@ -363,6 +365,19 @@ def main(demo=False):
   model = jetlink_adapter.attach(model, small_model, vipc_client_main.width, vipc_client_main.height)
   assert model is not None
   params.put_bool("ChestnutLoading", False)
+  # modeld load receipt (best-effort): after the selected model has actually
+  # loaded and warmed, record pid/process-start-ticks/loaded-mono/artifact-sha
+  # to the volatile shm receipt and the rlog. Diagnostic failures never stop
+  # inference. A jetlink attach that replaced the local ModelState retires the
+  # identity (loaded() is only called for an actual local runner load).
+  model_receipt = ModelReceiptOwner(report=lambda reason: cloudlog.warning("modeld load identity unavailable: %s", reason))
+  model_receipt.start()
+  if isinstance(model, ModelState):
+    artifact_path = modeld_pkl_path(model.chestnut)
+    artifact_identity = model_receipt.capture(artifact_path)
+    prepared = model_receipt.prepare(artifact_path, artifact_identity)
+    variant = ModelVariant.CHESTNUT if model.chestnut else ModelVariant.SMALL
+    model_receipt.loaded(prepared, variant)
   cloudlog.warning(f"models loaded in {time.monotonic() - st:.1f}s, modeld starting")
 
   config_realtime_process(7, 54)
@@ -572,6 +587,10 @@ def main(demo=False):
       pm.send('drivingModelData', drivingdata_send)
       pm.send('cameraOdometry', posenet_send)
       pm.send('modelDataV2SP', mdv2sp_send)
+      # Re-publish the actual load identity every 5s (owner self-throttles) so
+      # routes started after warm-up retain it; without the cereal
+      # modelIdentity service this reports publication-failed and no-ops.
+      model_receipt.publish(pm, time.monotonic_ns())
     last_vipc_frame_id = meta_main.frame_id
 
 if __name__ == "__main__":

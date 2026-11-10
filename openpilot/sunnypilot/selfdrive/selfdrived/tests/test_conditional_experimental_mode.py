@@ -39,6 +39,9 @@ import pytest
 from opendbc.car import structs
 from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.selfdrived.conditional_experimental_mode import (
+  CE_CCM_LEAD,
+  CE_CCM_SPEED,
+  CE_CCM_VETO,
   CE_CURVES,
   CE_LEAD,
   CE_MANUAL,
@@ -257,3 +260,101 @@ def test_requires_longitudinal_control():
   cem = ConditionalExperimentalMode(CP, params_obj)
   mode = frames(cem, 30, car_state(v_ego=30.0), sm(desired_curvature=0.004))
   assert mode is False
+
+
+# ---- Conditional Chill Mode (StarPilot CCM port) ------------------------------
+
+CCM_SPEED_MPS = 45 * 0.44704
+
+
+def make_ccm(**params):
+  clock = FakeClock()
+  params_obj = FakeCEParams(**{"ConditionalExperimental": False, "ConditionalChill": True, **params})
+  CP = structs.CarParams.new_message()
+  CP.openpilotLongitudinalControl = True
+  cem = ConditionalExperimentalMode(CP, params_obj, now_fn=clock)
+  return cem, clock, params_obj
+
+
+def run_ccm_frames(cem, clock, n, CS, sm_obj, dt=0.01):
+  out = None
+  for _ in range(n):
+    clock.t += dt
+    out = cem.update(CS, sm_obj)
+  return out
+
+
+def test_ccm_off_keeps_cem_semantics():
+  cem, clock, _ = make_ccm(ConditionalChill=False, ConditionalExperimental=True)
+  CS = car_state(v_ego=25.0)
+  sm_obj = sm(desired_curvature=0.004)  # curve trigger
+  mode = run_ccm_frames(cem, clock, 100, CS, sm_obj)
+  assert mode is True  # CEM engages experimental on curves, not chill
+
+
+def test_ccm_speed_candidate_chills_after_confirmation():
+  cem, clock, _ = make_ccm()
+  CS = car_state(v_ego=CCM_SPEED_MPS + 2.0)
+  CS.vCruise = CCM_SPEED_MPS + 4.0  # margin met, no lead (float32-safe)
+  sm_obj = sm()
+  # below the 0.35 s confirm window nothing chills yet
+  mode = run_ccm_frames(cem, clock, 20, CS, sm_obj)  # 0.20 s
+  assert mode is True
+  mode = run_ccm_frames(cem, clock, 30, CS, sm_obj)  # past confirm
+  assert mode is False  # chilled
+  assert cem._ce_status == CE_CCM_SPEED
+
+
+def test_ccm_chill_needs_set_speed_margin():
+  cem, clock, _ = make_ccm()
+  CS = car_state(v_ego=CCM_SPEED_MPS + 2.0)
+  CS.vCruise = CCM_SPEED_MPS + 2.0  # no margin
+  mode = run_ccm_frames(cem, clock, 200, CS, sm())
+  assert mode is True  # never chills at cruise speed
+
+
+def test_ccm_veto_forces_experimental():
+  cem, clock, _ = make_ccm()
+  CS = car_state(v_ego=CCM_SPEED_MPS + 2.0)
+  CS.vCruise = CCM_SPEED_MPS + 8.0
+  sm_obj = sm()
+  run_ccm_frames(cem, clock, 100, CS, sm_obj)
+  assert cem.ccm_chill is True
+  # a curve appears: chill drops immediately, experimental back on
+  sm_obj = sm(desired_curvature=0.006)  # >= 2.0 m/s^2 lateral at this speed
+  # the curve veto reuses the CEM's 0.8 s filter, so it builds over ~0.5 s
+  mode = run_ccm_frames(cem, clock, 100, CS, sm_obj)
+  assert mode is True
+  assert cem._ce_status == CE_CURVES
+
+
+def test_ccm_standstill_veto():
+  cem, clock, _ = make_ccm()
+  CS = car_state(v_ego=CCM_SPEED_MPS + 2.0, standstill=True)
+  CS.vCruise = CCM_SPEED_MPS + 8.0
+  mode = run_ccm_frames(cem, clock, 10, CS, sm())
+  assert mode is True
+  assert cem._ce_status == CE_CCM_VETO
+
+
+def test_ccm_blinker_veto_any_speed():
+  cem, clock, _ = make_ccm()
+  CS = car_state(v_ego=CCM_SPEED_MPS + 2.0, left_blinker=True)
+  CS.vCruise = CCM_SPEED_MPS + 8.0
+  mode = run_ccm_frames(cem, clock, 10, CS, sm())
+  assert mode is True
+  assert cem._ce_status == CE_SIGNAL
+
+
+def test_ccm_min_dwell_holds_chill_through_flickers():
+  cem, clock, _ = make_ccm()
+  CS = car_state(v_ego=CCM_SPEED_MPS + 2.0)
+  CS.vCruise = CCM_SPEED_MPS + 8.0
+  run_ccm_frames(cem, clock, 100, CS, sm())
+  assert cem.ccm_chill is True
+  # candidate lost: within the 1.2 s dwell the chill holds
+  CS2 = car_state(v_ego=20.0)  # below the speed threshold, no lead
+  CS2.vCruise = 30.0
+  clock.t += 0.5
+  mode = cem.update(CS2, sm())
+  assert mode is False  # still chilled

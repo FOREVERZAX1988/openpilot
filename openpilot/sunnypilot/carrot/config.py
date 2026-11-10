@@ -220,6 +220,12 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "TFollowGap3": 140,
   "TFollowGap4": 160,
   "TrafficLightDetectMode": 2,
+  # Traffic Mode curve endpoints (StarPilot defaults; carrot/traffic_mode.py).
+  "TrafficModeEnabled": 0,
+  "TrafficFollow": 0.75,
+  "RelaxedFollow": 1.6,
+  "TrafficJerkAcceleration": 100.0,
+  "RelaxedJerkAcceleration": 100.0,
   "TrafficStopDistanceAdjust": -150,
   "UseLaneLineCurveSpeed": 0,
   "UseWideCamera": 1,

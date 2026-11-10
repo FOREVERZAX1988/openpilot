@@ -1458,6 +1458,29 @@ def _flm_copy_json(value):
   return json.loads(json.dumps(value))
 
 
+# Fail-closed numeric admission for runtime-injected FLM overrides.
+# Mirrors the upstream flm discipline: GmSurface.base_values requires complete
+# positive finite values ("v < .05 -> Invalid GM friction threshold"), and no
+# composed stage may accept non-finite input. Values here go straight into the
+# per-frame friction threshold interpolation and vehicle-knob substitution, so
+# NaN/inf/absurd magnitudes must never pass (a NaN threshold poisons every
+# downstream arithmetic on the frame).
+FLM_OVERRIDE_MIN_FRICTION_THRESHOLD = 0.05  # same floor as upstream GmSurface
+FLM_OVERRIDE_MAX_KNOB_ABS = 100.0  # coarse sanity cap; every legitimate knob stays below 40
+
+
+def _flm_override_number(value, *, floor=None):
+  """Finite plain number admission; bool is not a number here."""
+  if isinstance(value, bool) or not isinstance(value, (int, float)):
+    return None
+  value = float(value)
+  if not math.isfinite(value):
+    return None
+  if floor is not None and value < floor:
+    return None
+  return value
+
+
 def normalize_flm_overrides(overrides) -> dict:
   if overrides in (None, "", b""):
     return {}
@@ -1491,21 +1514,23 @@ def normalize_flm_overrides(overrides) -> dict:
     values = payload.get("values", payload if isinstance(payload, list) else [])
     if not isinstance(values, (list, tuple)) or len(values) != len(FLM_FRICTION_SPEED_KNOTS):
       continue
-    try:
-      normalized["baseFrictionThresholds"][family] = {
-        "speedKnots": list(FLM_FRICTION_SPEED_KNOTS),
-        "values": [float(v) for v in values],
-      }
-    except Exception:
+    # All-or-nothing per family: a curve with one invalid knot changes the
+    # interpolated shape silently, so a partial acceptance is worse than none.
+    admitted = [_flm_override_number(v, floor=FLM_OVERRIDE_MIN_FRICTION_THRESHOLD) for v in values]
+    if any(v is None for v in admitted):
       continue
+    normalized["baseFrictionThresholds"][family] = {
+      "speedKnots": list(FLM_FRICTION_SPEED_KNOTS),
+      "values": admitted,
+    }
 
   vehicle_knobs = overrides.get("vehicleKnobs", {})
   if isinstance(vehicle_knobs, dict):
     for key, value in vehicle_knobs.items():
-      try:
-        normalized["vehicleKnobs"][str(key)] = float(value)
-      except Exception:
+      admitted = _flm_override_number(value)
+      if admitted is None or abs(admitted) > FLM_OVERRIDE_MAX_KNOB_ABS:
         continue
+      normalized["vehicleKnobs"][str(key)] = admitted
 
   if not normalized["baseFrictionThresholds"] and not normalized["vehicleKnobs"]:
     return {}
@@ -1540,16 +1565,20 @@ def flm_runtime_overrides_active() -> bool:
 def _flm_base_friction_threshold(family: str, v_ego: float, default_fn) -> float:
   payload = _FLM_ACTIVE_OVERRIDES.get("baseFrictionThresholds", {}).get(family, {})
   values = payload.get("values", [])
-  if isinstance(values, list) and len(values) == len(FLM_FRICTION_SPEED_KNOTS):
+  if (isinstance(values, list) and len(values) == len(FLM_FRICTION_SPEED_KNOTS) and
+      all(_flm_override_number(v, floor=FLM_OVERRIDE_MIN_FRICTION_THRESHOLD) is not None for v in values)):
     return float(np.interp(v_ego, FLM_FRICTION_SPEED_KNOTS, values))
   return float(default_fn(v_ego))
 
 
 def _flm_vehicle_knob(name: str, default_value: float) -> float:
-  try:
-    return float(_FLM_ACTIVE_OVERRIDES.get("vehicleKnobs", {}).get(name, default_value))
-  except Exception:
+  # normalize_flm_overrides already admitted finite magnitudes; this frame-time
+  # re-check keeps the read side fail-closed even against hand-edited globals.
+  value = _FLM_ACTIVE_OVERRIDES.get("vehicleKnobs", {}).get(name)
+  admitted = _flm_override_number(value) if value is not None else None
+  if admitted is None or abs(admitted) > FLM_OVERRIDE_MAX_KNOB_ABS:
     return float(default_value)
+  return admitted
 
 
 def get_gm_base_friction_threshold(v_ego: float) -> float:

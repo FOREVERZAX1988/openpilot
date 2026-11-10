@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
 import numpy as np
+import time
 
 import openpilot.cereal.messaging as messaging
 from opendbc.car.interfaces import ACCEL_MIN, ACCEL_MAX
@@ -87,8 +88,10 @@ def get_cruise_accel(e2e, v_cruise, v_ego, a_cruise_prev, angle_steers, CP, dt, 
 
 
 from openpilot.sunnypilot.common.param_read import read_bool
+from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_mpc_lib.jerk_channels import split_five_channels
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_close_gap import LaneChangeCloseGap
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_merge_floor import get_lane_change_merge_accel_floor
+from openpilot.sunnypilot.selfdrive.controls.lib.throttle_gate import ModelThrottleGate
 
 
 class LongitudinalPlanner(LongitudinalPlannerSP):
@@ -123,6 +126,10 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.uncertainty_policy_enabled = self._params.get_bool("UncertaintyPanicBypassEnabled")
     self.duplicate_guard_enabled = self._params.get_bool("LeadDuplicateGuardEnabled")
     self.model_lead_enabled = self._params.get_bool("ModelLeadTrajectoryEnabled")
+    # StarPilot five-channel jerk split (acceleration/deceleration and
+    # speed/speed_decrease selected by aEgo direction). Gated OFF until device
+    # A/B validation; with the gate off the single-factor path is untouched.
+    self._jerk_channels_enabled = self._params.get_bool("MPCJerkChannelsEnabled")
     self._uncert_tracker = None  # lazy: UncertaintyTracker(self.dt)
     # Absolute lane-change headway (default off until the key is registered;
     # read fault-tolerantly so an unregistered key cannot kill the planner).
@@ -130,6 +137,12 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     # StarPilot lane-change merge assist (default off until the key is
     # registered; read fault-tolerantly like close_gap).
     self.lane_change_merge_assist_enabled = read_bool(self._params, "LaneChangeMergeAssistEnabled")
+    # StarPilot ModelThrottleGate (default off): source-time-held throttle
+    # comfort hysteresis replacing the single-frame 0.4 probability threshold.
+    # The gate steps on modelV2 timestamps (250ms confirm hold, stale/future/gap
+    # fail-closed) and is reset whenever the stock path runs.
+    self.throttle_gate = ModelThrottleGate()
+    self._throttle_gate_enabled = read_bool(self._params, "ModelThrottleGateEnabled")
     self._lc_close_gap = LaneChangeCloseGap(dt=dt)
 
     self.v_desired_filter = FirstOrderFilter(init_v, 2.0, self.dt)
@@ -172,7 +185,19 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
     throttle_probs = sm['modelV2'].meta.disengagePredictions.gasPressProbs
     throttle_prob = throttle_probs[1] if len(throttle_probs) > 1 else 1.0
-    self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
+    if self._throttle_gate_enabled and sm['carControl'].longActive and not reset_state:
+      # StarPilot Ioniq 6 active path: the gate holds the current allow state
+      # until a crossing probability persists 250ms in source (modelV2) time.
+      # Stale, future, gapped or invalid model frames fail closed (no throttle).
+      self.allow_throttle = self.throttle_gate.step(
+        throttle_prob if len(throttle_probs) > 1 else float('nan'),
+        v_ego, low_speed_mps=MIN_ALLOW_THROTTLE_SPEED,
+        model_ns=sm.logMonoTime['modelV2'], now_ns=time.monotonic_ns(),
+        model_valid=(getattr(sm, 'valid', {}).get('modelV2', False) is True and
+                     getattr(sm, 'alive', {}).get('modelV2', False) is True))
+    else:
+      self.throttle_gate.reset()
+      self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
 
     steer_angle_without_offset = sm['carState'].steeringAngleDeg - sm['vehicleParameters'].angleOffsetDeg
 
@@ -192,8 +217,23 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
                                                                           self.output_a_target, v_cruise,
                                                                           reset_state=reset_state)
 
-    self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
-                         jerk_factor=self.carrot_jerk_factor if self.carrot_source_active else None)
+    # StarPilot Force Stop 2.0: committed/approach frames scale the jerk cost
+    # down (StopTune.jerk_scale, 0.32 or the vehicle tune) for a gentler,
+    # held deceleration; the scale is 1.0 on every other frame.
+    fs_jerk_scale = getattr(self, '_force_stop_jerk_scale', 1.0)
+    if self._jerk_channels_enabled and self.carrot_source_active:
+      # StarPilot five-channel split (planner-side, verbatim rule: aEgo >= 0
+      # selects the acceleration/speed channels, else deceleration/speed_decrease;
+      # danger is direction-independent). The carrot source owns the values;
+      # split_five_channels clamps each into the MPC's usable range so a bad
+      # value cannot reach the solver, then the explicit three-channel
+      # precedence applies inside set_weights.
+      channels = split_five_channels(self.carrot_source.carrot.jerk_channels, float(sm['carState'].aEgo))
+      self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
+                           jerk_factors=tuple(value * fs_jerk_scale for value in channels))
+    else:
+      self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality,
+                           jerk_factor=(self.carrot_jerk_factor * fs_jerk_scale) if self.carrot_source_active else None)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.output_a_target)
 
     # The follow time Carrot contributes, scaled by how far the user moved
@@ -268,6 +308,18 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
         if credit is not None and np.any(credit):
           mpc_carrot_kwargs['lane_change_credit'] = credit
 
+    # StarPilot Force Stop 2.0 (ForceStopEnabled gate): the committed stop
+    # line enters as a virtual obstacle, folded into the same min() floor as
+    # the carrot stop point; a closer real lead still wins.
+    self._force_stop_jerk_scale = 1.0
+    fs_plan = getattr(self, 'force_stop_plan', None)
+    if fs_plan is not None and getattr(fs_plan, 'obstacle_m', None) is not None:
+      self._force_stop_jerk_scale = float(fs_plan.jerk_scale)
+      fs_stop = float(fs_plan.obstacle_m) + STOP_DISTANCE
+      if 0.0 < fs_stop < 1e5:
+        existing_stop = mpc_carrot_kwargs.get('stop_obstacle_distance')
+        mpc_carrot_kwargs['stop_obstacle_distance'] = fs_stop if existing_stop is None else min(existing_stop, fs_stop)
+
     # Carrot gap/comfort refinements (each default off; only passed when on so
     # the stock solver input is byte-identical while they are disabled).
     if self._gap_recovery_enabled or self._braking_gap_enabled or self._cutout_relief_enabled:
@@ -287,6 +339,8 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       self.uncertainty_policy_enabled = self._params.get_bool("UncertaintyPanicBypassEnabled")
       self.duplicate_guard_enabled = self._params.get_bool("LeadDuplicateGuardEnabled")
       self.model_lead_enabled = self._params.get_bool("ModelLeadTrajectoryEnabled")
+      self._jerk_channels_enabled = self._params.get_bool("MPCJerkChannelsEnabled")
+      self._throttle_gate_enabled = read_bool(self._params, "ModelThrottleGateEnabled")
     panic_bypass = False
     if self.uncertainty_policy_enabled:
       if self._uncert_tracker is None:
@@ -372,7 +426,12 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       candidates.append((output_a_target_e2e, LongitudinalPlanSource.e2e, output_should_stop_e2e))
 
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
-    self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
+    # StarPilot Force Stop 2.0: a committed stop asserts should_stop (a fresh
+    # resume request suspends the assertion for its 6 s override window).
+    fs_plan = getattr(self, 'force_stop_plan', None)
+    force_stop_stop = bool(fs_plan is not None and fs_plan.should_stop
+                           and not getattr(fs_plan, 'resume_override', False))
+    self.output_should_stop = any(should_stop for _, _, should_stop in candidates) or force_stop_stop
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
 
     # StarPilot lead_follow_policy: shape only the non-urgent follow output of

@@ -36,6 +36,13 @@ CSC_COMFORT_MARGIN = 1.0
 # StarPilot: 10 / DT_MDL (0.05 s model rate) — samples one bucket needs before it
 # counts as calibrated in the progress readout.
 CALIBRATION_PROGRESS_THRESHOLD = 200
+# StarPilot runtime gating constants (curve_speed/runtime.py): a lead must
+# have been absent for this long before a frame counts as lead-clear, openpilot
+# longitudinal ownership silences sampling for this long after it ends, and a
+# curve "counts" when the measured lateral acceleration |k|*v^2 crosses this.
+CSC_LEAD_CLEAR_TIME = 1.0
+CSC_CONTROL_QUIET_TIME = 5.0
+CSC_IN_CURVE_LAT_ACCEL = 1.3
 
 CRUISING_SPEED = 5.0  # m/s, StarPilot starpilot_variables
 DEFAULT_LATERAL_ACCELERATION = 2.0  # m/s^2, typical lateral accel in curves
@@ -149,6 +156,12 @@ class CurvatureLearning:
     self.override_watch_key = None
     self.override_watch_peak = 0.0
     self.override_watch_timer = 0.0
+    # StarPilot runtime gating: lead-clear cooldown and revision bookkeeping
+    # for the asynchronous writer (data stays dirty until the writer confirms).
+    self._lead_clear_timer = 0.0
+    self.dirty_revision = 0
+    self.acked_revision = 0
+    self.pending_revision = None
 
     self.rebuild()
 
@@ -170,24 +183,66 @@ class CurvatureLearning:
         self.data_dirty = False
 
   def flush(self):
+    """Hand the current buckets to the persistence hook.
+
+    put_fn returns True when the submission was accepted for asynchronous
+    write (the data stays dirty until acknowledge_saved confirms the covered
+    revision, so a dropped write is retried on the next flush cadence),
+    False when it was rejected (suspended, or a write already in flight),
+    and None from a legacy synchronous host hook (considered saved
+    immediately).
+    """
     if not self.data_dirty:
       return
     if self.put_fn is not None:
-      # keys are already normalized bucket strings
-      self.put_fn(dict(self.curvature_data))
-    self.data_dirty = False
+      self.pending_revision = self.dirty_revision
+      accepted = self.put_fn(dict(self.curvature_data))
+      if accepted is None:
+        # synchronous host hook: considered saved immediately
+        self.pending_revision = None
+        self.data_dirty = False
+      elif accepted is False:
+        # rejected: retry on the next flush cadence
+        self.pending_revision = None
+    else:
+      self.data_dirty = False
     self.persistence_timer = 0.0
+
+  def acknowledge_saved(self, revision: int) -> None:
+    """Writer confirmation: the completed submission covered this revision."""
+    self.acked_revision = max(self.acked_revision, revision)
+    if self.pending_revision is not None and revision >= self.pending_revision:
+      self.pending_revision = None
+      self.data_dirty = False
+      self.persistence_timer = 0.0
 
   # ---- learning ----
 
   def log_data(self, v_ego, tracking_lead, manual_speed_control, driving_in_curve,
-               blinker, lateral_acceleration, road_curvature):
-    """Per-frame sampler. Mirrors StarPilot CurveSpeedController.log_data."""
+               blinker, lateral_acceleration, road_curvature, long_control_active=False):
+    """Per-frame sampler. Mirrors StarPilot CurveSpeedController.log_data.
+
+    driving_in_curve: whether this frame is in a curve - the caller applies
+    the measured criterion |curvature|*v^2 >= CSC_IN_CURVE_LAT_ACCEL
+    (StarPilot runtime.py); long_control_active: openpilot owns the speed
+    without pedal interference, which silences sampling for
+    CSC_CONTROL_QUIET_TIME after it ends.
+    """
     self.training_quiet_timer = max(self.training_quiet_timer - self.dt, 0.0)
+    if long_control_active:
+      self.training_quiet_timer = CSC_CONTROL_QUIET_TIME
+
+    # lead-clear cooldown: a lead must have been absent for
+    # CSC_LEAD_CLEAR_TIME before this frame counts as clear
+    if tracking_lead:
+      self._lead_clear_timer = 0.0
+    else:
+      self._lead_clear_timer += self.dt
 
     eligible = (
       v_ego > CRUISING_SPEED and
       not tracking_lead and
+      self._lead_clear_timer >= CSC_LEAD_CLEAR_TIME and
       manual_speed_control and
       self.training_quiet_timer <= 0.0
     )
@@ -223,6 +278,7 @@ class CurvatureLearning:
         self.curvature_data[key] = {"average": lat_accel, "count": 1}
 
       self.data_dirty = True
+      self.dirty_revision += 1
       self.rebuild()
       self.enable_training = True
 
@@ -278,6 +334,7 @@ class CurvatureLearning:
 
     self.rebuild()
     self.data_dirty = True
+    self.dirty_revision += 1
     self.flush()
 
   def rebuild(self):

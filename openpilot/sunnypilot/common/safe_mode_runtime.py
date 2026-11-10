@@ -215,15 +215,17 @@ def apply_safe_mode(params, *, ensure_backup: bool = True) -> bool:
   return changed
 
 
-def restore_safe_mode(params) -> bool:
+def restore_safe_mode(params, fresh_parked: bool | None = None) -> bool:
   """Undo Safe Mode from the backup. Returns whether anything changed.
 
   Refused while the car is moving: restoring rewrites the steering
-  parameters, which must not happen mid-drive.
+  parameters, which must not happen mid-drive. fresh_parked is the dual-
+  clock parked-evidence verdict (parked_evidence.fresh_parked) when the
+  caller can produce one; None keeps the flags-only behavior.
   """
   is_onroad = read_bool(params, "IsOnroad", False)
   is_offroad = read_bool(params, "IsOffroad", False)
-  if not can_restore(is_onroad, is_offroad):
+  if not can_restore(is_onroad, is_offroad, fresh_parked):
     return False
 
   backup = load_backup(_get(params, SAFE_MODE_BACKUP_PARAM))
@@ -299,7 +301,8 @@ def road_state(params) -> tuple[bool | None, bool | None]:
 
 
 def safe_mode_status(params, *, is_onroad: bool | None = None,
-                     is_offroad: bool | None = None) -> dict[str, Any]:
+                     is_offroad: bool | None = None,
+                     fresh_parked: bool | None = None) -> dict[str, Any]:
   """Everything a caller needs to render Safe Mode without guessing."""
   if is_onroad is None or is_offroad is None:
     onroad, offroad = road_state(params)
@@ -315,13 +318,14 @@ def safe_mode_status(params, *, is_onroad: bool | None = None,
     "isOffroad": is_offroad,
     "canEnter": (not active) and can_enter(is_onroad),
     "canRestore": active and is_onroad is not None and is_offroad is not None
-                  and can_restore(is_onroad, is_offroad),
-    "reason": transition_block_reason(active, is_onroad, is_offroad),
+                  and can_restore(is_onroad, is_offroad, fresh_parked),
+    "reason": transition_block_reason(active, is_onroad, is_offroad, fresh_parked),
   }
 
 
 def set_safe_mode(params, enabled: bool, *, is_onroad: bool | None = None,
-                  is_offroad: bool | None = None) -> dict[str, Any]:
+                  is_offroad: bool | None = None,
+                  fresh_parked: bool | None = None) -> dict[str, Any]:
   """Switch Safe Mode on or off and return the resulting status.
 
   Raises ``SafeModeError`` when the transition is refused, or when the store
@@ -329,7 +333,8 @@ def set_safe_mode(params, enabled: bool, *, is_onroad: bool | None = None,
   that already holds is a no-op rather than an error, so a UI that re-sends
   its toggle cannot wedge the flag.
   """
-  before = safe_mode_status(params, is_onroad=is_onroad, is_offroad=is_offroad)
+  before = safe_mode_status(params, is_onroad=is_onroad, is_offroad=is_offroad,
+                            fresh_parked=fresh_parked)
   if bool(enabled) == before["active"]:
     return before
 
@@ -367,4 +372,5 @@ def set_safe_mode(params, enabled: bool, *, is_onroad: bool | None = None,
   if stored != change_wanted:
     raise SafeModeError(f"{SAFE_MODE_PARAM} did not read back as {change_wanted}.", 500)
 
-  return safe_mode_status(params, is_onroad=is_onroad, is_offroad=is_offroad)
+  return safe_mode_status(params, is_onroad=is_onroad, is_offroad=is_offroad,
+                          fresh_parked=fresh_parked)

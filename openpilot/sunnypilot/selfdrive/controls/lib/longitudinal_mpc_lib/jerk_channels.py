@@ -89,3 +89,23 @@ def factors_for_personality(personality: str, overrides: dict[str, tuple[float, 
   if overrides and personality in overrides:
     return parse_factors(overrides[personality], base)
   return base
+
+
+def split_five_channels(channels: tuple[float, float, float, float, float],
+                        a_ego: float) -> tuple[float, float, float]:
+  """StarPilot five-channel direction split, planner-side (verbatim rule).
+
+  `channels` is the carrot source's (acceleration, deceleration, speed,
+  speed_decrease, danger) tuple. aEgo >= 0 selects the acceleration and
+  speed channels; negative aEgo selects the deceleration pair. The danger
+  channel is direction-independent. Each result is clamped into the MPC's
+  usable range so a bad value can never reach the solver.
+
+  Returns the MPC three-channel form (acceleration, danger, speed) for
+  set_weights' explicit jerk_factors precedence.
+  """
+  acceleration, deceleration, speed, speed_decrease, danger = channels
+  accelerating = a_ego >= 0
+  return (clamp_factor(acceleration if accelerating else deceleration),
+          clamp_factor(danger),
+          clamp_factor(speed if accelerating else speed_decrease))

@@ -406,6 +406,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // All writers go through selfdrived; the flag itself is the existing ExperimentalMode param
     // so planner/UI keep their single consumption path.
     {"ConditionalExperimental", {PERSISTENT | BACKUP, BOOL, "0"}},  // master switch; off = manual-only (stock behaviour)
+    {"ConditionalChill", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot CCM: reverse conditional - chill on the open road, experimental in complex scenes; takes precedence over ConditionalExperimental
     {"CECurves", {PERSISTENT | BACKUP, BOOL, "1"}},  // trigger EXP in demanding curves (lat-accel based)
     {"CECurvesLead", {PERSISTENT | BACKUP, BOOL, "1"}},  // allow the curve trigger while following a lead
     {"CELead", {PERSISTENT | BACKUP, BOOL, "1"}},  // trigger EXP when closing on a slower lead
@@ -417,6 +418,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SLCMapboxFiller", {PERSISTENT | BACKUP, BOOL, "1"}},
     {"MapboxSecretKey", {PERSISTENT, STRING}},  // access token; PERSISTENT-only so it survives reinstalls
     {"MapBoxRequests", {PERSISTENT, JSON, "{}"}},  // {total_requests, month} monthly quota bookkeeping
+
+    // StarPilot SLC advance: how many seconds of travel ahead of the braking envelope an upcoming
+    // lower map speed limit may already be offered (0-10; 0 = braking distance only).
+    {"SLCAdvanceSeconds", {PERSISTENT | BACKUP, INT, "0"}},
 
     // Fork-gap alignment wave 6 params. Consumers fall back to in-code defaults when a key is
     // unset, so registered defaults only feed UI discovery and stock_value reporting.
@@ -685,6 +690,24 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // validation. Defaults match stock openpilot's envelope at the endpoints but are
     // stronger mid-range (1.2 vs 0.8 m/s² near 40 kph).
     {"CarrotCruiseAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},
+    // Traffic Mode (StarPilot port): gesture-toggled low-speed follow profile
+    // with dedicated curves. Curve math lives in sunnypilot/carrot/traffic_mode.py;
+    // defaults are verbatim StarPilot param defaults.
+    {"TrafficModeEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // StarPilot five-channel MPC jerk split (direction-selected at the planner).
+    // A/B-gated: OFF keeps the single-factor carrot path byte-identical.
+    {"MPCJerkChannelsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // StarPilot Force Stop 2.0 (commitment/hold/release state machine). A/B gate:
+    // OFF keeps the planner byte-identical; ON can only lower the cruise target
+    // and add a virtual stop obstacle - never raise accel. Needs safety review.
+    {"ForceStopEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // StarPilot ModelThrottleGate (source-timed 250ms throttle comfort hysteresis).
+    // A/B gate: OFF keeps the single-frame 0.4 probability threshold untouched.
+    {"ModelThrottleGateEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"TrafficFollow", {PERSISTENT | BACKUP, FLOAT, "0.75"}},
+    {"RelaxedFollow", {PERSISTENT | BACKUP, FLOAT, "1.6"}},
+    {"TrafficJerkAcceleration", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
+    {"RelaxedJerkAcceleration", {PERSISTENT | BACKUP, FLOAT, "100.0"}},
     // Display-only overlays. Neither one is read anywhere on the control path.
     {"CarrotRadarPointsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw measured front-radar points in the road view
     {"CarrotSignalHudEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // draw the neural signal evidence ring (needs SignalAssistMode > 0)

@@ -17,6 +17,7 @@ from openpilot.common.constants import CV
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.selfdrive.controls.lib.accel_boost import AccelBoost
 from openpilot.sunnypilot.selfdrive.controls.lib.accel_boost import AccelBoostSP
+from openpilot.sunnypilot.selfdrive.controls.lib.force_stop import ForceStop, StopFrame, StopPlan, vehicle_tune
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan
@@ -131,6 +132,12 @@ class LongitudinalPlannerSP:
     self.e2e_alerts_helper = E2EAlertsHelper()
     self.accel_boost_sp = AccelBoostSP()
     self.accel_boost = AccelBoost()  # replaced in update() once params sync; also guards the e2e path
+    # Force Stop 2.0 (StarPilot force_stop.py verbatim machine). Gated by
+    # ForceStopEnabled; the plan is consumed by update_targets (speed ceiling)
+    # and by the host planner (virtual stop obstacle, jerk scale, stop signal).
+    self.force_stop_policy = ForceStop()
+    self.force_stop_plan = StopPlan()
+    self._force_stop_enabled = False
     self.openpilot_longitudinal = CP.openpilotLongitudinalControl
 
     self.output_v_target = 0.
@@ -343,6 +350,75 @@ class LongitudinalPlannerSP:
       return True
     return False
 
+  def _build_stop_frame(self, sm: messaging.SubMaster, v_ego: float) -> StopFrame:
+    """Map the data selfdrived/plannerd already subscribes to onto StarPilot's
+    StopFrame. sign stays False (no dashboard stop-sign source in this fork);
+    road_curvature comes from the model path's desired curvature."""
+    CS = sm['carState']
+    try:
+        model_ns = int(sm.logMonoTime['modelV2'])
+    except (KeyError, TypeError, ValueError):
+        model_ns = 0
+    try:
+        horizon = float(sm['modelV2'].position.x[-1])
+    except (AttributeError, KeyError, TypeError, ValueError, IndexError):
+        horizon = None
+    try:
+        curvature = float(sm['controlsState'].desiredCurvature)
+    except (AttributeError, KeyError, TypeError, ValueError):
+        curvature = None
+    try:
+        raw_stopped = bool(sm['modelV2'].action.shouldStop)
+    except (AttributeError, KeyError, TypeError, ValueError):
+        raw_stopped = False
+    try:
+        carrot = self.carrot_source.carrot
+        light = str(getattr(carrot, '_traffic_state', '')) == 'red'
+    except (AttributeError, TypeError, ValueError):
+        light = False
+    lead_present = False
+    lead_distance = 1000.0
+    lead_speed = 100.0
+    try:
+        lead = sm['radarState'].leadOne
+        lead_present = bool(lead.status)
+        lead_distance = float(lead.dRel)
+        lead_speed = float(lead.vLead)
+    except (AttributeError, KeyError, TypeError, ValueError):
+        pass
+    try:
+        driving_in_curve = abs(float(sm['controlsState'].desiredCurvature)) * v_ego * v_ego >= 2.0
+    except (AttributeError, KeyError, TypeError, ValueError):
+        driving_in_curve = False
+    enabled = bool(sm['carControl'].enabled) and bool(self.CP.openpilotLongitudinalControl)
+    return StopFrame(
+      model_ns=model_ns, speed_mps=v_ego, horizon_m=horizon,
+      light=light, raw_model_stopped=raw_stopped, model_should_stop=raw_stopped,
+      standstill=bool(CS.standstill), enabled=enabled,
+      pedal_override=bool(CS.gasPressed or CS.brakePressed),
+      tracking_lead=False, lead_present=lead_present,
+      lead_distance_m=lead_distance, lead_speed_mps=lead_speed,
+      driving_in_curve=driving_in_curve, road_curvature=curvature,
+      blinker=bool(CS.leftBlinker or CS.rightBlinker),
+      steering_angle_deg=float(CS.steeringAngleDeg),
+      resume_requested=bool(getattr(sm['carControl'].cruiseControl, 'resume', False)),
+      perception_available=horizon is not None,
+    )
+
+  def _update_force_stop(self, sm: messaging.SubMaster, v_ego: float, reset_state: bool) -> None:
+    """Step the Force Stop 2.0 machine (ForceStopEnabled gate) and keep the
+    resulting plan for this frame's consumers. Any adapter failure yields an
+    empty plan - the gate degrades to stock, never to a phantom stop."""
+    if not self._force_stop_enabled or reset_state:
+      self.force_stop_plan = StopPlan()
+      return
+    try:
+      frame = self._build_stop_frame(sm, v_ego)
+      tune = vehicle_tune(str(self.CP.carFingerprint))
+      self.force_stop_plan = self.force_stop_policy.step(frame, tune)
+    except (AttributeError, KeyError, TypeError, ValueError, IndexError, ZeroDivisionError):
+      self.force_stop_plan = StopPlan()
+
   def update_targets(self, sm: messaging.SubMaster, v_ego: float, a_ego: float, v_cruise: float,
                      reset_state: bool = False) -> tuple[float, float]:
     CS = sm['carState']
@@ -359,6 +435,17 @@ class LongitudinalPlannerSP:
       self._fusion_enabled = self._params.get_bool("CarrotTrafficLightFusionEnabled")
       self._lead_drop_enabled = self._params.get_bool("SlcLeadDropRelaxationEnabled")
       self._cruise_accel_enabled = self._params.get_bool("CarrotCruiseAccelEnabled")
+      # Force Stop 2.0 (StarPilot port) A/B gate: OFF keeps the planner
+      # byte-identical; ON engages the commitment/hold/release state machine.
+      # Safety-review note: the machine can only ever LOWER the cruise target
+      # and ADD a virtual stop obstacle; it never raises accel.
+      self._force_stop_enabled = self._params.get_bool("ForceStopEnabled")
+
+    # Force Stop 2.0: run the machine, then cap the cruise speed target with
+    # the committed/approach ceiling. A committed standstill hold pins it to 0.
+    self._update_force_stop(sm, v_ego, reset_state)
+    if self._force_stop_enabled and self.force_stop_plan.speed_ceiling_mps is not None:
+      v_cruise = min(v_cruise, self.force_stop_plan.speed_ceiling_mps)
 
     # Smart Cruise Control
     # SCC has nothing to act through without openpilot long or ICBM, the same condition

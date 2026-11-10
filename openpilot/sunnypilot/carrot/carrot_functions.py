@@ -35,6 +35,7 @@ from collections import deque
 from enum import Enum
 import math
 import time
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -57,6 +58,9 @@ from openpilot.sunnypilot.carrot.t_follow import (
   ramp_t_follow,
 )
 from openpilot.sunnypilot.carrot.traffic_stop import TrafficStopModelLeadMatcher, is_traffic_stop_entry_allowed
+from openpilot.sunnypilot.carrot.traffic_mode import (
+  TRAFFIC_COMFORT_BRAKE_FACTOR, TrafficProfile,
+)
 from openpilot.sunnypilot.carrot.signal_assist import SignalAssist
 from openpilot.sunnypilot.carrot.signal_assist_runtime import SignalAssistRuntime
 
@@ -128,6 +132,69 @@ def get_driving_mode_factors(driving_mode: DrivingMode,
 def get_driving_mode_comfort_brake_factor(driving_mode: DrivingMode) -> float:
   """Give Safe mode a slightly earlier braking profile while keeping Eco efficient."""
   return 0.9 if driving_mode == DrivingMode.Safe else 1.0
+
+
+# StarPilot ProfileSmoother rates. The jerk rate is verbatim (jerk_step = dt * 2.0
+# on jerk values spanning 0.25..2.0). The comfort-factor rate is adapted: the
+# StarPilot acceleration rate (2.0/s) applies to absolute m/s^2 spans, while our
+# multiplicative factors span ~0.2 between modes, so 0.5/s gives the same
+# sub-second-but-perceptible fade feel. The t-follow channel is excluded on
+# purpose - it already ramps through ramp_mode_t_follow_factor.
+ACCEL_STEP_RATE = 0.5
+JERK_STEP_RATE = 2.0
+
+
+@dataclass(frozen=True)
+class ModeComfortFactors:
+  """Mode-derived comfort scalars the smoother fades (StarPilot ProfileTuning role)."""
+  accel_factor: float
+  comfort_brake_factor: float
+
+
+STOCK_FACTORS = ModeComfortFactors(1.0, 1.0)
+
+
+def move_toward(current: float, target: float, step: float) -> float:
+  """StarPilot ProfileSmoother._move verbatim: bounded linear approach."""
+  return min(max(target, current - step), current + step)
+
+
+class DrivingModeSmoother:
+  """Fade driving-mode comfort changes at fixed rates instead of stepping.
+
+  StarPilot ProfileSmoother discipline: a live tuning change must reach the
+  planner as a rate-limited ramp, and an invalid input fades to stock rather
+  than snapping. Targets are resolved by the caller (the mode -> factor
+  mapping); the smoother only owns the applied state.
+
+  Transitions always start from stock, never from the previous mode's target,
+  matching how the StarPilot smoother starts a Traffic fade from the ordinary
+  personality rather than Traffic's own endpoint.
+
+  Steady state on the stock (Normal/High) tuning collapses the applied
+  history to None, so devices that never leave those modes behave
+  byte-for-byte as before.
+  """
+
+  def __init__(self):
+    self.applied: ModeComfortFactors | None = None
+
+  def sample(self, target: ModeComfortFactors, dt: float) -> ModeComfortFactors:
+    if (not isinstance(target, ModeComfortFactors) or type(dt) not in (int, float) or
+        not math.isfinite(dt) or not 0.0 < dt <= 0.25):
+      self.applied = None
+      return STOCK_FACTORS
+    if target != STOCK_FACTORS and self.applied is None:
+      self.applied = STOCK_FACTORS
+    if self.applied is not None:
+      accel_step = ACCEL_STEP_RATE * dt
+      self.applied = ModeComfortFactors(
+        move_toward(self.applied.accel_factor, target.accel_factor, accel_step),
+        move_toward(self.applied.comfort_brake_factor, target.comfort_brake_factor, accel_step),
+      )
+      if self.applied == STOCK_FACTORS:
+        self.applied = None
+    return self.applied if self.applied is not None else STOCK_FACTORS
 
 
 class TrafficState(Enum):
@@ -380,6 +447,15 @@ class CarrotPlanner:
     # Ramped copy of _my_t_follow_factor. The driving mode is applied gradually on the way
     # down (see ramp_mode_t_follow_factor) so clearing Safe does not snap the gap shut.
     self._tf_mode_factor = 1.0
+    # StarPilot ProfileSmoother: the mode-derived accel/comfort factors fade at
+    # fixed rates instead of stepping; see DrivingModeSmoother.
+    self._mode_smoother = DrivingModeSmoother()
+    self._mode_comfort_brake_factor = 1.0
+    # Traffic Mode (StarPilot port): gesture-toggled dedicated low-speed
+    # follow/jerk curves plus the Traffic acceleration profile.
+    self._traffic_mode_enabled = False
+    self._traffic_profile = TrafficProfile(self._params)
+    self._traffic_curve = None
     self._apply_driving_mode_factors()
 
     # Follow-distance breakpoints (seconds) - one per LongitudinalPersonality.
@@ -406,7 +482,6 @@ class CarrotPlanner:
     # Base comfort deceleration; scaled per-tick by the driving-mode factors below.
     self._comfort_brake_base = _DEFAULT_COMFORT_BRAKE
     self._comfort_brake = _DEFAULT_COMFORT_BRAKE
-    self._comfort_brake_comfort_factor = 1.0
     self._traffic_light_detect_mode = 2
     self._traffic_state = TrafficState.off
     self._traffic_state_carrot = 0
@@ -486,6 +561,7 @@ class CarrotPlanner:
     self._desire_state_count = 0
     self._jerk_factor = 1.0
     self._jerk_factor_apply = 1.0
+    self._jerk_fade_frame = -1
     self._j_lead_factor = 0.0
 
     # Lane-change gap tracker (ported from CarrotPilot). Consumed later by the
@@ -611,8 +687,28 @@ class CarrotPlanner:
 
   @property
   def jerk_factor(self) -> float:
-    """Comfort-scaled jerk multiplier currently used by the planner."""
-    return float(self._jerk_factor)
+    """Comfort-scaled jerk multiplier currently used by the planner.
+
+    StarPilot ProfileSmoother: the jerk-cost target fades at a bounded rate
+    instead of stepping when the mode (or the speed table) changes it. Gated
+    to once per planner tick so repeated reads within a tick cannot advance
+    the fade faster than wall time; the planner reads this exactly once per
+    tick after update().
+    """
+    if self._jerk_fade_frame != self._frame:
+      self._jerk_fade_frame = self._frame
+      self._jerk_factor_apply = move_toward(self._jerk_factor_apply, self._jerk_factor,
+                                            JERK_STEP_RATE * DT_MDL)
+    return float(self._jerk_factor_apply)
+
+  @property
+  def jerk_channels(self) -> tuple[float, float, float, float, float]:
+    """StarPilot five-channel jerk tuple: (acceleration, deceleration, speed,
+    speed_decrease, danger). All channels currently carry the faded single
+    factor, so the planner's direction split is behaviour-neutral until
+    per-channel tuning lands (MPCJerkChannelsEnabled A/B gate)."""
+    value = self.jerk_factor
+    return (value, value, value, value, value)
 
   @property
   def comfort_brake(self) -> float:
@@ -703,22 +799,54 @@ class CarrotPlanner:
       self._eco_over_speed = p.get_int("CruiseEcoControl")
       self._auto_navi_speed_decel_rate = float(p.get_int("AutoNaviSpeedDecelRate")) * 0.01
       self._traffic_stop_distance_adjust = p.get_float("TrafficStopDistanceAdjust") / 100.0
-      self._comfort_brake_comfort_factor = get_driving_mode_comfort_brake_factor(self._my_driving_mode)
       comfort_brake = p.get_float("LongitudinalMpcTuningComfortBrake")
       if comfort_brake > 0:
         self._comfort_brake_base = comfort_brake
+    elif self._params_count == 40:
+      # Traffic Mode curve endpoints (StarPilot TrafficFollow/RelaxedFollow
+      # and the Traffic/Relaxed jerk percentages; see carrot/traffic_mode.py).
+      # The toggle itself is read at == 50 so a button gesture lands within 2.5 s.
+      self._traffic_curve = self._traffic_profile.read()
+    elif self._params_count == 50:
+      self._traffic_mode_enabled = p.get_bool("TrafficModeEnabled", False)
     elif self._params_count >= 100:
       self._params_count = 0
 
   # ---- driving-mode helpers --------------------------------------------- #
 
   def _apply_driving_mode_factors(self) -> None:
-    """Cache accel/t_follow factors derived from the active driving mode."""
-    accel_factor, t_follow_factor = get_driving_mode_factors(self._my_driving_mode,
-                                                              self._my_eco_factor,
-                                                              self._my_safe_mode_factor)
-    self._my_safe_factor = accel_factor
+    """Cache the mode t-follow factor; the accel/comfort factors now fade
+    through the smoother each tick instead of being cached here."""
+    _, t_follow_factor = get_driving_mode_factors(self._my_driving_mode,
+                                                  self._my_eco_factor,
+                                                  self._my_safe_mode_factor)
     self._my_t_follow_factor = t_follow_factor
+
+  def _sample_mode_factors(self, lead_slow: bool) -> None:
+    """Fade the mode-derived comfort scalars toward the active mode's targets.
+
+    StarPilot ProfileSmoother discipline: a driving-mode change (including the
+    auto Safe entry/exit) must reach the planner as a rate-limited ramp. The
+    lead-proximity reduction stays instant - it is a safety response, not a
+    comfort transition - so it composes as a min() on top of the faded mode
+    factor, exactly matching the old per-tick mapping whenever the smoother
+    has converged.
+    """
+    accel_target = {DrivingMode.Eco: self._my_eco_factor,
+                    DrivingMode.Safe: self._my_safe_mode_factor}.get(self._my_driving_mode, 1.0)
+    if self._traffic_mode_enabled:
+      # StarPilot traffic cruise-brake magnitude (|A_CRUISE_MIN| * 0.35 vs a
+      # standard of 1.2) as a comfort-brake multiplier; the accel envelope is
+      # owned by the traffic profile, so the mode factor target is stock.
+      accel_target, comfort_target = 1.0, TRAFFIC_COMFORT_BRAKE_FACTOR
+    else:
+      comfort_target = get_driving_mode_comfort_brake_factor(self._my_driving_mode)
+    tuning = self._mode_smoother.sample(
+      ModeComfortFactors(accel_target, comfort_target), DT_MDL)
+    self._my_safe_factor = tuning.accel_factor
+    if lead_slow:
+      self._my_safe_factor = min(self._my_safe_factor, self._my_safe_mode_factor)
+    self._mode_comfort_brake_factor = tuning.comfort_brake_factor
 
   # ---- cruise envelope helpers ------------------------------------------ #
 
@@ -729,12 +857,23 @@ class CarrotPlanner:
   # get_carrot_max_accel channel as the turn-accel / cutin-predecel contributors,
   # so it can only ever lower the cap - never raise it.
   def get_carrot_accel(self, v_ego: float) -> float:
+    if self._traffic_mode_enabled:
+      # StarPilot traffic acceleration profile replaces the envelope; the
+      # consumer channel only ever tightens the positive-accel cap.
+      return self._traffic_profile.accel_cap(v_ego)
     factor = self._my_high_mode_factor if self._my_driving_mode == DrivingMode.High else self._my_safe_factor
     return float(np.interp(v_ego, _A_CRUISE_MAX_BP, self._cruise_max_vals) * factor)
 
   def _get_base_t_follow(self, personality: int, v_ego: float,
                          use_speed_tf: bool = True) -> float:
     """Return the unscaled following-time target for this personality."""
+    if self._traffic_mode_enabled and self._traffic_curve is not None:
+      # StarPilot traffic profile: the dedicated follow curve replaces the
+      # personality table entirely; the Traffic jerk channel becomes the
+      # MPC jerk target (faded by the planner-side jerk ramp).
+      follow_low, follow_high, jerk_low, jerk_high = self._traffic_curve
+      self._jerk_factor = self._traffic_profile.jerk((jerk_low, jerk_high), v_ego)
+      return self._traffic_profile.follow((follow_low, follow_high), v_ego)
     if use_speed_tf and self._enable_speed_tf < 0:
       tf_speed_bps = {
         -1: [0, 30, 60, 90],
@@ -1101,7 +1240,7 @@ class CarrotPlanner:
         if can_go:
           self._x_state = XState.e2eCruise
         else:
-          self._comfort_brake = self._comfort_brake_base * self._comfort_brake_comfort_factor
+          self._comfort_brake = self._comfort_brake_base * self._mode_comfort_brake_factor
           traffic_stop_adjust_ratio = float(np.interp(v_ego_kph, [0, 100], [1.0, 0.7]))
           stop_dist = x_last * float(np.interp(x_last, [0, 50], [1.0, traffic_stop_adjust_ratio]))
           if stop_dist > 10.0:
@@ -1249,15 +1388,11 @@ class CarrotPlanner:
     self._v_ego = v_ego
     v_ego_cluster_kph = float(getattr(cs, "vEgoCluster", v_ego)) * CV.MS_TO_KPH
 
-    # Driving mode-aware safety factor.
-    self._my_safe_factor = 1.0
+    # Driving mode-aware safety factor: fade toward the mode's comfort
+    # targets (StarPilot ProfileSmoother), with the lead-proximity reduction
+    # kept instant inside _sample_mode_factors.
     lead_one = radar.leadOne
-    if lead_one.present and lead_one.vLead < 5:
-      self._my_safe_factor = self._my_safe_mode_factor
-    elif self._my_driving_mode == DrivingMode.Eco:
-      self._my_safe_factor = self._my_eco_factor
-    elif self._my_driving_mode == DrivingMode.Safe:
-      self._my_safe_factor = self._my_safe_mode_factor
+    self._sample_mode_factors(bool(lead_one.present and lead_one.vLead < 5))
 
     if self._frame % 20 == 0:  # once per second at 20 Hz
       v_lead = float(lead_one.vLead) * CV.MS_TO_KPH if lead_one.present else 0.0
@@ -1456,7 +1591,7 @@ class CarrotPlanner:
 
     # Recompute from the base every tick. This used to be `*=`, which decayed the
     # value geometrically at 20 Hz whenever a factor != 1 was active.
-    self._comfort_brake = self._comfort_brake_base * self._my_safe_factor * self._comfort_brake_comfort_factor
+    self._comfort_brake = self._comfort_brake_base * self._my_safe_factor * self._mode_comfort_brake_factor
     self._actual_stop_distance = max(0.0, self._actual_stop_distance - v_ego * DT_MDL)
 
     if stop_model_x == 1000.0:

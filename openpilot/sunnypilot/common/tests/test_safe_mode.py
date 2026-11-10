@@ -71,6 +71,7 @@ KEY_TYPES = {
   "LeadDuplicateGuardEnabled": "BOOL",
   "ModelLeadTrajectoryEnabled": "BOOL",
   "CscCurvatureLearningEnabled": "BOOL",
+  "CscVisionEnvelopeEnabled": "BOOL",
   "SafeMode": "BOOL",
   "SafeModeBackup": "JSON",
   "IsOnroad": "BOOL",
