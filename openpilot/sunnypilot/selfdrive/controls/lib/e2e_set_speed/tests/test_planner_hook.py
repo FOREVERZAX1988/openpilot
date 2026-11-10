@@ -7,8 +7,8 @@ See the LICENSE.md file in the root directory for more details.
 The planner hook: off is upstream behaviour, on raises the e2e candidate, and the plan reports it.
 """
 import numpy as np
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.cereal import log, messaging
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC
 from openpilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner, LongitudinalPlanSource
@@ -64,7 +64,7 @@ def test_off_is_upstream():
   planner = run_planner(False)
   assert planner.mpc.source == LongitudinalPlanSource.e2e
   # upstream's boost starts at its aggressive minimum (the fixture's personality)
-  assert planner.output_a_target == pytest.approx(MODEL_ACCEL + planner.accel_boost.total_boost)
+  assert planner.output_a_target == approx(MODEL_ACCEL + planner.accel_boost.total_boost)
   assert planner.e2e_set_speed.inhibit == Inhibit.disabled
 
 
@@ -73,8 +73,8 @@ def test_on_raises_the_e2e_candidate():
   assert planner.e2e_set_speed.inhibit == Inhibit.none
   # the model holding at 0 under the set speed: lifted at the approach pace, below the cruise law's
   approach = approach_accel(planner.v_ego, planner.output_v_target, planner_sm()['selfdriveState'].personality.raw)
-  assert planner.e2e_set_speed.lift == pytest.approx(approach)
-  assert planner.output_a_target == pytest.approx(approach)
+  assert planner.e2e_set_speed.lift == approx(approach)
+  assert planner.output_a_target == approx(approach)
   assert planner.a_cruise > 1. > approach
 
 
@@ -85,8 +85,8 @@ def test_behind_a_lead_follows_as_chill():
   sm = planner_sm()
   for _ in range(200):
     planner.update(sm)
-  assert planner.e2e_set_speed.lift == pytest.approx(0.3)
-  assert planner.output_a_target == pytest.approx(0.3)
+  assert planner.e2e_set_speed.lift == approx(0.3)
+  assert planner.output_a_target == approx(0.3)
 
 
 def test_plan_reports_the_floor():
@@ -97,7 +97,7 @@ def test_plan_reports_the_floor():
   planner.publish_longitudinal_plan_sp(planner_sm(), pm)
   report = sent['longitudinalPlanSP'].longitudinalPlanSP.zoompilot.e2eSetSpeed
   assert report.inhibit == Inhibit.none
-  assert report.boost == pytest.approx(planner.e2e_set_speed.lift)
+  assert report.boost == approx(planner.e2e_set_speed.lift)
   assert (report.gain, report.fade) == (1., 1.)
 
 
@@ -121,4 +121,4 @@ def test_gas_boost_only_without_the_floor():
   assert gas_pressed_planner(False).accel_boost.total_boost > 0.1
   on = gas_pressed_planner(True)
   assert (on.accel_boost.total_boost, on.accel_boost.boost_eligible) == (0., False)
-  assert on.output_a_target == pytest.approx(on.e2e_set_speed.lift + MODEL_ACCEL)
+  assert on.output_a_target == approx(on.e2e_set_speed.lift + MODEL_ACCEL)

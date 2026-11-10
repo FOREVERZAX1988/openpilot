@@ -12,9 +12,11 @@ See the LICENSE.md file in the root directory for more details.
 # the alert; a driver-limited frame still does.
 
 import numpy as np
-import pytest
 
 from opendbc.sunnypilot.car.lateral_tune import get_steer_rail_schedule
+from openpilot.common.params import Params
+from openpilot.common.prefix import OpenpilotPrefix
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
 from openpilot.sunnypilot.selfdrive.controls.lib.tests.torque_harness import (
   DELAY_FRAMES, DT, LAF, LAT_DELAY, LP, VM, make_cp, make_cs, make_lac, step,
@@ -41,7 +43,7 @@ def count_update_limits(lac):
   return calls
 
 
-class TestRailFromPlatform:
+class TestRailFromPlatform(OpenpilotTestCase):
   """The CX-5 2022 schedule resolves from CP; the extension reads speed from the previous
   frame (the same _last_vego the speed-dep interp uses), so each speed takes two frames."""
 
@@ -53,10 +55,10 @@ class TestRailFromPlatform:
       for _ in range(2):
         step(lac, make_cs(v_ego), 0.0)
       expected = float(np.interp(v_ego, bp, rail))
-      assert lac.steer_max == pytest.approx(expected)
-      assert lac.pid.pos_limit == pytest.approx(expected * LAF)
-      assert lac.pid.neg_limit == pytest.approx(-expected * LAF)
-    assert lac.steer_max == pytest.approx(620.0 / 1200.0)  # the 20 m/s rail
+      assert lac.steer_max == approx(expected)
+      assert lac.pid.pos_limit == approx(expected * LAF)
+      assert lac.pid.neg_limit == approx(-expected * LAF)
+    assert lac.steer_max == approx(620.0 / 1200.0)  # the 20 m/s rail
 
   def test_update_limits_reruns_as_the_rail_moves_and_not_at_steady_speed(self, params):
     lac = make_rail_lac(mazda=True)
@@ -70,11 +72,11 @@ class TestRailFromPlatform:
     assert calls == []
     step(lac, make_cs(14.2), 0.0)  # now the 14.2 rail (648/1200)
     assert len(calls) == 1
-    assert lac.steer_max == pytest.approx(648.0 / 1200.0)
+    assert lac.steer_max == approx(648.0 / 1200.0)
     step(lac, make_cs(10.3), 0.0)
     step(lac, make_cs(10.3), 0.0)
     assert len(calls) == 2
-    assert lac.steer_max == pytest.approx(1048.0 / 1200.0)
+    assert lac.steer_max == approx(1048.0 / 1200.0)
 
   def test_platform_without_a_schedule_keeps_full_scale(self, params):
     lac = make_rail_lac(mazda=False)
@@ -85,11 +87,11 @@ class TestRailFromPlatform:
         step(lac, make_cs(v_ego), 0.0)
     assert calls == []
     assert lac.steer_max == 1.0
-    assert lac.pid.pos_limit == pytest.approx(LAF)
+    assert lac.pid.pos_limit == approx(LAF)
     assert lac.extension.rail_scale_at(15.0) == 1.0
 
 
-class TestRailAwareSaturation:
+class TestRailAwareSaturation(OpenpilotTestCase):
   """A railed EPS raises the saturation warning through the tune's own steer_max test once
   the classifier keeps the rail out of steer_limited_by_safety; a driver-limited frame keeps
   the suppression, and platforms without a rail schedule keep stock semantics."""
@@ -109,7 +111,7 @@ class TestRailAwareSaturation:
     lac = make_rail_lac(rail=self.RAIL)
     log = self._run(lac, lat_accel_demand=4.5, sls=False, frames=self.SAT_FRAMES)
     assert log.saturated
-    assert abs(log.output) == pytest.approx(0.6)
+    assert abs(log.output) == approx(0.6)
 
   def test_driver_limited_frames_suppress_it(self, params):
     lac = make_rail_lac(rail=self.RAIL)
@@ -142,7 +144,7 @@ class TestRailAwareSaturation:
     assert log.saturated
 
 
-class TestRailLimitedPid:
+class TestRailLimitedPid(OpenpilotTestCase):
   """The PID is limited to the torque the EPS will actually deliver, not the full steer scale,
   so its own anti-windup engages at the real rail. Delivered counts are unchanged (the
   carcontroller clamps there regardless); what changes is that a railed integrator can
@@ -156,13 +158,13 @@ class TestRailLimitedPid:
   def test_limits_track_the_rail(self, params):
     lac = self._railed()
     step(lac, make_cs(15.0), 0.0)
-    assert lac.pid.pos_limit == pytest.approx(self.RAIL * LAF)
-    assert lac.pid.neg_limit == pytest.approx(-self.RAIL * LAF)
+    assert lac.pid.pos_limit == approx(self.RAIL * LAF)
+    assert lac.pid.neg_limit == approx(-self.RAIL * LAF)
 
   def test_no_schedule_keeps_full_scale_limits(self, params):
     lac = self._railed(rail=None)
     step(lac, make_cs(15.0), 0.0)
-    assert lac.pid.pos_limit == pytest.approx(LAF)
+    assert lac.pid.pos_limit == approx(LAF)
 
   def test_limits_follow_speed(self, params):
     """A falling ceiling must tighten the limits as the car speeds up, not stay on whatever
@@ -170,10 +172,10 @@ class TestRailLimitedPid:
     lac = make_rail_lac(rail=([5.0, 25.0], [1.0, 0.5]))
     for _ in range(2):
       step(lac, make_cs(5.0), 0.0)
-    assert lac.pid.pos_limit == pytest.approx(LAF)
+    assert lac.pid.pos_limit == approx(LAF)
     for _ in range(2):
       step(lac, make_cs(25.0), 0.0)
-    assert lac.pid.pos_limit == pytest.approx(0.5 * LAF)
+    assert lac.pid.pos_limit == approx(0.5 * LAF)
 
   def test_output_never_exceeds_the_rail(self, params):
     lac = self._railed()
@@ -206,7 +208,7 @@ class TestRailLimitedPid:
     frame still freezes it: that is what the flag now means."""
     free = self._rail_then_reverse(sls=False)
     assert free < 0.4 - 0.05
-    assert self._rail_then_reverse(sls=True) == pytest.approx(0.4)
+    assert self._rail_then_reverse(sls=True) == approx(0.4)
 
   def test_railed_integrator_still_cannot_wind_into_the_rail(self, params):
     """The other half: a standing error that pushes further into the rail must not wind up."""
@@ -220,3 +222,9 @@ class TestRailLimitedPid:
       lac.update(True, make_cs(v_ego, 0.0), VM, LP, False, demand, None, False, LAT_DELAY)
     # unconstrained, ki * dt * error * 200 frames would be ~1.8
     assert lac.pid.i < 0.05
+
+
+def params():
+  """Params under a throwaway prefix, for tests that build a real controller."""
+  with OpenpilotPrefix():
+    yield Params()

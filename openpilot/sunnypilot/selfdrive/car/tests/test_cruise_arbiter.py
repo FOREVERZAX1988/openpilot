@@ -7,7 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 Card-side cruise arbiter on stock-ACC (ICBM) cars: press classification at the edges,
 the confirm/dismiss/decline flow, the prompt freeze and its timers.
 """
-import pytest
+import unittest
 
 from openpilot.cereal import custom
 from opendbc.car.car_helpers import interfaces
@@ -27,7 +27,7 @@ ButtonType = car_struct.CarState.ButtonEvent.Type
 DEFAULT_CAR = TOYOTA.TOYOTA_RAV4_TSS2
 
 
-class TestCruiseArbiterNonPcm:
+class TestCruiseArbiterNonPcm(unittest.TestCase):
   """Stock-ACC (button-actuated) cars: pcmCruise=True, openpilotLongitudinalControl=False,
   pcmCruiseSpeed=False. The session runs in the card-side cruise arbiter, synchronous
   with the buttons: presses are classified once at their edges (dismiss at press,
@@ -36,7 +36,8 @@ class TestCruiseArbiterNonPcm:
 
   MPH = CV.MPH_TO_MS
 
-  def setup_method(self, method):
+  def setUp(self):
+    super().setUp()
     self.params = Params()
     self.params.put("IsReleaseSpBranch", True, block=True)
     self.params.put("SpeedLimitMode", int(Mode.assist), block=True)
@@ -249,25 +250,26 @@ class TestCruiseArbiterNonPcm:
     assert int(ARBITER_PROMPT_PERIOD / DT_CTRL) == 500   # 5 s at 100 Hz
     assert int(ARBITER_GUARD_PERIOD / DT_CTRL) == 50     # 0.5 s at 100 Hz
 
-  @pytest.mark.parametrize("op_long, pcm_cruise, pcm_cruise_speed", [
-    (False, True, False),  # ICBM (Mazda stock long)
-    (True, True, False),   # ICBM under openpilot longitudinal (Mazda alpha long)
-    (True, False, True),   # op-long, no pcmCruise (most ports)
-    (True, True, True),    # pcm-op-long, driver-only setpoint (plannerd machine)
-  ], ids=["icbm", "icbm_op_long", "op_long_non_pcm", "pcm_op_long"])
-  def test_applicability_matches_planner_selection(self, op_long, pcm_cruise, pcm_cruise_speed):
+  def test_applicability_matches_planner_selection(self):
     """The arbiter must cover exactly the cars plannerd mirrors: every car whose setpoint is
     reachable (openpilot's own, or the ICBM buttons). Only a pcm-op-long car with a
     driver-only setpoint keeps the planner machine. A mismatch leaves a car mirroring a
     permanently disabled session."""
-    CarInterface = interfaces[DEFAULT_CAR]
-    CP = CarInterface.get_non_essential_params(DEFAULT_CAR)
-    CP_SP = CarInterface.get_non_essential_params_sp(CP, DEFAULT_CAR)
+    for op_long, pcm_cruise, pcm_cruise_speed in [
+      (False, True, False),  # ICBM (Mazda stock long)
+      (True, True, False),   # ICBM under openpilot longitudinal (Mazda alpha long)
+      (True, False, True),   # op-long, no pcmCruise (most ports)
+      (True, True, True),    # pcm-op-long, driver-only setpoint (plannerd machine)
+    ]:
+      with self.subTest(op_long=op_long, pcm_cruise=pcm_cruise, pcm_cruise_speed=pcm_cruise_speed):
+        CarInterface = interfaces[DEFAULT_CAR]
+        CP = CarInterface.get_non_essential_params(DEFAULT_CAR)
+        CP_SP = CarInterface.get_non_essential_params_sp(CP, DEFAULT_CAR)
 
-    CP.openpilotLongitudinalControl = op_long
-    CP.pcmCruise = pcm_cruise
-    CP_SP.pcmCruiseSpeed = pcm_cruise_speed
-    arb = CruiseArbiter(CP, CP_SP)
+        CP.openpilotLongitudinalControl = op_long
+        CP.pcmCruise = pcm_cruise
+        CP_SP.pcmCruiseSpeed = pcm_cruise_speed
+        arb = CruiseArbiter(CP, CP_SP)
     mirrored_by_plannerd = not pcm_machine_owns_sla(CP, icbm_active=not pcm_cruise_speed)
     assert mirrored_by_plannerd == (not (op_long and pcm_cruise and pcm_cruise_speed))
     assert arb.applicable == mirrored_by_plannerd, (op_long, pcm_cruise, pcm_cruise_speed)

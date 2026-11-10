@@ -7,8 +7,8 @@ See the LICENSE.md file in the root directory for more details.
 Cruise arbiter on op-long ports without pcmCruise: openpilot owns the setpoint, so a
 dismiss re-anchors v_cruise to the cap instead of leaving it to a dash reconciler.
 """
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.cereal import custom
 from opendbc.car.structs import car as car_struct
 from openpilot.common.constants import CV
@@ -33,7 +33,8 @@ class TestOpLongNonPcmDismiss:
   LIMIT_MPH = 45          # 72.42 kph: displays 45 mph or 72 kph
   BASELINE_KPH = {False: 70 * CV.MPH_TO_KPH, True: 113.}
 
-  def setup_method(self, method):
+  def setUp(self):
+    super().setUp()
     self.params = Params()
     self.params.put("SpeedLimitMode", int(Mode.assist), block=True)
     self.params.put_bool("CustomAccIncrementsEnabled", False)
@@ -74,37 +75,39 @@ class TestOpLongNonPcmDismiss:
     assert h.cruise_arbiter.prompting
     self.press(h, ButtonType.decelCruise)  # confirm down: the baseline survives, the cap binds
     assert h.cruise_arbiter.session_active
-    assert h.v_cruise_kph == pytest.approx(self.BASELINE_KPH[is_metric], abs=0.05)
-    assert h.cruise_arbiter.v_cap == pytest.approx(self.LIMIT_MPH * CV.MPH_TO_MS, abs=0.01)
+    assert h.v_cruise_kph == approx(self.BASELINE_KPH[is_metric], abs=0.05)
+    assert h.cruise_arbiter.v_cap == approx(self.LIMIT_MPH * CV.MPH_TO_MS, abs=0.01)
     return h
 
-  @pytest.mark.parametrize("is_metric, button, expected_kph", [
+  def test_dismiss_tap_steps_from_the_cap(self):
+    for is_metric, button, expected_kph in [
     (False, ButtonType.accelCruise, 72.4 + 1.6),   # 45 -> 46 mph
     (False, ButtonType.decelCruise, 72.4 - 1.6),   # 45 -> 44 mph
     (True, ButtonType.accelCruise, 73.),           # 72 -> 73 kph
     (True, ButtonType.decelCruise, 71.),           # 72 -> 71 kph
-  ])
-  def test_dismiss_tap_steps_from_the_cap(self, is_metric, button, expected_kph):
-    h = self.active_session(is_metric)
-    self.press(h, button)
-    assert h.cruise_arbiter.state == SpeedLimitAssistState.inactive
-    assert h.cruise_arbiter.v_cap == V_CRUISE_UNSET
-    assert h.v_cruise_kph == pytest.approx(expected_kph, abs=0.05), "one step from the cap, not the baseline"
-    assert h.v_cruise_cluster_kph == h.v_cruise_kph
+  ]:
+      with self.subTest(is_metric=is_metric, button=button, expected_kph=expected_kph):
+        h = self.active_session(is_metric)
+        self.press(h, button)
+        assert h.cruise_arbiter.state == SpeedLimitAssistState.inactive
+        assert h.cruise_arbiter.v_cap == V_CRUISE_UNSET
+        assert h.v_cruise_kph == approx(expected_kph, abs=0.05), "one step from the cap, not the baseline"
+        assert h.v_cruise_cluster_kph == h.v_cruise_kph
 
-  @pytest.mark.parametrize("is_metric, button, expected_kph", [
+  def test_dismiss_long_press_snaps_from_the_cap(self):
+    for is_metric, button, expected_kph in [
     (False, ButtonType.accelCruise, 80.),  # ceil(72.4 / 8.0) * 8.0
     (False, ButtonType.decelCruise, 72.),  # floor(72.4 / 8.0) * 8.0
     (True, ButtonType.accelCruise, 75.),   # ceil(72 / 5) * 5
     (True, ButtonType.decelCruise, 70.),   # floor(72 / 5) * 5
-  ])
-  def test_dismiss_long_press_snaps_from_the_cap(self, is_metric, button, expected_kph):
-    """The long-press tick at CRUISE_LONG_PRESS runs the partial-interval snap from the
-    re-anchored value, so a hold climbs or descends the grid from the cap."""
-    h = self.active_session(is_metric)
-    self.press(h, button, hold_frames=60)
-    assert h.cruise_arbiter.state == SpeedLimitAssistState.inactive
-    assert h.v_cruise_kph == pytest.approx(expected_kph, abs=0.05)
+  ]:
+      with self.subTest(is_metric=is_metric, button=button, expected_kph=expected_kph):
+        """The long-press tick at CRUISE_LONG_PRESS runs the partial-interval snap from the
+        re-anchored value, so a hold climbs or descends the grid from the cap."""
+        h = self.active_session(is_metric)
+        self.press(h, button, hold_frames=60)
+        assert h.cruise_arbiter.state == SpeedLimitAssistState.inactive
+        assert h.v_cruise_kph == approx(expected_kph, abs=0.05)
 
   def test_dismiss_never_raises_the_baseline(self):
     """The anchor is what the plan was running: min(baseline, cap). A session whose
@@ -114,7 +117,7 @@ class TestOpLongNonPcmDismiss:
     h.v_cruise_kph = h.v_cruise_cluster_kph = 40 * CV.MPH_TO_KPH  # driver dialed under the cap
     self.frames(h, 5)
     self.press(h, ButtonType.decelCruise)
-    assert h.v_cruise_kph == pytest.approx(40 * CV.MPH_TO_KPH - 1.6, abs=0.05)
+    assert h.v_cruise_kph == approx(40 * CV.MPH_TO_KPH - 1.6, abs=0.05)
 
   def test_icbm_dismiss_stays_owned(self):
     """The re-anchor is for setpoints openpilot holds. On an ICBM car the ECU steps the
@@ -141,4 +144,4 @@ class TestOpLongNonPcmDismiss:
     assert arb.state == SpeedLimitAssistState.inactive
     assert arb.press_owned(ButtonType.accelCruise)
     assert not arb.adopted_this_frame
-    assert h.v_cruise_kph == pytest.approx(60 * CV.MPH_TO_KPH, abs=0.05)
+    assert h.v_cruise_kph == approx(60 * CV.MPH_TO_KPH, abs=0.05)

@@ -1,8 +1,8 @@
 import math
 
 import numpy as np
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.sunnypilot.selfdrive.controls.lib.traffic_stop_profile import StopProfileGenerator
 
 
@@ -69,7 +69,7 @@ def test_required_stop_distance_matches_closed_form_route11_yellow_case():
     v_ego=10.707, a_ego=-1.111, actuator_delay=0.25,
     max_brake=3.0, jerk_limit=1.1,
   )
-  assert distance == pytest.approx(25.918873, abs=1e-5)
+  assert distance == approx(25.918873, abs=1e-5)
 
 
 def test_required_stop_distance_stops_inside_the_delay_interval():
@@ -77,7 +77,7 @@ def test_required_stop_distance_stops_inside_the_delay_interval():
     v_ego=1.0, a_ego=-2.0, actuator_delay=1.0,
     max_brake=3.0, jerk_limit=1.0,
   )
-  assert distance == pytest.approx(0.25)
+  assert distance == approx(0.25)
 
 
 def test_required_stop_distance_stops_inside_the_jerk_ramp():
@@ -85,7 +85,7 @@ def test_required_stop_distance_stops_inside_the_jerk_ramp():
     v_ego=1.0, a_ego=0.0, actuator_delay=0.0,
     max_brake=10.0, jerk_limit=1.0,
   )
-  assert distance == pytest.approx(2.0 * math.sqrt(2.0) / 3.0)
+  assert distance == approx(2.0 * math.sqrt(2.0) / 3.0)
 
 
 def test_required_stop_distance_includes_the_constant_max_brake_segment():
@@ -93,7 +93,7 @@ def test_required_stop_distance_includes_the_constant_max_brake_segment():
     v_ego=10.0, a_ego=0.0, actuator_delay=0.0,
     max_brake=2.0, jerk_limit=1.0,
   )
-  assert distance == pytest.approx(104.0 / 3.0)
+  assert distance == approx(104.0 / 3.0)
 
 
 def test_positive_acceleration_is_not_clipped_to_the_braking_magnitude():
@@ -108,24 +108,25 @@ def test_positive_acceleration_is_not_clipped_to_the_braking_magnitude():
   assert accelerating > bounded
 
 
-@pytest.mark.parametrize(("field", "value"), [
+def test_non_finite_stop_envelope_inputs_fail_closed(self):
+  for field, value in [
   ("v_ego", float("nan")),
   ("a_ego", float("nan")),
   ("actuator_delay", float("nan")),
   ("max_brake", float("nan")),
   ("jerk_limit", float("nan")),
   ("v_ego", float("inf")),
-])
-def test_non_finite_stop_envelope_inputs_fail_closed(field, value):
-  inputs = {
-    "v_ego": 10.0,
-    "a_ego": 0.0,
-    "actuator_delay": 0.2,
-    "max_brake": 2.5,
-    "jerk_limit": 0.8,
-  }
-  inputs[field] = value
-  assert math.isinf(StopProfileGenerator.required_stop_distance(**inputs))
+]:
+    with self.subTest(field=field, value=value):
+      inputs = {
+        "v_ego": 10.0,
+        "a_ego": 0.0,
+        "actuator_delay": 0.2,
+        "max_brake": 2.5,
+        "jerk_limit": 0.8,
+      }
+      inputs[field] = value
+      assert math.isinf(StopProfileGenerator.required_stop_distance(**inputs))
 
 
 def test_legacy_dt_argument_does_not_change_the_closed_form_result():
@@ -136,7 +137,7 @@ def test_legacy_dt_argument_does_not_change_the_closed_form_result():
     "max_brake": 2.5,
     "jerk_limit": 0.8,
   }
-  assert StopProfileGenerator.required_stop_distance(**inputs, dt=0.5) == pytest.approx(
+  assert StopProfileGenerator.required_stop_distance(**inputs, dt=0.5) == approx(
     StopProfileGenerator.required_stop_distance(**inputs, dt=0.001),
   )
 

@@ -7,7 +7,8 @@ See the LICENSE.md file in the root directory for more details.
 The speed limit assist prompt and its activation notice name the speed the car is going to,
 not just that a limit exists.
 """
-import pytest
+import unittest
+from unittest import mock
 
 from openpilot.cereal import custom, messaging
 from opendbc.car import structs
@@ -40,67 +41,83 @@ def _alert(event, target: float, set_speed: float, metric: bool = False, pcm_lon
   return EVENTS_SP[event][ET.WARNING](CP, CS, sm, metric, 0, None)
 
 
-@pytest.fixture
-def mici(monkeypatch):
-  monkeypatch.setattr(events_zp, 'IS_MICI', True)
+class TestPreActivePrompt(unittest.TestCase):
+  def _mici(self):
+    patcher = mock.patch.object(events_zp, 'IS_MICI', True)
+    patcher.start()
+    self.addCleanup(patcher.stop)
 
-
-class TestPreActivePrompt:
-  @pytest.mark.parametrize("set_speed, text", [(40, "按 + 键调至\n45 mph"), (55, "按 - 键调至\n45 mph")])
-  def test_names_the_target(self, mici, set_speed, text):
-    assert _alert(EventNameSP.speedLimitPreActive, 45, set_speed).alert_text_1 == text
-
-  def test_metric(self, mici):
-    assert _alert(EventNameSP.speedLimitPreActive, 80, 100, metric=True).alert_text_1 == "按 - 键调至\n80 km/h"
-
-  def test_tizi_draws_the_sign_instead(self):
-    assert _alert(EventNameSP.speedLimitPreActive, 45, 40).alert_size == AlertSize.none
-
-
-class TestActiveNotice:
-  @pytest.mark.parametrize("target, set_speed, speed", [
-    (45, 60, 45),  # down to the limit
-    (65, 60, 60),  # a limit over the set speed settles at the set speed
-  ])
-  def test_names_the_speed_it_settles_at(self, target, set_speed, speed):
-    alert = _alert(EventNameSP.speedLimitActive, target, set_speed)
-    assert alert.alert_text_1 == f"正在调整至限速 {speed} mph"
-    assert alert.alert_size == AlertSize.small
+  def test_names_the_target(self):
+    self._mici()
+    for set_speed, text in [(40, "按 + 键调至\n45 mph"), (55, "按 - 键调至\n45 mph")]:
+      with self.subTest(set_speed=set_speed):
+        self.assertEqual(_alert(EventNameSP.speedLimitPreActive, 45, set_speed).alert_text_1, text)
 
   def test_metric(self):
-    assert _alert(EventNameSP.speedLimitActive, 80, 100, metric=True).alert_text_1 == "正在调整至限速 80 km/h"
+    self._mici()
+    self.assertEqual(_alert(EventNameSP.speedLimitPreActive, 80, 100, metric=True).alert_text_1, "按 - 键调至\n80 km/h")
+
+  def test_tizi_draws_the_sign_instead(self):
+    self.assertEqual(_alert(EventNameSP.speedLimitPreActive, 45, 40).alert_size, AlertSize.none)
+
+
+class TestActiveNotice(unittest.TestCase):
+  def _mici(self):
+    patcher = mock.patch.object(events_zp, 'IS_MICI', True)
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def test_names_the_speed_it_settles_at(self):
+    for target, set_speed, speed in [
+      (45, 60, 45),  # down to the limit
+      (65, 60, 60),  # a limit over the set speed settles at the set speed
+    ]:
+      with self.subTest(target=target, set_speed=set_speed):
+        alert = _alert(EventNameSP.speedLimitActive, target, set_speed)
+        self.assertEqual(alert.alert_text_1, f"正在调整至限速 {speed} mph")
+        self.assertEqual(alert.alert_size, AlertSize.small)
+
+  def test_metric(self):
+    self.assertEqual(_alert(EventNameSP.speedLimitActive, 80, 100, metric=True).alert_text_1, "正在调整至限速 80 km/h")
 
   def test_below_the_confirm_threshold_says_the_same(self):
-    assert _alert(EventNameSP.speedLimitChanged, 35, 45).alert_text_1 == "正在调整至限速 35 mph"
+    self.assertEqual(_alert(EventNameSP.speedLimitChanged, 35, 45).alert_text_1, "正在调整至限速 35 mph")
 
-  def test_mici_keeps_the_unit_with_its_number(self, mici):
-    assert _alert(EventNameSP.speedLimitActive, 45, 60).alert_text_1 == "正在调整至限速\n45 mph"
+  def test_mici_keeps_the_unit_with_its_number(self):
+    self._mici()
+    self.assertEqual(_alert(EventNameSP.speedLimitActive, 45, 60).alert_text_1, "正在调整至限速\n45 mph")
 
   def test_unset_set_speed_falls_back_to_the_target(self):
     # vCruiseCluster 0 falls back to controlsState's vCruise, 0 when nothing published
-    assert _alert(EventNameSP.speedLimitActive, 45, 0).alert_text_1 == "正在调整至限速 45 mph"
+    self.assertEqual(_alert(EventNameSP.speedLimitActive, 45, 0).alert_text_1, "正在调整至限速 45 mph")
 
 
-class TestGasCancel:
+class TestGasCancel(unittest.TestCase):
   """pcm long applies a lower limit unasked; while it slows the car the notice says the gas declines it."""
+
+  def _mici(self):
+    patcher = mock.patch.object(events_zp, 'IS_MICI', True)
+    patcher.start()
+    self.addCleanup(patcher.stop)
 
   def test_slowing_offers_the_gas(self):
     alert = _alert(EventNameSP.speedLimitChanged, 20, 60, pcm_long=True, adapting=True)
-    assert alert.alert_text_1 == "正在调整至限速 20 mph"
-    assert alert.alert_text_2 == "踩油门保持当前速度"
-    assert alert.alert_size == AlertSize.mid  # tizi draws the second line only on mid
+    self.assertEqual(alert.alert_text_1, "正在调整至限速 20 mph")
+    self.assertEqual(alert.alert_text_2, "踩油门保持当前速度")
+    self.assertEqual(alert.alert_size, AlertSize.mid)  # tizi draws the second line only on mid
 
-  def test_mici_keeps_both_lines(self, mici):
+  def test_mici_keeps_both_lines(self):
+    self._mici()
     alert = _alert(EventNameSP.speedLimitChanged, 20, 60, pcm_long=True, adapting=True)
-    assert alert.alert_text_1 == "正在调整至限速\n20 mph"
-    assert alert.alert_text_2 == "踩油门保持当前速度"
+    self.assertEqual(alert.alert_text_1, "正在调整至限速\n20 mph")
+    self.assertEqual(alert.alert_text_2, "踩油门保持当前速度")
 
   def test_not_slowing_stays_small(self):
     """A raise, or a limit the car is already at: the gas has nothing to decline."""
     alert = _alert(EventNameSP.speedLimitActive, 45, 60, pcm_long=True)
-    assert alert.alert_text_2 == ""
-    assert alert.alert_size == AlertSize.small
+    self.assertEqual(alert.alert_text_2, "")
+    self.assertEqual(alert.alert_size, AlertSize.small)
 
   def test_arbiter_cars_get_no_gas_line(self):
     """ICBM and non-pcm cars confirm with the buttons, and the gas declines nothing there."""
-    assert _alert(EventNameSP.speedLimitChanged, 20, 60, adapting=True).alert_text_2 == ""
+    self.assertEqual(_alert(EventNameSP.speedLimitChanged, 20, 60, adapting=True).alert_text_2, "")

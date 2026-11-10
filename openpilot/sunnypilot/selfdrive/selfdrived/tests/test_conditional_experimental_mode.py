@@ -34,8 +34,6 @@ except (OSError, FileNotFoundError):
   _params_mod.Params = _ParamsStub
   sys.modules['openpilot.common.params'] = _params_mod
 
-import pytest
-
 from opendbc.car import structs
 from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.selfdrived.conditional_experimental_mode import (

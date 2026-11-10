@@ -10,8 +10,8 @@ per-path budgets, publication ramp and lookahead wire live in test_zp_vision_hor
 the road rendering and the base case live in vision_harness.py.
 """
 import numpy as np
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.cereal import custom
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.car.cruise import V_CRUISE_UNSET
@@ -170,21 +170,17 @@ class TestFarFieldCurvatureBias(VisionCase):
     assert self.scc_v.a_required == 0.
     assert self.scc_v.output_v_target == V_CRUISE_UNSET
 
-  @pytest.mark.parametrize("kappa, d0", [(1. / 645., 60.), (1. / 556., 60.)], ids=["r645", "r556"])
-  @pytest.mark.parametrize("op_long", [True, False], ids=["op_long", "stock"])
-  def test_highway_bend_the_raw_path_allows_never_commits(self, kappa, d0, op_long):
-    # 70 mph, perfect geometry, inside the near window: an r=645 m bend 60 m out sits at
-    # 1.49 m/s2 at the set speed, under the 1.71 planned, and an r=556 m bend 60 m out is
-    # take-able at sqrt(1.71 * 556) = 30.8 m/s (the r=500 m case at the old 1.9 planned;
-    # r=500 m is 1.92 m/s2 at 31 m/s, over the 1.8 ceiling, a real corner now). Multiplied
-    # by the far-field gain both read as corners; above the fitted speed band the gain is
-    # gone, so neither may commit, on either path.
-    v = 31.
-    scc = SmartCruiseControlVision(make_cp(op_long=op_long))
-    self.run_road(v, curve_at(d0, kappa), n=40, setpoint=v, scc=scc)
-    assert not scc.is_active, (kappa, d0, op_long)
-    assert scc.output_v_target == V_CRUISE_UNSET
-    assert scc.output_a_target == 0.
+  def test_highway_bend_the_raw_path_allows_never_commits(self):
+    for kappa, d0 in [(1. / 645., 60.), (1. / 556., 60.)]:
+      with self.subTest(kappa=kappa, d0=d0):
+        for op_long in [True, False]:
+          with self.subTest(op_long=op_long):
+            v = 31.
+            scc = SmartCruiseControlVision(make_cp(op_long=op_long))
+            self.run_road(v, curve_at(d0, kappa), n=40, setpoint=v, scc=scc)
+            assert not scc.is_active, (kappa, d0, op_long)
+            assert scc.output_v_target == V_CRUISE_UNSET
+            assert scc.output_a_target == 0.
 
   def test_gain_fades_out_above_the_fitted_speed_band(self):
     # the same attenuated corner at 70 mph, inside the near window, plans exactly as it
@@ -195,8 +191,8 @@ class TestFarFieldCurvatureBias(VisionCase):
       raw = SmartCruiseControlVision(make_cp())
       self.run_road(v, road, setpoint=v, scc=raw, attenuate=True)
     assert self.scc_v.a_required > 0.
-    assert self.scc_v.a_required == pytest.approx(raw.a_required)
-    assert self.scc_v.v_dip_ahead == pytest.approx(raw.v_dip_ahead)
+    assert self.scc_v.a_required == approx(raw.a_required)
+    assert self.scc_v.v_dip_ahead == approx(raw.v_dip_ahead)
     road = curve_at(150., kappa=0.012)
     # and is still whole at the top of the band
     v = 22.
@@ -215,15 +211,15 @@ class TestFarFieldCurvatureBias(VisionCase):
     self.run_road(v, road, setpoint=v, attenuate=True)
     assert self.scc_v.is_active
     # lead 15.6 * 0.36 + 15.6 * 1.2 / (2 * 1.051 jerk) = 14.52 m: (15.6^2 - 9.695^2) / (2 * 80.69)
-    assert self.scc_v.a_required == pytest.approx(0.926, abs=2e-3)
-    assert self.scc_v.output_v_target == pytest.approx(14.674, abs=2e-3)  # 15.6 - 0.926
+    assert self.scc_v.a_required == approx(0.926, abs=2e-3)
+    assert self.scc_v.output_v_target == approx(14.674, abs=2e-3)  # 15.6 - 0.926
 
     stock = self.stock()
     self.run_road(v, road, setpoint=v, scc=stock, attenuate=True)
     assert stock.is_active
     # lead walks only the tracking gap: 15.6 * (1.0 + 8 mph / 4 mph/s) = 46.8 m, over 48.41 m
-    assert stock.a_required == pytest.approx(1.543, abs=2e-3)
-    assert stock.output_v_target == pytest.approx(9.695, abs=2e-3)  # sent to the dip
+    assert stock.a_required == approx(1.543, abs=2e-3)
+    assert stock.output_v_target == approx(9.695, abs=2e-3)  # sent to the dip
 
 
 class TestCurveRecovery(VisionCase):
@@ -245,13 +241,13 @@ class TestCurveRecovery(VisionCase):
     back_road, highway = self.stock(), self.stock()
     self.in_curve(back_road, 12., setpoint=18.)
     self.in_curve(highway, 12., setpoint=31.)
-    assert back_road.v_near_min == pytest.approx(highway.v_near_min)
-    assert back_road.v_near_min == pytest.approx(float(vision_controller.curve_speed(self.KAPPA)))
+    assert back_road.v_near_min == approx(highway.v_near_min)
+    assert back_road.v_near_min == approx(float(vision_controller.curve_speed(self.KAPPA)))
 
   def test_curve_speed_meets_the_ceiling_at_each_breakpoint(self):
     for v, a_lat in zip(vision_controller._A_LAT_CURVE_BP, vision_controller._A_LAT_CURVE, strict=True):
       kappa = a_lat * vision_controller._PLAN_MARGIN / v ** 2
-      assert float(vision_controller.curve_speed(kappa)) == pytest.approx(v)
+      assert float(vision_controller.curve_speed(kappa)) == approx(v)
     speeds = vision_controller.curve_speed(np.linspace(0.0005, 0.03, 200))
     assert np.all(np.diff(speeds) < 0)
 

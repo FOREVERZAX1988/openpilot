@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-import pytest
+import unittest
 
 from openpilot.cereal import log
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
@@ -21,8 +21,9 @@ def make_car_state(left_blinker=False):
   )
 
 
-class TestDesireHelperDriverIntent:
-  def setup_method(self):
+class TestDesireHelperDriverIntent(unittest.TestCase):
+  def setUp(self):
+    super().setUp()
     self.helper = DesireHelper()
     self.helper._update_params_periodic = lambda: None
     self.helper._process_sides = lambda car, model, radar: None
@@ -70,8 +71,7 @@ class TestDesireHelperDriverIntent:
       radar_state=None,
     )
 
-  @pytest.mark.skip('sp advances preLaneChange via AutoLaneChangeController, not the cp direct FSM step; '
-             'covered by test_carrot_atc/test_auto_lane_change on the sp structure')
+  @unittest.skip('sp advances preLaneChange via AutoLaneChangeController, not the cp direct FSM step (covered by test_carrot_atc/test_auto_lane_change)')
   def test_driver_blinker_rearms_lane_change_while_atc_desire_is_already_active(self):
     # The first ATC frame is intentionally ignored when its type changes.
     self.update()
@@ -97,21 +97,22 @@ class TestDesireHelperDriverIntent:
 
     assert self.helper.lane_change_state == log.LaneChangeState.off
 
-  @pytest.mark.parametrize('block', ['inactive', 'can', 'speed', 'trailer'])
-  def test_bluetooth_lane_request_rejected_by_existing_gates(self, block):
-    state = make_car_state()
-    state.canValid = block != 'can'
-    state.vEgo = 0 if block == 'speed' else 20
-    state.trailerConnected = block == 'trailer'
-    self.carrot_man.atcType = ''
-    seen = []
-    self.helper.bluetooth_commands = SimpleNamespace(read=lambda allowed: seen.append(allowed))
-    self.helper.update(state, block != 'inactive', 0.1, carrot_man=self.carrot_man, radar_state=None)
-    assert seen == [False]
-    assert self.helper.lane_change_state == log.LaneChangeState.off
+  def test_bluetooth_lane_request_rejected_by_existing_gates(self):
+    for block in ['inactive', 'can', 'speed', 'trailer']:
+      with self.subTest(block=block):
+        self.setUp()
+        state = make_car_state()
+        state.canValid = block != 'can'
+        state.vEgo = 0 if block == 'speed' else 20
+        state.trailerConnected = block == 'trailer'
+        self.carrot_man.atcType = ''
+        seen = []
+        self.helper.bluetooth_commands = SimpleNamespace(read=lambda allowed, seen=seen: seen.append(allowed))
+        self.helper.update(state, block != 'inactive', 0.1, carrot_man=self.carrot_man, radar_state=None)
+        assert seen == [False]
+        assert self.helper.lane_change_state == log.LaneChangeState.off
 
-  @pytest.mark.skip('sp BSD hold lives in SideState/ALC gates with different placement than cp; '
-             'covered by test_carrot_atc/test_auto_lane_change on the sp structure')
+  @unittest.skip('sp BSD hold lives in SideState/ALC gates with different placement than cp (covered by test_carrot_atc/test_auto_lane_change)')
   def test_bluetooth_lane_request_does_not_skip_blindspot(self):
     self.carrot_man.atcType = ''
     self.helper.laneChangeBsd = 1

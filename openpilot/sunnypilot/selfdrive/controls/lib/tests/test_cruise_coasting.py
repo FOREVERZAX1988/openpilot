@@ -1,18 +1,19 @@
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.sunnypilot.selfdrive.controls.lib.cruise_coasting import (
   CruiseCoastingPlan, coasting_percent, coasting_relief,
 )
 # This existing fixture also supplies Windows-only Params/hardware import shims.
 
 
-@pytest.mark.parametrize('value, expected', [(0, 0), (5, 5), (10, 10), (30, 10), (-2, 0),
-                                            (None, 0), ('bad', 0), (float('nan'), 0), (float('inf'), 0)])
-def test_setting_bounds(value, expected):
-  assert coasting_percent(value) == expected
+def test_setting_bounds(self):
+  for value, expected in [(0, 0), (5, 5), (10, 10), (30, 10), (-2, 0),
+                                            (None, 0), ('bad', 0), (float('nan'), 0), (float('inf'), 0)]:
+    with self.subTest(value=value, expected=expected):
+      assert coasting_percent(value) == expected
 
 
 def test_margin_has_continuous_lower_and_upper_edges():
@@ -20,9 +21,9 @@ def test_margin_has_continuous_lower_and_upper_edges():
   for percent in (1, 5, 10):
     width = target * percent / 100
     assert coasting_relief(target, target, percent) == 0
-    assert coasting_relief(target + .3 * width, target, percent) == pytest.approx(1)
-    assert coasting_relief(target + .8 * width, target, percent) == pytest.approx(.5)
-    assert coasting_relief(target + width, target, percent) == pytest.approx(0, abs=1e-12)
+    assert coasting_relief(target + .3 * width, target, percent) == approx(1)
+    assert coasting_relief(target + .8 * width, target, percent) == approx(.5)
+    assert coasting_relief(target + width, target, percent) == approx(0, abs=1e-12)
     assert coasting_relief(target + 2 * width, target, percent) == 0
     for edge in (0., .1, .6, 1.):
       below = coasting_relief(target + (edge - 1e-6) * width, target, percent)
@@ -75,40 +76,42 @@ def test_live_speed_ratio_does_not_restart_entry_or_move_reference():
     assert result == (0 if frame < 20 else reference)
     assert plan.target == reference
   # With the reference frozen, actual overspeed enters the relief band.
-  assert coasting_relief(reference * 1.03, result, 10) == pytest.approx(1)
+  assert coasting_relief(reference * 1.03, result, 10) == approx(1)
 
 
-@pytest.mark.parametrize('ratio', [.94, 1.02])
-def test_external_caps_protect_frozen_and_current_speed_bands(ratio):
-  plan = CruiseCoastingPlan()
-  args = {'enabled': True, 'percent': 5, 'set_speed': 100., 'target': 100 / 3.6,
-          'external_limit': 250 / 3.6, 'dt': .05}
-  for _ in range(21):
-    reference = plan.update(**args)
-  current = args['target'] * ratio
-  # Place the cap between the two ceilings: checking just one is insufficient.
-  cap = (current + reference) / 2 * 1.05
-  assert plan.update(**{**args, 'target': current, 'external_limit': cap}) == 0
-  assert plan.target == 0
+def test_external_caps_protect_frozen_and_current_speed_bands(self):
+  for ratio in [.94, 1.02]:
+    with self.subTest(ratio=ratio):
+      plan = CruiseCoastingPlan()
+      args = {'enabled': True, 'percent': 5, 'set_speed': 100., 'target': 100 / 3.6,
+              'external_limit': 250 / 3.6, 'dt': .05}
+      for _ in range(21):
+        reference = plan.update(**args)
+      current = args['target'] * ratio
+      # Place the cap between the two ceilings: checking just one is insufficient.
+      cap = (current + reference) / 2 * 1.05
+      assert plan.update(**{**args, 'target': current, 'external_limit': cap}) == 0
+      assert plan.target == 0
 
 
-@pytest.mark.parametrize('change', ['set_speed', 'percent', 'veto'])
-def test_real_changes_restart_entry_and_capture_a_new_reference(change):
-  plan = CruiseCoastingPlan()
-  args = {'enabled': True, 'percent': 5, 'set_speed': 100., 'target': 100 / 3.6,
-          'external_limit': 250 / 3.6, 'dt': .05}
-  for _ in range(21):
-    assert plan.update(**args) >= 0
-  assert plan.stable_time == 1
-  args['target'] = 98 / 3.6
-  if change == 'veto':
-    assert plan.update(**{**args, 'enabled': False}) == 0
-  elif change == 'set_speed':
-    args['set_speed'] = 99.
-  else:
-    args['percent'] = 6
-  for frame in range(21):
-    assert plan.update(**args) == (0 if frame < 20 else args['target'])
+def test_real_changes_restart_entry_and_capture_a_new_reference(self):
+  for change in ['set_speed', 'percent', 'veto']:
+    with self.subTest(change=change):
+      plan = CruiseCoastingPlan()
+      args = {'enabled': True, 'percent': 5, 'set_speed': 100., 'target': 100 / 3.6,
+              'external_limit': 250 / 3.6, 'dt': .05}
+      for _ in range(21):
+        assert plan.update(**args) >= 0
+      assert plan.stable_time == 1
+      args['target'] = 98 / 3.6
+      if change == 'veto':
+        assert plan.update(**{**args, 'enabled': False}) == 0
+      elif change == 'set_speed':
+        args['set_speed'] = 99.
+      else:
+        args['percent'] = 6
+      for frame in range(21):
+        assert plan.update(**args) == (0 if frame < 20 else args['target'])
 
 
 # NOTE: the cp-longcontrol integration tests (control fixture, PID/no-windup/veto

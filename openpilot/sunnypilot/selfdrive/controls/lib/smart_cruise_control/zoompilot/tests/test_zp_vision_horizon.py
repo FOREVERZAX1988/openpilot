@@ -1,3 +1,5 @@
+import unittest
+
 """
 Copyright (c) 2026-, Zeph Leggett.
 
@@ -8,9 +10,9 @@ Vision controller: the highway planning horizon, the per-path budgets, the share
 publication ramp and the ICBM lookahead wire. Road rendering and the base case live in
 vision_harness.py.
 """
-import pytest
 
 import openpilot.cereal.messaging as messaging
+from openpilot.common.test import approx
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control import MIN_V
@@ -30,15 +32,15 @@ def hallucination(s):
 
 class TestHighwayHorizon(VisionCase):
 
-  @pytest.mark.parametrize("op_long", [True, False], ids=OP_LONG_IDS)
-  def test_whole_path_where_a_misread_is_cheap(self, op_long):
-    # the tracking servo and openpilot long plan the whole model path at any speed: the same
-    # 70 mph bend 250 m out is already in the plan
-    v, kappa = 31., 1. / 350.
-    scc = SmartCruiseControlVision(make_cp(op_long=True)) if op_long else self.stock()
-    self.run_road(v, curve_at(250., kappa), n=5, setpoint=v, scc=scc)
-    assert scc.a_required > 0.
-    assert scc.v_ahead_min < v
+  def test_whole_path_where_a_misread_is_cheap(self):
+    # ids: OP_LONG_IDS
+    for op_long in [True, False]:
+      with self.subTest(op_long=op_long):
+        v, kappa = 31., 1. / 350.
+        scc = SmartCruiseControlVision(make_cp(op_long=True)) if op_long else self.stock()
+        self.run_road(v, curve_at(250., kappa), n=5, setpoint=v, scc=scc)
+        assert scc.a_required > 0.
+        assert scc.v_ahead_min < v
 
   def test_far_misread_never_asks_past_the_budget(self):
     # the tracking servo plans on the misread, but a predicted constraint asks for the budget
@@ -50,17 +52,17 @@ class TestHighwayHorizon(VisionCase):
     assert stock.is_active
     assert stock.a_needed <= stock.limits.a_budget
 
-  @pytest.mark.parametrize("big, window", [(False, 3.), (True, 4.)], ids=["small", "big"])
-  def test_near_window_follows_the_model(self, big, window):
-    # cruising at 50 mph a late bend just inside the running model's measured window may
-    # escalate; just past it, predicted, it may not; from a 60 mph set speed neither may
-    v = 22.4
-    for setpoint, d, escalates in ((22.4, v * window - 10., True), (22.4, v * window + 10., False),
-                                   (26.8, v * window - 10., False)):
-      stock = self.stock()
-      self.run_road(v, curve_at(d, 0.006), n=40, setpoint=setpoint, scc=stock, big=big)
-      assert (stock.a_needed > stock.limits.a_budget) == escalates, (big, setpoint, d)
-      assert stock.a_needed >= stock.limits.a_budget  # the bend binds either way
+  def test_near_window_follows_the_model(self):
+    # ids: ["small", "big"]
+    for big, window in [(False, 3.), (True, 4.)]:
+      with self.subTest(big=big, window=window):
+        v = 22.4
+        for setpoint, d, escalates in ((22.4, v * window - 10., True), (22.4, v * window + 10., False),
+                                       (26.8, v * window - 10., False)):
+          stock = self.stock()
+          self.run_road(v, curve_at(d, 0.006), n=40, setpoint=setpoint, scc=stock, big=big)
+          assert (stock.a_needed > stock.limits.a_budget) == escalates, (big, setpoint, d)
+          assert stock.a_needed >= stock.limits.a_budget  # the bend binds either way
 
   def test_op_long_published_decel_is_clipped_to_the_budget(self):
     # the plan aTarget seeds mpc.set_cur_state and stage 0 is pinned to the seed, so a
@@ -72,7 +74,7 @@ class TestHighwayHorizon(VisionCase):
       self.run_road(V_EGO, road, n=1)
       a_min = min(a_min, self.scc_v.output_a_target)
     assert self.scc_v.is_active
-    assert a_min == pytest.approx(-self.scc_v.limits.a_budget, abs=1e-6)
+    assert a_min == approx(-self.scc_v.limits.a_budget, abs=1e-6)
 
     # stock ACC keeps the full lever: the same wire is ICBM's dash gap, not a command
     stock = SmartCruiseControlVision(make_cp(op_long=False))
@@ -80,7 +82,7 @@ class TestHighwayHorizon(VisionCase):
     for _ in range(60):
       self.run_road(V_EGO, road, n=1, scc=stock)
       a_min = min(a_min, stock.output_a_target)
-    assert a_min == pytest.approx(A_PUB_MIN, abs=1e-6)
+    assert a_min == approx(A_PUB_MIN, abs=1e-6)
 
   def test_published_decel_stays_within_the_clip(self):
     # Constraints inside the actuation lead can produce a large required deceleration, which
@@ -114,44 +116,45 @@ class TestPerPathBudgets(VisionCase):
     back_road, highway = self.stock(), self.stock()
     self.run_road(V_EGO, road, scc=back_road, setpoint=V_EGO)
     self.run_road(V_EGO, road, scc=highway, setpoint=29.)
-    assert highway.a_required == pytest.approx(back_road.a_required)
-    assert highway.v_dip_ahead == pytest.approx(float(curve_speed(0.004)), rel=1e-3)
+    assert highway.a_required == approx(back_road.a_required)
+    assert highway.v_dip_ahead == approx(float(curve_speed(0.004)), rel=1e-3)
     assert back_road.v_dip_ahead < highway.v_dip_ahead - 1.
 
 
-class TestPublishRamp:
+class TestPublishRamp(unittest.TestCase):
   """The one publication ramp the limiter sources share."""
 
   def test_op_long_clips_at_the_budget(self):
     lim = get_planning_limits(make_cp(op_long=True))
     assert lim.a_pub_min == -lim.a_budget
-    assert publish_ramp(-2.0, -1.18, lim, V_EGO) == pytest.approx(-lim.a_budget)
+    assert publish_ramp(-2.0, -1.18, lim, V_EGO) == approx(-lim.a_budget)
 
   def test_stock_clips_at_the_budget_unless_measured(self):
     # a predicted constraint (map, speed limit) asks for the budget at most; measured geometry
     # passes its own floor and may use the ECU's range
     lim = get_planning_limits(make_cp(op_long=False))
     assert lim.a_pub_min == -lim.a_budget
-    assert publish_ramp(-3.0, -0.7, lim, V_EGO) == pytest.approx(-lim.a_budget)
-    assert publish_ramp(-3.0, -1.95, lim, V_EGO, a_floor=A_PUB_MIN) == pytest.approx(A_PUB_MIN)
+    assert publish_ramp(-3.0, -0.7, lim, V_EGO) == approx(-lim.a_budget)
+    assert publish_ramp(-3.0, -1.95, lim, V_EGO, a_floor=A_PUB_MIN) == approx(A_PUB_MIN)
 
   def test_step_is_jerk_limited_both_ways(self):
     lim = get_planning_limits(make_cp(op_long=True))
     j = lim.jerk(V_EGO)
-    assert publish_ramp(-1.0, 0., lim, V_EGO) == pytest.approx(-j * DT_MDL)
-    assert publish_ramp(0., -1.0, lim, V_EGO) == pytest.approx(-1.0 + j * DT_MDL)
-    assert publish_ramp(-0.01, 0., lim, V_EGO) == pytest.approx(-0.01)
+    assert publish_ramp(-1.0, 0., lim, V_EGO) == approx(-j * DT_MDL)
+    assert publish_ramp(0., -1.0, lim, V_EGO) == approx(-1.0 + j * DT_MDL)
+    assert publish_ramp(-0.01, 0., lim, V_EGO) == approx(-0.01)
 
   def test_stock_ramps_at_the_publication_jerk(self):
     lim = get_planning_limits(make_cp(op_long=False))
     assert lim.jerk(V_EGO) == 0.
-    assert publish_ramp(-1.0, 0., lim, V_EGO) == pytest.approx(-PUB_JERK * DT_MDL)
+    assert publish_ramp(-1.0, 0., lim, V_EGO) == approx(-PUB_JERK * DT_MDL)
 
 
-class TestLookaheadWire:
+class TestLookaheadWire(unittest.TestCase):
   """v_ahead_min feeds the ICBM restore gate: 0 must mean exactly "no lookahead"."""
 
-  def setup_method(self):
+  def setUp(self):
+    super().setUp()
     self.params = Params()
     self.params.put_bool("SmartCruiseControlVision", True, block=True)
     self.scc_v = SmartCruiseControlVision(make_cp())

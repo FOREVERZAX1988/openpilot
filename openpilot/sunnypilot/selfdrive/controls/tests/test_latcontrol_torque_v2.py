@@ -13,8 +13,10 @@ See the LICENSE.md file in the root directory for more details.
 import math
 from collections import deque
 
-import pytest
 
+from openpilot.common.params import Params
+from openpilot.common.prefix import OpenpilotPrefix
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
 from openpilot.sunnypilot.selfdrive.controls.lib import latcontrol_torque_v2 as v2_module
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v2 import (
@@ -47,7 +49,7 @@ def make_v0_equivalent(monkeypatch, friction=0.0):
   return v2
 
 
-class TestV0Parity:
+class TestV0Parity(OpenpilotTestCase):
   def test_v2_is_v0_with_the_deltas_off(self, params, monkeypatch):
     """The setpoint is v0's, so with KD, the deadzone and the jerk filter neutralized the two
     controllers must agree frame for frame on a moving request AND a moving measurement,
@@ -61,9 +63,9 @@ class TestV0Parity:
       measured = 0.8 * math.sin(2 * math.pi * 0.3 * (t - 0.4))  # lagged, so the error moves too
       out0, _, log0 = v0.update(True, make_cs(v_ego, measured), VM, LP, False, desired, None, False, LAT_DELAY)
       out2, _, log2 = v2.update(True, make_cs(v_ego, measured), VM, LP, False, desired, None, False, LAT_DELAY)
-      assert out2 == pytest.approx(out0, abs=1e-6), f"frame {i}"
+      assert out2 == approx(out0, abs=1e-6), f"frame {i}"
       for field in ('error', 'p', 'i', 'd', 'f', 'desiredLateralAccel', 'desiredLateralJerk'):
-        assert getattr(log2, field) == pytest.approx(getattr(log0, field), abs=1e-6), f"frame {i} {field}"
+        assert getattr(log2, field) == approx(getattr(log0, field), abs=1e-6), f"frame {i} {field}"
     assert abs(v2.pid.i) > 1e-3  # the integrator was live, not frozen, through the comparison
     assert log0.version == 0
     assert log2.version == 2
@@ -77,13 +79,13 @@ class TestV0Parity:
     params.put_bool("NeuralNetworkLateralControl", True, block=True)
     v2 = make_lac(LatControlTorqueV2)
     assert not v2.extension.overrides_output
-    assert v2.pid.pos_limit == pytest.approx(LAF)
+    assert v2.pid.pos_limit == approx(LAF)
     v2.update_limits()  # must stay a no-op on the extension, or the per-frame override path restores torque-space limits
-    assert v2.pid.pos_limit == pytest.approx(LAF)
+    assert v2.pid.pos_limit == approx(LAF)
 
     v0 = make_lac(LatControlTorqueV0)
     assert v0.extension.overrides_output
-    assert v0.pid.pos_limit == pytest.approx(v0.steer_max)
+    assert v0.pid.pos_limit == approx(v0.steer_max)
 
   def test_pid_limits_follow_steer_max(self, params):
     """The rail arrives from the extension as steer_max; v0's update_limits (not overridden)
@@ -91,11 +93,11 @@ class TestV0Parity:
     v2 = make_lac(LatControlTorqueV2)
     v2.steer_max = 0.6
     v2.update_limits()
-    assert v2.pid.pos_limit == pytest.approx(0.6 * LAF)
-    assert v2.pid.neg_limit == pytest.approx(-0.6 * LAF)
+    assert v2.pid.pos_limit == approx(0.6 * LAF)
+    assert v2.pid.neg_limit == approx(-0.6 * LAF)
 
 
-class TestFrictionInput:
+class TestFrictionInput(OpenpilotTestCase):
   def _tracking_run(self, v0, v2, v_ego, request_fn, frames):
     """The wheel tracks the delayed command, so the friction input is the jerk contribution
     alone. Returns (v0 friction terms, v2 friction terms)."""
@@ -146,11 +148,11 @@ class TestFrictionInput:
       return fs
     def max_diff(lo, hi):
       return max(abs(a - b) for a, b in zip(run(lo, hi, False), run(lo, hi, True), strict=True))
-    assert max_diff(0.5, 1.0) == pytest.approx(0.0, abs=1e-9)
+    assert max_diff(0.5, 1.0) == approx(0.0, abs=1e-9)
     assert max_diff(0.0, 0.2) > 0.01
-    assert get_center_chatter_jerk_deadzone(25.0, 0.0) == pytest.approx(0.18)
-    assert get_center_chatter_jerk_deadzone(25.0, 0.35) == pytest.approx(0.0)
-    assert get_center_chatter_jerk_deadzone(0.0, 0.0) == pytest.approx(0.08)
+    assert get_center_chatter_jerk_deadzone(25.0, 0.0) == approx(0.18)
+    assert get_center_chatter_jerk_deadzone(25.0, 0.35) == approx(0.0)
+    assert get_center_chatter_jerk_deadzone(0.0, 0.0) == approx(0.08)
 
   def test_friction_jerk_input_is_clipped(self, params):
     """A 2 m/s^2 step is a 6.7 m/s^3 differencer; the filter must see it clipped at +-2.5
@@ -165,11 +167,11 @@ class TestFrictionInput:
       log = step(v2, make_cs(v_ego), desired)
       if i in (20, 50):
         assert abs(log.desiredLateralJerk) > 6.0
-    assert max(seen) == pytest.approx(MAX_FRICTION_JERK)
-    assert min(seen) == pytest.approx(-MAX_FRICTION_JERK)
+    assert max(seen) == approx(MAX_FRICTION_JERK)
+    assert min(seen) == approx(-MAX_FRICTION_JERK)
 
 
-class TestSharedGainSchedule:
+class TestSharedGainSchedule(OpenpilotTestCase):
   """v2 keeps v0's gain schedule verbatim: the low-speed KP flatten (KP ~7 below 7.5 m/s,
   2026-08-30 routes 129-12c) tripled the felt vehicle weave at 2.5-5 m/s and was reverted.
   Any low-speed retune must come from a system-ID of the loop, not a schedule guess."""
@@ -178,10 +180,10 @@ class TestSharedGainSchedule:
     v0, v2 = make_pair()
     for i in range(400):
       v0.pid.speed = v2.pid.speed = i * 0.1
-      assert v2.pid.k_p == pytest.approx(v0.pid.k_p), f"{i * 0.1} m/s"
+      assert v2.pid.k_p == approx(v0.pid.k_p), f"{i * 0.1} m/s"
 
 
-class TestLowSpeedDamping:
+class TestLowSpeedDamping(OpenpilotTestCase):
   """kd = 0.3 s * KP(v), capped below 7.5 m/s and faded out by 14.5 m/s (route 12e steps:
   closed-loop sim overshoot 1.63 -> 1.21). v0 keeps KD = 0; the shared -measurement_rate
   argument is dead there."""
@@ -190,7 +192,7 @@ class TestLowSpeedDamping:
     _, v2 = make_pair()
     for v_ego, kd in [(2.0, 1.65), (7.5, 1.65), (9.0, 1.29), (10.0, 1.05), (14.5, 0.0), (25.0, 0.0)]:
       v2.pid.speed = v_ego
-      assert v2.pid.k_d == pytest.approx(kd), f"{v_ego} m/s"
+      assert v2.pid.k_d == approx(kd), f"{v_ego} m/s"
 
   def test_v0_kd_stays_zero(self, params):
     v0, _ = make_pair()
@@ -211,7 +213,7 @@ class TestLowSpeedDamping:
   def test_damping_opposes_measurement_motion_at_9mps(self, params):
     v2, log = self._sweep(9.0)
     assert v2.pid.d < -0.1
-    assert log.d == pytest.approx(v2.pid.d, abs=1e-6)
+    assert log.d == approx(v2.pid.d, abs=1e-6)
 
   def test_no_damping_at_16mps(self, params):
     v2, _ = self._sweep(16.0)
@@ -224,26 +226,26 @@ class TestLowSpeedDamping:
     assert v2.pid.d == 0.0
 
 
-class TestReleaseHandling:
+class TestReleaseHandling(OpenpilotTestCase):
   def test_release_decay_is_one_shot(self, params):
     """Handing back the wheel decays the integrator once (x0.8), not every frame; v0 does not."""
     v2 = make_lac(LatControlTorqueV2)
     v2.pid.i = 1.0
     step(v2, make_cs(pressed=True), 0.0)  # frozen while pressed
-    assert v2.pid.i == pytest.approx(1.0)
+    assert v2.pid.i == approx(1.0)
     step(v2, make_cs(pressed=False), 0.0)  # falling edge: one-shot decay, error is 0
-    assert v2.pid.i == pytest.approx(STEER_RELEASE_I_DECAY)
+    assert v2.pid.i == approx(STEER_RELEASE_I_DECAY)
     step(v2, make_cs(pressed=False), 0.0)
-    assert v2.pid.i == pytest.approx(STEER_RELEASE_I_DECAY)
+    assert v2.pid.i == approx(STEER_RELEASE_I_DECAY)
 
     v0 = make_lac(LatControlTorqueV0)
     v0.pid.i = 1.0
     step(v0, make_cs(pressed=True), 0.0)
     step(v0, make_cs(pressed=False), 0.0)
-    assert v0.pid.i == pytest.approx(1.0)
+    assert v0.pid.i == approx(1.0)
 
 
-class TestReleaseErrorRamp:
+class TestReleaseErrorRamp(OpenpilotTestCase):
   """The release-edge error ramp: the P term used to land the whole hand-off error in one
   frame (P-step p90 2.24 within 100 ms measured on the 2026-08-29 override drive); the ramp
   eases the PID error in over RELEASE_ERROR_RAMP_T while feedforward stays immediate."""
@@ -269,11 +271,11 @@ class TestReleaseErrorRamp:
     full = errors[-1]
     assert abs(full) > 0.4  # the standing error survives the run
     # first post-release frame carries dt/RAMP_T of the error, not all of it
-    assert errors[0] == pytest.approx(full * DT / RELEASE_ERROR_RAMP_T, rel=1e-3)
+    assert errors[0] == approx(full * DT / RELEASE_ERROR_RAMP_T, rel=1e-3)
     assert abs(ps[0]) < 0.1 * abs(ps[-1])
     # monotone ramp-in, complete within RELEASE_ERROR_RAMP_T
     assert abs(errors[9]) < abs(errors[19]) < abs(errors[29])
-    assert errors[int(RELEASE_ERROR_RAMP_T / DT) + 1] == pytest.approx(full, rel=1e-6)
+    assert errors[int(RELEASE_ERROR_RAMP_T / DT) + 1] == approx(full, rel=1e-6)
 
   def test_release_ramp_leaves_feedforward_alone(self, params):
     """The ramp eases the PID error only: at the release frame the feedforward already equals
@@ -281,8 +283,8 @@ class TestReleaseErrorRamp:
     v2 = make_lac(LatControlTorqueV2)
     request = 2e-3 * 15.0 ** 2
     _, _, fs = self._steady_error_run(v2, v_ego=15.0, lat_accel=request, press_frames=50, desired=2e-3)
-    assert fs[0] == pytest.approx(request, abs=1e-6)
-    assert fs[0] == pytest.approx(fs[-1], abs=1e-9)
+    assert fs[0] == approx(request, abs=1e-6)
+    assert fs[0] == approx(fs[-1], abs=1e-9)
 
   def test_no_ramp_without_a_release_edge(self, params):
     """A steady active run never engages the ramp: error is full-scale from the start."""
@@ -293,7 +295,7 @@ class TestReleaseErrorRamp:
     assert abs(log.error) > 0.4
 
 
-class TestInactivePriming:
+class TestInactivePriming(OpenpilotTestCase):
   """Re-engaging with a wound wheel: in v2 the friction input reads the shaped jerk and the D
   term reads the measurement rate, so a stale request buffer or previous_measurement would
   command against the held wheel. Priming while inactive keeps the first active frame clean
@@ -309,14 +311,14 @@ class TestInactivePriming:
     for _ in range(100):
       step(v2, make_cs(self.V_EGO, self.HOLD), desired, active=False)
     log = step(v2, make_cs(self.V_EGO, self.HOLD), desired)
-    assert log.error == pytest.approx(0.0, abs=1e-6)
-    assert log.desiredLateralJerk == pytest.approx(0.0, abs=1e-6)
-    assert friction_term(log, self.V_EGO, desired) == pytest.approx(0.0, abs=1e-6)
-    assert log.d == pytest.approx(0.0, abs=1e-6)
-    assert v2.pid.i == pytest.approx(0.3)  # deliberately not cleared while inactive
+    assert log.error == approx(0.0, abs=1e-6)
+    assert log.desiredLateralJerk == approx(0.0, abs=1e-6)
+    assert friction_term(log, self.V_EGO, desired) == approx(0.0, abs=1e-6)
+    assert log.d == approx(0.0, abs=1e-6)
+    assert v2.pid.i == approx(0.3)  # deliberately not cleared while inactive
 
 
-class TestCurvatureBuffer:
+class TestCurvatureBuffer(OpenpilotTestCase):
   """The buffer stores curvature and is rescaled by the live v^2 on read: braking through a
   constant-curvature arc produces no phantom jerk, so nothing reaches the friction input
   (docs/zoompilot/lateral-tune.md, Tried and rejected)."""
@@ -337,7 +339,7 @@ class TestCurvatureBuffer:
     assert max(frictions) < 0.05
 
 
-class TestIntegratorFreeze:
+class TestIntegratorFreeze(OpenpilotTestCase):
   """v0's freeze semantics on the classified flag: steer_limited_by_safety (now driver-limited
   only), steeringPressed, or vEgo < 5 freeze the integrator; nothing else does."""
 
@@ -351,13 +353,19 @@ class TestIntegratorFreeze:
     return v2.pid.i
 
   def test_frozen_when_limited_by_safety(self, params):
-    assert self._run(sls=True) == pytest.approx(0.1)
+    assert self._run(sls=True) == approx(0.1)
 
   def test_frozen_when_pressed(self, params):
-    assert self._run(pressed=True) == pytest.approx(0.1)
+    assert self._run(pressed=True) == approx(0.1)
 
   def test_frozen_below_5mps(self, params):
-    assert self._run(v_ego=4.0) == pytest.approx(0.1)
+    assert self._run(v_ego=4.0) == approx(0.1)
 
   def test_live_otherwise(self, params):
     assert self._run() < 0.1 - 1e-4
+
+
+def params():
+  """Params under a throwaway prefix, for tests that build a real controller."""
+  with OpenpilotPrefix():
+    yield Params()

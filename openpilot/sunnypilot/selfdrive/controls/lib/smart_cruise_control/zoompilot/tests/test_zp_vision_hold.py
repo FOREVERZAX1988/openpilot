@@ -8,8 +8,8 @@ Vision controller on stock ACC: the commit hold below the bias band and the esca
 ceiling keyed on the set speed. Road rendering and the base case live in vision_harness.py.
 """
 import numpy as np
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.car.cruise import V_CRUISE_UNSET
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.speed_profile import lead_distance, required_decel
@@ -66,9 +66,9 @@ class TestCommitHold(VisionCase):
       # the approach already ramped the wire; a held bend never asks past the budget
       assert -lim.a_budget - 1e-9 <= scc.output_a_target <= -a_held + 1e-9
     else:
-      pytest.fail("the hold never ended")
+      raise AssertionError("the hold never ended")
     # handed to the near field, which reads a straight road
-    assert x - V * DT_MDL == pytest.approx(held_at - near_d, abs=V * DT_MDL)
+    assert x - V * DT_MDL == approx(held_at - near_d, abs=V * DT_MDL)
     assert not scc.is_active
     assert scc.output_v_target == V_CRUISE_UNSET
     assert not np.isfinite(scc.v_dip_held)
@@ -83,15 +83,17 @@ class TestCommitHold(VisionCase):
     assert scc.output_v_target == V_CRUISE_UNSET
     assert not np.isfinite(scc.v_dip_held)
 
-  @pytest.mark.parametrize("v, op_long, start", [(25., False, 110.), (V, True, 60.)], ids=["stock_56mph", "op_long"])
-  def test_no_hold_above_the_band_or_on_op_long(self, v, op_long, start):
-    scc = SmartCruiseControlVision(make_cp(op_long=op_long))
-    x = self.drive(scc, bend(start), 40, v=v)  # 2 s, past the latch time
-    assert scc.is_active
-    assert not np.isfinite(scc.v_dip_held)
-    self.drive(scc, straight, 1, x, v=v)
-    assert not scc.is_active
-    assert scc.output_v_target == V_CRUISE_UNSET
+  def test_no_hold_above_the_band_or_on_op_long(self):
+    # ids: ["stock_56mph", "op_long"]
+    for v, op_long, start in [(25., False, 110.), (V, True, 60.)]:
+      with self.subTest(v=v, op_long=op_long, start=start):
+        scc = SmartCruiseControlVision(make_cp(op_long=op_long))
+        x = self.drive(scc, bend(start), 40, v=v)  # 2 s, past the latch time
+        assert scc.is_active
+        assert not np.isfinite(scc.v_dip_held)
+        self.drive(scc, straight, 1, x, v=v)
+        assert not scc.is_active
+        assert scc.output_v_target == V_CRUISE_UNSET
 
   def test_speeding_up_past_the_band_drops_the_hold(self):
     scc = self.stock()
@@ -114,9 +116,9 @@ class TestCommitHold(VisionCase):
     x = self.drive(scc, deeper, SEEN_FRAMES - 1, x)
     assert scc.v_dip_held == v_first
     assert scc.v_dip_ahead < v_first - 2.
-    assert scc.output_v_target == pytest.approx(scc.v_dip_ahead)
+    assert scc.output_v_target == approx(scc.v_dip_ahead)
     x = self.drive(scc, deeper, 1, x)
-    assert scc.v_dip_held == pytest.approx(scc.v_dip_ahead)
+    assert scc.v_dip_held == approx(scc.v_dip_ahead)
     assert scc.v_dip_held < v_first - 2.
     assert x0 + BEND_S <= x - V * DT_MDL + scc.d_held <= x0 + BEND_S + BEND_L
 
@@ -151,7 +153,7 @@ class TestEscalationCeiling(VisionCase):
     assert lo.a_needed > 2 * budget
     assert lo.output_a_target < -2 * budget
     # cruising from 60 mph the same read asks for the budget at most
-    assert hi.a_needed == pytest.approx(budget)
-    assert hi.output_a_target == pytest.approx(-budget)
+    assert hi.a_needed == approx(budget)
+    assert hi.output_a_target == approx(-budget)
     # and between them the ceiling fades
-    assert mid.a_needed == pytest.approx((lo.a_needed + budget) / 2)
+    assert mid.a_needed == approx((lo.a_needed + budget) / 2)

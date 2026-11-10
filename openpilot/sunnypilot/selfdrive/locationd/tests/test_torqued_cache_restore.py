@@ -1,3 +1,5 @@
+import unittest
+
 """
 Copyright (c) 2026-, Zeph Leggett.
 
@@ -9,18 +11,20 @@ valid flag, the fork's LiveTorqueParametersSP the bin values and points; the gua
 both, and the cache write that feeds them.
 """
 import numpy as np
-import pytest
 
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.cereal import log
 from openpilot.common.realtime import DT_MDL
+from openpilot.selfdrive.locationd import torqued
 from openpilot.selfdrive.locationd.torqued import TorqueEstimator, VERSION, MIN_FILTER_DECAY
+from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
+from openpilot.sunnypilot.selfdrive.locationd import torqued_ext
 from openpilot.sunnypilot.selfdrive.locationd.speed_bin_learner import LIVE_TORQUE_PARAMETERS_SP_KEY, LIVE_TORQUE_PARAMETERS_SP_SERVICE
 from openpilot.sunnypilot.selfdrive.locationd.tests.speed_dep_helpers import (
   SPEED_DEP_FINGERPRINT, NON_SPEED_DEP_FINGERPRINT, FakePubMaster, get_car_bins, make_cp, make_cache, make_cache_sp,
   in_bounds_values, seed_values, assert_untouched, seed_version_of,
 )
 
-pytestmark = pytest.mark.skipif(SPEED_DEP_FINGERPRINT is None, reason="No cars in speed_dependent.toml")
 
 
 def _cache(**kwargs):
@@ -48,7 +52,8 @@ def _one_point_per_bin(est):
   return [[[0.11, 0.3]] for _ in est.speed_bin_bounds]
 
 
-class TestCacheRestore:
+@unittest.skipIf(SPEED_DEP_FINGERPRINT is None, "No cars in speed_dependent.toml")
+class TestCacheRestore(OpenpilotTestCase):
   """_restore_ext_cache called directly with the cache objects and the cached CP."""
 
   def test_successful_restore_updates_filters(self, fake_params):
@@ -126,8 +131,8 @@ class TestCacheRestore:
     assert all(d == 200.0 for d in est.speed_bin_decays)
     assert all(d != MIN_FILTER_DECAY for d in est.speed_bin_decays)
     for f in est.speed_bin_filtered:
-      assert f['latAccelFactor'].alpha == pytest.approx(DT_MDL / (200.0 + DT_MDL))
-      assert f['frictionCoefficient'].alpha == pytest.approx(DT_MDL / (200.0 + DT_MDL))
+      assert f['latAccelFactor'].alpha == approx(DT_MDL / (200.0 + DT_MDL))
+      assert f['frictionCoefficient'].alpha == approx(DT_MDL / (200.0 + DT_MDL))
     est.decay = saved_decay
 
   def test_estimator_decay_does_not_override_cache(self, fake_params):
@@ -154,31 +159,33 @@ class TestCacheRestore:
     assert_untouched(est, seeds, n_points=1)
 
 
-  @pytest.mark.parametrize("field, bad_bin, bad_value", [
+  def test_bad_bin_reseeds_only_that_bin(self):
+    # ids: ['nan_laf', 'inf_friction', 'laf_above_bound', 'friction_below_bound']
+    for field, bad_bin, bad_value in [
     ('laf', 1, lambda lo, hi: float('nan')),
     ('friction', -1, lambda lo, hi: float('inf')),
     ('laf', 2, lambda lo, hi: hi * 1.5),
     ('friction', 0, lambda lo, hi: lo - 0.05),
-  ], ids=['nan_laf', 'inf_friction', 'laf_above_bound', 'friction_below_bound'])
-  def test_bad_bin_reseeds_only_that_bin(self, fake_params, field, bad_bin, bad_value):
-    """A value non-finite or past the clip range the learner applies to its SVD output (bounds
-    moved under the cache: a seed refresh that kept seed_version, less-restrict switched off)
-    reseeds that bin alone at MIN decay. The rest restore, and every bin's points still load,
-    so the bad one re-learns from them."""
-    est = TorqueEstimator(make_cp())
-    seed_lafs, seed_frictions = seed_values(est)
-    lafs, frictions = in_bounds_values(est)
-    vals, bounds = (lafs, est.speed_bin_lat_accel_factor_bounds) if field == 'laf' else (frictions, est.speed_bin_friction_bounds)
-    bad = bad_bin % len(est.speed_bin_bounds)
-    vals[bad] = bad_value(*bounds[bad])
+  ]:
+      with self.subTest(field=field, bad_bin=bad_bin, bad_value=bad_value):
+        """A value non-finite or past the clip range the learner applies to its SVD output (bounds
+        moved under the cache: a seed refresh that kept seed_version, less-restrict switched off)
+        reseeds that bin alone at MIN decay. The rest restore, and every bin's points still load,
+        so the bad one re-learns from them."""
+        est = TorqueEstimator(make_cp())
+        seed_lafs, seed_frictions = seed_values(est)
+        lafs, frictions = in_bounds_values(est)
+        vals, bounds = (lafs, est.speed_bin_lat_accel_factor_bounds) if field == 'laf' else (frictions, est.speed_bin_friction_bounds)
+        bad = bad_bin % len(est.speed_bin_bounds)
+        vals[bad] = bad_value(*bounds[bad])
 
-    est._restore_ext_cache(_cache(decay=200.0), cache_CP=est.CP, cache_sp=_sp(est, lafs, frictions, _one_point_per_bin(est)))
+        est._restore_ext_cache(_cache(decay=200.0), cache_CP=est.CP, cache_sp=_sp(est, lafs, frictions, _one_point_per_bin(est)))
 
-    for i, filters in enumerate(est.speed_bin_filtered):
-      expected = (seed_lafs[i], seed_frictions[i], MIN_FILTER_DECAY) if i == bad else (lafs[i], frictions[i], 200.0)
-      assert (filters['latAccelFactor'].x, filters['frictionCoefficient'].x, est.speed_bin_decays[i]) == expected
-      assert filters['latAccelFactor'].alpha == pytest.approx(DT_MDL / (expected[2] + DT_MDL))
-      assert len(est.speed_bin_points[i]) == 1
+        for i, filters in enumerate(est.speed_bin_filtered):
+          expected = (seed_lafs[i], seed_frictions[i], MIN_FILTER_DECAY) if i == bad else (lafs[i], frictions[i], 200.0)
+          assert (filters['latAccelFactor'].x, filters['frictionCoefficient'].x, est.speed_bin_decays[i]) == expected
+          assert filters['latAccelFactor'].alpha == approx(DT_MDL / (expected[2] + DT_MDL))
+          assert len(est.speed_bin_points[i]) == 1
 
   def test_value_on_clip_bound_accepted(self, fake_params):
     """A filter railed at its clip bound reads back through Float32 a rounding step past it."""
@@ -230,18 +237,20 @@ class TestCacheRestore:
     est = TorqueEstimator(make_cp())
     assert est.speed_dep_seed_version == seed_version_of(est.CP.carFingerprint)
 
-  @pytest.mark.parametrize("delta", [1, -1], ids=["cache_behind", "cache_ahead"])
-  def test_other_seed_version_rejects_whole_cache(self, fake_params, delta):
-    """The TOML entry's seed_version keys the fork cache: a bump retires the bins and the
-    points learned under the old seeds, so the new seeds take over on the next boot. Any
-    mismatch counts, since neither side's values were learned under this config."""
-    est = TorqueEstimator(make_cp())
-    seeds = seed_values(est)
-    lafs, frictions = in_bounds_values(est)
-    est._restore_ext_cache(_cache(decay=200.0), cache_CP=est.CP,
-                           cache_sp=_sp(est, lafs, frictions, _one_point_per_bin(est),
-                                        seed_version=est.speed_dep_seed_version + delta))
-    assert_untouched(est, seeds)
+  def test_other_seed_version_rejects_whole_cache(self):
+    # ids: ["cache_behind", "cache_ahead"]
+    for delta in [1, -1]:
+      with self.subTest(delta=delta):
+        """The TOML entry's seed_version keys the fork cache: a bump retires the bins and the
+        points learned under the old seeds, so the new seeds take over on the next boot. Any
+        mismatch counts, since neither side's values were learned under this config."""
+        est = TorqueEstimator(make_cp())
+        seeds = seed_values(est)
+        lafs, frictions = in_bounds_values(est)
+        est._restore_ext_cache(_cache(decay=200.0), cache_CP=est.CP,
+                               cache_sp=_sp(est, lafs, frictions, _one_point_per_bin(est),
+                                            seed_version=est.speed_dep_seed_version + delta))
+        assert_untouched(est, seeds)
 
   def test_legacy_cache_without_seed_version_reads_zero(self, fake_params):
     """A cache written before the field existed reads back 0, so the first seed_version on
@@ -344,7 +353,8 @@ class TestCacheRestore:
     assert all(len(b) == 0 for b in est.speed_bin_points)
 
 
-class TestCacheRestoreGolden:
+@unittest.skipIf(SPEED_DEP_FINGERPRINT is None, "No cars in speed_dependent.toml")
+class TestCacheRestoreGolden(OpenpilotTestCase):
   """End to end through Params bytes: the restore must hand back exactly what a healthy
   cache holds, keyed on CarParamsPrevRoute as upstream's restore is. The guards themselves are
   pinned through _restore_ext_cache above."""
@@ -406,7 +416,8 @@ class TestCacheRestoreGolden:
     assert_untouched(est, seed_values(seed_est))
 
 
-class TestRestoreAcrossBoots:
+@unittest.skipIf(SPEED_DEP_FINGERPRINT is None, "No cars in speed_dependent.toml")
+class TestRestoreAcrossBoots(OpenpilotTestCase):
   """write -> restore -> write -> restore through Params, as torqued does across reboots."""
 
   @staticmethod
@@ -448,11 +459,12 @@ class TestRestoreAcrossBoots:
       est = self._boot(fake_params, CP, cache, cache_sp)
       assert not est.speed_bin_points[i].is_valid()
       assert est.speed_bin_learned[i]
-      assert (est.speed_bin_filtered[i]['latAccelFactor'].x, est.speed_bin_decays[i]) == pytest.approx(want, rel=1e-6)
+      assert (est.speed_bin_filtered[i]['latAccelFactor'].x, est.speed_bin_decays[i]) == approx(want, rel=1e-6)
       cache, cache_sp = self._write(fake_params, est)
 
 
-class TestPointsCacheWrite:
+@unittest.skipIf(SPEED_DEP_FINGERPRINT is None, "No cars in speed_dependent.toml")
+class TestPointsCacheWrite(OpenpilotTestCase):
   """torqued's cache write (get_msg with_points=True) is what feeds the fork cache."""
 
   @staticmethod
@@ -484,10 +496,10 @@ class TestPointsCacheWrite:
       sp = getattr(evt, LIVE_TORQUE_PARAMETERS_SP_SERVICE)
       assert sp.version == VERSION
       assert sp.seedVersion == est.speed_dep_seed_version == seed_version_of(est.CP.carFingerprint)
-      assert list(sp.speedBinCenters) == pytest.approx(est.speed_bin_centers)
+      assert list(sp.speedBinCenters) == approx(est.speed_bin_centers)
       assert len(sp.speedBinLatAccelFactors) == len(bounds)
       assert len(sp.speedBinPoints) == len(bounds)
-      assert list(sp.speedBinDecays) == pytest.approx(est.speed_bin_decays)
+      assert list(sp.speedBinDecays) == approx(est.speed_bin_decays)
       assert sum(len(bin_pts) for bin_pts in sp.speedBinPoints) >= 2
 
   def test_written_points_round_trip_into_a_fresh_estimator(self, fake_params):
@@ -504,3 +516,14 @@ class TestPointsCacheWrite:
     for want, bucket in zip(written, restored.speed_bin_points, strict=True):
       got = np.asarray(bucket.get_points()[:, [0, 2]], dtype=float).reshape(-1, 2)
       np.testing.assert_allclose(got, np.asarray(want, dtype=float).reshape(-1, 2), rtol=1e-6)  # one Float32 trip
+
+def _route_params(monkeypatch, fake):
+  # both Params sites: torqued reads the caches, torqued_ext reads the toggles
+  monkeypatch.setattr(torqued, "Params", lambda: fake)
+  monkeypatch.setattr(torqued_ext, "Params", lambda: fake)
+  return fake
+
+
+def fake_params(monkeypatch):
+  """One FakeParams behind both Params sites, Enforce Torque Control and Self-Tune on, caches empty."""
+  return _route_params(monkeypatch, FakeParams(EnforceTorqueControl=True, LiveTorqueParamsToggle=True))

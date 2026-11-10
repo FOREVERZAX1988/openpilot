@@ -1,3 +1,4 @@
+
 """
 Copyright (c) 2026-, Zeph Leggett.
 
@@ -13,10 +14,12 @@ See the LICENSE.md file in the root directory for more details.
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 
 from opendbc.car.structs import car
 from opendbc.sunnypilot.car.lateral_tune import get_steer_slew_schedule
+from openpilot.common.params import Params
+from openpilot.common.prefix import OpenpilotPrefix
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.cereal import custom
 from openpilot.sunnypilot.selfdrive.controls.controls_lateral_zp import ControlsLateralZP
 from openpilot.sunnypilot.selfdrive.controls.controlsd_ext import ControlsExt
@@ -28,7 +31,7 @@ from openpilot.sunnypilot.selfdrive.controls.lib.tests.torque_harness import DT,
 # over an 800-count one, where a step is wider than controlsd's 0.01 mismatch threshold
 STEP_1200 = {'slew_up': 10.0 / 1200.0, 'slew_down': 10.0 / 1200.0, 'rail_scale': 648.0 / 1200.0}
 STEP_800 = {'slew_up': 10.0 / 800.0, 'slew_down': 10.0 / 800.0, 'rail_scale': 648.0 / 800.0}
-SIDES = [pytest.param(STEP_1200, id='scale_1200'), pytest.param(STEP_800, id='scale_800')]
+SIDES = [STEP_1200, STEP_800]
 
 CX5_SLEW = get_steer_slew_schedule(make_cp(mazda=True))
 
@@ -42,18 +45,20 @@ def cl(cmd, applied, applied_prev, side, upstream_flag=True, **kw):
   return classify(cmd, applied, applied_prev, upstream_flag=upstream_flag, **args)
 
 
-class TestClassifyTable:
-  @pytest.mark.parametrize('side', SIDES)
-  def test_clean_when_command_and_applied_agree(self, side):
-    assert cl(0.30, 0.30, 0.29, side) == CLEAN
-    assert cl(0.30, 0.305, 0.29, side) == CLEAN  # inside the 0.01 threshold
-    assert cl(0.30, 0.30, 0.29, side, **DECAYING) == CLEAN
+class TestClassifyTable(OpenpilotTestCase):
+  def test_clean_when_command_and_applied_agree(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        assert cl(0.30, 0.30, 0.29, side) == CLEAN
+        assert cl(0.30, 0.305, 0.29, side) == CLEAN  # inside the 0.01 threshold
+        assert cl(0.30, 0.30, 0.29, side, **DECAYING) == CLEAN
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_full_slew_step_toward_the_command_is_rate_limited(self, side):
-    step = side['slew_up']
-    lim = cl(0.40, 0.30 + step, 0.30, side)
-    assert lim == SteerLimit(limited=True, driver_limited=False, rate_limited=True, at_rail=False)
+  def test_full_slew_step_toward_the_command_is_rate_limited(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        step = side['slew_up']
+        lim = cl(0.40, 0.30 + step, 0.30, side)
+        assert lim == SteerLimit(limited=True, driver_limited=False, rate_limited=True, at_rail=False)
 
   def test_command_walking_under_the_rate_limit_is_lag_not_a_driver(self):
     # on an 800 scale a step is 0.0125: a command moving 0.012 per frame is tracked exactly, one
@@ -64,76 +69,87 @@ class TestClassifyTable:
     lim = cl(0.312, 0.300, 0.299, STEP_800)
     assert (lim.rate_limited, lim.driver_limited) == (False, True)
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_short_step_is_driver_limited(self, side):
-    step = side['slew_up']
-    lim = cl(0.40, 0.30 + 0.5 * step, 0.30, side)
-    assert lim == SteerLimit(limited=True, driver_limited=True, rate_limited=False, at_rail=False)
-    # the 0.9 tolerance covers the scale being read at vEgoRaw and rounded by the carcontroller
-    assert cl(0.40, 0.30 + 0.92 * step, 0.30, side).rate_limited
+  def test_short_step_is_driver_limited(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        step = side['slew_up']
+        lim = cl(0.40, 0.30 + 0.5 * step, 0.30, side)
+        assert lim == SteerLimit(limited=True, driver_limited=True, rate_limited=False, at_rail=False)
+        # the 0.9 tolerance covers the scale being read at vEgoRaw and rounded by the carcontroller
+        assert cl(0.40, 0.30 + 0.92 * step, 0.30, side).rate_limited
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_walking_down_toward_zero_uses_the_down_step(self, side):
-    step = side['slew_down']
-    assert cl(0.0, -0.30 + step, -0.30, side).rate_limited
-    assert cl(0.0, 0.30 - step, 0.30, side).rate_limited
+  def test_walking_down_toward_zero_uses_the_down_step(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        step = side['slew_down']
+        assert cl(0.0, -0.30 + step, -0.30, side).rate_limited
+        assert cl(0.0, 0.30 - step, 0.30, side).rate_limited
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_pinned_applied_is_driver_limited(self, side):
-    lim = cl(0.40, 0.30, 0.30, side)
-    assert lim == SteerLimit(limited=True, driver_limited=True, rate_limited=False, at_rail=False)
+  def test_pinned_applied_is_driver_limited(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        lim = cl(0.40, 0.30, 0.30, side)
+        assert lim == SteerLimit(limited=True, driver_limited=True, rate_limited=False, at_rail=False)
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_step_away_from_the_command_is_not_rate_limited(self, side):
-    step = side['slew_up']
-    lim = cl(0.20, 0.30 + step, 0.30, side)
-    assert lim.driver_limited and not lim.rate_limited
+  def test_step_away_from_the_command_is_not_rate_limited(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        step = side['slew_up']
+        lim = cl(0.20, 0.30 + step, 0.30, side)
+        assert lim.driver_limited and not lim.rate_limited
 
-  @pytest.mark.parametrize('side', SIDES)
-  @pytest.mark.parametrize('kind', ['rate', 'driver'])
-  def test_deepening_integrator_freezes_decaying_one_bleeds(self, side, kind):
-    """The flag handed to the tunes is directional: rate- and driver-limited alike freeze
-    only while integrating would grow |i|; toward a reversing error the integrator stays live."""
-    applied = 0.30 + (side['slew_up'] if kind == 'rate' else 0.0)
-    assert cl(0.40, applied, 0.30, side, error_prev=0.2, integrator=0.3).limited
-    assert cl(0.40, applied, 0.30, side, error_prev=-0.2, integrator=-0.3).limited
-    assert not cl(0.40, applied, 0.30, side, error_prev=-0.2, integrator=0.3).limited
-    assert not cl(0.40, applied, 0.30, side, error_prev=0.2, integrator=-0.3).limited
+  def test_deepening_integrator_freezes_decaying_one_bleeds(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        for kind in ['rate', 'driver']:
+          with self.subTest(kind=kind):
+            """The flag handed to the tunes is directional: rate- and driver-limited alike freeze
+            only while integrating would grow |i|; toward a reversing error the integrator stays live."""
+            applied = 0.30 + (side['slew_up'] if kind == 'rate' else 0.0)
+            assert cl(0.40, applied, 0.30, side, error_prev=0.2, integrator=0.3).limited
+            assert cl(0.40, applied, 0.30, side, error_prev=-0.2, integrator=-0.3).limited
+            assert not cl(0.40, applied, 0.30, side, error_prev=-0.2, integrator=0.3).limited
+            assert not cl(0.40, applied, 0.30, side, error_prev=0.2, integrator=-0.3).limited
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_empty_integrator_counts_as_deepening(self, side):
-    assert cl(0.40, 0.30, 0.30, side, error_prev=0.2, integrator=0.0).limited
-    assert cl(0.40, 0.30, 0.30, side, error_prev=0.0, integrator=0.3).limited
+  def test_empty_integrator_counts_as_deepening(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        assert cl(0.40, 0.30, 0.30, side, error_prev=0.2, integrator=0.0).limited
+        assert cl(0.40, 0.30, 0.30, side, error_prev=0.0, integrator=0.3).limited
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_applied_on_the_rail_is_never_limited(self, side):
-    rail = side['rail_scale']
-    for kw in (DEEPENING, DECAYING):
-      lim = cl(rail + 0.20, rail, rail, side, **kw)
-      assert lim == SteerLimit(limited=False, driver_limited=False, rate_limited=False, at_rail=True)
-      lim = cl(-rail - 0.20, -rail, -rail, side, **kw)
-      assert lim == SteerLimit(limited=False, driver_limited=False, rate_limited=False, at_rail=True)
+  def test_applied_on_the_rail_is_never_limited(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        rail = side['rail_scale']
+        for kw in (DEEPENING, DECAYING):
+          lim = cl(rail + 0.20, rail, rail, side, **kw)
+          assert lim == SteerLimit(limited=False, driver_limited=False, rate_limited=False, at_rail=True)
+          lim = cl(-rail - 0.20, -rail, -rail, side, **kw)
+          assert lim == SteerLimit(limited=False, driver_limited=False, rate_limited=False, at_rail=True)
 
-  @pytest.mark.parametrize('side', SIDES)
-  def test_rail_reported_even_without_a_mismatch(self, side):
-    rail = side['rail_scale']
-    assert cl(rail, rail, rail, side, upstream_flag=False) == SteerLimit(False, False, False, True)
+  def test_rail_reported_even_without_a_mismatch(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        rail = side['rail_scale']
+        assert cl(rail, rail, rail, side, upstream_flag=False) == SteerLimit(False, False, False, True)
 
   def test_full_scale_is_a_rail_on_platforms_without_a_ceiling(self):
     flat = {'slew_up': 0.01, 'slew_down': 0.02, 'rail_scale': 1.0}
     assert cl(1.0, 1.0, 1.0, flat).at_rail
     assert not cl(1.0, 0.99, 0.98, flat).at_rail
 
-  @pytest.mark.parametrize('side', SIDES)
-  @pytest.mark.parametrize('flag', [True, False])
-  def test_first_frame_falls_back_to_the_upstream_flag(self, side, flag):
-    lim = cl(0.40, 0.30, None, side, upstream_flag=flag, **DECAYING)
-    assert lim == SteerLimit(limited=flag, driver_limited=flag, rate_limited=False, at_rail=False)
-    # no history is only a fallback under a mismatch: an agreeing pair is clean regardless
-    assert cl(0.30, 0.30, None, side, upstream_flag=flag) == CLEAN
+  def test_first_frame_falls_back_to_the_upstream_flag(self):
+    for side in SIDES:
+      with self.subTest(side=side):
+        for flag in [True, False]:
+          with self.subTest(flag=flag):
+            lim = cl(0.40, 0.30, None, side, upstream_flag=flag, **DECAYING)
+            assert lim == SteerLimit(limited=flag, driver_limited=flag, rate_limited=False, at_rail=False)
+            # no history is only a fallback under a mismatch: an agreeing pair is clean regardless
+            assert cl(0.30, 0.30, None, side, upstream_flag=flag) == CLEAN
 
 
-class TestControlsdWiring:
+class TestControlsdWiring(OpenpilotTestCase):
   """ControlsLateralZP.reclassify_steer_limit runs after publish() computed the upstream flag."""
 
   @staticmethod
@@ -200,7 +216,7 @@ class TestControlsdWiring:
     assert ext._steer_slew_schedule == CX5_SLEW
 
 
-class TestCommandedTorque:
+class TestCommandedTorque(OpenpilotTestCase):
   def test_tracks_the_published_actuator_sign_and_inactive_frames(self, params):
     lac = make_lac(LatControlTorqueV0, mazda=True)
     v_ego = 15.0
@@ -210,13 +226,13 @@ class TestCommandedTorque:
       steer, _, _ = lac.update(True, cs, VM, LP, False, 0.3 / v_ego ** 2, None, False, LAT_DELAY)
     assert steer != 0.0
     assert lac.extension.commanded_torque == steer
-    assert lac.extension.last_error == pytest.approx(0.3)  # setpoint 0.3 m/s^2, measurement 0
+    assert lac.extension.last_error == approx(0.3)  # setpoint 0.3 m/s^2, measurement 0
     assert lac.extension.integrator == lac.pid.i != 0.0
     lac.update(False, cs, VM, LP, False, 0.0, None, False, LAT_DELAY)
     assert lac.extension.commanded_torque == 0.0
 
 
-class TestIntegratorUnderTheNewFlag:
+class TestIntegratorUnderTheNewFlag(OpenpilotTestCase):
   """v0 against a simulated actuator that walks toward the command at the carcontroller's
   rate limit, one frame behind, on a weaving request with a constant small tracking error of
   one sign. The command moves faster than one slew step, so upstream's |cmd - applied| > 0.01
@@ -277,16 +293,22 @@ class TestIntegratorUnderTheNewFlag:
     assert old['deepening'].old_duty > 0.7, 'the upstream flag must fire on most frames for this test to mean anything'
     # Both classifiers freeze error that would deepen saturation.
     assert new['deepening'].new_duty > 0.7
-    assert new['deepening'].i == pytest.approx(self.SEED_I, abs=0.03)
-    assert old['deepening'].i == pytest.approx(self.SEED_I, abs=0.03)
+    assert new['deepening'].i == approx(self.SEED_I, abs=0.03)
+    assert old['deepening'].i == approx(self.SEED_I, abs=0.03)
     # The directional classifier permits integrator decay away from saturation.
     assert new['decaying'].new_duty < 0.05
-    assert old['decaying'].i == pytest.approx(old['deepening'].i, abs=0.03)
+    assert old['decaying'].i == approx(old['deepening'].i, abs=0.03)
     expected_bleed = self.KI * DT * self.ERROR * self.FRAMES
-    assert new['deepening'].i - new['decaying'].i == pytest.approx(expected_bleed, rel=0.15)
+    assert new['deepening'].i - new['decaying'].i == approx(expected_bleed, rel=0.15)
     # a request past the rail: once the actuator is on the rail the flag is False (the slew up
     # to it is a deepening mismatch and stays limited) and the tune's alert fires
     # the slew reaches the 0.556 rail in about 67 of the 300 frames
     assert new['rail'].rail_duty > 0.75
     assert new['rail'].new_duty_at_rail == 0.0
     assert new['rail'].saturated
+
+
+def params():
+  """Params under a throwaway prefix, for tests that build a real controller."""
+  with OpenpilotPrefix():
+    yield Params()

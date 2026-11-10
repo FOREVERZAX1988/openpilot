@@ -10,7 +10,7 @@ The upper bound is upstream's cruise candidate, as in the planner with no lead, 
 on the set speed at the approach pace.
 """
 import numpy as np
-import pytest
+import unittest
 
 from openpilot.cereal import log as cereal_log
 from openpilot.common.constants import CV
@@ -64,30 +64,30 @@ def deficit_mph(log, after):
   return (V_CRUISE - log[log[:, 0] >= after, 1]).max() * CV.MS_TO_MPH
 
 
-def test_model_alone_stays_under():
-  assert deficit_mph(simulate(False), after=40.) > 5.
+class TestClosedLoop(unittest.TestCase):
 
+  def test_model_alone_stays_under(self):
+    assert deficit_mph(simulate(False), after=40.) > 5.
 
-@pytest.mark.parametrize("tau, deficit", [(25., 1.), (50., 1.), (65., 1.)])  # the per-bundle spread in the logs
-def test_reaches_set_speed(tau, deficit):
-  log = simulate(True, tau=tau)
-  assert deficit_mph(log, after=40.) < deficit
-  assert deficit_mph(log, after=40.) < 0.6 * deficit_mph(simulate(False, tau=tau), after=40.)
-  # no further past the set speed than chill mode's own cruise goes through the same lag
-  assert log[:, 1].max() <= chill_peak() + 1e-3
+  def test_reaches_set_speed(self):  # the per-bundle spread in the logs
+    for tau, deficit in [(25., 1.), (50., 1.), (65., 1.)]:
+      with self.subTest(tau=tau, deficit=deficit):
+        log = simulate(True, tau=tau)
+        assert deficit_mph(log, after=40.) < deficit
+        assert deficit_mph(log, after=40.) < 0.6 * deficit_mph(simulate(False, tau=tau), after=40.)
+        # no further past the set speed than chill mode's own cruise goes through the same lag
+        assert log[:, 1].max() <= chill_peak() + 1e-3
 
+  def test_added_jerk_bounded(self):
+    # the model never brakes in this run, so the lift never takes the gain's faster drop
+    log = simulate(True)
+    lift = log[:, 3] - log[:, 2]
+    jerk = np.diff(lift) / DT
+    assert -LIFT_FALL - 1e-6 <= jerk.min() and jerk.max() <= op_long_cruise_jerk(0.) + 1e-6
+    assert lift.min() >= 0.
 
-def test_added_jerk_bounded():
-  # the model never brakes in this run, so the lift never takes the gain's faster drop
-  log = simulate(True)
-  lift = log[:, 3] - log[:, 2]
-  jerk = np.diff(lift) / DT
-  assert -LIFT_FALL - 1e-6 <= jerk.min() and jerk.max() <= op_long_cruise_jerk(0.) + 1e-6
-  assert lift.min() >= 0.
-
-
-def test_yields_to_a_slowdown_within_half_a_second():
-  # converged, then the model starts braking for something at t = 45 s
-  log = simulate(True, brake_at=45.)
-  after = log[log[:, 0] >= 45. + 0.5]
-  assert np.allclose(after[:, 3], after[:, 2])
+  def test_yields_to_a_slowdown_within_half_a_second(self):
+    # converged, then the model starts braking for something at t = 45 s
+    log = simulate(True, brake_at=45.)
+    after = log[log[:, 0] >= 45. + 0.5]
+    assert np.allclose(after[:, 3], after[:, 2])

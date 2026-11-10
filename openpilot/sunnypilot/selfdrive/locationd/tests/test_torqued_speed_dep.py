@@ -7,13 +7,17 @@ See the LICENSE.md file in the root directory for more details.
 Speed-binned learning in torqued: bin layout, point routing, the published message, the
 toggle gates and the per-bin fit. The cache lives in test_torqued_cache_restore.py.
 """
+import unittest
 import numpy as np
-import pytest
 
 from unittest.mock import MagicMock, patch
 from opendbc.car.mazda.values import MazdaFlags
+from openpilot.common.test import OpenpilotTestCase, approx
+from openpilot.selfdrive.locationd import torqued
 from openpilot.selfdrive.locationd.torqued import TorqueEstimator, TorqueBuckets, VERSION, MIN_FILTER_DECAY, POINTS_PER_BUCKET, \
   STEER_BUCKET_BOUNDS
+from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
+from openpilot.sunnypilot.selfdrive.locationd import torqued_ext
 from openpilot.sunnypilot.selfdrive.locationd.speed_bin_learner import (
   DEFAULT_SPEED_BIN_BOUNDS as SPEED_BIN_BOUNDS, DEFAULT_SPEED_BIN_CENTERS as SPEED_BIN_CENTERS,
   SpeedBinLearner,
@@ -29,10 +33,30 @@ def _published(est, **kwargs):
   msg = est.get_msg(**kwargs)
   return msg.lateralTorqueParameters, est._pm.last()
 
-needs_speed_dep_car = pytest.mark.skipif(SPEED_DEP_FINGERPRINT is None, reason="No cars in speed_dependent.toml")
+
+def _route_params(monkeypatch, fake):
+  # both Params sites: torqued reads the caches, torqued_ext reads the toggles
+  monkeypatch.setattr(torqued, "Params", lambda: fake)
+  monkeypatch.setattr(torqued_ext, "Params", lambda: fake)
+  return fake
 
 
-class TestSpeedDepConfig:
+def fake_params(monkeypatch):
+  """One FakeParams behind both Params sites, Enforce Torque Control and Self-Tune on, caches
+  empty. Speed-dep learning runs wherever self-tune does, and make_cp's brand is not one
+  upstream self-tunes, so both toggles are needed."""
+  return _route_params(monkeypatch, FakeParams(EnforceTorqueControl=True, LiveTorqueParamsToggle=True))
+
+
+def fake_params_off(monkeypatch):
+  """Same, with Enforce Torque Control and Self-Tune off."""
+  return _route_params(monkeypatch, FakeParams())
+
+
+needs_speed_dep_car = unittest.skipIf(SPEED_DEP_FINGERPRINT is None, "No cars in speed_dependent.toml")
+
+
+class TestSpeedDepConfig(OpenpilotTestCase):
   """Config-level checks that need no estimator."""
 
   def test_speed_dep_config_has_entries(self):
@@ -49,7 +73,7 @@ class TestSpeedDepConfig:
       assert center <= hi
 
 
-class TestCentersToBounds:
+class TestCentersToBounds(OpenpilotTestCase):
   def test_midpoints_between_centers(self):
     bounds = SpeedBinLearner._centers_to_bounds([10.0, 20.0, 30.0])
     assert bounds[0] == (5, 15.0)   # lo=DEFAULT[0][0], hi=midpoint(10,20)
@@ -62,7 +86,7 @@ class TestCentersToBounds:
 
 
 @needs_speed_dep_car
-class TestSpeedBinnedLearning:
+class TestSpeedBinnedLearning(OpenpilotTestCase):
   """Self-tune on, on a configured car."""
 
   def test_speed_bins_initialized(self, fake_params):
@@ -117,26 +141,26 @@ class TestSpeedBinnedLearning:
   def test_global_fit_unchanged(self, fake_params):
     est = TorqueEstimator(make_cp(lat_accel_factor=1.25, friction=0.125))
     ltp = est.get_msg().lateralTorqueParameters
-    assert ltp.latAccelFactorFiltered == pytest.approx(1.25, abs=1e-2)
-    assert ltp.frictionCoefficientFiltered == pytest.approx(0.125, abs=1e-3)
+    assert ltp.latAccelFactorFiltered == approx(1.25, abs=1e-2)
+    assert ltp.frictionCoefficientFiltered == approx(0.125, abs=1e-3)
     assert ltp.calPerc == 0
 
 
-class TestSelfTuneGate:
+class TestSelfTuneGate(OpenpilotTestCase):
   """Speed-dep runs wherever self-tune does, with no toggle of its own."""
 
   @staticmethod
   def _cp(brand):
     return make_cp(fingerprint=NON_SPEED_DEP_FINGERPRINT, brand=brand)
 
-  @pytest.mark.parametrize("brand, self_tunes_bare", [('toyota', True), ('mazda', False)])
-  def test_follows_self_tune(self, fake_params_off, brand, self_tunes_bare):
-    # bare: upstream's brand gate; under Enforce Torque Control: the Self-Tune toggle
-    assert TorqueEstimator(self._cp(brand)).speed_binned == self_tunes_bare
-    fake_params_off.put_bool("EnforceTorqueControl", True)
-    assert not TorqueEstimator(self._cp(brand)).speed_binned
-    fake_params_off.put_bool("LiveTorqueParamsToggle", True)
-    assert TorqueEstimator(self._cp(brand)).speed_binned
+  def test_follows_self_tune(self, fake_params_off):
+    for brand, self_tunes_bare in [('toyota', True), ('mazda', False)]:
+      with self.subTest(brand=brand, self_tunes_bare=self_tunes_bare):
+        assert TorqueEstimator(self._cp(brand)).speed_binned == self_tunes_bare
+        fake_params_off.put_bool("EnforceTorqueControl", True)
+        assert not TorqueEstimator(self._cp(brand)).speed_binned
+        fake_params_off.put_bool("LiveTorqueParamsToggle", True)
+        assert TorqueEstimator(self._cp(brand)).speed_binned
 
   def test_manual_override_keeps_bins(self, fake_params):
     # the override pauses the learner's output, not the learner
@@ -147,7 +171,7 @@ class TestSelfTuneGate:
     assert not est.use_params
 
 
-class TestBackwardCompatibility:
+class TestBackwardCompatibility(OpenpilotTestCase):
   """Cars without self-tune are unaffected."""
 
   def test_unconfigured_car_creates_no_bins(self, fake_params_off):
@@ -170,12 +194,12 @@ class TestBackwardCompatibility:
   def test_unconfigured_car_global_params_still_work(self, fake_params_off):
     est = TorqueEstimator(make_cp(fingerprint=NON_SPEED_DEP_FINGERPRINT, lat_accel_factor=2.0, friction=0.15))
     ltp = est.get_msg().lateralTorqueParameters
-    assert ltp.latAccelFactorFiltered == pytest.approx(2.0, abs=1e-2)
-    assert ltp.frictionCoefficientFiltered == pytest.approx(0.15, abs=1e-3)
+    assert ltp.latAccelFactorFiltered == approx(2.0, abs=1e-2)
+    assert ltp.frictionCoefficientFiltered == approx(0.15, abs=1e-3)
     assert ltp.calPerc == 0
 
 
-class TestUnconfiguredCarSelfTuneOn:
+class TestUnconfiguredCarSelfTuneOn(OpenpilotTestCase):
   """An unconfigured car with self-tune on gets the default bins and the offline seeds."""
 
   def test_default_bins_seeded_with_offline_values(self, fake_params):
@@ -184,12 +208,12 @@ class TestUnconfiguredCarSelfTuneOn:
     assert len(est.speed_bin_bounds) == len(SPEED_BIN_BOUNDS)
     assert est.speed_bin_centers == list(SPEED_BIN_CENTERS)
     for i in range(len(SPEED_BIN_BOUNDS)):
-      assert est.speed_bin_filtered[i]['latAccelFactor'].x == pytest.approx(2.5)
-      assert est.speed_bin_filtered[i]['frictionCoefficient'].x == pytest.approx(0.18)
+      assert est.speed_bin_filtered[i]['latAccelFactor'].x == approx(2.5)
+      assert est.speed_bin_filtered[i]['frictionCoefficient'].x == approx(0.18)
 
 
 @needs_speed_dep_car
-class TestSanityBounds:
+class TestSanityBounds(OpenpilotTestCase):
   def test_bins_learn_without_the_relaxed_toggle(self, fake_params):
     """With LiveTorqueParamsRelaxedToggle off every bin still clips to a band around its seed,
     not (seed, seed): a fit 10% above the seed passes."""
@@ -201,7 +225,7 @@ class TestSanityBounds:
 
 
 @needs_speed_dep_car
-class TestNaNHandling:
+class TestNaNHandling(OpenpilotTestCase):
   """Bin behavior when the SVD fails. The bucket is a MagicMock here on purpose: it forces
   the failure path without needing thousands of points."""
 
@@ -242,7 +266,7 @@ class TestNaNHandling:
 
 
 @needs_speed_dep_car
-class TestFullBinKeepsLearning:
+class TestFullBinKeepsLearning(OpenpilotTestCase):
   """A bin's buckets are ring buffers: once all eight hold POINTS_PER_BUCKET its length stops
   changing while new points keep replacing old ones. The fit must still rerun on them; keyed on
   the length, a full bin froze at whatever it had learned when it filled."""
@@ -278,7 +302,7 @@ class TestFullBinKeepsLearning:
 
 
 @needs_speed_dep_car
-class TestFilteredOnlyOnceValid:
+class TestFilteredOnlyOnceValid(OpenpilotTestCase):
   """As upstream gates its global filter, a bin is fit and filtered only once it is valid; until
   then it publishes its seed and reads not valid."""
 
@@ -304,7 +328,7 @@ class TestFilteredOnlyOnceValid:
     assert est.speed_bin_filtered[0]['latAccelFactor'].x != seed
 
 
-class TestLegacyFirmwareBins:
+class TestLegacyFirmwareBins(OpenpilotTestCase):
   def test_first_kept_bin_starts_at_its_own_edge(self, fake_params):
     # a legacy-firmware CX-5 2022 keeps the bins above its 45 kph floor; the first of them must
     # not reach down over the floor and the firmware's dead band to the default 5 m/s
@@ -313,19 +337,20 @@ class TestLegacyFirmwareBins:
     est = TorqueEstimator(CP)
     full = SPEED_DEP_CARS['MAZDA_CX5_2022']['speed_bp']
     first = full.index(est.speed_bin_centers[0])
-    assert est.speed_bin_bounds[0][0] == pytest.approx((full[first - 1] + full[first]) / 2)
+    assert est.speed_bin_bounds[0][0] == approx((full[first - 1] + full[first]) / 2)
     assert est.speed_bin_bounds[0][0] > CP.minSteerSpeed
 
 
-class TestCustomTorqueParamsScale:
+class TestCustomTorqueParamsScale(OpenpilotTestCase):
   """The custom offline values share the manual override's params, typed on upstream's scale."""
 
-  @pytest.mark.parametrize("brand, laf, friction", [('mazda', 1.8, 0.1), ('toyota', 1.2, 0.15)])
-  def test_offline_values_on_steer_max(self, fake_params, brand, laf, friction):
-    fake_params.values.update(CustomTorqueParams=True, TorqueParamsOverrideLatAccelFactor='1.2', TorqueParamsOverrideFriction='0.15')
-    CP = make_cp('MAZDA_CX5_2022', brand=brand)
-    if brand == 'mazda':
-      CP.flags = int(MazdaFlags.GEN1 | MazdaFlags.STEER_TO_ZERO_EPS)
-    est = TorqueEstimator(CP)
-    assert est.offline_latAccelFactor == pytest.approx(laf)
-    assert est.offline_friction == pytest.approx(friction)
+  def test_offline_values_on_steer_max(self, fake_params):
+    for brand, laf, friction in [('mazda', 1.8, 0.1), ('toyota', 1.2, 0.15)]:
+      with self.subTest(brand=brand, laf=laf, friction=friction):
+        fake_params.values.update(CustomTorqueParams=True, TorqueParamsOverrideLatAccelFactor='1.2', TorqueParamsOverrideFriction='0.15')
+        CP = make_cp('MAZDA_CX5_2022', brand=brand)
+        if brand == 'mazda':
+          CP.flags = int(MazdaFlags.GEN1 | MazdaFlags.STEER_TO_ZERO_EPS)
+        est = TorqueEstimator(CP)
+        assert est.offline_latAccelFactor == approx(laf)
+        assert est.offline_friction == approx(friction)

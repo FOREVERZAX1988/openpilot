@@ -4,7 +4,7 @@ Copyright (c) 2026-, Zeph Leggett.
 This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-import pytest
+import unittest
 
 from openpilot.cereal import custom, log, messaging
 from opendbc.car import structs
@@ -72,7 +72,7 @@ class Selfdrived:
     self.step(car_state(False))
 
 
-class TestSpeedAssistSwitch:
+class TestSpeedAssistSwitch(unittest.TestCase):
   def test_long_press_switches_speed_assist_only(self):
     sd = Selfdrived()
     sd.hold_gap(DISTANCE_LONG_PRESS + 5)
@@ -140,7 +140,7 @@ class TestSpeedAssistSwitch:
       assert alert(None, None, None, False, 0, None).alert_text_1 == text
 
 
-class TestDistanceFarther:
+class TestDistanceFarther(unittest.TestCase):
   """The wheel's second distance button reaches selfdrived as a level on carStateSP; the helper
   turns it into one release edge, the opposite direction to upstream's gapAdjustCruise cycle."""
 
@@ -180,13 +180,14 @@ class TestDistanceFarther:
     assert sd.icbm.activations == [True, False, True]
 
 
-class TestRoadEdgeAlert:
-  @pytest.mark.parametrize("mode, audible", [(RoadEdgeMode.AUDIBLE, AudibleAlert.prompt), (RoadEdgeMode.SILENT, AudibleAlert.none)])
-  def test_silent_drops_only_the_chime(self, mode, audible):
-    sd = Selfdrived()
-    sd.params.put("RoadEdgeLaneChangeEnabled", mode)
-    for _ in range(PARAMS_READ_FRAMES):
-      sd.step()
-    alert = EVENTS_SP_ZP[EventNameSP.laneChangeRoadEdge][ET.WARNING](None, None, None, False, 0, 0)
-    assert alert.audible_alert == audible
-    assert alert.alert_size == AlertSize.small, "the on-screen alert is the same in both modes"
+class TestRoadEdgeAlert(unittest.TestCase):
+  def test_silent_drops_only_the_chime(self):
+    for mode, audible in [(RoadEdgeMode.AUDIBLE, AudibleAlert.prompt), (RoadEdgeMode.SILENT, AudibleAlert.none)]:
+      with self.subTest(mode=mode):
+        sd = Selfdrived()
+        sd.params.put("RoadEdgeLaneChangeEnabled", mode)
+        for _ in range(PARAMS_READ_FRAMES):
+          sd.step()
+        alert = EVENTS_SP_ZP[EventNameSP.laneChangeRoadEdge][ET.WARNING](None, None, None, False, 0, 0)
+        assert alert.audible_alert == audible
+        assert alert.alert_size == AlertSize.small, "the on-screen alert is the same in both modes"

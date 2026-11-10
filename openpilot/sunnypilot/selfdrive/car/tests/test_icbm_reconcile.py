@@ -9,8 +9,8 @@ is the source of truth, but only when the plan source is cruise and ICBM is not 
 (single-writer setpoint); SLA-owned presses never increment v_cruise; the vEgo clip on
 SET- while overriding is disabled.
 """
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.cereal import custom
 from opendbc.car.structs import car
 from openpilot.common.constants import CV
@@ -39,7 +39,8 @@ def make_car_state(dash_kph=0., gas_pressed=False, button_events=None, available
 class TestSetpointReconcile:
   """pcmCruise (stock ACC) car with ICBM enabled (pcmCruiseSpeed=False)."""
 
-  def setup_method(self):
+  def setUp(self):
+    super().setUp()
     Params().put_bool("CustomAccIncrementsEnabled", False)
     self.CP = car.CarParams(pcmCruise=True)
     self.CP_SP = custom.CarParamsSP(pcmCruiseSpeed=False, intelligentCruiseButtonManagementAvailable=True)
@@ -163,28 +164,30 @@ class TestSetpointReconcile:
     self.run_frames(make_car_state(dash_kph=53 * MPH), n=20)
     assert abs(self.v_cruise_helper.v_cruise_kph - 60 * MPH) < 0.1
 
-  @pytest.mark.parametrize("is_metric, unit", [(False, MPH), (True, 1.)], ids=["mph", "kph"])
-  def test_sla_minus_abort_floors_to_dash(self, is_metric, unit):
-    """Mid-decrease for SLA, a - press asks for slower. The in-transit dash fails both
-    agreement checks, so nothing is adopted inside the window; once it settles the
-    setpoint must come down to the dash the ECU left, never stay at the baseline for
-    the servo's restore to climb back to (the 51 -> 60 walk in a 45 zone)."""
-    self.is_metric = is_metric
-    self.engage_at(60 * unit)
-    self.set_regime(source='speedLimitAssist', sla_state='active', limit_kph=45 * unit)
+  def test_sla_minus_abort_floors_to_dash(self):
+    # ids: ["mph", "kph"]
+    for is_metric, unit in [(False, MPH), (True, 1.)]:
+      with self.subTest(is_metric=is_metric, unit=unit):
+        """Mid-decrease for SLA, a - press asks for slower. The in-transit dash fails both
+        agreement checks, so nothing is adopted inside the window; once it settles the
+        setpoint must come down to the dash the ECU left, never stay at the baseline for
+        the servo's restore to climb back to (the 51 -> 60 walk in a 45 zone)."""
+        self.is_metric = is_metric
+        self.engage_at(60 * unit)
+        self.set_regime(source='speedLimitAssist', sla_state='active', limit_kph=45 * unit)
 
-    # servo is halfway down (dash 52) when the driver presses -; the ECU's own -1 lands
-    self.press(ButtonType.decelCruise, dash_kph=52 * unit)
-    self.set_regime(source='cruise', icbm_state='holding', sla_state='inactive')
-    settle_frames = int(RECONCILE_SETTLE_TIME / DT_CTRL)
-    self.run_frames(make_car_state(dash_kph=51 * unit), n=settle_frames - 20)
-    assert abs(self.v_cruise_helper.v_cruise_kph - 60 * unit) < 0.1, "in-transit dash adopted early"
-    self.run_frames(make_car_state(dash_kph=51 * unit), n=40)
-    assert abs(self.v_cruise_helper.v_cruise_kph - 51 * unit) < 0.5, "setpoint left above the dash after a - press"
-    assert self.v_cruise_helper.v_cruise_cluster_kph == self.v_cruise_helper.v_cruise_kph
-    # one-shot: a later dash move outside any window is not followed
-    self.run_frames(make_car_state(dash_kph=40 * unit), n=20)
-    assert abs(self.v_cruise_helper.v_cruise_kph - 51 * unit) < 0.5
+        # servo is halfway down (dash 52) when the driver presses -; the ECU's own -1 lands
+        self.press(ButtonType.decelCruise, dash_kph=52 * unit)
+        self.set_regime(source='cruise', icbm_state='holding', sla_state='inactive')
+        settle_frames = int(RECONCILE_SETTLE_TIME / DT_CTRL)
+        self.run_frames(make_car_state(dash_kph=51 * unit), n=settle_frames - 20)
+        assert abs(self.v_cruise_helper.v_cruise_kph - 60 * unit) < 0.1, "in-transit dash adopted early"
+        self.run_frames(make_car_state(dash_kph=51 * unit), n=40)
+        assert abs(self.v_cruise_helper.v_cruise_kph - 51 * unit) < 0.5, "setpoint left above the dash after a - press"
+        assert self.v_cruise_helper.v_cruise_cluster_kph == self.v_cruise_helper.v_cruise_kph
+        # one-shot: a later dash move outside any window is not followed
+        self.run_frames(make_car_state(dash_kph=40 * unit), n=20)
+        assert abs(self.v_cruise_helper.v_cruise_kph - 51 * unit) < 0.5
 
   def test_sla_minus_abort_floor_never_raises(self):
     """The floor is min(): a dash that ends up above the setpoint (a trailing ECU step
@@ -242,15 +245,16 @@ class TestSetpointReconcile:
       self.v_cruise_helper.reconcile_setpoint_with_dash(CS)
     assert round(self.v_cruise_helper.v_cruise_kph) == 101
 
-  @pytest.mark.parametrize("floor_kph, dash_kph, expected_kph", [
+  def test_floor_is_the_cars(self):
+    for floor_kph, dash_kph, expected_kph in [
     (30., 30., 30.),        # Mazda MRCC: the 30 kph floor (dash 19 mph) is adopted as is
     (0., 30., 20 * MPH),    # sunnypilot's default floor is 20 mph, not 20 kph
-  ])
-  def test_floor_is_the_cars(self, floor_kph, dash_kph, expected_kph):
-    self.v_cruise_helper = VCruiseHelper(self.CP, custom.CarParamsSP(pcmCruiseSpeed=False, zoompilot={'minimumSetSpeed': floor_kph * CV.KPH_TO_MS},
-                                                                         intelligentCruiseButtonManagementAvailable=True))
-    # SET- at 20 mph; the ECU settles on its floor
-    self.engage_at(20 * MPH)
-    self.press(ButtonType.decelCruise, dash_kph=20 * MPH)
-    self.run_frames(make_car_state(dash_kph=dash_kph), n=20)
-    assert self.v_cruise_helper.v_cruise_kph == pytest.approx(expected_kph, abs=0.1)
+  ]:
+      with self.subTest(floor_kph=floor_kph, dash_kph=dash_kph, expected_kph=expected_kph):
+        self.v_cruise_helper = VCruiseHelper(self.CP, custom.CarParamsSP(pcmCruiseSpeed=False, zoompilot={'minimumSetSpeed': floor_kph * CV.KPH_TO_MS},
+                                                                             intelligentCruiseButtonManagementAvailable=True))
+        # SET- at 20 mph; the ECU settles on its floor
+        self.engage_at(20 * MPH)
+        self.press(ButtonType.decelCruise, dash_kph=20 * MPH)
+        self.run_frames(make_car_state(dash_kph=dash_kph), n=20)
+        assert self.v_cruise_helper.v_cruise_kph == approx(expected_kph, abs=0.1)

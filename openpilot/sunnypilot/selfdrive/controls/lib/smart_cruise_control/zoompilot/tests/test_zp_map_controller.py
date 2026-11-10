@@ -9,7 +9,6 @@ import math
 import platform
 
 import numpy as np
-import pytest
 
 
 from openpilot.cereal import custom, messaging
@@ -20,7 +19,7 @@ from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.limits imp
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.zoompilot.map_controller import _CONFIRM_T, _CONFIRM_V_BP, _FIX_HOLD_T, R, \
   SmartCruiseControlMap
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.speed_profile import lead_distance, required_decel
-from openpilot.common.test import OpenpilotTestCase
+from openpilot.common.test import OpenpilotTestCase, approx
 
 MapState = VisionState = custom.LongitudinalPlanSP.SmartCruiseControl.MapState
 
@@ -50,8 +49,8 @@ class FakeSM(dict):
 
 
 class TestSmartCruiseControlMap(OpenpilotTestCase):
-
-  def setup_method(self):
+  def setUp(self):
+    super().setUp()
     self.params = Params()
     self.mem_params = Params("/dev/shm/params") if platform.system() != "Darwin" else self.params
     self.reset_params()
@@ -99,14 +98,14 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
     v_ego = 25.
     self.bind(self.scc_m, v_ego, 25.)
     assert self.scc_m.state == MapState.turning
-    assert self.scc_m.output_v_target == pytest.approx(15.)
+    assert self.scc_m.output_v_target == approx(15.)
     assert 150. < self.scc_m.target_distance < 250.
 
     # required decel to the target, reached through the publication ramp
     expected = (15. ** 2 - v_ego ** 2) / (2. * self.scc_m.target_distance)
     for _ in range(40):
       self.scc_m.update(self.sm.tick(), True, False, v_ego, 0., 25.)
-    assert self.scc_m.output_a_target == pytest.approx(expected, abs=1e-3)
+    assert self.scc_m.output_a_target == approx(expected, abs=1e-3)
 
   def test_retained_target_tracks_distance(self):
     """A target that slips under the commit gate while still ahead (the car is already
@@ -132,14 +131,14 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
       d -= 6.
       self.sm.fix(target_lat - d / m_per_deg, lon0)
       self.scc_m.update(self.sm.tick(), True, False, v_ego, 0., 25.)
-      assert self.scc_m.is_active and self.scc_m.v_target == pytest.approx(15.)
-      assert self.scc_m.target_distance == pytest.approx(d, abs=1.), "retained target kept its commit-time distance"
+      assert self.scc_m.is_active and self.scc_m.v_target == approx(15.)
+      assert self.scc_m.target_distance == approx(d, abs=1.), "retained target kept its commit-time distance"
 
     # hold the state so the ramp settles: the decel must be the one for the current distance
     for _ in range(40):
       self.scc_m.update(self.sm.tick(), True, False, v_ego, 0., 25.)
     expected = (15. ** 2 - v_ego ** 2) / (2. * max(d, v_ego * 2.8))
-    assert self.scc_m.output_a_target == pytest.approx(expected, abs=1e-3)
+    assert self.scc_m.output_a_target == approx(expected, abs=1e-3)
 
   def test_commit_gate_and_decel_are_the_shared_solver(self):
     # The commit gate and output must share speed_profile.required_decel.
@@ -159,7 +158,7 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
     assert self.scc_m.is_active
     for _ in range(60):
       self.scc_m.update(self.sm.tick(), True, False, v_ego, 0., 25.)
-    assert self.scc_m.output_a_target == pytest.approx(-required_decel(v_ego, [15.], [max(d, v_ego * 2.8)]), abs=1e-3)
+    assert self.scc_m.output_a_target == approx(-required_decel(v_ego, [15.], [max(d, v_ego * 2.8)]), abs=1e-3)
 
   def _steep_target(self, scc, v_ego=25.):
     # 5 m/s target ~200 m ahead: raw required decel 1.5 m/s2, past the op-long budget
@@ -174,7 +173,7 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
     # so anything under the budget would bypass A_CRUISE_MIN through the MPC candidate
     raw = self._steep_target(self.scc_m)
     assert raw < -1.2
-    assert self.scc_m.output_a_target == pytest.approx(-self.scc_m.limits.a_budget, abs=1e-6)
+    assert self.scc_m.output_a_target == approx(-self.scc_m.limits.a_budget, abs=1e-6)
 
   def test_stock_path_asks_for_the_budget_at_most(self):
     # on stock ACC the wire is ICBM's overshoot lever; a map target is a prediction, so it may
@@ -184,7 +183,7 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
     stock = SmartCruiseControlMap(cp)
     raw = self._steep_target(stock)
     assert raw < -stock.limits.a_budget
-    assert stock.output_a_target == pytest.approx(-stock.limits.a_budget, abs=1e-6)
+    assert stock.output_a_target == approx(-stock.limits.a_budget, abs=1e-6)
 
   def _targets(self, *speeds, d0=200.):
     # ego at the origin; each target another 100 m north, at the given speeds
@@ -198,7 +197,7 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
   def test_target_binds_at_once_below_45mph(self):
     self._targets(8., d0=100.)
     self.scc_m.update(self.sm.tick(), True, False, 15., 0., 20.)
-    assert self.scc_m.v_target == pytest.approx(8.)
+    assert self.scc_m.v_target == approx(8.)
     self.scc_m.update(self.sm.tick(), True, False, 15., 0., 20.)
     assert self.scc_m.state == MapState.turning
 
@@ -217,23 +216,23 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
       self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
       assert self.scc_m.v_target == 0.
     self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
-    assert self.scc_m.v_target == pytest.approx(15.)
+    assert self.scc_m.v_target == approx(15.)
     self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
     assert self.scc_m.state == MapState.turning
 
   def test_deeper_target_waits_while_the_bound_one_holds(self):
     self._targets(15.)
     self.bind(self.scc_m, 25., 25.)
-    assert self.scc_m.v_target == pytest.approx(15.)
+    assert self.scc_m.v_target == approx(15.)
     # a slower target appears further on: the bound one keeps driving the plan until the
     # new one is confirmed, then it takes over
     self._targets(15., 10.)
     for _ in range(self.confirm_frames(25.) - 1):
       self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
-      assert self.scc_m.v_target == pytest.approx(15.)
+      assert self.scc_m.v_target == approx(15.)
       assert self.scc_m.is_active
     self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
-    assert self.scc_m.v_target == pytest.approx(10.)
+    assert self.scc_m.v_target == approx(10.)
 
   def test_release_is_immediate(self):
     self._targets(15.)
@@ -252,11 +251,11 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
     self._targets(15., 5.)
     for _ in range(10):
       self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
-      assert self.scc_m.v_target == pytest.approx(15.)
+      assert self.scc_m.v_target == approx(15.)
     self._targets(15.)
     self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
-    assert self.scc_m.v_target == pytest.approx(15.)
-    assert self.scc_m.target_distance == pytest.approx(d0, abs=1.)
+    assert self.scc_m.v_target == approx(15.)
+    assert self.scc_m.target_distance == approx(d0, abs=1.)
 
   def _bound_200m_ahead(self, v_ego=25.):
     lat0, lon0 = 32.0, -117.0
@@ -275,8 +274,8 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
     d = self.scc_m.target_distance
     self.sm.fix(0., 0., has_fix=False)
     self.scc_m.update(self.sm.tick(), True, False, 25., 0., 25.)
-    assert self.scc_m.is_active and self.scc_m.v_target == pytest.approx(15.)
-    assert self.scc_m.target_distance == pytest.approx(d - 25. * DT_MDL, abs=0.1)  # reckoned on from the fix
+    assert self.scc_m.is_active and self.scc_m.v_target == approx(15.)
+    assert self.scc_m.target_distance == approx(d - 25. * DT_MDL, abs=0.1)  # reckoned on from the fix
     assert (self.scc_m.last_position.latitude, self.scc_m.last_position.longitude) == (lat0, lon0)
 
   def test_distance_is_dead_reckoned_between_fixes(self):
@@ -287,7 +286,7 @@ class TestSmartCruiseControlMap(OpenpilotTestCase):
     frames = 10
     for _ in range(frames):
       self.scc_m.update(self.sm.tick(), True, False, v_ego, 0., 25.)
-    assert self.scc_m.target_distance == pytest.approx(d - v_ego * frames * DT_MDL, abs=0.1)
+    assert self.scc_m.target_distance == approx(d - v_ego * frames * DT_MDL, abs=0.1)
 
   def test_position_counts_as_lost_past_the_hold(self):
     self._bound_200m_ahead()

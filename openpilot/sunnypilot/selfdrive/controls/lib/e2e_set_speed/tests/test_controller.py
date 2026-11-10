@@ -6,9 +6,9 @@ See the LICENSE.md file in the root directory for more details.
 """
 
 import numpy as np
-import pytest
 
 import openpilot.cereal.messaging as messaging
+from openpilot.common.test import approx
 from openpilot.cereal import log
 from openpilot.common.realtime import DT_MDL as DT
 from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
@@ -40,7 +40,7 @@ def new_controller(enabled=True):
 def settled(a_cruise=A_CRUISE, **kwargs):
   ctl = new_controller()
   run(ctl, SETTLE_FRAMES, build_sm(V_EGO), a_cruise=a_cruise, **kwargs)
-  assert ctl.lift == pytest.approx(ctl.floor)
+  assert ctl.lift == approx(ctl.floor)
   return ctl
 
 
@@ -59,26 +59,27 @@ def test_disabled_passes_model_through():
   assert ctl.inhibit == Inhibit.disabled
 
 
-@pytest.mark.parametrize("kwargs", [{"is_e2e": False}, {"reset_state": True}])
-def test_idle_resets_at_once(kwargs):
-  ctl = settled()
-  assert run(ctl, 1, build_sm(V_EGO), a_model=0.05, **kwargs) == 0.05
-  assert (ctl.inhibit, ctl.lift) == (Inhibit.inactive, 0.)
+def test_idle_resets_at_once(self):
+  for kwargs in [{"is_e2e": False}, {"reset_state": True}]:
+    with self.subTest(kwargs=kwargs):
+      ctl = settled()
+      assert run(ctl, 1, build_sm(V_EGO), a_model=0.05, **kwargs) == 0.05
+      assert (ctl.inhibit, ctl.lift) == (Inhibit.inactive, 0.)
 
 
 def test_lifts_from_the_first_frame_at_the_rate_limit():
   ctl = new_controller()
   lifts = [run(ctl, 1, build_sm(V_EGO), a_cruise=1.5) for _ in range(SETTLE_FRAMES)]
-  assert lifts[0] == pytest.approx(RISE * DT)
+  assert lifts[0] == approx(RISE * DT)
   assert max(np.diff([0.] + lifts)) <= RISE * DT + 1e-9
-  assert lifts[-1] == pytest.approx(1.5)
+  assert lifts[-1] == approx(1.5)
   assert ctl.inhibit == Inhibit.none
 
 
 def test_floor_is_the_cruise_candidate():
   # with the model holding, the e2e candidate meets chill mode's acceleration and goes no higher
   settled()
-  assert run(new_controller(), SETTLE_FRAMES, build_sm(V_EGO), a_model=0.2) == pytest.approx(A_CRUISE)
+  assert run(new_controller(), SETTLE_FRAMES, build_sm(V_EGO), a_model=0.2) == approx(A_CRUISE)
   assert run(new_controller(), SETTLE_FRAMES, build_sm(V_EGO), a_model=0.7) == 0.7
 
 
@@ -87,11 +88,12 @@ def test_never_adds_throttle_over_the_set_speed():
   assert run(new_controller(), SETTLE_FRAMES, build_sm(V_EGO), a_model=-0.05, a_cruise=-0.3) == -0.05
 
 
-@pytest.mark.parametrize("v, gain", [((c.MIN_SPEED + c.FULL_SPEED) / 2, 0.5), (c.MIN_SPEED - 1., 0.)])
-def test_lift_fades_in_above_walking_pace(v, gain):
-  ctl = new_controller()
-  run(ctl, 1, build_sm(v), a_cruise=1.5)
-  assert ctl.gain == pytest.approx(gain)
+def test_lift_fades_in_above_walking_pace(self):
+  for v, gain in [((c.MIN_SPEED + c.FULL_SPEED) / 2, 0.5), (c.MIN_SPEED - 1., 0.)]:
+    with self.subTest(v=v, gain=gain):
+      ctl = new_controller()
+      run(ctl, 1, build_sm(v), a_cruise=1.5)
+      assert ctl.gain == approx(gain)
 
 
 def test_leaves_stop_and_go_braking_alone():
@@ -104,7 +106,7 @@ def test_gain_fades_the_lift_as_the_model_slows():
   floor = A_CRUISE
   a_model = sum(c.GAIN_BP) / 2
   run(ctl, SETTLE_FRAMES, build_sm(V_EGO), a_model=a_model)
-  assert ctl.lift == pytest.approx(0.5 * (floor - a_model))
+  assert ctl.lift == approx(0.5 * (floor - a_model))
   run(ctl, SETTLE_FRAMES, build_sm(V_EGO), a_model=c.GAIN_BP[0])
   assert ctl.lift == 0.
 
@@ -124,7 +126,7 @@ def test_lets_go_of_the_models_braking_at_once():
   # halfway into the fade, the lift drops to its new value in one frame instead of easing off
   a_model = sum(c.GAIN_BP) / 2
   run(ctl, 1, build_sm(V_EGO), a_model=a_model, a_cruise=1.5)
-  assert ctl.lift == pytest.approx(0.5 * (ctl.floor - a_model))
+  assert ctl.lift == approx(0.5 * (ctl.floor - a_model))
   ctl = settled(a_cruise=1.5)
   assert run(ctl, 1, build_sm(V_EGO), a_model=-0.5, a_cruise=1.5) == -0.5
   assert ctl.lift == 0.
@@ -141,19 +143,20 @@ def test_far_plan_speeds_do_not_move_the_lift():
   assert np.ptp(lifts) == 0.
 
 
-@pytest.mark.parametrize("lat, fade", [(0.4, 1.), (0.8, 0.5), (1.2, 0.)])
-def test_a_bend_ahead_fades_the_lift(lat, fade):
-  ctl = new_controller()
-  run(ctl, SETTLE_FRAMES, build_sm(V_EGO, yaw_rate=bend_ahead(lat)))
-  assert ctl.fade == pytest.approx(fade)
-  assert ctl.lift == pytest.approx(fade * A_CRUISE)
+def test_a_bend_ahead_fades_the_lift(self):
+  for lat, fade in [(0.4, 1.), (0.8, 0.5), (1.2, 0.)]:
+    with self.subTest(lat=lat, fade=fade):
+      ctl = new_controller()
+      run(ctl, SETTLE_FRAMES, build_sm(V_EGO, yaw_rate=bend_ahead(lat)))
+      assert ctl.fade == approx(fade)
+      assert ctl.lift == approx(fade * A_CRUISE)
 
 
 def test_lane_change_drops_the_lift():
   ctl = settled()
   run(ctl, 1, build_sm(V_EGO, lane_change=True))
   assert ctl.inhibit == Inhibit.laneChange
-  assert ctl.lift == pytest.approx(ctl.floor - c.LIFT_FALL * DT)
+  assert ctl.lift == approx(ctl.floor - c.LIFT_FALL * DT)
 
 
 def test_invalid_model_passes_through():
@@ -178,8 +181,8 @@ def test_approach_closes_small_gaps_gently():
   # of it at the target
   assert all(np.diff(approach.APPROACH_GAP_FRACTION) > 0) and approach.APPROACH_GAP_FRACTION[-1] == 1.
   for v, ceiling in zip(approach.APPROACH_BP, approach.APPROACH_V, strict=True):
-    assert approach.approach_accel(v, v + 10., STANDARD) == pytest.approx(ceiling)
-    assert approach.approach_accel(v, v, STANDARD) == pytest.approx(approach.APPROACH_GAP_FRACTION[0] * ceiling)
+    assert approach.approach_accel(v, v + 10., STANDARD) == approx(ceiling)
+    assert approach.approach_accel(v, v, STANDARD) == approx(approach.APPROACH_GAP_FRACTION[0] * ceiling)
   assert approach.approach_accel(V_EGO, V_EGO + 1., STANDARD) < 0.42  # a CX-5 5>4 kickdown at highway speed
 
 
@@ -193,5 +196,5 @@ def test_approach_follows_the_personality():
   relaxed_p, standard_p, aggressive_p = (personality(n) for n in ('relaxed', 'standard', 'aggressive'))
   for v in approach.APPROACH_BP:
     relaxed, standard, aggressive = (approach.approach_accel(v, v + 10., p) for p in (relaxed_p, standard_p, aggressive_p))
-    assert relaxed == pytest.approx(standard - 0.15) and aggressive == pytest.approx(standard + 0.15)
+    assert relaxed == approx(standard - 0.15) and aggressive == approx(standard + 0.15)
     assert approach.approach_accel(v, v + 1., aggressive_p) - approach.approach_accel(v, v + 1., standard_p) < 0.15

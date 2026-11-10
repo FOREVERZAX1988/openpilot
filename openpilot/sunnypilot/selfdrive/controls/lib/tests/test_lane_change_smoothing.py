@@ -4,15 +4,15 @@ Copyright (c) 2026-, Zeph Leggett.
 This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+import unittest
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 
 from openpilot.cereal import log, messaging
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL
-from openpilot.common.test import OpenpilotTestCase
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.selfdrive.controls.lib.drive_helpers import clip_curvature, MAX_LATERAL_JERK
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_change_smoothing import (
   LaneChangeSmoothing, clip_curvature_rate, read_level, LEVEL_JERK_FACTOR, LEVEL_TIME_EXTRA,
@@ -43,7 +43,7 @@ RIGHT_STARTING = make_model(LaneChangeState.laneChangeStarting, LaneChangeDirect
 OFF = make_model()
 
 
-class TestLevelMapping:
+class TestLevelMapping(unittest.TestCase):
   def test_levels_are_contiguous_indices(self):
     # the UIs store the position in their label lists, so the levels must be 0..n-1
     assert LEVELS == tuple(range(len(LEVELS)))
@@ -71,7 +71,8 @@ class TestLevelMapping:
 
 
 class TestLaneChangeSmoothing(OpenpilotTestCase):
-  def setup_method(self):
+  def setUp(self):
+    super().setUp()
     self.params = Params()
     self.params.put("LaneChangeSmoothing", LEVEL_MEDIUM, block=True)
     self.lcs = LaneChangeSmoothing()
@@ -89,12 +90,12 @@ class TestLaneChangeSmoothing(OpenpilotTestCase):
 
   def test_clamped_during_maneuver(self):
     jf = self.update(LEFT_STARTING, 0.001, 0.0)
-    assert jf == pytest.approx(self.lcs.set_jerk)
+    assert jf == approx(self.lcs.set_jerk)
     assert jf < 0.2  # the default level is a real clamp
 
   def test_finishing_state_keeps_clamp(self):
     jf = self.update(LEFT_FINISHING, 0.001, 0.0)
-    assert jf == pytest.approx(self.lcs.set_jerk)
+    assert jf == approx(self.lcs.set_jerk)
 
   def test_lateral_inactive_resets(self):
     # disengaging mid-maneuver must not leave a clamp or an armed unwind for the re-engage
@@ -120,12 +121,12 @@ class TestLaneChangeSmoothing(OpenpilotTestCase):
     # a right lane change unwinds with positive curvature steps
     self.update(RIGHT_STARTING, -0.001, 0.0)
     assert self.update(RIGHT_STARTING, 0.005, 0.0) > self.lcs.set_jerk
-    assert self.update(RIGHT_STARTING, -0.005, 0.0) == pytest.approx(self.lcs.set_jerk)
+    assert self.update(RIGHT_STARTING, -0.005, 0.0) == approx(self.lcs.set_jerk)
 
   def test_unwind_is_continuous_in_lag(self):
     # no bang-bang at the crest: a vanishing lag gets a vanishing boost
     self.update(LEFT_STARTING, 0.001, 0.0)
-    assert self.update(LEFT_STARTING, -1e-6, 0.0) == pytest.approx(self.lcs.set_jerk, abs=1e-3)
+    assert self.update(LEFT_STARTING, -1e-6, 0.0) == approx(self.lcs.set_jerk, abs=1e-3)
 
   def test_unwind_stays_armed_through_release(self):
     self.update(LEFT_STARTING, 0.001, 0.0)
@@ -136,7 +137,7 @@ class TestLaneChangeSmoothing(OpenpilotTestCase):
   def test_rate_clip_scales_with_factor(self):
     full, _ = clip_curvature(15.0, 0.0, 0.01, 0.0)
     half, _ = clip_curvature(15.0, 0.0, clip_curvature_rate(15.0, 0.0, 0.01, 0.5), 0.0)
-    assert half == pytest.approx(full / 2)
+    assert half == approx(full / 2)
     assert clip_curvature_rate(15.0, 0.0, 0.01, 1.0) == 0.01  # stock: clip_curvature's own clip
 
   def test_rate_clip_is_inside_clip_curvatures(self):
@@ -188,7 +189,8 @@ class TestClosedLoop(OpenpilotTestCase):
       y += y_dot * DT_CTRL
     return y, max(jerks), t_done
 
-  def setup_method(self):
+  def setUp(self):
+    super().setUp()
     self.params = Params()
 
   def test_smoothed_lane_change_completes_without_snap(self):
