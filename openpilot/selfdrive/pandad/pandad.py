@@ -501,6 +501,15 @@ def main() -> None:
               cloudlog.exception("internal SPI panda recovery failed")
       else:
         panda_serials = Panda.list()
+        # count this boot's silent misses: with a dead internal panda that
+        # never enumerates, the recovery path above would otherwise never
+        # run (the gate stays at 0) and the loop spins silently forever -
+        # observed 2026-11-10 on a tici whose app region was corrupted by an
+        # interrupted flash. Incrementing here sends the NEXT iteration into
+        # the recovery path, which waits patiently for enumeration before
+        # any reset, so a slow-booting panda is still safe.
+        if not panda_serials:
+          no_internal_panda_count += 1
 
       # only touch DFU when the panda truly never came up in normal mode
       if not panda_serials:
