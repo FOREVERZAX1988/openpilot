@@ -1,14 +1,8 @@
-import numpy as np
 import raylib_nb as rl
 import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims on raylib_nb)
 
 from openpilot.common.swaglog import cloudlog
-
-try:
-  import qrcode
-except ImportError:  # never declared as a dependency: without this the main UI layout
-  # (main -> CarrotWebDialog -> CarrotWebQrSession -> this module) fails to import at all.
-  qrcode = None
+from openpilot.common.qrcode import make_texture
 
 
 class QRCodeTexture:
@@ -30,29 +24,14 @@ class QRCodeTexture:
     if not normalized:
       return True
 
-    if qrcode is None:
-      cloudlog.warning("Carrot Web QR code unavailable: the qrcode package is not installed")
-      return True
-
     try:
-      qr = qrcode.QRCode(
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=10,
-        border=4,
-      )
-      qr.add_data(normalized)
-      qr.make(fit=True)
-      pil_image = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
-      pixels = np.asarray(pil_image, dtype=np.uint8)
-
-      image = rl.Image()
-      image.data = rl.ffi.cast("void *", pixels.ctypes.data)
-      image.width = pil_image.width
-      image.height = pil_image.height
-      image.mipmaps = 1
-      image.format = rl.PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
-
-      self._texture = rl.load_texture_from_image(image)
+      # Vendored, dependency-free QR renderer (see openpilot/common/qrcode.py).
+      # The previous implementation here drove the pip `qrcode` package with
+      # pyray-era rl.ffi / Image.data field assignment, neither of which exists
+      # in raylib_nb: the empty rl.Image() fields assignment is invisible to the
+      # C struct, so load_texture_from_image always failed and the dialog only
+      # ever showed its "Offline" placeholder.
+      self._texture = make_texture(normalized)
       rl.set_texture_filter(self._texture, rl.TextureFilter.TEXTURE_FILTER_POINT)
     except Exception:
       cloudlog.exception("Carrot Web QR code generation failed")

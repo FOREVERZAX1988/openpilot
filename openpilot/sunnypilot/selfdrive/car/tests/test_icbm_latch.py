@@ -1,3 +1,4 @@
+
 """
 Copyright (c) 2026-, Zeph Leggett.
 
@@ -6,9 +7,9 @@ See the LICENSE.md file in the root directory for more details.
 """
 from unittest.mock import MagicMock
 
-import pytest
 
 import openpilot.cereal.messaging as messaging
+from openpilot.common.test import OpenpilotTestCase
 from openpilot.cereal import custom
 from opendbc.car import structs
 from openpilot.common.params import Params
@@ -48,8 +49,8 @@ def _cs(cruise_enabled=False, buttons=()):
   return CS
 
 
-@pytest.fixture
 def params():
+  """Params fixture resolved by OpenpilotTestCase for methods declaring it."""
   p = Params()
   for key in CONSUMER_KEYS + (LEGACY_TOGGLE, MIGRATED):
     p.remove(key)
@@ -57,12 +58,13 @@ def params():
   return p
 
 
-class TestLatch:
-  @pytest.mark.parametrize("active", [True, False])
-  def test_starts_at_the_boot_decision(self, active):
-    latch = IcbmLatch(_cp(), _cp_sp(active))
-    assert latch.active == active
-    assert latch.activation == (IcbmActivation.active if active else IcbmActivation.passive)
+class TestLatch(OpenpilotTestCase):
+  def test_starts_at_the_boot_decision(self):
+    for active in [True, False]:
+      with self.subTest(active=active):
+        latch = IcbmLatch(_cp(), _cp_sp(active))
+        assert latch.active == active
+        assert latch.activation == (IcbmActivation.active if active else IcbmActivation.passive)
 
   def test_follows_demand_only_while_disengaged(self):
     latch = IcbmLatch(_cp(), _cp_sp(False))
@@ -81,14 +83,14 @@ class TestLatch:
       assert not latch.update(engaged=False) and not latch.active
 
 
-class TestPublishedActivation:
-  @pytest.mark.parametrize("pcm_cruise_speed", [True, False])
-  def test_unset_falls_back_to_the_boot_flag(self, pcm_cruise_speed):
-    # a log from before the field, or no carStateSP received yet
-    CP_SP = custom.CarParamsSP.new_message(pcmCruiseSpeed=pcm_cruise_speed)
-    assert icbm_active(_cs_sp(), CP_SP) == (not pcm_cruise_speed)
-    assert icbm_active(_cs_sp(IcbmActivation.active), CP_SP)
-    assert not icbm_active(_cs_sp(IcbmActivation.passive), CP_SP)
+class TestPublishedActivation(OpenpilotTestCase):
+  def test_unset_falls_back_to_the_boot_flag(self):
+    for pcm_cruise_speed in [True, False]:
+      with self.subTest(pcm_cruise_speed=pcm_cruise_speed):
+        CP_SP = custom.CarParamsSP.new_message(pcmCruiseSpeed=pcm_cruise_speed)
+        assert icbm_active(_cs_sp(), CP_SP) == (not pcm_cruise_speed)
+        assert icbm_active(_cs_sp(IcbmActivation.active), CP_SP)
+        assert not icbm_active(_cs_sp(IcbmActivation.passive), CP_SP)
 
   def test_servo_follows_card_and_starts_clean(self):
     servo = IntelligentCruiseButtonManagement(_cp(), _cp_sp(False))
@@ -100,12 +102,13 @@ class TestPublishedActivation:
     assert servo.fast_faulted  # what this drive learned about the dash survives
 
 
-class TestDemand:
-  @pytest.mark.parametrize("key", CONSUMER_KEYS)
-  def test_stock_acc_consumers(self, params, key):
-    assert not icbm_demanded(_cp(), params)
-    params.put_bool(key, True, block=True)
-    assert icbm_demanded(_cp(), params)
+class TestDemand(OpenpilotTestCase):
+  def test_stock_acc_consumers(self, params):
+    for key in CONSUMER_KEYS:
+      with self.subTest(key=key):
+        assert not icbm_demanded(_cp(), params)
+        params.put_bool(key, True, block=True)
+        assert icbm_demanded(_cp(), params)
 
   def test_sla_assist(self, params):
     params.put("SpeedLimitMode", int(Mode.assist), block=True)
@@ -119,7 +122,7 @@ class TestDemand:
     assert icbm_demanded(_cp(op_long=True), params)
 
 
-class TestMigration:
+class TestMigration(OpenpilotTestCase):
   def _all_on(self, params):
     for key in CONSUMER_KEYS:
       params.put_bool(key, True, block=True)
@@ -186,7 +189,7 @@ class TestMigration:
     assert params.get_bool("SmartCruiseControlVision")
 
 
-class TestCardHandover:
+class TestCardHandover(OpenpilotTestCase):
   def _helper(self, params, active=False, op_long=False):
     helper = VCruiseHelper(_cp(op_long=op_long), _cp_sp(active))
     helper.read_custom_set_speed_params()
@@ -223,7 +226,7 @@ class TestCardHandover:
     assert helper.pcm_cruise_speed and not helper.cruise_arbiter.applicable
 
 
-class TestPlannerHandover:
+class TestPlannerHandover(OpenpilotTestCase):
   def _targets(self, planner, activation):
     cc = messaging.new_message('carControl').carControl
     gps = planner.scc.map.gps_location_service  # no fix: the map controller holds nothing

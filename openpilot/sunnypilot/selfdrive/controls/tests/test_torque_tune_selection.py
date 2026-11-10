@@ -16,17 +16,18 @@ See the LICENSE.md file in the root directory for more details.
 # The v0 constructor is patched out: these tests pin the branch that gets taken, not the
 # controller's behavior, and building the real one pulls in NNLC model loading.
 
+import unittest
 import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
 
 from opendbc.car.structs import car
 from openpilot.cereal import custom
 from openpilot.common.params import Params
 from openpilot.common.prefix import OpenpilotPrefix
+from openpilot.common.test import OpenpilotTestCase
 from openpilot.sunnypilot.selfdrive.controls import controls_lateral_zp
 from openpilot.sunnypilot.selfdrive.controls.controls_lateral_zp import TUNE_SWAP_INACTIVE_FRAMES, ControlsLateralZP
 
@@ -56,11 +57,11 @@ def declared_default(key: str = "TorqueControlTune") -> float:
 def require_current_libparams(params, *keys: str) -> None:
   for key in keys:
     if float(params.get(key, return_default=True)) != declared_default(key):
-      pytest.skip("libparams_c is stale against params_keys.h; rebuild with scons openpilot/common")
+      raise unittest.SkipTest("libparams_c is stale against params_keys.h; rebuild with scons openpilot/common")
 
 
-@pytest.fixture
 def ctx(monkeypatch):
+  """Fixture resolved by OpenpilotTestCase for methods declaring it."""
   monkeypatch.setattr(controls_lateral_zp, "LatControlTorqueV0", lambda *a, **k: FakeLaC(V0))
   monkeypatch.setattr(controls_lateral_zp, "LatControlTorqueV2", lambda *a, **k: FakeLaC(V2))
   with OpenpilotPrefix():
@@ -84,7 +85,7 @@ def swap(controls, big: bool):
   ControlsLateralZP.select_lateral_control(controls, {'modelV2': SimpleNamespace(big=big)})
 
 
-class TestTorqueTuneSelection:
+class TestTorqueTuneSelection(OpenpilotTestCase):
   def test_declared_defaults(self):
     """Upstream's v0 for the small model, so other brands never inherit the Mazda tune through
     the default (the Mazdas are seeded, test_torque_defaults_seed.py); v1 for a big one."""
@@ -98,11 +99,12 @@ class TestTorqueTuneSelection:
     require_current_libparams(params, "TorqueControlTune")
     assert select(controls) == BY_VERSION[declared_default()]
 
-  @pytest.mark.parametrize(("version", "expected"), [(0.0, V0), (1.0, V1), (2.0, V2)])
-  def test_explicit_version_is_honored(self, ctx, version, expected):
-    params, controls = ctx
-    params.put("TorqueControlTune", version, block=True)
-    assert select(controls) == expected
+  def test_explicit_version_is_honored(self, ctx):
+    for version, expected in [(0.0, V0), (1.0, V1), (2.0, V2)]:
+      with self.subTest(version=version, expected=expected):
+        params, controls = ctx
+        params.put("TorqueControlTune", version, block=True)
+        assert select(controls) == expected
 
   def test_every_declared_version_is_wired(self, ctx):
     """The versions file is what the UI selectors and the sunnylink schema offer, while
@@ -119,16 +121,17 @@ class TestTorqueTuneSelection:
       params.put("TorqueControlTune", version, block=True)
       assert select(controls) == expected
 
-  @pytest.mark.parametrize("version", [1.0, 2.0])
-  def test_torque_control_not_enforced_still_uses_v0_for_torque_cars(self, ctx, version):
-    """Pre-existing behavior worth pinning: torque-tuned cars get v0 even with the toggle off.
-    For 2.0 this is also the structural NNLC exclusion: enabling NNLC disables
-    EnforceTorqueControl (ui_state/_cleanup_unsupported_params), so a stored v2 selection can
-    never construct the v2 controller alongside NNLC."""
-    params, controls = ctx
-    params.put_bool("EnforceTorqueControl", False, block=True)
-    params.put("TorqueControlTune", version, block=True)
-    assert select(controls) == V0
+  def test_torque_control_not_enforced_still_uses_v0_for_torque_cars(self, ctx):
+    for version in [1.0, 2.0]:
+      with self.subTest(version=version):
+        """Pre-existing behavior worth pinning: torque-tuned cars get v0 even with the toggle off.
+        For 2.0 this is also the structural NNLC exclusion: enabling NNLC disables
+        EnforceTorqueControl (ui_state/_cleanup_unsupported_params), so a stored v2 selection can
+        never construct the v2 controller alongside NNLC."""
+        params, controls = ctx
+        params.put_bool("EnforceTorqueControl", False, block=True)
+        params.put("TorqueControlTune", version, block=True)
+        assert select(controls) == V0
 
   def test_unset_big_tune_selects_its_declared_default(self, ctx):
     """An unset TorqueControlTuneBig resolves through params_keys.h (v1), not through the
@@ -149,22 +152,23 @@ class TestTorqueTuneSelection:
     swap(controls, big=True)
     assert controls.LaC == V2 and controls.LaC.resets == 0
 
-  @pytest.mark.parametrize(("small", "big"), [(2.0, 1.0), (0.0, 2.0), (1.0, 0.0)])
-  def test_lateral_control_follows_the_model_size(self, ctx, small, big):
-    """Every drive starts on the small model's tune; the frame after modelV2.big flips runs
-    the other size's controller, reset once, and a repeated frame does not churn it."""
-    params, controls = ctx
-    params.put("TorqueControlTune", small, block=True)
-    params.put("TorqueControlTuneBig", big, block=True)
-    assert select(controls) == BY_VERSION[small]
+  def test_lateral_control_follows_the_model_size(self, ctx):
+    for small, big in [(2.0, 1.0), (0.0, 2.0), (1.0, 0.0)]:
+      with self.subTest(small=small, big=big):
+        """Every drive starts on the small model's tune; the frame after modelV2.big flips runs
+        the other size's controller, reset once, and a repeated frame does not churn it."""
+        params, controls = ctx
+        params.put("TorqueControlTune", small, block=True)
+        params.put("TorqueControlTuneBig", big, block=True)
+        assert select(controls) == BY_VERSION[small]
 
-    swap(controls, big=True)
-    assert controls.LaC == BY_VERSION[big] and controls.LaC.resets == 1
-    swap(controls, big=True)
-    assert controls.LaC.resets == 1
+        swap(controls, big=True)
+        assert controls.LaC == BY_VERSION[big] and controls.LaC.resets == 1
+        swap(controls, big=True)
+        assert controls.LaC.resets == 1
 
-    swap(controls, big=False)
-    assert controls.LaC == BY_VERSION[small] and controls.LaC.resets == 1
+        swap(controls, big=False)
+        assert controls.LaC == BY_VERSION[small] and controls.LaC.resets == 1
 
   def test_a_hand_back_while_steering_keeps_the_tune_that_steers(self, ctx):
     """2026-09-29: every big-to-small hand-back while steering stepped the commanded torque
@@ -230,15 +234,16 @@ class TestTorqueTuneSelection:
       "the declared default must be a version the selectors offer"
     assert BY_VERSION[shown] == select(controls)
 
-  @pytest.mark.parametrize(("small", "big", "enforce", "expected"), [
-    (2.0, 2.0, True, False), (2.0, 1.0, True, True), (0.0, 2.0, True, True), (2.0, 2.0, False, True)])
-  def test_jerk_aware_has_effect_unless_every_size_runs_v2(self, ctx, small, big, enforce, expected):
-    """v2 forces the jerk-aware controller off, so its toggle only locks when both sizes run
-    v2; with Enforce Torque Control off both run v0."""
-    from openpilot.sunnypilot.selfdrive.controls.lib.torque_tune import jerk_aware_has_effect
+  def test_jerk_aware_has_effect_unless_every_size_runs_v2(self, ctx):
+    for small, big, enforce, expected in [
+    (2.0, 2.0, True, False), (2.0, 1.0, True, True), (0.0, 2.0, True, True), (2.0, 2.0, False, True)]:
+      with self.subTest(small=small, big=big, enforce=enforce, expected=expected):
+        """v2 forces the jerk-aware controller off, so its toggle only locks when both sizes run
+        v2; with Enforce Torque Control off both run v0."""
+        from openpilot.sunnypilot.selfdrive.controls.lib.torque_tune import jerk_aware_has_effect
 
-    params, _ = ctx
-    params.put_bool("EnforceTorqueControl", enforce, block=True)
-    params.put("TorqueControlTune", small, block=True)
-    params.put("TorqueControlTuneBig", big, block=True)
-    assert jerk_aware_has_effect(params) is expected
+        params, _ = ctx
+        params.put_bool("EnforceTorqueControl", enforce, block=True)
+        params.put("TorqueControlTune", small, block=True)
+        params.put("TorqueControlTuneBig", big, block=True)
+        assert jerk_aware_has_effect(params) is expected

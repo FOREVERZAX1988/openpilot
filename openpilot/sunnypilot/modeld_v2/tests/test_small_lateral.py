@@ -7,11 +7,12 @@ See the LICENSE.md file in the root directory for more details.
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 from jetlink.openpilot.testing import FakeJoinedModel
 
+from openpilot.common.test import approx
 from openpilot.cereal import log
 from openpilot.sunnypilot.modeld_v2.small_lateral import SmallLateral, FADE
+import unittest
 
 BIG_CURVATURE = 0.02
 SPEED = 5.0
@@ -74,84 +75,83 @@ def frame(sl, model, v_ego, then=None, desire=0):
   return action
 
 
-@pytest.mark.parametrize("v_ego, curvature, runs", [
-  (0.0, FakeSmall.CURVATURE, True),
-  (SPEED, FakeSmall.CURVATURE, True),
-  (SPEED + FADE / 2, (FakeSmall.CURVATURE + BIG_CURVATURE) / 2, True),
-  (SPEED + FADE, BIG_CURVATURE, False),
-  (30.0, BIG_CURVATURE, False),
-])
-def test_small_curvature_below_speed_large_above(v_ego, curvature, runs):
-  small = FakeSmall()
-  action = frame(lateral(small), big(), v_ego)
-  assert action.desiredCurvature == pytest.approx(curvature)
-  assert action.desiredAcceleration == 0.5   # longitudinal stays the large model's
-  assert len(small.calls) == runs            # only where it steers
 
 
-def test_each_slow_stretch_starts_from_a_reset_history():
-  small = FakeSmall()
-  sl = lateral(small)
-  for v_ego in (1.0, 1.0, 1.5, 10.0, 10.0, 1.0, 0.5):
-    frame(sl, big(), v_ego)
-  assert len(small.calls) == 5
-  assert small.resets == 2
-  assert not small.prev_desire.any()
+class TestSmallLateral(unittest.TestCase):
+  def test_each_slow_stretch_starts_from_a_reset_history(self):
+    small = FakeSmall()
+    sl = lateral(small)
+    for v_ego in (1.0, 1.0, 1.5, 10.0, 10.0, 1.0, 0.5):
+      frame(sl, big(), v_ego)
+    assert len(small.calls) == 5
+    assert small.resets == 2
+    assert not small.prev_desire.any()
+
+  def test_the_small_model_gets_its_own_slots_and_timing(self):
+    small = FakeSmall()
+    model = big()
+    frame(lateral(small), model, 1.0, desire=3)
+    bufs, transforms, inputs = small.calls[0]
+    assert bufs == {'img': 'main', 'big_img': 'extra'}
+    assert transforms == {'img': 't_main', 'big_img': 't_extra'}
+    assert inputs[small.desire_key].tolist() == [0, 0, 0, 1, 0, 0, 0, 0]
+    # the large model's lateral horizon, moved by the small bundle's own smoothing
+    assert small.action_t == approx((0.3 + small.LAT_SMOOTH_SECONDS, 0.4))
+    assert inputs['lateral_control_params'] == approx([1.0, model.lat_delay + small.LAT_SMOOTH_SECONDS])
+    assert small.PLANPLUS_CONTROL == model.PLANPLUS_CONTROL
+
+  def test_nothing_without_a_large_model(self):
+    small = FakeSmall()
+    sl = lateral(small)
+
+    def then():
+      pass
+    # the small model drives, or jetlink's joining model drives as it
+    for model in (small, FakeJoinedModel(small)):
+      assert sl.after_enqueue(model, then, 0, (None, None), (None, None), big_inputs(), 0.0) is then
+    assert frame(lateral(None), big(), 0.0).desiredCurvature == approx(BIG_CURVATURE)
+
+  def test_the_chestnut_state_still_goes_out(self):
+    calls = []
+    frame(lateral(FakeSmall()), big(), 1.0, then=lambda: calls.append(1))
+    assert calls == [1]
+
+  def test_a_hand_back_inside_run_does_not_reenter_the_small_model(self):
+    # jetlink hands the frame back inside run() and runs the small model with this callback
+    small = FakeSmall()
+    sl = lateral(small)
+    joined = FakeJoinedModel(small, chestnut=True)
+    after = sl.after_enqueue(joined, None, 0, (None, None), (None, None), big_inputs(), 0.0)
+    joined.chestnut = False
+    joined.run({}, {}, {}, after)
+    assert len(small.calls) == 1
+    assert sl.output is None
+
+  def test_a_failing_small_model_leaves_the_large_one_steering(self):
+    small = FakeSmall(fail=True)
+    sl = lateral(small)
+    assert frame(sl, big(), 0.5).desiredCurvature == approx(BIG_CURVATURE)
+    assert frame(sl, big(), 0.5).desiredCurvature == approx(BIG_CURVATURE)
+    assert len(small.calls) == 1   # tried once, then left alone
+
+  def test_off_never_runs_the_small_model(self):
+    small = FakeSmall()
+    assert frame(lateral(small, speed=0.0), big(), 0.0).desiredCurvature == approx(BIG_CURVATURE)
+    assert small.calls == []
 
 
-def test_the_small_model_gets_its_own_slots_and_timing():
-  small = FakeSmall()
-  model = big()
-  frame(lateral(small), model, 1.0, desire=3)
-  bufs, transforms, inputs = small.calls[0]
-  assert bufs == {'img': 'main', 'big_img': 'extra'}
-  assert transforms == {'img': 't_main', 'big_img': 't_extra'}
-  assert inputs[small.desire_key].tolist() == [0, 0, 0, 1, 0, 0, 0, 0]
-  # the large model's lateral horizon, moved by the small bundle's own smoothing
-  assert small.action_t == pytest.approx((0.3 + small.LAT_SMOOTH_SECONDS, 0.4))
-  assert inputs['lateral_control_params'] == pytest.approx([1.0, model.lat_delay + small.LAT_SMOOTH_SECONDS])
-  assert small.PLANPLUS_CONTROL == model.PLANPLUS_CONTROL
-
-
-def test_nothing_without_a_large_model():
-  small = FakeSmall()
-  sl = lateral(small)
-
-  def then():
-    pass
-  # the small model drives, or jetlink's joining model drives as it
-  for model in (small, FakeJoinedModel(small)):
-    assert sl.after_enqueue(model, then, 0, (None, None), (None, None), big_inputs(), 0.0) is then
-  assert frame(lateral(None), big(), 0.0).desiredCurvature == pytest.approx(BIG_CURVATURE)
-
-
-def test_the_chestnut_state_still_goes_out():
-  calls = []
-  frame(lateral(FakeSmall()), big(), 1.0, then=lambda: calls.append(1))
-  assert calls == [1]
-
-
-def test_a_hand_back_inside_run_does_not_reenter_the_small_model():
-  # jetlink hands the frame back inside run() and runs the small model with this callback
-  small = FakeSmall()
-  sl = lateral(small)
-  joined = FakeJoinedModel(small, chestnut=True)
-  after = sl.after_enqueue(joined, None, 0, (None, None), (None, None), big_inputs(), 0.0)
-  joined.chestnut = False
-  joined.run({}, {}, {}, after)
-  assert len(small.calls) == 1
-  assert sl.output is None
-
-
-def test_a_failing_small_model_leaves_the_large_one_steering():
-  small = FakeSmall(fail=True)
-  sl = lateral(small)
-  assert frame(sl, big(), 0.5).desiredCurvature == pytest.approx(BIG_CURVATURE)
-  assert frame(sl, big(), 0.5).desiredCurvature == pytest.approx(BIG_CURVATURE)
-  assert len(small.calls) == 1   # tried once, then left alone
-
-
-def test_off_never_runs_the_small_model():
-  small = FakeSmall()
-  assert frame(lateral(small, speed=0.0), big(), 0.0).desiredCurvature == pytest.approx(BIG_CURVATURE)
-  assert small.calls == []
+class TestSmallLateralAdditional(unittest.TestCase):
+  def test_small_curvature_below_speed_large_above(self):
+    for v_ego, curvature, runs in [
+    (0.0, FakeSmall.CURVATURE, True),
+    (SPEED, FakeSmall.CURVATURE, True),
+    (SPEED + FADE / 2, (FakeSmall.CURVATURE + BIG_CURVATURE) / 2, True),
+    (SPEED + FADE, BIG_CURVATURE, False),
+    (30.0, BIG_CURVATURE, False),
+  ]:
+      with self.subTest(v_ego=v_ego, curvature=curvature, runs=runs):
+        small = FakeSmall()
+        action = frame(lateral(small), big(), v_ego)
+        assert action.desiredCurvature == approx(curvature)
+        assert action.desiredAcceleration == 0.5   # longitudinal stays the large model's
+        assert len(small.calls) == runs            # only where it steers

@@ -8,8 +8,11 @@ How a real v0 controller's LatControlTorqueExt takes a torqued message: the bins
 and the two deactivation paths back to the CarParams tune. The TOML entry gate is tested in
 opendbc (test_speed_dep_config.py), the learner's bounds in test_torqued_speed_dep.py.
 """
-import pytest
 
+from opendbc.sunnypilot.car import lateral_tune
+from openpilot.common.params import Params
+from openpilot.common.prefix import OpenpilotPrefix
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
 from openpilot.sunnypilot.selfdrive.controls.lib.tests.torque_harness import LAF, make_lac
 from openpilot.sunnypilot.selfdrive.locationd.tests.speed_dep_helpers import SAMPLE_SPEED_BP, make_torqued_msg
@@ -31,13 +34,13 @@ def activated(valid=(True,) * 7):
 
 def assert_on_cp_tune(lac):
   assert not lac.extension._speed_dep_active
-  assert lac.torque_params.latAccelFactor == pytest.approx(LAF)
+  assert lac.torque_params.latAccelFactor == approx(LAF)
   assert lac.torque_params.latAccelOffset == 0.0
-  assert lac.torque_params.friction == pytest.approx(CP_FRICTION)
-  assert lac.pid.pos_limit == pytest.approx(lac.steer_max * LAF)  # update_limits ran on the restored tune
+  assert lac.torque_params.friction == approx(CP_FRICTION)
+  assert lac.pid.pos_limit == approx(lac.steer_max * LAF)  # update_limits ran on the restored tune
 
 
-class TestUpdateSpeedDepTorque:
+class TestUpdateSpeedDepTorque(OpenpilotTestCase):
   def test_bins_taken_as_published(self, params, set_speed_dep_config):
     """The learner filters a bin only once it is valid, so an invalid bin already carries its
     seed: the controller neither re-reads the TOML nor substitutes the global values. The
@@ -51,8 +54,8 @@ class TestUpdateSpeedDepTorque:
     assert ext._speed_dep_speed_bp == list(tp_sp.speedBinCenters)
     assert ext._speed_dep_lat_accel_factor_bp == list(tp_sp.speedBinLatAccelFactors)
     assert ext._speed_dep_friction_bp == list(tp_sp.speedBinFrictions)
-    assert lac.torque_params.latAccelFactor == pytest.approx(1.0)
-    assert lac.pid.pos_limit == pytest.approx(lac.steer_max * 1.0)
+    assert lac.torque_params.latAccelFactor == approx(1.0)
+    assert lac.pid.pos_limit == approx(lac.steer_max * 1.0)
 
   def test_empty_bins_restore_the_cp_tune(self, params):
     lac, _ = activated()
@@ -70,5 +73,17 @@ class TestUpdateSpeedDepTorque:
     lac = make_lac(LatControlTorqueV0, friction=CP_FRICTION)
     lac.update_torque_parameters(2.0, 0.0, 0.2)  # torqued's globals
     lac.extension.update_speed_dep_torque(*make_torqued_msg([], [], [], []))
-    assert lac.torque_params.latAccelFactor == pytest.approx(2.0)
-    assert lac.torque_params.friction == pytest.approx(0.2)
+    assert lac.torque_params.latAccelFactor == approx(2.0)
+    assert lac.torque_params.friction == approx(0.2)
+
+
+def params():
+  """Params under a throwaway prefix, for tests that build a real controller."""
+  with OpenpilotPrefix():
+    yield Params()
+
+def set_speed_dep_config(monkeypatch):
+  """Replaces the speed_dependent.toml contents get_speed_dep_config_for_car reads."""
+  def _set(cfg):
+    monkeypatch.setattr(lateral_tune, "get_speed_dep_config", lambda: cfg)
+  return _set

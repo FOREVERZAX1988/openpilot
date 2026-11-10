@@ -7,9 +7,10 @@ the daemon itself requires VisionIPC/cereal/ONNX runtime and is only exercised
 on device. No cv2 or messaging is touched here.
 """
 
+import unittest
 import numpy as np
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.common.constants import CV
 from openpilot.sunnypilot.common.cpu_throttle import (
   DEVICE_BUSY_AVG_CPU_USAGE_PERCENT as THROTTLE_AVG_CPU_USAGE_PERCENT,
@@ -34,7 +35,7 @@ from openpilot.sunnypilot.system.speed_limit_vision import (
 )
 
 
-class TestConstants:
+class TestConstants(unittest.TestCase):
   def test_us_classifier_values_are_publishable(self):
     # every value the classifier can output must be a publishable mph limit
     assert set(US_CLASSIFIER_SPEED_VALUES) <= VALID_SPEED_LIMITS_MPH
@@ -57,7 +58,7 @@ class TestConstants:
     assert all(value % 5 == 0 for value in VALID_SPEED_LIMITS_MPH)
 
 
-class TestMemoryPressure:
+class TestMemoryPressure(unittest.TestCase):
   def test_normal_when_no_inputs(self):
     assert memory_pressure_level(None, None) == "normal"
 
@@ -74,7 +75,7 @@ class TestMemoryPressure:
     assert memory_pressure_level(MEMORY_CRITICAL_AVAILABLE_KB, 1.0) == "critical"
 
 
-class TestDeviceCpuBusy:
+class TestDeviceCpuBusy(unittest.TestCase):
   def test_empty_usage_is_never_busy(self):
     assert device_cpu_usage_busy([]) is False
 
@@ -91,7 +92,7 @@ class TestDeviceCpuBusy:
     assert device_cpu_usage_busy(usage) is True
 
 
-class TestCpuThrottleFactor:
+class TestCpuThrottleFactor(unittest.TestCase):
   # The throttle factor uses cpu_throttle's own constants (74/89), not the
   # daemon busy-gate constants (78/92) imported above.
   def test_idle_usage_gives_unit_factor(self):
@@ -99,11 +100,11 @@ class TestCpuThrottleFactor:
 
   def test_average_over_threshold_scales_linearly(self):
     average = THROTTLE_AVG_CPU_USAGE_PERCENT + 8.0
-    assert _compute_throttle_factor(average, 0) == pytest.approx(2.0)
+    assert _compute_throttle_factor(average, 0) == approx(2.0)
 
   def test_hot_cores_add_half_a_step_each(self):
-    assert _compute_throttle_factor(0.0, THROTTLE_HOT_CORE_COUNT) == pytest.approx(1.5)
-    assert _compute_throttle_factor(0.0, THROTTLE_HOT_CORE_COUNT + 1) == pytest.approx(2.0)
+    assert _compute_throttle_factor(0.0, THROTTLE_HOT_CORE_COUNT) == approx(1.5)
+    assert _compute_throttle_factor(0.0, THROTTLE_HOT_CORE_COUNT + 1) == approx(2.0)
 
   def test_factor_is_clamped_to_four(self):
     assert _compute_throttle_factor(200.0, 50) == 4.0
@@ -117,32 +118,32 @@ class TestCpuThrottleFactor:
     idle = [0.0] * 8
     for _ in range(100):
       factor = device_cpu_throttle_factor(idle, name="test_rise", cores=None)
-    assert factor == pytest.approx(1.0, abs=0.1)
+    assert factor == approx(1.0, abs=0.1)
 
 
-class TestClassifierOutputNormalization:
+class TestClassifierOutputNormalization(unittest.TestCase):
   def test_softmax_sums_to_one(self):
     scores = np.array([1.0, 2.0, 3.0], dtype=np.float32)
     probabilities = SpeedLimitVisionDaemon._softmax(scores)
-    assert probabilities.sum() == pytest.approx(1.0)
-    assert probabilities[-1] == pytest.approx(np.exp(2.0) / (np.exp(0.0) + np.exp(1.0) + np.exp(2.0)))
+    assert probabilities.sum() == approx(1.0)
+    assert probabilities[-1] == approx(np.exp(2.0) / (np.exp(0.0) + np.exp(1.0) + np.exp(2.0)))
 
   def test_softmax_shift_invariance(self):
     scores = np.array([1000.0, 1001.0, 1002.0], dtype=np.float32)
     probabilities = SpeedLimitVisionDaemon._softmax(scores)
     assert np.all(np.isfinite(probabilities))
-    assert probabilities.sum() == pytest.approx(1.0)
+    assert probabilities.sum() == approx(1.0)
 
   def test_already_normalized_scores_pass_through(self):
     scores = np.array([0.2, 0.3, 0.5], dtype=np.float32)
     probabilities = SpeedLimitVisionDaemon._normalize_classifier_output(scores)
-    assert probabilities.sum() == pytest.approx(1.0)
-    assert probabilities[2] == pytest.approx(0.5)
+    assert probabilities.sum() == approx(1.0)
+    assert probabilities[2] == approx(0.5)
 
   def test_unnormalized_scores_get_softmaxed(self):
     scores = np.array([0.2, 0.3, 0.9], dtype=np.float32)
     probabilities = SpeedLimitVisionDaemon._normalize_classifier_output(scores)
-    assert probabilities.sum() == pytest.approx(1.0)
+    assert probabilities.sum() == approx(1.0)
     # argmax must be preserved
     assert int(np.argmax(probabilities)) == 2
 
@@ -150,7 +151,7 @@ class TestClassifierOutputNormalization:
     assert SpeedLimitVisionDaemon._normalize_classifier_output(np.array([], dtype=np.float32)).size == 0
 
 
-class TestGeometryHelpers:
+class TestGeometryHelpers(unittest.TestCase):
   def test_crop_by_ratio_clips_to_image(self):
     image = np.zeros((100, 200, 3), dtype=np.uint8)
     crop = SpeedLimitVisionDaemon._crop_by_ratio(image, 0.1, 0.2, 0.9, 0.8)
@@ -169,6 +170,6 @@ class TestGeometryHelpers:
 
   def test_speed_conversions_match_cv(self):
     # the daemon converts published mph values through the CV table
-    assert CV.MPH_TO_MS * 60 == pytest.approx(26.8224)
-    assert CV.MS_TO_KPH == pytest.approx(3.6)
-    assert CV.KPH_TO_MS * CV.MS_TO_KPH == pytest.approx(1.0)
+    assert CV.MPH_TO_MS * 60 == approx(26.8224)
+    assert CV.MS_TO_KPH == approx(3.6)
+    assert CV.KPH_TO_MS * CV.MS_TO_KPH == approx(1.0)

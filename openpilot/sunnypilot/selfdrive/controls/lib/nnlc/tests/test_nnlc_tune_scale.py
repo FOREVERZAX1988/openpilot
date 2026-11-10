@@ -7,7 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 NNLC's models were trained on upstream's STEER_MAX; on the Mazda EPS envelope's 1200 counts
 their torque is scaled by 800/1200 so the same counts reach the wire.
 """
-import pytest
+import unittest
 
 from opendbc.car.car_helpers import interfaces
 from opendbc.car.mazda.values import CAR as MAZDA
@@ -40,18 +40,21 @@ def nnlc_controller(car_name):
   return CP, controller
 
 
-@pytest.mark.parametrize("car_name, scale", [(MAZDA.MAZDA_CX5_2022, 800 / 1200), (TOYOTA.TOYOTA_RAV4, 1.0)])
-def test_nn_feedforward_on_steer_max(car_name, scale):
-  with OpenpilotPrefix():
-    CP, controller = nnlc_controller(car_name)
-    ext = controller.extension
-    assert ext._nnlc_enabled is False  # no model yet
-    ext.update_model_v2(generate_modelV2().modelV2)
-    assert ext._nnlc_enabled
-    ext.model.evaluate = lambda _: NN_TORQUE
-    ext.model.friction_override = False
+class TestNnlcTuneScale(unittest.TestCase):
 
-    CS = car.CarState.new_message(vEgo=30.0)
-    pose = Pose.from_device_motion(generate_deviceMotion().deviceMotion)
-    controller.update(True, CS, VehicleModel(CP), log.VehicleParameters.new_message(), False, 0.0, pose, False, 0.2)
-    assert ext._ff == pytest.approx(NN_TORQUE * scale)
+  def test_nn_feedforward_on_steer_max(self):
+    for car_name, scale in [(MAZDA.MAZDA_CX5_2022, 800 / 1200), (TOYOTA.TOYOTA_RAV4, 1.0)]:
+      with self.subTest(car_name=car_name):
+        with OpenpilotPrefix():
+          CP, controller = nnlc_controller(car_name)
+          ext = controller.extension
+          self.assertFalse(ext._nnlc_enabled)  # no model yet
+          ext.update_model_v2(generate_modelV2().modelV2)
+          self.assertTrue(ext._nnlc_enabled)
+          ext.model.evaluate = lambda _: NN_TORQUE
+          ext.model.friction_override = False
+
+          CS = car.CarState.new_message(vEgo=30.0)
+          pose = Pose.from_device_motion(generate_deviceMotion().deviceMotion)
+          controller.update(True, CS, VehicleModel(CP), log.VehicleParameters.new_message(), False, 0.0, pose, False, 0.2)
+          self.assertAlmostEqual(ext._ff, NN_TORQUE * scale)

@@ -10,7 +10,6 @@ required from the direct-read path that this layer replaces:
   "command zero torque"
 - identity binding (a bundle for another car is refused)
 """
-import math
 import unittest
 
 from openpilot.sunnypilot.flm.runtime_overrides import (

@@ -47,7 +47,7 @@ class _Expanded:
     params = [p for p in inspect.signature(self.func).parameters if p != "self"]
 
     for index, case in enumerate(self.cases):
-      label = self.ids(*case) if self.ids is not None else None
+      label = self._label(index, case)
       method_name = f"{name}_{index}" + (f"_{_to_safe_name(label)}" if label is not None else "")
 
       def test_method(test_case, current_case=case):
@@ -64,6 +64,16 @@ class _Expanded:
 
     # The descriptor itself is only a method factory, not a test.
     setattr(owner, name, None)
+
+  def _label(self, index, case):
+    """pytest's id for one case: a callable, a per-case list, or nothing."""
+    if self.ids is None:
+      return None
+    if callable(self.ids):
+      return self.ids(*case)
+    if index < len(self.ids):
+      return self.ids[index]
+    return None
 
 
 def parameterized_class(attrs, input_list=None):

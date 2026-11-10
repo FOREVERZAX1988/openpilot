@@ -7,14 +7,12 @@ downloaded update was silently skipped at reboot. These tests pin the contract:
 correct behind/ahead counts, and a byte-untouched real .git.
 """
 import asyncio
+import shutil
 import subprocess
+import tempfile
+import unittest
 from pathlib import Path
-
-try:
-  import pytest
-except ImportError:  # device has no pytest; skip instead of erroring the suite
-  import unittest
-  raise unittest.SkipTest('pytest is not available on this device') from None
+from unittest import mock
 
 from openpilot.sunnypilot.carrot.server.services import git_status
 from openpilot.common import repo_update
@@ -28,31 +26,6 @@ def _snapshot(root: Path) -> dict:
   return {str(p.relative_to(root)): p.stat().st_mtime_ns for p in root.rglob("*") if p.is_file()}
 
 
-@pytest.fixture()
-def repo(tmp_path, monkeypatch):
-  seed = tmp_path / "seed"
-  seed.mkdir()
-  _git("init", "-b", "master", cwd=seed)
-  _git("config", "user.email", "test@test", cwd=seed)
-  _git("config", "user.name", "test", cwd=seed)
-  (seed / "f.txt").write_text("a\n")
-  _git("add", "-A", cwd=seed)
-  _git("commit", "-m", "a", cwd=seed)
-
-  origin = tmp_path / "origin.git"
-  _git("clone", "--bare", str(seed), str(origin))
-
-  work = tmp_path / "work"
-  _git("clone", str(origin), str(work))
-  _git("config", "user.email", "test@test", cwd=work)
-  _git("config", "user.name", "test", cwd=work)
-
-  monkeypatch.setattr(git_status, "REPO_DIR", str(work))
-  monkeypatch.setattr(git_status, "STATUS_GIT_DIR", str(tmp_path / "status_mirror"))
-  monkeypatch.setattr(repo_update, "LOCK_PATH", str(tmp_path / "repo.lock"))
-  return work, origin, seed
-
-
 def _advance_origin(origin: Path, seed: Path, content: str) -> str:
   (seed / "f.txt").write_text(content + "\n")
   _git("add", "-A", cwd=seed)
@@ -62,76 +35,106 @@ def _advance_origin(origin: Path, seed: Path, content: str) -> str:
   return out.stdout.strip()
 
 
-def test_behind_count_detected_without_touching_real_git(repo):
-  work, origin, seed = repo
-  tip = _advance_origin(origin, seed, "b")
+class TestGitStatus(unittest.TestCase):
 
-  before = _snapshot(work / ".git")
-  status = asyncio.run(git_status.get_git_status(force=True))
-  after = _snapshot(work / ".git")
+  def setUp(self):
+    tmp = tempfile.mkdtemp(prefix="git_status_test_")
+    self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+    self.tmp_path = Path(tmp)
+    seed = self.tmp_path / "seed"
+    seed.mkdir()
+    _git("init", "-b", "master", cwd=seed)
+    _git("config", "user.email", "test@test", cwd=seed)
+    _git("config", "user.name", "test", cwd=seed)
+    (seed / "f.txt").write_text("a\n")
+    _git("add", "-A", cwd=seed)
+    _git("commit", "-m", "a", cwd=seed)
 
-  assert status["state"] == "ok"
-  assert status["behind"] == 1
-  assert status["ahead"] == 0
-  assert status["target_head"] == tip
-  # The whole point: not one byte of the real .git may change, or the launcher
-  # skips the overlay update install at the next boot.
-  assert after == before
-  assert not (work / ".git" / "FETCH_HEAD").exists()
+    origin = self.tmp_path / "origin.git"
+    _git("clone", "--bare", str(seed), str(origin))
+
+    work = self.tmp_path / "work"
+    _git("clone", str(origin), str(work))
+    _git("config", "user.email", "test@test", cwd=work)
+    _git("config", "user.name", "test", cwd=work)
+
+    self.work, self.origin, self.seed = work, origin, seed
+    for target, name, value in (
+      (git_status, "REPO_DIR", str(work)),
+      (git_status, "STATUS_GIT_DIR", str(self.tmp_path / "status_mirror")),
+      (repo_update, "LOCK_PATH", str(self.tmp_path / "repo.lock")),
+    ):
+      patcher = mock.patch.object(target, name, value)
+      patcher.start()
+      self.addCleanup(patcher.stop)
+
+  def test_behind_count_detected_without_touching_real_git(self):
+    tip = _advance_origin(self.origin, self.seed, "b")
+
+    before = _snapshot(self.work / ".git")
+    status = asyncio.run(git_status.get_git_status(force=True))
+    after = _snapshot(self.work / ".git")
+
+    self.assertEqual(status["state"], "ok")
+    self.assertEqual(status["behind"], 1)
+    self.assertEqual(status["ahead"], 0)
+    self.assertEqual(status["target_head"], tip)
+    # The whole point: not one byte of the real .git may change, or the launcher
+    # skips the overlay update install at the next boot.
+    self.assertEqual(after, before)
+    self.assertFalse((self.work / ".git" / "FETCH_HEAD").exists())
+
+  def test_ahead_and_behind_counted_together(self):
+    _advance_origin(self.origin, self.seed, "b")
+    asyncio.run(git_status.get_git_status(force=True))
+
+    (self.work / "local.txt").write_text("local\n")
+    _git("add", "-A", cwd=self.work)
+    _git("commit", "-m", "local", cwd=self.work)
+
+    before = _snapshot(self.work / ".git")
+    status = asyncio.run(git_status.get_git_status(force=True))
+
+    self.assertEqual(status["state"], "ok")
+    self.assertEqual(status["behind"], 1)
+    self.assertEqual(status["ahead"], 1)
+    self.assertEqual(_snapshot(self.work / ".git"), before)
+
+  def test_up_to_date_after_pull(self):
+    _advance_origin(self.origin, self.seed, "b")
+    _git("pull", "--ff-only", cwd=self.work)
+
+    status = asyncio.run(git_status.get_git_status(force=True))
+
+    self.assertEqual(status["state"], "ok")
+    self.assertEqual(status["behind"], 0)
+    self.assertEqual(status["ahead"], 0)
+
+  def test_mirror_self_heals_after_corruption(self):
+    _advance_origin(self.origin, self.seed, "b")
+    self.assertEqual(asyncio.run(git_status.get_git_status(force=True))["state"], "ok")
+
+    mirror = Path(git_status.STATUS_GIT_DIR)
+    (mirror / "HEAD").write_text("garbage")
+
+    status = asyncio.run(git_status.get_git_status(force=True))
+    self.assertEqual(status["state"], "ok")
+    self.assertEqual(status["behind"], 1)
+
+  def test_fetch_failure_reports_error_state(self):
+    _advance_origin(self.origin, self.seed, "b")
+
+    async def dead_fetch(url, refspec):
+      return 128, "network down"
+
+    patcher = mock.patch.object(git_status, "_fetch_status_mirror", dead_fetch)
+    patcher.start()
+    self.addCleanup(patcher.stop)
+    status = asyncio.run(git_status.get_git_status(force=True))
+    # A failed fetch must not report a usable upstream state.
+    self.assertEqual(status["state"], "fetch_error")
+    self.assertIs(status["available"], False)
 
 
-def test_ahead_and_behind_counted_together(repo):
-  work, origin, seed = repo
-  _advance_origin(origin, seed, "b")
-  asyncio.run(git_status.get_git_status(force=True))
-
-  (work / "local.txt").write_text("local\n")
-  _git("add", "-A", cwd=work)
-  _git("commit", "-m", "local", cwd=work)
-
-  before = _snapshot(work / ".git")
-  status = asyncio.run(git_status.get_git_status(force=True))
-
-  assert status["state"] == "ok"
-  assert status["behind"] == 1
-  assert status["ahead"] == 1
-  assert _snapshot(work / ".git") == before
-
-
-def test_up_to_date_after_pull(repo):
-  work, origin, seed = repo
-  _advance_origin(origin, seed, "b")
-  _git("pull", "--ff-only", cwd=work)
-
-  status = asyncio.run(git_status.get_git_status(force=True))
-
-  assert status["state"] == "ok"
-  assert status["behind"] == 0
-  assert status["ahead"] == 0
-
-
-def test_mirror_self_heals_after_corruption(repo):
-  work, origin, seed = repo
-  _advance_origin(origin, seed, "b")
-  assert asyncio.run(git_status.get_git_status(force=True))["state"] == "ok"
-
-  mirror = Path(git_status.STATUS_GIT_DIR)
-  (mirror / "HEAD").write_text("garbage")
-
-  status = asyncio.run(git_status.get_git_status(force=True))
-  assert status["state"] == "ok"
-  assert status["behind"] == 1
-
-
-def test_fetch_failure_reports_error_state(repo, monkeypatch):
-  work, origin, seed = repo
-  _advance_origin(origin, seed, "b")
-
-  async def dead_fetch(url, refspec):
-    return 128, "network down"
-
-  monkeypatch.setattr(git_status, "_fetch_status_mirror", dead_fetch)
-  status = asyncio.run(git_status.get_git_status(force=True))
-  # A failed fetch must not report a usable upstream state.
-  assert status["state"] == "fetch_error"
-  assert status["available"] is False
+if __name__ == "__main__":
+  unittest.main()

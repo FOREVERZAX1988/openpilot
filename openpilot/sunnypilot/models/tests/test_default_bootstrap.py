@@ -5,7 +5,7 @@ This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 
-import pytest
+import unittest
 
 from openpilot.sunnypilot.models import default_bootstrap
 from openpilot.sunnypilot.models.default_bootstrap import (CARRY_OVER_KEY, DEFAULT_MODEL_SHORT_NAME, carry_over_picks,
@@ -48,7 +48,11 @@ def _available_with_fm():
   return [FakeBundle(0, "C210M", "aaaa"), FakeBundle(28, DEFAULT_MODEL_SHORT_NAME, FM_REF, "Firehose Model"), FakeBundle(5, "NV", "bbbb")]
 
 
-class TestFindDefaultBundle:
+class TestFindDefaultBundle(unittest.TestCase):
+
+  def setUp(self):
+    default_bootstrap._carry_over_queued.clear()
+    self.addCleanup(default_bootstrap._carry_over_queued.clear)
   def test_matches_by_short_name(self):
     assert find_default_bundle(_available_with_fm()).ref == FM_REF
 
@@ -63,7 +67,11 @@ class TestFindDefaultBundle:
     assert find_default_bundle([FakeBundle(0, "C210M", "aaaa")]) is None
 
 
-class TestDefaultModelBootstrap:
+class TestDefaultModelBootstrap(unittest.TestCase):
+
+  def setUp(self):
+    default_bootstrap._carry_over_queued.clear()
+    self.addCleanup(default_bootstrap._carry_over_queued.clear)
   def test_queues_firehose_when_nothing_active(self):
     params = FakeParams()
     maybe_apply_default_model(params, _available_with_fm())
@@ -110,11 +118,6 @@ def stored(ref, name, version=OLD):
   return {"ref": ref, "internalName": name, "minimumSelectorVersion": version}
 
 
-@pytest.fixture(autouse=True)
-def fresh_process():
-  default_bootstrap._carry_over_queued.clear()
-
-
 def cleared_by_validation(params, source="qcom"):
   """What validate_active_bundles does to a slot it rejects: clears it and hands back the pick."""
   key = QCOM if source == "qcom" else CHESTNUT
@@ -123,7 +126,11 @@ def cleared_by_validation(params, source="qcom"):
   return {source: raw}
 
 
-class TestCarryOverPicks:
+class TestCarryOverPicks(unittest.TestCase):
+
+  def setUp(self):
+    default_bootstrap._carry_over_queued.clear()
+    self.addCleanup(default_bootstrap._carry_over_queued.clear)
   """A selector bump or a rebuilt catalog entry must not drop a device back to the stock model."""
 
   def test_a_stale_pick_is_requeued_by_its_ref(self):

@@ -4,7 +4,7 @@ Copyright (c) 2026-, Zeph Leggett.
 This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-import pytest
+import unittest
 
 from openpilot.cereal import custom, log, messaging
 from opendbc.car import structs
@@ -72,13 +72,11 @@ class Selfdrived:
     self.step(car_state(False))
 
 
-class TestSpeedAssistSwitch:
-  # xfail: upstream 33048bacf1 的 Set Speed Assist 重构没做完 —— 这几个测试断言
-  # 「长按距离键切换 speed_assist」，但 update() 里长按走的仍是 experimental mode
-  # （注释还写着 "sp keeps this long press; upstream's Set Speed Assist toggle
-  # lives in its settings UI"）。代码与测试互相矛盾，方向涉及纵向行为，不擅自改，
-  # 等上游收紧后删掉这个标记。
-  @pytest.mark.xfail(reason="upstream Set Speed Assist refactor incomplete: long press still drives experimental mode", strict=False)
+class TestSpeedAssistSwitch(unittest.TestCase):
+  # upstream 33048bacf1 的 Set Speed Assist 重构没做完: 长按距离键仍走
+  # experimental mode, 与这些测试的断言互相矛盾. 方向涉及纵向行为, 不擅自改,
+  # 等上游收紧后删掉这个标记. (原 pytest.mark.xfail, 随 unittest 迁移转换)
+  @unittest.expectedFailure
   def test_long_press_switches_speed_assist_only(self):
     sd = Selfdrived()
     sd.hold_gap(DISTANCE_LONG_PRESS + 5)
@@ -86,12 +84,10 @@ class TestSpeedAssistSwitch:
     assert sd.params.values["ExperimentalModeSetSpeed"] is False
     assert sd.personality == 1 and not sd.events.has(EventName.personalityChanged)
 
-  # xfail: upstream 33048bacf1 的 Set Speed Assist 重构没做完 —— 这几个测试断言
-  # 「长按距离键切换 speed_assist」，但 update() 里长按走的仍是 experimental mode
-  # （注释还写着 "sp keeps this long press; upstream's Set Speed Assist toggle
-  # lives in its settings UI"）。代码与测试互相矛盾，方向涉及纵向行为，不擅自改，
-  # 等上游收紧后删掉这个标记。
-  @pytest.mark.xfail(reason="upstream Set Speed Assist refactor incomplete: long press still drives experimental mode", strict=False)
+  # upstream 33048bacf1 的 Set Speed Assist 重构没做完: 长按距离键仍走
+  # experimental mode, 与这些测试的断言互相矛盾. 方向涉及纵向行为, 不擅自改,
+  # 等上游收紧后删掉这个标记. (原 pytest.mark.xfail, 随 unittest 迁移转换)
+  @unittest.expectedFailure
   def test_long_press_raises_the_alert_once(self):
     sd = Selfdrived()
     raised = 0
@@ -107,12 +103,10 @@ class TestSpeedAssistSwitch:
     assert sd.zp.speed_assist is True
     assert sd.personality == 0
 
-  # xfail: upstream 33048bacf1 的 Set Speed Assist 重构没做完 —— 这几个测试断言
-  # 「长按距离键切换 speed_assist」，但 update() 里长按走的仍是 experimental mode
-  # （注释还写着 "sp keeps this long press; upstream's Set Speed Assist toggle
-  # lives in its settings UI"）。代码与测试互相矛盾，方向涉及纵向行为，不擅自改，
-  # 等上游收紧后删掉这个标记。
-  @pytest.mark.xfail(reason="upstream Set Speed Assist refactor incomplete: long press still drives experimental mode", strict=False)
+  # upstream 33048bacf1 的 Set Speed Assist 重构没做完: 长按距离键仍走
+  # experimental mode, 与这些测试的断言互相矛盾. 方向涉及纵向行为, 不擅自改,
+  # 等上游收紧后删掉这个标记. (原 pytest.mark.xfail, 随 unittest 迁移转换)
+  @unittest.expectedFailure
   def test_press_after_a_long_press_steps_again(self):
     sd = Selfdrived()
     sd.hold_gap(DISTANCE_LONG_PRESS + 5)
@@ -150,12 +144,10 @@ class TestSpeedAssistSwitch:
       sd.step()
       assert not sd.events_sp.zp.has(EventNameZP.speedAssistSwitched)
 
-  # xfail: upstream 33048bacf1 的 Set Speed Assist 重构没做完 —— 这几个测试断言
-  # 「长按距离键切换 speed_assist」，但 update() 里长按走的仍是 experimental mode
-  # （注释还写着 "sp keeps this long press; upstream's Set Speed Assist toggle
-  # lives in its settings UI"）。代码与测试互相矛盾，方向涉及纵向行为，不擅自改，
-  # 等上游收紧后删掉这个标记。
-  @pytest.mark.xfail(reason="upstream Set Speed Assist refactor incomplete: long press still drives experimental mode", strict=False)
+  # upstream 33048bacf1 的 Set Speed Assist 重构没做完: 长按距离键仍走
+  # experimental mode, 与这些测试的断言互相矛盾. 方向涉及纵向行为, 不擅自改,
+  # 等上游收紧后删掉这个标记. (原 pytest.mark.xfail, 随 unittest 迁移转换)
+  @unittest.expectedFailure
   def test_alert_names_the_new_state(self):
     alert = EVENTS_ZP[EventNameZP.speedAssistSwitched][ET.WARNING]
     sd = Selfdrived()
@@ -164,7 +156,7 @@ class TestSpeedAssistSwitch:
       assert alert(None, None, None, False, 0, None).alert_text_1 == text
 
 
-class TestDistanceFarther:
+class TestDistanceFarther(unittest.TestCase):
   """The wheel's second distance button reaches selfdrived as a level on carStateSP; the helper
   turns it into one release edge, the opposite direction to upstream's gapAdjustCruise cycle."""
 
@@ -204,13 +196,14 @@ class TestDistanceFarther:
     assert sd.icbm.activations == [True, False, True]
 
 
-class TestRoadEdgeAlert:
-  @pytest.mark.parametrize("mode, audible", [(RoadEdgeMode.AUDIBLE, AudibleAlert.prompt), (RoadEdgeMode.SILENT, AudibleAlert.none)])
-  def test_silent_drops_only_the_chime(self, mode, audible):
-    sd = Selfdrived()
-    sd.params.put("RoadEdgeLaneChangeEnabled", mode)
-    for _ in range(PARAMS_READ_FRAMES):
-      sd.step()
-    alert = EVENTS_SP_ZP[EventNameSP.laneChangeRoadEdge][ET.WARNING](None, None, None, False, 0, 0)
-    assert alert.audible_alert == audible
-    assert alert.alert_size == AlertSize.small, "the on-screen alert is the same in both modes"
+class TestRoadEdgeAlert(unittest.TestCase):
+  def test_silent_drops_only_the_chime(self):
+    for mode, audible in [(RoadEdgeMode.AUDIBLE, AudibleAlert.prompt), (RoadEdgeMode.SILENT, AudibleAlert.none)]:
+      with self.subTest(mode=mode):
+        sd = Selfdrived()
+        sd.params.put("RoadEdgeLaneChangeEnabled", mode)
+        for _ in range(PARAMS_READ_FRAMES):
+          sd.step()
+        alert = EVENTS_SP_ZP[EventNameSP.laneChangeRoadEdge][ET.WARNING](None, None, None, False, 0, 0)
+        assert alert.audible_alert == audible
+        assert alert.alert_size == AlertSize.small, "the on-screen alert is the same in both modes"

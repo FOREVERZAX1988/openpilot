@@ -7,6 +7,7 @@ Covers:
 - default-off equivalence of LaneCenteringController (identical output stream
   with and without the offset handle)
 """
+import unittest
 import sys
 import types
 
@@ -32,9 +33,9 @@ except (OSError, FileNotFoundError):
 
 from types import SimpleNamespace
 
-import pytest
 import numpy as np
 
+from openpilot.common.test import approx
 from openpilot.selfdrive.controls.lib.lane_centering import LaneCenteringController
 from openpilot.sunnypilot.selfdrive.controls.lib.lane_offset_adjust import (
   ADJUST_OFFSET_LIMIT,
@@ -71,7 +72,7 @@ class FakeParams:
     return self._data.get(key)
 
 
-class TestComputeLaneOffsetPure:
+class TestComputeLaneOffsetPure(unittest.TestCase):
   def test_zero_when_adjust_offset_off(self):
     assert compute_lane_offset(3.2, 3.0, 2.0, 0.0) == 0.0
     assert compute_lane_offset(3.2, 3.0, 2.0, -0.1) == 0.0
@@ -94,21 +95,21 @@ class TestComputeLaneOffsetPure:
 
   def test_lane_width_ramp(self):
     # 2.7 m ego lane: ramp = (2.7 - 2.5) / (2.9 - 2.5) = 0.5 -> half of the shift
-    assert compute_lane_offset(2.7, 3.0, 1.5, 0.2) == pytest.approx(0.1)
+    assert compute_lane_offset(2.7, 3.0, 1.5, 0.2) == approx(0.1)
     # 2.5 m ego lane: ramp zero, no shift even on an asymmetric road
     assert compute_lane_offset(2.5, 3.0, 1.5, 0.2) == 0.0
 
   def test_keep_min_distance_cap_with_unknown_shift_side_width(self):
     # shift-side adjacent width unknown (0): only the shared line counts
     # cap = 1.6 - 1.35 = 0.25 -> the full 0.2 shift still fits
-    assert compute_lane_offset(3.2, 3.0, 0.0, 0.2) == pytest.approx(0.2)
+    assert compute_lane_offset(3.2, 3.0, 0.0, 0.2) == approx(0.2)
     # narrower lane: cap = 1.4 - 1.35 = 0.05 -> shift clamped to 0.05
-    assert compute_lane_offset(2.8, 3.0, 0.0, 0.2) == pytest.approx(0.05)
+    assert compute_lane_offset(2.8, 3.0, 0.0, 0.2) == approx(0.05)
 
   def test_keep_min_distance_cap_with_narrow_edge_side(self):
     # shift toward a near-edge side (adjacent width 0.3 m):
     # cap = 1.6 + 0.3 - 1.35 = 0.55 -> the 0.3 shift fits
-    assert compute_lane_offset(3.2, 3.0, 0.3, 0.3) == pytest.approx(0.3)
+    assert compute_lane_offset(3.2, 3.0, 0.3, 0.3) == approx(0.3)
     # full shift 2.0 m request: clamped by the keep-min cap, then by the hard limit
     assert compute_lane_offset(3.2, 3.0, 0.3, 2.0) == ADJUST_OFFSET_LIMIT
 
@@ -126,7 +127,7 @@ class TestComputeLaneOffsetPure:
     assert KEEP_MIN_DISTANCE_FROM_LANE == 1.35
 
 
-class TestLaneOffsetAdjust:
+class TestLaneOffsetAdjust(unittest.TestCase):
   def test_disabled_by_default_returns_zero(self):
     adjust = LaneOffsetAdjust(params=FakeParams())
     for _ in range(20):
@@ -179,7 +180,7 @@ class TestLaneOffsetAdjust:
     assert not adjust.enabled
 
 
-class TestLaneCenteringDefaultOffEquivalence:
+class TestLaneCenteringDefaultOffEquivalence(unittest.TestCase):
   def _run_stream(self, controller, frames=60, path_y=0.4, **model_kwargs):
     outputs = []
     model = fake_model(path_y=path_y, **model_kwargs)

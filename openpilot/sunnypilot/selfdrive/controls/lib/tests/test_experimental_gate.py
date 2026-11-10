@@ -7,14 +7,14 @@ See the LICENSE.md file in the root directory for more details.
 The planner's e2e candidate runs whenever openpilot drives the gas and brakes (chill mode went
 2026-11). Also the fixture the planner hook tests build on.
 """
-import pytest
-
 from openpilot.cereal import custom, messaging
 from opendbc.car import structs
 from opendbc.car.interfaces import ACCEL_MAX
-from openpilot.common.test import OpenpilotTestCase
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.selfdrive.controls.lib.longcontrol import LongCtrlState
 from openpilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner, LongitudinalPlanSource
+
+
 
 V_EGO = 20.0
 E2E_ACCEL = -3.0  # low enough that e2e wins the min() whenever it is a candidate
@@ -126,4 +126,4 @@ class TestExperimentalGate(OpenpilotTestCase):
     update = planner.e2e_set_speed.update
     planner.e2e_set_speed.update = lambda *args: seen.append(args[-1]) or update(*args)
     planner.update(sm)
-    assert seen == [pytest.approx(0.002 * V_EGO ** 2)]
+    assert seen == [approx(0.002 * V_EGO ** 2)]

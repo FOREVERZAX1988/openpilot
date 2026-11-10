@@ -7,6 +7,7 @@ Covers:
 - fallback equivalence: cars without the lever signal (getattr -> None, e.g.
   Toyota) and with the param off behave exactly like the legacy blinker path
 """
+import unittest
 import sys
 import types
 
@@ -90,7 +91,7 @@ def make_controller(blinker_latched_turn_kph=None):
   return controller
 
 
-class TestLeverManeuverPure:
+class TestLeverManeuverPure(unittest.TestCase):
   def test_off_when_speed_gate_zero(self):
     assert lever_maneuver(LEVER_LATCHED, 5.0, 0.0) == (None, False)
     assert lever_maneuver(LEVER_LATCHED, 5.0, -1.0) == (None, False)
@@ -113,7 +114,7 @@ class TestLeverManeuverPure:
     assert lever_maneuver(LEVER_ONE_TOUCH, TURN_SPEED_MAX, TURN_SPEED_MAX) == ("lane_change", True)
 
 
-class TestLaneTurnControllerWithLever:
+class TestLaneTurnControllerWithLever(unittest.TestCase):
   """blinkerLever present + BlinkerLatchedTurn enabled: lever semantics take priority."""
 
   def test_latched_left_blinker_is_turn(self):
@@ -148,7 +149,7 @@ class TestLaneTurnControllerWithLever:
     assert controller.get_turn_direction() == TurnDirection.turnLeft
 
 
-class TestLaneTurnControllerFallbackEquivalence:
+class TestLaneTurnControllerFallbackEquivalence(unittest.TestCase):
   """No lever signal / feature off: behavior must equal the legacy blinker path."""
 
   # (left_blinker, right_blinker, v_ego, blindspot_left, blindspot_right, expected)
@@ -188,7 +189,7 @@ class TestLaneTurnControllerFallbackEquivalence:
     assert controller.get_turn_direction() == TurnDirection.turnRight
 
 
-class TestParamReading:
+class TestParamReading(unittest.TestCase):
   def test_unregistered_key_falls_back_to_default(self):
     # FakeParams returns None for unregistered keys -> code default 0.0 (off)
     controller = make_controller()
@@ -208,7 +209,7 @@ class TestParamReading:
     assert controller.blinker_latched_turn == 0.0
 
 
-class TestDesireHelperPassesCarstate:
+class TestDesireHelperPassesCarstate(unittest.TestCase):
   def test_desire_helper_forwards_carstate(self):
     # regression guard for the one-line desire_helper.py change: the call site
     # forwards carstate so the controller can read blinkerLever. Read from the

@@ -1,9 +1,9 @@
-name: 打包预编译分支
+name: 打包发布 CNB
 
-# 手动触发：把 master 分支精简打包后推送到 staging 分支（GitHub + CNB 双端）。
-# 不再监听 push 自动打包；master-c3 相关打包路径已移除。
-# 2026-11-09: comment re-added to re-trigger Actions workflow registration
-# after the repo history rebuild (release.yaml returned 404 from the Actions API).
+# 手动触发：把 master 分支精简打包后发布到 CNB staging 分支。
+# 不再推 GitHub（build_stripped.sh 由 SKIP_ORIGIN_PUSH=1 关闭 origin 推送），
+# GitHub 仅作为源仓库与 Actions 运行环境；发布唯一出口是 CNB 镜像仓库。
+# 2026-11-10: 改为仅发布 CNB，permissions 降为 contents: read
 on:
   workflow_dispatch:
     inputs:
@@ -14,7 +14,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   GIT_CONFIG_COUNT: 1
@@ -22,8 +22,8 @@ env:
   GIT_CONFIG_VALUE_0: openpilot/selfdrive/modeld/models/big_driving_tinygrad.pkl
 
 jobs:
-  publish:
-    name: master → staging
+  build:
+    name: master → CNB staging
     runs-on: ubuntu-latest
     concurrency:
       group: release-staging
@@ -40,12 +40,14 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: 推送精简源码分支
+      - name: 生成精简源码树（不推 GitHub）
         env:
           BRANCH: staging
           # 固定 TARGET_DIR（脚本未设置时会 mktemp 随机目录），供下一步 CNB 发布复用精简树。
           # 必须放在 runner.temp（repo 工作区外）：脚本里的 git clean -xdff 会清掉 repo 内的未跟踪目录。
           TARGET_DIR: ${{ runner.temp }}/stripped
+          # 只打包不推源仓库：发布唯一出口是下一步的 CNB 同步
+          SKIP_ORIGIN_PUSH: "1"
         run: ./tools/release/build_stripped.sh
 
       - name: 同步发布到 CNB 镜像仓库
@@ -81,7 +83,7 @@ jobs:
             echo "全量推送: CNB 上暂无 $BRANCH、指定强制全量、或 fetch 失败"
           fi
 
-          # 与 build_stripped.sh 推 GitHub 的参数一致：精简树无 LFS 对象，跳过 LFS 钩子并关闭压缩
+          # 精简树无 LFS 对象，跳过 LFS 钩子并关闭压缩（与 build_stripped.sh 产树时的 git 参数一致）
           if ! GIT_LFS_SKIP_PUSH=1 git -c pack.window=0 -c pack.depth=0 -c pack.compression=0 \
               push $force_arg cnb "tmp:${BRANCH}" --no-verify; then
             # 增量推送失败（如 fetch 之后远端 tip 又变了）：全量兜底，下次会自动重新挂链

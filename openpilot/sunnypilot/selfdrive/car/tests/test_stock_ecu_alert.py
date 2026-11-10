@@ -9,7 +9,6 @@ in the shape of upstream's no-entry conditions, keyed on the published state, wh
 selfdrived and MADS are doing. Route 0000021b (2026-09-11): three minutes of presses under
 parkToTakeOver with lateral off, nothing shown.
 """
-import pytest
 
 from openpilot.cereal import custom, log, messaging
 from opendbc.car import DT_CTRL, structs
@@ -71,13 +70,15 @@ def _alert(state: str, standstill: bool):
 
 
 class TestStockEcuNotReady:
-  @pytest.mark.parametrize("state", ["starting", "parkToTakeOver", "stockCruiseOn", "restoring", "failed"])
-  def test_a_set_press_before_ownership_raises_it(self, state):
-    assert _events_for(state).zp.has(EventNameZP.stockEcuNotReady)
+  def test_a_set_press_before_ownership_raises_it(self):
+    for state in ["starting", "parkToTakeOver", "stockCruiseOn", "restoring", "failed"]:
+      with self.subTest(state=state):
+        assert _events_for(state).zp.has(EventNameZP.stockEcuNotReady)
 
-  @pytest.mark.parametrize("state", ["notNeeded", "ready", "restored"])
-  def test_an_owned_or_stock_body_engages_without_comment(self, state):
-    assert not _events_for(state).zp.has(EventNameZP.stockEcuNotReady)
+  def test_an_owned_or_stock_body_engages_without_comment(self):
+    for state in ["notNeeded", "ready", "restored"]:
+      with self.subTest(state=state):
+        assert not _events_for(state).zp.has(EventNameZP.stockEcuNotReady)
 
   def test_only_set_and_resume_presses_count(self):
     assert not _events_for("parkToTakeOver", button=ButtonType.mainCruise).zp.has(EventNameZP.stockEcuNotReady)
@@ -98,16 +99,17 @@ class TestStockEcuNotReady:
     assert alert.audible_alert == AudibleAlert.refuse
     assert alert.duration == int(3. / DT_CTRL)  # frames
 
-  @pytest.mark.parametrize("state, standstill, expected", [
+  def test_text_names_what_the_driver_has_to_do(self):
+    for state, standstill, expected in [
     ("starting", True, {"纵向控制初始化中", "请保持停车"}),
     ("starting", False, {"停车以启用纵向控制", "Alpha 纵向将在下次停车时接管"}),  # a moving takeover gets the stop-to-engage alert
     ("parkToTakeOver", False, {"停车以启用纵向控制", "Alpha 纵向将在下次停车时接管"}),
     ("stockCruiseOn", False, {"请关闭原厂巡航", "Alpha 纵向正在等待"}),
     ("restoring", False, {"纵向控制交还中", "完成后恢复原厂巡航"}),
     ("failed", True, {"纵向控制初始化失败", "重启车辆以重试"}),
-  ])
-  def test_text_names_what_the_driver_has_to_do(self, state, standstill, expected):
-    assert _alert(state, standstill)[1] == expected
+  ]:
+      with self.subTest(state=state, standstill=standstill, expected=expected):
+        assert _alert(state, standstill)[1] == expected
 
 
 class TestStockEcuUnprompted:
@@ -126,9 +128,10 @@ class TestStockEcuUnprompted:
     assert _update(car_events, "starting", standstill=True).zp.has(EventNameZP.stockEcuInitializing)
     assert not _update(car_events, "starting", standstill=False).zp.has(EventNameZP.stockEcuInitializing)
 
-  @pytest.mark.parametrize("state", ["notNeeded", "parkToTakeOver", "stockCruiseOn", "ready", "restoring", "restored", "failed"])
-  def test_only_the_starting_state(self, state):
-    assert not _update(_car_events(), state, standstill=True).zp.has(EventNameZP.stockEcuInitializing)
+  def test_only_the_starting_state(self):
+    for state in ["notNeeded", "parkToTakeOver", "stockCruiseOn", "ready", "restoring", "restored", "failed"]:
+      with self.subTest(state=state):
+        assert not _update(_car_events(), state, standstill=True).zp.has(EventNameZP.stockEcuInitializing)
 
   def test_ready_edge_fires_once(self):
     car_events = _car_events()

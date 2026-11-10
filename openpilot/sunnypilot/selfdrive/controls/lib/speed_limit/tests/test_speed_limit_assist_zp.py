@@ -1,3 +1,5 @@
+import unittest
+
 """
 Copyright (c) 2026-, Zeph Leggett.
 
@@ -7,8 +9,8 @@ See the LICENSE.md file in the root directory for more details.
 What zoompilot's pcm machine changes over sunnypilot's: the ramped decel it publishes, when it
 announces a limit, the set speed as a ceiling instead of a required max, and the gas hold.
 """
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.cereal import custom
 from opendbc.car.car_helpers import interfaces
 from opendbc.car.toyota.values import CAR as TOYOTA
@@ -27,8 +29,9 @@ EventNameSP = custom.OnroadEventSP.EventName
 CAR = TOYOTA.TOYOTA_RAV4_TSS2
 
 
-class TestSpeedLimitAssistZP:
-  def setup_method(self):
+class TestSpeedLimitAssistZP(unittest.TestCase):
+  def setUp(self):
+    super().setUp()
     params = Params()
     params.put("IsReleaseSpBranch", True, block=True)
     params.put("SpeedLimitMode", int(Mode.assist), block=True)
@@ -74,12 +77,12 @@ class TestSpeedLimitAssistZP:
     # pcm-op-long is openpilot long: the wire seeds the MPC, so it ramps to the budget and stops
     expected = self.adapt(100.0)
     assert expected < -self.sla.limits.a_budget
-    assert self.sla.output_a_target == pytest.approx(-self.sla.limits.a_budget, abs=1e-3)
+    assert self.sla.output_a_target == approx(-self.sla.limits.a_budget, abs=1e-3)
 
   def test_adapting_decel_inside_the_budget_is_published_exactly(self):
     expected = self.adapt(300.0)
     assert -self.sla.limits.a_budget < expected < 0.
-    assert self.sla.output_a_target == pytest.approx(expected, abs=1e-3)
+    assert self.sla.output_a_target == approx(expected, abs=1e-3)
 
   # announcements: "Adjusting to" is raised only when the speed the car settles at,
   # min(target, set speed), moves; the cruise arbiter follows the same rule
@@ -106,7 +109,7 @@ class TestSpeedLimitAssistZP:
 
   def test_engages_at_any_set_speed(self):
     self.engage(60, 35)
-    assert self.target_mph() == pytest.approx(35)
+    assert self.target_mph() == approx(35)
     assert self.sla.state != SpeedLimitAssistState.preActive
 
   def test_no_limit_waits_pending_then_activates(self):
@@ -119,7 +122,7 @@ class TestSpeedLimitAssistZP:
     self.engage(60, 35)
     self.drive(61, 35)
     assert self.sla.state in ACTIVE_STATES
-    assert self.target_mph() == pytest.approx(35)
+    assert self.target_mph() == approx(35)
 
   def test_needs_the_setting(self):
     self.sla.enabled = False
@@ -133,7 +136,7 @@ class TestSpeedLimitAssistZP:
     self.drive(60, 25, v_mph=35)
     assert self.sla.state in ACTIVE_STATES
     assert self.announced()
-    assert self.target_mph() == pytest.approx(25)
+    assert self.target_mph() == approx(25)
 
   # gas hold: releasing the gas above the limit holds the speed reached until the next sign
 
@@ -144,29 +147,29 @@ class TestSpeedLimitAssistZP:
   def test_gas_release_holds_the_speed_quietly(self):
     self.engage(60, 35)
     self.gas_to(60, 35, 40)
-    assert self.target_mph() == pytest.approx(40)
+    assert self.target_mph() == approx(40)
     assert not self.announced()
     self.drive(60, 35, v_mph=40, frames=50)
-    assert self.target_mph() == pytest.approx(40)
+    assert self.target_mph() == approx(40)
 
   def test_hold_caps_at_the_set_speed(self):
     self.engage(38, 35)
     self.gas_to(38, 35, 45)
-    assert self.target_mph() == pytest.approx(38)
+    assert self.target_mph() == approx(38)
 
   def test_release_at_or_below_the_limit_holds_nothing(self):
     self.engage(60, 35)
     self.gas_to(60, 35, 35)
     assert not self.sla.held_conv
-    assert self.target_mph() == pytest.approx(35)
+    assert self.target_mph() == approx(35)
 
   def test_tap_at_a_lower_sign_keeps_the_speed(self):
     """School zone: the limit drops while at speed, a tap of the gas declines it."""
     self.engage(60, 35)
     self.drive(60, 20, v_mph=35)
-    assert self.target_mph() == pytest.approx(20)
+    assert self.target_mph() == approx(20)
     self.gas_to(60, 20, 35)
-    assert self.target_mph() == pytest.approx(35)
+    assert self.target_mph() == approx(35)
     assert self.sla.state == SpeedLimitAssistState.active  # not adapting toward 20
 
   def test_hold_survives_a_limit_dropout(self):
@@ -174,19 +177,20 @@ class TestSpeedLimitAssistZP:
     self.gas_to(60, 35, 40)
     self.drive(60, 0, v_mph=40, frames=5)
     self.drive(60, 35, v_mph=40)
-    assert self.target_mph() == pytest.approx(40)
+    assert self.target_mph() == approx(40)
 
-  @pytest.mark.parametrize("new_limit", [25, 45])
-  def test_next_sign_ends_the_hold(self, new_limit):
-    self.engage(60, 35)
-    self.gas_to(60, 35, 40)
-    self.drive(60, new_limit, v_mph=40)
-    assert not self.sla.held_conv
-    assert self.target_mph() == pytest.approx(new_limit)
+  def test_next_sign_ends_the_hold(self):
+    for new_limit in [25, 45]:
+      with self.subTest(new_limit=new_limit):
+        self.engage(60, 35)
+        self.gas_to(60, 35, 40)
+        self.drive(60, new_limit, v_mph=40)
+        assert not self.sla.held_conv
+        assert self.target_mph() == approx(new_limit)
 
   def test_disengage_ends_the_hold(self):
     self.engage(60, 35)
     self.gas_to(60, 35, 40)
     self.drive(60, 35, v_mph=40, enabled=False)
     self.engage(60, 35)
-    assert self.target_mph() == pytest.approx(35)
+    assert self.target_mph() == approx(35)

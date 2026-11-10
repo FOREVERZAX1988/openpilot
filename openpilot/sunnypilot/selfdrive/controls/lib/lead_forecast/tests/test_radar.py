@@ -1,3 +1,5 @@
+import unittest
+
 """
 Copyright (c) 2026-, Zeph Leggett.
 
@@ -8,8 +10,8 @@ Radar leads (LeadForecastRadar): matched to the model's lead, measured accel han
 forecast, a new track never inherits the last one's shape.
 """
 import numpy as np
-import pytest
 
+from openpilot.common.test import approx
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS
 from openpilot.sunnypilot.selfdrive.controls.lib.lead_forecast.forecast import (FINE_T, LEAD_T_IDXS, RADAR_BRAKING_A_BP, RADAR_HANDOVER_T,
                                                                                 RADAR_LAUNCH_A_BP, RADAR_MATCH_DIST,
@@ -58,12 +60,12 @@ def expected(sm, lead=0):
   return radar_trajectory(ld.dRel, radar_speed(v_knots, ld.vLead, ld.aLeadK, ld.aLeadTau))
 
 
-class TestShape:
+class TestShape(unittest.TestCase):
   def test_starts_on_the_measured_accel(self):
     # radar sees the lead braking at -2 now; the model's first knot is 2 s out
     v_knots = np.array([15., 13., 11., 9., 7., 5.])
     v = radar_speed(v_knots, 15., -2., 0.)
-    assert (v[1] - v[0]) / (FINE_T[1] - FINE_T[0]) == pytest.approx(-2., rel=0.05)
+    assert (v[1] - v[0]) / (FINE_T[1] - FINE_T[0]) == approx(-2., rel=0.05)
 
   def test_ends_on_the_forecast(self):
     v_knots = np.array([15., 13., 11., 9., 7., 5.])
@@ -108,7 +110,7 @@ class TestShape:
     np.testing.assert_allclose(xv[:, 0], 30. + 10. * T_IDXS, atol=1e-6)
 
 
-class TestMatch:
+class TestMatch(unittest.TestCase):
   def test_off_is_upstream(self):
     mpc, forecast, upstream = build(radar=False)
     sm = radar_sm()
@@ -131,27 +133,29 @@ class TestMatch:
     assert forecast.inhibits[1] == Inhibit.none
     np.testing.assert_allclose(forecast.lead_xv[1], expected(sm, lead=1))
 
-  @pytest.mark.parametrize("d_rel,offset,ok", [
+  def test_range_tolerance(self):
+    for d_rel, offset, ok in [
     (D_REL, RADAR_MATCH_DIST - 0.5, True),
     (D_REL, RADAR_MATCH_DIST + 0.5, False),
     # a far lead gets the tolerance relative to the radar's range
     (100., RADAR_MATCH_DIST_REL * 100. * 0.8, True),
     (100., RADAR_MATCH_DIST_REL * 100. * 1.2, False),
-  ])
-  def test_range_tolerance(self, d_rel, offset, ok):
-    mpc, forecast, upstream = build()
-    sm = with_lead(radar_sm(d_rel=d_rel), dRel=d_rel - offset)
-    lead_xv = run(forecast, mpc, sm)
-    assert forecast.inhibits[0] == (Inhibit.none if ok else Inhibit.mismatch)
-    if not ok:
-      np.testing.assert_array_equal(lead_xv, upstream(sm['radarState'].leadOne))
+  ]:
+      with self.subTest(d_rel=d_rel, offset=offset, ok=ok):
+        mpc, forecast, upstream = build()
+        sm = with_lead(radar_sm(d_rel=d_rel), dRel=d_rel - offset)
+        lead_xv = run(forecast, mpc, sm)
+        assert forecast.inhibits[0] == (Inhibit.none if ok else Inhibit.mismatch)
+        if not ok:
+          np.testing.assert_array_equal(lead_xv, upstream(sm['radarState'].leadOne))
 
-  @pytest.mark.parametrize("dv,ok", [(RADAR_MATCH_SPEED - 0.2, True), (RADAR_MATCH_SPEED + 0.2, False)])
-  def test_relative_speed_tolerance(self, dv, ok):
-    mpc, forecast, _ = build()
-    sm = with_lead(radar_sm(), vRel=SLOWING[0] - V_EGO + dv)
-    run(forecast, mpc, sm)
-    assert forecast.inhibits[0] == (Inhibit.none if ok else Inhibit.mismatch)
+  def test_relative_speed_tolerance(self):
+    for dv, ok in [(RADAR_MATCH_SPEED - 0.2, True), (RADAR_MATCH_SPEED + 0.2, False)]:
+      with self.subTest(dv=dv, ok=ok):
+        mpc, forecast, _ = build()
+        sm = with_lead(radar_sm(), vRel=SLOWING[0] - V_EGO + dv)
+        run(forecast, mpc, sm)
+        assert forecast.inhibits[0] == (Inhibit.none if ok else Inhibit.mismatch)
 
   def test_compares_relative_speeds(self):
     # the model reads its own ego 1 m/s fast and the lead 1 m/s fast: they agree
@@ -194,7 +198,7 @@ class TestMatch:
     np.testing.assert_allclose(lead_xv[:, 0], lead_xv[0, 0])
 
 
-class TestTrackSwitch:
+class TestTrackSwitch(unittest.TestCase):
   def test_new_matched_track_keeps_the_weight(self):
     mpc, forecast, _ = build()
     run(forecast, mpc, radar_sm(track=7))

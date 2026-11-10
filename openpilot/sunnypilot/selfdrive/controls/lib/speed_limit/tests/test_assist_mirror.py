@@ -7,8 +7,9 @@ See the LICENSE.md file in the root directory for more details.
 Plannerd-side mirror of the card cruise arbiter's session: the default-message guard and
 the required-decel publication.
 """
-import pytest
 
+import unittest
+from openpilot.common.test import approx
 from openpilot.cereal import custom
 from opendbc.car.structs import car as car_struct
 from openpilot.selfdrive.car.cruise import V_CRUISE_UNSET
@@ -23,7 +24,7 @@ def _update(mirror, session, v_ego: float, distance: float, a_ego: float) -> Non
   mirror.update(True, False, v_ego, a_ego, 0., 0., 0., False, distance, EventsSP())
 
 
-class TestAssistMirrorDefaultMessage:
+class TestAssistMirrorDefaultMessage(unittest.TestCase):
   """plannerd ignores carStateSP in its health checks, so the mirror can be fed capnp's
   default CruiseSession (vCap=0.0) before the first card message arrives or in process
   replay without a carStateSP pub. That 0 must not become the plan target."""
@@ -43,7 +44,7 @@ class TestAssistMirrorDefaultMessage:
     session.vCap = 22.5
     mirror = self._mirror()
     _update(mirror, session, v_ego=20.0, distance=0.0, a_ego=0.0)
-    assert mirror.output_v_target == pytest.approx(22.5)
+    assert mirror.output_v_target == approx(22.5)
 
   def test_active_cap_below_v_ego_publishes_required_decel(self):
     session = custom.CarStateSP.new_message().zoompilot.cruiseSession
@@ -54,7 +55,7 @@ class TestAssistMirrorDefaultMessage:
     # walks there at 2 m/s3, so run it to convergence
     for _ in range(20):
       _update(mirror, session, v_ego=25.0, distance=150.0, a_ego=0.0)
-    assert mirror.output_a_target == pytest.approx(-0.75)
+    assert mirror.output_a_target == approx(-0.75)
 
   def test_cap_decel_is_clipped_to_the_budget(self):
     session = custom.CarStateSP.new_message().zoompilot.cruiseSession
@@ -66,8 +67,8 @@ class TestAssistMirrorDefaultMessage:
     for _ in range(60):
       _update(stock, session, v_ego=25.0, distance=100.0, a_ego=0.0)
       _update(op_long, session, v_ego=25.0, distance=100.0, a_ego=0.0)
-    assert stock.output_a_target == pytest.approx(-stock.limits.a_budget)
-    assert op_long.output_a_target == pytest.approx(-op_long.limits.a_budget)
+    assert stock.output_a_target == approx(-stock.limits.a_budget)
+    assert op_long.output_a_target == approx(-op_long.limits.a_budget)
     assert op_long.limits.a_budget < 2.0
 
   def test_inactive_session_tracks_a_ego(self):
@@ -75,4 +76,4 @@ class TestAssistMirrorDefaultMessage:
     session.vCap = 20.0  # cap present but session not active
     mirror = self._mirror()
     _update(mirror, session, v_ego=25.0, distance=150.0, a_ego=-0.2)
-    assert mirror.output_a_target == pytest.approx(-0.2)
+    assert mirror.output_a_target == approx(-0.2)

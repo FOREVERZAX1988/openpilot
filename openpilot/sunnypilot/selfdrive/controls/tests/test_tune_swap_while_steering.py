@@ -13,8 +13,9 @@ See the LICENSE.md file in the root directory for more details.
 
 from types import SimpleNamespace
 
-import pytest
-
+from openpilot.common.params import Params
+from openpilot.common.prefix import OpenpilotPrefix
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.selfdrive.controls.lib.latcontrol_torque import LatControlTorque as LatControlTorqueV1
 from openpilot.sunnypilot.selfdrive.controls.controls_lateral_zp import TUNE_SWAP_INACTIVE_FRAMES, ControlsLateralZP
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v2 import LatControlTorque as LatControlTorqueV2
@@ -24,6 +25,12 @@ V_EGO = 10.0
 LAT_ACCEL = 0.8           # a steady curve, and the car following it
 HAND_BACK = 200           # the frame the small model's first modelV2 arrives, v1 settled
 DRIVE_ARGS = (VM, LP, False, LAT_ACCEL / V_EGO ** 2, None, False, LAT_DELAY)
+
+
+def params():
+  """Params under a throwaway prefix, for tests that build a real controller."""
+  with OpenpilotPrefix():
+    yield Params()
 
 
 def controls():
@@ -50,11 +57,13 @@ def drive(ctl, hand_back: bool, inactive_at: int | None = None, frames: int = 30
   return out
 
 
-class TestSwapWhileSteering:
+
+
+class TestSwapWhileSteering(OpenpilotTestCase):
   def test_a_hand_back_while_steering_leaves_the_torque_as_it_was(self, params):
     steady = drive(controls(), hand_back=False)
     handed_back = drive(controls(), hand_back=True)
-    assert handed_back == pytest.approx(steady, abs=1e-9)
+    assert handed_back == approx(steady, abs=1e-9)
 
   def test_a_short_drop_keeps_the_tune_and_the_torque(self, params):
     # a steer fault flicker, and a 0.3 s gap: neither swaps, so the resume is the same
@@ -63,7 +72,7 @@ class TestSwapWhileSteering:
     steady = drive(controls(), hand_back=False, inactive=gaps)
     ctl = controls()
     handed_back = drive(ctl, hand_back=True, inactive=gaps)
-    assert handed_back == pytest.approx(steady, abs=1e-9)
+    assert handed_back == approx(steady, abs=1e-9)
     assert ctl.LaC is ctl._lac_by_size[True]
 
   def test_half_a_second_off_swaps(self, params):

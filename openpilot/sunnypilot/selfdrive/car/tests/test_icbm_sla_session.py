@@ -8,7 +8,6 @@ Closed-loop tests for the ICBM + SLA + driver-setpoint stack: curve restores, th
 lifecycle, the driver's presses, long presses and prompt answers, the press timing sweeps and
 the prompt-freeze overshoot report. See sla_loop_harness for the co-simulation these run on.
 """
-import pytest
 
 from openpilot.sunnypilot.selfdrive.car.tests.sla_loop_harness import (
   ButtonType, EventNameSP, Loop, MPH_MS, PRESS_OFFSETS_S, PlanSource, SlaState)
@@ -66,19 +65,21 @@ class TestCurveRestore:
 
 
 class TestSlaSession:
-  @pytest.mark.parametrize("op_long", [False, True], ids=["stock_acc", "alpha_long"])
-  def test_confirm_sticks_and_dash_reaches_limit(self, op_long):
-    """F1 end-to-end: one - press confirms; SLA must stay active while ICBM walks the
-    dash all the way to the limit (hold + taps), and the baseline must survive. Under
-    Mazda alpha long the body keeps the setpoint, so the session walks it the same way."""
-    loop = Loop(baseline_mph=60, seed=3, op_long=op_long)
-    confirm_lower(loop, limit=45)
+  def test_confirm_sticks_and_dash_reaches_limit(self):
+    # ids: ["stock_acc", "alpha_long"]
+    for op_long in [False, True]:
+      with self.subTest(op_long=op_long):
+        """F1 end-to-end: one - press confirms; SLA must stay active while ICBM walks the
+        dash all the way to the limit (hold + taps), and the baseline must survive. Under
+        Mazda alpha long the body keeps the setpoint, so the session walks it the same way."""
+        loop = Loop(baseline_mph=60, seed=3, op_long=op_long)
+        confirm_lower(loop, limit=45)
 
-    states = set()
-    loop.run(10.0, assert_each=lambda lo: states.add(lo.sla.state))
-    assert loop.ecu.dash == 45, f"dash never reached the limit: {loop.ecu.dash}"
-    assert states == {SlaState.active}, f"SLA flickered: {states}"
-    assert loop.v_cruise_mph == 60, f"baseline corrupted: {loop.v_cruise_mph}"
+        states = set()
+        loop.run(10.0, assert_each=lambda lo, states=states: states.add(lo.sla.state))
+        assert loop.ecu.dash == 45, f"dash never reached the limit: {loop.ecu.dash}"
+        assert states == {SlaState.active}, f"SLA flickered: {states}"
+        assert loop.v_cruise_mph == 60, f"baseline corrupted: {loop.v_cruise_mph}"
 
   def test_settled_press_reanchors(self):
     """Settled at the limit, one + press: SLA steps aside, the ECU's +1 becomes the new
@@ -92,80 +93,87 @@ class TestSlaSession:
     assert loop.ecu.dash == 46, f"dash: {loop.ecu.dash}"
     assert round(loop.v_cruise_mph) == 46, f"setpoint must re-anchor to 46: {loop.v_cruise_mph}"
 
-  @pytest.mark.parametrize("is_metric", [False, True], ids=["mph", "kph"])
-  def test_mid_move_abort_restores_baseline(self, is_metric):
-    """+ while ICBM is still walking down: session aborts and the servo restores the
-    exact baseline; the driver is never stranded mid-way (the upstream failure mode)."""
-    loop = Loop(baseline_mph=60, seed=5, is_metric=is_metric)
-    confirm_lower(loop, limit=45)
+  def test_mid_move_abort_restores_baseline(self):
+    # ids: ["mph", "kph"]
+    for is_metric in [False, True]:
+      with self.subTest(is_metric=is_metric):
+        """+ while ICBM is still walking down: session aborts and the servo restores the
+        exact baseline; the driver is never stranded mid-way (the upstream failure mode)."""
+        loop = Loop(baseline_mph=60, seed=5, is_metric=is_metric)
+        confirm_lower(loop, limit=45)
 
-    loop.run(1.2)  # servo mid-move, dash somewhere between 60 and 45
-    assert 45 < loop.ecu.dash < 60, loop.ecu.dash
-    loop.driver_press(ButtonType.accelCruise, in_seconds=0.05)
-    loop.run(14.0)  # abort + quiet window + restore
-    assert loop.sla.state == SlaState.inactive
-    assert loop.ecu.dash == 60, f"metric={is_metric}: baseline not restored: {loop.ecu.dash}"
-    assert loop.v_cruise_mph == 60, f"metric={is_metric}: setpoint corrupted: {loop.v_cruise_mph}"
+        loop.run(1.2)  # servo mid-move, dash somewhere between 60 and 45
+        assert 45 < loop.ecu.dash < 60, loop.ecu.dash
+        loop.driver_press(ButtonType.accelCruise, in_seconds=0.05)
+        loop.run(14.0)  # abort + quiet window + restore
+        assert loop.sla.state == SlaState.inactive
+        assert loop.ecu.dash == 60, f"metric={is_metric}: baseline not restored: {loop.ecu.dash}"
+        assert loop.v_cruise_mph == 60, f"metric={is_metric}: setpoint corrupted: {loop.v_cruise_mph}"
 
-  @pytest.mark.parametrize("is_metric", [False, True], ids=["mph", "kph"])
-  def test_mid_move_minus_dismiss_never_restores_upward(self, is_metric):
-    """- while ICBM is still walking down: the driver asked for slower. The session ends
-    and the ECU's own -1 lands, and from there the dash must never climb: the
-    in-transit dash failed the reconciler's agreement checks, nothing re-anchored, and
-    3 s later the servo walked 51 -> 60 inside the 45 zone. The setpoint floors to the
-    dash once the press settles and the servo has nothing to restore."""
-    loop = Loop(baseline_mph=60, seed=5, is_metric=is_metric)
-    confirm_lower(loop, limit=45)
+  def test_mid_move_minus_dismiss_never_restores_upward(self):
+    # ids: ["mph", "kph"]
+    for is_metric in [False, True]:
+      with self.subTest(is_metric=is_metric):
+        """- while ICBM is still walking down: the driver asked for slower. The session ends
+        and the ECU's own -1 lands, and from there the dash must never climb: the
+        in-transit dash failed the reconciler's agreement checks, nothing re-anchored, and
+        3 s later the servo walked 51 -> 60 inside the 45 zone. The setpoint floors to the
+        dash once the press settles and the servo has nothing to restore."""
+        loop = Loop(baseline_mph=60, seed=5, is_metric=is_metric)
+        confirm_lower(loop, limit=45)
 
-    loop.run(1.2)  # servo mid-move
-    assert 45 < loop.ecu.dash < 60, loop.ecu.dash
-    loop.driver_press(ButtonType.decelCruise, in_seconds=0.05)
-    loop.run(0.35)  # press + ECU latency: the driver's -1 (if registered) has landed
-    dash_after_press = loop.ecu.dash
-    assert dash_after_press <= 52, dash_after_press
+        loop.run(1.2)  # servo mid-move
+        assert 45 < loop.ecu.dash < 60, loop.ecu.dash
+        loop.driver_press(ButtonType.decelCruise, in_seconds=0.05)
+        loop.run(0.35)  # press + ECU latency: the driver's -1 (if registered) has landed
+        dash_after_press = loop.ecu.dash
+        assert dash_after_press <= 52, dash_after_press
 
-    def never_up(lo, ceiling=dash_after_press, m=is_metric):
-      assert lo.ecu.dash <= ceiling, f"metric={m}: servo restored upward at {lo.tick_n / 100.:.2f}s: {lo.ecu.dash} > {ceiling}"
-    loop.run(14.0, assert_each=never_up)  # grace + quiet window + whatever restore would follow
-    assert loop.sla.state == SlaState.inactive
-    assert loop.v_cruise_mph == loop.ecu.dash, \
-      f"metric={is_metric}: setpoint {loop.v_cruise_mph} left off the dash {loop.ecu.dash}"
+        def never_up(lo, ceiling=dash_after_press, m=is_metric):
+          assert lo.ecu.dash <= ceiling, f"metric={m}: servo restored upward at {lo.tick_n / 100.:.2f}s: {lo.ecu.dash} > {ceiling}"
+        loop.run(14.0, assert_each=never_up)  # grace + quiet window + whatever restore would follow
+        assert loop.sla.state == SlaState.inactive
+        assert loop.v_cruise_mph == loop.ecu.dash, \
+          f"metric={is_metric}: setpoint {loop.v_cruise_mph} left off the dash {loop.ecu.dash}"
 
-  @pytest.mark.parametrize("forged_mode, seed", [('taps', 6), ('ignored', 7)])
-  def test_synthesized_holds_still_reach_limit(self, forged_mode, seed):
-    """An ECU that registers synthesized holds as paced presses makes the same net progress
-    as taps with no fault; one that rejects them outright (zero movement) must trip the
-    long-press fallback. Either way the session lands the limit."""
-    loop = Loop(baseline_mph=60, seed=seed, forged_mode=forged_mode)
-    confirm_lower(loop, limit=45)
+  def test_synthesized_holds_still_reach_limit(self):
+    for forged_mode, seed in [('taps', 6), ('ignored', 7)]:
+      with self.subTest(forged_mode=forged_mode, seed=seed):
+        """An ECU that registers synthesized holds as paced presses makes the same net progress
+        as taps with no fault; one that rejects them outright (zero movement) must trip the
+        long-press fallback. Either way the session lands the limit."""
+        loop = Loop(baseline_mph=60, seed=seed, forged_mode=forged_mode)
+        confirm_lower(loop, limit=45)
 
-    loop.run(15.0)
-    assert loop.servo.fast_faulted == (forged_mode == 'ignored')
-    assert loop.ecu.dash == 45, f"dash never landed: {loop.ecu.dash}"
-    assert loop.sla.state == SlaState.active
+        loop.run(15.0)
+        assert loop.servo.fast_faulted == (forged_mode == 'ignored')
+        assert loop.ecu.dash == 45, f"dash never landed: {loop.ecu.dash}"
+        assert loop.sla.state == SlaState.active
 
 
 class TestDriverInteractions:
-  @pytest.mark.parametrize("button, seed", [(ButtonType.accelCruise, 12), (ButtonType.decelCruise, 14)], ids=["climb", "descend"])
-  def test_settled_longpress_reanchors(self, button, seed):
-    """The most common real exit from a zone: settled at the limit, the driver HOLDS + to
-    climb (or - to ride below it, which dismisses the session). The ECU snaps along its
-    5 mph grid (possibly with a trailing step), the increments stay suppressed (SLA owned
-    the press), the setpoint re-anchors to wherever the ECU landed, and neither the servo
-    nor the SET- grace's restore fights it afterward."""
-    loop = Loop(baseline_mph=60, seed=seed)
-    settle_in_zone(loop, limit=45)
+  def test_settled_longpress_reanchors(self):
+    # ids: ["climb", "descend"]
+    for button, seed in [(ButtonType.accelCruise, 12), (ButtonType.decelCruise, 14)]:
+      with self.subTest(button=button, seed=seed):
+        """The most common real exit from a zone: settled at the limit, the driver HOLDS + to
+        climb (or - to ride below it, which dismisses the session). The ECU snaps along its
+        5 mph grid (possibly with a trailing step), the increments stay suppressed (SLA owned
+        the press), the setpoint re-anchors to wherever the ECU landed, and neither the servo
+        nor the SET- grace's restore fights it afterward."""
+        loop = Loop(baseline_mph=60, seed=seed)
+        settle_in_zone(loop, limit=45)
 
-    loop.driver_press(button, in_seconds=0.1, hold_s=1.3)
-    loop.run(6.0)
-    assert loop.sla.state == SlaState.inactive
-    landed = loop.ecu.dash >= 50 if button == ButtonType.accelCruise else loop.ecu.dash <= 40
-    assert loop.ecu.dash % 5 == 0 and landed, f"no grid step: {loop.ecu.dash}"
-    assert loop.v_cruise_mph == loop.ecu.dash, \
-      f"setpoint must re-anchor to the ECU result: dash {loop.ecu.dash}, setpoint {loop.v_cruise_mph}"
-    dash_settled = loop.ecu.dash
-    loop.run(4.0)
-    assert loop.ecu.dash == dash_settled, "servo fought the driver's hold result"
+        loop.driver_press(button, in_seconds=0.1, hold_s=1.3)
+        loop.run(6.0)
+        assert loop.sla.state == SlaState.inactive
+        landed = loop.ecu.dash >= 50 if button == ButtonType.accelCruise else loop.ecu.dash <= 40
+        assert loop.ecu.dash % 5 == 0 and landed, f"no grid step: {loop.ecu.dash}"
+        assert loop.v_cruise_mph == loop.ecu.dash, \
+          f"setpoint must re-anchor to the ECU result: dash {loop.ecu.dash}, setpoint {loop.v_cruise_mph}"
+        dash_settled = loop.ecu.dash
+        loop.run(4.0)
+        assert loop.ecu.dash == dash_settled, "servo fought the driver's hold result"
 
   def test_up_confirm_adopts_limit(self):
     """Drive 0000000b t=415/461: cruising below a rising limit, + on the prompt must take
@@ -334,51 +342,57 @@ class TestPressTimingSweeps:
   offsets spanning more than one full SLA cycle and assert the outcome INVARIANTS:
   the system must converge to one coherent state at every phase, never a hybrid."""
 
-  @pytest.mark.parametrize("offset", PRESS_OFFSETS_S, ids=lambda o: f"{o:.2f}s")
-  def test_settled_press_at_any_phase_reanchors(self, offset):
-    loop = Loop(baseline_mph=60, seed=10)
-    settle_in_zone(loop, limit=45)
-    loop.run(offset)
-    loop.driver_press(ButtonType.accelCruise, in_seconds=0.01)
-    loop.run(6.0)
-    assert loop.sla.state == SlaState.inactive, f"offset {offset}"
-    assert loop.ecu.dash == 46, f"offset {offset}: dash {loop.ecu.dash}"
-    assert loop.v_cruise_mph == 46, f"offset {offset}: setpoint {loop.v_cruise_mph}"
+  def test_settled_press_at_any_phase_reanchors(self):
+    # ids: lambda o: f"{o:.2f}s"
+    for offset in PRESS_OFFSETS_S:
+      with self.subTest(offset=offset):
+        loop = Loop(baseline_mph=60, seed=10)
+        settle_in_zone(loop, limit=45)
+        loop.run(offset)
+        loop.driver_press(ButtonType.accelCruise, in_seconds=0.01)
+        loop.run(6.0)
+        assert loop.sla.state == SlaState.inactive, f"offset {offset}"
+        assert loop.ecu.dash == 46, f"offset {offset}: dash {loop.ecu.dash}"
+        assert loop.v_cruise_mph == 46, f"offset {offset}: setpoint {loop.v_cruise_mph}"
 
-  @pytest.mark.parametrize("offset", PRESS_OFFSETS_S, ids=lambda o: f"{o:.2f}s")
-  def test_mid_move_press_at_any_phase_converges(self, offset):
-    """Abort mid-walk at every phase. Deep in the walk the baseline must survive and
-    restore exactly; within the 2 mph agreement band of the limit the press counts as
-    settled and re-anchors; either way the system converges (setpoint == dash) and the
-    baseline is never left corrupted at some in-between value."""
-    loop = Loop(baseline_mph=60, seed=11)
-    confirm_lower(loop, limit=45)
+  def test_mid_move_press_at_any_phase_converges(self):
+    # ids: lambda o: f"{o:.2f}s"
+    for offset in PRESS_OFFSETS_S:
+      with self.subTest(offset=offset):
+        """Abort mid-walk at every phase. Deep in the walk the baseline must survive and
+        restore exactly; within the 2 mph agreement band of the limit the press counts as
+        settled and re-anchors; either way the system converges (setpoint == dash) and the
+        baseline is never left corrupted at some in-between value."""
+        loop = Loop(baseline_mph=60, seed=11)
+        confirm_lower(loop, limit=45)
 
-    loop.run(0.9 + offset)  # somewhere in the walk
-    dash_at_press = loop.ecu.dash
-    loop.driver_press(ButtonType.accelCruise, in_seconds=0.01)
-    loop.run(14.0)
+        loop.run(0.9 + offset)  # somewhere in the walk
+        dash_at_press = loop.ecu.dash
+        loop.driver_press(ButtonType.accelCruise, in_seconds=0.01)
+        loop.run(14.0)
 
-    assert loop.sla.state == SlaState.inactive, f"offset {offset}"
-    assert loop.v_cruise_mph == loop.ecu.dash, \
-      f"offset {offset}: diverged (dash {loop.ecu.dash}, setpoint {loop.v_cruise_mph})"
-    if abs(dash_at_press - 45) > 3:
-      assert loop.ecu.dash == 60, f"offset {offset}: baseline not restored from {dash_at_press}: {loop.ecu.dash}"
+        assert loop.sla.state == SlaState.inactive, f"offset {offset}"
+        assert loop.v_cruise_mph == loop.ecu.dash, \
+          f"offset {offset}: diverged (dash {loop.ecu.dash}, setpoint {loop.v_cruise_mph})"
+        if abs(dash_at_press - 45) > 3:
+          assert loop.ecu.dash == 60, f"offset {offset}: baseline not restored from {dash_at_press}: {loop.ecu.dash}"
 
-  @pytest.mark.parametrize("offset", PRESS_OFFSETS_S, ids=lambda o: f"{o:.2f}s")
-  def test_up_confirm_press_at_any_phase_converges(self, offset):
-    """The up-confirm press swept across the 20 Hz SLA cycle: at every phase the outcome
-    must be the full adoption (setpoint == dash == limit, session active), never the
-    logged hybrid of a +1 increment with an inert active session."""
-    loop = Loop(baseline_mph=40, seed=26)
-    loop.limit_mph = 45
-    loop.run(2.0 + offset)
-    assert loop.sla.state == SlaState.preActive
-    loop.driver_press(ButtonType.accelCruise, in_seconds=0.01)
-    loop.run(12.0)
-    assert loop.sla.state == SlaState.active, f"offset {offset}: {loop.sla.state}"
-    assert loop.v_cruise_mph == 45, f"offset {offset}: setpoint {loop.v_cruise_mph}"
-    assert loop.ecu.dash == 45, f"offset {offset}: dash {loop.ecu.dash}"
+  def test_up_confirm_press_at_any_phase_converges(self):
+    # ids: lambda o: f"{o:.2f}s"
+    for offset in PRESS_OFFSETS_S:
+      with self.subTest(offset=offset):
+        """The up-confirm press swept across the 20 Hz SLA cycle: at every phase the outcome
+        must be the full adoption (setpoint == dash == limit, session active), never the
+        logged hybrid of a +1 increment with an inert active session."""
+        loop = Loop(baseline_mph=40, seed=26)
+        loop.limit_mph = 45
+        loop.run(2.0 + offset)
+        assert loop.sla.state == SlaState.preActive
+        loop.driver_press(ButtonType.accelCruise, in_seconds=0.01)
+        loop.run(12.0)
+        assert loop.sla.state == SlaState.active, f"offset {offset}: {loop.sla.state}"
+        assert loop.v_cruise_mph == 45, f"offset {offset}: setpoint {loop.v_cruise_mph}"
+        assert loop.ecu.dash == 45, f"offset {offset}: dash {loop.ecu.dash}"
 
 
 class TestAlphaLong:
@@ -386,30 +400,31 @@ class TestAlphaLong:
   session walks the dash exactly as under stock cruise (TestSlaSession); a curve does not
   touch the dash because the planner slows the car itself."""
 
-  @pytest.mark.parametrize("lookahead", [None, 30])
-  def test_curve_leaves_the_dash_alone(self, lookahead):
-    loop = Loop(baseline_mph=60, seed=1, op_long=True)
-    loop.scc_dip_mph = 45
-    loop.lookahead_mph = lookahead
-    loop.run(8.0)
-    assert loop.ecu.dash == 60, f"the dash followed a curve under openpilot longitudinal: {loop.ecu.dash}"
-    assert loop.v_cruise_mph == 60
+  def test_curve_leaves_the_dash_alone(self):
+    for lookahead in [None, 30]:
+      with self.subTest(lookahead=lookahead):
+        loop = Loop(baseline_mph=60, seed=1, op_long=True)
+        loop.scc_dip_mph = 45
+        loop.lookahead_mph = lookahead
+        loop.run(8.0)
+        assert loop.ecu.dash == 60, f"the dash followed a curve under openpilot longitudinal: {loop.ecu.dash}"
+        assert loop.v_cruise_mph == 60
 
-  @pytest.mark.parametrize("lookahead", [None, 30])
-  def test_curve_inside_a_zone_holds_the_limit(self, lookahead):
-    # the production case: SCC Vision's lookahead sees the curve, the zone cap must hold
-    loop = Loop(baseline_mph=60, seed=3, op_long=True)
-    settle_in_zone(loop, limit=45)
-    loop.scc_dip_mph = 30
-    loop.lookahead_mph = lookahead
-    dashes = set()
-    loop.run(8.0, assert_each=lambda lo: dashes.add(lo.ecu.dash))
-    assert dashes == {45}, f"the dash left the zone cap during a curve: {sorted(dashes)}"
-    loop.scc_dip_mph = 0.
-    loop.lookahead_mph = None
-    loop.run(4.0)
-    assert loop.ecu.dash == 45
-    assert loop.v_cruise_mph == 60
+  def test_curve_inside_a_zone_holds_the_limit(self):
+    for lookahead in [None, 30]:
+      with self.subTest(lookahead=lookahead):
+        loop = Loop(baseline_mph=60, seed=3, op_long=True)
+        settle_in_zone(loop, limit=45)
+        loop.scc_dip_mph = 30
+        loop.lookahead_mph = lookahead
+        dashes = set()
+        loop.run(8.0, assert_each=lambda lo, dashes=dashes: dashes.add(lo.ecu.dash))
+        assert dashes == {45}, f"the dash left the zone cap during a curve: {sorted(dashes)}"
+        loop.scc_dip_mph = 0.
+        loop.lookahead_mph = None
+        loop.run(4.0)
+        assert loop.ecu.dash == 45
+        assert loop.v_cruise_mph == 60
 
 
 class TestPromptFreezeOvershoot:

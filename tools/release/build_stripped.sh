@@ -103,7 +103,9 @@ fi
 
 source "$SOURCE_DIR/tools/release/check_file_sizes.sh"
 
-if [ ! -z "$BRANCH" ]; then
+# SKIP_ORIGIN_PUSH=1: 只产出精简树、不推源仓库 origin（release.yaml 仅发布 CNB 时使用）；
+# BRANCH 仍会导出，供下游复用分支名。不设置时保持原有行为（BRANCH 非空即推 origin）。
+if [ ! -z "$BRANCH" ] && [ "${SKIP_ORIGIN_PUSH:-0}" != "1" ]; then
   echo "[-] Pushing to $BRANCH T=$SECONDS"
   # uploading the larger pack is faster than spending CPU to optimize it
   # The big model is already published to LFS by the source branch.
