@@ -11,7 +11,7 @@ cp 同名测试在 controls/tests/test_tesla_turn_journey.py（pytest）。本�
 
 未适配项（如实记录）：cp test_modeld_passes_validated_pose_and_hold_permission...
 针对 cp modeld.py 的 AST 摘取执行，验证 modeld→DH.update 的接线；sp 的等价接线在
-selfdrived/indicator_layer.py（livePose 订阅 + yaw_rate 计算），由
+selfdrived/indicator_layer.py（deviceMotion 订阅 + yaw_rate 计算），由
 selfdrived/tests/test_indicator_layer_manual_turn.py 的接线测试覆盖。
 
 在 Windows/非设备环境无需 POSIX 桩：不导入 openpilot.cereal（capnp 绑定）。
@@ -27,7 +27,7 @@ N = 10_000_000_000
 
 def messages():
   pose = NS(inputsOK=True, sensorsOK=True, posenetOK=True, orientationNED=NS(valid=True, z=.5))
-  sm = {'livePose': pose, 'selfdriveState': NS(active=True), 'carControl': NS()}
+  sm = {'deviceMotion': pose, 'selfdriveState': NS(active=True), 'carControl': NS()}
   sm['seen'] = dict.fromkeys(sm, True)
   sm['valid'] = dict.fromkeys(sm, True)
   sm['alive'] = dict.fromkeys(sm, True)
@@ -58,23 +58,23 @@ class TestTurnSignalContext(unittest.TestCase):
         sm = messages()
         state = context_state()
         if invalid == 'unseen':
-          sm.seen['livePose'] = False
+          sm.seen['deviceMotion'] = False
         elif invalid == 'stale_arrival':
-          sm.recv_time['livePose'] -= .4
+          sm.recv_time['deviceMotion'] -= .4
         elif invalid == 'stale_source':
-          sm.logMonoTime['livePose'] -= 400_000_000
+          sm.logMonoTime['deviceMotion'] -= 400_000_000
         elif invalid == 'future_source':
-          sm.logMonoTime['livePose'] += 1
+          sm.logMonoTime['deviceMotion'] += 1
         elif invalid == 'invalid_message':
-          sm.valid['livePose'] = False
+          sm.valid['deviceMotion'] = False
         elif invalid == 'dead':
-          sm.alive['livePose'] = False
+          sm.alive['deviceMotion'] = False
         elif invalid in ('inputs', 'sensors', 'posenet'):
-          setattr(sm['livePose'], invalid + 'OK', False)
+          setattr(sm['deviceMotion'], invalid + 'OK', False)
         elif invalid == 'orientation':
-          sm['livePose'].orientationNED.valid = False
+          sm['deviceMotion'].orientationNED.valid = False
         elif invalid == 'nan':
-          sm['livePose'].orientationNED.z = float('nan')
+          sm['deviceMotion'].orientationNED.z = float('nan')
         elif invalid == 'disabled':
           state.latEnabled = False
         elif invalid == 'fault':

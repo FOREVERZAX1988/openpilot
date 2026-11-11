@@ -135,7 +135,7 @@ class SelfdriveD:
     # scheduling blip otherwise makes all_checks() fail on a live 10 Hz feed and
     # raises the spurious "进程间通信问题: carrotManSP" comm issue mid-drive.
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan', 'liveTracks'] \
-             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP', 'livePose']
+             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP']
     disable_dm = is_dm_disabled(self.params)
     if SIMULATION or disable_dm:
       ignore += ['cabinCameraState', 'managerState']
@@ -152,8 +152,7 @@ class SelfdriveD:
                                    'lateralManeuverPlan', 'modelDataV2SP', 'longitudinalPlanSP', 'carStateSP',
                                    # 灯效观测层（selfdrived/indicator_layer.py）的输入：模型帧 + 导航帽。
                                    'carState', 'carrotManSP',
-                                   # ManualTurnIndicator 的实测横摆角速度源（cp modeld 同源 livePose.angularVelocityDevice.z）。
-                                   'livePose',
+                                   # ManualTurnIndicator 的实测横摆角速度源（cp modeld 同源 angularVelocityDevice.z）。
                                    'liveTracks'] + \
                                    self.camera_packets + self.sensor_packets + self.gps_packets,
                                   ignore_alive=ignore, ignore_avg_freq=ignore,

@@ -6,10 +6,10 @@ def turn_signal_context(sm, state, now, boot_ns, always_lateral):
     return (sm.seen[service] and sm.valid[service] and sm.alive[service] and
             0 <= now - sm.recv_time[service] <= .35)
 
-  pose = sm['livePose']
-  stamp = sm.logMonoTime['livePose']
+  pose = sm['deviceMotion']
+  stamp = sm.logMonoTime['deviceMotion']
   heading = None
-  if (fresh('livePose') and 0 < stamp <= boot_ns and boot_ns - stamp <= 350_000_000 and
+  if (fresh('deviceMotion') and 0 < stamp <= boot_ns and boot_ns - stamp <= 350_000_000 and
       pose.inputsOK and pose.sensorsOK and pose.posenetOK and pose.orientationNED.valid and math.isfinite(pose.orientationNED.z)):
     heading = (stamp, pose.orientationNED.z)
   allowed = (heading is not None and fresh('selfdriveState') and fresh('carControl') and
