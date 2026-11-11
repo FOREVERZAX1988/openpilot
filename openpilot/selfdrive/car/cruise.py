@@ -563,6 +563,7 @@ class VCruiseCarrot(VCruiseHelper):
           if CS.cruiseState.speed > 0:
             self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
             self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+            self._cruise_speed_set = True  # the car owns this set speed: it is real
         else:
           self.v_cruise_kph = np.clip(v_cruise_kph, 30, self._cruise_speed_max)
           self.v_cruise_cluster_kph = self.v_cruise_kph
@@ -574,11 +575,12 @@ class VCruiseCarrot(VCruiseHelper):
 
     # carrot's unset set speed: the setpoint boots at 20 km/h (cp parity) so the
     # control paths have a sane floor, but the UI must not display a phantom
-    # "20" before anything real (button, engage edge, app command, SLA adoption)
-    # established a set speed. Only the published cluster mirror goes to
-    # V_CRUISE_UNSET - v_cruise_kph itself keeps 20, and PCM-cruise cars always
-    # mirror the car's own cluster untouched.
-    if not self.CP.pcmCruise and not self._cruise_speed_set:
+    # "20" before anything real (button, engage edge, app command, SLA adoption,
+    # the car's own PCM reporting a set speed) established one. Only the
+    # published cluster mirror goes to V_CRUISE_UNSET - v_cruise_kph itself
+    # keeps 20. Applies to PCM cars too: while their stock cruise is off, the
+    # unavailable branch would otherwise publish the same boot 20.
+    if not self._cruise_speed_set:
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
 
     self.cruise_state_available_last = CS.cruiseState.available

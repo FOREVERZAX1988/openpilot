@@ -416,6 +416,28 @@ def t_engage_edge_establishes_display():
 step('engage edge publishes the real setpoint', t_engage_edge_establishes_display)
 
 
+def t_pcm_cars():
+  """PCM car: stock cruise off -> cluster UNSET (no phantom 20); stock cruise
+  on with a car-reported set speed -> the car's value wins."""
+  fresh = VCruiseCarrot(build_cp(pcm_cruise=True), build_cp_sp())
+  fresh.params._store['SpeedFromPCM'] = 1
+  for _ in range(5):
+    cs = make_cs(v_ego=15.0, available=False)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == V_CRUISE_UNSET, (
+    f'PCM car with cruise off must publish UNSET, got {fresh.v_cruise_cluster_kph}')
+  # stock cruise reports a set speed: the car's own cluster value is real
+  cs = make_cs(v_ego=15.0, available=True)
+  cs.cruiseState = _CruiseState(True, False, False, 15.0)
+  cs.cruiseState.speedCluster = 15.0
+  fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert 0 < fresh.v_cruise_cluster_kph < V_CRUISE_UNSET, (
+    f'PCM car-reported set speed must be published, got {fresh.v_cruise_cluster_kph}')
+
+
+step('PCM car: cruise off shows "-", car-reported speed is real', t_pcm_cars)
+
+
 def t_button_press_cycle():
   buttons = ['accelCruise', 'decelCruise', 'setCruise', 'resumeCruise', 'cancel',
              'gapAdjustCruise', 'lfaButton']
