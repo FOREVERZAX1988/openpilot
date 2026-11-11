@@ -142,7 +142,7 @@ class TestDm2Tests(OpenpilotTestCase):
     assert dm.alert_3_cnt == 1 and dm.no_response_cnt == 1
 
 
-  @parameterized.expand([((False, 2), 'eye'), ((True, 4), 'eye'), ((False, 2), 'sleep'), ((True, 4), 'sleep'), ((False, 2), 'phone'), ((True, 4), 'phone')], names=('clear', 'factor', 'cause'))  # noqa: E501
+  @parameterized.expand([(False, 2, 'eye'), (True, 4, 'eye'), (False, 2, 'sleep'), (True, 4, 'sleep'), (False, 2, 'phone'), (True, 4, 'phone')], names=('clear', 'factor', 'cause'))  # noqa: E501
   def test_camera_experimental_doubles_timing_but_not_detection_thresholds(self, clear, factor, cause):
     dm = DriverMonitoring2(experimental=True)
     msg = make_msg(True, distracted=(cause == 'eye'))
@@ -342,4 +342,10 @@ class TestDm2Tests(OpenpilotTestCase):
         policy._update_states(sample, [0, 0, 0], 20, True, False)
         policy._update_events(i % 53 == 0, True, False, False)
       for field in ('awareness', 'alert_level', 'active_policy', 'alert_3_cnt', 'no_response_cnt', 'too_distracted'):
-        assert getattr(dm, field) == getattr(standard, field)
+        dm_value = getattr(dm, field)
+        if field == 'too_distracted':
+          # dm2-only over-distraction latch; stock has no such field, it must
+          # simply never fire on the stock camera flow
+          assert dm_value is False
+        else:
+          assert dm_value == getattr(standard, field)

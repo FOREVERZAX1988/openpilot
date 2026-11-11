@@ -156,6 +156,9 @@ class TestSelfTuneGate(OpenpilotTestCase):
   def test_follows_self_tune(self, fake_params_off):
     for brand, self_tunes_bare in [('toyota', True), ('mazda', False)]:
       with self.subTest(brand=brand, self_tunes_bare=self_tunes_bare):
+        # reset the toggles: an earlier subTest round leaves them on and the
+        # bare-CP assertion must see factory defaults for each brand
+        fake_params_off.values.update(EnforceTorqueControl=False, LiveTorqueParamsToggle=False)
         assert TorqueEstimator(self._cp(brand)).speed_binned == self_tunes_bare
         fake_params_off.put_bool("EnforceTorqueControl", True)
         assert not TorqueEstimator(self._cp(brand)).speed_binned

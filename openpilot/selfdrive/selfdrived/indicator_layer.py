@@ -222,16 +222,17 @@ class IndicatorLayer:
     if not sm.seen.get('carrotManSP'):
       return
     cm = sm['carrotManSP']
-    # cp modeld.py:589-593：livePose.device 系横摆角速度（ ManualTurnIndicator 专用）。
-    # 与 cp 同源同门控；livePose 为可选观测输入（selfdrived 订阅表已 ignore），未上线传 None。
+    # cp modeld.py:589-593：deviceMotion（cp 源名 livePose，本 fork 随 upstream #38601 改名）
+    # 系横摆角速度（ ManualTurnIndicator 专用）。与 cp 同源同门控；deviceMotion 为可选观测输入
+    # （selfdrived 订阅表已 ignore），未上线传 None。
     yaw_rate = None
-    if sm.seen.get('livePose'):
+    if sm.seen.get('deviceMotion'):
       try:
-        pose = sm['livePose']
-        yaw_rate = (pose.angularVelocityDevice.z if sm.valid['livePose'] and sm.alive['livePose'] and
-                    0 <= now - sm.recv_time['livePose'] < .2 and pose.inputsOK and pose.sensorsOK and
+        pose = sm['deviceMotion']
+        yaw_rate = (pose.angularVelocityDevice.z if sm.valid['deviceMotion'] and sm.alive['deviceMotion'] and
+                    0 <= now - sm.recv_time['deviceMotion'] < .2 and pose.inputsOK and pose.sensorsOK and
                     0 <= time.clock_gettime_ns(getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)) -
-                    sm.logMonoTime['livePose'] < 200_000_000 and
+                    sm.logMonoTime['deviceMotion'] < 200_000_000 and
                     pose.posenetOK and pose.angularVelocityDevice.valid else None)
       except (AttributeError, KeyError, TypeError, ValueError):
         yaw_rate = None

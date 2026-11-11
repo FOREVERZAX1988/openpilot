@@ -236,7 +236,7 @@ def preview(monkeypatch, compact):
     assert not p.inset._expression.left_known and p.labels[-1] == 'DM EYES?'
 
 
-  @parameterized.expand([('driverMonitoringState', ('valid', False)), ('driverStateV2', ('valid', False)), ('driverMonitoringState', ('alive', False)), ('driverStateV2', ('alive', False)), ('driverMonitoringState', ('recv_frame', 1)), ('driverStateV2', ('recv_frame', 1)), ('driverMonitoringState', ('logMonoTime', 0)), ('driverStateV2', ('logMonoTime', 0)), ('driverMonitoringState', ('logMonoTime', 9500000000)), ('driverStateV2', ('logMonoTime', 9500000000)), ('driverMonitoringState', ('logMonoTime', 11000000000)), ('driverStateV2', ('logMonoTime', 11000000000))], names=('service', 'field', 'value'))  # noqa: E501
+  @parameterized.expand([('driverMonitoringState', 'valid', False), ('driverStateV2', 'valid', False), ('driverMonitoringState', 'alive', False), ('driverStateV2', 'alive', False), ('driverMonitoringState', 'recv_frame', 1), ('driverStateV2', 'recv_frame', 1), ('driverMonitoringState', 'logMonoTime', 0), ('driverStateV2', 'logMonoTime', 0), ('driverMonitoringState', 'logMonoTime', 9500000000), ('driverStateV2', 'logMonoTime', 9500000000), ('driverMonitoringState', 'logMonoTime', 11000000000), ('driverStateV2', 'logMonoTime', 11000000000)], names=('service', 'field', 'value'))  # noqa: E501
   def test_bad_data_never_retains_live_eyes(self, service, field, value):
     p = self.preview
     p.inset.draw_onroad(p.rect, False)

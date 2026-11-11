@@ -523,10 +523,10 @@ class Car:
         signal_now = now_nanos if REPLAY else time.clock_gettime_ns(getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC))
         turn_hold_allowed = False
         if lateral_ready and not impact_reboot and not CC.latActive:
-          # This fork has no livePose service; turn_signal_context reads it, so
-          # skip the turn-hold context entirely (graceful degradation) instead
-          # of crashing card at the first call.
-          if 'livePose' in self.sm.services:
+          # turn_signal_context reads deviceMotion (cp: livePose); without that
+          # service in our SubMaster skip the turn-hold context entirely
+          # (graceful degradation) instead of crashing card at the first call.
+          if 'deviceMotion' in self.sm.services:
             turn_hold_allowed, _ = turn_signal_context(self.sm, CS, time.monotonic(), signal_now, self.params.get_bool("AlwaysLateral"))
         meta = _TeslaTurnMeta(self.sm['modelV2'].meta, self.sm['selfdriveState'])
         lamp_intent = self.tesla_signals.lane_assistance.update(
@@ -593,8 +593,7 @@ class Car:
         self.card_diag_frames += 1
         if self.card_diag_frames >= 100:
           if should_log_card_diagnostics(self.card_diag_loop_max_us, 0, self.card_diag_can_timeouts):
-            print(f"card_diag: can_timeouts={self.card_diag_can_timeouts}, "
-                  f"loop_max_us={self.card_diag_loop_max_us}")
+            print(f"card_diag: can_timeouts={self.card_diag_can_timeouts}, loop_max_us={self.card_diag_loop_max_us}")
           self.card_diag_frames = 0
           self.card_diag_loop_max_us = 0
           self.card_diag_can_timeouts = 0

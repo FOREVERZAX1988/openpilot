@@ -24,7 +24,9 @@ def traffic_observations(radar):
   leads = [radar.leadOne, radar.leadTwo, radar.leadLeft, radar.leadRight]
   for name in ("leadsCenter", "leadsLeft", "leadsRight", "leadsLeft2", "leadsRight2", "leadsCutIn"):
     leads.extend(getattr(radar, name))
-  return [ObjectObservation(p.dRel, p.dPath, p.vLead, p.vRel) for p in leads if p.status]
+  # this fork's cereal dropped LeadData.status for present and deprecated dPath;
+  # yRel carries the same lateral offset radard still maintains
+  return [ObjectObservation(p.dRel, p.yRel, p.vLead, p.vRel) for p in leads if p.present]
 
 
 def side_coverage(params, cp):
@@ -128,9 +130,10 @@ def disabled_state_packet(rhd, experimental, monitor=None, valid=True, camera_un
   packet = monitor.get_state_packet(valid=valid) if monitor is not None else messaging.new_message('driverMonitoringState', valid=valid)
   state = packet.driverMonitoringState
   state.lockout = False
-  state.alertCountLockoutPercent = 0
-  state.alertTimeLockoutPercent = 0
-  state.lockoutRecoveryPercent = 0
+  # this fork moved the lockout percents into the deprecated group and
+  # dropped lockoutRecoveryPercent entirely
+  state.deprecated.alertCountLockoutPercent = 0
+  state.deprecated.alertTimeLockoutPercent = 0
   state.alert3Count = 0
   state.noResponseCount = 0
   state.noResponseForceDecel = False
