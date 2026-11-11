@@ -28,7 +28,10 @@ AHEAD_THRESHOLD = 5
 SET_SPEED_NA = 255
 KM_TO_MILE = 0.621371
 # PreviousSpeedLimit fallback: re-read the persisted value at most this often
-# (frames at the UI rate, ~0.5 s) while the resolver has no last limit.
+# (frames at the UI rate, ~0.5 s) while the resolver has no last limit. The
+# fallback reads PreviousSpeedLimitDrive - the per-drive mirror that the params
+# framework clears on the offroad transition - so a stale limit never lingers
+# on the screen after parking.
 PREVIOUS_LIMIT_READ_INTERVAL = 25
 
 AssistState = custom.LongitudinalPlanSP.SpeedLimit.AssistState
@@ -117,6 +120,10 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
     # PreviousSpeedLimit fallback (m/s): when the resolver has no
     # speedLimitLast yet - e.g. right after a reboot - the sign comes back from
     # this persisted param instead of blinking out. Read throttled, cached.
+    # Reads the per-drive mirror (PreviousSpeedLimitDrive), NOT the forever-
+    # persistent PreviousSpeedLimit: the mirror is cleared on the offroad
+    # transition, so parking erases the sign instead of freezing the last
+    # limit on screen overnight.
     self._previous_speed_limit_ms = 0.0
     self._previous_limit_read_frame = 0
 
@@ -205,13 +212,13 @@ class SpeedLimitRenderer(Widget, SpeedLimitAlertRenderer):
     self.speed = max(0.0, v_ego * self.speed_conv)
 
   def _read_previous_speed_limit(self):
-    """Throttled read of PreviousSpeedLimit (m/s) while there is no live last limit."""
+    """Throttled read of PreviousSpeedLimitDrive (m/s) while there is no live last limit."""
     if self._previous_limit_read_frame > 0:
       self._previous_limit_read_frame -= 1
       return
     self._previous_limit_read_frame = PREVIOUS_LIMIT_READ_INTERVAL
     try:
-      value = float(ui_state.params.get_float("PreviousSpeedLimit"))
+      value = float(ui_state.params.get_float("PreviousSpeedLimitDrive"))
       if math.isfinite(value) and value > 0.0:
         self._previous_speed_limit_ms = value
     except Exception:

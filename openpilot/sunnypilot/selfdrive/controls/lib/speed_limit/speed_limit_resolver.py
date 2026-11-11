@@ -320,6 +320,11 @@ class SpeedLimitResolver:
     # 10 Hz loop from hammering the params store.
     self._last_written_previous_limit = 0.
     self._previous_limit_write_warned = False  # one-shot: avoid a log flood every frame
+    # True when the winning solution this frame IS the Mapbox filler value: such
+    # an online lookup must fill the display but never persist into
+    # PreviousSpeedLimit(PreviousSpeedLimitDrive), or a query around a stale GPS
+    # fix becomes the "last real limit" forever.
+    self._filler_solution = False
 
     self.v_ego = 0.
     self.distance = 0.
@@ -335,7 +340,10 @@ class SpeedLimitResolver:
     if self.speed_limit > 0.:
       self.speed_limit_last = self.speed_limit
       self.speed_limit_final_last = self.speed_limit_final
-      self._persist_previous_speed_limit()
+      # A Mapbox filler value fills the display for this drive but is not a
+      # road-signed limit: never persist it (fix for the stale-limit complaint).
+      if not self._filler_solution:
+        self._persist_previous_speed_limit()
 
   def _persist_previous_speed_limit(self) -> None:
     """Persist the last valid limit into PreviousSpeedLimit (m/s).
@@ -347,8 +355,14 @@ class SpeedLimitResolver:
     if abs(self.speed_limit_last - self._last_written_previous_limit) < 0.01:
       return
     try:
-      self.params.put_float("PreviousSpeedLimit", float(self.speed_limit_last))
-      self._last_written_previous_limit = self.speed_limit_last
+      value = float(self.speed_limit_last)
+      self.params.put_float("PreviousSpeedLimit", value)
+      # Per-drive mirror: same value, but cleared by the params framework on the
+      # offroad transition. The UI fallback reads ONLY this mirror, so the sign
+      # is gone after parking (no stale limit while parked), yet a reboot while
+      # driving still restores it - which is what the persistence here is for.
+      self.params.put_float("PreviousSpeedLimitDrive", value)
+      self._last_written_previous_limit = value
     except Exception as e:
       # A libparams build without the key registered must not kill plannerd;
       # the feature degrades to "no sign after reboot".
@@ -733,6 +747,7 @@ class SpeedLimitResolver:
     self._get_from_map_data(sm)
 
     source = self._get_source_solution_according_to_policy()
+    self._filler_solution = False
 
     # Mapbox filler: only when every configured source came up empty and the
     # feature is on. A live source keeps the filler reset, matching
@@ -743,6 +758,9 @@ class SpeedLimitResolver:
       self._mapbox_fill(sm)
       if self.limit_solutions[SpeedLimitSource.map] > 0.:
         source = SpeedLimitSource.map
+        # The winning value IS the online filler result: mark it so
+        # update_speed_limit_states skips the PreviousSpeedLimit persistence.
+        self._filler_solution = True
 
     speed_limit = self.limit_solutions[source] if source else 0.
     distance = self.distance_solutions[source] if source else 0.
