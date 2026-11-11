@@ -499,6 +499,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomKp", {PERSISTENT | BACKUP, FLOAT, "1.0"}},
     {"VehicleTunesEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"FlmRuntimeOverridesEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM runtime injection: apply the friction curve / vehicle knobs from FLMActiveOverrides to the torque controller
+    {"FlmShadowEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM Seam A shadow: run evaluate_linear_factor beside native TLS and publish verdicts on CustomReserved19; never gates learning
     {"LongitudinalFollowingProfileEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot speed-dependent following profiles: interpolate the follow time over speed instead of using one number per personality
     {"LongitudinalFollowingProfile", {PERSISTENT | BACKUP, STRING}},  // JSON document: {aggressive|standard|relaxed: {preset, curve}} for LongitudinalFollowingProfileEnabled
     {"WeatherOffsetsEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},  // StarPilot weather adaptation: lengthen the follow time, widen the stopped gap and lower the accel/lateral-accel ceilings in bad weather
@@ -762,6 +763,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
     // Published by networkd; the Carrot web dialog reads it for the QR link.
     {"NetworkAddress", {CLEAR_ON_MANAGER_START, STRING}},
+    // CarrotAssist tools screen-record toggle; written by the voice-assistant
+    // tools bridge after an explicit grant. Mirrors CarrotPilot's contract.
+    {"ScreenRecord", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     // Destination pushed by the phone (sunnylink athena RPC setNavDestination,
     // and carrot_man's external-navi path). Both wrote it through
     // Params.put() while it was unregistered, so check_key() raised
@@ -1176,11 +1180,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"UseKonikServer", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"DpEpsAssistComp", {PERSISTENT | BACKUP, BOOL, "1"}},  // EPS 助力曲线补偿（IQ.Pilot 原理移植，默认开）
     {"DpEpsAssistCompScale", {PERSISTENT | BACKUP, FLOAT, "1.1"}},  // EPS 补偿幅度缩放（1.0=MQB 全量，0.5=半量，路试微调）
-    // Carrot web writes these two through /api/param_set; an unregistered key
-    // makes that write raise UnknownKeyName, so the car-selection page and the
-    // screen-record button both failed.
+    // Carrot web writes this through /api/param_set; an unregistered key makes
+    // that write raise UnknownKeyName, so the car-selection page failed.
+    // ScreenRecord was registered here too until 2026-11-11 when upstream took
+    // ownership of it (session-scoped, cleared on manager start / offroad, per
+    // CarrotPilot's contract). Keeping our PERSISTENT copy would have made a
+    // duplicate key in this initializer list, where which entry wins is
+    // unspecified - so it now lives only in upstream's block.
     {"CarSelected3", {PERSISTENT | BACKUP, STRING}},
-    {"ScreenRecord", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"MacanStartStop", {PERSISTENT | BACKUP, BOOL, "0"}},  // Macan 起步跟停（视觉决定起步，OP 代发 RESUME）
     {"MacanStartStopDistance", {PERSISTENT | BACKUP, INT, "6"}},  // Macan 起步安全距离（米；3~10，默认6，前保险杠到前车；需雷达ab或视觉>阈值才自动起步，防误起步。2026-10-07 取消 0=Off 语义）
     {"MacanSlopeComp", {PERSISTENT | BACKUP, BOOL, "0"}},          // Macan 坡度补偿开关（下坡刹一脚/上坡加力矩）

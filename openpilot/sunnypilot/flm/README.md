@@ -25,13 +25,47 @@ wording "verbatim" needed correcting):
 
 - Ioniq 6 frozen reconstruction and `GmFlmBinding` (torque_surface carve boundary).
 - `pid_stages`, `torque_stages`/`torque_adapter`, `physical_response` (controller
-  execution stages), live collection (event_collector / fullrate_collector /
-  gm_evidence body), restore/store (`full_surface_store`, `full_surface_profile`),
-  `event_evaluate` plumbing.
-- Any import of this package from `latcontrol_torque`, `torqued` or
-  `SpeedBinLearner`. Wiring `ProfileOwner`/`evaluate` outputs into a control
-  path changes actuator behaviour and is gated on a controls-safety-engineer
-  decision plus a default-off Params key registered through `params-contract`.
+  execution stages), restore/store (`full_surface_store`, `full_surface_profile`),
+  `event_evaluate` plumbing. The live-collection body stays unported —
+  `shadow_producer.py` re-derives its own bounded 20 Hz collection instead
+  (below), so `gm_evidence`/`event_collector`/`fullrate_collector` are not
+  needed.
+- ~~Any import of this package from `latcontrol_torque`, `torqued` or
+  `SpeedBinLearner`.~~ Two adjudicated exceptions now exist, both conditional
+  verdicts from controls-safety-engineer with default-off Params keys:
+  **Seam B** (`runtime_overrides` consumed by `latcontrol_torque` through
+  `ProfileOwner`), and **Seam A shadow** (`torqued` drives `shadow_producer`,
+  verdicts published but never consumed by the learn path).
+
+## Seam A shadow (`shadow_producer.py`)
+
+Ported from StarPilot's `flm/learning_producer.py` — an unwired reconstruction
+in that tree; this fork is the first to drive it from `torqued`'s main loop.
+**Shadow only**: verdicts are telemetry on CustomReserved19's append fields
+(`flmShadowStatus`/`flmShadowReason`/`flmShadowLatAccelFactor`/
+`flmShadowTrainWindows`/`flmShadowHeldoutWindows`, capnp append-only, empty
+when `FlmShadowEnabled` is off). Nothing in the learn path reads them.
+
+Adaptations from the source (all disclosed, behaviour-preserving where the
+source was live):
+
+| Concern | Source | Here |
+|---|---|---|
+| identity / enable | `learning_source.identity_for` + `controller_selection.read_selection` (their unwired capability binding) | `{'carFingerprint', 'lateralTuning', 'basis'}` with `basis[0]` = the offline `latAccelFactor`; enabled by the `FlmShadowEnabled` param, re-checked at 1 Hz, hard split on change |
+| `linear_conversion_verified` | capability-contract constant | `CP.lateralTuning.which() == 'torque'` — the car runs a linear torque controller by construction |
+| vehicle envelope | separate measured `vehicle_factor` | degenerates to the baseline band: this fork has no independent measured factor, so `evaluate_linear_factor`'s 0.7–1.3× vehicle check folds into the ±30 % baseline step check |
+| `cmd_torque` sample field | `cc.actuators.torque` | `cc.actuators.steer` (the lateral command; `actuators.torque` is longitudinal in this schema) |
+| publication | their `autoSteeringLearning` message | CustomReserved19 append fields via `verdict()`; their message does not exist in this fork |
+| clock | `time.CLOCK_BOOTTIME` direct | import-time `getattr` fallback (Linux device behaviour identical) |
+
+Thresholds (`MIN_TOTAL_POINTS = 4000`, `TORQUE_BUCKETS`, `MIN_BUCKET_POINTS`)
+carry over 1:1: both forks run torqued at `DT_MDL = 0.05` (20 Hz points) and
+share `STEER_BUCKET_BOUNDS`/`MIN_BUCKET_POINTS`/`MIN_POINTS_TOTAL`. The
+controls-safety-engineer Seam A verdict still requires a **device-side replay
+calibration of the accumulation rate** before any non-shadow gating; until
+then this stays telemetry regardless of the verdicts it produces. A
+`qualified_fit` verdict is statistical model evidence, not a tracking
+guarantee.
 
 ## Self-limitation
 

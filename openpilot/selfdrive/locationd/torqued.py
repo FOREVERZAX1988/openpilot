@@ -261,7 +261,8 @@ def main():
   DEBUG = bool(int(os.getenv("DEBUG", "0")))
 
   pm = messaging.PubMaster(['lateralTorqueParameters'])
-  sm = messaging.SubMaster(['carControl', 'carOutput', 'carState', 'extrinsicsCalibration', 'deviceMotion', 'lateralDelay'], poll='deviceMotion')
+  sm = messaging.SubMaster(['carControl', 'carOutput', 'carState', 'extrinsicsCalibration',
+                            'deviceMotion', 'lateralDelay', 'controlsState'], poll='deviceMotion')
 
   params = Params()
   estimator = TorqueEstimator(messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams))
@@ -275,6 +276,7 @@ def main():
           estimator.handle_log(t, which, sm[which])
 
     TorqueEstimatorExt.update_use_params(estimator)
+    TorqueEstimatorExt.update_flm_shadow(estimator, sm)
 
     # 4Hz driven by deviceMotion
     if sm.frame % 5 == 0:
