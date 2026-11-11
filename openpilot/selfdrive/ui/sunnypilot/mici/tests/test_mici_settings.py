@@ -9,7 +9,6 @@ See the LICENSE.md file in the root directory for more details.
 
 import os
 
-import pytest
 from unittest import mock
 
 from opendbc.car.mazda.values import MazdaFlags
@@ -18,6 +17,10 @@ os.environ["BIG"] = "0"
 os.environ.setdefault("SCALE", "1")
 
 from openpilot.selfdrive.ui.sunnypilot.tests.helpers import jetlink_status, render, wait_until
+SHARED_FIXTURE_MODULES = ('openpilot.selfdrive.ui.sunnypilot.tests.helpers',)
+
+from openpilot.common.parameterized import parameterized
+from openpilot.common.test import OpenpilotTestCase, approx
 
 
 def wait_for_param(params, key, timeout=2.0):
@@ -34,18 +37,18 @@ def wait_for_param(params, key, timeout=2.0):
   return last
 
 
-class TestFloatParamScaling:
+class TestFloatParamScaling(OpenpilotTestCase):
   """Float params store the physical value; the picker works in an x100 integer domain.
 
   Getting this wrong is a 100x error in a steering gain, and nothing about the UI looks broken:
   the label just reads 0.02 instead of 2.5. Mirrors OptionControlSP.use_float_scaling on TICI.
   """
 
-  @pytest.mark.parametrize(("param", "stored", "expected_ui"), [
+  @parameterized.expand([
     ("TorqueParamsOverrideLatAccelFactor", 2.5, 250),   # params_keys.h default
     ("TorqueParamsOverrideLatAccelFactor", 1.0, 100),
     ("TorqueParamsOverrideFriction", 0.1, 10),          # params_keys.h default
-  ])
+  ], names=('param', 'stored', 'expected_ui'))
   def test_reads_scaled_up(self, params, param, stored, expected_ui):
     from openpilot.selfdrive.ui.sunnypilot.mici.widgets.button import BigParamOption
 
@@ -64,7 +67,7 @@ class TestFloatParamScaling:
     idx = next(i for i, item in enumerate(picker._picker_items) if item.raw_value == 250)
     picker._center_index = lambda: idx
     picker._commit_value()
-    assert wait_for_param(params, param) == pytest.approx(2.5), "picker must divide by 100 on write"
+    assert wait_for_param(params, param) == approx(2.5), "picker must divide by 100 on write"
 
   def test_round_trip_is_lossless(self, params):
     from openpilot.selfdrive.ui.sunnypilot.mici.widgets.number_picker import NumberPickerScreen
@@ -77,7 +80,7 @@ class TestFloatParamScaling:
       idx = next(i for i, item in enumerate(picker._picker_items) if item.raw_value == target)
       picker._center_index = lambda i=idx: i
       picker._commit_value()
-      assert wait_for_param(params, param) == pytest.approx(physical), f"{physical} did not survive"
+      assert wait_for_param(params, param) == approx(physical), f"{physical} did not survive"
 
       # and the value we just wrote reads back as the same picker position
       assert NumberPickerScreen(title="t", param=param, min_value=1, max_value=100,
@@ -91,7 +94,7 @@ class TestFloatParamScaling:
     assert opt._read_value() == 25
 
 
-class TestMultiParamValueMapping:
+class TestMultiParamValueMapping(OpenpilotTestCase):
   """BigMultiParamToggleSP stores the option index by default, or a mapped value with `values=`."""
 
   def test_alc_modes_map_to_stored_value_not_index(self, params):
@@ -148,7 +151,7 @@ class TestMultiParamValueMapping:
     w._handle_mouse_release(MousePos(0, 0))
     assert wait_for_param(params, "SpeedLimitMode") == SL_MODE_ASSIST
 
-  @pytest.mark.parametrize("key", ["TorqueControlTune", "TorqueControlTuneBig"])
+  @parameterized.expand(["TorqueControlTune", "TorqueControlTuneBig"], names=('key',))
   def test_torque_tune_unset_shows_declared_default(self, params, key):
     """controlsd_ext resolves an unset param through the params_keys.h default with
     return_default, so each size's selector must agree. If these drift, the UI claims a tune
@@ -161,7 +164,7 @@ class TestMultiParamValueMapping:
 
     params.remove(key)
     w = BigMultiParamToggleSP("t", key, list(versions), values=list(versions.values()))
-    assert versions[w.value] == pytest.approx(float(params.get(key, return_default=True)))
+    assert versions[w.value] == approx(float(params.get(key, return_default=True)))
 
     for label, version in versions.items():
       params.put(key, version, block=True)
@@ -169,7 +172,7 @@ class TestMultiParamValueMapping:
       assert w.value == label
 
 
-class TestDependentSettings:
+class TestDependentSettings(OpenpilotTestCase):
   """A setting whose parent makes it inert locks, still showing the user's value on a grey pill."""
 
   def test_locks_while_dependency_unmet_and_keeps_param(self, params):
@@ -202,7 +205,7 @@ class TestDependentSettings:
     assert w._checked and w.enabled and not w.superseded
 
 
-class TestSubPanelSelfRefresh:
+class TestSubPanelSelfRefresh(OpenpilotTestCase):
   """gui_app renders only the top 2 nav-stack widgets, so a layout cannot drive a sub-panel
   nested under another sub-panel. Panels refresh themselves instead."""
 
@@ -237,7 +240,7 @@ class TestSubPanelSelfRefresh:
     assert layout._tq_relaxed.enabled and not layout._tq_relaxed.superseded, "applies again when self-tune returns"
 
 
-class TestSteeringLayoutBadges:
+class TestSteeringLayoutBadges(OpenpilotTestCase):
   def test_bsm_badge_hidden_when_auto_lane_change_cannot_feed_it(self, params):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import SteeringLayoutMici
     from openpilot.sunnypilot.selfdrive.controls.lib.auto_lane_change import AutoLaneChangeMode
@@ -254,7 +257,7 @@ class TestSteeringLayoutBadges:
       assert params.get_bool("AutoLaneChangeBsmDelay"), "badge suppression must not clear the param"
 
 
-class TestBlinkerPauseMici:
+class TestBlinkerPauseMici(OpenpilotTestCase):
   def test_blinker_pauses_steering_is_off_in_its_picker(self, params, monkeypatch):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import SteeringLayoutMici
     from openpilot.selfdrive.ui.ui_state import ui_state
@@ -270,7 +273,7 @@ class TestBlinkerPauseMici:
     assert [item.display_label for item in speed.create_picker_screen()._picker_items[:3]] == ["off", "5", "10"]
 
 
-class TestRoadEdgeLaneChange:
+class TestRoadEdgeLaneChange(OpenpilotTestCase):
   """RoadEdgeLaneChangeEnabled is ungated (matches TICI lane_change_settings) and works even
   with auto lane change off, so it must keep the lane-change entry button alive on its own."""
 
@@ -308,7 +311,7 @@ class TestRoadEdgeLaneChange:
     params.put("RoadEdgeLaneChangeEnabled", -1, block=True)
     assert read_road_edge_mode(params) == RoadEdgeMode.OFF
 
-  @pytest.mark.parametrize("mode", [1, 2])
+  @parameterized.expand([1, 2], names=('mode',))
   def test_button_badge_when_only_road_edge_on(self, params, mode):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import SteeringLayoutMici
     from openpilot.sunnypilot.selfdrive.controls.lib.auto_lane_change import AutoLaneChangeMode
@@ -327,7 +330,7 @@ class TestRoadEdgeLaneChange:
     assert layout._lane_change_btn._disabled, "everything off must still read disabled"
 
 
-class TestDisplayScreenSaver:
+class TestDisplayScreenSaver(OpenpilotTestCase):
   def test_timeout_gated_on_toggle_but_keeps_value(self, params):
     """Gated the way the file gates its brightness timer: set_enabled from _update_state.
     The stored timeout must survive the toggle being off."""
@@ -358,7 +361,7 @@ class TestDisplayScreenSaver:
     assert not layout._screensaver_timeout.enabled, "gate must follow the tap"
 
 
-class TestJerkAwareToggle:
+class TestJerkAwareToggle(OpenpilotTestCase):
   """LateralJerkTorqueController and NNLC are mutually exclusive (ui_state and the car interface
   both force-disable the pair); the layout must gate the toggles the same way or a tap on one
   while the other is on re-creates the conflict and gets both silently wiped at the next init."""
@@ -431,7 +434,7 @@ class TestJerkAwareToggle:
     assert layout._torque_settings_btn._disabled
 
 
-class TestMadsLimitedCallSignature:
+class TestMadsLimitedCallSignature(OpenpilotTestCase):
   """get_mads_limited_brands grew a params argument upstream (Tesla MADS screen activation).
   The call only executes with a fingerprinted car AND CarParamsSP present, which no other
   test provides, so a stale call site renders fine in tests and TypeErrors on the device."""
@@ -475,11 +478,11 @@ LAYOUT_TARGETS = [
 ]
 
 
-class TestCruiseBadges:
+class TestCruiseBadges(OpenpilotTestCase):
   """The speed limit button's icbm badge follows the stored mode. Which setups move speed limits
   through ICBM is icbm_moves_speed_limits, tested on its own; this checks the layout wiring."""
 
-  @pytest.mark.parametrize(("mode", "shown"), [(3, True), (2, False)])
+  @parameterized.expand([(3, True), (2, False)], names=('mode', 'shown'))
   def test_speed_limit_badge_follows_mode(self, params, mode, shown):
     from opendbc.car.structs import car
     from openpilot.cereal import custom
@@ -504,7 +507,7 @@ class TestCruiseBadges:
         params.remove(key)
 
 
-class TestSubtitleAreaRenders:
+class TestSubtitleAreaRenders(OpenpilotTestCase):
   """BigButtonSP's three subtitle modes are drawn, not stored, so each needs a real frame."""
 
   def _button(self, **kwargs):
@@ -536,7 +539,7 @@ class TestSubtitleAreaRenders:
     render(btn)
 
 
-class TestReleaseNotes:
+class TestReleaseNotes(OpenpilotTestCase):
   """The notes only exist as params updated writes, so the button has to read the right pair."""
 
   def _button(self, params, current=b"<h1>old</h1>", new=b"<h1>new</h1>", available=False):
@@ -579,7 +582,7 @@ class TestReleaseNotes:
     assert len(btn._page._content.elements) > 1
 
 
-class TestUpdateAlert:
+class TestUpdateAlert(OpenpilotTestCase):
   """The alert is the only place a staged update announces itself, so it owns the notes flow."""
 
   def _alerts(self, params, available=True):
@@ -627,10 +630,10 @@ class TestUpdateAlert:
     render(page)
 
 
-class TestLayoutsSurviveRender:
+class TestLayoutsSurviveRender(OpenpilotTestCase):
   """Post-sync guard. A layout that imports and updates cleanly can still crash on draw."""
 
-  @pytest.mark.parametrize(("module", "cls"), LAYOUT_TARGETS)
+  @parameterized.expand(LAYOUT_TARGETS, names=('module', 'cls'))
   def test_layout_renders(self, params, module, cls):
     import importlib
 
@@ -639,7 +642,7 @@ class TestLayoutsSurviveRender:
     render(layout)
     render(layout)  # second frame: first one only populates the scroller's visible set
 
-  @pytest.mark.parametrize(("module", "cls"), LAYOUT_TARGETS)
+  @parameterized.expand(LAYOUT_TARGETS, names=('module', 'cls'))
   def test_every_scroller_item_renders(self, params, module, cls):
     # The scroller culls anything off screen, so rendering the layout alone only proves the
     # top of the list draws. Draw every item so a break further down cannot hide behind a
@@ -741,11 +744,11 @@ class TestLayoutsSurviveRender:
     assert rect.x + rect.width <= home._alerts_pill.rect.x
 
 
-class TestRowDescriptions:
+class TestRowDescriptions(OpenpilotTestCase):
   """A long press opens a row's description; a row without one only shakes."""
 
   # toggles, developer and software keep upstream's rows; trips rows are read-only stats
-  @pytest.mark.parametrize(("module", "cls"), [t for t in LAYOUT_TARGETS if t[0] not in ("developer", "software", "toggles", "trips")])
+  @parameterized.expand([t for t in LAYOUT_TARGETS if t[0] not in ("developer", "software", "toggles", "trips")], names=('module', 'cls'))
   def test_every_setting_has_a_description(self, params, module, cls):
     import importlib
     from openpilot.selfdrive.ui.mici.layouts.settings.settings import SettingsBigButton
@@ -764,7 +767,7 @@ class TestRowDescriptions:
     assert not missing, f"{cls} rows without a description: {missing}"
 
 
-class TestAcceleratorProgressRenders:
+class TestAcceleratorProgressRenders(OpenpilotTestCase):
   """the models panel's provisioning line; the layout sweep above runs with no progress set"""
 
   STAGES = ['download', 'connect', 'upload', 'build', 'failed']
@@ -780,7 +783,7 @@ class TestAcceleratorProgressRenders:
     finally:
       ui_state.jetlink = saved
 
-  @pytest.mark.parametrize("stage", STAGES)
+  @parameterized.expand(STAGES, names=('stage',))
   def test_every_stage_gives_a_line(self, params, stage):
     active, header, info = self._info(stage, 0.42)
     assert active and header and info
@@ -789,7 +792,7 @@ class TestAcceleratorProgressRenders:
     _, _, info = self._info('download', 0.42)
     assert '42%' in info
 
-  @pytest.mark.parametrize("stage, frac, msg, drops, mode, shown", [
+  @parameterized.expand([
     # a join has nothing to measure, and "getting ready" alone does not separate an
     # unplugged Jetson from one six seconds from ready
     ('connect', 0.0, 'waiting for jetlink', 0, 'usb', 'waiting for jetlink'),
@@ -797,7 +800,7 @@ class TestAcceleratorProgressRenders:
     # jetlink counts the drops; the card names the cable, and on iOS the phone app too
     ('connect', 0.0, 'reconnecting', 2, 'usb', 'reconnecting, check cable (2 drops)'),
     ('connect', 0.0, 'waiting for jetlink', 3, 'ios', 'waiting for jetlink, check cable or app (3 drops)'),
-  ])
+  ], names=('stage', 'frac', 'msg', 'drops', 'mode', 'shown'))
   def test_the_line_is_jetlinks_message(self, params, stage, frac, msg, drops, mode, shown):
     assert self._info(stage, frac, msg, drops, mode)[2] == shown
 
@@ -822,7 +825,7 @@ class TestAcceleratorProgressRenders:
     finally:
       ui_state.jetlink = saved
 
-  @pytest.mark.parametrize("stage", STAGES)
+  @parameterized.expand(STAGES, names=('stage',))
   def test_the_panel_draws_with_progress_set(self, params, stage):
     from openpilot.selfdrive.ui.ui_state import ui_state
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.models import ModelsLayoutMici
@@ -840,7 +843,7 @@ class TestAcceleratorProgressRenders:
       ui_state.jetlink = saved
 
 
-class TestAcceleratorLinkToggle:
+class TestAcceleratorLinkToggle(OpenpilotTestCase):
   """one of the jetlink modes in one param, and the control is hidden on a device it means nothing to"""
 
   PARAM = "JetlinkLink"
@@ -870,10 +873,10 @@ class TestAcceleratorLinkToggle:
         render(widget)
 
   def test_the_value_line_says_what_each_mode_is_for(self, params):
-    # every MODES entry is offered, so a stored value always has something to match
     params.remove(self.PARAM)
     toggle = self._toggle()
     assert toggle.get_value() == "off"
+    # every MODES entry is offered, so a stored value always has something to match
     for index, value in enumerate(("off", "usb", "iOS", "wi-fi")):
       params.put(self.PARAM, index, block=True)
       toggle.refresh()
@@ -883,8 +886,8 @@ class TestAcceleratorLinkToggle:
     from openpilot.selfdrive.ui.sunnypilot.accelerator_link import link_mode
 
     params.remove(self.PARAM)
-    from openpilot.sunnypilot.jetlink_adapter import MODES
     assert link_mode() == "off"
+    from openpilot.sunnypilot.jetlink_adapter import MODES
     for index, mode in enumerate(MODES):
       params.put(self.PARAM, index, block=True)
       assert link_mode() == mode
@@ -973,7 +976,7 @@ class TestAcceleratorLinkToggle:
       assert shown() == ("", True)
 
 
-class TestDefaultBigModelMici:
+class TestDefaultBigModelMici(OpenpilotTestCase):
   """The big-models button names whose default an empty slot runs. The rule is
   model_info.default_model_name (test_model_info.py); this is the button reading it."""
 
@@ -996,10 +999,10 @@ class TestDefaultBigModelMici:
     assert buttons[1].get_value().removesuffix(" (active)") == "cinque terre v3 model (default)"
 
 
-class TestAlphaLongSwitchMici:
+class TestAlphaLongSwitchMici(OpenpilotTestCase):
   """The alpha switch is the saved preference, editable offroad or disengaged onroad."""
 
-  @pytest.mark.parametrize("engaged", [True, False])
+  @parameterized.expand([True, False], names=('engaged',))
   def test_switch_locks_only_while_engaged(self, params, monkeypatch, engaged):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.alpha_longitudinal import AlphaLongitudinalTogglesMici
     from openpilot.selfdrive.ui.ui_state import UIState
@@ -1008,7 +1011,7 @@ class TestAlphaLongSwitchMici:
     render(toggles._alpha_long_toggle)
     assert toggles._alpha_long_toggle.enabled == (not engaged)
 
-  @pytest.mark.parametrize("started", [True, False])
+  @parameterized.expand([True, False], names=('started',))
   def test_switch_cycles_onroad_only(self, params, monkeypatch, started):
     # set_alpha_longitudinal is shared by the tizi and mici switches
     from openpilot.selfdrive.ui.ui_state import ui_state
@@ -1031,7 +1034,7 @@ class TestAlphaLongSwitchMici:
     assert not params.get_bool("OffroadMode")  # applied by hardwared, never the UI
 
 
-class TestAlphaLongitudinalPanelMici:
+class TestAlphaLongitudinalPanelMici(OpenpilotTestCase):
   """The alpha switch and Set Speed Assist head Cruise, once, with no sub-panel."""
 
   def test_moved_switches_appear_once(self, params):
@@ -1060,12 +1063,12 @@ class TestAlphaLongitudinalPanelMici:
       buttons[label]._click_callback()
       assert type(pushed[-1]) is cls
 
-  @pytest.mark.parametrize(("alpha", "has_long", "alpha_visible", "assist_visible"), [
+  @parameterized.expand([
     (True, False, True, True),  # alpha off: assist locked
     (True, True, True, True),
     (False, True, False, True),  # openpilot long without alpha
     (False, False, False, False),  # stock ACC only: nothing to switch
-  ])
+  ], names=('alpha', 'has_long', 'alpha_visible', 'assist_visible'))
   def test_rows_show_only_where_they_can_act(self, params, monkeypatch, alpha, has_long, alpha_visible, assist_visible):
     from opendbc.car.structs import car
     from openpilot.cereal import custom
@@ -1082,10 +1085,10 @@ class TestAlphaLongitudinalPanelMici:
     assert cruise._alpha_long._set_speed_toggle.is_visible == assist_visible
 
 
-class TestOverriddenToggles:
+class TestOverriddenToggles(OpenpilotTestCase):
   """A toggle another setting overrides draws a grey pill; one only locked onroad keeps its green one."""
 
-  @pytest.mark.parametrize("has_long", [False, True])
+  @parameterized.expand([False, True], names=('has_long',))
   def test_e2e_toggles_lock_without_openpilot_long(self, params, monkeypatch, has_long):
     from opendbc.car.structs import car
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.alpha_longitudinal import AlphaLongitudinalTogglesMici
@@ -1115,7 +1118,7 @@ class TestOverriddenToggles:
     assert not layout._mads_toggle.enabled
     assert not layout._mads_toggle.superseded
 
-  @pytest.mark.parametrize("bsm", [False, True])
+  @parameterized.expand([False, True], names=('bsm',))
   def test_blind_spot_locks_without_bsm(self, params, monkeypatch, bsm):
     from opendbc.car.structs import car
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.visuals import VisualsLayoutMici
@@ -1126,7 +1129,7 @@ class TestOverriddenToggles:
     assert toggle.enabled == bsm
     assert toggle.superseded == (not bsm)
 
-  @pytest.mark.parametrize("mode", [0, 1])
+  @parameterized.expand([0, 1], names=('mode',))
   def test_speed_limit_settings_lock_with_the_mode_off(self, params, monkeypatch, mode):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.cruise import CruiseLayoutMici
     from openpilot.system.ui.lib.application import gui_app
@@ -1184,7 +1187,7 @@ class TestOverriddenToggles:
       assert item.enabled and not item.superseded
 
 
-class TestOnroadOverlays:
+class TestOnroadOverlays(OpenpilotTestCase):
   def test_left_blind_spot_hides_the_long_indicator(self, params, monkeypatch):
     # both sit at the top left; the right blind spot leaves it alone
     from openpilot.selfdrive.ui.sunnypilot.onroad.blind_spot_indicators import BlindSpotIndicators
@@ -1201,7 +1204,7 @@ class TestOnroadOverlays:
     assert not bsm.left_detected
 
 
-class TestModelsPanelMici:
+class TestModelsPanelMici(OpenpilotTestCase):
   """The models panel: the tici panel's driving options, in the order the user set."""
 
   @staticmethod
@@ -1270,7 +1273,7 @@ class TestModelsPanelMici:
       lane_turn.refresh()
       assert lane_turn.value == ("19 mph" if desire else "off")
 
-  @pytest.mark.parametrize(("metric", "label", "centered"), [(False, "19 mph", "19"), (True, "31 km/h", "31")])
+  @parameterized.expand([(False, "19 mph", "19"), (True, "31 km/h", "31")], names=('metric', 'label', 'centered'))
   def test_lane_turn_speed_reads_mph_in_either_unit(self, params, monkeypatch, metric, label, centered):
     from openpilot.selfdrive.ui.ui_state import ui_state
     monkeypatch.setattr(ui_state, "is_metric", metric)
@@ -1281,9 +1284,9 @@ class TestModelsPanelMici:
     # 19 mph is off the whole-km/h grid: the picker opens on the nearest
     assert self._centered(speed.create_picker_screen()) == centered
 
-  @pytest.mark.parametrize(("metric", "speed", "label", "centered"), [(False, 5.0, "under 11 mph", "11"),
+  @parameterized.expand([(False, 5.0, "under 11 mph", "11"),
                                                                       (True, 5.0, "under 18 km/h", "18"),
-                                                                      (False, 0.0, "off", "off")])
+                                                                      (False, 0.0, "off", "off")], names=('metric', 'speed', 'label', 'centered'))
   def test_small_model_steer_reads_ms_in_either_unit(self, params, monkeypatch, metric, speed, label, centered):
     from openpilot.selfdrive.ui.ui_state import ui_state
     monkeypatch.setattr(ui_state, "is_metric", metric)
@@ -1303,7 +1306,7 @@ class TestModelsPanelMici:
     assert options.camera_offset.value == "-0.05 m"
 
 
-class TestSpeedAssistBadge:
+class TestSpeedAssistBadge(OpenpilotTestCase):
   """The Set Speed Assist badge comes and goes with the wheel and waits for the model icon."""
 
   def _settle(self, hud, monkeypatch, frames=200):
@@ -1315,12 +1318,12 @@ class TestSpeedAssistBadge:
       hud._draw_speed_assist(rl.Rectangle(0, 0, 536, 240))
     return drawn
 
-  @pytest.mark.parametrize(("status", "chestnut", "shown"), [
+  @parameterized.expand([
     ("ENGAGED", "DISCONNECTED", True),
     ("DISENGAGED", "DISCONNECTED", False),  # leaves with the wheel
     ("ENGAGED", "LOADING", False),  # the model icon owns the corner
     ("ENGAGED", "ACTIVE", False),  # within the model icon's persistence after engaging
-  ])
+  ], names=('status', 'chestnut', 'shown'))
   def test_follows_the_wheel(self, params, monkeypatch, status, chestnut, shown):
     import raylib_nb as rl
     from openpilot.selfdrive.ui.sunnypilot.mici.onroad.hud_renderer import SPEED_ASSIST_ALPHA_IDLE, HudRendererSP
@@ -1333,7 +1336,7 @@ class TestSpeedAssistBadge:
     hud._chestnut_fade_time = rl.get_time()
     drawn = self._settle(hud, monkeypatch)
     if shown:
-      assert drawn and drawn[-1][3] == pytest.approx(SPEED_ASSIST_ALPHA_IDLE, abs=0.02)
+      assert drawn and drawn[-1][3] == approx(SPEED_ASSIST_ALPHA_IDLE, abs=0.02)
     else:
       assert not drawn
 
@@ -1349,9 +1352,9 @@ class TestSpeedAssistBadge:
     hud = HudRendererSP()
     hud._chestnut_fade_time = rl.get_time() - SET_SPEED_PERSISTENCE - 0.1
     drawn = self._settle(hud, monkeypatch)
-    assert drawn and drawn[-1][3] == pytest.approx(SPEED_ASSIST_ALPHA_IDLE, abs=0.02)
+    assert drawn and drawn[-1][3] == approx(SPEED_ASSIST_ALPHA_IDLE, abs=0.02)
 
-  @pytest.mark.parametrize(("fraction", "expected"), [(0.5, 0.55), (1.0, 0.7)])
+  @parameterized.expand([(0.5, 0.55), (1.0, 0.7)], names=('fraction', 'expected'))
   def test_brightens_with_the_lift(self, params, monkeypatch, fraction, expected):
     from openpilot.selfdrive.ui.sunnypilot.mici.onroad.hud_renderer import HudRendererSP
     from openpilot.selfdrive.ui.ui_state import ChestnutState, UIState, UIStatus, ui_state
@@ -1361,4 +1364,4 @@ class TestSpeedAssistBadge:
     monkeypatch.setattr(ui_state, "chestnut_state", ChestnutState.DISCONNECTED)
     monkeypatch.setattr(HudRendererSP, "_speed_assist_lift_fraction", staticmethod(lambda: fraction))
     drawn = self._settle(HudRendererSP(), monkeypatch)
-    assert drawn and drawn[-1][3] == pytest.approx(expected, abs=0.02)
+    assert drawn and drawn[-1][3] == approx(expected, abs=0.02)

@@ -12,29 +12,26 @@ import os
 import time
 from contextlib import contextmanager
 from types import SimpleNamespace
+import unittest
 from unittest import mock
 
-import pytest
 
 os.environ["BIG"] = "0"
 os.environ.setdefault("SCALE", "1")
 
-from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.ui.sunnypilot.tests.helpers import jetlink_status, wait_until
+SHARED_FIXTURE_MODULES = ('openpilot.selfdrive.ui.sunnypilot.tests.helpers',)
 
-# conftest's window, once for the module; every test then runs under its own prefix
-# 本 fork 的 UI 文案是中文（zh_overrides 全量替换），这 9 个用例硬断言上游英文串
-# （"Off" / "REFRESH" / "· ready on Jetson" / "11 mph"），功能未变、仅文案不同。
-# 注意：一个模块只能有一条有效的 pytestmark，重复赋值会覆盖前一条。
-pytestmark = [
-  pytest.mark.usefixtures("gui"),
-  pytest.mark.skip(reason="i18n: 本 fork UI 为中文，这些用例断言上游英文文案"),
-]
+from openpilot.common.test import OpenpilotTestCase
+
+# the shared hidden window, created once per process; every test then runs under its own prefix
 
 
+@unittest.skip("i18n: 本 fork UI 为中文，这些用例断言上游英文文案")
 class UITest(OpenpilotTestCase):
   def setUp(self):
     super().setUp()
+    self.use_fixture("gui")
     from openpilot.common.params import Params
     from openpilot.selfdrive.ui.ui_state import ui_state
     self.params = Params()

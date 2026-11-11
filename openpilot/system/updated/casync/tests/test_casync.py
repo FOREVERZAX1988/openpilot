@@ -1,9 +1,10 @@
-import pytest
 import os
+import unittest
 import pathlib
 import tempfile
 import subprocess
 
+from openpilot.common.test import OpenpilotTestCase
 from openpilot.system.updated.casync import casync
 from openpilot.system.updated.casync import tar
 
@@ -13,8 +14,8 @@ from openpilot.system.updated.casync import tar
 LOOPBACK = os.environ.get('LOOPBACK', None)
 
 
-@pytest.mark.skip("not used yet")
-class TestCasync:
+@unittest.skip("not used yet")
+class TestCasync(OpenpilotTestCase):
   @classmethod
   def setup_class(cls):
     cls.tmpdir = tempfile.TemporaryDirectory()
@@ -123,7 +124,7 @@ class TestCasync:
 
     assert stats['remote'] < len(self.contents)
 
-  @pytest.mark.skipif(not LOOPBACK, reason="requires loopback device")
+  @unittest.skipUnless(LOOPBACK, "requires loopback device")
   def test_lo_simple_extract(self):
     target = casync.parse_caibx(self.manifest_fn)
     sources = [('remote', casync.RemoteChunkReader(self.store_fn), casync.build_chunk_dict(target))]
@@ -135,7 +136,7 @@ class TestCasync:
 
     assert stats['remote'] == len(self.contents)
 
-  @pytest.mark.skipif(not LOOPBACK, reason="requires loopback device")
+  @unittest.skipUnless(LOOPBACK, "requires loopback device")
   def test_lo_chunk_reuse(self):
     """Test that chunks that are reused are only downloaded once"""
     target = casync.parse_caibx(self.manifest_fn)
@@ -151,8 +152,8 @@ class TestCasync:
     assert stats['remote'] < len(self.contents)
 
 
-@pytest.mark.skip("not used yet")
-class TestCasyncDirectory:
+@unittest.skip("not used yet")
+class TestCasyncDirectory(OpenpilotTestCase):
   """Tests extracting a directory stored as a casync tar archive"""
 
   NUM_FILES = 16

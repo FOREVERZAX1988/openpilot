@@ -50,6 +50,8 @@ sound_list_sp: dict[int, tuple[str, int | None, float]] = {
   # AudibleAlertSP, file name, play count (none for infinite)
   AudibleAlertSP.promptSingleLow: ("prompt_single_low.wav", 1, MAX_VOLUME),
   AudibleAlertSP.promptSingleHigh: ("prompt_single_high.wav", 1, MAX_VOLUME),
+  # carrot cut-in audio alert (cp parity: dedicated chime, plays once)
+  AudibleAlertSP.radarCutin: ("radar_cutin.wav", 1, MAX_VOLUME),
 }
 
 sound_list: dict[int, tuple[str, int | None, float]] = {

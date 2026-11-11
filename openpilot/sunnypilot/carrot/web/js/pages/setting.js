@@ -45,6 +45,10 @@ const settingSearchRuntime = carrotSettingsRuntime.search;
 const SETTING_OVERLAY_SEARCH_ENABLED = false;
 let settingInlineSearchQuery = "";
 let settingInlineSearchPreviousGroup = null;
+// Phone-voice search state (CarrotPilot parity): the Android wrapper reads the
+// rendered inline-search results through findPhoneSettings/phoneSearchResultName.
+let phoneSearchResults = null;
+let settingSearchTitlesFirst = false;
 // Field behaviour (debounce, IME, clear button, slot mounting, labels) lives in
 // features/settings/search/inline.js; the page keeps the navigation that
 // onApply triggers (search group, history, screen transitions).
@@ -583,7 +587,7 @@ function getSettingGroupLabel(group) {
 }
 
 function getSettingInlineSearchResults() {
-  return getSettingDerivedModel().searchItemEntries(settingInlineSearchQuery);
+  return getSettingDerivedModel().searchItemEntries(settingInlineSearchQuery, { preferTitle: settingSearchTitlesFirst });
 }
 
 function getSettingInlineSearchCountLabel() {
@@ -716,11 +720,18 @@ function restoreSettingInlineSearch(query = "") {
   settingValueRepository.invalidateGroup(SETTING_INLINE_SEARCH_GROUP);
 }
 
-async function applySettingInlineSearch(query = settingInlineSearchView.getQuery()) {
+async function applySettingInlineSearch(query = settingInlineSearchView.getQuery(), { preferTitle = false } = {}) {
   settingInlineSearchView.cancelPending();
   if (!SETTINGS || CURRENT_PAGE !== "setting" || !isCarrotSettingTabActive()) return;
   const nextQuery = String(query || "").trim();
-  if (nextQuery === settingInlineSearchQuery && CURRENT_GROUP === SETTING_INLINE_SEARCH_GROUP
+  if (!preferTitle) phoneSearchResults = null;
+  const orderChanged = settingSearchTitlesFirst !== preferTitle;
+  settingSearchTitlesFirst = preferTitle;
+  if (orderChanged) {
+    const box = document.getElementById("settingInlineSearchResults");
+    if (box) delete box.dataset.renderedSearchQuery;
+  }
+  if (!orderChanged && nextQuery === settingInlineSearchQuery && CURRENT_GROUP === SETTING_INLINE_SEARCH_GROUP
     && !CURRENT_SETTING_DETAIL && isSettingInlineSearchSurfaceActive()) return;
   const wasSearching = CURRENT_GROUP === SETTING_INLINE_SEARCH_GROUP;
   settingInlineSearchQuery = nextQuery;
@@ -1998,6 +2009,66 @@ function syncSettingMarqueeOverflow(root = document) {
     }
     el.classList.toggle("is-overflowing", overflow);
   });
+}
+
+function renderedPhoneSearchNames() {
+  if (document.hidden || CURRENT_PAGE !== "setting" || !isCarrotSettingTabActive() ||
+      CURRENT_GROUP !== SETTING_INLINE_SEARCH_GROUP || CURRENT_SETTING_DETAIL || !isSettingInlineSearchSurfaceActive()) return [];
+  const container = getSettingItemRenderContainer() || document.getElementById("items");
+  return Array.from(container?.querySelectorAll(".setting[data-setting-name]") || [])
+    .filter(row => row.offsetParent !== null).map(row => row.dataset.settingName);
+}
+
+function phoneSearchResultName(id, position) {
+  if (!phoneSearchResults || phoneSearchResults.id !== id || !settingSearchTitlesFirst ||
+      settingInlineSearchQuery !== phoneSearchResults.query) return null;
+  const expected = phoneSearchResults.names[position - 1];
+  return expected && renderedPhoneSearchNames()[position - 1] === expected ? expected : null;
+}
+
+async function findPhoneSettings(query, id) {
+  phoneSearchResults = null;
+  showPage("setting", true);
+  await loadSettings();
+  if (CURRENT_PAGE !== "setting" || document.hidden) return null;
+  await switchSettingTab("carrot");
+  settingInlineSearchView.setQuery(query);
+  await applySettingInlineSearch(query, { preferTitle: true });
+  if (!isSettingInlineSearchSurfaceActive() || settingInlineSearchQuery !== query) return null;
+  const { total, entries } = getSettingInlineSearchResults();
+  const names = renderedPhoneSearchNames();
+  if (total > 0 && !names.length) return null;
+  phoneSearchResults = { id, query, names };
+  const item = entries.find(entry => entry.item.name === names[0])?.item;
+  const spokenTitle = title => (title || item?.name || "").split(/[:：]/, 1)[0].trim();
+  return { status: "found", total, firstKo: spokenTitle(item?.title), firstEn: spokenTitle(item?.etitle) };
+}
+
+// The paired assistant may navigate only to an actual setting available in this
+// device's filtered catalog. Never accept URLs, scripts or parameter values.
+// CarrotPilot parity: exposed as a global via this classic script so the
+// tools-page assistant dialog can steer the settings screen.
+async function openAssistantSetting(name) {
+  if (!/^[A-Za-z][A-Za-z0-9_]{0,100}$/.test(String(name || ""))) return "unavailable";
+  showPage("setting", true);
+  await loadSettings();
+  if (typeof switchSettingTab === "function") await switchSettingTab("carrot");
+  const entry = rebuildSettingSearchEntries().find(item => item.name === name && item.source !== "profile");
+  if (!entry) return "unavailable";
+  // Entry rendering schedules its initial scroll reset on the next frame.
+  // Let it finish before placing the assistant's requested row in view.
+  const afterPaint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await afterPaint();
+  if (CURRENT_PAGE !== "setting") return "failed";
+  await selectSettingSearchEntry(entry);
+  if (entry.detailParent && CURRENT_SETTING_DETAIL !== entry.detailParent) {
+    await selectSettingDetail(entry.group, entry.detailParent, true);
+  }
+  await afterPaint();
+  if (CURRENT_PAGE !== "setting") return "failed";
+  const visible = Array.from(document.querySelectorAll('.setting[data-setting-name]'))
+    .some(row => row.dataset.settingName === name && row.offsetParent !== null);
+  return visible && focusSettingItem(name, "instant") ? "opened" : "failed";
 }
 
 function focusSettingItem(name, behavior = "smooth") {

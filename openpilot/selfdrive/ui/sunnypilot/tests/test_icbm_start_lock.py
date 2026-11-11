@@ -10,13 +10,14 @@ See the LICENSE.md file in the root directory for more details.
 
 from types import SimpleNamespace
 
-import pytest
 
 import openpilot.cereal.messaging as messaging
 from opendbc.car import structs
 from openpilot.cereal import custom
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.icbm_latch import IcbmActivation
+from openpilot.common.parameterized import parameterized
+from openpilot.common.test import OpenpilotTestCase
 
 
 def _locked(monkeypatch, *, has_icbm=True, started=True, op_engaged=False, cruise_engaged=False, activation=IcbmActivation.passive):
@@ -34,8 +35,8 @@ def _locked(monkeypatch, *, has_icbm=True, started=True, op_engaged=False, cruis
   return ui_state.icbm_start_locked
 
 
-class TestIcbmStartLock:
-  @pytest.mark.parametrize("op_engaged, cruise_engaged", [(True, False), (False, True), (True, True)])
+class TestIcbmStartLock(OpenpilotTestCase):
+  @parameterized.expand([(True, False), (False, True), (True, True)], names=('op_engaged', 'cruise_engaged'))
   def test_engaged_with_icbm_off_locks(self, monkeypatch, op_engaged, cruise_engaged):
     assert _locked(monkeypatch, op_engaged=op_engaged, cruise_engaged=cruise_engaged)
 
@@ -52,14 +53,14 @@ class TestIcbmStartLock:
   def test_offroad_never_locks(self, monkeypatch):
     assert not _locked(monkeypatch, op_engaged=True, started=False)
 
-  @pytest.mark.parametrize("op_long, key, on, allowed", [
+  @parameterized.expand([
     (False, "SmartCruiseControlVision", True, False),
     (False, "SmartCruiseControlVision", False, True),  # turning off is always allowed
     (True, "SmartCruiseControlVision", True, True),    # the planner runs curve control under op long
     (True, "CustomAccIncrementsEnabled", True, False),
     (True, "SpeedLimitMode", True, False),
     (False, "IsMetric", True, True),                   # not an ICBM feature
-  ])
+  ], names=('op_long', 'key', 'on', 'allowed'))
   def test_turn_on_allowed(self, monkeypatch, op_long, key, on, allowed):
     assert _locked(monkeypatch, op_engaged=True)
     monkeypatch.setattr(ui_state, 'CP', structs.CarParams(openpilotLongitudinalControl=op_long, pcmCruise=True))

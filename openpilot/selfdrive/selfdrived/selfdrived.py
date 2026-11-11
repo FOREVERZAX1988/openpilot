@@ -44,6 +44,11 @@ from openpilot.sunnypilot.selfdrive.selfdrived.button_state_tracker import Butto
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 from openpilot.sunnypilot.selfdrive.selfdrived.model_events import ModelEventsSP
 from openpilot.sunnypilot.selfdrive.controls.lib.radar_only_warning import RadarOnlyWarning
+from openpilot.sunnypilot.carrot.radar_motion.cutin_alert import (
+  CutinAlertCandidate,
+  CutinAlertTracker,
+  promoted_cutin_candidates,
+)
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitChangedAlertTracker
 from openpilot.sunnypilot.selfdrive.selfdrived.conditional_experimental_mode import ConditionalExperimentalMode
 from openpilot.sunnypilot.selfdrive.selfdrived.selfdrived_zp import SelfdrivedZP, lateral_only_experimental_available
@@ -130,7 +135,7 @@ class SelfdriveD:
     # scheduling blip otherwise makes all_checks() fail on a live 10 Hz feed and
     # raises the spurious "进程间通信问题: carrotManSP" comm issue mid-drive.
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan', 'liveTracks'] \
-             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP']
+             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP', 'livePose']
     disable_dm = is_dm_disabled(self.params)
     if SIMULATION or disable_dm:
       ignore += ['cabinCameraState', 'managerState']
@@ -147,6 +152,8 @@ class SelfdriveD:
                                    'lateralManeuverPlan', 'modelDataV2SP', 'longitudinalPlanSP', 'carStateSP',
                                    # 灯效观测层（selfdrived/indicator_layer.py）的输入：模型帧 + 导航帽。
                                    'carState', 'carrotManSP',
+                                   # ManualTurnIndicator 的实测横摆角速度源（cp modeld 同源 livePose.angularVelocityDevice.z）。
+                                   'livePose',
                                    'liveTracks'] + \
                                    self.camera_packets + self.sensor_packets + self.gps_packets,
                                   ignore_alive=ignore, ignore_avg_freq=ignore,
@@ -177,6 +184,10 @@ class SelfdriveD:
     # Carrot radar-only advisory (default off, alert only).
     self.radar_only_warning = RadarOnlyWarning()
     self.radar_only_warning_enabled = self.params.get_bool("CarrotRadarOnlyWarningEnabled")
+
+    # Carrot cut-in audio alert (default off, chime only; cp selfdrived parity).
+    self.cutin_audio_tracker = CutinAlertTracker()
+    self.cutin_alert_enabled = self.params.get_bool("CarrotCutinAlertEnabled")
 
     self.initialized = False
     self.enabled = False
@@ -558,6 +569,29 @@ class SelfdriveD:
       self.enabled and self.CP.openpilotLongitudinalControl,
     ):
       self.events.add(EventName.radarStationaryLead)
+
+    # Carrot cut-in audio alert (default off): only a detected CUT-IN that was
+    # actually promoted to leadTwo triggers the chime; cp parity.
+    cutin_enabled = self.enabled and self.cutin_alert_enabled and self.sm.valid['radarState']
+    radar_state = self.sm['radarState']
+    cutin_candidates = tuple(
+      CutinAlertCandidate(
+        int(lead.radarTrackId),
+        float(lead.dRel),
+        float(lead.yRel),
+        float(lead.vRel),
+      )
+      for lead in radar_state.leadsCutIn
+    ) if cutin_enabled else ()
+    lead_two = radar_state.leadTwo
+    promoted_lead = CutinAlertCandidate(
+      int(lead_two.radarTrackId),
+      float(lead_two.dRel),
+      float(lead_two.yRel),
+      float(lead_two.vRel),
+    ) if cutin_enabled and lead_two.present else None
+    if self.cutin_audio_tracker.update(promoted_cutin_candidates(cutin_candidates, promoted_lead), cutin_enabled):
+      self.events.add(EventName.radarCutin)
     if CS.canTimeout:
       self.events.add(EventName.canBusMissing)
     elif not CS.canValid:

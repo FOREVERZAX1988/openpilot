@@ -1,8 +1,9 @@
 import bisect
 
-import pytest
 
 from openpilot.selfdrive.monitoring import dm2_cadence
+from openpilot.common.test import OpenpilotTestCase, approx
+from openpilot.common.parameterized import parameterized
 
 
 class Clock:
@@ -42,44 +43,46 @@ def simulate(monkeypatch, disabled_seconds, processing=0.003, overshoot=0.0):
   return enabled_at, publications
 
 
-@pytest.mark.parametrize('disabled_seconds', [0, 60, 780, 3600])
-@pytest.mark.parametrize('overshoot', [0.0, 0.001])
-def test_camera_start_after_prolonged_absence_does_not_catch_up(monkeypatch, disabled_seconds, overshoot):
-  enabled_at, times = simulate(monkeypatch, disabled_seconds, overshoot=overshoot)
-  # Check every rolling second, including the transition, not just total Hz.
-  for t in times:
-    if t >= times[0] + 1:
-      count = bisect.bisect_right(times, t) - bisect.bisect_right(times, t - 1)
-      assert 16 <= count <= 24
-  recovered = [t for t in times if enabled_at + 10 <= t < enabled_at + 60]
-  assert 16 <= len(recovered) / 50 <= 20.1
+
+class TestDm2CadenceTests(OpenpilotTestCase):
+
+  @parameterized.expand([(0, 0.0), (60, 0.0), (780, 0.0), (3600, 0.0), (0, 0.001), (60, 0.001), (780, 0.001), (3600, 0.001)], names=('disabled_seconds', 'overshoot'))  # noqa: E501
+  def test_camera_start_after_prolonged_absence_does_not_catch_up(self, monkeypatch, disabled_seconds, overshoot):
+    enabled_at, times = simulate(monkeypatch, disabled_seconds, overshoot=overshoot)
+    # Check every rolling second, including the transition, not just total Hz.
+    for t in times:
+      if t >= times[0] + 1:
+        count = bisect.bisect_right(times, t) - bisect.bisect_right(times, t - 1)
+        assert 16 <= count <= 24
+    recovered = [t for t in times if enabled_at + 10 <= t < enabled_at + 60]
+    assert 16 <= len(recovered) / 50 <= 20.1
 
 
-@pytest.mark.parametrize('stall', [0.1, 1.0, 30.0])
-def test_scheduler_stall_is_not_repaid_with_fast_iterations(monkeypatch, stall):
-  clock = Clock()
-  monkeypatch.setattr(dm2_cadence, 'time', clock)
-  rate = dm2_cadence.DmRatekeeper(0.05)
-  for _ in range(100):
-    clock.now += 0.003
+  @parameterized.expand([0.1, 1.0, 30.0], names=('stall',))
+  def test_scheduler_stall_is_not_repaid_with_fast_iterations(self, monkeypatch, stall):
+    clock = Clock()
+    monkeypatch.setattr(dm2_cadence, 'time', clock)
+    rate = dm2_cadence.DmRatekeeper(0.05)
+    for _ in range(100):
+      clock.now += 0.003
+      rate.keep_time()
+    clock.now += stall
     rate.keep_time()
-  clock.now += stall
-  rate.keep_time()
-  resumed = clock.now
-  for i in range(1, 101):
-    clock.now += 0.003
-    rate.keep_time()
-    assert clock.now == pytest.approx(resumed + i * 0.05)
-  assert rate.frame == 201
+    resumed = clock.now
+    for i in range(1, 101):
+      clock.now += 0.003
+      rate.keep_time()
+      assert clock.now == approx(resumed + i * 0.05)
+    assert rate.frame == 201
 
 
-def test_persistent_overload_is_not_hidden(monkeypatch):
-  clock = Clock()
-  monkeypatch.setattr(dm2_cadence, 'time', clock)
-  rate = dm2_cadence.DmRatekeeper(0.05)
-  start = clock.now
-  for _ in range(100):
-    clock.now += 0.1
-    rate.keep_time()
-  # A genuinely slow producer stays below the existing 16 Hz health limit.
-  assert 100 / (clock.now - start) == pytest.approx(10)
+  def test_persistent_overload_is_not_hidden(self, monkeypatch):
+    clock = Clock()
+    monkeypatch.setattr(dm2_cadence, 'time', clock)
+    rate = dm2_cadence.DmRatekeeper(0.05)
+    start = clock.now
+    for _ in range(100):
+      clock.now += 0.1
+      rate.keep_time()
+    # A genuinely slow producer stays below the existing 16 Hz health limit.
+    assert 100 / (clock.now - start) == approx(10)

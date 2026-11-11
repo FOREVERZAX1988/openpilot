@@ -1,6 +1,9 @@
 """Positive adjacent-lane evidence for manual indication only, never steering."""
 import math
 
+# Minimum speed for the driver-initiated, lamp-only indications (cp boundary_lane add-on).
+MANUAL_INDICATOR_MIN_SPEED = 5 / 3.6
+
 
 def adjacent_lane(cs, md, direction, now):
   try:

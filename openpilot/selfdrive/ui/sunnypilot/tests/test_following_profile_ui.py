@@ -19,7 +19,6 @@ from openpilot.selfdrive.controls.lib.following_profile import (
 )
 from openpilot.selfdrive.ui.sunnypilot.lib.following_profile_store import (
   PRESET_ORDER,
-  build_document,
   default_selection,
   serialize_selection,
   selection_from_document,

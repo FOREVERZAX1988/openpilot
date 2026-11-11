@@ -22,9 +22,13 @@ from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
 from openpilot.selfdrive.car.card_diagnostics import should_log_card_diagnostics
 from openpilot.selfdrive.car.cruise import VCruiseCarrot
 from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp
+from openpilot.selfdrive.car.tesla_turn_signals import TeslaTurnSignals
+from openpilot.selfdrive.car.tesla_lane_signals import TeslaLaneSignals
+from openpilot.selfdrive.controls.lib.desire_lib.tesla_turn import turn_signal_context
 
 from openpilot.sunnypilot.mads.helpers import set_alternative_experience, set_car_specific_params
 from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfaces
+from openpilot.sunnypilot.selfdrive.controls.lib.lateral_readiness import LateralStartupGate
 from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
 from openpilot.sunnypilot.carrot.carrot_navi_fusion import merge_carrot_navi_lanes
 from openpilot.sunnypilot.carrot.xiaoge.xiaoge_vision import (
@@ -101,6 +105,34 @@ def can_comm_callbacks(logcan: messaging.SubSocket, sendcan: messaging.PubSocket
   return can_recv, can_send
 
 
+class _TeslaTurnMeta:
+  """cp modelV2.meta surface adapter for TeslaTurnSignals.update (card graft).
+
+  cp publishes autoTurnSignalDirection/RequestId on modelV2.meta from modeld's
+  DesireHelper; this fork publishes them on SelfdriveState from the selfdrived
+  indicator layer. modelV2.meta.desire IS written here (modeld, cp parity).
+  Everything else delegates to the real modelV2.meta reader, so the ported
+  1:1 Tesla modules keep their cp signatures untouched.
+  """
+
+  def __init__(self, meta, ss):
+    self._meta = meta
+    self._ss = ss
+
+  def __getattr__(self, name):
+    if name.startswith('_'):
+      raise AttributeError(name)
+    return getattr(self._meta, name)
+
+  @property
+  def autoTurnSignalDirection(self):
+    return self._ss.autoTurnSignalDirection
+
+  @property
+  def autoTurnSignalRequestId(self):
+    return self._ss.autoTurnSignalRequestId
+
+
 class Car:
   CI: CarInterfaceBase
   RI: RadarInterfaceBase
@@ -113,6 +145,10 @@ class Car:
     self.sm = messaging.SubMaster(
       ['pandaStates', 'carControl', 'onroadEvents', 'longitudinalPlan', 'radarState', 'drivingModelData']
       + ['carControlSP', 'longitudinalPlanSP', 'carrotManSP', 'carrotNaviSP']
+      # cp card parity surfaces: modelV2 (Tesla lane-signal predictions + turn
+      # desire), selfdriveState (this fork's autoTurnSignal observability, see
+      # _TeslaTurnMeta), and the lateral-readiness gate inputs.
+      + ['modelV2', 'selfdriveState', 'vehicleParameters', 'deviceMotion']
       + ['customReservedRawData0'])
     self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks'] + ['carParamsSP', 'carStateSP'])
 
@@ -235,6 +271,16 @@ class Car:
     # the same helper, so they work with VCruiseCarrot too.
     self.card_ext = CardExt(self.CP, self.CP_SP, self.params, self.sm, self.v_cruise_helper, self.CI)
 
+    # cp parity: Tesla body-controls lamp sessions + lateral startup gate.
+    self.lateral_startup = LateralStartupGate()
+    self.tesla_signals = TeslaTurnSignals.from_car_params(self.CP, enabled=self.params.get_bool("TeslaAutoTurnSignals"))
+    if self.CP.brand == "tesla":
+      self.tesla_signals.lane_assistance = TeslaLaneSignals(
+        manual=self.params.get_bool("TeslaManualLaneSignals"),
+        desire=self.params.get_bool("TeslaModelDesireSignals"), path=self.params.get_bool("TeslaModelPathSignals"))
+    self.tesla_signal_status = None if self.CP.brand == "tesla" else self.tesla_signals.status
+    self.tesla_signal_log_ns = 0
+
     self.is_metric = self.params.get_bool("IsMetric")
     self.experimental_mode = experimental_mode_requested(self.params)
     self.initial_cruise_speed = self.params.get("InitialCruiseSpeedKph", return_default=True)
@@ -250,6 +296,16 @@ class Car:
 
     # card is driven by can recv, expected at 100Hz
     self.rk = Ratekeeper(100, print_delay_threshold=None)
+
+  def _log_tesla_signals(self, CS, now: int) -> None:
+    changed = self.tesla_signals.status != self.tesla_signal_status
+    if not changed and (self.tesla_signals.session is None or now - self.tesla_signal_log_ns < 1_000_000_000):
+      return
+    cloudlog.event("tesla_auto_turn_signal", **self.tesla_signals.diagnostics(now),
+                   driver_valid=CS.turnSignalDriverValid, driver_direction=CS.turnSignalDriverDirection,
+                   stalk_counts=(CS.leftBlinkerStalkCount, CS.rightBlinkerStalkCount))
+    self.tesla_signal_status = self.tesla_signals.status
+    self.tesla_signal_log_ns = now
 
   def state_update(self) -> tuple[car.CarState, custom.CarStateSP, structs.RadarDataT | None]:
     """carState update loop, driven by can"""
@@ -267,6 +323,20 @@ class Car:
     RD: structs.RadarDataT | None = self.RI.update_carrot(CS.vEgo, CS.aEgo, time.monotonic(), can_list)
 
     self.sm.update(0)
+
+    # cp parity: Tesla auto turn signals observe the CAN stream and own lamp
+    # sessions while disengaged. Urgent cancels go straight to sendcan.
+    if self.CP.brand == "tesla":
+      signal_now = can_list[-1][0] if REPLAY and can_list else time.clock_gettime_ns(getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC))
+      self.tesla_signals.observe_driver(CS, signal_now)
+      self.tesla_signals.observe(can_list, signal_now)
+      urgent_sends = self.tesla_signals.take_sends(signal_now, cancel_only=True)
+      if urgent_sends:
+        self.can_callbacks[1](urgent_sends)
+      CS.autoTurnSignalDirection = self.tesla_signals.owned_direction
+      CS.autoTurnSignalReadyRequestId = self.tesla_signals.ready_request_id(signal_now)
+      CS.autoTurnSignalStatus = self.tesla_signals.status if self.CP.brand == "tesla" else ""
+      self._log_tesla_signals(CS, signal_now)
 
     # Merge Carrot navigation lane hints into carState/carStateSP. Both the 7714
     # v2 stream and the 7706 navLaneGuide array feed the SAME flags, so there is
@@ -429,16 +499,43 @@ class Car:
     if self.sm.all_alive(['carControl']):
       # cp impact dashcam: while a dashcam reboot is pending, neutralize the final
       # CAN output at the last application boundary, no matter what was queued.
-      if self.params.get_bool("ImpactDashcamReboot"):
+      impact_reboot = self.params.get_bool("ImpactDashcamReboot")
+      if impact_reboot:
         CC = CC.as_builder()
         CC.enabled = CC.latActive = CC.longActive = False
         CC.actuators = car.CarControl.Actuators.new_message()
         CC.cruiseControl.resume = CC.cruiseControl.override = False
         CC.cruiseControl.cancel = CS.cruiseState.enabled
         CC = CC.as_reader()
+      # cp parity: independently confirm startup once at the final application
+      # boundary. Read-only here: this fork's steering neutering stays in
+      # controlsd_ext; card only uses the latch to gate the Tesla graft.
+      lateral_ready = self.lateral_startup.update(self.sm, CS, 'carControl')
       # send car controls over can
       now_nanos = self.can_log_mono_time if REPLAY else int(time.monotonic() * 1e9)
       self.last_actuators_output, can_sends = self.CI.apply(CC, self.card_ext.controls_update(CS, CC, convert_carControlSP(CC_SP)), now_nanos)
+      # cp parity: Tesla turn-signal CAN execution at the final application
+      # boundary. autoTurnSignalDirection/RequestId come from SelfdriveState
+      # (selfdrived indicator layer) via _TeslaTurnMeta; desire from modelV2.meta.
+      if self.tesla_signals.configured:
+        fresh = all(self.sm.seen[s] and self.sm.alive[s] and self.sm.valid[s] and
+                    0 <= time.monotonic() - self.sm.recv_time[s] <= 0.2 for s in ('carControl', 'modelV2'))
+        signal_now = now_nanos if REPLAY else time.clock_gettime_ns(getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC))
+        turn_hold_allowed = False
+        if lateral_ready and not impact_reboot and not CC.latActive:
+          # This fork has no livePose service; turn_signal_context reads it, so
+          # skip the turn-hold context entirely (graceful degradation) instead
+          # of crashing card at the first call.
+          if 'livePose' in self.sm.services:
+            turn_hold_allowed, _ = turn_signal_context(self.sm, CS, time.monotonic(), signal_now, self.params.get_bool("AlwaysLateral"))
+        meta = _TeslaTurnMeta(self.sm['modelV2'].meta, self.sm['selfdriveState'])
+        lamp_intent = self.tesla_signals.lane_assistance.update(
+          CS, CC, self.sm['modelV2'], self._xiaoge_vision_result, time.monotonic_ns(),
+          allowed=fresh and lateral_ready and not impact_reboot,
+          busy=bool(meta.autoTurnSignalDirection.raw) or
+               (self.tesla_signals.session is not None and not self.tesla_signals.session.lamp_only))
+        can_sends.extend(self.tesla_signals.update(CS, CC, meta, fresh, signal_now,
+                                                   turn_hold_allowed=turn_hold_allowed, lamp_intent=lamp_intent))
       self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))
 
       self.CC_prev = CC

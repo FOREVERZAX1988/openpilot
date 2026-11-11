@@ -49,6 +49,54 @@ async def api_tools_start(request: web.Request) -> web.Response:
   return web.json_response({"ok": True, "job_id": job_id, "status": job["status"]})
 
 
+# Voice-assistant authorized dispatch (CarrotPilot parity): the same fixed
+# dispatcher jobs, started from the web UI or the granted voice API. Tasks are
+# pinned so an abandoned job cannot be garbage-collected mid-run.
+_running_tasks: set[asyncio.Task] = set()
+
+
+def start_job(body, guard=None):
+  """Start the same fixed dispatcher job from the UI or authorized voice API."""
+  action = body.get('action')
+  if validate_action(action):
+    raise ValueError('Unknown tool action')
+  if guard:
+    guard()
+  job_id = uuid.uuid4().hex[:12]
+  job = {
+    "id": job_id,
+    "action": str(action),
+    "payload": dict(body),
+    "status": "running",
+    "log": "",
+    "progress": 0,
+    "message": "",
+    "step_current": 0,
+    "step_total": 0,
+    "error": None,
+    "error_code": None,
+    "error_detail": None,
+    "result": None,
+    "created_at": time.time(),  # persisted wall-clock job history
+    "updated_at": time.time(),
+  }
+  jobs.jobs()[job_id] = job
+  jobs.prune()
+  jobs.persist_now()
+
+  async def run():
+    try:
+      if guard:
+        guard()
+      await run_tool_job(job)
+    except Exception as exc:
+      jobs.finish(job, ok=False, error=str(exc))
+  task = asyncio.create_task(run())
+  _running_tasks.add(task)
+  task.add_done_callback(_running_tasks.discard)
+  return job_id
+
+
 async def api_tools_job(request: web.Request) -> web.Response:
   job_id = (request.query.get("id") or request.match_info.get("job_id") or "").strip()
   if not job_id:

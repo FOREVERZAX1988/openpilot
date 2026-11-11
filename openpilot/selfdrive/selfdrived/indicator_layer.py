@@ -37,7 +37,8 @@ ATC_TURN_TYPES = ("turn left", "turn right")
 ATC_FORK_TYPES = ("fork left", "fork right", "atc left", "atc right")
 
 # 显示 JSON 的 origin 词表（common/indicator_display.py）。
-SOURCE_ORIGINS = {'model_turn': 'model_turn', 'model_desire': 'model_desire', 'model_path': 'model_path', 'manual': 'manual'}
+SOURCE_ORIGINS = {'model_turn': 'model_turn', 'model_desire': 'model_desire', 'model_path': 'model_path', 'manual': 'manual',
+                  'manual_turn': 'manual_turn'}
 
 
 class IndicatorLayer:
@@ -50,6 +51,7 @@ class IndicatorLayer:
     self.tracker = AutoSignalTracker()
 
     self.boundary_indicator_enabled = False
+    self.manual_turn_indicator_enabled = False
     self.model_desire_indicator_enabled = False
     self.model_path_indicator_enabled = False
     self.indicator_journal_time = 0.
@@ -84,13 +86,15 @@ class IndicatorLayer:
 
   @property
   def enabled(self):
-    return self.boundary_indicator_enabled or self.model_desire_indicator_enabled or self.model_path_indicator_enabled
+    return self.boundary_indicator_enabled or self.manual_turn_indicator_enabled or self.model_desire_indicator_enabled or self.model_path_indicator_enabled
 
   def _update_params(self):
     # cp desire_helper._update_params_periodic: ManualLaneChangeIndicator 挂
     # AutoBlinkerControl 链（灯控开启且非 CAN-FD 灯控时才允许本 fork 检测手动灯）。
     lamp_mode = self.params.get_int("AutoBlinkerControl") in (1, 2) and not self.params.get_bool("CanfdBlinkerControl")
     self.boundary_indicator_enabled = lamp_mode and self.params.get_bool("ManualLaneChangeIndicator")
+    # cp desire_helper: ManualTurnIndicator 同链路；转向由实测横摆角速度独立判定。
+    self.manual_turn_indicator_enabled = lamp_mode and self.params.get_bool("ManualTurnIndicator")
     self.model_desire_indicator_enabled = lamp_mode and self.params.get_bool("ModelDesireIndicator")
     self.model_path_indicator_enabled = lamp_mode and self.params.get_bool("ModelPathIndicator")
     # 低速 TBT 源在发灯前等待该所有权确认；同时跨进程重启恢复隔离掩码。
@@ -218,6 +222,19 @@ class IndicatorLayer:
     if not sm.seen.get('carrotManSP'):
       return
     cm = sm['carrotManSP']
+    # cp modeld.py:589-593：livePose.device 系横摆角速度（ ManualTurnIndicator 专用）。
+    # 与 cp 同源同门控；livePose 为可选观测输入（selfdrived 订阅表已 ignore），未上线传 None。
+    yaw_rate = None
+    if sm.seen.get('livePose'):
+      try:
+        pose = sm['livePose']
+        yaw_rate = (pose.angularVelocityDevice.z if sm.valid['livePose'] and sm.alive['livePose'] and
+                    0 <= now - sm.recv_time['livePose'] < .2 and pose.inputsOK and pose.sensorsOK and
+                    0 <= time.clock_gettime_ns(getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)) -
+                    sm.logMonoTime['livePose'] < 200_000_000 and
+                    pose.posenetOK and pose.angularVelocityDevice.valid else None)
+      except (AttributeError, KeyError, TypeError, ValueError):
+        yaw_rate = None
     lamps = (int(CS.leftBlinker), int(CS.rightBlinker))
     driver_st = BLINKER_LEFT if lamps == (1, 0) else BLINKER_RIGHT if lamps == (0, 1) else BLINKER_NONE
     atc_st, atc_enabled, forced_window = self._atc_state(cm, driver_st)
@@ -238,7 +255,8 @@ class IndicatorLayer:
                                 command_curvature=sm['carControl'].actuators.curvature,
                                 # cp 经 physical-hold.json 识别一触杆回声；该文件生产者未随本 fork
                                 # 移植，传 None 时回声恒不匹配（观测在物理杆按住期间暂停，cp 同）。
-                                feedback=None)
+                                feedback=None,
+                                manual_turn_enabled=self.manual_turn_indicator_enabled, yaw_rate=yaw_rate)
     self.tracker.update(CS, md, cm, enabled=True, lateral_active=sm['carControl'].latActive,
                         lane_change_state=lane_change_state, lane_change_direction=lane_change_direction,
                         lane_turn_direction=lane_turn_direction, driver_st=driver_st,
@@ -275,6 +293,9 @@ class IndicatorLayer:
       preparation = None
     if self.boundary_indicator_enabled and self.boundary_indicator.episode:
       preparation = (self.boundary_indicator.episode['direction'], 'manual')
+    # cp modeld.py:629-630：手动转弯候选优先于其它准备来源。
+    if self.manual_turn_indicator_enabled and self.model_indicator.manual_turn.candidate:
+      preparation = self.model_indicator.manual_turn.candidate
     self.indicator_prepare_direction = preparation[0] if preparation and not observation else 0
     self.indicator_prepare_source = preparation[1] if preparation and not observation else ''
     self.auto_signal_direction = self.tracker.auto_signal_direction
