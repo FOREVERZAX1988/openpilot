@@ -24,7 +24,9 @@ def traffic_observations(radar):
   leads = [radar.leadOne, radar.leadTwo, radar.leadLeft, radar.leadRight]
   for name in ("leadsCenter", "leadsLeft", "leadsRight", "leadsLeft2", "leadsRight2", "leadsCutIn"):
     leads.extend(getattr(radar, name))
-  return [ObjectObservation(p.dRel, p.dPath, p.vLead, p.vRel) for p in leads if p.status]
+  # this fork's cereal dropped LeadData.status for present and deprecated dPath;
+  # yRel carries the same lateral offset radard still maintains
+  return [ObjectObservation(p.dRel, p.yRel, p.vLead, p.vRel) for p in leads if p.present]
 
 
 def side_coverage(params, cp):
