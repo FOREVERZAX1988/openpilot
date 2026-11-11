@@ -342,4 +342,10 @@ class TestDm2Tests(OpenpilotTestCase):
         policy._update_states(sample, [0, 0, 0], 20, True, False)
         policy._update_events(i % 53 == 0, True, False, False)
       for field in ('awareness', 'alert_level', 'active_policy', 'alert_3_cnt', 'no_response_cnt', 'too_distracted'):
-        assert getattr(dm, field) == getattr(standard, field)
+        dm_value = getattr(dm, field)
+        if field == 'too_distracted':
+          # dm2-only over-distraction latch; stock has no such field, it must
+          # simply never fire on the stock camera flow
+          assert dm_value is False
+        else:
+          assert dm_value == getattr(standard, field)
