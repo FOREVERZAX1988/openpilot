@@ -340,5 +340,5 @@ class OptionControlSP(ItemAction):
       new_value = self.current_value + self.value_change_step
       new_value = min(self.max_value, new_value)
       self.set_value(new_value)
-    elif self.enabled and self.label_rect.width > 0 and rl.check_collision_point_rec(mouse_pos, self.label_rect):
+    elif self.enabled and self.label_rect.width > 0 and rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), self.label_rect):
       self._open_input_dialog()

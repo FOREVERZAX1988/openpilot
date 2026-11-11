@@ -8,7 +8,9 @@ These tests pin the parsing/clamping contract of that path without needing a GPU
 """
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
+from openpilot.system.ui.lib.application import MousePos
 from openpilot.system.ui.sunnypilot.widgets import option_control as oc
 from openpilot.system.ui.widgets import DialogResult
 
@@ -97,21 +99,42 @@ class TestCarrotOptionDirectInput(unittest.TestCase):
 
   def test_tapping_value_box_opens_keypad(self):
     ctrl = self._make()
+    ctrl._minus_enabled = ctrl._plus_enabled = False
     ctrl.label_rect = oc.rl.Rectangle(10, 10, 100, 100)
     opened = []
-    ctrl._open_input_dialog = lambda: opened.append(True)  # keep pyray/window out of the test
-    import pyray as rl
-    ctrl._handle_mouse_release(rl.Vector2(50, 50))
+    ctrl._open_input_dialog = lambda: opened.append(True)  # keep the window out of the test
+    # Real UI passes MousePos (a NamedTuple), not a raylib Vector2 -- see the
+    # 2026-11-11 device crash where the un-converted type took down the UI.
+    ctrl._handle_mouse_release(MousePos(50, 50))
     self.assertEqual(opened, [True])
 
   def test_tapping_outside_value_box_does_not_open_keypad(self):
     ctrl = self._make()
+    ctrl._minus_enabled = ctrl._plus_enabled = False
     ctrl.label_rect = oc.rl.Rectangle(10, 10, 100, 100)
     opened = []
     ctrl._open_input_dialog = lambda: opened.append(True)
-    import pyray as rl
-    ctrl._handle_mouse_release(rl.Vector2(2000, 2000))
+    ctrl._handle_mouse_release(MousePos(2000, 2000))
     self.assertEqual(opened, [])
+
+  def test_value_box_hit_test_passes_raylib_vector2(self):
+    # raylib_nb's binding is strict: MousePos -> check_collision_point_rec()
+    # raises TypeError. Pin the conversion so this cannot regress unnoticed.
+    ctrl = self._make()
+    ctrl._minus_enabled = ctrl._plus_enabled = False
+    ctrl.label_rect = oc.rl.Rectangle(10, 10, 100, 100)
+    ctrl._open_input_dialog = lambda: None
+    seen = []
+    real_check = oc.rl.check_collision_point_rec
+
+    def spy(point, rect):
+      seen.append(point)
+      return real_check(point, rect)
+
+    with mock.patch.object(oc.rl, "check_collision_point_rec", spy):
+      ctrl._handle_mouse_release(MousePos(50, 50))
+    self.assertEqual(len(seen), 1)
+    self.assertIsInstance(seen[0], type(oc.rl.Vector2(0, 0)))
 
 
 if __name__ == "__main__":
