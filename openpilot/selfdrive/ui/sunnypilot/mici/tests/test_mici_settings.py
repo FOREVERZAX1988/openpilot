@@ -21,6 +21,15 @@ SHARED_FIXTURE_MODULES = ('openpilot.selfdrive.ui.sunnypilot.tests.helpers',)
 
 from openpilot.common.parameterized import parameterized
 from openpilot.common.test import OpenpilotTestCase, approx
+from openpilot.system.ui.lib.multilang import multilang
+
+# This suite asserts the English label contract (option names, badge ids,
+# "5 minutes", ...). multilang caches LanguageSetting when it is imported, so on
+# a zh-CHS device tr("off") is "关", tr("5 minutes") is "5 分钟" and every one
+# of those assertions fails even though the widget is correct. Pin the language
+# for this test process only: shipped translations are untouched and still
+# drive the real UI (see test_translation_contract below).
+multilang.reload("en")
 
 
 def wait_for_param(params, key, timeout=2.0):
@@ -35,6 +44,23 @@ def wait_for_param(params, key, timeout=2.0):
       return val
     last = val
   return last
+
+
+class TestTranslationContract(OpenpilotTestCase):
+  """The suite above pins English; make sure the device's zh-CHS path is still live.
+
+  Pinning the test language must not hide a broken or missing translation file:
+  our mici devices run zh-CHS, so the .po has to keep resolving.
+  """
+
+  def test_zh_chs_translations_resolve(self):
+    from openpilot.system.ui.lib.multilang import multilang, tr
+
+    try:
+      assert multilang.reload("zh-CHS"), "zh-CHS must be a registered UI language"
+      assert tr("off") != "off", "zh-CHS .po must translate the off label"
+    finally:
+      multilang.reload("en")
 
 
 class TestFloatParamScaling(OpenpilotTestCase):
@@ -696,14 +722,17 @@ class TestLayoutsSurviveRender(OpenpilotTestCase):
 
   def test_home_knows_the_port_jetlink_holds(self, params, monkeypatch):
     # a Jetson enumerates as nothing comma knows; with the link holding the port it is not unknown
-    from types import SimpleNamespace
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.home import MiciHomeLayoutSP
     from openpilot.selfdrive.ui.ui_state import ui_state
 
     monkeypatch.setattr(ui_state, "usb_connected", True)
     monkeypatch.setattr(ui_state, "usb_unknown", True)
     home = MiciHomeLayoutSP()
-    for jetlink, shown in ((None, True), (SimpleNamespace(holds_port=False), True), (SimpleNamespace(holds_port=True), False)):
+    # _enforce_usb_port() reads the real Status fields (enabled/mode). The old
+    # holds_port SimpleNamespace silently left `enabled` missing.
+    for jetlink, shown in ((None, True),
+                           (jetlink_status(enabled=False), True),
+                           (jetlink_status(enabled=True, mode="usb"), False)):
       monkeypatch.setattr(ui_state, "jetlink", jetlink)
       ui_state._enforce_usb_port()
       home._set_chestnut_visibility()
@@ -926,7 +955,9 @@ class TestAcceleratorLinkToggle(OpenpilotTestCase):
     with mock.patch('openpilot.selfdrive.ui.sunnypilot.mici.layouts.models.ui_state.is_offroad', return_value=True):
       assert toggle.enabled
       self._tap(toggle)
-      assert params.get(self.PARAM) == 0
+      # this fork keeps wi-fi in MODES (off/usb/ios/wi-fi), so iOS -> wi-fi is
+      # index 3, not the 3-mode upstream cycle that wrapped back to 0.
+      assert params.get(self.PARAM) == 3
 
   def test_layout_hides_the_toggle_until_it_means_something(self, params):
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.models import ModelsLayoutMici
@@ -1354,11 +1385,17 @@ class TestSpeedAssistBadge(OpenpilotTestCase):
     drawn = self._settle(hud, monkeypatch)
     assert drawn and drawn[-1][3] == approx(SPEED_ASSIST_ALPHA_IDLE, abs=0.02)
 
-  @parameterized.expand([(0.5, 0.55), (1.0, 0.7)], names=('fraction', 'expected'))
-  def test_brightens_with_the_lift(self, params, monkeypatch, fraction, expected):
-    from openpilot.selfdrive.ui.sunnypilot.mici.onroad.hud_renderer import HudRendererSP
+  @parameterized.expand([(0.5,), (1.0,)], names=('fraction',))
+  def test_brightens_with_the_lift(self, params, monkeypatch, fraction):
+    from openpilot.selfdrive.ui.sunnypilot.mici.onroad.hud_renderer import (
+      HudRendererSP, SPEED_ASSIST_ALPHA_IDLE, SPEED_ASSIST_ALPHA_LIFT,
+    )
     from openpilot.selfdrive.ui.ui_state import ChestnutState, UIState, UIStatus, ui_state
 
+    # Commit 15353a5d21 retuned the idle/lift endpoints to 0.35/0.9 but the ported
+    # test still carried the old 0.4/0.7 numbers. Derive the expectation from the
+    # shipped constants so a future retune cannot silently desync this contract.
+    expected = SPEED_ASSIST_ALPHA_IDLE + (SPEED_ASSIST_ALPHA_LIFT - SPEED_ASSIST_ALPHA_IDLE) * fraction
     monkeypatch.setattr(UIState, "speed_assist_active", property(lambda _: True))
     monkeypatch.setattr(ui_state, "status", UIStatus.ENGAGED)
     monkeypatch.setattr(ui_state, "chestnut_state", ChestnutState.DISCONNECTED)

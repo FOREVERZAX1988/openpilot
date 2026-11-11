@@ -265,7 +265,7 @@ class MonkeyPatch:
     elif not isinstance(name, str):
       raise TypeError("use setattr(target, name, value) with name being a string")
 
-    original = getattr(target, name, _MISSING)
+    original = _original_attr(target, name)
     if original is _MISSING and raising:
       raise AttributeError(f"{target!r} has no attribute {name!r}")
     setattr(target, name, value)
@@ -283,7 +283,7 @@ class MonkeyPatch:
     return attr, target
 
   def delattr(self, target, name, raising=True):
-    original = getattr(target, name, _MISSING)
+    original = _original_attr(target, name)
     if original is _MISSING:
       if raising:
         raise AttributeError(f"{target!r} has no attribute {name!r}")
@@ -339,6 +339,21 @@ class SubTests:
 
   def test(self, label=None, **kwargs):
     return self._test_case.subTest(**kwargs) if label is None else self._test_case.subTest(label, **kwargs)
+
+
+def _original_attr(target, name):
+  """getattr() unwraps staticmethod/classmethod descriptors. Undoing a patch with
+  that bare function would turn a static method into a bound instance method, so
+  the next ``self._speed_assist_lift_fraction()`` call fails with "takes 0
+  positional arguments but 1 was given" in a *later*, unrelated test. Keep the
+  descriptor itself so the restore is lossless.
+  """
+  original = getattr(target, name, _MISSING)
+  if original is not _MISSING and inspect.isclass(target):
+    raw = inspect.getattr_static(target, name, _MISSING)
+    if isinstance(raw, (staticmethod, classmethod)):
+      return raw
+  return original
 
 
 def _restore_attr(obj, name, original):

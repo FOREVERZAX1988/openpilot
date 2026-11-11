@@ -222,6 +222,12 @@ class BigButton(BaseButton):
     self._label.set_text(tr(text))
     self._update_label_layout()
 
+  def get_text(self) -> str:
+    # mici settings' _replace_panel() finds its scroller buttons by label with
+    # get_text(); without this the settings layout raises AttributeError while
+    # it is being built on every mici device.
+    return self.text
+
   def set_value(self, value: str):
     self.value = tr(value)
     self._sub_label.set_text(tr(value))
