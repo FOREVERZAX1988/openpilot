@@ -1,17 +1,19 @@
 """stopping_params tests (cp parity, PC-runnable).
 
 PYTHONPATH="/data/openpilot" python -m unittest openpilot.common.tests.test_stopping_params
+
+This suite pins get_stopping_speed()'s pure read/repair logic, so it always uses
+the shared in-memory Params stub. Going through the real backend here used to
+write /data/params on a live device (and race the running manager over the same
+key), which made four tests fail for reasons unrelated to the function. The
+fork's *registered* VEgoStopping default is a Macan tuning value in
+openpilot/common/params_keys.h (50 = 0.5 m/s); that table is not what this
+suite measures, so expectations below use the module constants rather than a
+hard-coded 0.25.
 """
 import unittest
 
-try:
-  from openpilot.common.params import Params
-except (OSError, ModuleNotFoundError):
-  # PC: no native libparams. Use the shared stub so every suite in a combined
-  # unittest run sees identical Params behavior regardless of load order.
-  from openpilot.common.tests import params_pc_stub
-  params_pc_stub.register()
-  Params = params_pc_stub.Params
+from openpilot.common.tests.params_pc_stub import Params
 
 from openpilot.common.stopping_params import (
   STOPPING_SPEED_DEFAULT, STOPPING_SPEED_MIN, get_stopping_speed,
@@ -20,12 +22,12 @@ from openpilot.common.stopping_params import (
 
 class TestStoppingParams(unittest.TestCase):
   def setUp(self):
+    Params._reset()
     self.params = Params()
-    self.params.remove("VEgoStopping")
 
   def test_missing_key_returns_sp_default(self):
-    """No key -> the fork's historical 0.25 m/s, and the default materializes."""
-    self.assertAlmostEqual(get_stopping_speed(self.params), 0.25)
+    """No key -> the module default materializes in the store."""
+    self.assertAlmostEqual(get_stopping_speed(self.params), STOPPING_SPEED_DEFAULT * 0.01)
     self.assertEqual(self.params.get_int("VEgoStopping"), STOPPING_SPEED_DEFAULT)
 
   def test_below_minimum_is_repaired(self):

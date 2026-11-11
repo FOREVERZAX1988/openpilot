@@ -371,7 +371,7 @@ class SpeedLimitVisionDaemon:
     self.is_metric = False
 
     if self.use_runtime:
-      from cereal import messaging
+      import openpilot.cereal.messaging as messaging
       from openpilot.cereal.visionipc import VisionStreamType
       from msgq.visionipc import VisionIpcClient
       from openpilot.common.params import Params

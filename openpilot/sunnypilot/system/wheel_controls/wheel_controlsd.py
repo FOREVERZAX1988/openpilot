@@ -70,7 +70,11 @@ def cycle_driving_personality(params) -> bool:
   try:
     if params.get_bool(SAFE_MODE_PARAM):
       return False
-    from cereal import car, log  # pylint: disable=import-outside-toplevel  # device-only
+    # cereal/__init__.py publishes log + custom only; CarParams lives in opendbc.
+    # The old `from cereal import car, log` raised ImportError, was swallowed by
+    # the except below, and made cycle_driving_personality() a permanent no-op.
+    from openpilot.cereal import log  # pylint: disable=import-outside-toplevel  # device-only
+    from opendbc.car.structs import car  # pylint: disable=import-outside-toplevel
 
     cp_bytes = params.get("CarParams" if params.get_bool("IsOnroad") else "CarParamsPersistent")
     if not cp_bytes:

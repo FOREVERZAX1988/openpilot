@@ -5,7 +5,7 @@ import subprocess
 import time
 import threading
 
-from cereal import messaging
+import openpilot.cereal.messaging as messaging
 # car.capnp lives in opendbc now; cereal only loads log.capnp and custom.capnp, so
 # `from cereal import car` raised ImportError and this process never started on Lite.
 from opendbc.car.structs import car
