@@ -29,6 +29,8 @@ class DriverMonitoring2(DriverMonitoring):
     self.parked_since = None
     self.parked_last_check = None
     self.parked_reset_done = False
+    # read by _response_reset before any parked reset could have set it
+    self.too_distracted = False
 
   def update_parked_reset(self, now, eligible):
     """Clear accumulated DM state once per confirmed parking stop, never on an engage edge."""
