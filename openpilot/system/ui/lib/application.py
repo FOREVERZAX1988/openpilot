@@ -937,6 +937,17 @@ class GuiApplication(GuiApplicationExt):
         if not fnt_path.exists() and multilang.requires_font_fallback():
           filename = f"OpFont-Regular-{active_lang}.fnt"
           fnt_path = fspath / filename
+        # raylib_nb's load_font_ex has no BMFont (.fnt) path: for the pre-baked
+        # CJK atlases it always returns GetFontDefault(). Upstream keeps trying
+        # and logging an ERROR on every font-cache rebuild; we know up front
+        # that this loader cannot use them, so skip the doomed attempt and go
+        # straight to the OTF + codepoints bake. The resulting font is exactly
+        # the old fallback, minus one failed load and one ERROR per weight.
+        # Revisit only if raylib_nb ever exposes LoadBMFont.
+        # UNIFONT is OpFont-Regular-Labels.fnt too, but that small labels atlas
+        # loads fine and must keep its own path.
+        if multilang.requires_font_fallback() and font_weight != FontWeight.UNIFONT and filename.endswith(".fnt"):
+          _PREBAKED_FONT_FAILURES.add(filename)
         if fnt_path.exists() and filename not in _PREBAKED_FONT_FAILURES:
           # raylib_nb has no load_font shim; LoadFontEx with no codepoints is
           # the C LoadFont() equivalent (fontSize is ignored for .fnt atlases)
