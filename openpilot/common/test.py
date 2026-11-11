@@ -27,11 +27,16 @@ def clean_env():
     os.environ.update(starting_env)
 
 
+# approx lives at the bottom of this module (class _Approx): pytest tolerance
+# semantics with a bool-context guard; it is defined after the helpers below
+# because it needs no imports from here.
+
 class OpenpilotTestCase(unittest.TestCase):
   """TestCase with openpilot's per-test isolation."""
 
   COMMA_HARDWARE_TEST = False
   SHARED_DOWNLOAD_CACHE = False
+  SHARED_FIXTURE_MODULES = ()
 
   def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
@@ -66,7 +71,17 @@ class OpenpilotTestCase(unittest.TestCase):
     if name == "capsys":
       return self._capsys()
 
-    fixture = getattr(inspect.getmodule(type(self)), name)
+    fixture = getattr(inspect.getmodule(type(self)), name, None)
+    if fixture is None:
+      # ported conftest fixtures: a test module may declare SHARED_FIXTURE_MODULES
+      # naming the helper modules that carry fixtures it uses across files
+      for mod_name in type(self).SHARED_FIXTURE_MODULES:
+        import importlib
+        fixture = getattr(importlib.import_module(mod_name), name, None)
+        if fixture is not None:
+          break
+    if fixture is None:
+      raise AttributeError(f'unknown fixture {name!r} for {type(self).__module__}')
     kwargs = {p: self._fixture(p) for p in inspect.signature(fixture).parameters}
     value = fixture(**kwargs)
     if inspect.isgenerator(value):
@@ -365,7 +380,6 @@ class _CaptureFixture:
 
 class _Approx:
   """pytest's ``approx``: an expected value compared within a tolerance.
-
   Mirrors pytest's tolerance rule: ``abs`` and ``rel`` default to 1e-12 and
   1e-6, and the comparison passes when the actual value is within the larger
   of the two tolerances.
@@ -421,5 +435,7 @@ class _Approx:
 
 
 def approx(expected, rel=None, abs=None):  # noqa: A002 - mirrors pytest's keyword
-  """pytest-compatible ``approx`` for tests ported to unittest."""
+  """pytest-compatible ``approx`` for tests ported to unittest (pytest tolerance
+  semantics: the comparison passes when |actual - expected| is within the larger
+  of rel * |expected| and abs, defaulting to 1e-6 / 1e-12)."""
   return _Approx(expected, rel=rel, abs=abs)

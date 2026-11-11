@@ -14,21 +14,22 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest import mock
 
-import pytest
 
 os.environ["BIG"] = "0"
 os.environ.setdefault("SCALE", "1")
 
-from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.ui.sunnypilot.tests.helpers import jetlink_status, wait_until
+SHARED_FIXTURE_MODULES = ('openpilot.selfdrive.ui.sunnypilot.tests.helpers',)
 
-# conftest's window, once for the module; every test then runs under its own prefix
-pytestmark = pytest.mark.usefixtures("gui")
+from openpilot.common.test import OpenpilotTestCase
+
+# the shared hidden window, created once per process; every test then runs under its own prefix
 
 
 class UITest(OpenpilotTestCase):
   def setUp(self):
     super().setUp()
+    self.use_fixture("gui")
     from openpilot.common.params import Params
     from openpilot.selfdrive.ui.ui_state import ui_state
     self.params = Params()

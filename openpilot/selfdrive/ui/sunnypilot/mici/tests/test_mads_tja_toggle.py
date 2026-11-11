@@ -12,7 +12,10 @@ import os
 os.environ["BIG"] = "0"
 os.environ.setdefault("SCALE", "1")
 
+from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.ui.sunnypilot.tests.helpers import render
+SHARED_FIXTURE_MODULES = ('openpilot.selfdrive.ui.sunnypilot.tests.helpers',)
+
 
 
 def _bundle(p, brand):
@@ -20,7 +23,7 @@ def _bundle(p, brand):
   p.put("CarPlatformBundle", {"brand": brand, "platform": "X", "name": "X"}, block=True)
 
 
-class TestMadsTjaToggle:
+class TestMadsTjaToggle(OpenpilotTestCase):
   def test_mici_visible_only_for_mazda(self, params):
     from openpilot.selfdrive.ui.ui_state import ui_state
     from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import SteeringLayoutMici
