@@ -162,8 +162,20 @@ def carrot_sm(mocker, map_limit: float = 0., **carrot_fields):
     'speedLimitAheadDistance': 0.,
   }, mocker)
   gps_data = create_mock({'unixTimestampMillis': time.monotonic() * 1e3}, mocker)
+  # The resolver reads these unconditionally in _get_from_car_state / the
+  # steering sanity check. Omitting them made the whole class fail with
+  # KeyError('carState') instead of exercising the carrot merge logic.
+  car_state = mocker.MagicMock()
+  car_state.steeringAngleDeg = 0.0
+  car_state.standstill = False
+  car_state.vCruise = 0.
+  car_state_sp = mocker.MagicMock()
+  car_state_sp.speedLimit = 0.
   sm = mocker.MagicMock()
   sm.__getitem__.side_effect = lambda key: {
+    'carState': car_state,
+    'carStateSP': car_state_sp,
+    'vehicleParameters': mocker.MagicMock(angleOffsetDeg=0.0),
     'liveMapDataSP': live_map_data,
     'gpsLocation': gps_data,
     'carrotManSP': carrot,

@@ -457,6 +457,18 @@ class TestResolverMapboxFill(OpenpilotTestCase):
     sm = mapbox_sm(mocker)  # empty offline map: only the filler can produce a limit
     future = StubFuture(result=(80 * CV.KPH_TO_MS, 500.0), done=True)
     resolver.mapbox.executor = SubmitRecorder(future)
+    # update_params() rebuilds self.mapbox on every plannerd tick, which would
+    # throw away the executor stub above before _mapbox_fill ever sees the
+    # result. Keep the injected instance while leaving all other param refresh
+    # behaviour intact (the upstream test assumed the older life-cycle).
+    injected_mapbox = resolver.mapbox
+    original_update_params = resolver.update_params
+
+    def refresh_params():
+      original_update_params()
+      resolver.mapbox = injected_mapbox
+
+    resolver.update_params = refresh_params
     resolver.update(20.0, sm)
 
     # the filler value IS the winning solution this frame...
