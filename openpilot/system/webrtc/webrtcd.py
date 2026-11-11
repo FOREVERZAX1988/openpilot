@@ -14,7 +14,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from abc import abstractmethod
-from typing import Any
+from typing import Any, Callable
 
 from openpilot.system.webrtc.device.bitrate import LivestreamBitrateController
 from openpilot.system.webrtc.device.messaging import CerealIncomingMessageProxy, CerealOutgoingMessageProxy, DynamicPubMaster
