@@ -2,7 +2,7 @@
 import math
 import os
 
-from openpilot.cereal import log
+from openpilot.cereal import log, custom
 from opendbc.car.structs import car
 from opendbc.car.hyundai.values import HyundaiFlags
 import openpilot.cereal.messaging as messaging
@@ -24,6 +24,7 @@ AlertSize = log.SelfdriveState.AlertSize
 AlertStatus = log.SelfdriveState.AlertStatus
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 AudibleAlert = log.SelfdriveState.AudibleAlert
+AudibleAlertSP = custom.SelfdriveStateSP.AudibleAlert
 EventName = log.OnroadEvent.EventName
 
 
@@ -842,6 +843,13 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "注意前方物体", "请确认前方并准备减速",
       AlertStatus.normal, AlertSize.mid,
       Priority.HIGH, VisualAlert.none, AudibleAlert.prompt, 2.),
+  },
+
+  # Carrot cut-in audio alert: a detected CUT-IN promoted to leadTwo. The
+  # tracker in selfdrived fires once per continuous candidate; this is a
+  # chime-only engagement alert (cp parity, dedicated radar_cutin.wav).
+  EventName.radarCutin: {
+    ET.WARNING: EngagementAlert(AudibleAlertSP.radarCutin),
   },
 
   # One-shot NNFF torque model notice. selfdrived rebinds this entry through

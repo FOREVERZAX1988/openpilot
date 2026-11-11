@@ -158,6 +158,8 @@ struct SelfdriveStateSP @0x81c2f05a394cf4af {
     lastLane @65;
     newLane @66;
     laneChangeEnd @67;
+    # carrot cut-in audio alert (selfdrived cutin tracker)
+    radarCutin @68;
   }
 }
 

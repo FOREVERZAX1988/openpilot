@@ -40,6 +40,8 @@ class RouteEngine:
     self.sm = sm
     self.pm = pm
     self.params = params if params is not None else Params()
+    # Session-scoped params (tmpfs). Holds the carrot web Mapbox destination.
+    self.params_memory = Params('/dev/shm/params')
 
     self.last_position = None  # (longitude, latitude)
     self.last_bearing = None
@@ -78,7 +80,13 @@ class RouteEngine:
     if self.last_position is None:
       return
 
-    destination = self.params.get("NavDestination")
+    # Session-scoped Mapbox destination (carrot web) wins while it exists;
+    # the persistent NavDestination remains for non-geocoding callers
+    # (cp navd.py destination_from_params parity). Both are JSON-typed here,
+    # so a get() returns the dict parse_destination_coordinate expects.
+    destination = self.params_memory.get('NavDestinationTemporary')
+    if destination is None:
+      destination = self.params.get("NavDestination")
     parsed = parse_destination_coordinate(destination)
     if destination is None or parsed is None:
       self.last_recorded_destination = None
@@ -203,6 +211,8 @@ class RouteEngine:
         # Clear route if driving away from destination
         if np.linalg.norm(local_meters(self.last_position, self.nav_destination)) > REROUTE_DISTANCE:
           self.params.remove("NavDestination")
+          # cp navd parity: arrival ends the session-scoped Mapbox destination too.
+          self.params_memory.remove("NavDestinationTemporary")
           self.clear_route()
 
   def send_route(self):

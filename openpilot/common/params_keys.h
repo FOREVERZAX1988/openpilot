@@ -312,6 +312,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SubaruStopAndGoManualParkingBrake", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TeslaCoopSteering", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TeslaMadsScreenButton", {PERSISTENT | BACKUP, INT, "0"}},
+    // cp tesla_turn_signals/card add-on: Tesla body-controls lamp sessions; writer card.py,
+    // reader card.py (TeslaTurnSignals.from_car_params). No-op until the Tesla actuation port lands.
+    {"TeslaAutoTurnSignals", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // cp parity: TeslaLaneSignals sources for the card.py graft (manual stalk
+    // echo, model desire, model path predictions). All default off.
+    {"TeslaManualLaneSignals", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"TeslaModelDesireSignals", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"TeslaModelPathSignals", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ToyotaEnforceStockLongitudinal", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ToyotaStopAndGoHack", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ToyotaTSS2Smooth", {PERSISTENT | BACKUP, BOOL, "0"}},
@@ -711,6 +719,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotBrakingGapEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},     // comfort reserve against the lead braking path
     {"CarrotGapRecoveryEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},    // recover the cruise gap after a lead pulls away
     {"CarrotRadarOnlyWarningEnabled", {PERSISTENT | BACKUP, BOOL, "0"}}, // advisory alert for a measured obstacle with no selected lead
+    // Written by the settings UI / web; read by selfdrived. Chime-only cut-in
+    // alert for a detected CUT-IN promoted to leadTwo (cp parity, alert only).
+    {"CarrotCutinAlertEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotLateralReadinessEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 3, SETTINGS_ADVANCED}}, // block startup steering until lateral inputs and CAN are ready
     {"CarrotFastRadarEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 3, SETTINGS_ADVANCED}},      // refresh a selected lead's kinematics from newer liveTracks (Hyundai only)
     {"CarrotCutoutReliefEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},   // ease future following demand for a confirmed lead cut-out
@@ -760,6 +771,21 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // carrot's copy only survived because of a broad except.
     // JSON type: writers must pass a dict, not a json.dumps() string.
     {"NavDestination", {PERSISTENT, JSON, "{}"}},
+    // Session-scoped Mapbox destination written by the carrot web panel
+    // (server/features/navigation.py POST /api/navigation/destination). Lives in
+    // the tmpfs store (/dev/shm/params) and is read by navd's recompute_route,
+    // which prefers it over the persistent NavDestination while it exists.
+    // cp parity: cleared on manager start / offroad transition instead of a
+    // manager drive-end hook (this fork's navd has no manager cleanup hook);
+    // navd also removes it on arrival. DONT_LOG keeps coordinates out of logs.
+    {"NavDestinationTemporary", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION | DONT_LOG, JSON, "{}"}},
+    // Optional intermediate waypoints for the Mapbox route request (JSON list of
+    // [lon, lat] pairs). Written by the carrot web panel, consumed by navd's
+    // route calculation (cp navd parity); cleared with the destination.
+    {"NavDestinationWaypoints", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON, "[]"}},
+    // Mapbox geocoding public token (pk.*). Written via the carrot web panel's
+    // Settings → Network, read by the /api/navigation/search endpoint and navd.
+    {"MapboxPublicKey", {PERSISTENT, STRING}},
     // Onroad navigation instruction card (StarPilot port). carrot_man folds navInstructionCarrotSP
     // into this JSON every publish; the card renders it and long-press cancel clears it.
     {"NavigationCardEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},
@@ -810,6 +836,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoTurnControl", {PERSISTENT | BACKUP, INT, "2"}},  // cp ATC: 0 off, 1 steering only, 2 speed+steering, 3 speed only; default full
     {"AutoTurnControlRightLaneChange", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp 32ed45b2e: independent right-fork TBT physical-indicator admission
     {"ManualLaneChangeIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp boundary_indicator add-on: manual lamp feedback isolation
+    // cp indicator_observer/manual_turn_indicator add-on: steering-torque + measured-yaw initiated lamp turn;
+    // writer settings UI, reader selfdrived/indicator_layer.py (AutoBlinkerControl lamp_mode gated)
+    {"ManualTurnIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ModelDesireIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp indicator_observer: lamp-only model desire intent observation
     {"ModelPathIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp indicator_observer: lamp-only model path/curve intent observation
     {"CarrotTrafficStopProfileEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // SunnyPilot StopProfileGenerator: closed-form jerk-limited stop envelope for traffic-light stop&go

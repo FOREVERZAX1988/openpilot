@@ -530,6 +530,10 @@ def main(demo=False):
                 carrot_man=carrot_man, radar_state=sm['radarState'])
       modelv2_send.modelV2.meta.laneChangeState = DH.lane_change_state
       modelv2_send.modelV2.meta.laneChangeDirection = DH.lane_change_direction
+      # cp parity: card's Tesla auto-turn graft reads the turn desire here
+      # (Session.turn admission); this fork's autoTurnSignalDirection/RequestId
+      # observability stays on SelfdriveState, published by selfdrived.
+      modelv2_send.modelV2.meta.desire = DH.desire
       # carrot: adjacent-lane widths for the xiaoge BSD gate (cp parity)
       modelv2_send.modelV2.meta.laneWidthLeft = lane_width_left_est.update(
         modelv2_send.modelV2.laneLines[0], modelv2_send.modelV2.laneLineProbs[0],

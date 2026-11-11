@@ -52,6 +52,8 @@ openpilot/selfdrive/assets/sounds/tici_engaged.wav -filter -diff -merge binary
 openpilot/selfdrive/assets/sounds/traffic_sign_green.wav -filter -diff -merge binary
 openpilot/selfdrive/assets/sounds/traffic_sign_changed.wav -filter -diff -merge binary
 openpilot/selfdrive/assets/sounds/reverse_gear.wav -filter -diff -merge binary
+# CarrotAssist cut-in chime: imported from cp (radar_cutin.wav), plain git blob.
+openpilot/selfdrive/assets/sounds/radar_cutin.wav -filter -diff -merge binary
 openpilot/sunnypilot/selfdrive/assets/images/lane_change_l.png -filter -diff -merge binary
 openpilot/sunnypilot/selfdrive/assets/images/lane_change_r.png -filter -diff -merge binary
 openpilot/sunnypilot/selfdrive/assets/images/turn_r.png -filter -diff -merge binary

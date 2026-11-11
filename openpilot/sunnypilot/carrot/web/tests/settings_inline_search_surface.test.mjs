@@ -32,6 +32,8 @@ function createSearchView({ split = false, query = "", previousQuery = "", curre
     SETTING_FAVORITES_GROUP: "favorites",
     settingInlineSearchQuery: previousQuery,
     settingInlineSearchPreviousGroup: previousGroup,
+    settingSearchTitlesFirst: false,
+    phoneSearchResults: null,
     settingRenderToken: 0,
     settingInlineSearchView: {
       cancelPending() {},

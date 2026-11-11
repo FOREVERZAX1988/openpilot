@@ -21,6 +21,10 @@ from . import config
 from .features import bluetooth as bluetooth_feature
 from .features import camera as camera_feature
 from .features import opui_proxy as opui_proxy_feature
+from .features import assistant_connection as assistant_connection_feature
+from .features import assistant_drive as assistant_drive_feature
+from .features import assistant_settings as assistant_settings_feature
+from .features import assistant_tools as assistant_tools_feature
 from .features import carrot_navi as carrot_navi_feature
 from .features import cars as cars_feature
 from .features import dashcam as dashcam_feature
@@ -28,6 +32,7 @@ from .features import egpu as egpu_feature
 from .features import intro as intro_feature
 from .features import lan_services as lan_services_feature
 from .features import mapbox_tokens as mapbox_tokens_feature
+from .features import navigation as navigation_feature
 from .features import params as params_feature
 from .features import params_extra as params_extra_feature
 from .features import screenrecord as screenrecord_feature
@@ -169,6 +174,14 @@ def create_app(params=None) -> web.Application:
   # CarrotPilot's features.register_all() order, minus egpu_model (this fork keeps its own
   # egpu.py, which reads the chestnut/jetlink stack rather than CarrotPilot's big_model
   # pipeline) and plus the features this fork added (camera, params_extra).
+  assistant_connection_feature.register(app)
+  assistant_drive_feature.register(app)
+  assistant_settings_feature.register(app)
+  assistant_tools_feature.register(app)
+  # CarrotPilot's register_all() mounts the Mapbox destination/preview feature
+  # next to the assistant features; here it goes just before static so the
+  # explicit /navigation and /api/navigation/* routes win the panel's "/" tree.
+  navigation_feature.register(app)
   static_feature.register(app)          # "/" - the panel, with the asset manifest injected
   intro_feature.register(app)
   carrot_navi_feature.register(app)

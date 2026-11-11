@@ -133,6 +133,9 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     # Carrot advisory: a measured front/corner obstacle with no selected lead.
     # Display/alert only; never changes radar selection or longitudinal targets.
     radarStationaryLead @107;
+    # Carrot cut-in audio alert: a detected CUT-IN promoted to leadTwo.
+    # Alert only; produced by the selfdrived cutin tracker.
+    radarCutin @155;
     # One-shot notice naming the NNFF torque model card loaded at boot, emitted
     # once per onroad session by selfdrived.
     torqueNNLoad @110;
@@ -1176,6 +1179,15 @@ struct ModelDataV2 {
     # mean; modeld fills these and the xiaoge BSD gate consumes them. Ordinals match cp.
     laneWidthLeft @10 :Float32;
     laneWidthRight @11 :Float32;
+
+    # carrot turn-signal intent surface consumed by card's Tesla auto-turn graft.
+    # cp carries these on the same MetaData; desire is written by modeld's
+    # DesireHelper (cp parity), while autoTurnSignalDirection/RequestId stay
+    # unwritten here - this fork publishes them on SelfdriveState from the
+    # selfdrived indicator layer, which card's meta adapter reads instead.
+    desire @12 :Desire;
+    autoTurnSignalDirection @13 :LaneChangeDirection;
+    autoTurnSignalRequestId @14 :UInt64;
 
 
     deprecated :group {

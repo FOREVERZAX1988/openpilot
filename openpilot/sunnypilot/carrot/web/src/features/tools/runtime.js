@@ -1,6 +1,8 @@
 "use strict";
 
 import { handleWebAutoUpdateStatus, openWebSettingsDialog } from "./web_settings/controller.js";
+import { openAssistantDialog } from "./assistant.js";
+import { localVoice } from "./local_voice.js";
 import {
   bindToolsDeviceInfoCopy,
   buildToolsDeviceInfoDialog,
@@ -1133,6 +1135,8 @@ function initToolsPage() {
     if (typeof openWebSettingsDialog === "function") openWebSettingsDialog();
   });
 
+  bindOnce("btnToolsAssistant", openAssistantDialog);
+
   bindOnce("btnDeviceInfo", async () => {
     let values = toolsMetaLastValues || {};
     try {
@@ -1582,6 +1586,7 @@ const CarrotToolsRuntime = Object.freeze({
 });
 
 Object.assign(globalThis, {
+  CarrotLocalVoice: localVoice,
   CarrotToolsRuntime,
   initToolsPage,
   refreshGitPullStatus,
