@@ -10,6 +10,7 @@ except ImportError as exc:  # PC without the msgq native module
 from opendbc.car.structs import car
 from openpilot.cereal import log
 from openpilot.selfdrive.monitoring import dm2d
+from openpilot.selfdrive.monitoring.dm2_test_settings import pin_carrot_vision_settings
 from openpilot.selfdrive.monitoring.test_monitoring import make_msg
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.common.parameterized import parameterized
@@ -27,6 +28,11 @@ def checked_submaster(state, replay=False):
 
 
 class TestDm2DTests(OpenpilotTestCase):
+  def setUp(self):
+    super().setUp()
+    # live-camera cases assume carrotpilot's VISION (5, 8, 13) timeouts;
+    # see dm2_test_settings.py for why the shipped policy must not be edited.
+    pin_carrot_vision_settings(self)
 
   @parameterized.expand([False, True], names=('experimental',))
   def test_live_reenable_cadence_and_camera_recovery(self, monkeypatch, experimental):

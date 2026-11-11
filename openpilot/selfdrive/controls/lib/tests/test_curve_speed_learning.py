@@ -4,10 +4,13 @@ import unittest
 import numpy as np
 
 from openpilot.selfdrive.controls.lib.curve_speed_learning import (
+  CSC_CONTROL_QUIET_TIME,
   CSC_COUNT_CAP,
   CSC_LAT_ACCEL_MAX,
   CSC_LAT_ACCEL_MIN,
+  CSC_LEAD_CLEAR_TIME,
   CSC_NUDGE_WEIGHT,
+  CSC_TRAINING_SETTLE_TIME,
   CURVATURE_BUCKETS,
   CURVATURE_GRID,
   DEFAULT_LATERAL_ACCELERATION,
@@ -274,11 +277,13 @@ class TestSamplingGatingGaps(unittest.TestCase):
     # lead visible through the settle period
     self._frames(learning, 60, tracking_lead=True)
     self.assertFalse(learning.enable_training)
-    # lead dropped: sampling must stay silent for CSC_LEAD_CLEAR_TIME (1 s)
-    self._frames(learning, 60)
+    # The lead-clear cooldown delays the settle timer by CSC_LEAD_CLEAR_TIME;
+    # derive the frame count from the shipped constants instead of hardcoding
+    # seconds that no longer match the policy (the old 60 frames = 3 s already
+    # exceeded cooldown + settle, so the assertion could never hold).
+    self._frames(learning, int(CSC_LEAD_CLEAR_TIME / learning.dt))
     self.assertFalse(learning.enable_training)
-    # 1 s of clear frames (20 at 20 Hz) on top of the settled timer
-    self._frames(learning, 21)
+    self._frames(learning, int(CSC_TRAINING_SETTLE_TIME / learning.dt) + 2)
     self.assertTrue(learning.enable_training)
 
   def test_lead_reappear_resets_cooldown(self):
@@ -291,13 +296,15 @@ class TestSamplingGatingGaps(unittest.TestCase):
 
   def test_control_silence_after_openpilot_ownership(self):
     learning = CurvatureLearning(dt=0.05)
-    # openpilot owns the speed: the quiet timer is pinned
+    # openpilot owns the speed: the quiet timer is pinned each frame
     self._frames(learning, 100, manual_speed_control=False, long_control_active=True)
-    self._frames(learning, 100)  # driver takes over, quiet timer 5 s
+    # once the driver takes over the pinned timer counts down; sampling stays
+    # silent for the whole CSC_CONTROL_QUIET_TIME window
+    quiet_frames = int(CSC_CONTROL_QUIET_TIME / learning.dt)
+    self._frames(learning, quiet_frames - 1)
     self.assertFalse(learning.enable_training)
-    self._frames(learning, 81)   # 4.05 s < CSC_CONTROL_QUIET_TIME
-    self.assertFalse(learning.enable_training)
-    self._frames(learning, 20)   # past 5 s + settle already elapsed
+    # after quiet expires the settle timer still has to elapse
+    self._frames(learning, int(CSC_TRAINING_SETTLE_TIME / learning.dt) + 2)
     self.assertTrue(learning.enable_training)
 
   def test_pure_manual_driving_has_no_silence(self):
@@ -354,8 +361,12 @@ class TestAsyncPersistenceContract(unittest.TestCase):
   def test_sync_hook_saved_immediately(self):
     learning = CurvatureLearning(dt=0.05)
     learning.data_dirty = True
+    # A legacy hook returning None means "saved synchronously". Give the learner
+    # some data first, otherwise the hook dict is empty and this cannot prove
+    # the payload was handed over.
+    learning.curvature_data = {"0.0010": {"average": 2.0, "count": 3}}
     stored = {}
     learning.put_fn = lambda data: stored.update(data) or None
     learning.flush()
     self.assertFalse(learning.data_dirty)
-    self.assertTrue(stored)
+    self.assertEqual(stored, learning.curvature_data)

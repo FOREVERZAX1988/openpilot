@@ -42,17 +42,23 @@ def sample(detector, t, accel=(0, 0, 0), *, orientation=(0, 0, 0), calibration=(
 
 class TestImpactDashcamTests(OpenpilotTestCase):
 
+  # sample()'s accel is a 3-axis vector. The pytest->unittest converter emitted
+  # each vector as three case values but kept a single name, so expand()'s
+  # strict zip raised before any of these tests could run. Flatten to three
+  # named components and rebuild the vector (same as upstream c91162160b).
   @parameterized.expand([(IMPACT_ACCEL, 0, 0), (-IMPACT_ACCEL, 0, 0), (0, IMPACT_ACCEL, 0),
-                                     (0, -IMPACT_ACCEL, 0), (11, 11, 0)], names=('accel',))
-  def test_two_new_horizontal_samples(self, accel):
+                         (0, -IMPACT_ACCEL, 0), (11, 11, 0)], names=('ax', 'ay', 'az'))
+  def test_two_new_horizontal_samples(self, ax, ay, az):
+    accel = (ax, ay, az)
     detector = ImpactDetector()
     assert not sample(detector, 1, accel)[0]
     assert not sample(detector, 1, accel)[0]  # one packet seen twice
     assert sample(detector, 1.01, accel)[0]
 
 
-  @parameterized.expand([(0, 0, 0), (-10, 0, 0), (0, 0, 30), (IMPACT_ACCEL - 0.01, 0, 0)], names=('accel',))
-  def test_gravity_aeb_and_vertical_bumps_do_not_trigger(self, accel):
+  @parameterized.expand([(0, 0, 0), (-10, 0, 0), (0, 0, 30), (IMPACT_ACCEL - 0.01, 0, 0)], names=('ax', 'ay', 'az'))
+  def test_gravity_aeb_and_vertical_bumps_do_not_trigger(self, ax, ay, az):
+    accel = (ax, ay, az)
     detector = ImpactDetector()
     for t in np.arange(1, 1.2, .01):
       assert not sample(detector, t, accel)[0]

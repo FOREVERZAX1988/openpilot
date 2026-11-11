@@ -8,6 +8,7 @@ except ImportError as exc:  # PC without the msgq native module
 from openpilot.common.realtime import DT_DMON
 from openpilot.selfdrive.monitoring.dm2 import DriverMonitoring2
 from openpilot.selfdrive.monitoring.dm2_context import ObjectObservation, TrafficContext
+from openpilot.selfdrive.monitoring.dm2_test_settings import pin_carrot_vision_settings
 from openpilot.selfdrive.monitoring.policy import DriverMonitoring, AlertLevel
 from openpilot.selfdrive.monitoring.test_monitoring import make_msg
 from openpilot.common.test import OpenpilotTestCase, approx
@@ -34,6 +35,11 @@ def camera(dm, seconds, msg=None, clear=False, response=False, held=False, stric
 
 
 class TestDm2Tests(OpenpilotTestCase):
+  def setUp(self):
+    super().setUp()
+    # camera timing cases assume carrotpilot's VISION (5, 8, 13) timeouts;
+    # see dm2_test_settings.py for why the shipped policy must not be edited.
+    pin_carrot_vision_settings(self)
 
   @parameterized.expand([(False, False), (True, False), (False, True), (True, True)], names=('camera_available', 'initial'))
   def test_live_mode_preserves_elapsed_and_accumulated_state(self, camera_available, initial):
