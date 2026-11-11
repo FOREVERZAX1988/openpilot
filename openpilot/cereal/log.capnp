@@ -135,7 +135,9 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     radarStationaryLead @107;
     # Carrot cut-in audio alert: a detected CUT-IN promoted to leadTwo.
     # Alert only; produced by the selfdrived cutin tracker.
-    radarCutin @155;
+    # Ordinal @111 = next sequential slot (append-only rule); do NOT copy cp's
+    # @155 - capnp requires enum ordinals to be contiguous with no holes.
+    radarCutin @111;
     # One-shot notice naming the NNFF torque model card loaded at boot, emitted
     # once per onroad session by selfdrived.
     torqueNNLoad @110;
