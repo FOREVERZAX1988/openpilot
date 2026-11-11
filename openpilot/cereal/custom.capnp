@@ -1262,6 +1262,16 @@ struct CustomReserved19 @0xa4f1eb3323f5f582 {
   # cache-only, empty on the published message and in a cache from before 2026-10-21
   speedBinDecays @7 :List(Float32);  # per-bin filter decay
   speedBinLearned @8 :List(Bool);    # the bin has been fit since its last reseed, whatever its points now
+  # Seam A shadow (flm.automatic.evaluate_linear_factor) verdict telemetry from
+  # sunnypilot/flm/shadow_producer.py. Shadow only: nothing in the learn path
+  # reads these and no acceptance is gated on them; they exist so routes carry
+  # the verdict for the offline replay calibration. Empty until torqued runs
+  # with FlmShadowEnabled.
+  flmShadowStatus @9 :Text;              # collecting/rejected/qualified_fit/unavailable + reason below
+  flmShadowReason @10 :Text;             # last split/eval reason, e.g. disabled, collecting_independent_response
+  flmShadowLatAccelFactor @11 :Float32;  # candidate latAccelFactor when qualified_fit, else 0
+  flmShadowTrainWindows @12 :Int32;      # windows in the fit's train partition, 0 without a verdict
+  flmShadowHeldoutWindows @13 :Int32;    # windows in the fit's heldout partition, 0 without a verdict
 }
 
 # ---- zoompilot -----------------------------------------------------------------------------

@@ -294,6 +294,17 @@ class SpeedBinLearner:
         sp.speedBinDecays = [float(d) for d in self.speed_bin_decays]
         sp.speedBinLearned = self.speed_bin_learned
         sp.speedBinPoints = [bucket.get_points()[:, [0, 2]].tolist() for bucket in self.speed_bin_points]
+    # Seam A shadow verdict telemetry (capnp append, CustomReserved19 @9-@13):
+    # empty fields when no producer is attached (a pre-shadow reader never sees
+    # a difference); set on both the wire and the cache copy so routes carry it
+    shadow = getattr(self, 'flm_shadow', None)
+    if shadow is not None:
+      v = shadow.verdict()
+      sp.flmShadowStatus = v['status']
+      sp.flmShadowReason = v['reason']
+      sp.flmShadowLatAccelFactor = v['latAccelFactor']
+      sp.flmShadowTrainWindows = v['trainWindows']
+      sp.flmShadowHeldoutWindows = v['heldoutWindows']
     return msg
 
   def _estimate_params_speed_binned(self):

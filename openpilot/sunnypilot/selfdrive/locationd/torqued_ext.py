@@ -11,6 +11,7 @@ from opendbc.car.structs import car
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
+from openpilot.sunnypilot.flm.shadow_producer import FlmShadowProducer
 from openpilot.sunnypilot.selfdrive.locationd.speed_bin_learner import SpeedBinLearner
 
 RELAXED_MIN_BUCKET_POINTS = np.array([1, 200, 300, 500, 500, 300, 200, 1])
@@ -23,6 +24,10 @@ class TorqueEstimatorExt(SpeedBinLearner):
     self.CP = CP
     self._params = Params()
     self.frame = -1
+    # Seam A shadow (telemetry only, self-gates on FlmShadowEnabled): verdicts
+    # ride the CustomReserved19 append fields; nothing in the learn path reads
+    # them. update_flm_shadow is the only thing driving it.
+    self.flm_shadow = FlmShadowProducer(CP, self._params)
 
     self.enforce_torque_control_toggle = self._params.get_bool("EnforceTorqueControl")  # only during init
     self.use_params = self.CP.brand in ALLOWED_CARS and self.CP.lateralTuning.which() == 'torque'
@@ -75,3 +80,11 @@ class TorqueEstimatorExt(SpeedBinLearner):
         self.use_params = self.use_live_torque_params
 
     self.frame += 1
+
+  @staticmethod
+  def update_flm_shadow(estimator, sm):
+    """torqued main's per-loop hook: drive the Seam A shadow producer. Never
+    raises into the TLS publication path (update() fails closed internally)."""
+    shadow = getattr(estimator, 'flm_shadow', None)
+    if shadow is not None:
+      shadow.update(sm, estimator)
