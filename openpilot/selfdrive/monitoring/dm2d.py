@@ -130,9 +130,10 @@ def disabled_state_packet(rhd, experimental, monitor=None, valid=True, camera_un
   packet = monitor.get_state_packet(valid=valid) if monitor is not None else messaging.new_message('driverMonitoringState', valid=valid)
   state = packet.driverMonitoringState
   state.lockout = False
-  state.alertCountLockoutPercent = 0
-  state.alertTimeLockoutPercent = 0
-  state.lockoutRecoveryPercent = 0
+  # this fork moved the lockout percents into the deprecated group and
+  # dropped lockoutRecoveryPercent entirely
+  state.deprecated.alertCountLockoutPercent = 0
+  state.deprecated.alertTimeLockoutPercent = 0
   state.alert3Count = 0
   state.noResponseCount = 0
   state.noResponseForceDecel = False
