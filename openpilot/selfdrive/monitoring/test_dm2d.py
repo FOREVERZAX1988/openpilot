@@ -84,7 +84,7 @@ class TestDm2DTests(OpenpilotTestCase):
     model.laneLineProbs = [0., 1., 1., 0.]
     state = State(carState=car.CarState.new_message(vEgo=20, canValid=True, gearShifter='drive'),
                   selfdriveState=log.SelfdriveState.new_message(enabled=True), modelV2=model.as_reader(),
-                  radarState=log.RadarState.new_message(), extrinsicsCalibration=log.ExtrinsicsCalibrationData.new_message(rpyCalib=[0., 0., 0.]),
+                  radarState=log.RadarState.new_message(), extrinsicsCalibration=log.ExtrinsicsCalibration.new_message(rpyCalib=[0., 0., 0.]),
                   driverStateV2=make_msg(True))
 
     class Params:
@@ -212,7 +212,7 @@ class TestDm2DTests(OpenpilotTestCase):
   def test_malformed_camera_outputs_cannot_reuse_previous_attention(self):
     model = log.ModelDataV2.new_message()
     model.meta.disengagePredictions.brakeDisengageProbs = [0.0]
-    calibration = log.ExtrinsicsCalibrationData.new_message(rpyCalib=[0., 0., 0.])
+    calibration = log.ExtrinsicsCalibration.new_message(rpyCalib=[0., 0., 0.])
 
     class State(dict):
       def all_checks(self, _):
@@ -233,7 +233,7 @@ class TestDm2DTests(OpenpilotTestCase):
   def test_replay_camera_dependencies_expire_on_route_timeline(self):
     model = log.ModelDataV2.new_message()
     model.meta.disengagePredictions.brakeDisengageProbs = [0.0]
-    calibration = log.ExtrinsicsCalibrationData.new_message(rpyCalib=[0., 0., 0.])
+    calibration = log.ExtrinsicsCalibration.new_message(rpyCalib=[0., 0., 0.])
 
     class State(dict):
       logMonoTime = {
@@ -339,7 +339,7 @@ class TestDm2DTests(OpenpilotTestCase):
   GEAR_CASES = ([(str(gear), (gear,) * 6) for gear in car.CarState.GearShifter.schema.enumerants]
                 + [('gear_changes', ('drive', 'drive', 'neutral', 'neutral', 'reverse', 'reverse'))])
 
-  @parameterized.expand([(10.0,) * 6, (0.0,) * 6, (10.0, 10.0, 0.0, 0.0, 0.0, 0.0)], names=('speeds',))
+  @parameterized.expand([((10.0,) * 6,), ((0.0,) * 6,), ((10.0, 10.0, 0.0, 0.0, 0.0, 0.0),)], names=('speeds',))
   def test_three_physical_cancel_presses_disable_for_current_session_at_any_gear_or_speed(self, monkeypatch, speeds):
     for gears_id, gears in self.GEAR_CASES:
       with self.subTest(gears=gears_id):
@@ -813,7 +813,7 @@ class TestDm2DTests(OpenpilotTestCase):
     model.laneLineProbs = [0., 1., 1., 0.]
     state = State(carState=car.CarState.new_message(vEgo=20, canValid=True, gearShifter='drive'),
                   selfdriveState=log.SelfdriveState.new_message(enabled=True), modelV2=model.as_reader(),
-                  radarState=log.RadarState.new_message(), extrinsicsCalibration=log.ExtrinsicsCalibrationData.new_message(rpyCalib=[0., 0., 0.]),
+                  radarState=log.RadarState.new_message(), extrinsicsCalibration=log.ExtrinsicsCalibration.new_message(rpyCalib=[0., 0., 0.]),
                   driverStateV2=make_msg(True, distracted=True))
 
     class Bluetooth:
