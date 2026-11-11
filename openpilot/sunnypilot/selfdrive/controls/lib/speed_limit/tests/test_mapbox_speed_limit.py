@@ -442,3 +442,33 @@ class TestResolverMapboxFill(OpenpilotTestCase):
     resolver.update(20.0, sm)
     resolver.update(20.0, sm)
     assert len(writes) == 1
+    # the per-drive mirror is kept in sync with the persistent value
+    assert fp.values["PreviousSpeedLimitDrive"] == fp.values["PreviousSpeedLimit"]
+
+  def test_filler_value_not_persisted(self, mocker):
+    """A Mapbox filler result fills the display but never persists into
+    PreviousSpeedLimit/PreviousSpeedLimitDrive: an online lookup around a
+    stale GPS fix must not become the "last real limit" forever."""
+    resolver = self._resolver()
+    fp = FakeParams({"SLCMapboxFiller": True})
+    resolver.params = fp
+    resolver._last_written_previous_limit = 0.0
+
+    sm = mapbox_sm(mocker)  # empty offline map: only the filler can produce a limit
+    future = StubFuture(result=(80 * CV.KPH_TO_MS, 500.0), done=True)
+    resolver.mapbox.executor = SubmitRecorder(future)
+    resolver.update(20.0, sm)
+
+    # the filler value IS the winning solution this frame...
+    assert resolver.source == SpeedLimitSource.map
+    assert abs(resolver.speed_limit - 80 * CV.KPH_TO_MS) < 1e-6
+    assert resolver._filler_solution
+    # ...but nothing was persisted
+    assert "PreviousSpeedLimit" not in fp.values
+    assert "PreviousSpeedLimitDrive" not in fp.values
+
+    # a real (offline map) limit afterwards persists both keys again
+    sm_real = mapbox_sm(mocker, map_limit=50 * CV.KPH_TO_MS)
+    resolver.update(20.0, sm_real)
+    assert abs(fp.values["PreviousSpeedLimit"] - 50 * CV.KPH_TO_MS) < 1e-6
+    assert abs(fp.values["PreviousSpeedLimitDrive"] - 50 * CV.KPH_TO_MS) < 1e-6

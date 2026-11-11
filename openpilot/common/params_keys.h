@@ -379,6 +379,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SpeedLimitPolicy", {PERSISTENT | BACKUP, INT, "4"}},  // 0=car only, 1=map only, 2=car first, 3=map first, 4=combined (min)
     {"SpeedLimitValueOffset", {PERSISTENT | BACKUP, INT, "0"}},
     {"PreviousSpeedLimit", {PERSISTENT, FLOAT, "0.0"}},  // m/s; last valid limit so the sign survives a reboot
+    {"PreviousSpeedLimitDrive", {PERSISTENT | CLEAR_ON_OFFROAD_TRANSITION, FLOAT, "0.0"}},  // m/s; per-drive mirror of PreviousSpeedLimit - what the UI fallback reads, so a stale limit never lingers after parking (offroad transition clears it) while a reboot mid-drive still restores the sign
     {"SpeedLimitChangedAlert", {PERSISTENT | BACKUP, BOOL, "0"}},  // chime + alert whenever the displayed limit changes
 
     // Ask before taking a new speed limit, by direction. 0 = never, 1 = only

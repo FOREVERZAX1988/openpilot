@@ -250,4 +250,5 @@ class VCruiseHelperSP:
       v_cruise_kph = float(np.clip(round(v_cruise_kph, 1), self.v_cruise_min, V_CRUISE_MAX))
       self.v_cruise_kph = v_cruise_kph
       self.v_cruise_cluster_kph = v_cruise_kph
+      self._cruise_speed_set = True  # an SLA adoption is a real set speed
       self._clear_reconcile()

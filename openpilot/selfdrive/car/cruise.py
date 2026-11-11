@@ -267,6 +267,12 @@ class VCruiseCarrot(VCruiseHelper):
     self.v_cruise_cluster_kph = 20 #V_CRUISE_UNSET
     self.v_cruise_kph_last = 20
     self._cruise_speed_initialized = False
+    # No real set speed established yet. The setpoint boots at 20 km/h for cp
+    # parity (control paths need a sane floor), but until a button press, the
+    # engage edge, a carrot app command or an SLA adoption establishes a speed,
+    # the PUBLISHED cluster mirror is forced to V_CRUISE_UNSET so the UI shows
+    # "-" instead of a phantom "20" MAX box (fix for the set-speed complaint).
+    self._cruise_speed_set = False
 
     self.enabled_last = False
 
@@ -526,6 +532,12 @@ class VCruiseCarrot(VCruiseHelper):
     if CC.enabled:
       self._cruise_ready = False
     v_cruise_kph = self._update_cruise_buttons(CS, CC, self.v_cruise_kph, CS_SP)
+    # any pressed accel/decel/resume ends the "unset" display: these establish
+    # or move the set speed (setCruise/cancel are intentionally excluded - they
+    # toggle lateral/cancel state without touching the setpoint)
+    if any(b.pressed and b.type in (ButtonType.accelCruise, ButtonType.decelCruise,
+                                    ButtonType.resumeCruise) for b in CS.buttonEvents):
+      self._cruise_speed_set = True
 
     if self._activate_cruise > 0:
       #self.events.append(EventName.buttonEnable)
@@ -560,6 +572,15 @@ class VCruiseCarrot(VCruiseHelper):
       #if self.cruise_state_available_last: # 최초 한번이라도 cruiseState.available이 True였다면
       #  self._lat_enabled = False
 
+    # carrot's unset set speed: the setpoint boots at 20 km/h (cp parity) so the
+    # control paths have a sane floor, but the UI must not display a phantom
+    # "20" before anything real (button, engage edge, app command, SLA adoption)
+    # established a set speed. Only the published cluster mirror goes to
+    # V_CRUISE_UNSET - v_cruise_kph itself keeps 20, and PCM-cruise cars always
+    # mirror the car's own cluster untouched.
+    if not self.CP.pcmCruise and not self._cruise_speed_set:
+      self.v_cruise_cluster_kph = V_CRUISE_UNSET
+
     self.cruise_state_available_last = CS.cruiseState.available
     self.enabled_last = CC.enabled
 
@@ -585,6 +606,8 @@ class VCruiseCarrot(VCruiseHelper):
     else:
       self.v_cruise_kph = int(round(np.clip(max(CS.vEgo * CV.MS_TO_KPH, initial_speed), V_CRUISE_INITIAL, V_CRUISE_MAX)))
       self.v_cruise_cluster_kph = self.v_cruise_kph
+    # the engage edge establishes a real set speed: end the "unset" display
+    self._cruise_speed_set = True
 
   def _prepare_buttons(self, CS, v_cruise_kph, CS_SP=None, remote=None):
     button_kph = v_cruise_kph
@@ -721,9 +744,11 @@ class VCruiseCarrot(VCruiseHelper):
         elif self.carrot_arg == "STOP":
           v_cruise_kph = 5
           self._cruise_speed_initialized = False
+          self._cruise_speed_set = True
           self._add_log("Cruise stop (carrot command)")
 
       elif self.carrot_cmd == "SPEED":
+        self._cruise_speed_set = True  # an app command establishes a real set speed
         if self.carrot_arg == "UP":
           v_cruise_kph = self._auto_speed_up(v_cruise_kph)
           self._add_log("Cruise speed up (carrot command)")

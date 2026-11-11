@@ -178,7 +178,7 @@ _events_mod.EventsSP = _EventsSP
 _events_mod.EventNameSP = types.SimpleNamespace()
 sys.modules['openpilot.sunnypilot.selfdrive.selfdrived.events'] = _events_mod
 
-from openpilot.selfdrive.car.cruise import VCruiseCarrot, ButtonType, GearShifter
+from openpilot.selfdrive.car.cruise import VCruiseCarrot, ButtonType, GearShifter, V_CRUISE_UNSET
 
 # NO capnp.load() in this process, by design.
 #
@@ -325,7 +325,8 @@ def build_cp(pcm_cruise=False, openpilot_long=True):
 
 
 def build_cp_sp():
-  return types.SimpleNamespace(pcmCruiseSpeed=False)
+  return types.SimpleNamespace(pcmCruiseSpeed=False,
+                               intelligentCruiseButtonManagementAvailable=False)
 
 
 print('=== VCruiseCarrot onroad simulation ===')
@@ -352,21 +353,67 @@ step('cruise becomes available', t_ignition_cruise_available)
 
 
 def t_set_engage():
-  """Exactly the card.py call that raised the reported TypeError."""
+  """Exactly the card.py engage-edge call (initial_speed floor, DEC removed 2026-10)."""
   cs_prev = make_cs(v_ego=15.0, available=True)
-  helper.initialize_v_cruise(cs_prev, False, False)
+  helper.initialize_v_cruise(cs_prev, 40)
 
 
-step('initialize_v_cruise(CS, experimental, dynamic) [the reported crash]', t_set_engage)
+step('initialize_v_cruise(CS, initial_speed) [the reported crash]', t_set_engage)
 
 
-def t_engage_with_experimental():
-  helper.initialize_v_cruise(make_cs(v_ego=15.0), True, False)
-  helper.initialize_v_cruise(make_cs(v_ego=15.0), True, True)
-  helper.initialize_v_cruise(make_cs(v_ego=15.0), False, True)
+def t_engage_initial_speeds():
+  """The engage-edge call across representative initial-speed floors."""
+  for initial_speed in (0, 40, 100):
+    helper.initialize_v_cruise(make_cs(v_ego=15.0), initial_speed)
 
 
-step('initialize_v_cruise across all experimental combinations', t_engage_with_experimental)
+step('initialize_v_cruise across initial-speed floors', t_engage_initial_speeds)
+
+
+def t_unset_display_before_any_set():
+  """Fix for the phantom-MAX complaint: a fresh helper publishes the cluster
+  mirror as V_CRUISE_UNSET while nothing real (button, engage, app command)
+  has established a set speed - the UI shows "-" instead of a phantom "20".
+  The internal setpoint itself keeps the cp-parity 20 km/h floor."""
+  fresh = VCruiseCarrot(build_cp(), build_cp_sp())
+  for _ in range(5):
+    cs = make_cs(v_ego=15.0, available=True)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  # the internal setpoint ego-follows while disengaged (pre-existing raise),
+  # but the published cluster mirror stays UNSET: the UI shows "-" because the
+  # driver has established nothing
+  assert fresh.v_cruise_kph > 20, f'ego-follow raise should have moved the setpoint, got {fresh.v_cruise_kph}'
+  assert fresh.v_cruise_cluster_kph == V_CRUISE_UNSET, (
+    f'published cluster mirror must stay UNSET before a real set speed, got {fresh.v_cruise_cluster_kph}')
+  assert fresh._cruise_speed_set is False
+
+
+step('phantom "20" suppressed: cluster mirror UNSET before any real set', t_unset_display_before_any_set)
+
+
+def t_button_press_establishes_display():
+  """An accel/decel/resume press ends the "unset" display and publishes the setpoint."""
+  fresh = VCruiseCarrot(build_cp(), build_cp_sp())
+  cs = make_cs(v_ego=15.0, available=True, buttons=[('decelCruise', True)])
+  fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh._cruise_speed_set is True, 'a decel press must establish the set speed'
+  assert 0 < fresh.v_cruise_cluster_kph < V_CRUISE_UNSET, (
+    f'published cluster mirror must be the real setpoint after a press, got {fresh.v_cruise_cluster_kph}')
+
+
+step('a decel press publishes the real setpoint (display "-")', t_button_press_establishes_display)
+
+
+def t_engage_edge_establishes_display():
+  """The engage edge (card.py -> initialize_v_cruise) publishes the real setpoint."""
+  fresh = VCruiseCarrot(build_cp(), build_cp_sp())
+  fresh.initialize_v_cruise(make_cs(v_ego=15.0), 40)
+  assert fresh._cruise_speed_set is True
+  assert 0 < fresh.v_cruise_cluster_kph < V_CRUISE_UNSET, (
+    f'published cluster mirror must be the real setpoint after engage, got {fresh.v_cruise_cluster_kph}')
+
+
+step('engage edge publishes the real setpoint', t_engage_edge_establishes_display)
 
 
 def t_button_press_cycle():
