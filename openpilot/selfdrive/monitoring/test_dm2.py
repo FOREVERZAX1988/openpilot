@@ -142,7 +142,7 @@ class TestDm2Tests(OpenpilotTestCase):
     assert dm.alert_3_cnt == 1 and dm.no_response_cnt == 1
 
 
-  @parameterized.expand([((False, 2), 'eye'), ((True, 4), 'eye'), ((False, 2), 'sleep'), ((True, 4), 'sleep'), ((False, 2), 'phone'), ((True, 4), 'phone')], names=('clear', 'factor', 'cause'))  # noqa: E501
+  @parameterized.expand([(False, 2, 'eye'), (True, 4, 'eye'), (False, 2, 'sleep'), (True, 4, 'sleep'), (False, 2, 'phone'), (True, 4, 'phone')], names=('clear', 'factor', 'cause'))  # noqa: E501
   def test_camera_experimental_doubles_timing_but_not_detection_thresholds(self, clear, factor, cause):
     dm = DriverMonitoring2(experimental=True)
     msg = make_msg(True, distracted=(cause == 'eye'))
