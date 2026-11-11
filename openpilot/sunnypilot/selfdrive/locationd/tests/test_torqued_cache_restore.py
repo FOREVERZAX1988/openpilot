@@ -159,7 +159,7 @@ class TestCacheRestore(OpenpilotTestCase):
     assert_untouched(est, seeds, n_points=1)
 
 
-  def test_bad_bin_reseeds_only_that_bin(self):
+  def test_bad_bin_reseeds_only_that_bin(self, fake_params):
     # ids: ['nan_laf', 'inf_friction', 'laf_above_bound', 'friction_below_bound']
     for field, bad_bin, bad_value in [
     ('laf', 1, lambda lo, hi: float('nan')),
@@ -237,7 +237,7 @@ class TestCacheRestore(OpenpilotTestCase):
     est = TorqueEstimator(make_cp())
     assert est.speed_dep_seed_version == seed_version_of(est.CP.carFingerprint)
 
-  def test_other_seed_version_rejects_whole_cache(self):
+  def test_other_seed_version_rejects_whole_cache(self, fake_params):
     # ids: ["cache_behind", "cache_ahead"]
     for delta in [1, -1]:
       with self.subTest(delta=delta):
