@@ -943,8 +943,18 @@ def log_handler(end_event: threading.Event, log_attr_name=LOG_ATTR_NAME) -> None
 
   log_files = []
   last_scan = 0.
+  params = Params()
   while not end_event.is_set():
     try:
+      # Do not steal CPU/network from the driving stack: forwarding a 2500-file
+      # swaglog backlog (~300KB JSON per file over TLS) was measured starving
+      # camerad/modeld while driving (camera frame drops, model lag after each
+      # app reconnect). Uploads drain only offroad, throttled.
+      if params.get_bool("IsOnroad"):
+        if end_event.wait(5.0):
+          break
+        continue
+
       curr_scan = time.monotonic()
       if curr_scan - last_scan > 10:
         log_files = get_logs_to_send_sorted(log_attr_name)
@@ -986,6 +996,13 @@ def log_handler(end_event: threading.Event, log_attr_name=LOG_ATTR_NAME) -> None
         except queue.Empty:
           if curr_log is None:
             break
+
+      # throttle backlog drain offroad: one file per ~3s instead of one per
+      # response round-trip (~0.7s), so a multi-GB backlog cannot monopolize
+      # the CPU for tens of minutes.
+      if curr_log is not None:
+        if end_event.wait(2.0):
+          break
 
     except Exception:
       cloudlog.exception("athena.log_handler.exception")

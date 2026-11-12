@@ -315,6 +315,7 @@ def run(directory=DIRECTORY, duration=None, model_path=MODEL_PATH, observation_p
                    target_cpu_duty=TARGET_CPU_DUTY, stream='road',
                    supported_sizes=[list(size) for size in SUPPORTED_SIZES])
     previous_id = None
+    last_diag_emit = 0.0
     while requested(directory) and (duration is None or time.monotonic() - start < duration):
       if not client.is_connected() and not client.connect(False):
         time.sleep(1)
@@ -391,7 +392,13 @@ def run(directory=DIRECTORY, duration=None, model_path=MODEL_PATH, observation_p
               publish_prepare_observation(control_record)
         except (OSError, ValueError, KeyError, TypeError):
           cloudlog.exception('signalYoloControlPublishFailed')
-      cloudlog.event('signalYoloShadow', **record)
+      # Telemetry throttle: this record is 1-2KB of JSON into swaglog; at
+      # shadow rate it floods /data/log and the athena backlog upload then
+      # starves cameras/modeld on app reconnect. Keep the observation file
+      # at full rate, emit the swaglog event at most every 10s.
+      if time.monotonic() - last_diag_emit >= 10.0:
+        last_diag_emit = time.monotonic()
+        cloudlog.event('signalYoloShadow', **record)
       time.sleep(next_delay(elapsed))
 
 
