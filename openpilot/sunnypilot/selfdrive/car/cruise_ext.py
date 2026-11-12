@@ -251,4 +251,5 @@ class VCruiseHelperSP:
       self.v_cruise_kph = v_cruise_kph
       self.v_cruise_cluster_kph = v_cruise_kph
       self._cruise_speed_set = True  # an SLA adoption is a real set speed
+      self._set_speed_event = True
       self._clear_reconcile()
