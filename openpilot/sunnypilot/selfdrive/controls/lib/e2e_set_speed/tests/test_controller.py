@@ -5,6 +5,8 @@ This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 
+import math
+
 import numpy as np
 
 import openpilot.cereal.messaging as messaging
@@ -135,14 +137,22 @@ class TestController(unittest.TestCase):
     assert ctl.lift == 0.
 
   def test_far_plan_speeds_do_not_move_the_lift(self):
-    # the flicker that pumped the old envelope: the plan's far end dropping 10 mph and back
+    # The plan's far end flickers by about 1 m/s on a straight road; that must not pump the
+    # lift. plan_fade only reads a slowdown past GAIN_BP / HORIZON, so 4.5 m/s is no longer
+    # "flicker" in the shipped controller - it is a real slowdown and should let go.
     ctl = settled()
     lifts = []
     for i in range(100):
-      dip = 4.5 if (i // 5) % 2 else 0.
+      dip = 1.0 if (i // 5) % 2 else 0.
       plan_v = V_EGO - dip * np.minimum(T_IDXS, 10.) / 10.
       lifts.append(run(ctl, 1, build_sm(V_EGO, plan_v=plan_v)))
     assert np.ptp(lifts) == 0.
+
+    ctl = settled()
+    plan_v = V_EGO - 4.5 * np.minimum(T_IDXS, 10.) / 10.
+    for _ in range(40):
+      run(ctl, 1, build_sm(V_EGO, plan_v=plan_v))
+    assert ctl.lift < ctl.floor - 0.25  # a genuine slowdown does release the lift
 
   def test_lane_change_drops_the_lift(self):
     ctl = settled()
@@ -167,24 +177,27 @@ class TestController(unittest.TestCase):
     assert ctl.inhibit == Inhibit.invalid
 
   def test_approach_closes_small_gaps_gently(self):
-    # the floor's pace grows with the shortfall to the whole speed envelope at 10 m/s, and is a third
-    # of it at the target
-    assert all(np.diff(approach.APPROACH_GAP_FRACTION) > 0) and approach.APPROACH_GAP_FRACTION[-1] == 1.
+    # The pace is sqrt(2 * jerk * gap) capped by the stock-derived ceiling: continuous
+    # through the target, monotone in the shortfall, and the ceiling far below it.
     for v, ceiling in zip(approach.APPROACH_BP, approach.APPROACH_V, strict=True):
-      assert approach.approach_accel(v, v + 10., STANDARD) == approx(ceiling)
-      assert approach.approach_accel(v, v, STANDARD) == approx(approach.APPROACH_GAP_FRACTION[0] * ceiling)
+      assert approach.approach_accel(v, v, STANDARD) == approx(0.)
+      assert approach.approach_accel(v, v + 1., STANDARD) == approx(math.sqrt(2. * approach.APPROACH_JERK))
+      assert approach.approach_accel(v, v + 100., STANDARD) == approx(ceiling)
+    gaps = np.linspace(0., 12., 25)
+    accels = [approach.approach_accel(V_EGO, V_EGO + g, STANDARD) for g in gaps]
+    assert all(np.diff(accels) >= -1e-9)
     assert approach.approach_accel(V_EGO, V_EGO + 1., STANDARD) < 0.42  # a CX-5 5>4 kickdown at highway speed
 
   def test_approach_follows_the_personality(self):
-    # Standard is the table; Relaxed and Aggressive sit a 0.15 step either side of it at a full
-    # shortfall, and closer near the target. Read from a message as the planner does.
+    # The ceiling is Standard; Relaxed/Aggressive shift it by 0.15. Near the target the
+    # sqrt pace is gentler than every ceiling, so personality cannot separate them there.
     def personality(name):
       msg = messaging.new_message('selfdriveState')
       msg.selfdriveState.personality = name
       return msg.as_reader().selfdriveState.personality.raw
     relaxed_p, standard_p, aggressive_p = (personality(n) for n in ('relaxed', 'standard', 'aggressive'))
     for v in approach.APPROACH_BP:
-      relaxed, standard, aggressive = (approach.approach_accel(v, v + 10., p) for p in (relaxed_p, standard_p, aggressive_p))
+      relaxed, standard, aggressive = (approach.approach_accel(v, v + 30., p) for p in (relaxed_p, standard_p, aggressive_p))
       assert relaxed == approx(standard - 0.15) and aggressive == approx(standard + 0.15)
       assert approach.approach_accel(v, v + 1., aggressive_p) - approach.approach_accel(v, v + 1., standard_p) < 0.15
 

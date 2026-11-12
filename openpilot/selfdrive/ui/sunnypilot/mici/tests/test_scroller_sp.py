@@ -1,4 +1,5 @@
 import pyray as rl
+import raylib_nb as rl_nb
 
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.system.ui.lib.application import MouseEvent, MousePos, gui_app
@@ -57,7 +58,7 @@ class TestScrollerSP(OpenpilotTestCase):
 
   def test_scroll_panel_sp_rejects_orthogonal_drags(self, monkeypatch):
     panel = GuiScrollPanel2SP(horizontal=True)
-    bounds = rl.Rectangle(0, 0, 100, 100)
+    bounds = rl_nb.Rectangle(0, 0, 100, 100)
 
     monkeypatch.setattr(gui_app, "_mouse_events", [_mouse_event(10, 10, pressed=True, t=1.0)])
     panel.update(bounds, 200)
@@ -71,7 +72,7 @@ class TestScrollerSP(OpenpilotTestCase):
 
   def test_scroll_panel_sp_can_disable_out_of_bounds_handling(self, monkeypatch):
     panel = GuiScrollPanel2SP(horizontal=False, handle_out_of_bounds=False)
-    bounds = rl.Rectangle(0, 0, 100, 100)
+    bounds = rl_nb.Rectangle(0, 0, 100, 100)
     monkeypatch.setattr(gui_app, "_mouse_events", [])
 
     panel.set_offset(20)

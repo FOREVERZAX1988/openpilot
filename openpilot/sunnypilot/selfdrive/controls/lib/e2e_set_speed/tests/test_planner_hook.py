@@ -11,6 +11,7 @@ import numpy as np
 from openpilot.common.test import approx
 from openpilot.cereal import log, messaging
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC
+from openpilot.selfdrive.controls.lib.accel_boost import AccelBoost
 from openpilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner, LongitudinalPlanSource
 from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.controls.lib.tests.test_experimental_gate import build_planner, build_sm
@@ -74,6 +75,13 @@ def run_planner(enabled: bool, frames: int = 200) -> LongitudinalPlanner:
 def gas_pressed_planner(enabled: bool) -> LongitudinalPlanner:
   """Model-limited with the gas held: upstream's boost latches eligibility, then learns."""
   planner = run_planner(enabled, frames=1)  # the first frame installs the gated boost
+  # This fixture asserts upstream's gas-boost contract. On a device with
+  # AccelBoostSP=True, planner.update() swaps in the fork's probability-driven boost,
+  # which has no gas learning at all. Install the upstream object explicitly and stop
+  # update_params() from swapping it back out during the 50 gas-pressed frames.
+  planner.accel_boost_sp.update_params = lambda: False
+  if not enabled:
+    planner.accel_boost = AccelBoost()
   planner.accel_boost.total_boost = 0.1
   planner.accel_boost.boost_eligible = True
   sm = planner_sm()

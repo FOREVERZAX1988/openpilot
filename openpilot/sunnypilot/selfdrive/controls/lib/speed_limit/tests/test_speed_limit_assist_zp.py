@@ -10,7 +10,7 @@ What zoompilot's pcm machine changes over sunnypilot's: the ramped decel it publ
 announces a limit, the set speed as a ceiling instead of a required max, and the gas hold.
 """
 
-from openpilot.common.test import approx
+from openpilot.common.test import OpenpilotTestCase, approx
 from openpilot.cereal import custom
 from opendbc.car.car_helpers import interfaces
 from opendbc.car.toyota.values import CAR as TOYOTA
@@ -29,7 +29,7 @@ EventNameSP = custom.OnroadEventSP.EventName
 CAR = TOYOTA.TOYOTA_RAV4_TSS2
 
 
-class TestSpeedLimitAssistZP(unittest.TestCase):
+class TestSpeedLimitAssistZP(OpenpilotTestCase):
   def setUp(self):
     super().setUp()
     params = Params()

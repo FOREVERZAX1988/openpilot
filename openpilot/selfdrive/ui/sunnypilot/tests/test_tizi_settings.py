@@ -223,11 +223,13 @@ class TestTiziSettingsTests(OpenpilotTestCase):
     assert params.get_bool("ConfidenceBall") is False  # off by default
 
 
-  def test_multi_button_follows_its_param(self, params):
+  def test_multi_button_follows_its_param(self, params, monkeypatch):
     """The buttons read their param at construction: a change made elsewhere (the ICBM
     migration, the availability check, sunnylink) must show, or the next tap on the row writes
     the stale value back."""
+    from openpilot.sunnypilot.carrot.config import unified_params
     from openpilot.system.ui.sunnypilot.widgets.list_view import MultipleButtonActionSP
+    monkeypatch.setattr(unified_params, "_system_params", params)
     from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Mode
 
     params.put("SpeedLimitMode", int(Mode.assist), block=True)
@@ -285,7 +287,9 @@ class TestTiziSettingsTests(OpenpilotTestCase):
     (False, True, True, False),
   ], names=('has_long', 'vision', 'map_on', 'enabled'))
   def test_curve_speed_follows_slow_for_curves(self, params, monkeypatch, has_long, vision, map_on, enabled):
+    from openpilot.sunnypilot.carrot.config import unified_params
     from opendbc.car.structs import car
+    monkeypatch.setattr(unified_params, "_system_params", params)
     from openpilot.cereal import custom
     from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise import CruiseLayout
     from openpilot.selfdrive.ui.ui_state import ui_state

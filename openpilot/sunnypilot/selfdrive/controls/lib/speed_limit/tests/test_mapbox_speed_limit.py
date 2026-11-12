@@ -455,7 +455,7 @@ class TestResolverMapboxFill(OpenpilotTestCase):
     resolver._last_written_previous_limit = 0.0
 
     sm = mapbox_sm(mocker)  # empty offline map: only the filler can produce a limit
-    future = StubFuture(result=(80 * CV.KPH_TO_MS, 500.0), done=True)
+    future = StubFuture(result=(80 * CV.KPH_TO_MS, 500.0), done=False)
     resolver.mapbox.executor = SubmitRecorder(future)
     # update_params() rebuilds self.mapbox on every plannerd tick, which would
     # throw away the executor stub above before _mapbox_fill ever sees the
@@ -469,7 +469,9 @@ class TestResolverMapboxFill(OpenpilotTestCase):
       resolver.mapbox = injected_mapbox
 
     resolver.update_params = refresh_params
-    resolver.update(20.0, sm)
+    resolver.update(20.0, sm)  # first tick submits the async lookup
+    future._done = True
+    resolver.update(20.0, sm)  # next tick collects it
 
     # the filler value IS the winning solution this frame...
     assert resolver.source == SpeedLimitSource.map
