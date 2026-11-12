@@ -1,0 +1,81 @@
+name: Sync LFS to CNB
+
+# Mirror the LFS objects master actually references from sunnypilot's public
+# HuggingFace LFS store into our CNB repo, so clones/pulls from cnb.cool smudge
+# LFS without touching huggingface.co (unreachable for mainland-China links).
+#
+# Read side: HF sunnypilot-lfs is public - no token needed for the fetch.
+# Write side: CNB uses username `cnb` + the CNB_TOKEN secret as the password.
+#
+# Scope note: `git lfs fetch` grabs the branch's HEAD objects plus the last 7
+# days of history (lfs.fetchrecentcommitsdays). A full --all-history fetch is
+# ~24 GB of objects and will not fit a hosted runner; checking out commits
+# older than that window may still need a one-time full seed from a local
+# machine that already has the objects cached.
+
+env:
+  CNB_REPO: 'https://cnb.cool/mouxancnb/openpilot.git'
+  HF_LFS_URL: 'https://huggingface.co/sunnypilot/sunnypilot-lfs.git/info/lfs'
+
+on:
+  schedule:
+    - cron: '30 0 * * *' # 00:30 UTC daily, after sunnypilot's 00:00 upstream sync lands
+  workflow_dispatch: # enables manual triggering
+
+concurrency:
+  group: lfs-cnb-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.repository == 'mouxangithub/openpilot'
+    steps:
+      - name: Clone master from CNB (no LFS smudge)
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+        run: |
+          set -euo pipefail
+          GIT_LFS_SKIP_SMUDGE=1 git clone --filter=blob:limit=1k -b master \
+            "${CNB_REPO}" repo
+
+      - name: Fetch LFS from HuggingFace (public read)
+        working-directory: repo
+        run: |
+          set -euo pipefail
+          git config lfs.url "${HF_LFS_URL}"
+          git config lfs.activitytimeout 300
+          git config lfs.transfer.maxretries 5
+          git config lfs.concurrenttransfers 4
+          git config lfs.fetchrecentcommitsdays 7
+          echo "objects referenced by HEAD: $(git lfs ls-files | wc -l)"
+          for attempt in 1 2 3; do
+            echo "Fetch attempt $attempt..."
+            git lfs fetch && exit 0
+            echo "Attempt $attempt failed, retrying in 60s..."
+            sleep 60
+          done
+          echo "All fetch attempts failed"
+          exit 1
+
+      - name: Push LFS to CNB
+        working-directory: repo
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config lfs.url "https://cnb:${CNB_TOKEN}@cnb.cool/mouxancnb/openpilot.git/info/lfs"
+          git config lfs.locksverify false
+          for attempt in 1 2 3; do
+            echo "Push attempt $attempt..."
+            git lfs push --all origin && exit 0
+            echo "Attempt $attempt failed, retrying in 30s..."
+            sleep 30
+          done
+          echo "All push attempts failed"
+          exit 1
+
+      - name: Summary
+        working-directory: repo
+        run: |
+          echo "local LFS objects on disk: $(find .git/lfs/objects -type f 2>/dev/null | wc -l)"

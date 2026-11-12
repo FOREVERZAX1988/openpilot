@@ -25,6 +25,10 @@ import urllib.request
 POINTER_VERSION = "https://git-lfs.github.com/spec/v1"
 POINTER_RE = re.compile(rb"\Aversion " + POINTER_VERSION.encode() + rb"\noid sha256:([0-9a-f]{64})\nsize ([0-9]+)\n\Z")
 BUCKET = os.environ.get("OPENPILOT_LFS_BUCKET", "commaai/openpilot-lfs")
+# Upstream moved lfs.url to its CNB mirror before that mirror was seeded. Keep
+# the public HF git-lfs server as a fallback so fork-only objects (sound/font
+# assets that are not in the HF bucket) can still be fetched during an OTA.
+LEGACY_LFS_URL = "https://huggingface.co/sunnypilot/sunnypilot-lfs.git/info/lfs"
 ZERO = "0" * 40
 RANGES = 8
 RANGE_MIN = 16 << 20
@@ -228,17 +232,33 @@ def lfs_config(key):
 
 
 def endpoint_objects(objects):
-  """oid -> (href, headers) for the objects the git-lfs server at lfs.url has. A fork's own objects aren't in the bucket."""
+  """oid -> (href, headers) from lfs.url, falling back to the public HF store.
+
+  A fork's own objects aren't in the HF bucket, so they come from a git-lfs
+  server instead. If lfs.url points at a mirror that has not been seeded yet
+  (CNB), asking only that mirror would make an OTA fail; try the legacy public
+  endpoint for whatever is still missing.
+  """
   found = {}
   items = list(objects.items())
-  for start in range(0, len(items), 100):
-    body = {"operation": "download", "transfers": ["basic"], "objects": [{"oid": oid, "size": size} for oid, size in items[start:start + 100]]}
-    request = urllib.request.Request(lfs_config("url").rstrip("/") + "/objects/batch", data=json.dumps(body).encode(),
-                                     headers={"Accept": "application/vnd.git-lfs+json", "Content-Type": "application/vnd.git-lfs+json"})
-    with urllib.request.urlopen(request, timeout=30) as response:
-      for item in json.load(response)["objects"]:
-        if download := item.get("actions", {}).get("download"):
-          found[item["oid"]] = (download["href"], download.get("header", {}))
+  endpoints = (lfs_config("url").rstrip("/"), LEGACY_LFS_URL.rstrip("/"))
+  for base in dict.fromkeys(url for url in endpoints if url):
+    missing = [(oid, size) for oid, size in items if oid not in found]
+    if not missing:
+      break
+    for start in range(0, len(missing), 100):
+      chunk = missing[start:start + 100]
+      body = {"operation": "download", "transfers": ["basic"], "objects": [{"oid": oid, "size": size} for oid, size in chunk]}
+      request = urllib.request.Request(base + "/objects/batch", data=json.dumps(body).encode(),
+                                       headers={"Accept": "application/vnd.git-lfs+json", "Content-Type": "application/vnd.git-lfs+json"})
+      try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+          for item in json.load(response)["objects"]:
+            if download := item.get("actions", {}).get("download"):
+              found[item["oid"]] = (download["href"], download.get("header", {}))
+      except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        # One unavailable/unreadable endpoint must not hide objects on the next.
+        continue
   return found
 
 
