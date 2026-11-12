@@ -129,8 +129,12 @@ class TestCarrotUiReach(unittest.TestCase):
     ported key that nobody wired up fails a test instead of quietly appearing in the doc.
     """
     _, without_ui = split_switches()
-    self.assertEqual([], sorted(without_ui),
-                     'control-path parameters with no device control: ' + repr(sorted(without_ui))
+    # A control-path param may deliberately stay script-only, but only when the
+    # audit records why. That is the "write down why" half of this guard; an
+    # unexplained gap (a ported key nobody wired up) must still fail.
+    unexplained = sorted(name for name in without_ui if name not in NOTES)
+    self.assertEqual([], unexplained,
+                     'control-path parameters with no device control and no explanation: ' + repr(unexplained)
                      + ' - add a row (see carrot_tuning_items.build_dev_items()) or write down ' +
                        'why it stays script-only in audit_ui_reach.NOTES')
 

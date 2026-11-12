@@ -113,7 +113,9 @@ class BootNetworkDependencyTest(unittest.TestCase):
 
   def test_webui_and_aid_start_through_keep_alive_before_manager(self):
     """If this changes, the whole hazard moves and these guards must be revisited."""
-    manager_at = self.script.index("  ./manager.py")
+    # The launcher now goes through run_startup_command ./manager.py rather than
+    # invoking it with a bare two-space indent. The ordering guard still applies.
+    manager_at = self.script.index("run_startup_command ./manager.py")
     for service, entry in KEEPALIVE_ENTRIES.items():
       with self.subTest(service=service):
         self.assertIn(entry, self.script)

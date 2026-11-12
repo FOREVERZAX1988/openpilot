@@ -97,7 +97,10 @@ class TestReporter(unittest.TestCase):
     self.assertEqual(r.current_candidate_ip, "")
 
   def test_payload_shape(self):
-    params = Params()
+    # device_id() prefers the real DongleId when present; use a fresh empty
+    # store so this exercises the hostname fallback on a provisioned device.
+    params = mock.MagicMock()
+    params.get.return_value = None
     with mock.patch("openpilot.sunnypilot.carrot.cweb_push.socket.gethostname", return_value="c3-dev"):
       self.assertEqual(device_id(params), "c3-dev")
     payload = build_payload(params, "192.168.7.229", 7000)

@@ -9,19 +9,28 @@
 或 webui 的 `panel_catalog.py` 里出现过。8088 网页面板靠扫描车机设置页生成控件，不额外增加可达性。
 `carrot_tuning_api.py` 的白名单不算入口，那是通用编辑器。
 
-共 25 个：**25 个有 UI 入口，0 个没有**。
+共 26 个：**25 个有 UI 入口，1 个没有**。
 
-这一节是留给下一次上游拉取的：新搬来的键如果只注册了 `params_keys.h`、还没有接到控件上，
-它会重新出现在这里，而不是悄悄只能用 curl 打开。现在一个都没有。
+没有入口的那些，仍然可以通过 carrot_server 写参数（`params_keys.h` 注册即允许，不走白名单）：
+
+```
+curl -X POST http://<device>:7000/api/param_set \
+     -H "Content-Type: application/json" \
+     -d '{"name": "CarrotMapDecelEnabled", "value": 1}'
+
+curl "http://<device>:7000/api/params_bulk?names=CarrotMapDecelEnabled,CarrotTurnAccelEnabled"
+```
 
 读点只给文件不给行号：行号一改就漂，用参数名 grep 定位。
+
+没有入口的 1 个声明了层级，**没有一个是 level 1（日常）**：都只适合脚本或 App。
 
 ## 有 UI 入口（25）
 
 | 参数 | 默认 | 层级 | 读点 | 作用 |
 | --- | --- | --- | --- | --- |
 | `AdvancedLateralTune` | `0` | - | `openpilot/selfdrive/controls/lib/flm_workspace.py` | FLM 分析器改用 Steer* 旋钮值，关=报 carParams 原值 |
-| `CarrotAtcBlinkerEnabled` | `0` | 1 | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
+| `CarrotAtcBlinkerEnabled` | `1` | 1 | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
 | `CarrotBrakingGapEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 前车舒适制动项（lead_comfort）进 MPC |
 | `CarrotCruiseCoastingEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/controlsd_ext.py`, `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 巡航超速带内松刹车滑行 |
 | `CarrotCruiseCoastingPercent` | `10` | 3 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 滑行带的宽度，按百分比 |
@@ -45,3 +54,9 @@
 | `VisionSpeedLimitEnabled` | `0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 视觉识别的限速并入地图源，只降不升 |
 | `VisionSpeedLimitLowLimitFilter` | `0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 丢弃低于阈值的识别结果（多为误读） |
 | `VisionSpeedLimitLowLimitThreshold` | `0.0` | - | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 上一条的阈值，m/s |
+
+## 没有 UI 入口（1），只能走 7000 的 `POST /api/param_set`
+
+| 参数 | 默认 | 层级 | 读点 | 作用 |
+| --- | --- | --- | --- | --- |
+| `CarrotCruiseAccelEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | cp CruiseMaxVals0-6 加速曲线包络，经 get_carrot_max_accel 只降不升；上车 A/B 前保持默认关 |

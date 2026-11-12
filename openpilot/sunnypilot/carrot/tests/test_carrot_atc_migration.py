@@ -12,7 +12,9 @@ choice made afterwards - including 0 via the tuning UI - must win forever.
 import sys
 import types
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+from openpilot.common.tests import params_pc_stub
 
 try:
   from openpilot.common.params import Params
@@ -54,11 +56,17 @@ def _fresh_unified_params() -> UnifiedParams:
   UnifiedParams is a singleton, so every scenario resets both it and the store;
   the nonexistent json path keeps _nav_data at compile-time defaults only.
   """
-  if hasattr(Params, "_reset"):
-    Params._reset()
+  # On a device the ctypes Params is importable, so leaving the real class in
+  # place made these tests read/write /data/params and leak state between
+  # scenarios (and into the car). Force the in-memory store while UnifiedParams
+  # constructs its backing store; the instance keeps that stub afterwards.
+  stub = params_pc_stub.Params
+  stub._reset()
   UnifiedParams._instance = None
   UnifiedParams._initialized = False
-  return UnifiedParams(nav_json_file="/nonexistent/carrot_nav_params.json")
+  from openpilot.sunnypilot.carrot import config as carrot_config
+  with patch.object(carrot_config, "Params", stub):
+    return UnifiedParams(nav_json_file="/nonexistent/carrot_nav_params.json")
 
 
 class TestCarrotAtcMigration(unittest.TestCase):

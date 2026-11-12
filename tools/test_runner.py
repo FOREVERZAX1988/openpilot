@@ -163,7 +163,10 @@ def collect(targets, keyword):
     before = len(loader.errors)
     try:
       suite = loader.loadTestsFromName(name)
-    except Exception:
+    except (Exception, SystemExit):
+      # Modules that call sys.exit()/raise SystemExit at import time (e.g. a
+      # missing optional OpenCV wheel) derive from BaseException, so a bare
+      # `except Exception` would let one test module abort the whole discovery.
       errors.append(f"Failed to collect {name}\n{traceback.format_exc()}")
       continue
     errors.extend(loader.errors[before:])
