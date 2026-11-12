@@ -392,16 +392,116 @@ step('phantom "20" suppressed: cluster mirror UNSET before any real set', t_unse
 
 
 def t_button_press_establishes_display():
-  """An accel/decel/resume press ends the "unset" display and publishes the setpoint."""
+  """A decel press-then-release ends the "unset" display and publishes the
+  adopted setpoint. The press frame alone correctly still shows "-": nothing
+  real (the release that carries the adopt/step) has happened yet."""
   fresh = VCruiseCarrot(build_cp(), build_cp_sp())
   cs = make_cs(v_ego=15.0, available=True, buttons=[('decelCruise', True)])
   fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
   assert fresh._cruise_speed_set is True, 'a decel press must establish the set speed'
+  assert fresh.v_cruise_cluster_kph == V_CRUISE_UNSET, (
+    f'press frame must still show "-" (no value established yet), got {fresh.v_cruise_cluster_kph}')
+  cs = make_cs(v_ego=15.0, available=True, buttons=[('decelCruise', False)])
+  fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
   assert 0 < fresh.v_cruise_cluster_kph < V_CRUISE_UNSET, (
-    f'published cluster mirror must be the real setpoint after a press, got {fresh.v_cruise_cluster_kph}')
+    f'published cluster mirror must be the real setpoint after release, got {fresh.v_cruise_cluster_kph}')
 
 
-step('a decel press publishes the real setpoint (display "-")', t_button_press_establishes_display)
+step('a decel press+release publishes the real setpoint', t_button_press_establishes_display)
+
+
+def t_cancel_and_op_exit_keep_max():
+  """The reported bug: ACC-cancel and OP-exit must not repaint the MAX box.
+  Engage at 54 km/h, drive faster, cancel: the cluster keeps the set speed
+  through disengaged frames, through cruise-unavailable frames, and through a
+  stock-cruise re-arm edge (the old code jumped MAX to the current speed there)."""
+  fresh = VCruiseCarrot(build_cp(), build_cp_sp())
+  fresh.initialize_v_cruise(make_cs(v_ego=15.0), 40)  # set speed = 54 km/h
+  for _ in range(5):
+    cs = make_cs(v_ego=15.0, available=True)
+    fresh.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == 54, f'engaged MAX should be 54, got {fresh.v_cruise_cluster_kph}'
+  # ACC cancel: op disengages, stock cruise stays available, car keeps speeding up
+  for _ in range(20):
+    cs = make_cs(v_ego=25.0, available=True)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == 54, (
+    f'ACC-cancel must not move MAX, got {fresh.v_cruise_cluster_kph}')
+  # stock cruise disarms then re-arms: the availability rising edge is the
+  # non-PCM jump source (update_v_cruise assigns v_ego on the edge)
+  for _ in range(5):
+    cs = make_cs(v_ego=25.0, available=False)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  for _ in range(5):
+    cs = make_cs(v_ego=25.0, available=True)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == 54, (
+    f're-arm edge must not move MAX, got {fresh.v_cruise_cluster_kph}')
+
+
+step('ACC-cancel + re-arm edge keep MAX at the set speed', t_cancel_and_op_exit_keep_max)
+
+
+def t_pcm_speed_from_pcm_exit_op_keeps_max():
+  """PCM + SpeedFromPCM car: while disengaged with cruise still available and
+  the PCM reporting speed 0, the internal setpoint ego-follows (cp re-engage
+  sync) and PERSISTS - the unavailable branch then republishes it on OP exit.
+  The MAX box must stay at the car's set speed throughout."""
+  fresh = VCruiseCarrot(build_cp(pcm_cruise=True), build_cp_sp())
+  fresh.params._store['SpeedFromPCM'] = 1
+  # engaged: the car reports a 60 km/h set speed
+  cs = make_cs(v_ego=15.0, available=True)
+  cs.cruiseState = _CruiseState(True, True, False, 16.67)
+  fresh.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  set_speed = fresh.v_cruise_cluster_kph
+  assert 50 < set_speed < 70, f'PCM-reported set speed expected, got {set_speed}'
+  # ACC cancel: PCM reports speed 0 while still available; op disengaged, car speeds up
+  for _ in range(20):
+    cs = make_cs(v_ego=25.0, available=True)
+    cs.cruiseState = _CruiseState(True, False, False, 0.0)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == set_speed, (
+    f'cancel must not move MAX, got {fresh.v_cruise_cluster_kph}')
+  # exit op: cruise unavailable - the drifted internal setpoint gets republished
+  # here in the old code (MAX jumped to the current speed)
+  for _ in range(10):
+    cs = make_cs(v_ego=30.0, available=False)
+    cs.cruiseState = _CruiseState(False, False, False, 0.0)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == set_speed, (
+    f'OP-exit must not move MAX, got {fresh.v_cruise_cluster_kph}')
+  # the internal setpoint itself still ego-followed while cruise was available
+  # (cp re-engage semantics kept); the unavailable branch republishes the last
+  # local value, so it rests at the last synced speed, not the set speed
+  assert fresh.v_cruise_kph >= 90 > set_speed, (
+    f'internal setpoint must keep ego-following, got {fresh.v_cruise_kph}')
+
+
+step('PCM SpeedFromPCM: cancel + OP-exit keep MAX at the car set speed', t_pcm_speed_from_pcm_exit_op_keeps_max)
+
+
+def t_decel_adopt_still_updates_max():
+  """Regression guard for the freeze not being over-eager: a real decel press
+  while disengaged adopts the current speed and the MAX box follows it, then
+  freezes again while the car speeds up."""
+  fresh = VCruiseCarrot(build_cp(), build_cp_sp())
+  for _ in range(3):
+    cs = make_cs(v_ego=15.0, available=True)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  cs = make_cs(v_ego=15.0, available=True, buttons=[('decelCruise', True)])
+  fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  cs = make_cs(v_ego=15.0, available=True, buttons=[('decelCruise', False)])
+  fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == 54, (
+    f'real decel adopt must update MAX, got {fresh.v_cruise_cluster_kph}')
+  for _ in range(10):
+    cs = make_cs(v_ego=25.0, available=True)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert fresh.v_cruise_cluster_kph == 54, (
+    f'display must freeze again after the adopt, got {fresh.v_cruise_cluster_kph}')
+
+
+step('real decel adopt updates MAX, then display re-freezes', t_decel_adopt_still_updates_max)
 
 
 def t_engage_edge_establishes_display():

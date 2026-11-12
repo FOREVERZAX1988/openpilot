@@ -273,6 +273,18 @@ class VCruiseCarrot(VCruiseHelper):
     # the PUBLISHED cluster mirror is forced to V_CRUISE_UNSET so the UI shows
     # "-" instead of a phantom "20" MAX box (fix for the set-speed complaint).
     self._cruise_speed_set = False
+    # Last real set speed the cluster published. While openpilot is disengaged
+    # the internal setpoint keeps chasing v_ego (cp's re-engage sync) and several
+    # publish branches mirror it - neither may repaint the MAX box (reported bug:
+    # ACC-cancel / OP-exit "set" MAX to the current speed). The cluster freezes
+    # here until a real set-speed event (button step / adopt-current / restore,
+    # carrot app SPEED/STOP, PCM reporting a set speed, engage edge, SLA
+    # adoption) or engagement moves it again. UNSET until the first real event,
+    # so the UI keeps showing "-".
+    self._v_cruise_last_real_kph = V_CRUISE_UNSET
+    # Per-frame latch: a real set-speed event was handled in this update tick.
+    # Consumed at the end of update_v_cruise.
+    self._set_speed_event = False
 
     self.enabled_last = False
 
@@ -564,6 +576,7 @@ class VCruiseCarrot(VCruiseHelper):
             self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
             self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
             self._cruise_speed_set = True  # the car owns this set speed: it is real
+            self._set_speed_event = True
         else:
           self.v_cruise_kph = np.clip(v_cruise_kph, 30, self._cruise_speed_max)
           self.v_cruise_cluster_kph = self.v_cruise_kph
@@ -573,15 +586,22 @@ class VCruiseCarrot(VCruiseHelper):
       #if self.cruise_state_available_last: # 최초 한번이라도 cruiseState.available이 True였다면
       #  self._lat_enabled = False
 
-    # carrot's unset set speed: the setpoint boots at 20 km/h (cp parity) so the
-    # control paths have a sane floor, but the UI must not display a phantom
-    # "20" before anything real (button, engage edge, app command, SLA adoption,
-    # the car's own PCM reporting a set speed) established one. Only the
-    # published cluster mirror goes to V_CRUISE_UNSET - v_cruise_kph itself
-    # keeps 20. Applies to PCM cars too: while their stock cruise is off, the
-    # unavailable branch would otherwise publish the same boot 20.
+    # carrot's set-speed display gating. The published cluster may only move on a
+    # real set-speed event (button step / adopt-current / restore, carrot app
+    # command, PCM reporting a set speed, engage edge, SLA adoption) or while
+    # openpilot is engaged tracking the live setpoint. Disengaged frames with no
+    # real event FREEZE the cluster at the last real value: the internal setpoint
+    # keeps chasing v_ego (cp re-engage semantics, control behaviour untouched)
+    # and the unavailable branch keeps republishing it, but neither may leak into
+    # the MAX box - pressing ACC cancel or exiting openpilot no longer "sets" MAX.
     if not self._cruise_speed_set:
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
+    elif CC.enabled or self._set_speed_event:
+      self.v_cruise_cluster_kph = self.v_cruise_kph
+      self._v_cruise_last_real_kph = self.v_cruise_kph
+    else:
+      self.v_cruise_cluster_kph = self._v_cruise_last_real_kph
+    self._set_speed_event = False
 
     self.cruise_state_available_last = CS.cruiseState.available
     self.enabled_last = CC.enabled
@@ -610,6 +630,7 @@ class VCruiseCarrot(VCruiseHelper):
       self.v_cruise_cluster_kph = self.v_cruise_kph
     # the engage edge establishes a real set speed: end the "unset" display
     self._cruise_speed_set = True
+    self._set_speed_event = True
 
   def _prepare_buttons(self, CS, v_cruise_kph, CS_SP=None, remote=None):
     button_kph = v_cruise_kph
@@ -747,10 +768,12 @@ class VCruiseCarrot(VCruiseHelper):
           v_cruise_kph = 5
           self._cruise_speed_initialized = False
           self._cruise_speed_set = True
+          self._set_speed_event = True
           self._add_log("Cruise stop (carrot command)")
 
       elif self.carrot_cmd == "SPEED":
         self._cruise_speed_set = True  # an app command establishes a real set speed
+        self._set_speed_event = True
         if self.carrot_arg == "UP":
           v_cruise_kph = self._auto_speed_up(v_cruise_kph)
           self._add_log("Cruise speed up (carrot command)")
@@ -773,6 +796,13 @@ class VCruiseCarrot(VCruiseHelper):
       remote = None
     button_kph, button_type, long_pressed = self._prepare_buttons(CS, v_cruise_kph, CS_SP, remote)
 
+    # Anything between this capture and the latch below that moves the setpoint
+    # (carrot app SPEED/STOP, +/-/RES steps, adopt-current-speed, restore-at-brake)
+    # is a real set-speed event. The gas/brake auto-engage writes inside
+    # _update_cruise_state run after the latch point and deliberately do NOT count:
+    # when the auto-engage is refused (AutoCruiseControl off) their local v_ego
+    # write must not repaint the MAX box.
+    _v_cruise_kph_at_handlers_start = v_cruise_kph
     v_cruise_kph, button_type, long_pressed = self._carrot_command(v_cruise_kph, button_type, long_pressed)
 
     # Bluetooth-specific actions that don't map to standard button types.
@@ -827,6 +857,7 @@ class VCruiseCarrot(VCruiseHelper):
             v_cruise_kph = self._v_cruise_desired(CS, v_cruise_kph)
         self._cruise_speed_initialized = True
         self.carrot_cruise_active = False
+        self._set_speed_event = True  # RES/+: restore, initial resume or step - real
 
       elif button_type == ButtonType.decelCruise:
         self._lat_enabled = True
@@ -839,14 +870,18 @@ class VCruiseCarrot(VCruiseHelper):
           self._paddle_decel_active = True
         elif not CC.enabled:
           v_cruise_kph = max(self.v_ego_kph_set, self._cruise_speed_min)
+          self._set_speed_event = True  # adopt current speed while disengaged
         elif self.v_ego_kph_set > v_cruise_kph + 2 and self._cruise_button_mode in [2, 3]:
           v_cruise_kph = max(self.v_ego_kph_set, self._cruise_speed_min)
+          self._set_speed_event = True
         elif self._cruise_button_mode in [0, 1]:
           v_cruise_kph = button_kph
+          self._set_speed_event = True
         elif self.v_ego_kph_set < 1.0:
           self.carrot_cruise_active = True
         elif self.v_ego_kph_set > self._cruise_speed_min and v_cruise_kph > self.v_ego_kph_set:
           v_cruise_kph = self.v_ego_kph_set
+          self._set_speed_event = True  # sync down to the current speed
         else:
           #self._cruise_control(-2, -1, "Cruise off (decelCruise)")
           self.carrot_cruise_active = True
@@ -887,10 +922,12 @@ class VCruiseCarrot(VCruiseHelper):
       if button_type == ButtonType.accelCruise:
         v_cruise_kph = button_kph
         self._v_cruise_kph_at_brake = 0
+        self._set_speed_event = True
       elif button_type == ButtonType.decelCruise:
         self._pause_auto_speed_up = True
         v_cruise_kph = button_kph
         self._v_cruise_kph_at_brake = 0
+        self._set_speed_event = True
       elif button_type == ButtonType.gapAdjustCruise:
         if self.traffic_toggle_frame:
           # StarPilot Traffic Mode gesture: very-long gap-adjust press toggles
@@ -911,6 +948,11 @@ class VCruiseCarrot(VCruiseHelper):
         self._paddle_decel_active = False
         #self.params.put_bool_nonblocking("ExperimentalMode", not self.params.get_bool("ExperimentalMode"))
         self._add_log("Lateral " + "enabled" if self._lat_enabled else "disabled")
+
+    # latch: any handler above moved the setpoint this frame (long-press steps,
+    # carrot GO routed through the accel branch, synthesized remote +/- steps)
+    if v_cruise_kph != _v_cruise_kph_at_handlers_start:
+      self._set_speed_event = True
 
     if self._paddle_mode > 0 and button_type in [ButtonType.paddleLeft, ButtonType.paddleRight]:  # paddle button
       if self._paddle_mode == 3:
