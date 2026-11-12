@@ -9,8 +9,8 @@ StarPilot-style onroad navigation instruction card.
 Data flow: carrot_man (sunnypilot/carrot/carrot_man.py) assembles a
 ``NavInstructionState`` dict into the JSON param of the same name every time it
 publishes ``navInstructionCarrotSP``; this renderer reads it back at 10 Hz
-(params IO is throttled, never per-frame) and draws the maneuver card on the
-right edge of the HUD.
+(params IO is throttled, never per-frame) and draws the maneuver card
+top-center, directly under the current-speed block (webui road_lite parity).
 
 Params consumed (all read via the default Params() handle - carrot_man writes
 NavInstructionState to /data/params, so the UI must not use a /dev/shm handle):
@@ -313,11 +313,13 @@ class NavigationCardRenderer(Widget):
       rl.draw_text_ex(self._font_bold, line, rl.Vector2(x, line_y), font_size, 0, rl.WHITE)
 
   def _render_default(self, rect: rl.Rectangle) -> None:  # tici/tizi expanded card
-    right_margin = 40
+    # webui road_lite parity: the nav band sits top-CENTER, directly under the
+    # top-center current-speed block (speed digits ~y180, unit ~y290), instead
+    # of the old right-edge / bottom-anchored placement.
     card_width = 560
     card_height = 195
-    container_x = int(rect.x + rect.width - card_width - right_margin)
-    container_y = int(rect.y + rect.height - card_height - 440)
+    container_x = int(rect.x + (rect.width - card_width) / 2)
+    container_y = int(rect.y + 350)
 
     icon_size = 100
     icon_padding = 24
@@ -407,8 +409,8 @@ class NavigationCardRenderer(Widget):
 
   def _render_collapsed_default(self, rect: rl.Rectangle) -> None:  # tici/tizi collapsed chip
     chip_size = 94
-    chip_x = int(rect.x + rect.width - chip_size - 40)  # right-aligned, 40px margin
-    chip_y = int(rect.y + 340)  # above expanded card
+    chip_x = int(rect.x + (rect.width - chip_size) / 2)  # centered, same slot as the expanded card
+    chip_y = int(rect.y + 350)  # below the top-center speed block
     chip_rect = rl.Rectangle(chip_x, chip_y, chip_size, chip_size)
     self._interactive_rect = chip_rect
 
