@@ -1,18 +1,17 @@
 name: Sync LFS to CNB
 
-# Mirror the LFS objects our branches actually reference from sunnypilot's
-# public HuggingFace LFS store into our CNB repo, so clones/pulls from
-# cnb.cool smudge LFS without touching huggingface.co (unreachable for
-# mainland-China links).
+# Mirror the LFS objects master actually references from sunnypilot's public
+# HuggingFace LFS store into our CNB repo, so clones/pulls from cnb.cool smudge
+# LFS without touching huggingface.co (unreachable for mainland-China links).
 #
 # Read side: HF sunnypilot-lfs is public - no token needed for the fetch.
 # Write side: CNB uses username `cnb` + the CNB_TOKEN secret as the password.
 #
-# Scope note: `git lfs fetch` grabs the checked-out branch's HEAD objects plus
-# the last 7 days of history per branch (lfs.fetchrecentcommitsdays). A full
-# --all-history fetch is ~24 GB of objects and will not fit a hosted runner;
-# checking out commits older than that window may still need a one-time full
-# seed pushed from a local machine that already has the objects cached.
+# Scope note: `git lfs fetch` grabs the branch's HEAD objects plus the last 7
+# days of history (lfs.fetchrecentcommitsdays). A full --all-history fetch is
+# ~24 GB of objects and will not fit a hosted runner; checking out commits
+# older than that window may still need a one-time full seed from a local
+# machine that already has the objects cached.
 
 env:
   CNB_REPO: 'https://cnb.cool/mouxancnb/openpilot.git'
@@ -31,22 +30,14 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     if: github.repository == 'mouxangithub/openpilot'
-    strategy:
-      fail-fast: false
-      matrix:
-        # master-c3 only exists on CNB (it is CNB's default branch), so both
-        # branches are cloned from CNB - one uniform code path.
-        branch: [master, master-c3]
     steps:
-      - name: Clone from CNB (no LFS smudge)
+      - name: Clone master from CNB (no LFS smudge)
         env:
           CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
         run: |
           set -euo pipefail
-          GIT_LFS_SKIP_SMUDGE=1 git clone --filter=blob:limit=1k \
-            "https://cnb:${CNB_TOKEN}@cnb.cool/mouxancnb/openpilot.git" repo
-          cd repo
-          git checkout -B "${{ matrix.branch }}" "origin/${{ matrix.branch }}"
+          GIT_LFS_SKIP_SMUDGE=1 git clone --filter=blob:limit=1k -b master \
+            "${CNB_REPO}" repo
 
       - name: Fetch LFS from HuggingFace (public read)
         working-directory: repo
@@ -57,7 +48,6 @@ jobs:
           git config lfs.transfer.maxretries 5
           git config lfs.concurrenttransfers 4
           git config lfs.fetchrecentcommitsdays 7
-          git lfs ls-files -l | head -5
           echo "objects referenced by HEAD: $(git lfs ls-files | wc -l)"
           for attempt in 1 2 3; do
             echo "Fetch attempt $attempt..."
@@ -70,6 +60,8 @@ jobs:
 
       - name: Push LFS to CNB
         working-directory: repo
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
         run: |
           set -euo pipefail
           git config lfs.url "https://cnb:${CNB_TOKEN}@cnb.cool/mouxancnb/openpilot.git/info/lfs"
@@ -82,11 +74,8 @@ jobs:
           done
           echo "All push attempts failed"
           exit 1
-        env:
-          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
 
       - name: Summary
         working-directory: repo
         run: |
-          echo "branch: ${{ matrix.branch }}"
-          echo "local LFS objects available: $(git lfs ls-files --all 2>/dev/null | wc -l) pointer entries, $(find .git/lfs/objects -type f 2>/dev/null | wc -l) objects on disk"
+          echo "local LFS objects on disk: $(find .git/lfs/objects -type f 2>/dev/null | wc -l)"
