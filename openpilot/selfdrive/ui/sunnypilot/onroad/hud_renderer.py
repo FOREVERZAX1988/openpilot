@@ -55,7 +55,8 @@ class HudRendererSP(HudRenderer):
     self.circular_alerts_renderer = CircularAlertsRenderer()
     self.speed_renderer = SpeedRenderer()
     self.signal_hud = SignalHudRenderer()
-    self._torque_bar = TorqueBarZP(scale=3.0, always=True, show_bar=lambda: ui_state.torque_bar)
+    self._torque_bar = TorqueBarZP(scale=3.0, always=True, show_bar=lambda: ui_state.torque_bar,
+                                   show_gauge=lambda: ui_state.lane_center_gauge)
     # StarPilot widget ports - each one reads its own gating params (throttled,
     # code-side defaults; none of the keys are registered in params_keys.h).
     self.stopping_point_renderer = StoppingPointRenderer()

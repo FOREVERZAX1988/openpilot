@@ -19,6 +19,16 @@ sections:
     description: 横向控制启用时在驾驶画面显示转向弧线。
     visibility:
     - $ref: '#/macros/hide_on_mici'
+  - key: LaneCenterUI
+    widget: toggle
+    title: Lane Center Gauge
+    description: Shows lane center assist's nudge as a gauge under the steering arc.
+    visibility:
+    - $ref: '#/macros/hide_on_mici'
+    enablement:
+    - type: param
+      key: Blendful
+      equals: true
   - key: ConfidenceBall
     widget: toggle
     title: 置信球

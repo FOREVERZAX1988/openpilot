@@ -15,7 +15,7 @@ from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed import approach
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed import controller as c
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.controller import E2ESetSpeedController, Inhibit
-from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.tests.helpers import ENGAGED, T_IDXS, build_sm
+from openpilot.sunnypilot.selfdrive.controls.lib.e2e_set_speed.tests.helpers import ENGAGED, T_IDXS, build_sm, plan_ramp
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.limits import op_long_cruise_jerk
 import unittest
 
@@ -197,6 +197,61 @@ class TestControllerAdditional(unittest.TestCase):
         assert run(ctl, 1, build_sm(V_EGO), a_model=0.05, **kwargs) == 0.05
         assert (ctl.inhibit, ctl.lift) == (Inhibit.inactive, 0.)
 
+  def test_far_plan_flicker_does_not_move_the_lift(self):
+    # the plan's far end flickering on a straight road, up to the drop band
+    ctl = settled()
+    lifts = []
+    for i in range(100):
+      dip = 0.99 * -c.GAIN_BP[1] * c.HORIZON if (i // 5) % 2 else 0.
+      lifts.append(run(ctl, 1, build_sm(V_EGO, plan_v=plan_ramp(V_EGO, dip))))
+    assert np.ptp(lifts) == 0.
+    assert ctl.plan_fade == 1.
+
+  def test_plan_drop_fades_the_lift(self):
+    # a gentle coast (inside the gain's band) toward a stop or a light: the lift lets it coast
+    for drop, plan_fade in [(0., 1.), (1., 1.), (2., 0.5), (3., 0.), (8., 0.)]:
+      with self.subTest(drop=drop, plan_fade=plan_fade):
+        ctl = new_controller()
+        a_model = -0.05
+        run(ctl, SETTLE_FRAMES, build_sm(V_EGO, plan_v=plan_ramp(V_EGO, drop)), a_model=a_model)
+        assert ctl.plan_fade == approx(plan_fade)
+        assert ctl.gain == approx(plan_fade)
+        assert ctl.lift == approx(plan_fade * (A_CRUISE - a_model))
+
+  def test_coast_toward_a_stop_lets_go_of_the_lift(self):
+    # lifted on an open road, then the plan starts ending at a stop: the lift goes, never below the model
+    ctl = settled()
+    drops = np.linspace(0., 6., 60)
+    out = [run(ctl, 1, build_sm(V_EGO, plan_v=plan_ramp(V_EGO, d)), a_model=-0.05) for d in drops]
+    assert min(out) >= -0.05
+    assert all(o == -0.05 for o, d in zip(out, drops, strict=True) if d >= c.HORIZON * -c.GAIN_BP[0])
+    assert ctl.lift == 0.
+
+  def test_closing_lead_fades_the_lift(self):
+    for lead, plan_fade in [
+      ((60., 0.), 1.),     # steady lead
+      ((60., -0.9), 1.),   # barely closing
+      ((30., -3.), 0.),    # closing hard, 10 s to contact
+      ((60., -3.), 0.75),  # closing hard, 20 s to contact
+      ((150., -3.), 1.),   # 50 s to contact
+      ((20., -2.), 0.5),   # closing gently, 10 s to contact
+      ((60., 2.), 1.),     # pulling away
+    ]:
+      with self.subTest(lead=lead, plan_fade=plan_fade):
+        ctl = new_controller()
+        run(ctl, SETTLE_FRAMES, build_sm(V_EGO, lead=lead))
+        assert ctl.plan_fade == approx(plan_fade)
+        assert ctl.lift == approx(plan_fade * A_CRUISE)
+
+  def test_closing_lead_fade_is_smooth(self):
+    ctl = new_controller()
+    fades = []
+    for d in np.linspace(120., 20., 101):  # closing at 3 m/s from 40 s to 7 s out
+      run(ctl, 1, build_sm(V_EGO, lead=(d, -3.)))
+      fades.append(ctl.plan_fade)
+    assert fades[0] == 1. and fades[-1] == 0.
+    assert max(np.abs(np.diff(fades))) <= 0.05 + 1e-9  # 1 m of 100 per step
+
   def test_lift_fades_in_above_walking_pace(self):
     for v, gain in [((c.MIN_SPEED + c.FULL_SPEED) / 2, 0.5), (c.MIN_SPEED - 1., 0.)]:
       with self.subTest(v=v, gain=gain):
@@ -211,3 +266,21 @@ class TestControllerAdditional(unittest.TestCase):
         run(ctl, SETTLE_FRAMES, build_sm(V_EGO, yaw_rate=bend_ahead(lat)))
         assert ctl.fade == approx(fade)
         assert ctl.lift == approx(fade * A_CRUISE)
+
+  def test_approach_is_continuous_at_the_target(self):
+    # no step where the car reaches the target: the pace falls smoothly to 0 and stays there
+    step = 1e-3
+    for v in (5., 15., 25.):
+      with self.subTest(v=v):
+        gaps = np.linspace(-1., 10., 11001)
+        paces = np.array([approach.approach_accel(v - g, v, STANDARD) for g in gaps])
+        assert all(np.diff(paces) >= 0.)
+        assert max(np.diff(paces)) <= np.sqrt(2 * approach.APPROACH_JERK * step) + 1e-9  # the root's steepest step, off the target
+        assert paces[gaps <= 0.].max() == 0.
+
+  def test_approach_asks_nothing_at_or_over_the_target(self):
+    for over in (0., 0.5, 5.):
+      with self.subTest(over=over):
+        for personality in (log.LongitudinalPersonality.relaxed, STANDARD, log.LongitudinalPersonality.aggressive):
+          for v in approach.APPROACH_BP:
+            assert approach.approach_accel(v + over, v, personality) == 0.

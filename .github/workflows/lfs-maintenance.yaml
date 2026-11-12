@@ -1,17 +1,22 @@
 name: Sync LFS to CNB
 
-# Mirror the LFS objects master actually references from sunnypilot's public
+# Mirror the LFS objects master's HEAD references from sunnypilot's public
 # HuggingFace LFS store into our CNB repo, so clones/pulls from cnb.cool smudge
 # LFS without touching huggingface.co (unreachable for mainland-China links).
 #
 # Read side: HF sunnypilot-lfs is public - no token needed for the fetch.
-# Write side: CNB uses username `cnb` + the CNB_TOKEN secret as the password.
+# Write side: CNB accepts `cnb` or the account name as the username with an
+# access token as the password.
 #
-# Scope note: `git lfs fetch` grabs the branch's HEAD objects plus the last 7
-# days of history (lfs.fetchrecentcommitsdays). A full --all-history fetch is
-# ~24 GB of objects and will not fit a hosted runner; checking out commits
-# older than that window may still need a one-time full seed from a local
-# machine that already has the objects cached.
+# Scope: HEAD only (lfs.fetchrecentcommitsdays=0). master's HEAD carries ~270
+# LFS files (~0.9 GiB, actual transfer ~110 MB); the full history is ~24 GB and
+# a hosted runner cannot hold or push it in a daily job - a one-time full seed
+# was done from a machine that already had the objects cached, and a checking
+# out of older commits may need re-fetching from HF directly.
+#
+# Push by explicit OID list (`push --object-id --stdin`) instead of
+# `push --all`: --all walks the full history reachable from the refs and fails
+# on any object missing locally, which a HEAD-only fetch guarantees.
 
 env:
   CNB_REPO: 'https://cnb.cool/mouxancnb/openpilot.git'
@@ -24,16 +29,15 @@ on:
 
 concurrency:
   group: lfs-cnb-sync
-  cancel-in-progress: false
+  cancel-in-progress: true # a stale slow run must never block the next one
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     if: github.repository == 'mouxangithub/openpilot'
+    timeout-minutes: 45
     steps:
       - name: Clone master from CNB (no LFS smudge)
-        env:
-          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
         run: |
           set -euo pipefail
           GIT_LFS_SKIP_SMUDGE=1 git clone --filter=blob:limit=1k -b master \
@@ -41,34 +45,44 @@ jobs:
 
       - name: Fetch LFS from HuggingFace (public read)
         working-directory: repo
+        timeout-minutes: 20
         run: |
           set -euo pipefail
           git config lfs.url "${HF_LFS_URL}"
-          git config lfs.activitytimeout 300
-          git config lfs.transfer.maxretries 5
-          git config lfs.concurrenttransfers 4
-          git config lfs.fetchrecentcommitsdays 7
-          echo "objects referenced by HEAD: $(git lfs ls-files | wc -l)"
+          git config lfs.activitytimeout 120
+          git config lfs.dialtimeout 30
+          git config lfs.transfer.maxretries 3
+          git config lfs.concurrenttransfers 8
+          # HEAD only: the recent-commits window pulls gigabytes and the
+          # runner cannot push that across the border in a daily job.
+          git config lfs.fetchrecentcommitsdays 0
+          git config lfs.fetchrecentrefsdays 0
+          echo "objects referenced by HEAD: $(git lfs ls-files -l | wc -l)"
           for attempt in 1 2 3; do
             echo "Fetch attempt $attempt..."
-            git lfs fetch && exit 0
-            echo "Attempt $attempt failed, retrying in 60s..."
-            sleep 60
+            git lfs fetch origin master && exit 0
+            echo "Attempt $attempt failed, retrying in 30s..."
+            sleep 30
           done
           echo "All fetch attempts failed"
           exit 1
 
-      - name: Push LFS to CNB
+      - name: Push LFS to CNB (by OID list)
         working-directory: repo
         env:
           CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+        timeout-minutes: 20
         run: |
           set -euo pipefail
           git config lfs.url "https://cnb:${CNB_TOKEN}@cnb.cool/mouxancnb/openpilot.git/info/lfs"
           git config lfs.locksverify false
+          git config lfs.activitytimeout 120
+          git config lfs.dialtimeout 30
+          git config lfs.concurrenttransfers 8
           for attempt in 1 2 3; do
             echo "Push attempt $attempt..."
-            git lfs push --all origin && exit 0
+            git lfs ls-files -l | awk '{sub("sha256:","",$1); print $1}' \
+              | git lfs push --object-id origin --stdin && exit 0
             echo "Attempt $attempt failed, retrying in 30s..."
             sleep 30
           done
@@ -79,3 +93,4 @@ jobs:
         working-directory: repo
         run: |
           echo "local LFS objects on disk: $(find .git/lfs/objects -type f 2>/dev/null | wc -l)"
+          echo "HEAD-referenced objects: $(git lfs ls-files -l | wc -l)"

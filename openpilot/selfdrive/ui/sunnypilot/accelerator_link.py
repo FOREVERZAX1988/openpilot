@@ -41,30 +41,6 @@ def link_toggle_meaningful() -> bool:
   return not ui_state.chestnut_present and ui_state.jetlink is not None
 
 
-def port_state(jetlink) -> str | None:
-  """jetlink's port line: 'connected' with a host on the link, else the CC
-  pin's 'empty' or 'device' (a cable with something live behind it, which it
-  cannot name); None where the kernel does not say. jetlink's Status derives
-  it as port_state; one that predates it carries only the pin's port, read
-  as 'device' where it is not empty."""
-  state = getattr(jetlink, "port_state", None)
-  if state is not None:
-    return state
-  # a Status too old for port_state says a host is there as present
-  if getattr(jetlink, "present", False):
-    return "connected"
-  port = getattr(jetlink, "port", None)
-  if port is None:
-    return None
-  return "empty" if port == "empty" else "device"
-
-
-def small_steering_meaningful() -> bool:
-  """The small model steers beside a big model only on tinygrad's runner,
-  and never beside a chestnut (modeld_v2/small_lateral.py)."""
-  return ui_state.active_runner_tinygrad and not ui_state.chestnut_present
-
-
 def link_status() -> str:
   """One line under the toggle: what is on the comma's USB-C port right now.
 
@@ -74,14 +50,9 @@ def link_status() -> str:
   than claiming an empty port.
   """
   jetlink = ui_state.jetlink
-  if jetlink is None:
-    return ""
-  # Wi-Fi leaves the USB-C port alone: point the user at the hotspot instead
-  if getattr(jetlink, "mode", None) == "wifi":
-    return tr("Join the device's hotspot and open Jetlink there.")
-  port = port_state(jetlink)
+  port = jetlink.port_state if jetlink is not None else None
   if port == "connected":
-    return f"{tr('Jetlink connected:')} {getattr(jetlink, 'transport', '')}."
+    return f"{tr('Jetlink connected:')} {jetlink.transport}."
   return {"empty": tr("Nothing on the USB port."), "device": tr("A device is on the USB port.")}.get(port, "")
 
 

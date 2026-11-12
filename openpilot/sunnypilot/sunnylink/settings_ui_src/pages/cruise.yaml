@@ -317,6 +317,44 @@ sections:
         field: has_icbm
         equals: true
     - $ref: '#/macros/icbm_scc_not_engaged'
+  - key: CurveSpeedProfile
+    widget: multiple_button
+    title: 弯道车速
+    description: 慢速过弯的力度。柔和减得更多，运动减得更少。
+    # values are the index into curve_speed_profile.SCALES
+    options:
+    - value: 0
+      label: 柔和
+    - value: 1
+      label: 标准
+    - value: 2
+      label: 运动
+    visibility:
+    - type: any
+      conditions:
+      - type: capability
+        field: has_longitudinal_control
+        equals: true
+      - type: capability
+        field: has_icbm
+        equals: true
+    enablement:
+    - type: any
+      conditions:
+      - type: capability
+        field: has_longitudinal_control
+        equals: true
+      - type: capability
+        field: has_icbm
+        equals: true
+    - type: any
+      conditions:
+      - type: param
+        key: SmartCruiseControlVision
+        equals: true
+      - type: param
+        key: SmartCruiseControlMap
+        equals: true
 - id: carrot_navigation
   title: OSM / Carrot 导航
   description: 手机互联、导航数据与动态巡航调校

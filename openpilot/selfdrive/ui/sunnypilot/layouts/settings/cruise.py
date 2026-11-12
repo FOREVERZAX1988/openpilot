@@ -10,6 +10,7 @@ from openpilot.selfdrive.ui.sunnypilot.layouts.settings.alpha_longitudinal_toggl
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise_sub_layouts.speed_limit_settings import SpeedLimitSettingsLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise_sub_layouts.longitudinal_mpc_tuning import LongitudinalMpcTuningLayout
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.following_profile_toggles import FollowingProfileToggles
+from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise_zp import CurveSpeed
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, option_item_sp, simple_button_item_sp
@@ -93,6 +94,8 @@ class CruiseLayout(Widget):
                      "Eases off in curves and when sunnypilot slows or stops. Never goes past your set speed, and lead-car following still comes first."),
       param="AccelBoostSP")
 
+    self.curve_speed = CurveSpeed(self.scc_v_toggle, self.scc_m_toggle)
+
     self.custom_acc_toggle = toggle_item_sp(
       title=tr("Custom ACC Speed Increments"),
       description="",
@@ -130,6 +133,7 @@ class CruiseLayout(Widget):
       self.icbm_toggle,
       self.scc_v_toggle,
       self.scc_m_toggle,
+      self.curve_speed.item,
       self.sla_settings_button,
       self.cem_toggle,
       self.cem_curves_toggle,
@@ -239,6 +243,8 @@ class CruiseLayout(Widget):
       if self.icbm_toggle.description != new_icbm_desc:
         self.icbm_toggle.set_description(new_icbm_desc)
         self.icbm_toggle.show_description(True)
+
+    self.curve_speed.update_state(has_long or has_icbm)
 
     show_custom_acc_desc = False
 
