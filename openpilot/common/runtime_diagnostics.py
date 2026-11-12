@@ -7,7 +7,12 @@ import time
 
 
 class RuntimeDiagnostics:
-  def __init__(self, component, emit, interval=1.0, *, peak_metric=None):
+  # Default 10s: these records go to swaglog (1-2KB each), and 1s interval
+  # across radarcan/radard/ui/signalyolod measured ~200KB/min — enough to
+  # build a multi-GB /data/log backlog that athena uploads on every app
+  # reconnect, starving cameras/modeld while driving. 10s keeps the
+  # diagnostic value at ~1/10th the volume.
+  def __init__(self, component, emit, interval=10.0, *, peak_metric=None):
     self.component, self.emit, self.interval = component, emit, interval
     # When set, the full record() call with the highest value of this metric
     # is carried to the emit as peak_sample: one owned, correlated frame
