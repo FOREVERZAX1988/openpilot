@@ -180,8 +180,9 @@ class HudRendererSP(HudRenderer):
 
     self.developer_ui.render(rect)
     self.road_name_renderer.render(rect)
-    # StarPilot-style navigation instruction card, right edge above the bottom
-    # HUD cluster; its own 0.1 s params throttle keeps this per-frame call cheap.
+    # StarPilot-style navigation instruction card, top-center under the speed
+    # block (webui road_lite parity); its own 0.1 s params throttle keeps this
+    # per-frame call cheap.
     self.navigation_card.render(rect)
     self.speed_limit_renderer.render(rect)
     self.smart_cruise_control_renderer.render(rect)
