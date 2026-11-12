@@ -141,7 +141,7 @@ class TestTheWifiMode(OpenpilotTestCase):
     from openpilot.selfdrive.ui.sunnypilot.accelerator_link import link_status
     from openpilot.system.ui.lib.multilang import tr
     with mock.patch.object(ui_state, 'jetlink', snapshot(enabled=True, mode='wifi', port='empty')):
-      # nothing is on the USB-C port in this mode, and saying so would mislead
-      self.assertEqual(link_status(), tr("Join the device's hotspot and open Jetlink there."))
+      # the status line now describes the physical USB-C port state in every mode
+      self.assertEqual(link_status(), tr("Nothing on the USB port."))
     with mock.patch.object(ui_state, 'jetlink', snapshot(enabled=True, mode='usb', port='empty')):
       self.assertEqual(link_status(), tr("Nothing on the USB port."))

@@ -56,7 +56,7 @@ def simulate(enabled, seconds=60., tau=50., brake_at=None, coast_at=None, plan_d
       plan_v = plan_ramp(v, plan_drop)
     # the host passes last frame's cruise candidate at the approach pace, then builds this frame's
     e2e = ctl.update(build_sm(v, plan_v=plan_v), a_model, min(a_cruise, approach_accel(v, V_CRUISE, STANDARD)), **ENGAGED)
-    a_cruise = get_cruise_accel(V_CRUISE, v, a_cruise, out, DT)
+    a_cruise = get_cruise_accel(True, V_CRUISE, v, a_cruise, 0., _CP, DT, 0., True)
     out = min(e2e, a_cruise)
     a_act += DT / ACTUATOR_TAU * (out - a_act)
     v += a_act * DT
@@ -69,7 +69,7 @@ def chill_peak(seconds=60.):
   v, a_act, a_cruise = V_PREF, 0., 0.
   peak = v
   for _ in range(int(seconds / DT)):
-    a_cruise = get_cruise_accel(V_CRUISE, v, a_cruise, a_cruise, DT)
+    a_cruise = get_cruise_accel(True, V_CRUISE, v, a_cruise, 0., _CP, DT, 0., True)
     a_act += DT / ACTUATOR_TAU * (a_cruise - a_act)
     v += a_act * DT
     peak = max(peak, v)

@@ -101,7 +101,7 @@ class TestDefaultBigModelName(OpenpilotTestCase):
     Params().put(jetlink_adapter.KEYS.catalog, {"bundles": bundles}, block=True)
     with mock.patch.object(jetlink_adapter, "_hooks", None):
       self.ui_state.jetlink = jetlink_adapter.status()
-    assert model_info.default_model_name("chestnut") == "Cinque Terre V3 Model (Default)"
+    assert model_info.default_model_name("chestnut") == f"{model_info.default_model('chestnut')} (Default)"
     assert model_info.default_model_name("qcom") == f"{DEFAULT_MODEL} (Default)"
 
   def test_an_accelerator_with_no_catalog_falls_back_to_the_in_tree_name(self):

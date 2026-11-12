@@ -13,6 +13,12 @@ import unittest
 import warnings
 
 ROOT = Path(__file__).resolve().parents[1]
+# Comma devices install test-only wheels (pytest, ...) into a writable pydeps
+# dir that is not on the venv's sys.path. Make it visible so those suites are
+# collected instead of reported as "No module named pytest" collection errors.
+for _extra in (ROOT / ".pydeps", Path("/data/.pydeps")):
+  if _extra.is_dir() and str(_extra) not in sys.path:
+    sys.path.insert(0, str(_extra))
 IGNORED = (
   ROOT / "openpilot/selfdrive/test/process_replay/test_processes.py",
   ROOT / "openpilot/tools/sim",

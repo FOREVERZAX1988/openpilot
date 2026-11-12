@@ -283,8 +283,8 @@ class TestTiziSettingsTests(OpenpilotTestCase):
     (True, False, True, True),
     (True, False, False, False),  # nothing reads it with both curve features off
     (False, True, True, False),
-  ], names=('has_long', 'vision', 'map', 'enabled'))
-  def test_curve_speed_follows_slow_for_curves(self, params, monkeypatch, has_long, vision, map_, enabled):
+  ], names=('has_long', 'vision', 'map_on', 'enabled'))
+  def test_curve_speed_follows_slow_for_curves(self, params, monkeypatch, has_long, vision, map_on, enabled):
     from opendbc.car.structs import car
     from openpilot.cereal import custom
     from openpilot.selfdrive.ui.sunnypilot.layouts.settings.cruise import CruiseLayout
@@ -295,7 +295,7 @@ class TestTiziSettingsTests(OpenpilotTestCase):
     monkeypatch.setattr(ui_state, "has_longitudinal_control", has_long)
     monkeypatch.setattr(ui_state, "has_icbm", False)
     params.put_bool("SmartCruiseControlVision", vision, block=True)
-    params.put_bool("SmartCruiseControlMap", map_, block=True)
+    params.put_bool("SmartCruiseControlMap", map_on, block=True)
     params.put("CurveSpeedProfile", 2, block=True)
     try:
       cruise = CruiseLayout()
