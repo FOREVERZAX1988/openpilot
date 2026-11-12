@@ -143,12 +143,16 @@ class Sidebar(Widget, SidebarSP):
     self._net_strength = max(0, min(5, strength.raw + 1)) if strength.raw > 0 else 0
 
   def _update_temperature_status(self, device_state):
-    thermal_status = device_state.thermalStatus
-
-    if thermal_status == ThermalStatus.ok:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+    # Show the actual CPU temperature like the webui sidebar (web/static/js/sidebar.js:
+    # "{Math.round(cpu_temp)}°C" with the GOOD/HIGH text only as a fallback before
+    # the sensor reports; thermal != ok turns the metric red).
+    thermal_ok = device_state.thermalStatus == ThermalStatus.ok
+    cpu_temp_c = device_state.cpuTempC
+    temp = cpu_temp_c[0] if len(cpu_temp_c) else 0.0
+    if temp > 0:
+      self._temp_status.update(tr_noop("TEMP"), f"{round(temp)}°C", Colors.GOOD if thermal_ok else Colors.DANGER)
     else:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("HIGH"), Colors.DANGER)
+      self._temp_status.update(tr_noop("TEMP"), tr_noop("GOOD" if thermal_ok else "HIGH"), Colors.GOOD if thermal_ok else Colors.DANGER)
 
   def _update_connection_status(self, device_state):
     last_ping = device_state.lastAthenaPingTime
