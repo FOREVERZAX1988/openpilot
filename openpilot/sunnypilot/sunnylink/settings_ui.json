@@ -1291,6 +1291,75 @@
                   ]
                 }
               ]
+            },
+            {
+              "key": "CurveSpeedProfile",
+              "widget": "multiple_button",
+              "title": "\u5f2f\u9053\u8f66\u901f",
+              "description": "\u6162\u901f\u8fc7\u5f2f\u7684\u529b\u5ea6\u3002\u67d4\u548c\u51cf\u5f97\u66f4\u591a\uff0c\u8fd0\u52a8\u51cf\u5f97\u66f4\u5c11\u3002",
+              "options": [
+                {
+                  "value": 0,
+                  "label": "\u67d4\u548c"
+                },
+                {
+                  "value": 1,
+                  "label": "\u6807\u51c6"
+                },
+                {
+                  "value": 2,
+                  "label": "\u8fd0\u52a8"
+                }
+              ],
+              "visibility": [
+                {
+                  "type": "any",
+                  "conditions": [
+                    {
+                      "type": "capability",
+                      "field": "has_longitudinal_control",
+                      "equals": true
+                    },
+                    {
+                      "type": "capability",
+                      "field": "has_icbm",
+                      "equals": true
+                    }
+                  ]
+                }
+              ],
+              "enablement": [
+                {
+                  "type": "any",
+                  "conditions": [
+                    {
+                      "type": "capability",
+                      "field": "has_longitudinal_control",
+                      "equals": true
+                    },
+                    {
+                      "type": "capability",
+                      "field": "has_icbm",
+                      "equals": true
+                    }
+                  ]
+                },
+                {
+                  "type": "any",
+                  "conditions": [
+                    {
+                      "type": "param",
+                      "key": "SmartCruiseControlVision",
+                      "equals": true
+                    },
+                    {
+                      "type": "param",
+                      "key": "SmartCruiseControlMap",
+                      "equals": true
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -1801,6 +1870,29 @@
                     "field": "device_type",
                     "equals": "mici"
                   }
+                }
+              ]
+            },
+            {
+              "key": "LaneCenterUI",
+              "widget": "toggle",
+              "title": "Lane Center Gauge",
+              "description": "Shows lane center assist's nudge as a gauge under the steering arc.",
+              "visibility": [
+                {
+                  "type": "not",
+                  "condition": {
+                    "type": "capability",
+                    "field": "device_type",
+                    "equals": "mici"
+                  }
+                }
+              ],
+              "enablement": [
+                {
+                  "type": "param",
+                  "key": "Blendful",
+                  "equals": true
                 }
               ]
             },
@@ -2518,34 +2610,14 @@
             {
               "key": "Blendful",
               "widget": "toggle",
-
               "title": "\u8f66\u9053\u5c45\u4e2d\u8f85\u52a9\uff08Alpha\uff09",
-              "description": "\u5728\u6a21\u578b\u81ea\u8eab\u8f6c\u5411\u7684\u57fa\u7840\u4e0a\u8f7b\u67d4\u5730\u628a\u8f66\u63a8\u56de\u8f66\u9053\u4e2d\u592e\uff0c\u8f66\u9053\u7ebf\u8d8a\u6e05\u6670\u4fee\u6b63\u8d8a\u5f3a\u3002\u9047\u969c\u788d\u81ea\u52a8\u8ba9\u884c\u3002\u9ed8\u8ba4\u6a21\u578b\u4e0d\u53ef\u7528\u3002",
-              "enablement": [
-                {
-                  "type": "capability",
-                  "field": "custom_model_active",
-                  "equals": true
-                }
-              ]
-
+              "description": "\u5728\u6a21\u578b\u81ea\u8eab\u8f6c\u5411\u7684\u57fa\u7840\u4e0a\u8f7b\u67d4\u5730\u628a\u8f66\u63a8\u56de\u8f66\u9053\u4e2d\u592e\uff0c\u8f66\u9053\u7ebf\u8d8a\u6e05\u6670\u4fee\u6b63\u8d8a\u5f3a\u3002\u9047\u969c\u788d\u81ea\u52a8\u8ba9\u884c\u3002\u4fee\u6b63\u65f6\u4e2d\u5fc3\u7ebf\u53d8\u84dd\uff1b\u89c6\u89c9\u8bbe\u7f6e\u4e2d\u7684\u8f66\u9053\u5c45\u4e2d UI \u53ef\u663e\u793a\u529b\u5ea6\u8868\u3002"
             },
             {
-              "key": "SmallModelSteering",
-              "widget": "option",
-              "title": "\u5c0f\u6a21\u578b\u8f6c\u5411",
-              "description": "\u4f7f\u7528\u5927\u6a21\u578b\u65f6\uff0c\u4f4e\u4e8e\u6b64\u8f66\u901f\u7531\u5c0f\u6a21\u578b\u8f6c\u5411\u3002\u4f4e\u901f\u4e0b\u66f4\u7a33\u30020 \u4e3a\u5173\u95ed\u3002\u9ed8\u8ba4 5 m/s\uff0811 mph\uff0c18 km/h\uff09\u3002\u9ed8\u8ba4\u6a21\u578b\u4e0d\u53ef\u7528\u3002",
-              "min": 0,
-              "max": 9,
-              "step": 0.5,
-              "unit": "m/s",
-              "enablement": [
-                {
-                  "type": "capability",
-                  "field": "custom_model_active",
-                  "equals": true
-                }
-              ]
+              "key": "BigModelSmoothing",
+              "widget": "toggle",
+              "title": "\u5927\u6a21\u578b\u5e73\u6ed1",
+              "description": "\u8d4b\u4e88\u5927\u6a21\u578b\u5c0f\u6a21\u578b\u7684\u8f6c\u5411\u5e73\u6ed1\u5904\u7406\u3002\u53ef\u5e73\u6291\u76f4\u8def\u4e0a\u5c0f\u5e45\u7684\u5de6\u53f3\u6446\u52a8\u3002"
             },
             {
               "key": "LaneTurnDesire",

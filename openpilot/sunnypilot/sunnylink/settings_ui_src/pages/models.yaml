@@ -11,22 +11,12 @@ sections:
   items:
   - key: Blendful
     widget: toggle
-
     title: 车道居中辅助（Alpha）
-    description: 在模型自身转向的基础上轻柔地把车推回车道中央，车道线越清晰修正越强。遇障碍自动让行。默认模型不可用。
-    enablement:
-    - $ref: '#/macros/custom_model'
-
-  - key: SmallModelSteering
-    widget: option
-    title: 小模型转向
-    description: 使用大模型时，低于此车速由小模型转向。低速下更稳。0 为关闭。默认 5 m/s（11 mph，18 km/h）。默认模型不可用。
-    min: 0
-    max: 9
-    step: 0.5
-    unit: m/s
-    enablement:
-    - $ref: '#/macros/custom_model'
+    description: 在模型自身转向的基础上轻柔地把车推回车道中央，车道线越清晰修正越强。遇障碍自动让行。修正时中心线变蓝；视觉设置中的车道居中 UI 可显示力度表。
+  - key: BigModelSmoothing
+    widget: toggle
+    title: 大模型平滑
+    description: 赋予大模型小模型的转向平滑处理。可平抑直路上小幅的左右摆动。
   - key: LaneTurnDesire
     widget: toggle
     title: 使用变道转向意图
