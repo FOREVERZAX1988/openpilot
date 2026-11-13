@@ -7537,3 +7537,211 @@ msgstr "已订阅"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 SunnyLink 🚀"
 
+
+#: openpilot\selfdrive\ui\impact_dashcam.py
+msgid "Impact suspected"
+msgstr "疑似碰撞"
+
+#: openpilot\selfdrive\ui\impact_dashcam.py
+msgid "Dashcam mode: reboot in {seconds}s"
+msgstr "行车记录仪模式：{seconds} 秒后重启"
+
+#: openpilot\selfdrive\ui\impact_dashcam.py
+msgid "Touch anywhere to cancel"
+msgstr "点按任意位置取消"
+
+#: openpilot\selfdrive\ui\impact_dashcam.py
+msgid "Rebooting into Dashcam Mode"
+msgstr "正在重启进入行车记录仪模式"
+
+#: openpilot\selfdrive\ui\impact_dashcam.py
+msgid "openpilot disabled"
+msgstr "openpilot 已停用"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
+msgid "Device will automatically shutdown after set time once the engine is turned off.\n(30h is the default)"
+msgstr "发动机关闭后，设备会在设定时间后自动关机。\n（默认为 30 小时）"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "For a deeper reset, go to\nhttps://flash.comma.ai"
+msgstr "如需彻底重置，请访问\nhttps://flash.comma.ai"
+
+#: openpilot\selfdrive\ui\sunnypilot\onroad\circular_alerts.py
+msgid "GREEN\nLIGHT"
+msgstr "绿灯\n亮起"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_zp.py
+msgid "Gentle"
+msgstr "平缓"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
+msgid "Gives big models the small models' steering smoothing. Can calm small side-to-side wiggles on straight roads."
+msgstr "让大模型使用小模型的转向平滑。可减轻直路上的轻微左右摆动。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_zp.py
+msgid "How fast Slow for Curves takes turns. Gentle slows more, Sporty slows less."
+msgstr "弯道减速的力度。平缓减得更多，运动减得更少。"
+
+#: openpilot\selfdrive\ui\sunnypilot\onroad\circular_alerts.py
+msgid "LEAD VEHICLE\nDEPARTING"
+msgstr "前车\n已驶离"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals_zp.py
+msgid "Lane Center Gauge"
+msgstr "车道居中仪表"
+
+#: openpilot\system\ui\tici_reset.py
+msgid "Resetting device...\nThis may take up to a minute."
+msgstr "正在重置设备...\n最多需要一分钟。"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\cruise_zp.py
+msgid "Sporty"
+msgstr "运动"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\osm.py
+msgid "This will delete ALL downloaded maps\n\nAre you sure you want to delete all maps?"
+msgstr "将删除所有已下载的地图\n\n确定要删除全部地图吗？"
+
+#: openpilot\selfdrive\ui\mici\layouts\onboarding.py
+msgid "accept\nterms"
+msgstr "同意\n条款"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "caution: installing\n3rd party software"
+msgstr "注意：正在安装\n第三方软件"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "connect to\ncontinue"
+msgstr "连接后\n可继续"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "connect to\ninternet"
+msgstr "连接\n互联网"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "curve speed"
+msgstr "弯道速度"
+
+#: openpilot\selfdrive\ui\mici\layouts\onboarding.py
+msgid "decline &\nuninstall"
+msgstr "拒绝并\n卸载"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onboarding.py
+msgid "disable\nsunnylink"
+msgstr "停用\nsunnylink"
+
+#: openpilot\system\ui\mici_updater.py
+msgid "download\n& install"
+msgstr "下载\n并安装"
+
+#: openpilot\selfdrive\ui\mici\layouts\onboarding.py
+msgid "driver monitoring\ncheck"
+msgstr "驾驶员监测\n检查"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "enable\nexperimental mode"
+msgstr "启用\n实验模式"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\onboarding.py
+msgid "enable\nsunnylink"
+msgstr "启用\nsunnylink"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "enable alpha\nlongitudinal"
+msgstr "启用 alpha\n纵向控制"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "enabling\nexperimental mode"
+msgstr "正在启用\n实验模式"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "flm shadow"
+msgstr "FLM 影子"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "flm-shadow"
+msgstr "FLM 影子"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "gentle"
+msgstr "平缓"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "how to restore to a\nfactory state later"
+msgstr "之后如何恢复\n出厂状态"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "joystick debug\nmode"
+msgstr "摇杆调试\n模式"
+
+#: openpilot\selfdrive\ui\mici\layouts\onboarding.py
+msgid "make sure comma\nfour can see your face"
+msgstr "确保 comma four\n能看到你的脸"
+
+#: openpilot\selfdrive\ui\mici\onroad\augmented_road_view.py
+msgid "openpilot can't start\ncheck alerts"
+msgstr "openpilot 无法启动\n请查看警告"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "reboot\ndevice"
+msgstr "重启\n设备"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "reset &\nerase"
+msgstr "重置并\n清除"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "reset triggered by\ntapping the screen"
+msgstr "由点按屏幕\n触发的重置"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "resetting erases\nall user content & data"
+msgstr "重置将清除\n所有用户内容与数据"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "slide to install\ncustom software"
+msgstr "滑动安装\n自定义软件"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "slide to install\nopenpilot"
+msgstr "滑动安装\nopenpilot"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
+msgid "smooth big model"
+msgstr "大模型平滑"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "sporty"
+msgstr "运动"
+
+#: openpilot\selfdrive\ui\mici\onroad\augmented_road_view.py
+msgid "start the car to\nuse sunnypilot"
+msgstr "启动车辆后\n使用 sunnypilot"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "swipe down to go\nback and try again"
+msgstr "下滑返回\n再试一次"
+
+#: openpilot\selfdrive\ui\mici\layouts\onboarding.py
+msgid "terms of\nservice"
+msgstr "服务\n条款"
+
+#: openpilot\system\ui\mici_updater.py
+msgid "the download size\nis approximately 1 GB"
+msgstr "下载大小\n约 1 GB"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "this may take up to\na minute..."
+msgstr "最多需要\n一分钟..."
+
+#: openpilot\system\ui\mici_reset.py
+msgid "this may take up to\na minute{dots}"
+msgstr "最多需要\n一分钟{dots}"
+
+#: openpilot\system\ui\mici_reset.py
+msgid "user data partition\ncould not be mounted"
+msgstr "用户数据分区\n无法挂载"
+
+#: openpilot\system\ui\mici_setup.py
+msgid "waiting for\ninternet..."
+msgstr "等待\n网络连接..."
