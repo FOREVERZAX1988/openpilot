@@ -409,6 +409,16 @@ class TestMapLimitAdvance(OpenpilotTestCase):
 
   KPH = CV.KPH_TO_MS
 
+  def setUp(self):
+    super().setUp()
+    from unittest import mock
+    # _GpsFixAge ages the fix with time.monotonic(); at 25 m/s a 0.1 m
+    # assertion tolerates only 4 ms of real time. Pin it so the suite does not
+    # depend on execution order or machine load.
+    clock = mock.patch.object(resolver_module.time, 'monotonic', return_value=1000.0)
+    clock.start()
+    self.addCleanup(clock.stop)
+
   def _resolver(self):
     resolver = SpeedLimitResolver()
     resolver.policy = Policy.map_data_only

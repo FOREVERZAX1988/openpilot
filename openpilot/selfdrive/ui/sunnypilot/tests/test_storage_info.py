@@ -78,8 +78,17 @@ class _FakeArtifact:
     self.fileSizeBytes = file_size_bytes
 
 
+class _FakeModel:
+  def __init__(self, artifact, metadata=None):
+    self.artifact = artifact
+    self.metadata = metadata
+
+
 class _FakeBundle:
   def __init__(self, *artifacts):
+    # cached_bundle_sizes walks bundle.models[].artifact/.metadata (custom.capnp
+    # ModelBundle layout), not a flat artifacts list.
+    self.models = [_FakeModel(a) for a in artifacts]
     self.artifacts = list(artifacts)
 
 
@@ -97,10 +106,11 @@ class TestModelRootSize(unittest.TestCase):
     self.assertEqual(model_root_size("/no/such/model/root"), 0)
 
 
-@unittest.skip("环境依赖：cached_bundle_sizes 在能 import model_sizes.artifact_size 的机器上"
-               "（设备就有）走 size ledger，而不是 PC 上那条 plain-stat fallback；"
-               "这两个用例用 _FakeBundle 假造 catalog，在设备上必然算出 0。")
 class TestCachedBundleSizes(unittest.TestCase):
+  """Works on both paths: the device's size ledger and the PC plain-stat
+  fallback both report a present file's real stat size."""
+
+
   def test_attributes_complete_files_per_source(self):
     with tempfile.TemporaryDirectory() as d:
       for rel, size in (("small.dlc", 1000), ("big.dlc", 4000)):

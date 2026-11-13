@@ -12,7 +12,6 @@ import os
 import time
 from contextlib import contextmanager
 from types import SimpleNamespace
-import unittest
 from unittest import mock
 
 
@@ -23,20 +22,35 @@ from openpilot.selfdrive.ui.sunnypilot.tests.helpers import jetlink_status, wait
 SHARED_FIXTURE_MODULES = ('openpilot.selfdrive.ui.sunnypilot.tests.helpers',)
 
 from openpilot.common.test import OpenpilotTestCase
+from openpilot.system.ui.lib.multilang import multilang
+
+# This suite asserts the English label contract ("Off", "Live", "REFRESH", ...).
+# multilang caches LanguageSetting at import, so on a zh-CHS device those labels
+# are Chinese and every assertion fails even though the widget is correct. Pin
+# the language for this test process only; shipped translations are untouched
+# (same rule as mici/tests/test_mici_settings.py, see AGENTS.md).
+multilang.reload("en")
 
 # the shared hidden window, created once per process; every test then runs under its own prefix
 
 
-@unittest.skip("i18n: 本 fork UI 为中文，这些用例断言上游英文文案")
 class UITest(OpenpilotTestCase):
   def setUp(self):
     super().setUp()
     self.use_fixture("gui")
     from openpilot.common.params import Params
     from openpilot.selfdrive.ui.ui_state import ui_state
+    from openpilot.sunnypilot.carrot.config import unified_params
     self.params = Params()
     ui_state.params = self.params
     ui_state.update_params()
+    # OptionControlSP reads the module-level unified_params singleton, whose
+    # _system_params was built at import time outside this test's prefix. Without
+    # pointing it at the isolated store, controls read (and write) another
+    # test's params and the suite becomes order-dependent.
+    original = unified_params._system_params
+    unified_params._system_params = self.params
+    self.addCleanup(setattr, unified_params, "_system_params", original)
 
 
 @contextmanager
@@ -542,6 +556,7 @@ class TestTiciModelsPanel(UITest):
     self.ui_state.is_metric = False
     self.params.put_bool("LaneTurnDesire", False, block=True)
     self.params.put("LaneTurnValue", 19.0, block=True)
+    self.params.put("LagdToggleDelay", 0.2, block=True)
     self.params.put_bool("LagdToggle", True, block=True)
     layout = self._layout()
     layout._update_state()
