@@ -28,7 +28,7 @@ class TestFlmShadowProducer(unittest.TestCase):
     values = {
       'carState': SimpleNamespace(vEgo=20., steeringPressed=False, brakePressed=False, gasPressed=False,
                                  canValid=True, canTimeout=False, steeringAngleDeg=1., steeringTorque=0.),
-      'carControl': SimpleNamespace(latActive=True, actuators=SimpleNamespace(steer=-.1)),
+      'carControl': SimpleNamespace(latActive=True, actuators=SimpleNamespace(torque=-.1)),
       'carOutput': SimpleNamespace(actuatorsOutput=SimpleNamespace(torque=-.1)),
       'controlsState': SimpleNamespace(lateralControlState=lateral),
       'deviceMotion': SimpleNamespace(timestamp=self.now, angularVelocityDevice=SimpleNamespace(valid=True),

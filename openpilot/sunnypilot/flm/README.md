@@ -54,7 +54,7 @@ source was live):
 | identity / enable | `learning_source.identity_for` + `controller_selection.read_selection` (their unwired capability binding) | `{'carFingerprint', 'lateralTuning', 'basis'}` with `basis[0]` = the offline `latAccelFactor`; enabled by the `FlmShadowEnabled` param, re-checked at 1 Hz, hard split on change |
 | `linear_conversion_verified` | capability-contract constant | `CP.lateralTuning.which() == 'torque'` — the car runs a linear torque controller by construction |
 | vehicle envelope | separate measured `vehicle_factor` | degenerates to the baseline band: this fork has no independent measured factor, so `evaluate_linear_factor`'s 0.7–1.3× vehicle check folds into the ±30 % baseline step check |
-| `cmd_torque` sample field | `cc.actuators.torque` | `cc.actuators.steer` (the lateral command; `actuators.torque` is longitudinal in this schema) |
+| `cmd_torque` sample field | `cc.actuators.torque` | `cc.actuators.torque` — same name here; this fork's `Actuators.torque` IS the lateral command (`steer` does not exist in the fork schema; earlier note claiming `actuators.torque` was longitudinal was wrong and the `.steer` read it caused would have failed every update at runtime) |
 | publication | their `autoSteeringLearning` message | CustomReserved19 append fields via `verdict()`; their message does not exist in this fork |
 | clock | `time.CLOCK_BOOTTIME` direct | import-time `getattr` fallback (Linux device behaviour identical) |
 
