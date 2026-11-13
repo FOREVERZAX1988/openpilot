@@ -541,7 +541,7 @@ class GmSurface:
     return profile == self.profile and suffix in self.knobs
 
   def base_threshold(self, speed):
-    from openpilot.starpilot.lateral.bolt_shaping import get_gm_base_friction_threshold
+    from openpilot.sunnypilot.lateral.bolt_shaping import get_gm_base_friction_threshold
     value = (get_gm_base_friction_threshold(speed) if self.base_values is None else
              float(np.interp(speed, _gm_FLM_FRICTION_SPEED_KNOTS, self.base_values)))
     if not _gm_finite(value) or value <= 0.:
@@ -586,3 +586,97 @@ class GmSurface:
     if type(value) is not dict or set(value) != {'profile', 'knobs', 'baseValues'}:
       raise ValueError('Malformed GM surface')
     return cls(value['profile'], value['knobs'], value['baseValues'])
+
+
+@dataclass(frozen=True)
+class GmFlmBinding:
+  controller: str
+  policy: str
+  basis: tuple[float, float, float]
+  saved: tuple[tuple[str, str, GmSurface], ...] = ()
+  active: str | None = None
+  applied: bool = False
+  trial: str | None = None
+  baseline_active: str | None = None
+  baseline_applied: bool = False
+  manual: tuple[tuple[str, str], ...] = ()
+  baseline_manual: str | None = None
+  applied_manual: str | None = None
+  cleanup_progress: bool = False
+
+  def __post_init__(self):
+    import re
+    if self.controller not in ('standard', 'starpilot') or self.policy not in (
+        'bolt', 'volt', 'suburban', 'ordinary_camera', 'silverado_cc', 'ordinary_cc', 'ordinary_sdgm', 'ordinary_ascm'):
+      raise ValueError('Unsupported GM FLM owner')
+    if (type(self.basis) is not tuple or len(self.basis) != 3 or
+        any(type(v) not in (int, float) or not _gm_finite(v) for v in self.basis) or self.basis[0] <= 0. or self.basis[2] < 0.):
+      raise ValueError('Invalid GM FLM source basis')
+    if type(self.saved) is not tuple or len(self.saved) > 4 or type(self.applied) is not bool or type(self.baseline_applied) is not bool:
+      raise ValueError('Malformed GM FLM state')
+    ids = set()
+    for key, label, surface in self.saved:
+      if (type(key) is not str or re.fullmatch(r'[a-zA-Z0-9_-]{1,48}', key) is None or key in ids or
+          type(label) is not str or not 1 <= len(label.strip()) <= 80 or not isinstance(surface, GmSurface)):
+        raise ValueError('Malformed saved GM surface')
+      ids.add(key)
+    if type(self.cleanup_progress) is not bool or type(self.manual) is not tuple or len(self.manual) > 4:
+      raise ValueError('Malformed saved FLM manual choices')
+    manual_ids = set()
+    for key, raw in self.manual:
+      if key not in ids or key in manual_ids or type(raw) is not str or len(raw.encode('utf-8')) > 4096:
+        raise ValueError('Unbound saved FLM manual choices')
+      manual_ids.add(key)
+    if (self.baseline_manual is None) != (self.applied_manual is None):
+      raise ValueError('Incomplete FLM manual rollback')
+    for raw in (self.baseline_manual, self.applied_manual):
+      if raw is not None and (type(raw) is not str or len(raw.encode('utf-8')) > 4096 or self.trial is None):
+        raise ValueError('Orphaned FLM manual rollback')
+    for key, applied in ((self.active, self.applied), (self.baseline_active, self.baseline_applied)):
+      if (key is not None and (type(key) is not str or key not in ids)) or applied != (key is not None):
+        raise ValueError('Unbound GM FLM activation')
+    if self.trial is not None and (type(self.trial) is not str or re.fullmatch(r'[a-f0-9]{32}', self.trial) is None or not self.applied):
+      raise ValueError('Invalid trial identity')
+    if self.trial is None and (self.baseline_active is not None or self.baseline_applied):
+      raise ValueError('Orphaned rollback baseline')
+
+  def selected(self):
+    return next((surface for key, _, surface in self.saved if key == self.active), None) if self.applied else None
+
+  def document(self):
+    return {'controller': self.controller, 'policy': self.policy, 'basis': list(self.basis),
+            'saved': {key: {'label': label, 'surface': surface.document()} for key, label, surface in self.saved},
+            'active': self.active, 'applied': self.applied, 'trial': self.trial,
+            'baselineActive': self.baseline_active, 'baselineApplied': self.baseline_applied,
+            'manual': dict(self.manual), 'baselineManual': self.baseline_manual, 'appliedManual': self.applied_manual, 'cleanupProgress': self.cleanup_progress}
+
+  @classmethod
+  def from_document(cls, value):
+    keys = {'controller', 'policy', 'basis', 'saved', 'active', 'applied', 'trial', 'baselineActive', 'baselineApplied'}
+    extra = {'manual', 'baselineManual', 'appliedManual'}
+    if (type(value) is not dict or set(value) not in (keys, keys | extra, keys | extra | {'cleanupProgress'}) or
+        type(value['saved']) is not dict or len(value['saved']) > 4):
+      raise ValueError('Malformed GM FLM document')
+    saved = []
+    for key, entry in value['saved'].items():
+      if type(entry) is not dict or set(entry) != {'label', 'surface'}:
+        raise ValueError('Malformed saved GM surface')
+      saved.append((key, entry['label'], GmSurface.from_document(entry['surface'])))
+    if type(value['basis']) is not list:
+      raise ValueError('Malformed GM FLM basis')
+    manual = value.get('manual', {})
+    if type(manual) is not dict:
+      raise ValueError('Malformed FLM manual choices')
+    return cls(value['controller'], value['policy'], tuple(value['basis']), tuple(saved), value['active'], value['applied'], value['trial'],
+               value['baselineActive'], value['baselineApplied'], tuple(manual.items()),
+               value.get('baselineManual'), value.get('appliedManual'), value.get('cleanupProgress', False))
+
+  def validate_manual(self, fingerprint):
+    from openpilot.sunnypilot.flm.manual_trial import manual_profile
+    for _, raw in self.manual:
+      profile = manual_profile(raw, fingerprint, self.basis)
+      if profile.gain_basis is not None and profile.gain_basis.controller != self.controller:
+        raise ValueError('Wrong FLM saved gain controller')
+    for raw in (self.baseline_manual, self.applied_manual):
+      if raw is not None:
+        manual_profile(raw, fingerprint, self.basis)

@@ -188,7 +188,7 @@ class FlmShadowProducer:
     control_row = FLMSample(self.session, self.block, row_ns / 1e9, cs.vEgo, True, False, False,
       lc.actualLateralAccel, lc.desiredLateralAccel, lc.desiredLateralJerk, lc.error, lc.errorRate,
       lc.p, lc.i, lc.d, lc.f, lc.output, cs.steeringAngleDeg, cs.steeringTorque,
-      cc.actuators.steer, sm['carOutput'].actuatorsOutput.torque, None)
+      cc.actuators.torque, sm['carOutput'].actuatorsOutput.torque, None)
     self.control_history.append((row_ns, control_row))
     if len(self.torques) < 100 or len(self.speeds) < 100:
       self.reason = 'alignment_history'
