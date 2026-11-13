@@ -21,11 +21,35 @@ wording "verbatim" needed correcting):
 | `torque_surface.py` | carved from `starpilot/flm/torque_surface.py` | GM universal surface stage math (`GmSurface`, `_gm_get_flm_full_surface_*`), frozen `_gm_*` constants, `SurfaceInput`. **2026-11-13 wiring batch 1**: `GmFlmBinding` appended (the document round trip between `torque_settings` and the saved FLM state; `Ioniq 6` reconstruction still excluded — its `_DEFAULTS` bind `lateral/ioniq6_policy`, deferred with that chain) |
 | `evidence_types.py` | `starpilot/flm/gm_evidence.py` | frozen `FLMSample` record contract only |
 
+### Wiring batch 2/3 (2026-11-13) — lifecycle / restore-store / observation chain
+
+22 more modules, same discipline (verbatim + import rewrite; imports
+verified locally and on device; flm suite 87/87 OK on both):
+
+| Group | Modules |
+|---|---|
+| lifecycle/persistence | `learned_lifecycle`, `persistence_module`, `calibration_lifecycle`, `event_storage`, `sunnypilot/saved_document.py` (POSIX fcntl commit) |
+| restore/store | `restore_support`, `restore_activation`, `event_windows`, `event_episodes`, `event_physical`, `normalized_trace_archive` |
+| observation/plant | `torque_observation`, `physical_observation`, `physical_input_observation`, `plant_lag`, `producer_clock_equivalence`, `evidence_noise`, `evidence_phases`, `clipping_quality`, `native_primitives` |
+| torque/feedback chain | `torque_eligibility`, `torque_emission_replay` (+ opendbc `car/steering_projection.py`, verbatim), `event_mean_evidence`, `candidate_feedback`, `feedback_replay`, `event_activation` |
+
+Shared contracts: `runtime_identity` += `SourceState`; `replay_constants`
+holds MAX_FRAME_GAP_NS/MAX_REPLAY_FRAMES extracted from the 1,724-line
+`controller_replay` (still unported).
+
+**Deliberately excluded** (bound to StarPilot's daemon restore-replay
+architecture — sp validates restore via `ProfileOwner.replay_validation`
+instead): `event_raw_fit`, `event_restore_fit`, `torque_raw_fit`,
+`source_plant_fit`, and the collectors `gm_evidence`/`fullrate_collector`/
+`event_collection`. Dormant lazy imports into unported modules (e.g.
+`controller_replay.SelectedControllerFactory` in `feedback_replay`) raise
+a clear ModuleNotFoundError if ever reached; nothing in sp reaches them.
+
 ### Wiring batch 1 (2026-11-13) — deferred-scope modules now ported, still default-off
 
 Import-domain rewrite only (`openpilot.starpilot.*` → `openpilot.sunnypilot.*`);
 verified locally 87/87 (`flm/tests` incl. `test_physical_response` port and
-`test_wiring_batch_smoke`). Device-side run pending (see artifacts audit).
+`test_wiring_batch_smoke`); device-side 87/87 OK (0 skip) on HEAD 2c0d6b4ea8.
 
 | Module | Source | Role |
 |---|---|---|
