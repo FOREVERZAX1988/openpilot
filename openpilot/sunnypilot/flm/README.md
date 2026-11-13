@@ -18,18 +18,37 @@ wording "verbatim" needed correcting):
 | `event_bounded_ridge.py` | `starpilot/flm/event_bounded_ridge.py` | Deterministic box-constrained ridge solve (≤3⁴ face enumeration), not componentwise clamping |
 | `canonical_surface_adapter.py` | `starpilot/flm/canonical_surface_adapter.py` | full30 coordinate catalog (NAMES/GROUPS/RAW_DOMAINS), coordinate bounds, manifest/anchor digests, `validate_trial`, `CanonicalSurfaceEffects` admission + envelope |
 | `automatic.py` | `starpilot/flm/automatic.py` | **ADAPTED (4 lines)**: `FLMSample` imported from `evidence_types` (a byte-identical copy of the frozen dataclass) instead of gm_evidence, whose 1350-line live-collection body is wiring-batch scope. Linear `latAccelFactor` identification from bank-corrected physical windows, `admit_linear_factor` envelope (±30 % step, 0.7–1.3× vehicle factor) |
-| `torque_surface.py` | carved from `starpilot/flm/torque_surface.py` | GM universal surface stage math (`GmSurface`, `_gm_get_flm_full_surface_*`), frozen `_gm_*` constants, `SurfaceInput` |
+| `torque_surface.py` | carved from `starpilot/flm/torque_surface.py` | GM universal surface stage math (`GmSurface`, `_gm_get_flm_full_surface_*`), frozen `_gm_*` constants, `SurfaceInput`. **2026-11-13 wiring batch 1**: `GmFlmBinding` appended (the document round trip between `torque_settings` and the saved FLM state; `Ioniq 6` reconstruction still excluded — its `_DEFAULTS` bind `lateral/ioniq6_policy`, deferred with that chain) |
 | `evidence_types.py` | `starpilot/flm/gm_evidence.py` | frozen `FLMSample` record contract only |
+
+### Wiring batch 1 (2026-11-13) — deferred-scope modules now ported, still default-off
+
+Import-domain rewrite only (`openpilot.starpilot.*` → `openpilot.sunnypilot.*`);
+verified locally 87/87 (`flm/tests` incl. `test_physical_response` port and
+`test_wiring_batch_smoke`). Device-side run pending (see artifacts audit).
+
+| Module | Source | Role |
+|---|---|---|
+| `selected_effects.py` | verbatim | effect selection over `adaptive_profile` + `canonical_surface_adapter`; `_selected_source` keeps dormant lazy imports (`manual_coordinates` ported; `offroad_runtime` not ported — the branch never fires until route effects exist) |
+| `torque_stages.py` / `pid_stages.py` | verbatim | per-frame controller stage math (execution wiring later, controls-safety gated) |
+| `torque_adapter.py` | verbatim | Parameter/ProfileOwner adapter glue |
+| `physical_response.py` | verbatim | plant lag fit with train/heldout block split (7/7 tests green, values match upstream) |
+| `full_surface_profile.py` / `full_surface_store.py` | verbatim | restore/store of full surfaces (`remember_full`/`load_prior`/`rollback_full`) |
+| `event_evaluate.py` | verbatim + 1 line | `POLICY` inlined (constant only; the 1,063-line `event_controller_replay` deliberately stays unported) |
+| `manual_coordinates.py` / `manual_trial.py` | verbatim | manual coordinate validation/serialize; `manual_coordinates.load` reads through `torque_settings` |
+| `runtime_identity.py` | extracted from `runtime_adapter_registry.py` | `digest`/`car_params_digest`/`physical_model_revision` only — the 1,064-line registry is not ported |
+| `saved_source.py` (package root) | verbatim | bounded, symlink-safe param reads (`O_NONBLOCK`/`O_NOFOLLOW` — POSIX-only, device-verified) |
+| `sunnypilot/lateral/` (new) | `starpilot/lateral/` | config/contract layer only: `controller_selection`, `learning_preferences`, `torque_supported`, `torque_tuning`, `torque_shaping`, `bolt_shaping`, `torque_settings`, `gm_geometry_runtime`. Nothing here actuates a car; `torque_runtime`, `bolt_policy`, `ioniq6_policy` (the actuation-adjacent chain) stay unported |
 
 ## Not ported on purpose (wiring batch, needs controls-safety adjudication)
 
-- Ioniq 6 frozen reconstruction and `GmFlmBinding` (torque_surface carve boundary).
-- `pid_stages`, `torque_stages`/`torque_adapter`, `physical_response` (controller
-  execution stages), restore/store (`full_surface_store`, `full_surface_profile`),
-  `event_evaluate` plumbing. The live-collection body stays unported —
-  `shadow_producer.py` re-derives its own bounded 20 Hz collection instead
-  (below), so `gm_evidence`/`event_collector`/`fullrate_collector` are not
-  needed.
+- Ioniq 6 frozen reconstruction (`Ioniq6Surface` + `lateral/ioniq6_policy`,
+  which binds 26 frozen constants + shaping helpers), `torque_runtime`,
+  `bolt_policy`, and the whole live-collection body (`gm_evidence`,
+  `event_collector`, `fullrate_collector`, `offroad_*` daemon,
+  `live_tracking_*` multiprocess subsystem, `runtime_adapter_registry` /
+  `global_runtime` orchestration, replay suites). `shadow_producer.py`
+  re-derives its own bounded 20 Hz collection instead.
 - ~~Any import of this package from `latcontrol_torque`, `torqued` or
   `SpeedBinLearner`.~~ Two adjudicated exceptions now exist, both conditional
   verdicts from controls-safety-engineer with default-off Params keys:
