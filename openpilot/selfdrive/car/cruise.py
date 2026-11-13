@@ -594,11 +594,22 @@ class VCruiseCarrot(VCruiseHelper):
     # keeps chasing v_ego (cp re-engage semantics, control behaviour untouched)
     # and the unavailable branch keeps republishing it, but neither may leak into
     # the MAX box - pressing ACC cancel or exiting openpilot no longer "sets" MAX.
+    #
+    # While the car's PCM owns the set speed, publish the cluster value the car
+    # itself displays (CS.cruiseState.speedCluster) rather than the canonical
+    # mirror: Toyota's SET_SPEED and displayed UI_SET_SPEED legitimately differ
+    # by the cluster's own display granularity (measured +5..+6 kph on
+    # TOYOTA_WILDLANDER_PHEV), so publishing the canonical value here makes the
+    # MAX box lag the dashboard by that offset. Fall back to the canonical
+    # mirror for cars that never report a usable cluster value.
+    car_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH \
+      if (CS.cruiseState.available and CS.cruiseState.speed > 0) else 0.
     if not self._cruise_speed_set:
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
     elif CC.enabled or self._set_speed_event:
-      self.v_cruise_cluster_kph = self.v_cruise_kph
-      self._v_cruise_last_real_kph = self.v_cruise_kph
+      display_kph = car_cluster_kph if car_cluster_kph > 0 else self.v_cruise_kph
+      self.v_cruise_cluster_kph = display_kph
+      self._v_cruise_last_real_kph = display_kph
     else:
       self.v_cruise_cluster_kph = self._v_cruise_last_real_kph
     self._set_speed_event = False
