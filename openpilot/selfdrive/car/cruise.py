@@ -607,7 +607,20 @@ class VCruiseCarrot(VCruiseHelper):
     if not self._cruise_speed_set:
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
     elif CC.enabled or self._set_speed_event:
-      display_kph = car_cluster_kph if car_cluster_kph > 0 else self.v_cruise_kph
+      if car_cluster_kph > 0:
+        display_kph = car_cluster_kph
+      elif self._set_speed_event or not self.pcm_owns_set_speed:
+        # a real set-speed event moved the internal setpoint, or the car does
+        # not let the PCM own the set speed: the internal value is the answer
+        display_kph = self.v_cruise_kph
+      else:
+        # PCM-owned car, CC still flagged enabled but the PCM report has ALREADY
+        # dropped (cancel in flight: selfdrived's CC lags card's CAN view by
+        # 1-2 frames). Falling back to v_cruise here repaints MAX with the
+        # canonical mirror and permanently poisons the frozen value (observed
+        # on TOYOTA_WILDLANDER_PHEV: MAX 30 -> 26 while the dashboard keeps
+        # 30, and every later freeze kept the wrong 26).
+        display_kph = self._v_cruise_last_real_kph
       self.v_cruise_cluster_kph = display_kph
       self._v_cruise_last_real_kph = display_kph
     else:
