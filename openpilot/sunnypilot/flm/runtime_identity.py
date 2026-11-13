@@ -9,7 +9,24 @@ Verbatim except for the module boundary.
 import hashlib
 import json
 import struct
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
+
+
+@dataclass(frozen=True)
+class SourceState:
+  """Shared source-state contract (verbatim from runtime_adapter_registry)."""
+  enabled: bool
+  manual: bool
+  reset: str
+  source_epoch: str
+  observed_ns: int
+  expires_ns: int
+  cp_sha256: str
+  calibration: tuple[float, ...] = ()
+  calibration_generation: str = ''
+  persistent_source_epoch: str = ''
+  # Optional-process-only selected configuration; never added to controls IPC.
+  manual_baseline: tuple[float, ...] = field(default=(), compare=False, repr=False)
 
 
 def digest(value):
