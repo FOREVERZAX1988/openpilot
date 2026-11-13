@@ -223,12 +223,14 @@ class _ButtonEvent:
 
 
 class _CruiseState:
-  def __init__(self, available, enabled, standstill, speed):
+  def __init__(self, available, enabled, standstill, speed, speed_cluster=None):
     self.available = available
     self.enabled = enabled
     self.standstill = standstill
     self.speed = speed
-    self.speedCluster = speed
+    # Toyota reports a canonical SET_SPEED that differs from the cluster's
+    # displayed UI_SET_SPEED; keep them independent so tests can exercise both.
+    self.speedCluster = speed if speed_cluster is None else speed_cluster
 
 
 class _CarState:
@@ -324,9 +326,9 @@ def make_sm(cs, cs_sp, enabled=False, alive=None):
   return SM()
 
 
-def build_cp(pcm_cruise=False, openpilot_long=True):
+def build_cp(pcm_cruise=False, openpilot_long=True, brand='hyundai'):
   return types.SimpleNamespace(pcmCruise=pcm_cruise, openpilotLongitudinalControl=openpilot_long,
-                               brand='hyundai', carFingerprint='TEST')
+                               brand=brand, carFingerprint='TEST')
 
 
 def build_cp_sp():
@@ -500,6 +502,92 @@ def t_pcm_speed_from_pcm_exit_op_keeps_max():
 
 
 step('PCM SpeedFromPCM: cancel + OP-exit keep MAX at the car set speed', t_pcm_speed_from_pcm_exit_op_keeps_max)
+
+
+def t_toyota_cluster_display_offset():
+  """Toyota PCM car: the PCM's canonical SET_SPEED and the cluster's displayed
+  UI_SET_SPEED differ by the cluster's own display granularity (measured
+  +5..+6 kph on TOYOTA_WILDLANDER_PHEV). The MAX box must publish the car's
+  cluster value while tracking, and freeze at that value after ACC cancel /
+  OP exit - not the canonical mirror, which lags the dashboard by the offset."""
+  fresh = VCruiseCarrot(build_cp(pcm_cruise=True), build_cp_sp())
+  fresh.params._store['SpeedFromPCM'] = 1
+  # engaged: canonical 64 km/h on the wire, dashboard displays 70 km/h
+  cs = make_cs(v_ego=16.0, available=True)
+  cs.cruiseState = _CruiseState(True, True, False, 64 / 3.6, speed_cluster=70 / 3.6)
+  fresh.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  assert abs(fresh.v_cruise_cluster_kph - 70.0) < 0.1, (
+    f'MAX must show the car-reported cluster value (70), got {fresh.v_cruise_cluster_kph}')
+  assert abs(fresh.v_cruise_kph - 64.0) < 0.1, (
+    f'planner target must stay the canonical set speed (64), got {fresh.v_cruise_kph}')
+  # ACC cancel: PCM reports speed 0, still available - MAX freezes at 70
+  for _ in range(10):
+    cs = make_cs(v_ego=20.0, available=True)
+    cs.cruiseState = _CruiseState(True, False, False, 0.0)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert abs(fresh.v_cruise_cluster_kph - 70.0) < 0.1, (
+    f'cancel must freeze MAX at the displayed value, got {fresh.v_cruise_cluster_kph}')
+  # OP exit: cruise unavailable - the frozen display must persist
+  for _ in range(5):
+    cs = make_cs(v_ego=25.0, available=False)
+    cs.cruiseState = _CruiseState(False, False, False, 0.0)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert abs(fresh.v_cruise_cluster_kph - 70.0) < 0.1, (
+    f'OP-exit must not move MAX, got {fresh.v_cruise_cluster_kph}')
+  # a car without a cluster report falls back to the canonical mirror
+  fallback = VCruiseCarrot(build_cp(pcm_cruise=True), build_cp_sp())
+  fallback.params._store['SpeedFromPCM'] = 1
+  cs = make_cs(v_ego=16.0, available=True)
+  cs.cruiseState = _CruiseState(True, True, False, 20.0, speed_cluster=0.0)
+  fallback.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  assert abs(fallback.v_cruise_cluster_kph - 72.0) < 0.1, (
+    f'no cluster report must fall back to the canonical mirror, got {fallback.v_cruise_cluster_kph}')
+
+
+step('Toyota PCM cluster offset: MAX shows the displayed value, freezes on cancel', t_toyota_cluster_display_offset)
+
+
+def t_cancel_inflight_cc_lag_poison_frame():
+  """The observed on-road bug (qlog 0000004a--cda6acca26, t=26.91): the driver
+  cancels ACC, the PCM drops its set speed IMMEDIATELY (available=0, speed=0),
+  but selfdrived's carControl still flags enabled for 1-2 frames (its view of
+  carState lags card's CAN view). The gating took the CC.enabled branch, found
+  no car cluster report, fell back to the canonical mirror and PERMANENTLY
+  poisoned the frozen value: MAX jumped 30 -> 26 while the dashboard kept 30,
+  and every later freeze kept the wrong 26. The cancel-in-flight cross frame
+  must keep the last real value instead."""
+  fresh = VCruiseCarrot(build_cp(pcm_cruise=True, brand='toyota'), build_cp_sp())
+  fresh.params._store['SpeedFromPCM'] = 1
+  # engaged: canonical 26 km/h on the wire, dashboard displays 30 km/h
+  cs = make_cs(v_ego=0.0, available=True)
+  cs.cruiseState = _CruiseState(True, True, False, 26 / 3.6, speed_cluster=30 / 3.6)
+  fresh.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  assert abs(fresh.v_cruise_cluster_kph - 30.0) < 0.1, (
+    f'engaged MAX must be the car cluster value (30), got {fresh.v_cruise_cluster_kph}')
+  # cancel in flight: the PCM already dropped the set speed (available=0,
+  # speed=0) but selfdrived's CC still flags enabled (the lag cross frame)
+  cs = make_cs(v_ego=0.0, available=False)
+  cs.cruiseState = _CruiseState(False, True, False, 0.0)
+  fresh.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  assert abs(fresh.v_cruise_cluster_kph - 30.0) < 0.1, (
+    f'cancel-in-flight cross frame must not repaint MAX with the canonical '
+    f'value (26), got {fresh.v_cruise_cluster_kph}')
+  # and the freeze afterwards must keep the dashboard value, not the poison
+  for _ in range(10):
+    cs = make_cs(v_ego=0.0, available=False)
+    cs.cruiseState = _CruiseState(False, False, False, 0.0)
+    fresh.update_v_cruise(cs, False, True, make_sm(cs, make_cs_sp()), make_cs_sp())
+  assert abs(fresh.v_cruise_cluster_kph - 30.0) < 0.1, (
+    f'frozen MAX must stay at the dashboard value (30), got {fresh.v_cruise_cluster_kph}')
+  # re-SET: the PCM reports the new speed again and MAX follows it
+  cs = make_cs(v_ego=0.0, available=True)
+  cs.cruiseState = _CruiseState(True, True, False, 26 / 3.6, speed_cluster=30 / 3.6)
+  fresh.update_v_cruise(cs, True, True, make_sm(cs, make_cs_sp(), enabled=True), make_cs_sp())
+  assert abs(fresh.v_cruise_cluster_kph - 30.0) < 0.1, (
+    f're-set must show the car cluster value again, got {fresh.v_cruise_cluster_kph}')
+
+
+step('cancel-in-flight CC lag must not poison the frozen MAX value', t_cancel_inflight_cc_lag_poison_frame)
 
 
 def t_decel_adopt_still_updates_max():
