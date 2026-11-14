@@ -273,9 +273,20 @@ class TestRouteEngine(unittest.TestCase):
     self.engine.send_route()
     return get
 
+  def test_nav_host_follows_the_server_switch(self):
+    from openpilot.common.api.comma_connect import get_api_host
+    with patch('openpilot.common.params.Params.get_bool', side_effect=lambda key, *args, **kwargs: key == "UseKonikServer"):
+      self.assertEqual(get_api_host(), "https://api.konik.ai")
+    with patch('openpilot.common.params.Params.get_bool', return_value=False):
+      self.assertEqual(get_api_host(), "https://api.commadotai.com")
+
   def test_request_and_instruction(self):
     get = self.load_route()
-    self.assertEqual(get.call_args.args[0], 'https://api.commadotai.com/v1/nav/directions/v5/mapbox/driving-traffic/0,0;0.002,0')
+    # navd builds its host from get_api_host(), which follows the UseKonikServer
+    # switch. Derive the expectation so the test passes on either server.
+    from openpilot.common.api.comma_connect import get_api_host
+    expected_host = get_api_host().rstrip('/') + '/v1/nav'
+    self.assertEqual(get.call_args.args[0], expected_host + '/directions/v5/mapbox/driving-traffic/0,0;0.002,0')
     options = get.call_args.kwargs['params']
     self.assertEqual((options['access_token'], options['bearings'], options['language']), ('test-token', '90,90;', 'en'))
     self.assertEqual(len(self.last_message('navRoute').navRoute.coordinates), 5)

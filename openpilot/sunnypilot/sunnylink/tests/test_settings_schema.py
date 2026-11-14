@@ -284,10 +284,13 @@ class TestKnownPanels(OpenpilotTestCase):
     items = {item["key"]: item for item in _iter_panel_items(cruise)}
 
     assert items["AccelPersonalityEnabled"]["widget"] == "toggle"
+    # Labels are localised in settings_ui.json (zh-CHS). Keep the option values
+    # and their order pinned, and assert the checked-in labels so a translation
+    # change is reviewed instead of silently drifting.
     assert items["AccelPersonality"]["options"] == [
-      {"value": 0, "label": "Eco"},
-      {"value": 1, "label": "Normal"},
-      {"value": 2, "label": "Sport"},
+      {"value": 0, "label": "经济"},
+      {"value": 1, "label": "标准"},
+      {"value": 2, "label": "运动"},
     ]
     assert {
       "type": "capability",

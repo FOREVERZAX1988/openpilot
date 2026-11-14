@@ -42,9 +42,11 @@ class TestMainCruiseOffSwitch(OpenpilotTestCase):
 
 
 class TestMainCruiseEngage(OpenpilotTestCase):
-  """MadsMainCruiseAllowed engages lateral on the ACC main rising edge, on Rivian and Tesla (no
-  ACC main button of their own for MADS) as on every other brand. Only a declared MADS button
-  that owns lateral (the Mazda TJA button) takes ACC main out of it."""
+  """MadsMainCruiseAllowed engages lateral on the ACC main rising edge. Brands in
+  MADS_NO_ACC_MAIN_BUTTON have no ACC main button of their own, so they set
+  no_main_cruise and must NOT engage from that edge; Mazda without a declared
+  TJA button is the positive case. A declared MADS button that owns lateral
+  (Mazda TJA) also takes ACC main out of it."""
 
   def _engages(self, brand, sp_flags=0):
     mocker = self._fixture("mocker")
@@ -52,9 +54,18 @@ class TestMainCruiseEngage(OpenpilotTestCase):
     mads.update_events(car_state(True))
     return sd.events_sp.has(EventNameSP.lkasEnable)
 
-  def test_rivian_and_tesla_engage_on_main(self):
-    for brand in ("rivian", "tesla"):
-      assert self._engages(brand), brand
+  def test_no_acc_main_brands_do_not_engage_on_main(self):
+    from openpilot.sunnypilot.mads.helpers import MADS_NO_ACC_MAIN_BUTTON
+    assert MADS_NO_ACC_MAIN_BUTTON  # guard against an empty list making this vacuous
+    for brand in MADS_NO_ACC_MAIN_BUTTON:
+      assert not self._engages(brand), brand
+
+  def test_no_acc_main_brands_set_no_main_cruise(self):
+    from openpilot.sunnypilot.mads.helpers import MADS_NO_ACC_MAIN_BUTTON
+    for brand in MADS_NO_ACC_MAIN_BUTTON:
+      mocker = self._fixture("mocker")
+      mads, _ = make_mads(mocker, brand, prev_available=False)
+      assert mads.no_main_cruise, brand
 
   def test_mazda_without_a_tja_button_engages_on_main(self):
     assert self._engages("mazda")

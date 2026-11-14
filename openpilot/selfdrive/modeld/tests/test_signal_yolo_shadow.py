@@ -36,7 +36,33 @@ def _manifest(**overrides):
   return meta
 
 
-class TestOptIn(unittest.TestCase):
+class _IsolatedFileOptIn(unittest.TestCase):
+  """requested() ORs the CLI opt-in file with the SignalYoloEnabled device param.
+  These cases exercise the file contract, so pin the param channel off; on a real
+  device with the toggle enabled an empty directory would otherwise read as on.
+  """
+  def setUp(self):
+    super().setUp()
+    from unittest.mock import patch
+    from openpilot.selfdrive.modeld import signal_yolo_shadow as shadow
+    patcher = patch.object(shadow, '_param_enabled', return_value=False)
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+
+class TestParamOptIn(unittest.TestCase):
+  """The settings toggle is a real opt-in path; keep it covered explicitly."""
+  def test_settings_toggle_enables_without_a_file(self):
+    from unittest.mock import patch
+    from openpilot.selfdrive.modeld import signal_yolo_shadow as shadow
+    with tempfile.TemporaryDirectory() as directory:
+      with patch.object(shadow, '_param_enabled', return_value=True):
+        self.assertTrue(requested(Path(directory)))
+      with patch.object(shadow, '_param_enabled', return_value=False):
+        self.assertFalse(requested(Path(directory)))
+
+
+class TestOptIn(_IsolatedFileOptIn):
   def test_absent_file_means_off(self):
     with tempfile.TemporaryDirectory() as directory:
       self.assertFalse(requested(Path(directory)))
@@ -100,7 +126,7 @@ class TestValidateArtifact(unittest.TestCase):
         validate_artifact(directory, directory / 'signal_light_detector.onnx')
 
 
-class TestInstall(unittest.TestCase):
+class TestInstall(_IsolatedFileOptIn):
   def test_install_writes_the_model_and_a_comparison_only_manifest(self):
     with tempfile.TemporaryDirectory() as directory:
       directory = Path(directory)
@@ -233,7 +259,7 @@ class TestReferenceGeometry(unittest.TestCase):
     self.assertEqual(REFERENCE_SIZE, (1344, 760))
 
 
-class TestControlOptIn(unittest.TestCase):
+class TestControlOptIn(_IsolatedFileOptIn):
   def test_control_flag_requires_the_observer_to_be_enabled(self):
     with tempfile.TemporaryDirectory() as directory:
       directory = Path(directory)

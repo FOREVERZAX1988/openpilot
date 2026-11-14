@@ -204,8 +204,21 @@ def collect_all_items(data: dict) -> list[tuple[str, dict]]:
   return items
 
 
+def _is_inline_sub_panel(item: dict) -> bool:
+  """Sub-panels stored inline among a section's items are containers (they carry
+  id/label/trigger_key/items), not parameter rows with key/widget/title."""
+  return (isinstance(item, dict) and "key" not in item
+          and "trigger_key" in item and isinstance(item.get("items"), list))
+
+
 def _collect_item(path: str, item: dict, items: list[tuple[str, dict]]) -> None:
-  """Recursively collect an item and its sub_items."""
+  """Recursively collect a parameter row and its sub_items. Inline sub-panels are
+  unwrapped so their child rows are still validated, but the container itself is
+  not reported as a row missing key/widget/title."""
+  if _is_inline_sub_panel(item):
+    for sub in item["items"]:
+      _collect_item(f"{path} > inline sub_panel '{item.get('id', '?')}'", sub, items)
+    return
   items.append((path, item))
   for sub in item.get("sub_items", []):
     _collect_item(f"{path} > sub_item", sub, items)
@@ -216,6 +229,10 @@ def collect_panel_keys(panel: dict) -> set[str]:
   keys: set[str] = set()
 
   def _add(item: dict) -> None:
+    if _is_inline_sub_panel(item):
+      for sub in item["items"]:
+        _add(sub)
+      return
     if "key" in item:
       keys.add(item["key"])
     for sub in item.get("sub_items", []):
@@ -274,6 +291,17 @@ def check_structural(data: dict, result: ValidationResult) -> None:
       for field in ("id", "label", "trigger_key"):
         if field not in sp:
           errors.append(f"panels[{i}].sub_panels[{k}]: missing required field '{field}'")
+
+    # Inline sub-panels live among a section's items. Validate the container's
+    # own metadata instead of mistaking it for a row missing key/widget/title.
+    inline = list(panel.get("items", []))
+    for section in panel.get("sections", []):
+      inline.extend(section.get("items", []))
+    for it in inline:
+      if _is_inline_sub_panel(it):
+        for field in ("id", "label", "trigger_key"):
+          if field not in it:
+            errors.append(f"panels[{i}]: inline sub_panel missing required field '{field}'")
 
   # Validate items
   all_items = collect_all_items(data)
