@@ -193,7 +193,7 @@ msgid ""
 "A detected limit at or below this value is dropped as an impossible reading. "
 "Stored in m/s, shown in both; only read while the filter above is on. "
 "Applies within about five seconds."
-msgstr ""
+msgstr "识别到的限速低于或等于此值时，将被视为不合理读数直接丢弃。内部以 m/s 存储，界面会同时显示换算值；仅在上方的过滤器开启时读取。约 5 秒内生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/accelerator_link.py
 msgid "A device is on the USB port."
@@ -377,6 +377,8 @@ msgid ""
 "clear.\n"
 "Yields around obstacles. Not with the Default model."
 msgstr ""
+"Alpha 版。将车辆轻柔地推向车道中央，车道线越清晰修正越强。\n"
+"遇到障碍物会让行。默认模型下不可用。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
 msgid "Always On"
@@ -425,7 +427,7 @@ msgid ""
 "profile to the lateral torque controller. Off keeps the override table empty "
 "and stock friction in force. With no profile applied the bundle is empty and "
 "this switch changes nothing; takes effect within a few seconds, no restart."
-msgstr ""
+msgstr "把 FLM 已应用配置中的摩擦曲线和车型专属参数应用到横向扭矩控制器。关闭时覆盖表保持为空，仍使用原厂摩擦力。若未应用任何配置，参数包为空，此开关不会有任何变化；数秒内生效，无需重启。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "Are you sure you want to backup your current sunnypilot settings?"
@@ -859,7 +861,7 @@ msgstr "已取消"
 msgid ""
 "Cap the longitudinal acceleration allowed while the car is inside a curve. "
 "Read once when plannerd starts - restart to apply."
-msgstr ""
+msgstr "限制车辆过弯时允许的纵向加速度。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
 msgid "Car First"
@@ -1261,7 +1263,7 @@ msgid ""
 "Creep the follow distance back out after something (a cut-in, a hard "
 "slowdown) squeezed it short. Read once when plannerd starts - restart to "
 "apply."
-msgstr ""
+msgstr "当跟车距离因切入或急减速等原因被压缩后，让它逐步恢复到原有距离。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/settings.py
 msgid "Cruise"
@@ -1591,7 +1593,7 @@ msgstr "关闭 Alpha 纵向控制开关，以启用智能巡航按钮管理。"
 msgid ""
 "Discard detected limits at or below the threshold below - usually a misread "
 "sign. Off means every reading the reader accepts is used."
-msgstr ""
+msgstr "丢弃低于或等于下方设定值的识别限速——这类读数通常是标志识别错误。关闭时，识别器接受的每一条读数都会被采用。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Disconnect"
@@ -1889,14 +1891,14 @@ msgstr "抢先体验：成为 sunnypilot 赞助者"
 msgid ""
 "Ease off from the lead vehicle's own deceleration, before the gap starts "
 "closing. Read once when plannerd starts - restart to apply."
-msgstr ""
+msgstr "依据前车自身的减速提前缓和本车减速，不用等车距开始缩小。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid ""
 "Ease off inside the overspeed band while cruising on the set speed. It can "
 "only ever reduce deceleration, never add acceleration. Read once when the "
 "longitudinal control process starts - restart to apply."
-msgstr ""
+msgstr "以设定速度巡航时，在超速区间内缓和减速。它只会减少减速，绝不会增加加速。仅在纵向控制进程启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Eco"
@@ -2445,7 +2447,7 @@ msgstr ""
 msgid ""
 "Fold the phone app's traffic-light state into the longitudinal plan. Applies "
 "within about five seconds, no restart needed."
-msgstr ""
+msgstr "把手机 App 的红绿灯状态并入纵向规划。约 5 秒内生效，无需重启。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Follow Deceleration Boost"
@@ -2763,7 +2765,7 @@ msgid ""
 "Hold lateral actuation back from a standstill until lateral input and CAN "
 "are both ready. One-way latch per drive. Read once when the control process "
 "starts - restart to apply."
-msgstr ""
+msgstr "从静止起步时暂缓横向控制，直到横向输入和 CAN 都就绪。每次驾驶只锁定一次，不反复触发。仅在控制进程启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/trips.py
 msgid "Hours"
@@ -2852,7 +2854,7 @@ msgid ""
 "How old a phone packet may be before the carrot source counts as gone; past "
 "this the source goes inactive instead of holding its last request. Only read "
 "while Carrot Longitudinal Source is on."
-msgstr ""
+msgstr "手机数据包超过多长时间未更新即判定 Carrot 源已断开；超时后该源转为失效，不再沿用上一次的请求。仅在「Carrot 纵向源」开启时读取。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid ""
@@ -3222,6 +3224,8 @@ msgid ""
 "Learns how long your car takes to respond to steering as you drive.\n"
 "On is stock openpilot."
 msgstr ""
+"在行驶中学习车辆对转向指令的响应延迟。\n"
+"开启即为 openpilot 原厂行为。"
 
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid ""
@@ -3258,7 +3262,7 @@ msgstr "使用自调校时采用较宽松的设置。这让 torqued 在学习值
 msgid ""
 "Let map speed limits slow the car; one of the three conditions Smart Cruise "
 "Control - Map needs. Read once when plannerd starts - restart to apply."
-msgstr ""
+msgstr "允许地图限速降低车速；这是「地图智能巡航」所需的三个条件之一。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
 msgid ""
@@ -3275,7 +3279,7 @@ msgid ""
 "analyzer reporting stock values, which is what the shipped tune compares "
 "against. Affects the analyzer only; nothing reaches the controller until "
 "runtime overrides are on and a profile is applied."
-msgstr ""
+msgstr "让 FLM 分析器使用「转向延迟 / 摩擦力 / Kp / 横向加速度 / 转向比」这些参数，而不使用 carParams 中已有的值。关闭时分析器仍报告原厂值，正是出厂调校所对照的基准。此开关只影响分析器；只有开启运行时覆盖并应用配置后，参数才会传到控制器。"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/toggles.py
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/alpha_longitudinal.py
@@ -3301,7 +3305,7 @@ msgid ""
 "Let the lead vehicle's comfort-deceleration limit enter the MPC as a soft "
 "bound, which softens closing speed. Read once when plannerd starts - restart "
 "to apply."
-msgstr ""
+msgstr "让前车的舒适减速上限作为软约束进入 MPC，从而缓和接近速度。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid ""
@@ -3325,7 +3329,7 @@ msgid ""
 "Let the speed-limit resolver use the detected limit. It is folded into the "
 "map source, so a map limit stays authoritative and vision can only tighten "
 "it. Applies within about five seconds."
-msgstr ""
+msgstr "让限速解析器采用识别到的限速。该值并入地图源，因此地图限速仍优先，视觉识别只能进一步收紧。约 5 秒内生效。"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid ""
@@ -3702,7 +3706,7 @@ msgstr "东北"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/developer.py
 msgid "NNFF Lateral Feedforward"
-msgstr ""
+msgstr "NNFF 横向前馈"
 
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 msgid "NO"
@@ -4586,7 +4590,7 @@ msgstr "刷新模型列表"
 msgid ""
 "Refresh an already-locked lead from a newer radar frame instead of promoting "
 "a new track."
-msgstr ""
+msgstr "用较新的雷达数据刷新已锁定的前车目标，而不是提升新的跟踪轨迹。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Refresh rate of the external cluster map, in frames per second."
@@ -4610,7 +4614,7 @@ msgid ""
 "Release the follow suppression once the lead leaves the lane, so the car "
 "does not keep hanging back. Read once when plannerd starts - restart to "
 "apply."
-msgstr ""
+msgstr "前车驶离本车道后立即解除跟车抑制，避免车辆一直落在后面。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/steering_sub_layouts/mads_settings.py
 msgid "Remain Active"
@@ -4662,7 +4666,7 @@ msgid ""
 "Require range evidence before a stopped lead counts as departed, so a "
 "stationary lead is not mistaken for an open gap. Read once when plannerd "
 "starts - restart to apply."
-msgstr ""
+msgstr "判定静止前车已驶离前，需有距离变化的证据，避免把停住的前车误判为前方无车。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/layouts/settings/device.py
 #: openpilot/selfdrive/ui/layouts/settings/imu_calibration.py
@@ -4811,7 +4815,7 @@ msgid ""
 "Run the vision speed-limit reader: three ONNX models look at the road camera "
 "and publish the sign they read into shared memory. Started by the process "
 "manager, so restart to apply. Off by default."
-msgstr ""
+msgstr "运行视觉限速识别：三个 ONNX 模型分析道路摄像头画面，并把识别到的标志发布到共享内存。由进程管理器启动，因此需重启生效。默认关闭。"
 
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
 msgid ""
@@ -4820,6 +4824,10 @@ msgid ""
 "Wi-Fi for a computer or phone whose hotspot the comma joined.\n"
 "USB and iOS take the port and turn ADB off. Wi-Fi leaves both alone."
 msgstr ""
+"在接入 comma 的电脑或手机上运行大模型。\n"
+"USB 适用于 Mac、Jetson、Linux PC 或 Android 设备；iOS 适用于 iPhone 或 iPad。\n"
+"Wi-Fi 适用于 comma 已连接其热点的电脑或手机。\n"
+"USB 和 iOS 会占用端口并关闭 ADB；Wi-Fi 则两者都不改动。"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\models.py
 msgid ""
@@ -5169,6 +5177,8 @@ msgid ""
 "Shifts where the model thinks the camera sits.\n"
 "Positive moves the car left, negative right. Not with the Default model."
 msgstr ""
+"调整模型认为摄像头所处的位置。\n"
+"正值使车辆左移，负值右移。默认模型下不可用。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise.py
 msgid "Short Press Increment"
@@ -5449,7 +5459,7 @@ msgstr ""
 msgid ""
 "StarPilot's per-vehicle lateral torque network, replacing the stock torque "
 "math. Needs a torque model for this car."
-msgstr ""
+msgstr "StarPilot 的车型专属横向扭矩网络，用来替代原厂扭矩计算。需要本车型的扭矩模型。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning.py
 msgid "Start / Engage"
@@ -5472,7 +5482,7 @@ msgid ""
 "Start slowing early for a vehicle cutting in from a neighbouring lane, "
 "instead of waiting for the gap to close. Read once when plannerd starts - "
 "restart to apply."
-msgstr ""
+msgstr "侧方车道有车辆切入时提前减速，而不是等车距缩小后再反应。仅在 plannerd 启动时读取一次，需重启生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 msgid "Start the Bluetooth service to scan and pair devices."
@@ -5765,6 +5775,8 @@ msgid ""
 "The software delay used while live steer delay is off.\n"
 "Default is 0.20 s."
 msgstr ""
+"关闭实时学习转向延迟时使用的软件延迟值。\n"
+"默认 0.20 秒。"
 
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/steering.py
 msgid "The steering tune used while a big model drives."
@@ -6455,7 +6467,7 @@ msgid ""
 "When the speed limit drops sharply under a stable lead, ease the target down "
 "at a comfort rate instead of stepping it. Vetoed by a closing gap, lead "
 "braking, a driver override or a low speed. Applies within about five seconds."
-msgstr ""
+msgstr "跟随稳定前车时若限速骤降，让目标车速按舒适速率平缓下调，而不是一步降到位。遇到车距缩小、前车制动、驾驶员接管或低速时会被否决。约 5 秒内生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/developer.py
 msgid ""
@@ -6482,13 +6494,15 @@ msgstr "广角摄像头"
 msgid ""
 "Width of the coasting band, in percent. Only read while Cruise Coasting is "
 "on; 0 disables the relief without touching the toggle."
-msgstr ""
+msgstr "滑行带的宽度，单位为百分比。仅在「巡航滑行」开启时读取；设为 0 可关闭减速放宽，而不改动开关本身。"
 
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
 msgid ""
 "With the blinker on below the lane turn speed, plans the turn that way.\n"
 "Stops the car picking the wrong turn at a red light."
 msgstr ""
+"车速低于转向速度且打开转向灯时，按该方向规划转弯。\n"
+"避免车辆在红灯路口选错转弯方向。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/developer.py
 msgid "Would you like to delete this log?"
@@ -8511,11 +8525,11 @@ msgstr "已订阅"
 
 #: openpilot/sunnypilot/selfdrive/selfdrived/events.py
 msgid "实验模式已关闭"
-msgstr ""
+msgstr "实验模式已关闭"
 
 #: openpilot/sunnypilot/selfdrive/selfdrived/events.py
 msgid "实验模式已开启"
-msgstr ""
+msgstr "实验模式已开启"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "🚀 sunnylink 🚀"
