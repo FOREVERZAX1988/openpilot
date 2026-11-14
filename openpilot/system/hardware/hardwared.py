@@ -21,6 +21,7 @@ from openpilot.selfdrive.selfdrived.alertmanager import set_offroad_alert
 from openpilot.common.hardware import HARDWARE, COMMA_HARDWARE
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.git import get_short_branch
+from openpilot.common.hardware.comma.hardware import get_touch_device_path
 from openpilot.common.hardware.usb import CHESTNUT_FW_VERSION, CHESTNUT_USB_PRODUCT, get_usb_state, get_usb_topology, is_chestnut_usb_id, set_usb_state
 from openpilot.common.linux import LinuxSystemStats
 from openpilot.system.loggerd.config import get_available_percent
@@ -130,28 +131,58 @@ def touch_thread(end_event):
   event_size = struct.calcsize(event_format)
   event_frame = []
 
-  with open("/dev/input/by-path/platform-894000.i2c-event", "rb") as event_file:
-    fcntl.fcntl(event_file, fcntl.F_SETFL, os.O_NONBLOCK)
-    while not end_event.is_set():
+  # The touch event device can be missing for a while (driver probe order,
+  # replacement screens whose Samsung touch driver re-flashes its firmware
+  # at boot, ...). Retry discovery instead of crashing hardwared in a loop.
+  event_file = None
+  while not end_event.is_set():
+    if event_file is None:
+      path = get_touch_device_path()
+      if path is None:
+        time.sleep(1.0)
+        count = 0
+        continue
+      try:
+        event_file = open(path, "rb")
+        fcntl.fcntl(event_file, fcntl.F_SETFL, os.O_NONBLOCK)
+      except OSError:
+        time.sleep(1.0)
+        count = 0
+        continue
+
+    try:
       if (count % int(1. / DT_HW)) == 0:
         event = event_file.read(event_size)
-        if event:
-          (sec, usec, etype, code, value) = struct.unpack(event_format, event)
-          if etype != 0 or code != 0 or value != 0:
-            touch = log.Touch.new_message()
-            touch.sec = sec
-            touch.usec = usec
-            touch.type = etype
-            touch.code = code
-            touch.value = value
-            event_frame.append(touch)
-          else: # end of frame, push new log
-            msg = messaging.new_message('touch', len(event_frame), valid=True)
-            msg.touch = event_frame
-            pm.send('touch', msg)
-            event_frame = []
-          continue
+      else:
+        event = None
+    except OSError:
+      # device disappeared (driver re-probe, usb-rebind): rediscover
+      try:
+        event_file.close()
+      except OSError:
+        pass
+      event_file = None
+      count = 0
+      continue
 
+    if event:
+      (sec, usec, etype, code, value) = struct.unpack(event_format, event)
+      if etype != 0 or code != 0 or value != 0:
+        touch = log.Touch.new_message()
+        touch.sec = sec
+        touch.usec = usec
+        touch.type = etype
+        touch.code = code
+        touch.value = value
+        event_frame.append(touch)
+      else: # end of frame, push new log
+        msg = messaging.new_message('touch', len(event_frame), valid=True)
+        msg.touch = event_frame
+        pm.send('touch', msg)
+        event_frame = []
+      count += 1
+      time.sleep(DT_HW)
+    else:
       count += 1
       time.sleep(DT_HW)
 
