@@ -10306,3 +10306,156 @@ msgstr "停车以启用纵向控制"
 #: events i18n migration
 msgid "Adjusting to Speed Limit{}{}"
 msgstr "正在调整至限速{}{}"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "0=Off, 1=Steering only, 2=Speed + steering (default), 3=Speed only."
+msgstr "0=关闭，1=仅控制转向，2=控制速度+转向（默认），3=仅控制速度。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles. The center line turns blue as it nudges; Lane Center UI in Visuals adds a gauge."
+msgstr "在模型自身转向的基础上，轻柔地把车辆推回车道中央；车道线越清晰修正越强。遇到障碍会自动避让。修正时中线变蓝；「视觉」中的车道居中显示可再加仪表。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Alerts"
+msgstr "警报"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid ""
+"Alpha. Nudges the car toward the middle of the lane.\n"
+"Stronger when the lane lines are clear. Yields around obstacles.\n"
+"The center line turns blue as it nudges."
+msgstr ""
+"Alpha。将车辆轻微引向车道中间。\n"
+"车道线清晰时更强，遇到障碍物会让行。\n"
+"修正时中线变蓝。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Assist: Sets cruise to the speed limit. When asked, press + or - to accept."
+msgstr "辅助：把巡航速度设为限速。提示时按 + 或 - 确认。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Assist: Slows to the speed limit, up to your set speed. Tap gas to keep your speed."
+msgstr "辅助：减速至限速，但不超过设定速度。轻踩油门可保持当前车速。"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/cruise.py
+msgid ""
+"Auto follows the limit your car shows, and the map where it shows none.\n"
+"The map also slows you before a lower limit ahead.\n"
+"Car or map uses only that one."
+msgstr ""
+"自动采用车辆显示的限速，车辆没有时改用地图。\n"
+"地图还会在前方限速降低前提前减速。\n"
+"选车辆或地图则只用该来源的数据。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
+msgid "Auto: Follow the limit your car shows, and the map where it shows none. The map also slows you before a lower limit ahead."
+msgstr "自动：采用车辆显示的限速，车辆没有时改用地图。地图还会在前方限速降低前提前减速。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
+msgid "Car Only: Use only the limit your car shows"
+msgstr "仅车辆：只使用车辆显示的限速"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Envelope the traffic-light stop point with a smooth, jerk-limited braking profile. It can only brake earlier or harder - it never raises the target speed."
+msgstr "用平顺且限制急变的制动曲线包住红绿灯停车点。它只会更早或更强地制动，绝不会提高目标车速。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_zp.py
+msgid "Gentle"
+msgstr "温和"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid ""
+"Gives big models the small models' steering smoothing.\n"
+"Can calm small side-to-side wiggles on straight roads."
+msgstr ""
+"把小模型的转向平滑用到大模型上。\n"
+"可减轻直线行驶时轻微的左右偏移。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Gives big models the small models' steering smoothing. Can calm small side-to-side wiggles on straight roads."
+msgstr "把小模型的转向平滑用到大模型上，可减轻直线行驶时轻微的左右偏移。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_zp.py
+msgid "How fast Slow for Curves takes turns. Gentle slows more, Sporty slows less."
+msgstr "设定「弯道减速」的过弯速度。温和模式减速更多，运动模式减速更少。"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/cruise.py
+msgid ""
+"How fast slow for curves takes turns.\n"
+"Gentle slows more. Sporty slows less."
+msgstr ""
+"设定「弯道减速」的过弯速度。\n"
+"温和模式减速更多，运动模式减速更少。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Info: Shows the speed limit."
+msgstr "信息：显示限速。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/visuals_zp.py
+msgid "Lane Center Gauge"
+msgstr "车道居中仪表"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/navigation.py
+msgid "Let the Carrot app's turn instruction act as a turn signal and steer for exits and turns. On by default; turn off if you don't want navigation to actuate the signal."
+msgstr "让 Carrot App 的转弯指令当作转向灯信号，并用于驶出与转弯时的转向。默认开启；不想让导航触发转向灯时可关闭。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_policy.py
+msgid "Map Only: Use only the limit from the map"
+msgstr "仅地图：只使用地图的限速"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Mute Door Alert"
+msgstr "静音车门警报"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Mute Seatbelt Alert"
+msgstr "静音安全带警报"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Off: No speed limit features."
+msgstr "关：不启用任何限速功能。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/visuals_zp.py
+msgid "Shows lane center assist's nudge as a gauge under the steering arc."
+msgstr "在转向弧下方用仪表显示车道居中辅助的轻推修正。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_zp.py
+msgid "Sporty"
+msgstr "运动"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Suppress the door-open engage block. The car still shows its own warning; use only if a sensor falsely reports an open door."
+msgstr "取消车门未关导致无法开启的拦截。车辆仍会显示自己的警告；仅当传感器误报车门打开时使用。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Suppress the seatbelt-not-latched engage block. The car still shows its own warning; use only where the belt is genuinely fastened."
+msgstr "取消安全带未系导致无法开启的拦截。车辆仍会显示自己的警告；仅在安全带确实系好时使用。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/visuals_zp.py
+msgid "This feature requires Lane Center Assist, in Models, to be on."
+msgstr "此功能需要先在「模型」中开启车道居中辅助。"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
+msgid "Traffic Stop Profile"
+msgstr "红绿灯停车曲线"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/cruise_sub_layouts/speed_limit_settings.py
+msgid "Warning: Warns when you're over the speed limit."
+msgstr "警告：超速时发出提醒。"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/cruise.py
+msgid "curve speed"
+msgstr "弯道速度"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/cruise.py
+msgid "gentle"
+msgstr "温和"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/models_zp.py
+msgid "smooth big model"
+msgstr "大模型转向平滑"
+
+#: openpilot/selfdrive/ui/sunnypilot/mici/layouts/cruise.py
+msgid "sporty"
+msgstr "运动"
