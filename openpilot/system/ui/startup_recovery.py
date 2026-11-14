@@ -12,6 +12,7 @@ import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims
 import raylib
 
 from openpilot.common.reboot import reboot_device
+from openpilot.common.hardware.comma.hardware import get_touch_device_path
 from openpilot.common.startup_touch_log import TouchLog
 from openpilot.common.network_info import label_with_port, start_ip_monitor
 from openpilot.common.startup_recovery import BUSY_STATES, RecoveryUpdate, read_startup_error
@@ -64,7 +65,8 @@ class TouchPress:
     if os.name != 'posix':
       return
     try:
-      self.fd = os.open(TOUCH_DEVICE, os.O_RDONLY | os.O_NONBLOCK)
+      path = get_touch_device_path() or TOUCH_DEVICE
+      self.fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
     except OSError:
       pass
 
