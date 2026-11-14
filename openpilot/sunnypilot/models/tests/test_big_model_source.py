@@ -22,12 +22,12 @@ def model(tmp_path: Path, body: bytes) -> Path:
 
 
 class TestBigModelSource(OpenpilotTestCase):
-  def test_a_pointer_is_told_from_the_model(tmp_path):
+  def test_a_pointer_is_told_from_the_model(self, tmp_path):
     assert B.is_lfs_pointer(model(tmp_path, POINTER))
     assert not B.is_lfs_pointer(model(tmp_path, MODEL))
     assert not B.is_lfs_pointer(tmp_path / 'missing.pkl')
 
-  def test_a_pointer_is_not_compiled(tmp_path):
+  def test_a_pointer_is_not_compiled(self, tmp_path):
     # the big warps are tracked, so only the model tells a fetched install from a pointer
     from openpilot.selfdrive.modeld import helpers
     path = model(tmp_path, POINTER)

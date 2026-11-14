@@ -78,6 +78,11 @@ def _params(values: dict[str, float] | None = None, enabled: bool = True):
     def get_float(self, name, *a, **k):
       return merged.get(name, 100.0)
 
+    def get_param_path(self, name, *a, **k):
+      # LearningPersistence resolves a document path; a never-written path
+      # must read as absent, not blow up the controller constructor.
+      return f"/tmp/openpilot-test-no-such-params/{name}"
+
   return _P()
 
 

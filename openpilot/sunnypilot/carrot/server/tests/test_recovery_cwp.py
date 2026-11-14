@@ -21,7 +21,7 @@ class TestRecoveryCwp(unittest.TestCase):
 
 
 class TestRecoveryCwpAdditional(OpenpilotTestCase):
-  def test_cwp_status_disables_unregistered_device(monkeypatch):
+  def test_cwp_status_disables_unregistered_device(self, monkeypatch):
     writes = []
     monkeypatch.setattr(recovery, "_read_param", lambda key, default="": "1" if key == recovery.CWP_RECOVERY_BOOT_PARAM else default)
     monkeypatch.setattr(recovery, "_write_param", lambda key, value: writes.append((key, value)))
@@ -39,7 +39,7 @@ class TestRecoveryCwpAdditional(OpenpilotTestCase):
     }
     assert writes == [(recovery.CWP_RECOVERY_BOOT_PARAM, "0")]
 
-  def test_cwp_enable_requires_registration(monkeypatch):
+  def test_cwp_enable_requires_registration(self, monkeypatch):
     writes = []
     monkeypatch.setattr(recovery, "_cwp_status", lambda: {
       "ok": True, "enabled": False, "registered": False, "state": "unregistered",
@@ -52,7 +52,7 @@ class TestRecoveryCwpAdditional(OpenpilotTestCase):
     assert result["error"] == "Not registered"
     assert writes == []
 
-  def test_cwp_enable_writes_persistent_param(monkeypatch):
+  def test_cwp_enable_writes_persistent_param(self, monkeypatch):
     writes = []
     monkeypatch.setattr(recovery, "_cwp_status", lambda: {
       "ok": True, "enabled": False, "registered": True, "state": "ready",
@@ -65,7 +65,7 @@ class TestRecoveryCwpAdditional(OpenpilotTestCase):
     assert result["enabled"] is True
     assert writes == [(recovery.CWP_RECOVERY_BOOT_PARAM, "1")]
 
-  def test_cwp_boot_sends_recovery_port(monkeypatch):
+  def test_cwp_boot_sends_recovery_port(self, monkeypatch):
     requests = []
     monkeypatch.setattr(recovery, "_read_param", lambda key, default="": "1" if key == recovery.CWP_RECOVERY_BOOT_PARAM else default)
     monkeypatch.setattr(recovery, "_local_ip", lambda: "192.168.0.5")

@@ -33,7 +33,10 @@ def _iter_panel_items(panel: dict):
       yield item
   for section in panel.get("sections", []):
     for item in section.get("items", []):
-      yield item
+      # Sub-panels are stored inline among items; they are containers carrying
+      # trigger_key/items, not parameter rows with key/widget.
+      if "trigger_key" not in item:
+        yield item
     for sp in section.get("sub_panels", []):
       for item in sp.get("items", []):
         yield item

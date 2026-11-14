@@ -108,7 +108,7 @@ class TestDeviceSettingGroups(unittest.TestCase):
 
 
 class TestDeviceSettingGroupsAdditional(OpenpilotTestCase):
-  def test_sunnypilot_sections_degrade_to_empty_without_a_catalog(monkeypatch, tmp_path):
+  def test_sunnypilot_sections_degrade_to_empty_without_a_catalog(self, monkeypatch, tmp_path):
     from openpilot.sunnypilot.carrot.server import config
     monkeypatch.setattr(config, "DEFAULT_SETTINGS_PATH", str(tmp_path / "missing.json"))
     monkeypatch.setattr(device_info, "_sp_device_groups_cache", None)

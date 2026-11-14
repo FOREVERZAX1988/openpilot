@@ -28,7 +28,7 @@ class TestWebCapabilities(unittest.TestCase):
 
 
 class TestWebCapabilitiesAdditional(OpenpilotTestCase):
-  def test_web_lab_unlock_never_enables_gated_features(tmp_path, monkeypatch):
+  def test_web_lab_unlock_never_enables_gated_features(self, tmp_path, monkeypatch):
     settings_path = tmp_path / "web_settings.json"
     monkeypatch.setattr(web_settings, "CARROT_WEB_SETTINGS_PATH", str(settings_path))
 
@@ -51,7 +51,7 @@ class TestWebCapabilitiesAdditional(OpenpilotTestCase):
     assert disabled["settings"]["vision_ar_enabled"] is False
     assert disabled["settings"]["vision_ar_debug"] is False
 
-  def test_carrot_web_lab_command_controls_the_shared_capability(tmp_path, monkeypatch, capsys):
+  def test_carrot_web_lab_command_controls_the_shared_capability(self, tmp_path, monkeypatch, capsys):
     settings_path = tmp_path / "web_settings.json"
     monkeypatch.setattr(web_settings, "CARROT_WEB_SETTINGS_PATH", str(settings_path))
 

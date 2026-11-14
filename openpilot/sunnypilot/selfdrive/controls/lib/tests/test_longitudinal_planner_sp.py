@@ -33,7 +33,8 @@ def make_planner(op_long=True):
   planner.sla.update = MagicMock()
   sm = {'carState': messaging.new_message('carState').carState,
         'carControl': messaging.new_message('carControl').carControl,
-        'carStateSP': messaging.new_message('carStateSP').carStateSP}
+        'carStateSP': messaging.new_message('carStateSP').carStateSP,
+        'modelV2': messaging.new_message('modelV2').modelV2}
   return planner, sm
 
 

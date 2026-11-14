@@ -53,7 +53,7 @@ class TestXiaogeProxy(unittest.TestCase):
 
 
 class TestXiaogeProxyAdditional(OpenpilotTestCase):
-  def test_proxy_relays_status_snapshots_and_configuration_only_to_fixed_service(monkeypatch):
+  def test_proxy_relays_status_snapshots_and_configuration_only_to_fixed_service(self, monkeypatch):
     async def check():
       received = []
       async def upstream(request):
@@ -91,7 +91,7 @@ class TestXiaogeProxyAdditional(OpenpilotTestCase):
       assert received[2][3] == b'{"poly_left": [[1, 2]]}'
     asyncio.run(check())
 
-  def test_proxy_rejects_unregistered_operations_cross_origin_and_oversize_posts(monkeypatch):
+  def test_proxy_rejects_unregistered_operations_cross_origin_and_oversize_posts(self, monkeypatch):
     async def check():
       async with proxy_client() as client:
         def unexpected_forward(*args, **kwargs):
@@ -111,7 +111,7 @@ class TestXiaogeProxyAdditional(OpenpilotTestCase):
           assert response.status == expected, (method, path, await response.text())
     asyncio.run(check())
 
-  def test_stopped_service_returns_actionable_error_and_page_stays_available(monkeypatch):
+  def test_stopped_service_returns_actionable_error_and_page_stays_available(self, monkeypatch):
     async def check():
       server = TestServer(web.Application())
       await server.start_server()
@@ -124,7 +124,7 @@ class TestXiaogeProxyAdditional(OpenpilotTestCase):
         assert (await client.get("/xiaoge/")).status == 200
     asyncio.run(check())
 
-  def test_proxy_times_out_and_does_not_follow_upstream_redirects(monkeypatch):
+  def test_proxy_times_out_and_does_not_follow_upstream_redirects(self, monkeypatch):
     async def check():
       async def upstream(request):
         if request.path == "/api/status":
@@ -147,7 +147,7 @@ class TestXiaogeProxyAdditional(OpenpilotTestCase):
           assert (await response.json())["code"] == "vision_bad_response"
     asyncio.run(check())
 
-  def test_proxy_limits_upstream_response_size(monkeypatch):
+  def test_proxy_limits_upstream_response_size(self, monkeypatch):
     async def check():
       async def upstream(request):
         return web.Response(body=b"x" * 33)

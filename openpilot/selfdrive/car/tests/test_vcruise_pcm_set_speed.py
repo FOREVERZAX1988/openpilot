@@ -196,7 +196,12 @@ class TestMacanFusionSetSpeed(unittest.TestCase):
     helper.update_v_cruise(cs, True, True, _make_sm(), SimpleNamespace())
     self.assertAlmostEqual(helper.v_cruise_kph, 53.8, places=1,
                            msg="OP must keep tracking the stock ACC, or the two controllers fight")
-    self.assertAlmostEqual(helper.v_cruise_cluster_kph, 53.8, places=1)
+    # Since the upstream "unset display" change (2026-11-12) the cluster value
+    # published to the UI stays V_CRUISE_UNSET until the driver actually
+    # establishes a set speed with a button press; only v_cruise_kph (the
+    # control target, asserted above) follows the PCM. This fixture never
+    # injects buttonEvents, so the display legitimately stays unset.
+    self.assertEqual(helper.v_cruise_cluster_kph, V_CRUISE_UNSET)
 
 
 if __name__ == '__main__':

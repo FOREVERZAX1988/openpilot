@@ -19,7 +19,7 @@ class _Response:
 
 
 class TestRecoveryDiscord(OpenpilotTestCase):
-  def test_recovery_tmux_discord_upload_attaches_log(monkeypatch, tmp_path):
+  def test_recovery_tmux_discord_upload_attaches_log(self, monkeypatch, tmp_path):
     tmux_log = tmp_path / "tmux.log"
     tmux_log.write_bytes(b"recovery tmux output")
     request_capture = {}
@@ -54,7 +54,7 @@ class TestRecoveryDiscord(OpenpilotTestCase):
     assert payload["username"] == "Carrot Exception"
     assert payload["flags"] == 4
 
-  def test_server_tmux_log_reports_actual_discord_result(monkeypatch):
+  def test_server_tmux_log_reports_actual_discord_result(self, monkeypatch):
     calls = []
     monkeypatch.setattr(recovery, "_capture_tmux_log", lambda: (0, ""))
     monkeypatch.setattr(recovery, "_send_tmux_destinations", lambda reason: calls.append(reason) or {
@@ -75,7 +75,7 @@ class TestRecoveryDiscord(OpenpilotTestCase):
       "file": "/download/tmux.log",
     }
 
-  def test_recovery_tmux_sends_to_all_main_server_destinations(monkeypatch, tmp_path):
+  def test_recovery_tmux_sends_to_all_main_server_destinations(self, monkeypatch, tmp_path):
     tmux_log = tmp_path / "tmux.log"
     tmux_log.write_bytes(b"tmux-data")
     calls = []
@@ -102,7 +102,7 @@ class TestRecoveryDiscord(OpenpilotTestCase):
       ("discord", "tmux_send", b"tmux-data", {"ok": True, "status": 200}),
     ]
 
-  def test_recovery_dsm_upload_uses_automatic_session(monkeypatch):
+  def test_recovery_dsm_upload_uses_automatic_session(self, monkeypatch):
     calls = []
     payload = {"tmux_why": "tmux_send", "dongle_id": "device-id", "car_name": "TEST"}
 

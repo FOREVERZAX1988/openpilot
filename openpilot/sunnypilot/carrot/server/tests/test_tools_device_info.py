@@ -32,7 +32,7 @@ class _SerialUnavailableHardware(_Hardware):
 
 
 class TestToolsDeviceInfo(OpenpilotTestCase):
-  def test_tools_device_info_keeps_hardware_identity_outside_params(monkeypatch):
+  def test_tools_device_info_keeps_hardware_identity_outside_params(self, monkeypatch):
     monkeypatch.setattr(device_info, "get_param_values", lambda _names, _defaults: {
       "DongleId": "dongle-id",
       "HardwareSerial": "",
@@ -62,7 +62,7 @@ class TestToolsDeviceInfo(OpenpilotTestCase):
     assert info["runtime"] == {"boot_time": "2026-09-10T10:11:12Z"}
     assert "iccid" not in str(info).lower()
 
-  def test_tools_device_info_keeps_imei_when_another_hardware_field_is_unavailable(monkeypatch):
+  def test_tools_device_info_keeps_imei_when_another_hardware_field_is_unavailable(self, monkeypatch):
     monkeypatch.setattr(device_info, "get_param_values", lambda _names, _defaults: {"HardwareSerial": "param-serial"})
     hardware_module = ModuleType("openpilot.system.hardware")
     hardware_module.HARDWARE = _SerialUnavailableHardware()

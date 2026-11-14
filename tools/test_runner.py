@@ -223,8 +223,20 @@ def run_batch(test_ids, capture_output):
   return result.records
 
 
+def configure_warnings(action):
+  # aiohttp >=3.9 warns when a plain str is used as an Application key. Our
+  # web tests (and the server they exercise) use str keys deliberately, and
+  # this is an advisory notice rather than a defect. Keep -W error for every
+  # other warning, including in worker processes.
+  warnings.simplefilter(action)
+  warnings.filterwarnings("ignore", message="It is recommended to use web.AppKey instances for keys.*")
+  # aiohttp >=3.9 also deprecates mutating a started app; its cleanup context
+  # re-raises those as CleanupError when warnings are errors.
+  warnings.filterwarnings("ignore", message="Changing state of started or joined application is deprecated.*")
+
+
 def run_parallel(batches, workers, warning_action, capture_output):
-  with ProcessPoolExecutor(max_workers=workers, initializer=warnings.simplefilter, initargs=(warning_action,)) as pool:
+  with ProcessPoolExecutor(max_workers=workers, initializer=configure_warnings, initargs=(warning_action,)) as pool:
     futures = {pool.submit(run_batch, batch, capture_output): batch for batch in batches}
     for future in as_completed(futures):
       try:
@@ -283,7 +295,7 @@ def main():
 
   capture_output = not args.no_capture
   os.chdir(ROOT)
-  warnings.simplefilter(args.warnings)
+  configure_warnings(args.warnings)
   started = time.monotonic()
   tests, errors = collect(args.targets, args.k)
   batches = make_batches(tests)

@@ -74,6 +74,7 @@ PRIUS_TSS2_ROUTE_MODEL = ActuatorModel(
 
 
 class PlantSP(Plant):
+  messaging_initialized = False
   """Closed-loop plant with configurable observations and actuator response."""
 
   def __init__(

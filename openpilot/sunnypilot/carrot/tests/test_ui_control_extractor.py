@@ -57,7 +57,7 @@ class TestUiControlExtractor(unittest.TestCase):
 
 
 class TestUiControlExtractorAdditional(OpenpilotTestCase):
-  def test_po_translations_lookup(tmp_path):
+  def test_po_translations_lookup(self, tmp_path):
     po = tmp_path / "t.po"
     lines = [
       'msgid ""',

@@ -36,7 +36,7 @@ class TestWebSettingsNavigation(unittest.TestCase):
 
 
 class TestWebSettingsNavigationAdditional(OpenpilotTestCase):
-  def test_existing_settings_without_layout_keys_keep_legacy_layout(tmp_path, monkeypatch):
+  def test_existing_settings_without_layout_keys_keep_legacy_layout(self, tmp_path, monkeypatch):
     settings_path = tmp_path / "web_settings.json"
     settings_path.write_text(json.dumps({"start_page": "carrot"}), encoding="utf-8")
     monkeypatch.setattr(web_settings, "CARROT_WEB_SETTINGS_PATH", str(settings_path))

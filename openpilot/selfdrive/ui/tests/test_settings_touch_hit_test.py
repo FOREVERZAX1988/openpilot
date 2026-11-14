@@ -14,7 +14,7 @@ import pathlib
 import unittest
 from types import SimpleNamespace
 
-import pyray as rl
+import raylib_nb as rl
 
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings import settings as sp_settings
 from openpilot.system.ui.lib.application import gui_app, MouseEvent, MousePos
