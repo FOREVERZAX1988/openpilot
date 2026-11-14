@@ -212,6 +212,14 @@ class SteeringLayoutMici(NavScroller):
       opt.set_enabled(lambda: self._tq_custom._checked)
     self._tq_custom_view = self._tq_custom_btn.link_sub_panel([self._tq_custom, self._tq_manual_rt, self._tq_lat_accel, self._tq_friction])
 
+    # FLM shadow telemetry (Seam A): background sample collection and verdict
+    # telemetry. It never touches steering output; torqued re-reads the param
+    # at 1 Hz, so toggling here applies live without a restart.
+    self._flm_shadow_toggle = BigParamControlSP(tr("flm shadow"), "FlmShadowEnabled",
+                                                description=tr("Collects FLM lateral learning data while you drive and records verdicts as telemetry.\n" +
+                                                               "It never changes steering."))
+    self._flm_shadow_toggle.set_enabled(ui_state.is_offroad)
+
     self._tq_items_rest = [self._tq_self_tune_btn, self._tq_custom_btn]
     for item in self._tq_items_rest:
       item.set_enabled(lambda: self._enforce_torque)
@@ -220,7 +228,7 @@ class SteeringLayoutMici(NavScroller):
       item.set_enabled(ui_state.is_offroad)
       item.set_superseded(lambda: not self._enforce_torque)  # torque-tuned cars run v0 without it
     self._tq_view = self._torque_settings_btn.link_sub_panel([self._torque_toggle, self._jerk_aware_toggle,
-                                                              *self._tq_versions] + self._tq_items_rest)
+                                                              *self._tq_versions] + self._tq_items_rest + [self._flm_shadow_toggle])
 
   def _update_state(self):
     super()._update_state()
@@ -271,6 +279,7 @@ class SteeringLayoutMici(NavScroller):
     jerk_aware = ui_state.params.get_bool("LateralJerkTorqueController")
     self_tune_on = ui_state.params.get_bool("LiveTorqueParamsToggle")
     custom_on = ui_state.params.get_bool("CustomTorqueParams")
+    flm_shadow_on = ui_state.params.get_bool("FlmShadowEnabled")
 
     self._torque_settings_btn.set_enabled(torque_allowed)
     if not enforce_torque and not jerk_aware:
@@ -278,7 +287,8 @@ class SteeringLayoutMici(NavScroller):
     else:
       # set_badges hides entries whose value is "off".
       self._torque_settings_btn.set_badges([(tr("enabled"), _on_off(enforce_torque)), (tr("jerk-aware"), _on_off(jerk_aware)),
-                                            (tr("self-tune"), _on_off(self_tune_on)), (tr("custom"), _on_off(custom_on))])
+                                            (tr("self-tune"), _on_off(self_tune_on)), (tr("custom"), _on_off(custom_on)),
+                                            (tr("flm-shadow"), _on_off(flm_shadow_on))])
     self._nnlc_toggle.set_enabled(torque_allowed and offroad and not enforce_torque and not jerk_aware)
 
     self._update_mads_state()
