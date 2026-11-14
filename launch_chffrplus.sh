@@ -562,6 +562,30 @@ set_lite_hw() {
   [ -z "$(i2cget -y 0 0x10 0x00 2>/dev/null)" ] && echo "Lite HW" && export LITE=1
 }
 
+sync_clock_if_drifted() {
+  # Fetch a plain-HTTP Date header and apply it when local clock drifts >60s.
+  # HTTP itself needs no TLS, so this works even when the clock is so stale
+  # that every HTTPS handshake fails certificate validation ("not yet valid").
+  # Applies to BOTH directions (behind AND ahead) so a half-stale RTC that
+  # passes the old "pre-2025" epoch guard can no longer wedge the updater.
+  local d remote_ts diff
+  for d in http://www.baidu.com http://www.qq.com http://github.com; do
+    local hdr
+    hdr=$(curl -fsSI -m 10 "$d" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
+    [ -z "$hdr" ] && continue
+    # strip the comma: `date -s "Sun, 09 Nov ..."` fails with Invalid argument
+    remote_ts=$(date -d "${hdr/, /}" +%s 2>/dev/null) || continue
+    [ -z "$remote_ts" ] && continue
+    diff=$(( $(date +%s) - remote_ts ))
+    if [ ${diff#-} -gt 60 ]; then
+      sudo date -s "${hdr/, /}" >/dev/null 2>&1 || continue
+      echo "[agnos] clock synced from $d: $hdr (drift ${diff}s)" | tee -a /tmp/agnos_pending.log
+    fi
+    return 0
+  done
+  return 1
+}
+
 agnos_init() {
   sudo rm -f /data/etc/NetworkManager/system-connections/*.nmmeta
   rm -f /data/scons_cache/config.lock
@@ -591,15 +615,11 @@ agnos_init() {
   # sane, and the updater UI loop hides the cause behind generic failures.
   # Sync from an HTTP Date header (HTTP itself needs no TLS) BEFORE the
   # updater ever runs, not only in the headless fallback below
-  # (observed 2026-11-07: bt2 -> bt3 on a clone reboot-looped for ~1h).
-  if [ "$(date +%s)" -lt 1735689600 ]; then
-    local d
-    for _u in http://www.baidu.com http://www.qq.com http://github.com; do
-      d=$(curl -fsSI -m 10 "$_u" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
-      # strip the comma: `date -s "Sun, 09 Nov ..."` fails with Invalid argument
-      [ -n "$d" ] && sudo date -s "${d/, /}" >/dev/null 2>&1 && echo "[agnos] clock synced from $_u: $d" | tee -a /tmp/agnos_pending.log && break
-    done
-  fi
+  # (observed 2026-11-07: bt2 -> bt3 on a clone reboot-looped for ~1h;
+  #  observed 2026-11-14: RTC stuck at 2026-07-28 passed the "pre-2025"
+  #  guard and the cnb.cool release TLS failed with "not yet valid" for
+  #  hours. So the guard is drift-based, not epoch-based.)
+  sync_clock_if_drifted || true
 
   if is_headless_boot; then
     echo "[agnos] headless: OS update required ($(cat /VERSION) -> $AGNOS_VERSION). Use WebUI Software → AGNOS, or SSH: $agnos_py --swap $manifest" | tee -a /tmp/agnos_pending.log
@@ -623,13 +643,7 @@ agnos_init() {
       echo "[agnos] updater UI failed $updater_fails times, falling back to headless flash" | tee -a /tmp/agnos_pending.log
       # HTTPS needs a sane clock; RTC resets can leave 1970. Sync via HTTP(80)
       # first: TLS certificate validation itself requires a valid clock.
-      if [ "$(date +%s)" -lt 1735689600 ]; then
-        local d
-        for _u in http://github.com http://www.qq.com http://www.baidu.com; do
-          d=$(curl -fsSI -m 10 "$_u" 2>/dev/null | grep -i '^date:' | cut -d' ' -f2- | tr -d '\r')
-          [ -n "$d" ] && sudo date -s "${d/, /}" >/dev/null 2>&1 && break
-        done
-      fi
+      sync_clock_if_drifted || true
       sudo env PYTHONPATH="$PY_PATH" "$PY" "$agnos_py" --swap "$manifest" && sudo reboot
       # swap failed too (network etc.); keep retrying via the UI loop
       updater_fails=0
