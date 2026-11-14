@@ -645,34 +645,6 @@
               ]
             },
             {
-              "key": "LaneChangeSmoothing",
-              "widget": "option",
-              "title": "Lane Change Smoothing",
-              "description": "Slow automatic lane changes to a chosen pace. Off is stock; every pace is gentler than stock. The end-of-maneuver correction keeps its authority at every pace, so the car settles into the new lane without a wheel snap.",
-              "options": [
-                {
-                  "value": 0,
-                  "label": "Off"
-                },
-                {
-                  "value": 1,
-                  "label": "Fast"
-                },
-                {
-                  "value": 2,
-                  "label": "Medium"
-                },
-                {
-                  "value": 3,
-                  "label": "Slow"
-                },
-                {
-                  "value": 4,
-                  "label": "Extra Slow"
-                }
-              ]
-            },
-            {
               "key": "AutoLaneChangeBsmDelay",
               "widget": "toggle",
               "title": "\u81ea\u52a8\u53d8\u9053\uff1a\u76f2\u533a\u5ef6\u8fdf",
@@ -1904,8 +1876,8 @@
             {
               "key": "LaneCenterUI",
               "widget": "toggle",
-              "title": "Lane Center Gauge",
-              "description": "Shows lane center assist's nudge as a gauge under the steering arc.",
+              "title": "\u8f66\u9053\u5c45\u4e2d\u4eea\u8868",
+              "description": "\u5728\u8f6c\u5411\u5f27\u4e0b\u65b9\u7528\u4eea\u8868\u663e\u793a\u8f66\u9053\u5c45\u4e2d\u8f85\u52a9\u7684\u8f7b\u63a8\u4fee\u6b63\u3002",
               "visibility": [
                 {
                   "type": "not",
@@ -3034,20 +3006,20 @@
       ]
     },
     "volkswagen": {
-      "title": "Volkswagen / Porsche Settings",
+      "title": "\u5927\u4f17 / \u4fdd\u65f6\u6377\u8bbe\u7f6e",
       "description": "",
       "items": [
         {
           "key": "MacanStartupGapSync",
           "widget": "toggle",
-          "title": "Macan Distance Sync Direction",
-          "description": "ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only."
+          "title": "Macan \u8ddd\u79bb\u540c\u6b65\u65b9\u5411",
+          "description": "\u5f00\u542f\uff1a\u4ee5 openpilot \u7684\u8ddf\u8f66\u98ce\u683c\u4e3a\u51c6\uff0c\u70b9\u706b\u540e\u53d1\u9001 DIST +/- \u8109\u51b2\uff0c\u8ba9\u539f\u5382 ACC \u6cbf\u7528\u8bb0\u5fc6\u7684\u98ce\u683c\uff08\u5982 4 \u683c\uff1d\u8212\u9002\uff09\u3002\u5173\u95ed\uff1a\u4ee5\u8f66\u8f86\u4e3a\u51c6\uff0copenpilot \u628a\u98ce\u683c\u91cd\u7f6e\u4e3a\u8f66\u8f86\u9ed8\u8ba4\uff083 \u683c\uff1d\u6807\u51c6\uff09\u3002\u4ec5\u5bf9 Macan \u751f\u6548\u3002"
         },
         {
           "key": "MacanStartStop",
           "widget": "toggle",
-          "title": "Macan Stop and Go",
-          "description": "Vision model decides when to start; openpilot sends RESUME to release the stock parking hold.",
+          "title": "Macan \u8d77\u6b65\u8ddf\u505c",
+          "description": "\u7531\u89c6\u89c9\u6a21\u578b\u51b3\u5b9a\u4f55\u65f6\u8d77\u6b65\uff1bopenpilot \u53d1\u9001 RESUME \u89e3\u9664\u539f\u5382\u9a7b\u8f66\u4fdd\u6301\u3002",
           "enablement": [
             {
               "type": "offroad_only"
@@ -3057,8 +3029,8 @@
         {
           "key": "MacanSlopeComp",
           "widget": "toggle",
-          "title": "Macan Slope Compensation",
-          "description": "Applies decel on descents / extra pull on ascents.",
+          "title": "Macan \u5761\u5ea6\u8865\u507f",
+          "description": "\u4e0b\u5761\u65bd\u52a0\u51cf\u901f\uff0c\u4e0a\u5761\u589e\u52a0\u7275\u5f15\u3002",
           "enablement": [
             {
               "type": "offroad_only"
@@ -3068,8 +3040,8 @@
         {
           "key": "MacanSlopeCompUnlimited",
           "widget": "toggle",
-          "title": "Slope Comp Unlimited (Macan)",
-          "description": "Release the factory torque limit for slope compensation.",
+          "title": "\u5761\u5ea6\u8865\u507f\u653e\u5f00\u9650\u5236\uff08Macan\uff09",
+          "description": "\u89e3\u9664\u5761\u5ea6\u8865\u507f\u7684\u539f\u5382\u626d\u77e9\u9650\u5236\u3002",
           "enablement": [
             {
               "type": "offroad_only"
@@ -3084,8 +3056,8 @@
         {
           "key": "MacanRadarFusion",
           "widget": "toggle",
-          "title": "Radar Fusion (Macan)",
-          "description": "Uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead. Reduces follow jitter.",
+          "title": "Macan \u96f7\u8fbe\u878d\u5408",
+          "description": "\u4f7f\u7528\u539f\u5382 ACC \u96f7\u8fbe\uff08bus2 \u8f66\u8ddd\u4e0e\u524d\u8f66\u901f\u5ea6\uff09\u4fee\u6b63\u89c6\u89c9\u524d\u8f66\u6570\u636e\uff0c\u51cf\u5c11\u8ddf\u8f66\u6296\u52a8\u3002",
           "enablement": [
             {
               "type": "offroad_only"
@@ -3095,8 +3067,8 @@
         {
           "key": "MacanVerzBridge",
           "widget": "toggle",
-          "title": "Macan Verz Bridge",
-          "description": "When ON, the bridge smooths the requested deceleration with a percentage-based ramp (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills breath/pulse. When OFF, verz passes through un-smoothed. Deep braking (<= -1.5) and OEM brake requests always pass through for safety.",
+          "title": "Macan \u51cf\u901f\u6865\u63a5",
+          "description": "\u5f00\u542f\u65f6\uff0c\u6865\u63a5\u6309\u767e\u5206\u6bd4\u7f13\u5347\u5e73\u6ed1\u51cf\u901f\u8bf7\u6c42\uff08\u6b65\u957f\uff1d1.25% \u00d7 |verz|\uff09\uff0c\u67d4\u5316 openpilot \u81ea\u53d1\u9aa4\u5239\u5e76\u6d88\u9664\u5598\u606f\u4e0e\u8109\u52a8\u3002\u5173\u95ed\u65f6\u51cf\u901f\u8bf7\u6c42\u4e0d\u505a\u5e73\u6ed1\u76f4\u63a5\u900f\u4f20\u3002\u6df1\u5239\uff08\u2264 -1.5\uff09\u4e0e\u539f\u5382\u5239\u8f66\u8bf7\u6c42\u65e0\u8bba\u5f00\u5173\u5747\u76f4\u901a\uff0c\u4ee5\u4fdd\u8bc1\u5b89\u5168\u3002",
           "enablement": [
             {
               "type": "offroad_only"

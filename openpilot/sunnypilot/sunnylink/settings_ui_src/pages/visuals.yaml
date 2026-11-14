@@ -21,8 +21,8 @@ sections:
     - $ref: '#/macros/hide_on_mici'
   - key: LaneCenterUI
     widget: toggle
-    title: Lane Center Gauge
-    description: Shows lane center assist's nudge as a gauge under the steering arc.
+    title: 车道居中仪表
+    description: 在转向弧下方用仪表显示车道居中辅助的轻推修正。
     visibility:
     - $ref: '#/macros/hide_on_mici'
     enablement:

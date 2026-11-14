@@ -141,41 +141,41 @@ sections:
       equals: true
 
 - id: volkswagen
-  title: Volkswagen / Porsche Settings
+  title: 大众 / 保时捷设置
   description: ''
   items:
   - key: MacanStartupGapSync
     widget: toggle
-    title: Macan Distance Sync Direction
-    description: 'ON: openpilot style wins - after ignition send DIST +/- pulses so the stock ACC follows your remembered style (e.g. 4 bars = Comfortable). OFF: car wins - openpilot resets its style to the car default (3 bars = Standard). Effective on Macan only.'
+    title: Macan 距离同步方向
+    description: '开启：以 openpilot 的跟车风格为准，点火后发送 DIST +/- 脉冲，让原厂 ACC 沿用记忆的风格（如 4 格＝舒适）。关闭：以车辆为准，openpilot 把风格重置为车辆默认（3 格＝标准）。仅对 Macan 生效。'
   - key: MacanStartStop
     widget: toggle
-    title: Macan Stop and Go
-    description: 'Vision model decides when to start; openpilot sends RESUME to release the stock parking hold.'
+    title: Macan 起步跟停
+    description: '由视觉模型决定何时起步；openpilot 发送 RESUME 解除原厂驻车保持。'
     enablement:
     - $ref: '#/macros/offroad'
   - key: MacanSlopeComp
     widget: toggle
-    title: Macan Slope Compensation
-    description: 'Applies decel on descents / extra pull on ascents.'
+    title: Macan 坡度补偿
+    description: '下坡施加减速，上坡增加牵引。'
     enablement:
     - $ref: '#/macros/offroad'
   - key: MacanSlopeCompUnlimited
     widget: toggle
-    title: Slope Comp Unlimited (Macan)
-    description: 'Release the factory torque limit for slope compensation.'
+    title: 坡度补偿放开限制（Macan）
+    description: '解除坡度补偿的原厂扭矩限制。'
     enablement:
     - $ref: '#/macros/offroad'
     - {type: param, key: MacanSlopeComp, equals: true}
   - key: MacanRadarFusion
     widget: toggle
-    title: Radar Fusion (Macan)
-    description: 'Uses the stock ACC radar (bus2 distance + lead speed) to correct the vision lead. Reduces follow jitter.'
+    title: Macan 雷达融合
+    description: '使用原厂 ACC 雷达（bus2 车距与前车速度）修正视觉前车数据，减少跟车抖动。'
     enablement:
     - $ref: '#/macros/offroad'
   - key: MacanVerzBridge
     widget: toggle
-    title: Macan Verz Bridge
-    description: 'When ON, the bridge smooths the requested deceleration with a percentage-based ramp (step = 1.25% x |verz|) - softens abrupt OP-initiated braking and kills breath/pulse. When OFF, verz passes through un-smoothed. Deep braking (<= -1.5) and OEM brake requests always pass through for safety.'
+    title: Macan 减速桥接
+    description: '开启时，桥接按百分比缓升平滑减速请求（步长＝1.25% × |verz|），柔化 openpilot 自发骤刹并消除喘息与脉动。关闭时减速请求不做平滑直接透传。深刹（≤ -1.5）与原厂刹车请求无论开关均直通，以保证安全。'
     enablement:
     - $ref: '#/macros/offroad'
