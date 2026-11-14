@@ -24,6 +24,7 @@ class MockSubMaster(dict):
   def __init__(self, services: dict):
     super().__init__(services)
     self.valid = dict.fromkeys(services, True)
+    self.alive = dict.fromkeys(services, True)
     self.logMonoTime = dict.fromkeys(services, 0)
     self.updated = dict.fromkeys(services, True)
     self.recv_frame = dict.fromkeys(services, 1)
