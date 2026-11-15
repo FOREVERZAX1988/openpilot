@@ -99,7 +99,7 @@ def test_zh_chs_dynamic_alerts_use_template_fallback(restore_language):
     ("Drive above 30 km/h to engage", "请将时速提高至 30 km/h 来启用"),
     ("Steer Unavailable Below 20 mph", "转向在 20 mph 以下不可用"),
     ("Used: 85%", "已用 85%"),
-    ("Frames Dropped: 2.4%", "已丢帧 2.4%"),
+    ("Frames Dropped: 2.4%", "已丢画面 2.4%"),
     ("Calibration in Progress: 50%", "校准进行中：50%"),
     ("Press + to Set\n45 mph", "按 + 键调至\n45 mph"),
     ("Adjusting to Speed Limit\n45 mph", "正在调整至限速\n45 mph"),

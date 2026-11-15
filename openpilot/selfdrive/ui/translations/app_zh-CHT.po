@@ -9561,7 +9561,7 @@ msgstr "风扇故障"
 
 #: events i18n migration
 msgid "Frames Dropped: {:.1f}%"
-msgstr "已丢帧 {:.1f}%"
+msgstr "已丢画面 {:.1f}%"
 
 
 #: events i18n migration
@@ -9656,12 +9656,12 @@ msgstr "电池电量低"
 
 #: events i18n migration
 msgid "Low Camera Frame Rate"
-msgstr "摄像头帧率低"
+msgstr "摄像头刷新率低"
 
 
 #: events i18n migration
 msgid "Low Camera Frame Rate: Restart Device"
-msgstr "摄像头帧率低：请重启设备"
+msgstr "摄像头刷新率低：请重启设备"
 
 
 #: events i18n migration
@@ -10131,7 +10131,7 @@ msgstr "偏航角"
 
 #: events i18n migration
 msgid "frames dropped"
-msgstr "已丢帧"
+msgstr "已丢画面"
 
 
 #: events i18n migration

@@ -278,20 +278,32 @@ class Params:
       return _copy_string(params_get_default(self.p, key))
     return None
 
-  def get(self, key, block=False, return_default=False):
+  def get(self, key, block=False, return_default=False, encoding=None, default=None):
+    """Read a param.
+
+    ``encoding`` / ``default`` are upstream-API shims. This ctypes binding
+    already decodes by the key's declared type (so encoding is a no-op), and
+    ``default`` is returned when the key has never been written. sunnypilot /
+    carrot callers still use the old signature in 11 places (speed_limit_vision,
+    bluetooth, UI param guards, navigation). Without them speed_limit_vision
+    crashed 753 times during the 2026-11-15 drive: manager restarted it ~2x/s,
+    which produced the processNotRunning / commIssue / modeldLagging /
+    cameraFrameRate soft-disable cascade.
+    """
     k = self.check_key(key)
     if lib is not None:
       t = self.get_type(k)
-      default = self._default(k) if return_default else None
+      fallback = self._default(k) if (return_default or default is not None) else None
       value = _copy_string(params_get(self.p, k, block))
       if value == b"":
         if block:
           raise KeyboardInterrupt
-        return self._cpp2python(t, default, None, key)
-      return self._cpp2python(t, value, default, key)
+        return default if default is not None else self._cpp2python(t, fallback, None, key)
+      return self._cpp2python(t, value, fallback, key)
     else:
       # mock read
-      return self._mock_store.get(k.decode(), None)
+      stored = self._mock_store.get(k.decode(), None)
+      return default if (stored is None and default is not None) else stored
 
   def get_bool(self, key, block=False):
     if lib is not None:

@@ -566,7 +566,7 @@ msgstr "自动转向结束距离"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Auto Turn Speed Threshold"
-msgstr "自动转向车速阈值"
+msgstr "自动转向车速门限"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Auto Turn on Navi Lane Change"
@@ -609,7 +609,7 @@ msgstr "方位"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "BSD Detection Threshold"
-msgstr "盲区检测阈值"
+msgstr "盲区检测门限"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "BSD Inference Interval"
@@ -1056,7 +1056,7 @@ msgstr "仪表 HUD 编码器"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Cluster HUD Live FPS"
-msgstr "仪表 HUD 实时帧率"
+msgstr "仪表 HUD 实时刷新率"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Cluster HUD Mirror"
@@ -1108,7 +1108,7 @@ msgstr "仪表地图配置"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Cluster Navigation Map FPS"
-msgstr "仪表导航地图帧率"
+msgstr "仪表导航地图刷新率"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Cluster Navigation Map Theme"
@@ -1178,11 +1178,11 @@ msgstr "条件实验模式"
 msgid ""
 "Confidence threshold for ONNX blind-spot detection, in percent. Higher means "
 "fewer, more certain detections."
-msgstr "ONNX 盲区检测的置信度阈值（%）。越高检出越少但越确定。"
+msgstr "ONNX 盲区检测的置信度门限（%）。越高检出越少但越确定。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Confidence threshold for ONNX lane detection, in percent."
-msgstr "ONNX 车道检测的置信度阈值（%）。"
+msgstr "ONNX 车道检测的置信度门限（%）。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/bluetooth_settings.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -2926,7 +2926,7 @@ msgstr "检测到疑似碰撞"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Impossible Limit Threshold"
-msgstr "不合理限速阈值"
+msgstr "不合理限速门限"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/alpha_longitudinal_toggles.py
 msgid ""
@@ -2959,7 +2959,7 @@ msgid ""
 "speed while the running average stays under the limit. Time banked in "
 "congestion is spent over the next kilometre."
 msgstr ""
-"在点位式区间测速路段内，当平均速度低于限速时允许加速至巡航设定速度。拥堵中攒"
+"在点位式区间测速路段内，当平均速度低于限速时允许加速至巡航设定速度。拥堵中积"
 "下的时间余量会在随后一公里内用掉。"
 
 #: openpilot/system/ui/tici_updater.py
@@ -3137,7 +3137,7 @@ msgstr "变道平滑"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Lane Detection Threshold"
-msgstr "车道检测阈值"
+msgstr "车道检测门限"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Lane Guide Blocking"
@@ -4594,7 +4594,7 @@ msgstr "用较新的雷达数据刷新已锁定的前车目标，而不是提升
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Refresh rate of the external cluster map, in frames per second."
-msgstr "外接仪表地图的刷新率，单位为帧/秒。"
+msgstr "外接仪表地图的刷新率，单位为次/秒。"
 
 #: openpilot/selfdrive/ui/layouts/settings/device.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -4794,7 +4794,7 @@ msgid ""
 "have no effect."
 msgstr ""
 "在摄像头画面上运行 ONNX 盲区模型，并在 UI 中报告侧方障碍物。关闭时卸载模型并"
-"释放内存；下方阈值设置将不起作用。"
+"释放内存；下方门限设置将不起作用。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 msgid ""
@@ -5225,7 +5225,7 @@ msgstr "在外接仪表上显示调试叠加层。"
 
 #: openpilot/selfdrive/ui/mici/layouts/settings/developer.py
 msgid "Show touch locations and the UI frame rate."
-msgstr "显示触点位置和 UI 帧率。"
+msgstr "显示触点位置和 UI 刷新率。"
 
 #: openpilot/selfdrive/ui/sunnypilot/mici/layouts/sunnylink.py
 msgid ""
@@ -5394,7 +5394,7 @@ msgstr "车速来源 PCM"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Speed at which cruise set speed is re-synchronized. Tesla BYD only."
-msgstr "巡航设定速度重新同步的速度阈值。仅限特斯拉、比亚迪。"
+msgstr "巡航设定速度重新同步的速度门限。仅限特斯拉、比亚迪。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/carrot_tuning_items.py
 msgid "Speed below which auto turn activates."
@@ -5508,7 +5508,7 @@ msgid ""
 "phantom starts. Only effective when Stop and Go (Macan) is enabled."
 msgstr ""
 "Macan 起步安全距离：自动起步所需的车头（前保险杠）到前车的最小距离（3~10 米，"
-"默认 6 米）。需原厂雷达距离(ab) 或视觉前车距离超过该阈值才自动起步——防误起"
+"默认 6 米）。需原厂雷达距离(ab) 或视觉前车距离超过该门限才自动起步——防误起"
 "步。仅在开启“起步跟停（Macan）”时生效。"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/osm.py
@@ -9555,7 +9555,7 @@ msgstr "风扇故障"
 
 #: events i18n migration
 msgid "Frames Dropped: {:.1f}%"
-msgstr "已丢帧 {:.1f}%"
+msgstr "已丢画面 {:.1f}%"
 
 
 #: events i18n migration
@@ -9650,12 +9650,12 @@ msgstr "电池电量低"
 
 #: events i18n migration
 msgid "Low Camera Frame Rate"
-msgstr "摄像头帧率低"
+msgstr "摄像头刷新率低"
 
 
 #: events i18n migration
 msgid "Low Camera Frame Rate: Restart Device"
-msgstr "摄像头帧率低：请重启设备"
+msgstr "摄像头刷新率低：请重启设备"
 
 
 #: events i18n migration
@@ -10125,7 +10125,7 @@ msgstr "偏航角"
 
 #: events i18n migration
 msgid "frames dropped"
-msgstr "已丢帧"
+msgstr "已丢画面"
 
 
 #: events i18n migration
