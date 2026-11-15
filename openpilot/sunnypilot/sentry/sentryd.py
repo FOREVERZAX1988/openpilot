@@ -25,7 +25,10 @@ only and publishes its own state message.
 import time
 
 from openpilot.common.swaglog import cloudlog
-from openpilot.common.messaging import SubMaster
+# StarPilot keeps SubMaster in openpilot.common.messaging; this fork has no such
+# module (it lives in cereal.messaging). The stale import made sentryd fail at
+# startup and was the one remaining boot-smoke import error.
+from openpilot.cereal.messaging import SubMaster
 from openpilot.common.params import Params
 from openpilot.selfdrive.selfdrived.alertmanager import set_offroad_alert
 from openpilot.sunnypilot.sentry.policy import Inputs, SentryPolicy, Settings

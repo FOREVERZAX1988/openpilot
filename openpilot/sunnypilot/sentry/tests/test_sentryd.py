@@ -19,14 +19,14 @@ if "fcntl" not in sys.modules:
     _fcntl.ioctl = lambda *args, **kwargs: 0
     sys.modules["fcntl"] = _fcntl
 
-# messaging is a compiled Cython extension and does not exist on a Windows
-# dev machine. The daemon only needs SubMaster/PubMaster names at import
-# time, and the test injects its own fake SubMaster, so a stub keeps the
+# cereal.messaging pulls in the compiled msgq extension, which does not exist
+# on a Windows dev machine. The daemon only needs SubMaster/PubMaster names at
+# import time, and the test injects its own fake SubMaster, so a stub keeps the
 # module importable off-device. On the device the real module is used.
 try:
-  import openpilot.common.messaging
+  import openpilot.cereal.messaging
 except Exception:
-  _messaging = types.ModuleType("openpilot.common.messaging")
+  _messaging = types.ModuleType("openpilot.cereal.messaging")
 
   class _StubSubMaster:
     def __init__(self, services=None):
@@ -47,7 +47,7 @@ except Exception:
 
   _messaging.SubMaster = _StubSubMaster
   _messaging.PubMaster = _StubPubMaster
-  sys.modules["openpilot.common.messaging"] = _messaging
+  sys.modules["openpilot.cereal.messaging"] = _messaging
 
 try:
   import openpilot.common.params
