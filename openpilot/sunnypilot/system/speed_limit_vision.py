@@ -1231,10 +1231,18 @@ class SpeedLimitVisionDaemon:
       return None
 
     data = buffer.data
-    if not data.any():
+    if len(data) == 0:
       return None
 
-    image = np.frombuffer(data, dtype=np.uint8).reshape((len(data) // client.stride, client.stride))
+    # VisionBuf.data is a memoryview (msgq.visionipc), not a NumPy array:
+    # calling .any() on it raises AttributeError on every frame onroad, which
+    # manager restarts ~2x/s and starves camerad/modeld. Do the all-zero check
+    # on the NumPy view instead, preserving the original "blank frame" guard.
+    image = np.frombuffer(data, dtype=np.uint8)
+    if not image.any():
+      return None
+
+    image = image.reshape((len(data) // client.stride, client.stride))
     return cv2.cvtColor(image[:client.height * 3 // 2, :client.width], cv2.COLOR_YUV2BGR_NV12)
 
   @staticmethod
