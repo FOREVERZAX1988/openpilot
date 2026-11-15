@@ -101,6 +101,11 @@ class TestPlannerLeadWiring(OpenpilotTestCase):
     # update() now also drives lead_forecast (added by the c3 port); give the
     # __new__-bypassed planner a no-op sink like events_sp/e2e_alerts_helper.
     planner.lead_forecast = _Sink()
+    # update() refreshes the boost implementation every tick; the __new__-bypassed
+    # planner needs a stub whose update_params() reports "no change".
+    from unittest.mock import MagicMock
+    planner.accel_boost_sp = MagicMock()
+    planner.accel_boost_sp.update_params.return_value = False
     return planner
 
   @staticmethod

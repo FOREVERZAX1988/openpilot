@@ -77,6 +77,12 @@ class PlantSP(Plant):
   messaging_initialized = False
   """Closed-loop plant with configurable observations and actuator response."""
 
+  @property
+  def current_time(self):
+    # PlantSP advances self.rk.frame in step() and builds PlannerSM from it.
+    # Plant.current_time uses self.frame, which this subclass never advances.
+    return float(self.rk.frame) / self.rate
+
   def __init__(
     self,
     lead_relevancy=False,
@@ -107,14 +113,15 @@ class PlantSP(Plant):
       raise ValueError("actuator_lag must be finite and non-negative")
 
     self.rate = 1.0 / DT_MDL
+    self.frame = 0  # Plant.current_time reads it; PlantSP does not call Plant.__init__
 
-    if not Plant.messaging_initialized:
+    if not PlantSP.messaging_initialized:
       Plant.radar = messaging.pub_sock('radarState')
       Plant.controls_state = messaging.pub_sock('controlsState')
       Plant.selfdrive_state = messaging.pub_sock('selfdriveState')
       Plant.car_state = messaging.pub_sock('carState')
       Plant.plan = messaging.sub_sock('longitudinalPlan')
-      Plant.messaging_initialized = True
+      PlantSP.messaging_initialized = True
 
     self.v_lead_prev = 0.0
 

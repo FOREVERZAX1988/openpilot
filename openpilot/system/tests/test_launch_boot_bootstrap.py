@@ -154,7 +154,9 @@ class BootNetworkDependencyTest(unittest.TestCase):
         continue
       with self.subTest(line=lineno):
         if re.search(r"\bcurl\b", line):
-          self.assertIn("--max-time", line, f"curl without --max-time at line {lineno}")
+          # --max-time N and curl's short form -m N are both bounded timeouts.
+          self.assertTrue(re.search(r"--max-time|-m\s+\d+", line),
+                          f"curl without a bounded timeout at line {lineno}")
         if "pip install" in line and "--no-index" not in line:
           self.assertIn("--timeout", line, f"network pip install without --timeout at line {lineno}")
           self.assertIn("--retries 0", line, f"network pip install without --retries 0 at line {lineno}")

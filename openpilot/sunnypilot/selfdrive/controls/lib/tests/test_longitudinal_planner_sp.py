@@ -22,6 +22,39 @@ from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import Lon
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
 
 
+class _AutoSM(dict):
+  """SubMaster stand-in for planner tests. The carrot planner reads the
+  bookkeeping dicts and may ask for services a test did not explicitly seed,
+  so resolve unknown services to real empty messages instead of KeyError."""
+  def __init__(self, services):
+    super().__init__(services)
+    self.logMonoTime = dict.fromkeys(services, 0)
+    self.alive = dict.fromkeys(services, True)
+    self.valid = dict.fromkeys(services, True)
+    self.updated = dict.fromkeys(services, True)
+    self.recv_frame = dict.fromkeys(services, 1)
+
+  def __missing__(self, key):
+    try:
+      msg = messaging.new_message(key)
+      value = getattr(msg, key, msg)
+    except Exception:
+      value = MagicMock()
+    self[key] = value
+    return value
+
+
+def _model_v2():
+  """carrot_functions indexes modelV2.position.x[31] and x[-1]; an empty
+  message has zero-length arrays, so seed a full trajectory."""
+  from openpilot.selfdrive.modeld.constants import ModelConstants
+  msg = messaging.new_message('modelV2')
+  msg.modelV2.position.x = [0.] * ModelConstants.IDX_N
+  msg.modelV2.position.y = [0.] * ModelConstants.IDX_N
+  msg.modelV2.velocity.x = [0.] * ModelConstants.IDX_N
+  return msg.modelV2
+
+
 def make_planner(op_long=True):
   """A planner whose sources are mocked (they are exercised in their own tests; here only their
   published pair matters), and the messages update_targets reads."""
@@ -31,10 +64,11 @@ def make_planner(op_long=True):
   planner.resolver.update = MagicMock()
   planner.resolver.distance = 0.
   planner.sla.update = MagicMock()
-  sm = {'carState': messaging.new_message('carState').carState,
-        'carControl': messaging.new_message('carControl').carControl,
-        'carStateSP': messaging.new_message('carStateSP').carStateSP,
-        'modelV2': messaging.new_message('modelV2').modelV2}
+  sm = _AutoSM({'carState': messaging.new_message('carState').carState,
+                'carControl': messaging.new_message('carControl').carControl,
+                'carStateSP': messaging.new_message('carStateSP').carStateSP,
+                'radarState': messaging.new_message('radarState').radarState,
+                'modelV2': _model_v2()})
   return planner, sm
 
 
@@ -117,8 +151,10 @@ class TestSccNeedsLongOrIcbm(unittest.TestCase):
     planner.sla.update = MagicMock()
     cc = messaging.new_message('carControl').carControl
     cc.enabled = True
-    sm = {'carState': messaging.new_message('carState').carState, 'carControl': cc,
-          'carStateSP': messaging.new_message('carStateSP').carStateSP}
+    sm = _AutoSM({'carState': messaging.new_message('carState').carState, 'carControl': cc,
+                  'carStateSP': messaging.new_message('carStateSP').carStateSP,
+                  'radarState': messaging.new_message('radarState').radarState,
+                  'modelV2': _model_v2()})
     planner.update_targets(sm, 20., 0., 25.)
     return planner.scc.update.call_args.args[1]
 
@@ -144,9 +180,11 @@ class TestCarrotSpeedSource(unittest.TestCase):
     planner._carrot_enabled = carrot_enabled
     # active/v_target are read-only on the real adapter, so stub the source
     planner.carrot_source = MagicMock(active=active, v_target=v_target)
-    sm = {'carState': messaging.new_message('carState').carState,
-          'carControl': messaging.new_message('carControl').carControl,
-          'carStateSP': messaging.new_message('carStateSP').carStateSP}
+    sm = _AutoSM({'carState': messaging.new_message('carState').carState,
+                  'carControl': messaging.new_message('carControl').carControl,
+                  'carStateSP': messaging.new_message('carStateSP').carStateSP,
+                  'radarState': messaging.new_message('radarState').radarState,
+                  'modelV2': _model_v2()})
     return planner, sm
 
   def test_active_slower_carrot_target_wins(self):

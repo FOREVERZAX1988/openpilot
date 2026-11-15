@@ -190,7 +190,7 @@ class TestMultipleButtonWritesItsParam(unittest.TestCase):
     action.selected_button = 3
     action._handle_mouse_release(None)
     action._update_state()
-    self.assertEqual(action.get_selected_button(), 3)
+    self.assertEqual(action.selected_button, 3)
 
 
 if __name__ == "__main__":

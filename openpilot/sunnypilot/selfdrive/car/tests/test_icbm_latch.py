@@ -22,6 +22,40 @@ from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import Lon
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Mode
 
 ButtonType = structs.CarState.ButtonEvent.Type
+
+class _AutoSM(dict):
+  """SubMaster stand-in for planner tests. The carrot planner reads the
+  bookkeeping dicts and may ask for services a test did not explicitly seed,
+  so resolve unknown services to real empty messages instead of KeyError."""
+  def __init__(self, services):
+    super().__init__(services)
+    self.logMonoTime = dict.fromkeys(services, 0)
+    self.alive = dict.fromkeys(services, True)
+    self.valid = dict.fromkeys(services, True)
+    self.updated = dict.fromkeys(services, True)
+    self.recv_frame = dict.fromkeys(services, 1)
+
+  def __missing__(self, key):
+    try:
+      msg = messaging.new_message(key)
+      value = getattr(msg, key, msg)
+    except Exception:
+      value = MagicMock()
+    self[key] = value
+    return value
+
+
+def _model_v2():
+  """carrot_functions indexes modelV2.position.x[31] and x[-1]; an empty
+  message has zero-length arrays, so seed a full trajectory."""
+  from openpilot.selfdrive.modeld.constants import ModelConstants
+  msg = messaging.new_message('modelV2')
+  msg.modelV2.position.x = [0.] * ModelConstants.IDX_N
+  msg.modelV2.position.y = [0.] * ModelConstants.IDX_N
+  msg.modelV2.velocity.x = [0.] * ModelConstants.IDX_N
+  return msg.modelV2
+
+
 CONSUMER_KEYS = tuple(c.key for c in CONSUMERS if isinstance(c.on, bool))
 
 
@@ -104,8 +138,12 @@ class TestPublishedActivation(OpenpilotTestCase):
 
 class TestDemand(OpenpilotTestCase):
   def test_stock_acc_consumers(self, params):
+    # Each consumer must be judged from a clean store: the previous iteration
+    # left its key on, so the next "nothing is on" assertion failed spuriously.
     for key in CONSUMER_KEYS:
       with self.subTest(key=key):
+        for other in CONSUMER_KEYS:
+          params.put_bool(other, False, block=True)
         assert not icbm_demanded(_cp(), params)
         params.put_bool(key, True, block=True)
         assert icbm_demanded(_cp(), params)
@@ -230,8 +268,10 @@ class TestPlannerHandover(OpenpilotTestCase):
   def _targets(self, planner, activation):
     cc = messaging.new_message('carControl').carControl
     gps = planner.scc.map.gps_location_service  # no fix: the map controller holds nothing
-    sm = {'carState': messaging.new_message('carState').carState, 'carControl': cc, 'carStateSP': _cs_sp(activation),
-          gps: getattr(messaging.new_message(gps), gps)}
+    sm = _AutoSM({'carState': messaging.new_message('carState').carState, 'carControl': cc, 'carStateSP': _cs_sp(activation),
+                  'radarState': messaging.new_message('radarState').radarState,
+                  'modelV2': _model_v2(),
+                  gps: getattr(messaging.new_message(gps), gps)})
     planner.update_targets(sm, 20., 0., 25.)
 
   def test_alpha_long_switches_sla_owner(self, params):
