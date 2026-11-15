@@ -616,6 +616,17 @@ class VCruiseCarrot(VCruiseHelper):
       elif CS.cruiseState.speed == -1:
         self.v_cruise_kph = -1
         self.v_cruise_cluster_kph = -1
+      else:
+        # Macan(MLB) 的 ACC 加减速/RES 按钮由原厂 PCM 消费，openpilot 只能收到
+        # setCruise / gapAdjustCruise（2026-11-15 route 00000018 实测 8 次
+        # setCruise、0 次 accelCruise/decelCruise/resumeCruise）。上游 11-12
+        # 的 set-speed 显示闸门靠这些按钮或 pcmCruise 通用分支来置
+        # _cruise_speed_set，而融合分支全程跳过通用分支 → 车仪表已有 30 km/h
+        # 时 vCruiseCluster 仍恒 255，UI 显示 "--"、SET 看起来完全无效。
+        # 原厂 ACC 报告真实设定速度本身就是「真实设定事件」，在此补标记，
+        # 让显示跟随车仪表；未设定(speed==0)时仍走 UNSET，不引入幽灵速度。
+        self._cruise_speed_set = True
+        self._set_speed_event = True
     elif CS.cruiseState.available:
       if not self.cruise_state_available_last:
         self._lat_enabled = True

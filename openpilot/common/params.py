@@ -221,7 +221,16 @@ class UnknownKeyName(Exception):
 class Params:
   # mock 全局内存存储
   _mock_store = {}
-  def __init__(self, d=""):
+  def __init__(self, d="", memory=False):
+    if memory:
+      # sunnypilot/carrot daemons request the shared-memory params channel with
+      # Params(memory=True) (speed_limit_vision, bluetooth, wheel_controlsd).
+      # This fork's ctypes binding takes a path, and every other caller already
+      # uses /dev/shm/params (VCruiseCarrot, mapd, ...). Without this mapping the
+      # keyword raises TypeError at construction: manager restarts the daemon in a
+      # tight loop (~2 crashes/s over the whole 2026-11-15 drive, 836 crashes),
+      # stealing CPU from camerad/modeld and tripping cameraFrameRate/commIssue.
+      d = "/tmp/params" if sys.platform == "darwin" else "/dev/shm/params"
     self.d = d
     if lib is not None:
       path = ensure_bytes(d)

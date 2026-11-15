@@ -196,12 +196,34 @@ class TestMacanFusionSetSpeed(unittest.TestCase):
     helper.update_v_cruise(cs, True, True, _make_sm(), SimpleNamespace())
     self.assertAlmostEqual(helper.v_cruise_kph, 53.8, places=1,
                            msg="OP must keep tracking the stock ACC, or the two controllers fight")
-    # Since the upstream "unset display" change (2026-11-12) the cluster value
-    # published to the UI stays V_CRUISE_UNSET until the driver actually
-    # establishes a set speed with a button press; only v_cruise_kph (the
-    # control target, asserted above) follows the PCM. This fixture never
-    # injects buttonEvents, so the display legitimately stays unset.
-    self.assertEqual(helper.v_cruise_cluster_kph, V_CRUISE_UNSET)
+    # Macan's PCM consumes the accel/decel/resume buttons itself: the drive of
+    # 2026-11-15 (route 00000018) had 8 setCruise presses and ZERO accel/decel/
+    # resume events, yet the stock ACC reported 30 kph. Upstream's 2026-11-12
+    # display gate only unlocks on those buttons or in the generic pcmCruise
+    # branch, which the fusion branch skips - so vCruiseCluster stayed at 255
+    # and the UI showed "--" while the dashboard showed 30. A real stock set
+    # speed IS the set-speed event on this car; the UI must follow the cluster.
+    self.assertAlmostEqual(helper.v_cruise_cluster_kph, 53.8, places=1,
+                           msg="Macan cluster display must follow the stock ACC setpoint")
+
+  def test_disengaged_stock_setpoint_still_published(self):
+    """No cruise button events and openpilot disengaged: the MAX box must still show the car's set speed."""
+    helper = _make_macan_helper()
+    sm = _make_sm()
+    sm['carControl'].enabled = False
+    cs = _CarState(speed_kph=30.0)
+    helper.update_v_cruise(cs, False, True, sm, SimpleNamespace())
+    self.assertAlmostEqual(helper.v_cruise_kph, 30.0, places=1)
+    self.assertAlmostEqual(helper.v_cruise_cluster_kph, 30.0, places=1,
+                           msg="stock ACC set speed must reach the UI without any button event")
+
+    # Once the stock setpoint drops, the display gate freezes the last real value
+    # rather than painting v_ego (or a clamped 255) into the MAX box.
+    cs.cruiseState.speed = 0.0
+    cs.cruiseState.speedCluster = 0.0
+    helper.update_v_cruise(cs, False, True, sm, SimpleNamespace())
+    self.assertAlmostEqual(helper.v_cruise_cluster_kph, 30.0, places=1,
+                           msg="ACC cancel must not repaint MAX with the current speed")
 
 
 if __name__ == '__main__':
