@@ -312,7 +312,10 @@ class SmartCruiseControlVision:
     # openpilot owns the speed without pedal interference: silences sampling
     # for CSC_CONTROL_QUIET_TIME after it ends (StarPilot control silence)
     long_control_active = long_enabled and not (gas_pressed or brake_pressed)
-    tracking_lead = bool(sm['radarState'].leadOne.status or sm['radarState'].leadTwo.status)
+    # RadarState.LeadData names the presence bit `present` (@11); `.status` is
+    # CarControlSP.LeadData's name. Reading the old name here raised
+    # AttributeError with no handler around it (SCC vision path).
+    tracking_lead = bool(sm['radarState'].leadOne.present or sm['radarState'].leadTwo.present)
     # StarPilot in-curve criterion: measured lateral acceleration |k|*v^2,
     # independent of the control state machine (which only turns when the
     # controller owns the curve - the learner samples manual driving).

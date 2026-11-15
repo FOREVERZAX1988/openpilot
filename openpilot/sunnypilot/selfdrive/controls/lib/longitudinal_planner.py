@@ -381,7 +381,11 @@ class LongitudinalPlannerSP:
     lead_speed = 100.0
     try:
         lead = sm['radarState'].leadOne
-        lead_present = bool(lead.status)
+        # RadarState.LeadData uses `present` (@11); `status` is the name
+        # CarControlSP.LeadData gives the same bit. Reading .status threw
+        # AttributeError into the except below, so this frame always looked
+        # lead-less (dRel=1000) - a silent regression, not a fallback.
+        lead_present = bool(lead.present)
         lead_distance = float(lead.dRel)
         lead_speed = float(lead.vLead)
     except (AttributeError, KeyError, TypeError, ValueError):
@@ -478,7 +482,10 @@ class LongitudinalPlannerSP:
         self.sla.output_v_target = self._lead_drop.relax(
           float(self.sla.output_v_target), float(v_ego),
           lead_present=bool(lead.present),
-          lead_status=bool(lead.status),
+          # `status` was renamed `present` in RadarState.LeadData; reading the
+          # old name raised into the except and reset the relaxation every
+          # frame, so the feature never applied.
+          lead_status=bool(lead.present),
           d_rel=float(lead.dRel),
           v_lead=float(lead.vLead),
           a_lead_k=float(lead.aLeadK),

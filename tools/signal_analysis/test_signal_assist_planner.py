@@ -15,7 +15,7 @@ planner_class, REPO = _harness.planner_class, _harness.REPO
 def inputs(speed=0., distance=100., lead=False):
   return dict(carState=NS(vCluRatio=1., softHoldActive=0, vEgo=speed, aEgo=0., vEgoCluster=speed,
                          gasPressed=False, brakePressed=False, steeringAngleDeg=0., leftBlinker=False, rightBlinker=False),
-              selfdriveState=NS(personality=1), radarState=NS(leadOne=NS(status=lead, dRel=10.)),
+              selfdriveState=NS(personality=1), radarState=NS(leadOne=NS(present=lead, status=lead, dRel=10.)),
               modelV2=NS(position=NS(x=[distance*i/32 for i in range(33)], y=[0.]*33),
                          velocity=NS(x=[speed]+[15.]*32), leadsV3=[]))
 

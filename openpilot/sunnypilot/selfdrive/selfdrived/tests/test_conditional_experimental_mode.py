@@ -93,7 +93,9 @@ def sm(desired_curvature=0.0, lead_status=False, lead_d_rel=100.0, lead_v_lead=3
     pass
 
   lead = _Lead()
-  lead.status = lead_status
+  # RadarState.LeadData's presence bit is `present`; the stub's old `status`
+  # name is what CarControlSP uses and hid the real schema mismatch.
+  lead.present = lead_status
   lead.dRel = lead_d_rel
   lead.vLead = lead_v_lead
 

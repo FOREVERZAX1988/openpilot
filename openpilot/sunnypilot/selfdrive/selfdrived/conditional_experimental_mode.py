@@ -238,7 +238,8 @@ class ConditionalExperimentalMode:
       accel = float(lead.aLeadK)
     except (KeyError, TypeError, AttributeError):
       return False
-    if not bool(lead.status):
+    # RadarState.LeadData uses `present`; `.status` is CarControlSP's name.
+    if not bool(lead.present):
       return False
     # radar presence is authoritative; vision-only leads need model confidence
     radar = bool(getattr(lead, "radar", True))
@@ -330,7 +331,7 @@ class ConditionalExperimentalMode:
   def _slow_lead(self, sm, v_ego: float) -> bool:
     try:
       lead = sm["radarState"].leadOne
-      lead_status = bool(lead.status)
+      lead_status = bool(lead.present)   # RadarState.LeadData names it `present`
       lead_distance = float(lead.dRel)
       lead_speed = float(lead.vLead)
     except (KeyError, TypeError, AttributeError):
@@ -352,7 +353,10 @@ class ConditionalExperimentalMode:
   @staticmethod
   def _following_lead(sm) -> bool:
     try:
-      return bool(sm["radarState"].leadOne.status)
+      # RadarState.LeadData's presence bit is `present` (@11); `status` is
+      # CarControlSP.LeadData's name for the same bit. The old read threw into
+      # the except and made every real drive look lead-less.
+      return bool(sm["radarState"].leadOne.present)
     except (KeyError, TypeError, AttributeError):
       return False
 

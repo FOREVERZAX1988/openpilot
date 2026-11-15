@@ -34,7 +34,10 @@ def _plan(**overrides):
 
 
 def _lead(**overrides):
-  lead = {'status': True, 'dRel': 12.0, 'vLead': 0.0}
+  # RadarState.LeadData names the presence bit `present` (@11). The stub used
+  # to call it `status`, which kept this suite green while dmonitoringd raised
+  # AttributeError on every real radarState frame.
+  lead = {'present': True, 'dRel': 12.0, 'vLead': 0.0}
   lead.update(overrides)
   return NS(**lead)
 
@@ -102,7 +105,7 @@ class TestStationaryPauseLead(unittest.TestCase):
   def test_lead_vetoes(self):
     plan = _plan(xState=XSTATE_LEAD, hasLead=True, trafficState=0)
     for name, radar in (
-      ('no_lead', _radar(leadOne=_lead(status=False))),
+      ('no_lead', _radar(leadOne=_lead(present=False))),
       ('too_far', _radar(leadOne=_lead(dRel=45.0))),
       ('lead_moving', _radar(leadOne=_lead(vLead=0.5))),
       ('radar_errors', _radar(radarErrors=NS(to_dict=lambda: {'commIssue': True}))),
