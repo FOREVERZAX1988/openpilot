@@ -126,3 +126,17 @@ const TRAINING_STEP_COUNT = 19;
 function isTruthyDeviceFlag(value) {
   return value === true || value === 1 || value === "1" || value === "true" || value === "True";
 }
+
+// TailscaleState protocol (written by AGNOS tailscale_manager.py, read-only
+// here): "" / "pairing|<url>" / "joined|<name>|<ip>" / "needslogin" / "error|<msg>"
+function formatTailscaleState(state) {
+  if (!state) return getUIText("off", "OFF");
+  const sep = String(state).indexOf("|");
+  const kind = sep === -1 ? String(state) : String(state).slice(0, sep);
+  const rest = sep === -1 ? "" : String(state).slice(sep + 1);
+  if (kind === "joined") return rest ? `${rest.split("|")[0]} (${rest.split("|")[1] || ""})` : "joined";
+  if (kind === "pairing") return getUIText("tailscale_pairing", "Pairing - scan the QR on the device");
+  if (kind === "needslogin") return getUIText("tailscale_needslogin", "Login expired - re-scan the QR on the device");
+  if (kind === "error") return `${getUIText("error", "Error")}: ${rest}`;
+  return String(state);
+}

@@ -31,6 +31,22 @@ class AlphaLongConfirmPage(NavScroller):
     ])
 
 
+class AgentPasswordConfirmPage(NavScroller):
+  def __init__(self, on_confirm: Callable[[], None]):
+    super().__init__()
+
+    accept = BigConfirmationCircleButton(tr("reset agent\npassword"),
+                                         gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
+                                         lambda: self.dismiss(on_confirm))
+
+    self._scroller.add_widgets([
+      GreyBigButton(tr("reset agent password"), tr("The web login password will be regenerated."),
+                    gui_app.texture("icons_mici/settings/developer/ssh.png", 64, 64)),
+      GreyBigButton("", tr("Sessions using the old password stop working once the agent restarts.")),
+      accept,
+    ])
+
+
 class DeveloperLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
@@ -86,6 +102,10 @@ class DeveloperLayoutMici(NavScroller):
                                                description=tr("Built-in AI agent, offroad only. Browser access on port 5095;"
                                                               + " see the web panel for the password."),
                                                title=tr("AI agent"))
+    self._agent_password_btn = BigButton(tr("AI agent password"),
+                                         ui_state.params.get("AgentPassword") or tr("Not set"), icon=txt_ssh,
+                                         description=tr("Login password for the agent web page (port 5095). Tap to regenerate."))
+    self._agent_password_btn.set_click_callback(self._on_reset_agent_password)
     self._joystick_toggle = BigToggle(tr("joystick debug\nmode"), initial_state=ui_state.params.get_bool("JoystickDebugMode"),
                                       toggle_callback=self._on_joystick_debug_mode, description=tr("Control the car with a joystick for debugging."))
     self._long_maneuver_toggle = BigToggle(tr("longitudinal maneuver mode"), initial_state=ui_state.params.get_bool("LongitudinalManeuverMode"),
@@ -108,6 +128,7 @@ class DeveloperLayoutMici(NavScroller):
       self._ssh_toggle,
       self._tailscale_toggle,
       self._agent_toggle,
+      self._agent_password_btn,
       self._ssh_keys_btn,
       self._joystick_toggle,
       self._long_maneuver_toggle,
@@ -193,6 +214,7 @@ class DeveloperLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+    self._agent_password_btn.set_value(ui_state.params.get("AgentPassword") or tr("Not set"))
 
   def _on_enable_tailscale(self, state: bool):
     if state:
@@ -207,6 +229,14 @@ class DeveloperLayoutMici(NavScroller):
       from openpilot.sunnypilot.agent.agent_process import ensure_password
       ensure_password(ui_state.params)
       ui_state.params.remove("AgentSuspended")
+      self._agent_password_btn.set_value(ui_state.params.get("AgentPassword") or tr("Not set"))
+
+  def _on_reset_agent_password(self):
+    gui_app.push_widget(AgentPasswordConfirmPage(self._do_reset_agent_password))
+
+  def _do_reset_agent_password(self):
+    from openpilot.sunnypilot.agent.agent_process import reset_password
+    self._agent_password_btn.set_value(reset_password(ui_state.params))
 
   def _on_joystick_debug_mode(self, state: bool):
     ui_state.params.put_bool("JoystickDebugMode", state, block=True)

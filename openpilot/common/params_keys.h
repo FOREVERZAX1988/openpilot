@@ -168,7 +168,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AgentEnabled", {PERSISTENT | BACKUP, BOOL}},
     {"AgentSuspended", {CLEAR_ON_MANAGER_START, BOOL}},  // written by agent_process on idle expiry so the manager gate stops respawning it
     {"AgentPassword", {PERSISTENT, STRING}},  // opencode web login password, auto-generated on first enable
-    {"AgentApiKey", {PERSISTENT | DONT_LOG, STRING}},  // model provider API key (optional; self-hosted endpoints usually need none)
+    {"AgentApiKey", {PERSISTENT | DONT_LOG, STRING}},  // one-way dropbox: agent_process moves it into /data/agent/env (0600) and removes the param on next agent start
     {"AgentModelBase", {PERSISTENT, STRING}},  // OpenAI-compatible base URL; empty = opencode's built-in provider picker
     {"AgentModelId", {PERSISTENT, STRING}},  // model id under the custom provider
     {"StockEcuHandBackRequest", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},

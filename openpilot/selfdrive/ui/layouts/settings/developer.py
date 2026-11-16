@@ -2,9 +2,9 @@ from openpilot.common.params import Params
 from openpilot.selfdrive.ui.widgets.ssh_key import ssh_key_item
 from openpilot.selfdrive.ui.widgets.tailscale_dialog import TailscaleDialog
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.sunnypilot.agent.agent_process import ensure_password
+from openpilot.sunnypilot.agent.agent_process import ensure_password, reset_password
 from openpilot.system.ui.widgets import Widget
-from openpilot.system.ui.widgets.list_view import toggle_item
+from openpilot.system.ui.widgets.list_view import button_item, toggle_item
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
 from openpilot.system.ui.lib.application import gui_app
@@ -83,6 +83,16 @@ class DeveloperLayout(Widget):
       callback=self._on_enable_agent,
     )
 
+    self._agent_password_reset = button_item(
+      lambda: tr("Agent Password"),
+      lambda: tr("Reset"),
+      description=lambda: tr(
+        "Regenerates the web login password shown above. "
+        + "The change takes effect within a minute, when the agent restarts."
+      ),
+      callback=self._on_reset_agent_password,
+    )
+
     self._joystick_toggle = toggle_item(
       lambda: tr("Joystick Debug Mode"),
       description="",
@@ -127,6 +137,7 @@ class DeveloperLayout(Widget):
       self._ssh_keys,
       self._tailscale_toggle,
       self._agent_toggle,
+      self._agent_password_reset,
       self._joystick_toggle,
       self._long_maneuver_toggle,
       self._lat_maneuver_toggle,
@@ -219,6 +230,9 @@ class DeveloperLayout(Widget):
       ensure_password(self._params)
       self._params.remove("AgentSuspended")
     self._params.put_bool("AgentEnabled", state, block=True)
+
+  def _on_reset_agent_password(self):
+    reset_password(self._params)  # agent toggle's description lambda re-renders with the new value
 
   def _on_joystick_debug_mode(self, state: bool):
     self._params.put_bool("JoystickDebugMode", state, block=True)

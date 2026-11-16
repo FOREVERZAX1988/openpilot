@@ -23,6 +23,7 @@ Shell execution is NOT offered as a tool. opencode's own permissions config
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -83,6 +84,17 @@ CONTROL_PARAM_BLACKLIST_EXACT = frozenset({
 
 MAX_LINES = 400
 ROUTE_DIR = "/data/media/0/realdata"
+
+# Mirrors system/loggerd/uploader.py UPLOAD_ATTR_NAME/VALUE (stdlib-only here,
+# so the constant is duplicated; the uploader owns the semantics).
+UPLOAD_XATTR_NAME = "user.upload"
+UPLOAD_XATTR_VALUE = b"1"
+
+# Route names the agent may ask the uploader to prioritise. Real route dirs
+# look like "2026-11-16--10-30-00"; rejecting everything else keeps commas,
+# pipes and newlines out of the AthenadRecentlyViewedRoutes CSV param.
+ROUTE_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+MAX_ROUTE_ENTRIES = 10
 
 
 def is_control_param(key: str) -> bool:
@@ -254,6 +266,87 @@ def tool_set_params(arguments: dict, params_dir: str) -> str:
   return "\n".join(results)
 
 
+def tool_upload_logs(arguments: dict, params_dir: str) -> str:
+  """Report the uploader's pending queue and optionally prioritise a route.
+
+  Walks the same channel system/loggerd/uploader.py uses: a file counts as
+  pending when it lacks the user.upload xattr, and a locked route dir is
+  skipped exactly like the uploader skips it. The optional ``route`` argument
+  writes into AthenadRecentlyViewedRoutes - the uploader's existing priority
+  channel (it keeps qcamera uploads alive for those routes on metered links);
+  this tool never uploads anything itself.
+  """
+  if not is_offroad(params_dir):
+    return "error: vehicle is onroad (or state unknown) - upload requests are allowed only while parked"
+
+  has_xattr = hasattr(os, "getxattr")
+  pending = 0
+  pending_bytes = 0
+  per_route: list[str] = []
+  try:
+    route_dirs = sorted(os.listdir(ROUTE_DIR), reverse=True)
+  except OSError as exc:
+    return f"error: cannot list routes: {exc}"
+  for logdir in route_dirs:
+    path = os.path.join(ROUTE_DIR, logdir)
+    if not os.path.isdir(path):
+      continue
+    try:
+      names = os.listdir(path)
+    except OSError:
+      continue
+    if any(name.endswith(".lock") for name in names):  # uploader skips locked dirs too
+      continue
+    count = 0
+    size = 0
+    for name in names:
+      fn = os.path.join(path, name)
+      if not os.path.isfile(fn):
+        continue
+      if has_xattr:
+        try:
+          if os.getxattr(fn, UPLOAD_XATTR_NAME) == UPLOAD_XATTR_VALUE:
+            continue
+        except OSError:
+          pass  # attribute unreadable/unset -> treat as pending
+      count += 1
+      try:
+        size += os.path.getsize(fn)
+      except OSError:
+        pass
+    if count:
+      pending += count
+      pending_bytes += size
+      per_route.append(f"{logdir}: {count} file(s)")
+      if len(per_route) >= 10:
+        break
+
+  suffix = "" if has_xattr else " (xattr unavailable here - every file counted, may overcount)"
+  lines = [
+    f"pending uploads: {pending} file(s){suffix}",
+    f"pending size: {pending_bytes / (1 << 20):.1f} MiB",
+  ]
+  if per_route:
+    lines.append("routes with pending files:")
+    lines.extend(f"  {entry}" for entry in per_route)
+
+  route = arguments.get("route")
+  if route is not None:
+    route = str(route).strip()
+    if not ROUTE_NAME_RE.match(route):
+      lines.append("route request: REFUSED - route name must match [A-Za-z0-9_-]+")
+    else:
+      try:
+        existing = read_param_file(params_dir, "AthenadRecentlyViewedRoutes") or ""
+        entries = [entry for entry in existing.split(",") if entry and entry != route]
+        entries.insert(0, route)
+        write_param_file(params_dir, "AthenadRecentlyViewedRoutes", ",".join(entries[:MAX_ROUTE_ENTRIES]))
+        lines.append(f"route request: '{route}' queued for priority upload (uploader picks it up on its next pass)")
+      except OSError as exc:
+        lines.append(f"route request: failed - {exc}")
+  return "\n".join(lines)
+
+
 def tool_reboot_device(arguments: dict, params_dir: str) -> str:
   if not is_offroad(params_dir):
     return "error: vehicle is onroad (or state unknown) - reboot refused while driving"
@@ -315,6 +408,17 @@ TOOLS = [
     },
   },
   {
+    "name": "upload_logs",
+    "description": (
+      "Report pending route-log uploads (what system/loggerd/uploader.py will send and why it may be stalled)"
+      + " and optionally prioritise one route via the 'route' argument. Offroad only, requires user approval."
+    ),
+    "inputSchema": {
+      "type": "object",
+      "properties": {"route": {"type": "string", "description": "route name to prioritise (optional)"}},
+    },
+  },
+  {
     "name": "reboot_device",
     "description": "Reboot the device (offroad only, requires user approval).",
     "inputSchema": {"type": "object", "properties": {}},
@@ -328,6 +432,7 @@ TOOL_HANDLERS = {
   "list_routes": tool_list_routes,
   "get_params": tool_get_params,
   "set_params": tool_set_params,
+  "upload_logs": tool_upload_logs,
   "reboot_device": tool_reboot_device,
 }
 

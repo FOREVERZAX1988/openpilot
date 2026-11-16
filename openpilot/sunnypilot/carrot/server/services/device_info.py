@@ -91,6 +91,7 @@ DEVICE_SETTING_GROUPS: tuple[tuple[str, tuple[tuple[str, Any], ...]], ...] = (
     ("AdbEnabled", False),
     ("SshEnabled", False),
     ("TailscaleEnabled", False),
+    ("TailscaleState", ""),  # AGNOS tailscale-manager writes it; the panel renders it read-only
     ("AgentEnabled", False),
     ("AgentPassword", ""),
     ("JoystickDebugMode", False),
@@ -175,8 +176,9 @@ _BASE_OWNED_PARAMS = frozenset({
   # Developer
   "AdbEnabled", "SshEnabled", "JoystickDebugMode", "LongitudinalManeuverMode",
   "AlphaLongitudinalEnabled", "GithubUsername", "GithubSshKeys",
-  # remote SSH / AI agent (this fork; TailscaleState is AGNOS-owned and deliberately not exposed)
-  "TailscaleEnabled", "AgentEnabled", "AgentPassword",
+  # remote SSH / AI agent (this fork; TailscaleState ships read-only for the
+  # panel's status row, writes are refused in services/params.py)
+  "TailscaleEnabled", "TailscaleState", "AgentEnabled", "AgentPassword",
 })
 
 

@@ -30,6 +30,10 @@ from openpilot.sunnypilot.agent.opencode_config import build_opencode_config, ge
 
 AGENT_PORT = 5095
 AGENT_WS = "/data/agent_ws"
+# Model-provider API key store. The key lives in a 0600 file, not a param:
+# params are world-readable on device and ride along in param backups.
+AGENT_ENV_DIR = "/data/agent"
+API_KEY_PATH = "/data/agent/env"
 OPENCODE_BIN = "/usr/local/bin/opencode"
 IDLE_EXIT_MINUTES = 30
 IDLE_CHECK_SECONDS = 60.0
@@ -42,6 +46,45 @@ def ensure_password(params: Params) -> str:
   password = generate_password()
   params.put("AgentPassword", password, block=True)
   return password
+
+
+def reset_password(params: Params) -> str:
+  """Regenerate the web login password.
+
+  The running agent keeps the old password in its environment until it exits;
+  main() below watches the param and restarts the process within one idle
+  poll, so a reset becomes effective without a device reboot.
+  """
+  password = generate_password()
+  params.put("AgentPassword", password, block=True)
+  params.remove("AgentSuspended")
+  return password
+
+
+def ensure_api_key(params: Params) -> str:
+  """Move the AgentApiKey dropbox param into the 0600 key file, then read it.
+
+  AgentApiKey is a one-way channel: the user writes the param (via SSH or a
+  future UI), the next agent start relocates the value to
+  /data/agent/env (0600) and removes the param, so the key no longer shows
+  up in param backups or generic param reads. To rotate: write the param
+  again, or edit the file directly over SSH.
+  """
+  key = params.get("AgentApiKey")
+  if key:
+    os.makedirs(AGENT_ENV_DIR, exist_ok=True)
+    tmp = API_KEY_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+      f.write(key)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, API_KEY_PATH)
+    params.remove("AgentApiKey")
+    cloudlog.info("moved AgentApiKey param into %s (0600) and cleared the param", API_KEY_PATH)
+  try:
+    with open(API_KEY_PATH, encoding="utf-8") as f:
+      return f.read().strip()
+  except OSError:
+    return ""
 
 
 def _established_connections(port: int) -> int:
@@ -89,13 +132,14 @@ def main() -> None:
     return
 
   password = ensure_password(params)
+  api_key = ensure_api_key(params)
   os.makedirs(AGENT_WS, exist_ok=True)
 
   wrapper = write_mcp_wrapper(os.path.join(AGENT_WS, "comma_mcp_launch.sh"))
   config = build_opencode_config(
     base_url=params.get("AgentModelBase") or "",
     model_id=params.get("AgentModelId") or "",
-    api_key=params.get("AgentApiKey") or "",
+    api_key=api_key,
     mcp_command=[wrapper],
   )
   config_json = json.dumps(config, indent=2) + "\n"
@@ -138,6 +182,11 @@ def main() -> None:
   try:
     while proc.poll() is None:
       time.sleep(IDLE_CHECK_SECONDS)
+      # A password reset (UI or web panel) regenerates the param; restart so
+      # the new password is in the server env. The manager respawns us.
+      if params.get("AgentPassword") != password:
+        cloudlog.info("AI agent password changed, restarting to apply it")
+        break
       if _established_connections(AGENT_PORT) > 0:
         idle_deadline = time.monotonic() + IDLE_EXIT_MINUTES * 60
       elif time.monotonic() >= idle_deadline:

@@ -649,6 +649,15 @@ function renderDeviceDeveloperItems(values) {
       { disabled: toggle.disabled === true, confirmKey: toggle.confirmKey || "" },
     );
   });
+  // Remote SSH status (read-only: AGNOS's tailscale-manager owns the value)
+  html += renderDeviceVersionRow(getUIText("tailscale_status", "Tailscale Status"), formatTailscaleState(values.TailscaleState));
+  // Agent web password: shown so the user can copy it; reset regenerates it.
+  html += renderDeviceActionRow(
+    getUIText("agent_password", "AI Agent Password"),
+    values.AgentPassword || "-",
+    getUIText("reset_upper", "RESET"),
+    "btnDeviceAgentPasswordReset",
+  );
   return html;
 }
 

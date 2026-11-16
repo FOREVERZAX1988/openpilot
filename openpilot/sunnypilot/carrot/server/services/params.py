@@ -376,6 +376,10 @@ def put_typed(params: "Params", key: str, value: Any, p: dict[str, Any] | None =
 
 
 INTERNAL_SESSION_PARAMS = frozenset({"DriverMonitoringSessionDisabled", "JetsonLegacyUpdatePending"})
+# Written exclusively by the AGNOS layer (tailscale_manager.py watches
+# TailscaleEnabled and owns this state protocol); a panel write would be
+# overwritten within seconds and only confuse the on-device UI.
+AGNOS_OWNED_PARAMS = frozenset({"TailscaleState"})
 BACKUP_EXCLUDED_PARAMS = frozenset({"DriverMonitoringEnabled"})
 
 
@@ -411,6 +415,8 @@ def _is_onroad(params) -> bool:
 def set_param_value(name: str, value: Any, p: dict[str, Any] | None = None) -> None:
   if name in INTERNAL_SESSION_PARAMS:
     raise ValueError(f"{name} is controlled internally")
+  if name in AGNOS_OWNED_PARAMS:
+    raise ValueError(f"{name} is owned by the AGNOS layer (read-only here)")
   if not HAS_PARAMS:
     _mem_store[name] = str(value)
     return

@@ -94,6 +94,59 @@ class TestOffroadGate(unittest.TestCase):
       self.assertFalse(os.path.exists(os.path.join(params_dir, "DoReboot")))
 
 
+class TestUploadLogs(unittest.TestCase):
+  def _make_route(self, tmp: str, route: str, files: dict[str, int], xattr_pending: bool = True) -> None:
+    route_dir = os.path.join(tmp, "realdata", route)
+    os.makedirs(route_dir, exist_ok=True)
+    for name, size in files.items():
+      fn = os.path.join(route_dir, name)
+      with open(fn, "wb") as f:
+        f.write(b"0" * size)
+      if not xattr_pending and hasattr(os, "setxattr"):
+        os.setxattr(fn, comma_mcp.UPLOAD_XATTR_NAME, comma_mcp.UPLOAD_XATTR_VALUE)
+
+  def test_refused_onroad(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "0"})
+      self.assertTrue(comma_mcp.tool_upload_logs({}, params_dir).startswith("error:"))
+
+  def test_status_counts_pending_files(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "1"})
+      self._make_route(tmp, "route_a", {"qlog.zst": 100, "rlog.zst": 200})
+      self._make_route(tmp, "route_b", {"qlog.zst": 50})
+      original = comma_mcp.ROUTE_DIR
+      comma_mcp.ROUTE_DIR = os.path.join(tmp, "realdata")
+      try:
+        result = comma_mcp.tool_upload_logs({}, params_dir)
+      finally:
+        comma_mcp.ROUTE_DIR = original
+      self.assertIn("pending uploads: 3 file(s)", result)
+      self.assertIn("route_a: 2 file(s)", result)
+      self.assertIn("route_b: 1 file(s)", result)
+      self.assertIn("pending size: 0.0 MiB", result)  # 350 bytes rounds to 0.0
+
+  def test_route_priority_write_and_validation(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "1", "AthenadRecentlyViewedRoutes": "old_route|123"})
+      os.makedirs(os.path.join(tmp, "realdata"), exist_ok=True)
+      os.makedirs(os.path.join(tmp, "realdata"), exist_ok=True)
+      original = comma_mcp.ROUTE_DIR
+      comma_mcp.ROUTE_DIR = os.path.join(tmp, "realdata")
+      try:
+        result = comma_mcp.tool_upload_logs({"route": "2026-11-16--10-30-00"}, params_dir)
+        bad = comma_mcp.tool_upload_logs({"route": "bad,route\nname"}, params_dir)
+      finally:
+        comma_mcp.ROUTE_DIR = original
+      self.assertIn("queued for priority upload", result)
+      with open(os.path.join(params_dir, "AthenadRecentlyViewedRoutes"), encoding="utf-8") as f:
+        self.assertEqual(f.read(), "2026-11-16--10-30-00,old_route|123")
+
+      self.assertIn("REFUSED", bad)
+      with open(os.path.join(params_dir, "AthenadRecentlyViewedRoutes"), encoding="utf-8") as f:
+        self.assertEqual(f.read(), "2026-11-16--10-30-00,old_route|123")  # unchanged
+
+
 class TestWhitelist(unittest.TestCase):
   def test_get_params_rejects_unknown_keys(self):
     with tempfile.TemporaryDirectory() as tmp:

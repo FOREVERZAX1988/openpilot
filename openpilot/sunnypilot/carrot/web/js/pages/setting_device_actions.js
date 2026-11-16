@@ -2310,4 +2310,30 @@ async function loadDeviceDeveloperExtras(container) {
       showAppToast(err.message || getUIText("failed", "Failed"), { tone: "error" });
     }
   });
+
+  // Agent web password reset (hand-built row in renderDeviceDeveloperItems).
+  // The password is generated client-side and written through the same param
+  // channel the on-device reset uses; the running agent restarts itself
+  // within a minute of the param change.
+  bindOnce(container.querySelector("#btnDeviceAgentPasswordReset"), "click", async () => {
+    const ok = await appConfirm(getUIText("agent_password_reset_confirm", "Regenerate the AI agent web password?"), {
+      title: getUIText("device_group_developer", "Developer"),
+      confirmLabel: getUIText("ok", "OK"),
+      cancelLabel: getUIText("cancel", "Cancel"),
+    });
+    if (!ok) return;
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    let binary = "";
+    bytes.forEach((b) => { binary += String.fromCharCode(b); });
+    const password = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    try {
+      await setParam("AgentPassword", password);
+      showAppToast(getUIText("agent_password_reset_done", "Password regenerated - the agent applies it within a minute"), { tone: "info" });
+      const container2 = document.getElementById("deviceItems");
+      if (container2) await loadDeviceDeveloperExtras(container2);
+    } catch (err) {
+      showAppToast(err.message || getUIText("failed", "Failed"), { tone: "error" });
+    }
+  });
 }
