@@ -55,6 +55,16 @@ fi
 
 export STAGING_ROOT="/data/safe_staging"
 
+# jetlink asks for a 4 MB SO_SNDBUF per frame stream (jetlink/transport/tcp.py
+# _tune), but AGNOS' default net.core.wmem_max (229376 = 224 KB) clamps it
+# back. A single lossless/hevc warp frame is ~390 KB, so a clamped socket
+# cannot hold one frame: sendmsg blocks waiting for the kernel to drain ~30 KB
+# at a time, which shows up as 50-65 ms sends and makes the large model's
+# pacer demote to 15/10 Hz. Raise the ceiling so a whole frame fits. /etc is
+# read-only on AGNOS, so sysctl must be applied at launcher time; sudo -n is
+# passwordless here (same mechanism the clock sync above relies on).
+sudo -n sysctl -w net.core.wmem_max=4194304 >/dev/null 2>&1 || true
+
 # NOTE: do not disable the cabin camera by device model here. Clone C3 units
 # report model "comma tici" but DO have a working OS04C10 cabin camera; the
 # camerad bringup-failure path (sensor_missing) already keeps hardware without
