@@ -68,47 +68,18 @@ def get_default_route_iface():
   return min(routes)[1] if routes else None
 
 _PANEL_BACKLIGHT = Path("/sys/class/backlight/panel0-backlight")
-_PANEL_TOUCH_IRQS = ("fts_ts", "samsung_i2c_touchpanel")
-
-
-def get_touch_device_path() -> str | None:
-  """Locate the touchscreen input event device, tolerating driver variants.
-
-  The stock comma panel (FocalTech fts_ts) exposes
-  /dev/input/by-path/platform-894000.i2c-event; the Samsung EA8074 panels
-  (replacement screens) register the same by-path once their driver probes,
-  but probe order/timing can differ, so fall back to a by-path glob and then
-  to matching /sys/class/input names. Returns None when no touch device is
-  up yet so callers can retry instead of crashing.
-  """
-  stock = Path("/dev/input/by-path/platform-894000.i2c-event")
-  if stock.exists():
-    return str(stock)
-  by_path = Path("/dev/input/by-path")
-  if by_path.is_dir():
-    candidates = sorted(by_path.glob("*i2c-event*"))
-    if candidates:
-      return str(candidates[0])
-  for ev in sorted(Path("/sys/class/input").glob("event*")):
-    try:
-      name = (ev / "device" / "name").read_text(errors="replace").strip().lower()
-    except OSError:
-      continue
-    if "touch" in name and "fake" not in name:
-      return f"/dev/input/{ev.name}"
-  return None
+_PANEL_TOUCH_IRQ = "fts_ts"
 
 
 def _has_panel_touch() -> bool:
   """Touch controller IRQ — absent when the panel is removed but backlight sysfs remains."""
   try:
     with open("/proc/interrupts") as f:
-      irqs = f.read()
-      if any(name in irqs for name in _PANEL_TOUCH_IRQS):
+      if _PANEL_TOUCH_IRQ in f.read():
         return True
   except OSError:
     pass
-  return get_touch_device_path() is not None
+  return Path("/dev/input/by-path/platform-894000.i2c-event").exists()
 
 
 def invalidate_display_probe_cache() -> None:
