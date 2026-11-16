@@ -77,6 +77,16 @@ def _params_dir() -> Path:
   return Path(root) / os.environ.get('OPENPILOT_PREFIX', 'd')
 
 
+# jetlink's runtime codec switch reads <JETLINK_PARAMS_ROOT>/JetlinkForceHevc.
+# launch_env.sh exports it, but that shell never reaches modeld: comma.service
+# starts /usr/comma/comma.sh in tmux, which execs launch_openpilot.sh ->
+# launch_chffrplus.sh, and the export does not survive into the manager's
+# children (measured 2026-11-16: neither manager nor modeld carried it, so
+# writing JetlinkForceHevc did nothing). Set it here, in the process that
+# actually runs jetlink, so the switch works without a code default.
+os.environ.setdefault('JETLINK_PARAMS_ROOT', str(_params_dir()))
+
+
 def link_on() -> bool:
   """Is the Jetlink setting on? As jetlink reads it, a file, so that a jetlink
   this build cannot use tells only someone who turned the link on."""
