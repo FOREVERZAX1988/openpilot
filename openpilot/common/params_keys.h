@@ -164,6 +164,17 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"RouteCount", {PERSISTENT, INT, "0"}},
     {"SnoozeUpdate", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"SshEnabled", {PERSISTENT | BACKUP, BOOL}},
+    // Remote SSH (Tailscale): the AGNOS layer owns the daemon (tailscaled.service +
+    // tailscale-manager), openpilot only flips the switch and renders state/QR.
+    {"TailscaleEnabled", {PERSISTENT | BACKUP, BOOL}},
+    {"TailscaleState", {CLEAR_ON_MANAGER_START, STRING}},  // AGNOS tailscale_manager.py writes: "" / "pairing|<url>" / "joined|<name>|<ip>" / "error|<msg>"
+    // Built-in AI agent (opencode web, port 5095, offroad only, manager-hosted).
+    {"AgentEnabled", {PERSISTENT | BACKUP, BOOL}},
+    {"AgentSuspended", {CLEAR_ON_MANAGER_START, BOOL}},  // written by agent_process on idle expiry so the manager gate stops respawning it
+    {"AgentPassword", {PERSISTENT, STRING}},  // opencode web login password, auto-generated on first enable
+    {"AgentApiKey", {PERSISTENT | DONT_LOG, STRING}},  // one-way dropbox: agent_process moves it into /data/agent/env (0600) and removes the param on next agent start
+    {"AgentModelBase", {PERSISTENT, STRING}},  // OpenAI-compatible base URL; empty = opencode's built-in provider picker
+    {"AgentModelId", {PERSISTENT, STRING}},  // model id under the custom provider
     {"StockEcuHandBackRequest", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"StockEcuHandBackResult", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"StockEcuHandBackFailed", {CLEAR_ON_IGNITION_ON, BOOL}},  // an onroad cycle went ahead on a failed hand-back: stock cruise is down until ignition

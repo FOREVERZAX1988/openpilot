@@ -14,11 +14,12 @@ CARROT_WEB_MIN_CLOSE_SECONDS = 0.35
 
 # Every LAN service worth a QR code, in the order the dialog draws them.
 # 7000 is this fork's settings panel, 5080 the webui submodule, 5090 the OP
-# assistant (ai.aid).
+# assistant (ai.aid), 5095 the built-in AI agent (opencode).
 CARROT_WEB_SERVICES: tuple[tuple[str, int], ...] = (
   ("Carrot Web", 7000),
   ("WebUI", 5080),
   ("OP 助手", 5090),
+  ("AI Agent", 5095),
 )
 
 

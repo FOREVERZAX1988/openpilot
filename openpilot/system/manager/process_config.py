@@ -107,6 +107,15 @@ def sentry_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
   # the user opted in; with the default off it never starts.
   return not started and params.get_bool("SentryEnabled")
 
+def ai_agent_run(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # Built-in AI agent (opencode web, port 5095): parked diagnostics and device
+  # ops only. Offroad gate here stops the process on the offroad transition,
+  # and the agent's MCP layer independently re-checks IsOffroad on every write
+  # tool call (narrowing the teardown window, though check-then-write is not
+  # atomic). AgentSuspended is written by the agent's idle watchdog so a clean
+  # exit is not immediately respawned.
+  return not PC and not started and params.get_bool("AgentEnabled") and not params.get_bool("AgentSuspended")
+
 def livestream(started: bool, params: Params, CP: car.CarParams) -> bool:
   return params.get_bool("IsLiveStreaming")
 
@@ -496,6 +505,12 @@ procs += [
   # from the car network - see the module docstring before turning it on.
   PythonProcess("carrot_recovery", "openpilot.sunnypilot.carrot.recovery.server",
                 carrot_recovery_enabled, restart_if_crash=True),
+
+  # Built-in AI agent: opencode web UI on 5095 (see openpilot/sunnypilot/agent/).
+  # restart_if_crash: the web UI must come back on its own; a clean idle exit
+  # (AgentSuspended) makes the gate false instead, so no respawn loop.
+  PythonProcess("ai_agent", "openpilot.sunnypilot.agent.agent_process",
+                ai_agent_run, restart_if_crash=True),
 
   # Xiaoge ONNX BSD/Lane detection
   # Reads VisionIPC camera buffers, runs ONNX inference, publishes to customReservedRawData0.

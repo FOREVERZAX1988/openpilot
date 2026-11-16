@@ -376,6 +376,10 @@ def put_typed(params: "Params", key: str, value: Any, p: dict[str, Any] | None =
 
 
 INTERNAL_SESSION_PARAMS = frozenset({"DriverMonitoringSessionDisabled", "JetsonLegacyUpdatePending"})
+# Written exclusively by the AGNOS layer (tailscale_manager.py watches
+# TailscaleEnabled and owns this state protocol); a panel write would be
+# overwritten within seconds and only confuse the on-device UI.
+AGNOS_OWNED_PARAMS = frozenset({"TailscaleState"})
 BACKUP_EXCLUDED_PARAMS = frozenset({"DriverMonitoringEnabled"})
 
 
@@ -411,6 +415,8 @@ def _is_onroad(params) -> bool:
 def set_param_value(name: str, value: Any, p: dict[str, Any] | None = None) -> None:
   if name in INTERNAL_SESSION_PARAMS:
     raise ValueError(f"{name} is controlled internally")
+  if name in AGNOS_OWNED_PARAMS:
+    raise ValueError(f"{name} is owned by the AGNOS layer (read-only here)")
   if not HAS_PARAMS:
     _mem_store[name] = str(value)
     return
@@ -431,6 +437,11 @@ def set_param_value(name: str, value: Any, p: dict[str, Any] | None = None) -> N
 
   if name == "DriverMonitoringEnabled" and not _coerce_bool(value) and not params.get_bool("IsOnroad"):
     params.remove("Offroad_DriverMonitoringUncertain")
+  if name == "AgentEnabled" and _coerce_bool(value):
+    # Re-enabling from the web panel must also clear the agent's idle-suspend
+    # marker, or the manager gate stays false and the toggle appears dead
+    # (only the on-device settings page cleared it otherwise).
+    params.remove("AgentSuspended")
 
 # -----------------------
 # Bulk backup / restore

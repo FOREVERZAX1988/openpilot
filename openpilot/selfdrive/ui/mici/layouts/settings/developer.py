@@ -9,6 +9,7 @@ from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callba
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.widgets.ssh_key import SshKeyFetcher
+from openpilot.selfdrive.ui.widgets.tailscale_dialog import TailscaleDialog
 
 
 class AlphaLongConfirmPage(NavScroller):
@@ -27,6 +28,22 @@ class AlphaLongConfirmPage(NavScroller):
       GreyBigButton("", tr("Enabling this will switch to openpilot longitudinal control.")),
       GreyBigButton("", tr("Using Experimental mode is recommended with openpilot longitudinal control alpha.")),
       GreyBigButton("", tr("Changing this setting will restart openpilot if the car is powered on.")),
+      accept,
+    ])
+
+
+class AgentPasswordConfirmPage(NavScroller):
+  def __init__(self, on_confirm: Callable[[], None]):
+    super().__init__()
+
+    accept = BigConfirmationCircleButton(tr("reset agent\npassword"),
+                                         gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
+                                         lambda: self.dismiss(on_confirm))
+
+    self._scroller.add_widgets([
+      GreyBigButton(tr("reset agent password"), tr("The web login password will be regenerated."),
+                    gui_app.texture("icons_mici/settings/developer/ssh.png", 64, 64)),
+      GreyBigButton("", tr("Sessions using the old password stop working once the agent restarts.")),
       accept,
     ])
 
@@ -76,6 +93,20 @@ class DeveloperLayoutMici(NavScroller):
                                              description=tr("Use Android Debug Bridge (ADB) over USB or the network."), title=tr("enable ADB"))
     self._ssh_toggle = BigCircleParamControl(gui_app.texture("icons_mici/ssh_short.png", 82, 82), "SshEnabled", icon_offset=(0, 12),
                                              description=tr("Access the device remotely using your SSH keys."), title=tr("enable SSH"))
+    self._tailscale_toggle = BigCircleParamControl(gui_app.texture("icons_mici/ssh_short.png", 82, 82), "TailscaleEnabled",
+                                                   toggle_callback=self._on_enable_tailscale, icon_offset=(0, 12),
+                                                   description=tr("Remote SSH from anywhere via Tailscale."
+                                                                  + " Enable, then scan the pairing QR on the next screen."),
+                                                   title=tr("remote SSH"))
+    self._agent_toggle = BigCircleParamControl(gui_app.texture("icons_mici/settings/developer/ssh.png", 82, 82), "AgentEnabled",
+                                               toggle_callback=self._on_enable_agent, icon_offset=(0, 12),
+                                               description=tr("Built-in AI agent, offroad only. Browser access on port 5095;"
+                                                              + " see the web panel for the password."),
+                                               title=tr("AI agent"))
+    self._agent_password_btn = BigButton(tr("AI agent password"),
+                                         ui_state.params.get("AgentPassword") or tr("Not set"), icon=txt_ssh,
+                                         description=tr("Login password for the agent web page (port 5095). Tap to regenerate."))
+    self._agent_password_btn.set_click_callback(self._on_reset_agent_password)
     self._joystick_toggle = BigToggle(tr("joystick debug\nmode"), initial_state=ui_state.params.get_bool("JoystickDebugMode"),
                                       toggle_callback=self._on_joystick_debug_mode, description=tr("Control the car with a joystick for debugging."))
     self._long_maneuver_toggle = BigToggle(tr("longitudinal maneuver mode"), initial_state=ui_state.params.get_bool("LongitudinalManeuverMode"),
@@ -96,6 +127,9 @@ class DeveloperLayoutMici(NavScroller):
     self._scroller.add_widgets([
       self._adb_toggle,
       self._ssh_toggle,
+      self._tailscale_toggle,
+      self._agent_toggle,
+      self._agent_password_btn,
       self._ssh_keys_btn,
       self._joystick_toggle,
       self._long_maneuver_toggle,
@@ -109,6 +143,8 @@ class DeveloperLayoutMici(NavScroller):
     self._refresh_toggles = (
       ("AdbEnabled", self._adb_toggle),
       ("SshEnabled", self._ssh_toggle),
+      ("TailscaleEnabled", self._tailscale_toggle),
+      ("AgentEnabled", self._agent_toggle),
       ("JoystickDebugMode", self._joystick_toggle),
       ("LongitudinalManeuverMode", self._long_maneuver_toggle),
       ("LateralManeuverMode", self._lat_maneuver_toggle),
@@ -129,6 +165,8 @@ class DeveloperLayoutMici(NavScroller):
       item.set_enabled(lambda: ui_state.is_offroad())
     # Jetlink holds the USB port that ADB needs
     self._adb_toggle.set_enabled(lambda: ui_state.is_offroad() and not ui_state.adb_blocked)
+    # AI agent is parked-only by design (manager offroad gate + MCP gate)
+    self._agent_toggle.set_enabled(lambda: ui_state.is_offroad())
 
     # Disable toggles that require not engaged
     for item in engaged_blocked_toggles:
@@ -177,6 +215,29 @@ class DeveloperLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+    self._agent_password_btn.set_value(ui_state.params.get("AgentPassword") or tr("Not set"))
+
+  def _on_enable_tailscale(self, state: bool):
+    if state:
+      # Same dialog as the tici page: polls TailscaleState (written by AGNOS's
+      # tailscale-manager) and shows the pairing QR until joined.
+      gui_app.push_widget(TailscaleDialog(ui_state.params))
+
+  def _on_enable_agent(self, state: bool):
+    if state:
+      # Generate the web login password up front and clear the idle-suspend
+      # marker so the manager spawns the agent on the next offroad pass.
+      from openpilot.sunnypilot.agent.agent_process import ensure_password
+      ensure_password(ui_state.params)
+      ui_state.params.remove("AgentSuspended")
+      self._agent_password_btn.set_value(ui_state.params.get("AgentPassword") or tr("Not set"))
+
+  def _on_reset_agent_password(self):
+    gui_app.push_widget(AgentPasswordConfirmPage(self._do_reset_agent_password))
+
+  def _do_reset_agent_password(self):
+    from openpilot.sunnypilot.agent.agent_process import reset_password
+    self._agent_password_btn.set_value(reset_password(ui_state.params))
 
   def _on_joystick_debug_mode(self, state: bool):
     ui_state.params.put_bool("JoystickDebugMode", state, block=True)
