@@ -404,12 +404,18 @@ def main():
             cloudlog.warning(f"Observation {which} ignored ({res.name.lower()})")
           update_observation_invalid(res, which, observation_input_invalid, timing_run,
                                      input_invalid_decay, timing_invalid_grace)
+        elif which == "cameraOdometry":
+          # a missed observation (modeld dropped a frame) spends the same budget as a rejected one,
+          # capped so a long outage recovers as fast as a short one
+          observation_input_invalid[which] = min(observation_input_invalid[which] + 1, input_invalid_limit[which])
     else:
       filter_initialized = sm.all_checks() and sensor_all_checks(acc_msgs, gyro_msgs, sensor_valid, sensor_recv_time, sensor_alive, SIMULATION)
 
     if sm.updated["cameraOdometry"]:
       critical_service_inputs_valid = all(observation_input_invalid[s] < input_invalid_threshold[s] for s in critical_services)
-      inputs_valid = sm.all_valid() and critical_service_inputs_valid
+      # once the filter runs, cameraOdometry validity is judged by the budget above, not message by message
+      sm_inputs_valid = sm.all_valid(["carState", "extrinsicsCalibration"]) if filter_initialized else sm.all_valid()
+      inputs_valid = sm_inputs_valid and critical_service_inputs_valid
       sensors_valid = sensor_all_checks(acc_msgs, gyro_msgs, sensor_valid, sensor_recv_time, sensor_alive, SIMULATION)
 
       msg = estimator.get_msg(sensors_valid, inputs_valid, filter_initialized)
