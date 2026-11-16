@@ -65,6 +65,12 @@ export STAGING_ROOT="/data/safe_staging"
 # passwordless here (same mechanism the clock sync above relies on).
 sudo -n sysctl -w net.core.wmem_max=4194304 >/dev/null 2>&1 || true
 
+# jetlink's runtime codec switch: with JETLINK_PARAMS_ROOT set, writing "1"
+# to <root>/JetlinkForceHevc opts the next hello into HEVC (for testing a
+# hardware-decoder build) without restarting manager. Unset elsewhere, so a
+# bare jetlink never reads the machine's params store.
+export JETLINK_PARAMS_ROOT="/data/params/d"
+
 # NOTE: do not disable the cabin camera by device model here. Clone C3 units
 # report model "comma tici" but DO have a working OS04C10 cabin camera; the
 # camerad bringup-failure path (sensor_missing) already keeps hardware without
