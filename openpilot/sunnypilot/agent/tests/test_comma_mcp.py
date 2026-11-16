@@ -68,6 +68,25 @@ class TestOffroadGate(unittest.TestCase):
       with open(os.path.join(params_dir, "ShowDebugInfo"), encoding="utf-8") as f:
         self.assertEqual(f.read(), "1")
 
+  def test_string_bool_values_coerced(self):
+    # All whitelisted params are BOOL: the string "true" must become "1",
+    # not be written verbatim (libparams would then read it as False).
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "1"})
+      result = comma_mcp.tool_set_params({"params": {"ShowDebugInfo": "true", "IsMetric": "false"}}, params_dir)
+      self.assertEqual(result.count("written"), 2)
+      with open(os.path.join(params_dir, "ShowDebugInfo"), encoding="utf-8") as f:
+        self.assertEqual(f.read(), "1")
+      with open(os.path.join(params_dir, "IsMetric"), encoding="utf-8") as f:
+        self.assertEqual(f.read(), "0")
+
+  def test_non_bool_value_refused(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "1"})
+      result = comma_mcp.tool_set_params({"params": {"ShowDebugInfo": "banana"}}, params_dir)
+      self.assertIn("REFUSED", result)
+      self.assertFalse(os.path.exists(os.path.join(params_dir, "ShowDebugInfo")))
+
   def test_reboot_refused_onroad(self):
     with tempfile.TemporaryDirectory() as tmp:
       params_dir = _make_params_dir(tmp, {"IsOffroad": "0"})

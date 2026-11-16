@@ -37,8 +37,11 @@ class TestOpencodeConfig(unittest.TestCase):
   def test_permissions_denied_by_default(self):
     config = build_opencode_config("", "", "", ["wrapper.sh"])
     self.assertEqual(config["permission"]["bash"], {"*": "deny"})
-    self.assertEqual(config["permission"]["edit"], "ask")
-    self.assertEqual(config["permission"]["webfetch"], "deny")
+    # Every builtin tool that reads arbitrary files or reaches the network must
+    # be denied: the agent runs as root and read/grep would bypass the MCP
+    # param whitelist entirely.
+    for key in ("webfetch", "websearch", "read", "grep", "glob", "list", "edit", "task", "lsp", "codesearch"):
+      self.assertEqual(config["permission"][key], "deny", key)
 
   def test_mcp_server_registered(self):
     config = build_opencode_config("", "", "", ["/data/agent_ws/comma_mcp_launch.sh"])

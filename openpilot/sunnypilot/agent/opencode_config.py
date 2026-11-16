@@ -4,8 +4,9 @@ Schema is pinned to opencode v2.3.0 (see agnos-builder userspace/agent_setup.sh)
 validate against the locked binary whenever either side is bumped.
 
 The permission block is the second security layer of the agent (comma_mcp.py's
-offroad/whitelist/blacklist gates are the first and third): builtin bash is
-denied outright, file edits and everything else ask.
+offroad/whitelist/blacklist gates are the first and third): every builtin
+opencode tool is denied and device control goes exclusively through the
+comma-tools MCP server.
 """
 import secrets
 
@@ -27,12 +28,27 @@ def generate_password() -> str:
 
 
 def build_opencode_config(base_url: str, model_id: str, api_key: str, mcp_command: list[str]) -> dict:
+  # Device control goes exclusively through the comma-tools MCP server: every
+  # builtin tool that reads arbitrary files or reaches the network is denied
+  # outright, because the agent runs as root and opencode's read/grep would
+  # otherwise bypass comma_mcp's param whitelist entirely (AgentApiKey, params,
+  # SSH material). edit/task/lsp are useless without read and equally denied.
+  # Validate this key list against the locked binary's tool registry whenever
+  # opencode is bumped - a NEW builtin defaults to allow, not deny.
   config: dict = {
     "$schema": "https://opencode.ai/config.json",
     "permission": {
-      "edit": "ask",
       "bash": {"*": "deny"},
       "webfetch": "deny",
+      "websearch": "deny",
+      "read": "deny",
+      "grep": "deny",
+      "glob": "deny",
+      "list": "deny",
+      "edit": "deny",
+      "task": "deny",
+      "lsp": "deny",
+      "codesearch": "deny",
     },
     "mcp": {
       "comma-tools": {

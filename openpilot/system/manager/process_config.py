@@ -103,8 +103,9 @@ def ai_agent_run(started: bool, params: Params, CP: car.CarParams) -> bool:
   # Built-in AI agent (opencode web, port 5095): parked diagnostics and device
   # ops only. Offroad gate here stops the process on the offroad transition,
   # and the agent's MCP layer independently re-checks IsOffroad on every write
-  # tool call (closing the teardown window). AgentSuspended is written by the
-  # agent's idle watchdog so a clean exit is not immediately respawned.
+  # tool call (narrowing the teardown window, though check-then-write is not
+  # atomic). AgentSuspended is written by the agent's idle watchdog so a clean
+  # exit is not immediately respawned.
   return not PC and not started and params.get_bool("AgentEnabled") and not params.get_bool("AgentSuspended")
 
 def livestream(started: bool, params: Params, CP: car.CarParams) -> bool:

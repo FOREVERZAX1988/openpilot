@@ -10,8 +10,9 @@ Security model - three independent gates, all fail-closed:
 
 1. Offroad hard gate: every write tool re-checks Params IsOffroad at call time.
    The manager only stops the agent process on the offroad transition; between
-   that transition and process teardown there is a window, and this gate closes
-   it. Anything but an explicit True is treated as onroad/unknown.
+   that transition and process teardown there is a window that this gate
+   narrows to milliseconds (re-checked per key) without eliminating it.
+   Anything but an explicit True is treated as onroad/unknown.
 2. Whitelist: only listed param keys are readable/writable at all. get_params
    and set_params reject everything else.
 3. Control blacklist: vehicle-control-related keys are refused even if a later
@@ -36,7 +37,6 @@ OFFROAD_PARAM = "IsOffroad"
 # Params the agent may READ (device diagnostics / identity). Keep this boring.
 READ_PARAM_WHITELIST = frozenset({
   "DongleId",
-  "DeviceType",
   "GitBranch",
   "GitCommit",
   "UpdaterState",
@@ -44,7 +44,6 @@ READ_PARAM_WHITELIST = frozenset({
   "IsOffroad",
   "NetworkAddress",
   "LastOffroadStatusPacket",
-  "CarBatteryPercent",
 })
 
 # Params the agent may WRITE after explicit user approval. Everything that
@@ -107,6 +106,28 @@ def read_param_file(params_dir: str, key: str) -> str | None:
       return f.read().strip()
   except OSError:
     return None
+
+
+def coerce_bool_value(value) -> str | None:
+  """Normalize an incoming bool-ish value to a params BOOL literal.
+
+  Every key on WRITE_PARAM_WHITELIST is a BOOL param; writing the string
+  "true" would libparams-read as False, so anything that is not a clean
+  bool representation is refused instead of written.
+  """
+  if value is True:
+    return "1"
+  if value is False:
+    return "0"
+  if isinstance(value, str):
+    lowered = value.strip().lower()
+    if lowered in ("1", "true"):
+      return "1"
+    if lowered in ("0", "false"):
+      return "0"
+  if isinstance(value, int) and value in (0, 1):
+    return str(value)
+  return None
 
 
 def write_param_file(params_dir: str, key: str, value: str) -> None:
@@ -222,7 +243,11 @@ def tool_set_params(arguments: dict, params_dir: str) -> str:
       results.append(f"{key}: REFUSED - not on the writable whitelist")
       continue
     if is_offroad(params_dir):  # re-check between keys (cheap, belt-and-suspenders)
-      write_param_file(params_dir, key, "1" if value is True else "0" if value is False else str(value))
+      coerced = coerce_bool_value(value)
+      if coerced is None:
+        results.append(f"{key}: REFUSED - not a valid bool value ({value!r})")
+        continue
+      write_param_file(params_dir, key, coerced)
       results.append(f"{key}: written")
     else:
       results.append(f"{key}: REFUSED - offroad state changed mid-call")

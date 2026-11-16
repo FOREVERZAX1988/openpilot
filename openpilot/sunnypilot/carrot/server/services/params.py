@@ -431,6 +431,11 @@ def set_param_value(name: str, value: Any, p: dict[str, Any] | None = None) -> N
 
   if name == "DriverMonitoringEnabled" and not _coerce_bool(value) and not params.get_bool("IsOnroad"):
     params.remove("Offroad_DriverMonitoringUncertain")
+  if name == "AgentEnabled" and _coerce_bool(value):
+    # Re-enabling from the web panel must also clear the agent's idle-suspend
+    # marker, or the manager gate stays false and the toggle appears dead
+    # (only the on-device settings page cleared it otherwise).
+    params.remove("AgentSuspended")
 
 # -----------------------
 # Bulk backup / restore

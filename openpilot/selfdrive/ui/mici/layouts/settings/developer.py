@@ -8,6 +8,7 @@ from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.widgets.ssh_key import SshKeyFetcher
+from openpilot.selfdrive.ui.widgets.tailscale_dialog import TailscaleDialog
 
 
 class AlphaLongConfirmPage(NavScroller):
@@ -75,8 +76,10 @@ class DeveloperLayoutMici(NavScroller):
                                              description=tr("Use Android Debug Bridge (ADB) over USB or the network."), title=tr("enable ADB"))
     self._ssh_toggle = BigCircleParamControl(gui_app.texture("icons_mici/ssh_short.png", 82, 82), "SshEnabled", icon_offset=(0, 12),
                                              description=tr("Access the device remotely using your SSH keys."), title=tr("enable SSH"))
-    self._tailscale_toggle = BigCircleParamControl(gui_app.texture("icons_mici/ssh_short.png", 82, 82), "TailscaleEnabled", icon_offset=(0, 12),
-                                                   description=tr("Remote SSH from anywhere via Tailscale. Enable, then scan the QR shown on the main UI."),
+    self._tailscale_toggle = BigCircleParamControl(gui_app.texture("icons_mici/ssh_short.png", 82, 82), "TailscaleEnabled",
+                                                   toggle_callback=self._on_enable_tailscale, icon_offset=(0, 12),
+                                                   description=tr("Remote SSH from anywhere via Tailscale."
+                                                                  + " Enable, then scan the pairing QR on the next screen."),
                                                    title=tr("remote SSH"))
     self._agent_toggle = BigCircleParamControl(gui_app.texture("icons_mici/settings/developer/ssh.png", 82, 82), "AgentEnabled",
                                                toggle_callback=self._on_enable_agent, icon_offset=(0, 12),
@@ -190,6 +193,12 @@ class DeveloperLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+
+  def _on_enable_tailscale(self, state: bool):
+    if state:
+      # Same dialog as the tici page: polls TailscaleState (written by AGNOS's
+      # tailscale-manager) and shows the pairing QR until joined.
+      gui_app.push_widget(TailscaleDialog(ui_state.params))
 
   def _on_enable_agent(self, state: bool):
     if state:

@@ -4,7 +4,6 @@ Registered in system/manager/process_config.py behind the ai_agent_run gate:
 offroad only, gated on AgentEnabled, and stopped whenever AgentSuspended is set
 (the idle watchdog below writes that flag before a clean exit so the manager
 does not immediately respawn an idle process).
-
 Responsibilities:
 - ensure AgentPassword exists (generated once, shown in the UI + web panel)
 - generate the opencode config via sunnypilot/agent/opencode_config.py into the
@@ -119,6 +118,10 @@ def main() -> None:
   binary = OPENCODE_BIN if os.path.exists(OPENCODE_BIN) else shutil.which("opencode")
   if binary is None:
     cloudlog.error("opencode binary not found - AgentEnabled is set but userspace/agent_setup.sh did not run on this image")
+    # Suspend instead of returning "cleanly": with the gate still true the
+    # manager would otherwise respawn this process every cycle and spam the
+    # log. The toggle (UI or web panel) clears the marker on re-enable.
+    params.put_bool("AgentSuspended", True, block=True)
     return
 
   # Parked diagnostics only: keep off the realtime cores, mirroring carrot_server.
