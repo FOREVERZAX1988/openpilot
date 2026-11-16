@@ -1,6 +1,8 @@
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.widgets.ssh_key import ssh_key_item
+from openpilot.selfdrive.ui.widgets.tailscale_dialog import TailscaleDialog
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.sunnypilot.agent.agent_process import ensure_password
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.list_view import toggle_item
 from openpilot.system.ui.widgets.scroller_tici import Scroller
@@ -21,6 +23,14 @@ DESCRIPTIONS = {
   'ssh_key': tr_noop(
     "Warning: This grants SSH access to all public keys in your GitHub settings. Never enter a GitHub username " +
     "other than your own. A comma employee will NEVER ask you to add their GitHub username."
+  ),
+  'tailscale': tr_noop(
+    "Remote SSH from anywhere via Tailscale. Enable, then scan the QR with the Tailscale app on your phone. " +
+    "Works over LTE too. An AGNOS update with tailscaled is required."
+  ),
+  'ai_agent': tr_noop(
+    "Built-in AI agent (opencode). Offroad only; browser access on port 5095 with the password below. " +
+    "Vehicle-control parameters are hard-blocked. Requires an AGNOS update with opencode."
   ),
   'alpha_longitudinal': tr_noop(
     "<b>WARNING: sunnypilot longitudinal control is in alpha for this car and may disable Automatic Emergency Braking (AEB).</b><br><br>" +
@@ -56,6 +66,22 @@ class DeveloperLayout(Widget):
       callback=self._on_enable_ssh,
     )
     self._ssh_keys = ssh_key_item(lambda: tr("SSH Keys"), description=lambda: tr(DESCRIPTIONS["ssh_key"]))
+
+    # Remote SSH (Tailscale): AGNOS tailscale-manager joins/leaves on this param
+    self._tailscale_toggle = toggle_item(
+      lambda: tr("Remote SSH (Tailscale)"),
+      description=lambda: tr(DESCRIPTIONS["tailscale"]),
+      initial_state=self._params.get_bool("TailscaleEnabled"),
+      callback=self._on_enable_tailscale,
+    )
+
+    # Built-in AI agent (opencode web, port 5095): manager-hosted, offroad only
+    self._agent_toggle = toggle_item(
+      lambda: tr("AI Agent"),
+      description=lambda: self._agent_description(),
+      initial_state=self._params.get_bool("AgentEnabled"),
+      callback=self._on_enable_agent,
+    )
 
     self._joystick_toggle = toggle_item(
       lambda: tr("Joystick Debug Mode"),
@@ -99,6 +125,8 @@ class DeveloperLayout(Widget):
       self._adb_toggle,
       self._ssh_toggle,
       self._ssh_keys,
+      self._tailscale_toggle,
+      self._agent_toggle,
       self._joystick_toggle,
       self._long_maneuver_toggle,
       self._lat_maneuver_toggle,
@@ -147,6 +175,8 @@ class DeveloperLayout(Widget):
     for key, item in (
       ("AdbEnabled", self._adb_toggle),
       ("SshEnabled", self._ssh_toggle),
+      ("TailscaleEnabled", self._tailscale_toggle),
+      ("AgentEnabled", self._agent_toggle),
       ("JoystickDebugMode", self._joystick_toggle),
       ("LongitudinalManeuverMode", self._long_maneuver_toggle),
       ("LateralManeuverMode", self._lat_maneuver_toggle),
@@ -166,6 +196,29 @@ class DeveloperLayout(Widget):
 
   def _on_enable_ssh(self, state: bool):
     self._params.put_bool("SshEnabled", state, block=True)
+
+  def _on_enable_tailscale(self, state: bool):
+    self._params.put_bool("TailscaleEnabled", state, block=True)
+    if state:
+      # tailscale-manager reacts within ~5s; the dialog polls TailscaleState
+      # and shows the pairing QR / final SSH address.
+      gui_app.push_widget(TailscaleDialog(self._params))
+
+  def _agent_description(self) -> str:
+    description = tr(DESCRIPTIONS["ai_agent"])
+    password = self._params.get("AgentPassword")
+    if password:
+      address = self._params.get("NetworkAddress") or "<device-ip>"
+      return f"{description}\nhttp://{address}:5095  Password: {password}"
+    return description
+
+  def _on_enable_agent(self, state: bool):
+    if state:
+      # Generate the web login password up front so the UI can display it,
+      # and clear the idle-suspend marker so the manager spawns it now.
+      ensure_password(self._params)
+      self._params.remove("AgentSuspended")
+    self._params.put_bool("AgentEnabled", state, block=True)
 
   def _on_joystick_debug_mode(self, state: bool):
     self._params.put_bool("JoystickDebugMode", state, block=True)

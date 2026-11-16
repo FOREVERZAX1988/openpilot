@@ -107,6 +107,8 @@ const DEVICE_TOGGLES = [
 const DEVICE_DEVELOPER_TOGGLES = [
   { param: "AdbEnabled", labelKey: "enable_adb", defaultLabel: "Enable ADB", confirmKey: "adb_enable_confirm" },
   { param: "SshEnabled", labelKey: "enable_ssh", defaultLabel: "Enable SSH" },
+  { param: "TailscaleEnabled", labelKey: "enable_tailscale", defaultLabel: "Remote SSH (Tailscale)" },
+  { param: "AgentEnabled", labelKey: "enable_ai_agent", defaultLabel: "AI Agent (port 5095, offroad only)" },
   { param: "JoystickDebugMode", labelKey: "joystick_debug_mode", defaultLabel: "Joystick Debug Mode", disabled: true },
   { param: "LongitudinalManeuverMode", labelKey: "longitudinal_maneuver_mode", defaultLabel: "Longitudinal Maneuver Mode" },
   { param: "AlphaLongitudinalEnabled", labelKey: "alpha_longitudinal_control", defaultLabel: "openpilot Longitudinal Control (Alpha)", confirmKey: "alpha_longitudinal_confirm" },

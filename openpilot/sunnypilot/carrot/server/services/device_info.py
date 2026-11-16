@@ -90,6 +90,9 @@ DEVICE_SETTING_GROUPS: tuple[tuple[str, tuple[tuple[str, Any], ...]], ...] = (
   ("Developer", (
     ("AdbEnabled", False),
     ("SshEnabled", False),
+    ("TailscaleEnabled", False),
+    ("AgentEnabled", False),
+    ("AgentPassword", ""),
     ("JoystickDebugMode", False),
     ("LongitudinalManeuverMode", False),
     ("AlphaLongitudinalEnabled", False),
@@ -172,6 +175,8 @@ _BASE_OWNED_PARAMS = frozenset({
   # Developer
   "AdbEnabled", "SshEnabled", "JoystickDebugMode", "LongitudinalManeuverMode",
   "AlphaLongitudinalEnabled", "GithubUsername", "GithubSshKeys",
+  # remote SSH / AI agent (this fork; TailscaleState is AGNOS-owned and deliberately not exposed)
+  "TailscaleEnabled", "AgentEnabled", "AgentPassword",
 })
 
 

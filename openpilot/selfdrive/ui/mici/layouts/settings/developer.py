@@ -75,6 +75,14 @@ class DeveloperLayoutMici(NavScroller):
                                              description=tr("Use Android Debug Bridge (ADB) over USB or the network."), title=tr("enable ADB"))
     self._ssh_toggle = BigCircleParamControl(gui_app.texture("icons_mici/ssh_short.png", 82, 82), "SshEnabled", icon_offset=(0, 12),
                                              description=tr("Access the device remotely using your SSH keys."), title=tr("enable SSH"))
+    self._tailscale_toggle = BigCircleParamControl(gui_app.texture("icons_mici/ssh_short.png", 82, 82), "TailscaleEnabled", icon_offset=(0, 12),
+                                                   description=tr("Remote SSH from anywhere via Tailscale. Enable, then scan the QR shown on the main UI."),
+                                                   title=tr("remote SSH"))
+    self._agent_toggle = BigCircleParamControl(gui_app.texture("icons_mici/settings/developer/ssh.png", 82, 82), "AgentEnabled",
+                                               toggle_callback=self._on_enable_agent, icon_offset=(0, 12),
+                                               description=tr("Built-in AI agent, offroad only. Browser access on port 5095;"
+                                                              + " see the web panel for the password."),
+                                               title=tr("AI agent"))
     self._joystick_toggle = BigToggle(tr("joystick debug\nmode"), initial_state=ui_state.params.get_bool("JoystickDebugMode"),
                                       toggle_callback=self._on_joystick_debug_mode, description=tr("Control the car with a joystick for debugging."))
     self._long_maneuver_toggle = BigToggle(tr("longitudinal maneuver mode"), initial_state=ui_state.params.get_bool("LongitudinalManeuverMode"),
@@ -95,6 +103,8 @@ class DeveloperLayoutMici(NavScroller):
     self._scroller.add_widgets([
       self._adb_toggle,
       self._ssh_toggle,
+      self._tailscale_toggle,
+      self._agent_toggle,
       self._ssh_keys_btn,
       self._joystick_toggle,
       self._long_maneuver_toggle,
@@ -108,6 +118,8 @@ class DeveloperLayoutMici(NavScroller):
     self._refresh_toggles = (
       ("AdbEnabled", self._adb_toggle),
       ("SshEnabled", self._ssh_toggle),
+      ("TailscaleEnabled", self._tailscale_toggle),
+      ("AgentEnabled", self._agent_toggle),
       ("JoystickDebugMode", self._joystick_toggle),
       ("LongitudinalManeuverMode", self._long_maneuver_toggle),
       ("LateralManeuverMode", self._lat_maneuver_toggle),
@@ -128,6 +140,8 @@ class DeveloperLayoutMici(NavScroller):
       item.set_enabled(lambda: ui_state.is_offroad())
     # Jetlink holds the USB port that ADB needs
     self._adb_toggle.set_enabled(lambda: ui_state.is_offroad() and not ui_state.adb_blocked)
+    # AI agent is parked-only by design (manager offroad gate + MCP gate)
+    self._agent_toggle.set_enabled(lambda: ui_state.is_offroad())
 
     # Disable toggles that require not engaged
     for item in engaged_blocked_toggles:
@@ -176,6 +190,14 @@ class DeveloperLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+
+  def _on_enable_agent(self, state: bool):
+    if state:
+      # Generate the web login password up front and clear the idle-suspend
+      # marker so the manager spawns the agent on the next offroad pass.
+      from openpilot.sunnypilot.agent.agent_process import ensure_password
+      ensure_password(ui_state.params)
+      ui_state.params.remove("AgentSuspended")
 
   def _on_joystick_debug_mode(self, state: bool):
     ui_state.params.put_bool("JoystickDebugMode", state, block=True)
