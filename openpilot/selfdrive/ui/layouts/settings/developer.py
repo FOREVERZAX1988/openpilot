@@ -1,10 +1,11 @@
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.widgets.ssh_key import ssh_key_item
 from openpilot.selfdrive.ui.widgets.tailscale_dialog import TailscaleDialog
+from openpilot.system.ui.sunnypilot.widgets.input_dialog import InputDialogSP
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.agent.agent_process import ensure_password, reset_password
 from openpilot.system.ui.widgets import Widget
-from openpilot.system.ui.widgets.list_view import button_item, toggle_item
+from openpilot.system.ui.widgets.list_view import button_item, dual_button_item, toggle_item
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
 from openpilot.system.ui.lib.application import gui_app
@@ -29,8 +30,17 @@ DESCRIPTIONS = {
     "Works over LTE too. An AGNOS update with tailscaled is required."
   ),
   'ai_agent': tr_noop(
-    "Built-in AI agent (opencode). Offroad only; browser access on port 5095 with the password below. " +
+    "Built-in AI agent (opencode). Offroad only; browser access on port 5095; the password is shown in the next row. " +
     "Vehicle-control parameters are hard-blocked. Requires an AGNOS update with opencode."
+  ),
+  'agent_password': tr_noop(
+    "Web login for the AI agent browser page (port 5095): username is always opencode, "
+    "the password is shown below. "
+    + "Set to type a custom one; Reset to generate a random one. "
+    + "The change takes effect within a minute, when the agent restarts."
+  ),
+  'tailscale_qr': tr_noop(
+    "Reopen the Tailscale pairing QR and the SSH address while Remote SSH is enabled."
   ),
   'alpha_longitudinal': tr_noop(
     "<b>WARNING: sunnypilot longitudinal control is in alpha for this car and may disable Automatic Emergency Braking (AEB).</b><br><br>"
@@ -75,6 +85,15 @@ class DeveloperLayout(Widget):
       callback=self._on_enable_tailscale,
     )
 
+    # Reopen the pairing dialog any time (not just on toggle-on): shows the
+    # QR while pairing, or the final SSH address once joined.
+    self._tailscale_qr = button_item(
+      lambda: tr("Pairing QR Code"),
+      lambda: tr("Show"),
+      description=lambda: tr(DESCRIPTIONS["tailscale_qr"]),
+      callback=self._on_show_tailscale_qr,
+    )
+
     # Built-in AI agent (opencode web, port 5095): manager-hosted, offroad only
     self._agent_toggle = toggle_item(
       lambda: tr("AI Agent"),
@@ -83,14 +102,13 @@ class DeveloperLayout(Widget):
       callback=self._on_enable_agent,
     )
 
-    self._agent_password_reset = button_item(
-      lambda: tr("Agent Password"),
+    # Agent password: view (in description) + edit (Set) + regenerate (Reset)
+    self._agent_password = dual_button_item(
+      lambda: tr("Set"),
       lambda: tr("Reset"),
-      description=lambda: tr(
-        "Regenerates the web login password shown above. "
-        + "The change takes effect within a minute, when the agent restarts."
-      ),
-      callback=self._on_reset_agent_password,
+      left_callback=self._on_set_agent_password,
+      right_callback=self._on_reset_agent_password,
+      description=lambda: self._agent_password_description(),
     )
 
     self._joystick_toggle = toggle_item(
@@ -136,8 +154,9 @@ class DeveloperLayout(Widget):
       self._ssh_toggle,
       self._ssh_keys,
       self._tailscale_toggle,
+      self._tailscale_qr,
       self._agent_toggle,
-      self._agent_password_reset,
+      self._agent_password,
       self._joystick_toggle,
       self._long_maneuver_toggle,
       self._lat_maneuver_toggle,
@@ -208,6 +227,9 @@ class DeveloperLayout(Widget):
   def _on_enable_ssh(self, state: bool):
     self._params.put_bool("SshEnabled", state, block=True)
 
+  def _on_show_tailscale_qr(self):
+    gui_app.push_widget(TailscaleDialog(self._params))
+
   def _on_enable_tailscale(self, state: bool):
     self._params.put_bool("TailscaleEnabled", state, block=True)
     if state:
@@ -217,11 +239,24 @@ class DeveloperLayout(Widget):
 
   def _agent_description(self) -> str:
     description = tr(DESCRIPTIONS["ai_agent"])
+    address = self._params.get("NetworkAddress") or "<device-ip>"
+    return f"{description}\nhttp://{address}:5095"
+
+  def _agent_password_description(self) -> str:
+    header = tr(DESCRIPTIONS["agent_password"])
     password = self._params.get("AgentPassword")
     if password:
-      address = self._params.get("NetworkAddress") or "<device-ip>"
-      return f"{description}\nhttp://{address}:5095  Password: {password}"
-    return description
+      return header + "\n" + f"{tr('Current password')}: {password}"
+    return header + "\n" + tr("No password generated yet — toggle AI Agent on to create one")
+
+  def _on_set_agent_password(self):
+    dlg = InputDialogSP(
+      tr("Set agent password"),
+      sub_title=tr("Used to log in to the agent web page on port 5095"),
+      current_text=self._params.get("AgentPassword") or "",
+      param="AgentPassword",
+    )
+    dlg.show()
 
   def _on_enable_agent(self, state: bool):
     if state:
@@ -232,7 +267,7 @@ class DeveloperLayout(Widget):
     self._params.put_bool("AgentEnabled", state, block=True)
 
   def _on_reset_agent_password(self):
-    reset_password(self._params)  # agent toggle's description lambda re-renders with the new value
+    reset_password(self._params)  # dual button's description lambda re-renders with the new value
 
   def _on_joystick_debug_mode(self, state: bool):
     self._params.put_bool("JoystickDebugMode", state, block=True)

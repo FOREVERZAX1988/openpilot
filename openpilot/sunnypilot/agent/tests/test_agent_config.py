@@ -34,14 +34,51 @@ class TestTailscaleState(unittest.TestCase):
 
 
 class TestOpencodeConfig(unittest.TestCase):
-  def test_permissions_denied_by_default(self):
+  # v2 "permissions" array: last matching rule wins, and every agent starts
+  # from an allow-all base policy, so these rules ARE the security model.
+  # The terminal tool is matched under BOTH action names (schema map says
+  # "bash"; ruleset is free-form) so a naming drift can't open a shell.
+  SHELL_ACTIONS = ("bash", "shell")
+  SUBAGENT_ACTIONS = ("subagent", "task")
+  PERMISSIONS_DENY = (
+    "external_directory", "edit", *SHELL_ACTIONS, "webfetch", "websearch", *SUBAGENT_ACTIONS, "skill",
+  )
+
+  def _effects(self, config, action):
+    return [r["effect"] for r in config["permissions"] if r["action"] == action]
+
+  def test_deny_actions(self):
     config = build_opencode_config("", "", "", ["wrapper.sh"])
-    self.assertEqual(config["permission"]["bash"], {"*": "deny"})
-    # Every builtin tool that reads arbitrary files or reaches the network must
-    # be denied: the agent runs as root and read/grep would bypass the MCP
-    # param whitelist entirely.
-    for key in ("webfetch", "websearch", "read", "grep", "glob", "list", "edit", "task", "lsp", "codesearch"):
-      self.assertEqual(config["permission"][key], "deny", key)
+    for action in self.PERMISSIONS_DENY:
+      self.assertEqual(self._effects(config, action)[-1], "deny", action)
+
+  def _decides(self, config, action, resource):
+    """Simulate opencode's last-match-wins rule resolution for one call."""
+    import fnmatch
+    effect = "allow"  # v2 base policy is allow-all
+    for rule in config["permissions"]:
+      if rule["action"] != action:
+        continue
+      if fnmatch.fnmatch(resource, rule["resource"]):
+        effect = rule["effect"]
+    return effect
+
+  def test_read_inside_project_allowed_and_fenced(self):
+    config = build_opencode_config("", "", "", ["wrapper.sh"])
+    # Project source reads work...
+    self.assertEqual(self._decides(config, "read", "openpilot/common/params.py"), "allow")
+    # ...but secrets-shaped paths and git internals are denied...
+    self.assertEqual(self._decides(config, "read", "somewhere/.env"), "deny")
+    self.assertEqual(self._decides(config, "read", ".git/config"), "deny")
+    # ...and the external fence keeps builtin tools out of /data/params etc.
+    ext = [r for r in config["permissions"] if r["action"] == "external_directory"]
+    self.assertEqual(ext[-1]["effect"], "deny")
+    self.assertEqual(ext[-1]["resource"], "*")
+
+  def test_search_and_question_channels_open(self):
+    config = build_opencode_config("", "", "", ["wrapper.sh"])
+    for action in ("grep", "glob", "list", "question"):
+      self.assertEqual(self._effects(config, action)[-1], "allow", action)
 
   def test_mcp_server_registered(self):
     config = build_opencode_config("", "", "", ["/data/agent_ws/comma_mcp_launch.sh"])
@@ -68,6 +105,44 @@ class TestOpencodeConfig(unittest.TestCase):
   def test_password_strength(self):
     self.assertGreaterEqual(len(generate_password()), 16)
     self.assertNotEqual(generate_password(), generate_password())
+
+  # ── workshop tiers ────────────────────────────────────────────────────────
+
+  def test_edit_tier(self):
+    config = build_opencode_config("", "", "", ["w.sh"], workshop_mode="edit")
+    for action in ("edit", "webfetch", "websearch", "skill", *self.SUBAGENT_ACTIONS):
+      self.assertEqual(self._effects(config, action)[-1], "allow", action)
+    # shell asks for approval every time in edit tier
+    for action in self.SHELL_ACTIONS:
+      self.assertEqual(self._effects(config, action)[-1], "ask", action)
+    # the external fence holds in every tier
+    ext = [r for r in config["permissions"] if r["action"] == "external_directory"]
+    self.assertEqual(ext[-1]["effect"], "deny")
+
+  def test_full_tier(self):
+    config = build_opencode_config("", "", "", ["w.sh"], workshop_mode="full")
+    for action in ("edit", "webfetch", "websearch", "skill", *self.SHELL_ACTIONS, *self.SUBAGENT_ACTIONS):
+      self.assertEqual(self._effects(config, action)[-1], "allow", action)
+
+  def test_invalid_mode_falls_back_to_readonly(self):
+    for mode in ("", "banana", "FULL", "Edit"):
+      config = build_opencode_config("", "", "", ["w.sh"], workshop_mode=mode)
+      for action in self.PERMISSIONS_DENY:
+        self.assertEqual(self._effects(config, action)[-1], "deny", f"{mode!r}: {action}")
+
+  def test_prompt_reflects_tier(self):
+    readonly = build_opencode_config("", "", "", ["w.sh"])
+    edit = build_opencode_config("", "", "", ["w.sh"], workshop_mode="edit")
+    full = build_opencode_config("", "", "", ["w.sh"], workshop_mode="full")
+    self.assertIn("read-only diagnosis", readonly["agent"]["comma-agent"]["prompt"])
+    self.assertIn("Workshop edit mode", edit["agent"]["comma-agent"]["prompt"])
+    self.assertIn("Full workshop mode", full["agent"]["comma-agent"]["prompt"])
+
+  def test_instructions_injected_and_filtered(self):
+    config = build_opencode_config("", "", "", ["w.sh"], instructions=["/data/openpilot/sunnypilot/agent/knowledge/device_environment.md"])
+    self.assertEqual(config["instructions"], ["/data/openpilot/sunnypilot/agent/knowledge/device_environment.md"])
+    config = build_opencode_config("", "", "", ["w.sh"], instructions=["", "  "])
+    self.assertNotIn("instructions", config)
 
 
 if __name__ == "__main__":

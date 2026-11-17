@@ -92,6 +92,12 @@
             # 避免污染产树），经 gh-proxy 浅克隆；整体失败时撤销覆盖回退直连重试。
             git config -f .gitmodules --get-regexp 'submodule\..*\.url' | while IFS=' ' read key url; do
               case "$url" in
+                # tinygrad 的 pinned commit 不在 sunnypilot/tinygrad master 历史里，走自建
+                # CNB 浅镜像（mouxancnb/tinygrad，master tip = pinned 4ffcdb3f2）；gh-proxy
+                # 对其大 pack 极慢且频繁断流（曾 41 分钟断在 73%）
+                https://github.com/sunnypilot/tinygrad.git)
+                  git config submodule.tinygrad.url "https://cnb.cool/mouxancnb/tinygrad.git"
+                  echo "mirror: tinygrad_repo -> cnb.cool/mouxancnb/tinygrad" ;;
                 https://github.com/*)
                   name=${key#submodule.}
                   name=${name%.url}
@@ -114,6 +120,24 @@
               echo "=== submodule not at pinned commit ==="
               exit 1
             fi
+            # 完整性自检+自愈：checkout fatal 时 HEAD 已指目标 sha，git submodule status
+            # 仍显示 OK、上述检查放行 —— 实测 CI 曾静默打出缺 6 个子模块内容的 staging
+            # （import opendbc 报 ModuleNotFoundError）。逐个校验 worktree 与 HEAD 一致，
+            # 落空则强制重检（已 clone 的只重跑 checkout，秒级），仍不一致则 fail-fast。
+            git config -f .gitmodules --get-regexp 'submodule\..*\.path' | while IFS=' ' read key path; do
+              if git -C "$path" status --porcelain 2>/dev/null | grep -q . \
+                 || [ -z "$(ls -A "$path" 2>/dev/null)" ]; then
+                echo "=== submodule '$path' worktree incomplete, force re-checkout ==="
+                git submodule update --init --force --depth 1 --progress -- "$path"
+              fi
+              if git -C "$path" status --porcelain 2>/dev/null | grep -q . \
+                 || [ -z "$(ls -A "$path" 2>/dev/null)" ]; then
+                echo "=== FATAL: submodule '$path' still incomplete after re-checkout ==="
+                git submodule status
+                exit 1
+              fi
+            done || exit 1
+            echo "all submodule worktrees complete"
             echo "all submodules OK"
 
         - name: build stripped tree
