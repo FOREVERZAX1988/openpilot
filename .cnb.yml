@@ -53,12 +53,31 @@
               sed -i 's|archive.ubuntu.com|mirrors.cloud.tencent.com|g; s|security.ubuntu.com|mirrors.cloud.tencent.com|g' /etc/apt/sources.list
             fi
             apt-get update
-            apt-get install -y --no-install-recommends git git-lfs python3 ca-certificates \
-              > /tmp/apt.log 2>&1 || {
-                echo "=== apt failed, tail ==="
-                tail -c 3000 /tmp/apt.log
+            # 先装不依赖 python3/tzdata 的基础包，失败即打印尾部日志
+            apt-get install -y --no-install-recommends \
+              git git-lfs ca-certificates > /tmp/apt-base.log 2>&1 || {
+                echo "=== base apt failed, tail ==="
+                tail -c 3000 /tmp/apt-base.log
                 exit 1
               }
+            # python3 单独安装。CNB 任务容器把 /etc/localtime bind-mount 进来，
+            # tzdata postinst `mv /etc/localtime.dpkg-new /etc/localtime` 会报
+            # "Device or resource busy"（与 agnos-builder 同坑），连装会被连锁
+            # 拖垮。失败时把 tzdata postinst 换成 no-op 再补配置。
+            apt-get install -y --no-install-recommends \
+              python3 > /tmp/apt-py.log 2>&1 || {
+                echo "=== python3 apt failed, applying /etc/localtime bind-mount workaround ==="
+                tail -c 1200 /tmp/apt-py.log || true
+                printf '#!/bin/sh\nexit 0\n' > /var/lib/dpkg/info/tzdata.postinst
+                DEBIAN_FRONTEND=noninteractive apt-get install -f -y \
+                  --no-install-recommends > /tmp/apt-fix.log 2>&1 || {
+                    echo "=== install -f failed, tail ==="
+                    tail -c 2000 /tmp/apt-fix.log
+                    exit 1
+                  }
+                echo "=== tzdata workaround applied ==="
+              }
+            python3 --version
             git lfs install
 
         - name: init submodules (github.com ones via gh-proxy)
