@@ -1,4 +1,4 @@
-"""Manager-hosted launcher for the built-in AI agent (opencode web, port 5095).
+"""Manager-hosted launcher for the built-in AI agent (opencode serve, port 5095).
 
 Registered in system/manager/process_config.py behind the ai_agent_run gate:
 offroad only, gated on AgentEnabled, and stopped whenever AgentSuspended is set
@@ -9,7 +9,10 @@ Responsibilities:
 - generate the opencode config via sunnypilot/agent/opencode_config.py into the
   agent workspace, both via OPENCODE_CONFIG and the XDG path so the launcher
   works across opencode config-discovery changes
-- spawn `opencode web --hostname 0.0.0.0 --port 5095` with the password env
+- spawn `opencode serve --hostname 0.0.0.0 --port 5095` with the password env
+  (opencode v2.3.0 has no `web` subcommand; `serve` is the v2 API + web server.
+  Its Basic auth expects username "opencode" + OPENCODE_SERVER_PASSWORD; static
+  assets are served without auth, only API routes are gated)
 - idle watchdog: with no browser connected to 5095 for IDLE_EXIT_MINUTES the
   process writes AgentSuspended and exits (parked devices keep the RAM)
 
@@ -174,7 +177,7 @@ def main() -> None:
   except Exception:
     cloudlog.exception("failed to set agent core affinity")
 
-  cmd = [binary, "web", "--hostname", "0.0.0.0", "--port", str(AGENT_PORT)]
+  cmd = [binary, "serve", "--hostname", "0.0.0.0", "--port", str(AGENT_PORT)]
   cloudlog.info(f"starting AI agent: {' '.join(cmd)}")
   proc = subprocess.Popen(cmd, cwd=AGENT_WS, env=env)
 

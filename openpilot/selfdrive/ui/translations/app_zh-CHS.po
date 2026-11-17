@@ -7815,8 +7815,8 @@ msgid "Reopen the Tailscale pairing QR and the SSH address while Remote SSH is e
 msgstr "远程 SSH 开启期间，重新打开 Tailscale 配对二维码和 SSH 地址。"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
-msgid "Web login password for the AI agent browser page (port 5095). Set to type a custom one; Reset to generate a random one. The change takes effect within a minute, when the agent restarts."
-msgstr "AI 助手浏览器页面（5095 端口）的网页登录密码。点「设置」输入自定义密码；点「重置」随机生成。修改约 1 分钟内（助手重启后）生效。"
+msgid "Web login for the AI agent browser page (port 5095): username is always opencode, the password is shown below. Set to type a custom one; Reset to generate a random one. The change takes effect within a minute, when the agent restarts."
+msgstr "AI 助手浏览器页面（5095 端口）的网页登录：用户名固定为 opencode，密码见下一行。点「设置」输入自定义密码；点「重置」随机生成。修改约 1 分钟内（助手重启后）生效。"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
 msgid "Set"

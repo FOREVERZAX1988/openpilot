@@ -34,7 +34,8 @@ DESCRIPTIONS = {
     "Vehicle-control parameters are hard-blocked. Requires an AGNOS update with opencode."
   ),
   'agent_password': tr_noop(
-    "Web login password for the AI agent browser page (port 5095). "
+    "Web login for the AI agent browser page (port 5095): username is always opencode, "
+    "the password is shown below. "
     + "Set to type a custom one; Reset to generate a random one. "
     + "The change takes effect within a minute, when the agent restarts."
   ),
