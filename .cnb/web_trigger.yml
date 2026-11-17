@@ -1,0 +1,9 @@
+# 手动触发按钮（等同 GitHub Actions release.yaml 的 workflow_dispatch）。
+# master 分支详情页会出现「打包发布 staging」按钮，
+# 点击后以 web_trigger_release 事件拉起 .cnb.yml 中 "$" 段的同名流水线。
+branch:
+  - reg: ^master$
+    buttons:
+      - name: 打包发布 staging
+        description: master 精简打包（build_stripped）并增量推送 CNB staging 分支
+        event: web_trigger_release

@@ -1,0 +1,110 @@
+# 云原生构建（CNB）流水线 —— openpilot staging 打包发布。
+#
+# 本文件是 .github/workflows/release.yaml（GitHub Actions 版「打包发布 CNB」）的
+# CNB 原生等价：把 master 分支精简打包（build_stripped.sh）后增量推送到本仓库
+# staging 分支，设备 OTA 即从 staging 拉取。
+#
+# 设计要点：
+#   * 仅手动触发（web_trigger 按钮，见 .cnb/web_trigger.yml），与 release.yaml 的
+#     workflow_dispatch 对等；发布节奏保持人工控制，不挂 master push 自动触发。
+#   * 打包是纯 git 操作（无编译），任意架构可跑。用 arm64（与本命名空间可用的
+#     runner 池一致 —— agnos-builder 同款；amd64 池无机器，分配直接失败）。
+#   * 平台 submodule 代拉关闭：.gitmodules 里 msgq/rednose/teleoprtc/tinygrad 指向
+#     github.com，CNB runner 直连 GitHub 不稳（参见 agnos-builder 同类处理），改由
+#     "init submodules" 阶段经 gh-proxy 浅克隆、失败回退直连；cnb.cool 上的子模块
+#     （panda/opendbc/jetlink/ai/neural_network_data）走原生地址不受影响。
+#   * LFS：平台 clone 会按 master HEAD 完整 smudge（含 767MB 的 big_driving 源模型）；
+#     release_files.py 已把 big_* 模型排除出精简树（无运行时引用），属可控的空间开销，
+#     换取流水线内不再单独处理 LFS 过滤。
+#   * 发布复用 release.yaml 的增量推送策略：以 CNB staging 当前 tip 为父提交
+#     commit-tree 挂链，推送只含变化对象；staging 分支不存在 / fetch 失败 /
+#     强制全量时回退 push -f（脚本内置兜底）。推送认证直接用流水线内置 CNB_TOKEN，
+#     无需配置 secret。
+#   * 注意：CNB stage 脚本默认用 dash(sh) 执行，跨阶段共享文件系统（/tmp 亦然）；
+#     需要 bash 语义的步骤显式 `bash xxx.sh` 调用。
+
+"$":
+  web_trigger_release:
+    - name: release-staging
+      runner:
+        tags: cnb:arch:arm64:v8
+        cpus: 16
+      docker:
+        image: ubuntu:24.04
+      git:
+        submodules:
+          enable: false
+      env:
+        CNB_REPO: mouxancnb/openpilot
+        # 固定 TARGET_DIR（脚本未设置时会 mktemp 随机目录），供发布阶段复用精简树。
+        # 必须放在工作区外：build_stripped.sh 里的 git clean -xdff 会清掉工作区内未跟踪目录。
+        TARGET_DIR: /tmp/stripped-cnb
+      stages:
+        - name: install build deps
+          script: |
+            set -e
+            # 容器内无 TERM，tzdata 默认进交互配置会 dpkg 报错
+            export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+            echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections || true
+            echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections || true
+            if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+              sed -i 's|archive.ubuntu.com|mirrors.cloud.tencent.com|g; s|security.ubuntu.com|mirrors.cloud.tencent.com|g' /etc/apt/sources.list.d/ubuntu.sources
+            else
+              sed -i 's|archive.ubuntu.com|mirrors.cloud.tencent.com|g; s|security.ubuntu.com|mirrors.cloud.tencent.com|g' /etc/apt/sources.list
+            fi
+            apt-get update
+            apt-get install -y --no-install-recommends git git-lfs python3 ca-certificates \
+              > /tmp/apt.log 2>&1 || {
+                echo "=== apt failed, tail ==="
+                tail -c 3000 /tmp/apt.log
+                exit 1
+              }
+            git lfs install
+
+        - name: init submodules (github.com ones via gh-proxy)
+          script: |
+            set -e
+            # 平台同族子模块（cnb.cool）鉴权兜底：私有仓库匿名克隆失败时用流水线
+            # 内置 token 经 insteadOf 重写 URL（insteadOf 不回显，token 不进日志）
+            if [ -n "${CNB_TOKEN:-}" ]; then
+              git config url."https://cnb:${CNB_TOKEN}@cnb.cool/".insteadOf "https://cnb.cool/"
+            fi
+            # 对指向 github.com 的子模块写 .git/config 级 URL 覆盖（不动 .gitmodules 文件，
+            # 避免污染产树），经 gh-proxy 浅克隆；整体失败时撤销覆盖回退直连重试。
+            git config -f .gitmodules --get-regexp 'submodule\..*\.url' | while IFS=' ' read key url; do
+              case "$url" in
+                https://github.com/*)
+                  name=${key#submodule.}
+                  name=${name%.url}
+                  git config "submodule.$name.url" "https://gh-proxy.com/$url"
+                  echo "mirror: $name -> gh-proxy" ;;
+              esac
+            done
+            if ! git submodule update --init --depth 1 --progress; then
+              echo "=== gh-proxy submodule fetch failed, falling back to direct github ==="
+              git config -f .gitmodules --get-regexp 'submodule\..*\.url' | while IFS=' ' read key url; do
+                name=${key#submodule.}
+                name=${name%.url}
+                git config --unset "submodule.$name.url" 2>/dev/null || true
+              done
+              git submodule update --init --depth 1 --progress
+            fi
+            # 全部子模块必须停在 pinned commit（无 -/+ 前缀），否则产树会打包错误版本
+            git submodule status
+            if git submodule status | grep -qE '^[-+]'; then
+              echo "=== submodule not at pinned commit ==="
+              exit 1
+            fi
+            echo "all submodules OK"
+
+        - name: build stripped tree
+          script: |
+            set -e
+            BRANCH=staging TARGET_DIR="$TARGET_DIR" SKIP_ORIGIN_PUSH=1 \
+              bash ./tools/release/build_stripped.sh
+            echo "=== stripped tree ready ==="
+            git -C "$TARGET_DIR" log --oneline -1
+            echo "tree size: $(du -sh "$TARGET_DIR" | cut -f1)"
+
+        - name: publish staging to CNB
+          script: bash .cnb/scripts/publish_staging.sh
