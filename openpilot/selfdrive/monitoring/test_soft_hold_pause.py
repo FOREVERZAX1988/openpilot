@@ -8,6 +8,7 @@ checks still see a fresh packet.
 import unittest
 from types import SimpleNamespace as NS
 
+from cereal import messaging
 from opendbc.car.structs import car
 
 from openpilot.selfdrive.monitoring.dmonitoringd import (
@@ -71,24 +72,41 @@ class TestSoftHoldEligible(unittest.TestCase):
 
 
 class _Monitor:
-  """Minimal stand-in exposing only what soft_hold_state_packet touches."""
+  """Stand-in backed by a REAL capnp message.
+
+  A plain SimpleNamespace happily accepts any attribute, which let a schema
+  mismatch (writing lockout percents at the top level when the fork moved them
+  into the deprecated group) pass every test while crashing dmonitoringd on
+  device. Use the real message so an unknown field raises immediately.
+  """
 
   def __init__(self):
     self.calls = 0
 
   def get_state_packet(self, valid=True):
     self.calls += 1
-    state = NS(
-      lockout=True, alertCountLockoutPercent=50, alertTimeLockoutPercent=60,
-      lockoutRecoveryPercent=70, alert3Count=3, noResponseCount=4,
-      noResponseForceDecel=True, alwaysOnLockout=True, alertLevel='three',
-      isRHD=True, activePolicy='vision',
-      visionPolicyState=NS(awarenessPercent=5, awarenessStep=1, isDistracted=True,
-                           distractedTypes=NS(pose=True, eye=True, phone=True),
-                           faceDetected=True, wheeltouchFallbackPercent=10),
-      wheeltouchPolicyState=NS(awarenessPercent=5),
-    )
-    return NS(driverMonitoringState=state, valid=valid)
+    dat = messaging.new_message('driverMonitoringState', valid=valid)
+    state = dat.driverMonitoringState
+    state.lockout = True
+    state.deprecated.alertCountLockoutPercent = 50
+    state.deprecated.alertTimeLockoutPercent = 60
+    state.alert3Count = 3
+    state.noResponseCount = 4
+    state.noResponseForceDecel = True
+    state.alwaysOnLockout = True
+    state.alertLevel = 'three'
+    state.isRHD = True
+    state.activePolicy = 'vision'
+    state.visionPolicyState.awarenessPercent = 5
+    state.visionPolicyState.awarenessStep = 1
+    state.visionPolicyState.isDistracted = True
+    state.visionPolicyState.distractedTypes.pose = True
+    state.visionPolicyState.distractedTypes.eye = True
+    state.visionPolicyState.distractedTypes.phone = True
+    state.visionPolicyState.faceDetected = True
+    state.visionPolicyState.wheeltouchFallbackPercent = 10
+    state.wheeltouchPolicyState.awarenessPercent = 5
+    return dat
 
 
 class TestSoftHoldPacket(unittest.TestCase):
@@ -96,14 +114,13 @@ class TestSoftHoldPacket(unittest.TestCase):
     monitor = _Monitor()
     state = soft_hold_state_packet(monitor).driverMonitoringState
     self.assertFalse(state.lockout)
-    self.assertEqual(state.alertLevel, 'none')
+    self.assertEqual(str(state.alertLevel), 'none')
     self.assertEqual(state.alert3Count, 0)
     self.assertEqual(state.noResponseCount, 0)
     self.assertFalse(state.noResponseForceDecel)
     self.assertFalse(state.alwaysOnLockout)
-    self.assertEqual(state.alertCountLockoutPercent, 0)
-    self.assertEqual(state.alertTimeLockoutPercent, 0)
-    self.assertEqual(state.lockoutRecoveryPercent, 0)
+    self.assertEqual(state.deprecated.alertCountLockoutPercent, 0)
+    self.assertEqual(state.deprecated.alertTimeLockoutPercent, 0)
 
   def test_awareness_and_distraction_are_neutralized(self):
     state = soft_hold_state_packet(_Monitor()).driverMonitoringState
@@ -119,7 +136,7 @@ class TestSoftHoldPacket(unittest.TestCase):
     state = soft_hold_state_packet(_Monitor()).driverMonitoringState
     self.assertTrue(state.isRHD)
     self.assertTrue(state.visionPolicyState.faceDetected)
-    self.assertEqual(state.activePolicy, 'vision')
+    self.assertEqual(str(state.activePolicy), 'vision')
 
   def test_valid_flag_is_propagated(self):
     self.assertTrue(soft_hold_state_packet(_Monitor(), valid=True).valid)

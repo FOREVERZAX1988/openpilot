@@ -117,9 +117,13 @@ def soft_hold_state_packet(monitor, valid=True):
   dat = monitor.get_state_packet(valid=valid)
   state = dat.driverMonitoringState
   state.lockout = False
-  state.alertCountLockoutPercent = 0
-  state.alertTimeLockoutPercent = 0
-  state.lockoutRecoveryPercent = 0
+  # This fork moved the lockout percents into the deprecated group (see
+  # dm2d.disabled_state_packet) and dropped lockoutRecoveryPercent entirely.
+  # Writing these at the top level raises capnp "struct has no such member"
+  # and kills dmonitoringd, which then starves driverMonitoringState and
+  # triggers Low IPC Rate -> softDisable.
+  state.deprecated.alertCountLockoutPercent = 0
+  state.deprecated.alertTimeLockoutPercent = 0
   state.alert3Count = 0
   state.noResponseCount = 0
   state.noResponseForceDecel = False
