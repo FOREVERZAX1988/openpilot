@@ -120,6 +120,24 @@
               echo "=== submodule not at pinned commit ==="
               exit 1
             fi
+            # 完整性自检+自愈：checkout fatal 时 HEAD 已指目标 sha，git submodule status
+            # 仍显示 OK、上述检查放行 —— 实测 CI 曾静默打出缺 6 个子模块内容的 staging
+            # （import opendbc 报 ModuleNotFoundError）。逐个校验 worktree 与 HEAD 一致，
+            # 落空则强制重检（已 clone 的只重跑 checkout，秒级），仍不一致则 fail-fast。
+            git config -f .gitmodules --get-regexp 'submodule\..*\.path' | while IFS=' ' read key path; do
+              if git -C "$path" status --porcelain 2>/dev/null | grep -q . \
+                 || [ -z "$(ls -A "$path" 2>/dev/null)" ]; then
+                echo "=== submodule '$path' worktree incomplete, force re-checkout ==="
+                git submodule update --init --force --depth 1 --progress -- "$path"
+              fi
+              if git -C "$path" status --porcelain 2>/dev/null | grep -q . \
+                 || [ -z "$(ls -A "$path" 2>/dev/null)" ]; then
+                echo "=== FATAL: submodule '$path' still incomplete after re-checkout ==="
+                git submodule status
+                exit 1
+              fi
+            done || exit 1
+            echo "all submodule worktrees complete"
             echo "all submodules OK"
 
         - name: build stripped tree
