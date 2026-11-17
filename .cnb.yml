@@ -7,7 +7,8 @@
 # 设计要点：
 #   * 仅手动触发（web_trigger 按钮，见 .cnb/web_trigger.yml），与 release.yaml 的
 #     workflow_dispatch 对等；发布节奏保持人工控制，不挂 master push 自动触发。
-#   * 打包是纯 git 操作（无编译），任意架构可跑，选 amd64（排队快、资源充裕）。
+#   * 打包是纯 git 操作（无编译），任意架构可跑。用 arm64（与本命名空间可用的
+#     runner 池一致 —— agnos-builder 同款；amd64 池无机器，分配直接失败）。
 #   * 平台 submodule 代拉关闭：.gitmodules 里 msgq/rednose/teleoprtc/tinygrad 指向
 #     github.com，CNB runner 直连 GitHub 不稳（参见 agnos-builder 同类处理），改由
 #     "init submodules" 阶段经 gh-proxy 浅克隆、失败回退直连；cnb.cool 上的子模块
@@ -26,8 +27,8 @@
   web_trigger_release:
     - name: release-staging
       runner:
-        tags: cnb:arch:amd64:v8
-        cpus: 8
+        tags: cnb:arch:arm64:v8
+        cpus: 16
       docker:
         image: ubuntu:24.04
       git:
