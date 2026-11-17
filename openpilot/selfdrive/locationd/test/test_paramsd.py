@@ -68,3 +68,49 @@ class TestParamsd(OpenpilotTestCase):
 
     learner.handle_log(3.0, "carState", cs)
     self.assertTrue(learner.active)
+
+  def test_inputsOK_false_ignores_yaw_rate_and_roll(self):
+    """paramsd must not learn from deviceMotion that locationd has rejected.
+
+    On 2026-11-17 route 0000002d seg4, locationd set inputsOK=false for the
+    whole segment (gyro/camera yaw-rate cross-check tripped on Macan vibration)
+    while angularVelocityDevice.valid / posenetOK / sensorsOK all stayed true.
+    paramsd used those "valid" but upstream-rejected yaw rates to learn
+    angleOffset, which ran away to -13.9 deg, latched angleOffsetValid=false,
+    and surfaced as "Steering misalignment detected" after the next engage.
+    The learner must respect locationd's own verdict.
+    """
+    lr = migrate(LogReader(TEST_ROUTE), [migrate_carParams])
+    CP = next(m for m in lr if m.which() == "carParams").carParams
+    learner = VehicleParamsLearner(CP, CP.steerRatio, 1.0, 0.0)
+
+    def make_device_motion(inputs_ok):
+      dm = messaging.new_message("deviceMotion").deviceMotion
+      dm.timestamp = 4_000_000_000
+      dm.inputsOK = inputs_ok
+      dm.posenetOK = True
+      dm.sensorsOK = True
+      dm.angularVelocityDevice.valid = True
+      dm.angularVelocityDevice.x = 0.5
+      dm.angularVelocityDevice.y = 0.0
+      dm.angularVelocityDevice.z = 0.5
+      dm.angularVelocityDevice.xStd = 0.01
+      dm.angularVelocityDevice.yStd = 0.01
+      dm.angularVelocityDevice.zStd = 0.01
+      dm.orientationNED.valid = True
+      dm.orientationNED.x = 0.0
+      dm.orientationNED.y = 0.0
+      dm.orientationNED.z = 0.0
+      dm.orientationNED.xStd = 0.01
+      dm.orientationNED.yStd = 0.01
+      dm.orientationNED.zStd = 0.01
+      return dm
+
+    # locationd rejected its inputs: paramsd must bound yaw rate to 0 (the
+    # "invalid" fallback), not adopt the 0.5 rad/s device reading.
+    learner.handle_log(4.0, "deviceMotion", make_device_motion(False))
+    self.assertEqual(learner.observed_yaw_rate, 0.0)
+
+    # Control: same reading with inputsOK=true is adopted as before.
+    learner.handle_log(5.0, "deviceMotion", make_device_motion(True))
+    self.assertNotEqual(learner.observed_yaw_rate, 0.0)

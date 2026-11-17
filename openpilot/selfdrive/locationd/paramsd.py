@@ -91,7 +91,15 @@ class VehicleParamsLearner:
         calibrated_pose = device_motion
 
       yaw_rate, yaw_rate_std = calibrated_pose.angular_velocity.z, calibrated_pose.angular_velocity.z_std
-      yaw_rate_valid = msg.angularVelocityDevice.valid
+      # inputsOK is locationd's own all-inputs verdict. When it is false the
+      # gyro/camera cross-check has failed (e.g. excessive chassis vibration on
+      # Macan) and deviceMotion's yaw/roll are unreliable even though their
+      # individual `valid` bits stay true. Feeding those into the learner drove
+      # angleOffset to -13.x deg, latched angleOffsetValid=False and surfaced as
+      # "Steering misalignment detected" after the next engage cycle. Respect
+      # the upstream verdict so a temporary localization fault cannot corrupt
+      # the learned steering geometry. 2026-11-17 route 0000002d seg4/8 proof.
+      yaw_rate_valid = msg.angularVelocityDevice.valid and msg.inputsOK
       yaw_rate_valid = yaw_rate_valid and 0 < yaw_rate_std < 10  # rad/s
       yaw_rate_valid = yaw_rate_valid and abs(yaw_rate) < 1  # rad/s
       if not yaw_rate_valid:
@@ -101,7 +109,7 @@ class VehicleParamsLearner:
 
       localizer_roll, localizer_roll_std = device_motion.orientation.x, device_motion.orientation.x_std
       localizer_roll_std = np.radians(1) if np.isnan(localizer_roll_std) else localizer_roll_std
-      roll_valid = (localizer_roll_std < ROLL_STD_MAX) and (ROLL_MIN < localizer_roll < ROLL_MAX) and msg.sensorsOK
+      roll_valid = (localizer_roll_std < ROLL_STD_MAX) and (ROLL_MIN < localizer_roll < ROLL_MAX) and msg.sensorsOK and msg.inputsOK
       if roll_valid:
         roll = localizer_roll
         # Experimentally found multiplier of 2 to be best trade-off between stability and accuracy or similar?
