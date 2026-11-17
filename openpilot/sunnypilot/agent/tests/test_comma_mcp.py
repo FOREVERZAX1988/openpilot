@@ -94,6 +94,50 @@ class TestOffroadGate(unittest.TestCase):
       self.assertFalse(os.path.exists(os.path.join(params_dir, "DoReboot")))
 
 
+class TestOpencodeUpdate(unittest.TestCase):
+  def test_version_parsing(self):
+    self.assertEqual(comma_mcp._parse_version("v2.3.1"), (2, 3, 1))
+    self.assertEqual(comma_mcp._parse_version("2.10.0"), (2, 10, 0))
+    self.assertIsNone(comma_mcp._parse_version("abc"))
+    self.assertIsNone(comma_mcp._parse_version("v2.x.0"))
+
+  def test_refused_onroad(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "0", "AgentAutoUpdate": "1"})
+      result = comma_mcp.tool_update_opencode({"version": "v2.3.1"}, params_dir)
+      self.assertTrue(result.startswith("error:"))
+      self.assertFalse(os.path.exists("/data/opencode_backup"))
+
+  def test_requires_opt_in_param(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "1"})
+      result = comma_mcp.tool_update_opencode({"version": "v2.3.1"}, params_dir)
+      self.assertIn("AgentAutoUpdate", result)
+      self.assertTrue(result.startswith("error:"))
+
+  def test_rejects_bad_tag_and_downgrade(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "1", "AgentAutoUpdate": "1"})
+      # no version arg
+      self.assertTrue(comma_mcp.tool_update_opencode({}, params_dir).startswith("error:"))
+      # not a release tag
+      self.assertTrue(comma_mcp.tool_update_opencode({"version": "latest"}, params_dir).startswith("error:"))
+      self.assertTrue(comma_mcp.tool_update_opencode({"version": "2.3.1"}, params_dir).startswith("error:"))
+      # downgrade refused without touching anything (installed >= target)
+      real_version = comma_mcp._opencode_version
+      comma_mcp._opencode_version = lambda: "v2.3.0"
+      try:
+        result = comma_mcp.tool_update_opencode({"version": "v2.2.7"}, params_dir)
+      finally:
+        comma_mcp._opencode_version = real_version
+      self.assertIn("refusing to downgrade", result)
+
+  def test_new_param_whitelists(self):
+    self.assertIn("AgentAutoUpdate", comma_mcp.WRITE_PARAM_WHITELIST)
+    self.assertIn("AgentOpencodeVersion", comma_mcp.READ_PARAM_WHITELIST)
+    self.assertFalse(comma_mcp.is_control_param("AgentAutoUpdate"))
+
+
 class TestUploadLogs(unittest.TestCase):
   def _make_route(self, tmp: str, route: str, files: dict[str, int], xattr_pending: bool = True) -> None:
     route_dir = os.path.join(tmp, "realdata", route)

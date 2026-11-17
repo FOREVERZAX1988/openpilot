@@ -34,14 +34,47 @@ class TestTailscaleState(unittest.TestCase):
 
 
 class TestOpencodeConfig(unittest.TestCase):
-  def test_permissions_denied_by_default(self):
+  # v2 "permissions" array: last matching rule wins, and every agent starts
+  # from an allow-all base policy, so these rules ARE the security model.
+  PERMISSIONS_DENY = (
+    "external_directory", "edit", "shell", "webfetch", "websearch", "subagent", "skill",
+  )
+
+  def _effects(self, config, action):
+    return [r["effect"] for r in config["permissions"] if r["action"] == action]
+
+  def test_deny_actions(self):
     config = build_opencode_config("", "", "", ["wrapper.sh"])
-    self.assertEqual(config["permission"]["bash"], {"*": "deny"})
-    # Every builtin tool that reads arbitrary files or reaches the network must
-    # be denied: the agent runs as root and read/grep would bypass the MCP
-    # param whitelist entirely.
-    for key in ("webfetch", "websearch", "read", "grep", "glob", "list", "edit", "task", "lsp", "codesearch"):
-      self.assertEqual(config["permission"][key], "deny", key)
+    for action in self.PERMISSIONS_DENY:
+      self.assertEqual(self._effects(config, action)[-1], "deny", action)
+
+  def _decides(self, config, action, resource):
+    """Simulate opencode's last-match-wins rule resolution for one call."""
+    import fnmatch
+    effect = "allow"  # v2 base policy is allow-all
+    for rule in config["permissions"]:
+      if rule["action"] != action:
+        continue
+      if fnmatch.fnmatch(resource, rule["resource"]):
+        effect = rule["effect"]
+    return effect
+
+  def test_read_inside_project_allowed_and_fenced(self):
+    config = build_opencode_config("", "", "", ["wrapper.sh"])
+    # Project source reads work...
+    self.assertEqual(self._decides(config, "read", "openpilot/common/params.py"), "allow")
+    # ...but secrets-shaped paths and git internals are denied...
+    self.assertEqual(self._decides(config, "read", "somewhere/.env"), "deny")
+    self.assertEqual(self._decides(config, "read", ".git/config"), "deny")
+    # ...and the external fence keeps builtin tools out of /data/params etc.
+    ext = [r for r in config["permissions"] if r["action"] == "external_directory"]
+    self.assertEqual(ext[-1]["effect"], "deny")
+    self.assertEqual(ext[-1]["resource"], "*")
+
+  def test_search_and_question_channels_open(self):
+    config = build_opencode_config("", "", "", ["wrapper.sh"])
+    for action in ("grep", "glob", "list", "question"):
+      self.assertEqual(self._effects(config, action)[-1], "allow", action)
 
   def test_mcp_server_registered(self):
     config = build_opencode_config("", "", "", ["/data/agent_ws/comma_mcp_launch.sh"])

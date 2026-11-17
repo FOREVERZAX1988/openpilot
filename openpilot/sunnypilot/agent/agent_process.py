@@ -33,6 +33,11 @@ from openpilot.sunnypilot.agent.opencode_config import build_opencode_config, ge
 
 AGENT_PORT = 5095
 AGENT_WS = "/data/agent_ws"
+# The agent's project: the running openpilot source tree. The config grants
+# read/grep/glob/list inside it and fences off everything else via
+# external_directory deny, so builtin tools can never reach /data/params or
+# key material.
+OPENCODE_PROJECT = "/data/openpilot"
 # Model-provider API key store. The key lives in a 0600 file, not a param:
 # params are world-readable on device and ride along in param backups.
 AGENT_ENV_DIR = "/data/agent"
@@ -161,6 +166,11 @@ def main() -> None:
   env["OPENCODE_SERVER_PASSWORD"] = password
   env["OPENCODE_CONFIG"] = config_env_path
   env["XDG_CONFIG_HOME"] = os.path.join(AGENT_WS, ".config")
+  # Session/state data must NOT land inside the project: /data/openpilot is a
+  # git tree that gets wiped by OTA, and .opencode state would dirty git status.
+  data_home = os.path.join(AGENT_WS, ".local")
+  env["XDG_DATA_HOME"] = os.path.join(data_home, "share")
+  os.makedirs(env["XDG_DATA_HOME"], exist_ok=True)
 
   binary = OPENCODE_BIN if os.path.exists(OPENCODE_BIN) else shutil.which("opencode")
   if binary is None:
@@ -171,6 +181,16 @@ def main() -> None:
     params.put_bool("AgentSuspended", True, block=True)
     return
 
+  # Publish the running version so the MCP tools and the UI can compare it
+  # against upstream releases.
+  try:
+    ver = subprocess.run([binary, "--version"], capture_output=True, encoding="utf-8", timeout=15)
+    version = (ver.stdout or "").strip().split()[-1] if ver.returncode == 0 else ""
+    if version and version != params.get("AgentOpencodeVersion"):
+      params.put("AgentOpencodeVersion", version, block=True)
+  except (OSError, subprocess.TimeoutExpired):
+    pass
+
   # Parked diagnostics only: keep off the realtime cores, mirroring carrot_server.
   try:
     set_core_affinity([0, 1, 2, 3])
@@ -179,7 +199,7 @@ def main() -> None:
 
   cmd = [binary, "serve", "--hostname", "0.0.0.0", "--port", str(AGENT_PORT)]
   cloudlog.info(f"starting AI agent: {' '.join(cmd)}")
-  proc = subprocess.Popen(cmd, cwd=AGENT_WS, env=env)
+  proc = subprocess.Popen(cmd, cwd=OPENCODE_PROJECT, env=env)
 
   idle_deadline = time.monotonic() + IDLE_EXIT_MINUTES * 60
   try:

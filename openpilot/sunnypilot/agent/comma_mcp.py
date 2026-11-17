@@ -45,6 +45,8 @@ READ_PARAM_WHITELIST = frozenset({
   "IsOffroad",
   "NetworkAddress",
   "LastOffroadStatusPacket",
+  "AgentOpencodeVersion",
+  "AgentAutoUpdate",
 })
 
 # Params the agent may WRITE after explicit user approval. Everything that
@@ -58,6 +60,7 @@ WRITE_PARAM_WHITELIST = frozenset({
   "IsLdwEnabled",
   "DisengageOnAccelerator",
   "HotspotOnBoot",
+  "AgentAutoUpdate",  # opt-in switch for update_opencode; user-approved in the web panel
 })
 
 # Refused unconditionally, even if someone later adds them to a whitelist.
@@ -84,6 +87,15 @@ CONTROL_PARAM_BLACKLIST_EXACT = frozenset({
 
 MAX_LINES = 400
 ROUTE_DIR = "/data/media/0/realdata"
+
+# opencode runtime updates. The binary is normally pinned by AGNOS
+# (userspace/agent_setup.sh); this is the opt-in runtime update channel.
+OPENCODE_BIN = "/usr/local/bin/opencode"
+OPENCODE_BACKUP_DIR = "/data/opencode_backup"
+OPENCODE_STAGING_DIR = "/data/opencode_update"
+OPENCODE_RELEASES_API = "https://api.github.com/repos/sst/opencode/releases"
+OPENCODE_ASSET = "opencode-linux-arm64.tar.gz"
+DOWNLOAD_TIMEOUT_SECONDS = 900
 
 # Mirrors system/loggerd/uploader.py UPLOAD_ATTR_NAME/VALUE (stdlib-only here,
 # so the constant is duplicated; the uploader owns the semantics).
@@ -355,6 +367,159 @@ def tool_reboot_device(arguments: dict, params_dir: str) -> str:
   return "reboot requested via DoReboot param"
 
 
+# ── opencode runtime update tools ────────────────────────────────────────────
+
+def _parse_version(tag: str) -> tuple[int, ...] | None:
+  parts = tag.strip().lstrip("vV").split(".")
+  try:
+    return tuple(int(p) for p in parts[:3])
+  except ValueError:
+    return None
+
+
+def _opencode_version() -> str:
+  try:
+    proc = subprocess.run([OPENCODE_BIN, "--version"], capture_output=True, encoding="utf-8", errors="replace", timeout=15)
+    if proc.returncode == 0 and proc.stdout.strip():
+      return proc.stdout.strip().split()[-1]
+  except (OSError, subprocess.TimeoutExpired):
+    pass
+  return "unknown"
+
+
+def _fetch_releases(count: int = 5) -> list[dict]:
+  import urllib.request
+  req = urllib.request.Request(
+    f"{OPENCODE_RELEASES_API}?per_page={count}",
+    headers={"User-Agent": "comma-agent", "Accept": "application/vnd.github+json"},
+  )
+  with urllib.request.urlopen(req, timeout=30) as resp:
+    return json.load(resp)
+
+
+def _asset_for(release: dict) -> dict | None:
+  for asset in release.get("assets") or []:
+    if asset.get("name") == OPENCODE_ASSET:
+      return asset
+  return None
+
+
+def tool_check_opencode_update(arguments: dict, params_dir: str) -> str:
+  """Read-only: current binary version vs the most recent upstream releases."""
+  current = _opencode_version()
+  cur = _parse_version(current)
+  try:
+    releases = _fetch_releases()
+  except Exception as exc:
+    return f"error: cannot reach GitHub releases API: {type(exc).__name__}: {exc}"
+  lines = [f"installed: {current}", "recent upstream releases:"]
+  for release in releases:
+    tag = release.get("tag_name") or "?"
+    asset = _asset_for(release)
+    newer = ""
+    if cur and _parse_version(tag):
+      newer = " (newer than installed)" if _parse_version(tag) > cur else ""
+    lines.append(f"  {tag}{' [pre-release]' if release.get('prerelease') else ''}"
+                 f"{' [no arm64 asset]' if asset is None else ''}{newer}")
+  lines.append("to update: confirm with the user, set the AgentAutoUpdate param (needs their approval), then call update_opencode with the exact tag.")
+  return "\n".join(lines)
+
+
+def tool_update_opencode(arguments: dict, params_dir: str) -> str:
+  if not is_offroad(params_dir):
+    return "error: vehicle is onroad (or state unknown) - updates are allowed only while parked"
+  if read_param_file(params_dir, "AgentAutoUpdate") != "1":
+    return "error: AgentAutoUpdate param is not enabled - ask the user to enable it (set_params AgentAutoUpdate=1) before updating"
+
+  target = str(arguments.get("version") or "").strip()
+  tgt = _parse_version(target)
+  if not target.startswith("v") or tgt is None:
+    return "error: 'version' must be an exact release tag like 'v2.3.1'"
+
+  current = _opencode_version()
+  cur = _parse_version(current)
+  if cur is None:
+    return f"error: cannot determine installed version ({current!r}) - refusing to overwrite"
+  if tgt <= cur:
+    return f"error: refusing to downgrade or reinstall (installed {current}, target {target})"
+
+  import shutil
+  import tarfile
+  try:
+    release = next((r for r in _fetch_releases(20) if r.get("tag_name") == target), None)
+    if release is None:
+      return f"error: release {target} not found in the last 20 upstream releases"
+    asset = _asset_for(release)
+    if asset is None:
+      return f"error: release {target} has no {OPENCODE_ASSET} asset"
+    digest = str(asset.get("digest") or "")
+    if not digest.startswith("sha256:"):
+      return "error: release asset has no sha256 digest - refusing to install an unverified binary"
+
+    os.makedirs(OPENCODE_STAGING_DIR, exist_ok=True)
+    os.makedirs(OPENCODE_BACKUP_DIR, exist_ok=True)
+    tarball = os.path.join(OPENCODE_STAGING_DIR, OPENCODE_ASSET)
+    import urllib.request
+    req = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "comma-agent"})
+    with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT_SECONDS) as resp, open(tarball, "wb") as out:
+      shutil.copyfileobj(resp, out)
+    actual = _sha256_file(tarball)
+    if actual != digest.split(":", 1)[1]:
+      return f"error: sha256 mismatch (expected {digest.split(':', 1)[1][:16]}..., got {actual[:16]}...) - staged file deleted"
+  except Exception as exc:
+    return f"error: download failed: {type(exc).__name__}: {exc}"
+
+  # Backup then install. sudo is NOPASSWD on AGNOS; install needs root because
+  # /usr/local/bin is root-owned.
+  backup = os.path.join(OPENCODE_BACKUP_DIR, f"opencode.{current}")
+  try:
+    shutil.copy2(OPENCODE_BIN, backup)
+  except OSError as exc:
+    return f"error: cannot back up current binary: {exc}"
+
+  extract_dir = os.path.join(OPENCODE_STAGING_DIR, "unpack")
+  installed = False
+  try:
+    shutil.rmtree(extract_dir, ignore_errors=True)
+    os.makedirs(extract_dir)
+    with tarfile.open(tarball) as tf:
+      tf.extractall(extract_dir)  # noqa: S202 - tarball sha256-verified against the release digest
+      members = os.listdir(extract_dir)
+      binary_name = "opencode" if "opencode" in members else (members[0] if members else "")
+      new_binary = os.path.join(extract_dir, binary_name)
+      if not binary_name or not os.path.isfile(new_binary):
+        return "error: tarball layout unexpected - no opencode binary found; backup untouched"
+    proc = subprocess.run(
+      ["sudo", "-n", "install", "-m", "0755", new_binary, OPENCODE_BIN],
+      capture_output=True, encoding="utf-8", errors="replace", timeout=60,
+    )
+    if proc.returncode != 0:
+      return f"error: install failed: {(proc.stderr or proc.stdout).strip()[:200]}; backup at {backup}"
+    installed = True
+  finally:
+    shutil.rmtree(OPENCODE_STAGING_DIR, ignore_errors=True)
+
+  # Post-install validation with automatic rollback.
+  new_version = _opencode_version()
+  if new_version != target.lstrip("v") and new_version != target:
+    subprocess.run(["sudo", "-n", "install", "-m", "0755", backup, OPENCODE_BIN], capture_output=True, timeout=60)
+    return f"error: new binary reports {new_version!r} instead of {target} - rolled back to {current}"
+  return (
+    f"updated opencode {current} -> {target} (backup at {backup}). "
+    + ("Restart the AI agent (toggle it off/on in settings, or reboot) to run the new version."
+       if installed else "")
+  )
+
+
+def _sha256_file(path: str) -> str:
+  import hashlib
+  h = hashlib.sha256()
+  with open(path, "rb") as f:
+    for chunk in iter(lambda: f.read(1 << 20), b""):
+      h.update(chunk)
+  return h.hexdigest()
+
+
 TOOLS = [
   {
     "name": "read_logs",
@@ -423,6 +588,24 @@ TOOLS = [
     "description": "Reboot the device (offroad only, requires user approval).",
     "inputSchema": {"type": "object", "properties": {}},
   },
+  {
+    "name": "check_opencode_update",
+    "description": "Compare the installed opencode version against recent upstream releases (read-only, no changes).",
+    "inputSchema": {"type": "object", "properties": {}},
+  },
+  {
+    "name": "update_opencode",
+    "description": (
+      "Update the opencode binary to a specific newer release tag. Offroad only, "
+      "requires the AgentAutoUpdate param enabled (user-approved) and the user's explicit "
+      "confirmation of the target version. Verifies the sha256 digest and rolls back on failure."
+    ),
+    "inputSchema": {
+      "type": "object",
+      "properties": {"version": {"type": "string", "description": "exact release tag, e.g. 'v2.3.1'"}},
+      "required": ["version"],
+    },
+  },
 ]
 
 TOOL_HANDLERS = {
@@ -434,6 +617,8 @@ TOOL_HANDLERS = {
   "set_params": tool_set_params,
   "upload_logs": tool_upload_logs,
   "reboot_device": tool_reboot_device,
+  "check_opencode_update": tool_check_opencode_update,
+  "update_opencode": tool_update_opencode,
 }
 
 
