@@ -7745,3 +7745,159 @@ msgstr "用户数据分区\n无法挂载"
 #: openpilot\system\ui\mici_setup.py
 msgid "waiting for\ninternet..."
 msgstr "等待\n网络连接..."
+
+#: openpilot\selfdrive\ui\layouts\settings\developer.py
+msgid "Remote SSH (Tailscale)"
+msgstr "远程 SSH（Tailscale）"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Scan to join your Tailscale network"
+msgstr "扫描二维码加入你的 Tailscale 网络"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Remote SSH is ready"
+msgstr "远程 SSH 已就绪"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Tailscale error"
+msgstr "Tailscale 错误"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Waiting for Tailscale state..."
+msgstr "等待 Tailscale 状态…"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "1. Install the Tailscale app on your phone and sign in"
+msgstr "1. 在手机上安装 Tailscale 应用并登录"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "2. Scan this QR code and tap Connect in the browser"
+msgstr "2. 扫描此二维码，并在浏览器中点击 Connect"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "3. Once joined, SSH to the address shown here"
+msgstr "3. 加入后，用 SSH 连接此处显示的地址"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "SSH to your device from any device in your Tailscale network:"
+msgstr "从 Tailscale 网络中的任意设备 SSH 连接你的设备："
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Generating QR..."
+msgstr "正在生成二维码…"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Unknown error"
+msgstr "未知错误"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Remote SSH from anywhere via Tailscale. Enable, then scan the QR with the Tailscale app on your phone. Works over LTE too. An AGNOS update with tailscaled is required."
+msgstr "通过 Tailscale 随时随地远程 SSH。开启后用手机上的 Tailscale 应用扫描二维码即可。LTE 网络下同样可用。需要带有 tailscaled 的 AGNOS 更新。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "AI Agent"
+msgstr "AI 助手"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Built-in AI agent (opencode). Offroad only; browser access on port 5095; the password is shown in the next row. Vehicle-control parameters are hard-blocked. Requires an AGNOS update with opencode."
+msgstr "内置 AI 助手（opencode）。仅停车状态运行；通过 5095 端口在浏览器访问，密码见下一行。车辆控制参数被硬性禁止。需要带有 opencode 的 AGNOS 更新。"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Pairing QR Code"
+msgstr "配对二维码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Show"
+msgstr "显示"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Reopen the Tailscale pairing QR and the SSH address while Remote SSH is enabled."
+msgstr "远程 SSH 开启期间，重新打开 Tailscale 配对二维码和 SSH 地址。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Web login password for the AI agent browser page (port 5095). Set to type a custom one; Reset to generate a random one. The change takes effect within a minute, when the agent restarts."
+msgstr "AI 助手浏览器页面（5095 端口）的网页登录密码。点「设置」输入自定义密码；点「重置」随机生成。修改约 1 分钟内（助手重启后）生效。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Set"
+msgstr "设置"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Set agent password"
+msgstr "设置助手密码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Used to log in to the agent web page on port 5095"
+msgstr "用于登录 5095 端口的助手网页"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Current password"
+msgstr "当前密码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "No password generated yet — toggle AI Agent on to create one"
+msgstr "尚未生成密码——开启「AI 助手」即可创建"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "remote SSH"
+msgstr "远程 SSH"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Remote SSH from anywhere via Tailscale. Enable, then scan the pairing QR on the next screen."
+msgstr "通过 Tailscale 随时随地远程 SSH。开启后，在下一屏扫描配对二维码。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "AI agent"
+msgstr "AI 助手"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Built-in AI agent, offroad only. Browser access on port 5095; the password is shown below."
+msgstr "内置 AI 助手，仅停车状态运行。通过 5095 端口在浏览器访问；密码见下方。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "AI agent password"
+msgstr "AI 助手密码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Login password for the agent web page (port 5095). Tap to regenerate."
+msgstr "助手网页（5095 端口）的登录密码。点击重新生成。"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "pairing QR code"
+msgstr "配对二维码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "show"
+msgstr "显示"
+
+#: openpilot\selfdrive\ui\widgets\tailscale_dialog.py
+msgid "Reopen the Tailscale pairing QR and the SSH address while remote SSH is enabled."
+msgstr "远程 SSH 开启期间，重新打开 Tailscale 配对二维码和 SSH 地址。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "set agent password"
+msgstr "设置助手密码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Type a custom web login password. The change takes effect within a minute, when the agent restarts."
+msgstr "输入自定义网页登录密码。修改约 1 分钟内（助手重启后）生效。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "enter agent password..."
+msgstr "输入助手密码…"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "reset agent\npassword"
+msgstr "重置助手\n密码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "reset agent password"
+msgstr "重置助手密码"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "The web login password will be regenerated."
+msgstr "网页登录密码将被重新生成。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
+msgid "Sessions using the old password stop working once the agent restarts."
+msgstr "助手重启后，使用旧密码的会话将失效。"

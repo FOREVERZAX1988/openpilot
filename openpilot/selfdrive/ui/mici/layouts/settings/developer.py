@@ -97,15 +97,22 @@ class DeveloperLayoutMici(NavScroller):
                                                    description=tr("Remote SSH from anywhere via Tailscale."
                                                                   + " Enable, then scan the pairing QR on the next screen."),
                                                    title=tr("remote SSH"))
+    self._tailscale_qr_btn = BigButton(tr("pairing QR code"), tr("show"), icon=txt_ssh,
+                                       description=tr("Reopen the Tailscale pairing QR and the SSH address while remote SSH is enabled."))
+    self._tailscale_qr_btn.set_click_callback(self._on_show_tailscale_qr)
     self._agent_toggle = BigCircleParamControl(gui_app.texture("icons_mici/settings/developer/ssh.png", 82, 82), "AgentEnabled",
                                                toggle_callback=self._on_enable_agent, icon_offset=(0, 12),
                                                description=tr("Built-in AI agent, offroad only. Browser access on port 5095;"
-                                                              + " see the web panel for the password."),
+                                                              + " the password is shown below."),
                                                title=tr("AI agent"))
     self._agent_password_btn = BigButton(tr("AI agent password"),
                                          ui_state.params.get("AgentPassword") or tr("Not set"), icon=txt_ssh,
                                          description=tr("Login password for the agent web page (port 5095). Tap to regenerate."))
     self._agent_password_btn.set_click_callback(self._on_reset_agent_password)
+    self._agent_password_set_btn = BigButton(tr("set agent password"), tr("custom"), icon=txt_ssh,
+                                             description=tr("Type a custom web login password. "
+                                                            + "The change takes effect within a minute, when the agent restarts."))
+    self._agent_password_set_btn.set_click_callback(self._on_set_agent_password)
     self._joystick_toggle = BigToggle(tr("joystick debug\nmode"), initial_state=ui_state.params.get_bool("JoystickDebugMode"),
                                       toggle_callback=self._on_joystick_debug_mode, description=tr("Control the car with a joystick for debugging."))
     self._long_maneuver_toggle = BigToggle(tr("longitudinal maneuver mode"), initial_state=ui_state.params.get_bool("LongitudinalManeuverMode"),
@@ -127,8 +134,10 @@ class DeveloperLayoutMici(NavScroller):
       self._adb_toggle,
       self._ssh_toggle,
       self._tailscale_toggle,
+      self._tailscale_qr_btn,
       self._agent_toggle,
       self._agent_password_btn,
+      self._agent_password_set_btn,
       self._ssh_keys_btn,
       self._joystick_toggle,
       self._long_maneuver_toggle,
@@ -222,6 +231,9 @@ class DeveloperLayoutMici(NavScroller):
       # tailscale-manager) and shows the pairing QR until joined.
       gui_app.push_widget(TailscaleDialog(ui_state.params))
 
+  def _on_show_tailscale_qr(self):
+    gui_app.push_widget(TailscaleDialog(ui_state.params))
+
   def _on_enable_agent(self, state: bool):
     if state:
       # Generate the web login password up front and clear the idle-suspend
@@ -237,6 +249,20 @@ class DeveloperLayoutMici(NavScroller):
   def _do_reset_agent_password(self):
     from openpilot.sunnypilot.agent.agent_process import reset_password
     self._agent_password_btn.set_value(reset_password(ui_state.params))
+
+  def _on_set_agent_password(self):
+    def set_password(text: str):
+      if text:
+        ui_state.params.put("AgentPassword", text, block=True)
+        self._agent_password_btn.set_value(text)
+
+    dlg = BigInputDialog(
+      tr("enter agent password..."),
+      ui_state.params.get("AgentPassword") or "",
+      minimum_length=4,
+      confirm_callback=set_password,
+    )
+    gui_app.push_widget(dlg)
 
   def _on_joystick_debug_mode(self, state: bool):
     ui_state.params.put_bool("JoystickDebugMode", state, block=True)
