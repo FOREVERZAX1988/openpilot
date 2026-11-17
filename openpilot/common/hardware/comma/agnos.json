@@ -1,83 +1,83 @@
 [
   {
     "name": "xbl",
-    "url": "https://commadist.azureedge.net/agnosupdate/xbl-e8acf2a9cc7f0ce84cb803bfea9477f765c0d7b4daf26048e59651b9e6a7bfbb.img.xz",
-    "hash": "e8acf2a9cc7f0ce84cb803bfea9477f765c0d7b4daf26048e59651b9e6a7bfbb",
-    "hash_raw": "e8acf2a9cc7f0ce84cb803bfea9477f765c0d7b4daf26048e59651b9e6a7bfbb",
+    "url": "https://commadist.azureedge.net/agnosupdate/xbl-6710967ca9701f205d7ab19c3a9b0dd2f547e65b3d96048b7c2b03755aafa0f1.img.xz",
+    "hash": "6710967ca9701f205d7ab19c3a9b0dd2f547e65b3d96048b7c2b03755aafa0f1",
+    "hash_raw": "6710967ca9701f205d7ab19c3a9b0dd2f547e65b3d96048b7c2b03755aafa0f1",
     "size": 3282256,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "bea7f1a24428c3ededf672fa4fc78baf180cfbd8aafb77c974655b38517283e3"
+    "ondevice_hash": "003a17ab1be68a696f7efe4c9938e8be511d4aacfc2f3211fc896bdc1681d089"
   },
   {
     "name": "xbl_config",
-    "url": "https://commadist.azureedge.net/agnosupdate/xbl_config-758552ecf92b5569677197783bf0ccb73d7f961685308e45d3276ac9dd974f85.img.xz",
-    "hash": "758552ecf92b5569677197783bf0ccb73d7f961685308e45d3276ac9dd974f85",
-    "hash_raw": "758552ecf92b5569677197783bf0ccb73d7f961685308e45d3276ac9dd974f85",
+    "url": "https://commadist.azureedge.net/agnosupdate/xbl_config-63922cfbfdf4ab87986c4ba8f3a4df5bf28414b3f71a29ec5947336722215535.img.xz",
+    "hash": "63922cfbfdf4ab87986c4ba8f3a4df5bf28414b3f71a29ec5947336722215535",
+    "hash_raw": "63922cfbfdf4ab87986c4ba8f3a4df5bf28414b3f71a29ec5947336722215535",
     "size": 98124,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "fb18cde08a98a168961ecd357e92474823046752b94e112f59fe51a6acd7197d"
+    "ondevice_hash": "2a855dd636cc94718b64bea83a44d0a31741ecaa8f72a63613ff348ec7404091"
   },
   {
     "name": "abl",
-    "url": "https://commadist.azureedge.net/agnosupdate/abl-29fd7ed1c012e599420764840f9f11286d34dbff4adaf102a447f06d8c5e0b35.img.xz",
-    "hash": "29fd7ed1c012e599420764840f9f11286d34dbff4adaf102a447f06d8c5e0b35",
-    "hash_raw": "29fd7ed1c012e599420764840f9f11286d34dbff4adaf102a447f06d8c5e0b35",
+    "url": "https://commadist.azureedge.net/agnosupdate/abl-32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6.img.xz",
+    "hash": "32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6",
+    "hash_raw": "32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6",
     "size": 274432,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "29fd7ed1c012e599420764840f9f11286d34dbff4adaf102a447f06d8c5e0b35"
+    "ondevice_hash": "32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6"
   },
   {
     "name": "aop",
-    "url": "https://commadist.azureedge.net/agnosupdate/aop-78b2287ca219a0811b3004c523fa0f4749e4d1fd92be3aba61699305b7943ad1.img.xz",
-    "hash": "78b2287ca219a0811b3004c523fa0f4749e4d1fd92be3aba61699305b7943ad1",
-    "hash_raw": "78b2287ca219a0811b3004c523fa0f4749e4d1fd92be3aba61699305b7943ad1",
+    "url": "https://commadist.azureedge.net/agnosupdate/aop-21370172e590bd4ea907a558bcd6df20dc7a6c7d38b8e62fdde18f4a512ba9e9.img.xz",
+    "hash": "21370172e590bd4ea907a558bcd6df20dc7a6c7d38b8e62fdde18f4a512ba9e9",
+    "hash_raw": "21370172e590bd4ea907a558bcd6df20dc7a6c7d38b8e62fdde18f4a512ba9e9",
     "size": 184364,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "6c9135446bd3fc075fcee59b887a12e49029ab1f98ed8d6d1e32c73569d47de3"
+    "ondevice_hash": "c1be2f4aac5b3af49b904b027faec418d05efd7bd5144eb4fdfcba602bcf2180"
   },
   {
     "name": "devcfg",
-    "url": "https://commadist.azureedge.net/agnosupdate/devcfg-f71df3a86958c093ba3969254c4db025187eef9385427f1ade946742939b43cc.img.xz",
-    "hash": "f71df3a86958c093ba3969254c4db025187eef9385427f1ade946742939b43cc",
-    "hash_raw": "f71df3a86958c093ba3969254c4db025187eef9385427f1ade946742939b43cc",
+    "url": "https://commadist.azureedge.net/agnosupdate/devcfg-d7d7e52963bbedbbf8a7e66847579ca106a0a729ce2cf60f4b8d8ea4b535d620.img.xz",
+    "hash": "d7d7e52963bbedbbf8a7e66847579ca106a0a729ce2cf60f4b8d8ea4b535d620",
+    "hash_raw": "d7d7e52963bbedbbf8a7e66847579ca106a0a729ce2cf60f4b8d8ea4b535d620",
     "size": 40336,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "2a67971602012c1b43544964709da13c322786b456a8e78568b117e8b1540ce3"
+    "ondevice_hash": "17b229668b20305ff8fa3cd5f94716a3aaa1e5bf9d1c24117eff7f2f81ae719f"
   },
   {
     "name": "boot",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.3-carrot-bt3/boot-c3x-c4-455e284285d3f4ab257f9e1b0c3abc6936c6c356e9fbbc4a40d0632a9849a373.img.xz",
-    "compressed_hash": "6ba15c8d8c844b6ed42d4d7bb7244179100ae23314ba003f7553bbf0e35992c4",
-    "compressed_size": 14603548,
-    "hash": "455e284285d3f4ab257f9e1b0c3abc6936c6c356e9fbbc4a40d0632a9849a373",
-    "hash_raw": "455e284285d3f4ab257f9e1b0c3abc6936c6c356e9fbbc4a40d0632a9849a373",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6-carrot-bt2/boot-c3-c3clone-4bcb04330e73ac640f7b4bc5a26a646367539226d9049f64618f97878a2f4492.img.xz",
+    "compressed_hash": "1e81712119d04efa2428661a8862b05b03d9adbfed54df1b6e2be379fa6e406a",
+    "compressed_size": 14601864,
+    "hash": "4bcb04330e73ac640f7b4bc5a26a646367539226d9049f64618f97878a2f4492",
+    "hash_raw": "4bcb04330e73ac640f7b4bc5a26a646367539226d9049f64618f97878a2f4492",
     "size": 49043456,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "fe76821ae21f7f956cb6b28b226308f570bb81db174a01494d5ab64e3fa13a9a"
+    "ondevice_hash": "5de0694fd8649d6963528ca47143c9d8937c49089a1e87aeb083f545370bfc94"
   },
   {
     "name": "system",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.3-carrot-bt3/system-c872a6d8da8d82f756bbd56d4257fd53c394296fa2b066979f235d2e69f52858.img.xz",
-    "compressed_hash": "bc8be34d9ac2afe4461fc6c757b8832e064606df9af484e1e352f764fd1edb60",
-    "compressed_size": 473627068,
-    "hash": "42aa49a750165eda51718a1a7d827b23b3d4166da4469ebe552a8c07dc49dc91",
-    "hash_raw": "c872a6d8da8d82f756bbd56d4257fd53c394296fa2b066979f235d2e69f52858",
-    "size": 2147483648,
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6-carrot-bt2/system-c1072f448c71f75fe481e2b1a9683666fa23e9388b8281aabf3042671419ecbe.img.xz",
+    "compressed_hash": "b223594b7297daec7375614f1abef6e024fb486358d9542ec19609b5726dcbd0",
+    "compressed_size": 688511552,
+    "hash": "7571a90b1026fcd4593e1f8b01d0cd7bbffd00e300851f56c21259fa896dfdd0",
+    "hash_raw": "c1072f448c71f75fe481e2b1a9683666fa23e9388b8281aabf3042671419ecbe",
+    "size": 4718592000,
     "sparse": true,
     "full_check": false,
     "has_ab": true,
-    "ondevice_hash": "c63e5bb6cef604b2fe9378dee0c5a44d50173c3444aca72addd201ca196de9b6"
+    "ondevice_hash": "5b96e0a74985c2ebb804a723558699add87968661daec412d64dcf0dd5c39dc9"
   }
 ]
