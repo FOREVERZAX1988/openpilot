@@ -182,14 +182,15 @@ def main() -> None:
     return
 
   # Publish the running version so the MCP tools and the UI can compare it
-  # against upstream releases.
+  # against upstream releases. Never fatal: an old libparams without the key
+  # registered must not take the whole agent down.
   try:
     ver = subprocess.run([binary, "--version"], capture_output=True, encoding="utf-8", timeout=15)
     version = (ver.stdout or "").strip().split()[-1] if ver.returncode == 0 else ""
     if version and version != params.get("AgentOpencodeVersion"):
       params.put("AgentOpencodeVersion", version, block=True)
-  except (OSError, subprocess.TimeoutExpired):
-    pass
+  except Exception:
+    cloudlog.exception("failed to publish AgentOpencodeVersion")
 
   # Parked diagnostics only: keep off the realtime cores, mirroring carrot_server.
   try:

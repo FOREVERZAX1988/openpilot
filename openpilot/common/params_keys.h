@@ -171,6 +171,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AgentApiKey", {PERSISTENT | DONT_LOG, STRING}},  // one-way dropbox: agent_process moves it into /data/agent/env (0600) and removes the param on next agent start
     {"AgentModelBase", {PERSISTENT, STRING}},  // OpenAI-compatible base URL; empty = opencode's built-in provider picker
     {"AgentModelId", {PERSISTENT, STRING}},  // model id under the custom provider
+    {"AgentOpencodeVersion", {PERSISTENT, STRING}},  // opencode binary version, published by agent_process for update checks
+    {"AgentAutoUpdate", {PERSISTENT, BOOL}},  // opt-in: allows the agent's update_opencode MCP tool to replace the opencode binary
     {"StockEcuHandBackRequest", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"StockEcuHandBackResult", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, JSON}},
     {"StockEcuHandBackFailed", {CLEAR_ON_IGNITION_ON, BOOL}},  // an onroad cycle went ahead on a failed hand-back: stock cruise is down until ignition
