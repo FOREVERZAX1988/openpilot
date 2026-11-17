@@ -47,6 +47,7 @@ READ_PARAM_WHITELIST = frozenset({
   "LastOffroadStatusPacket",
   "AgentOpencodeVersion",
   "AgentAutoUpdate",
+  "AgentWorkshopMode",  # read-only for the agent: it must never grant itself a higher tier
 })
 
 # Params the agent may WRITE after explicit user approval. Everything that
@@ -83,6 +84,7 @@ CONTROL_PARAM_BLACKLIST_EXACT = frozenset({
   "ExperimentalModeConfirmed",
   "OpenpilotEnabledToggle",
   "DisengageOnAccelerator",  # driver-facing but control-adjacent: read-only for the agent
+  "AgentWorkshopMode",  # self-escalation guard: tier changes come from the owner over SSH
 })
 
 MAX_LINES = 400
@@ -420,7 +422,7 @@ def tool_check_opencode_update(arguments: dict, params_dir: str) -> str:
     if cur and _parse_version(tag):
       newer = " (newer than installed)" if _parse_version(tag) > cur else ""
     lines.append(f"  {tag}{' [pre-release]' if release.get('prerelease') else ''}"
-                 f"{' [no arm64 asset]' if asset is None else ''}{newer}")
+                 + f"{' [no arm64 asset]' if asset is None else ''}{newer}")
   lines.append("to update: confirm with the user, set the AgentAutoUpdate param (needs their approval), then call update_opencode with the exact tag.")
   return "\n".join(lines)
 
@@ -483,7 +485,7 @@ def tool_update_opencode(arguments: dict, params_dir: str) -> str:
     shutil.rmtree(extract_dir, ignore_errors=True)
     os.makedirs(extract_dir)
     with tarfile.open(tarball) as tf:
-      tf.extractall(extract_dir)  # noqa: S202 - tarball sha256-verified against the release digest
+      tf.extractall(extract_dir)  # tarball sha256-verified against the release digest
       members = os.listdir(extract_dir)
       binary_name = "opencode" if "opencode" in members else (members[0] if members else "")
       new_binary = os.path.join(extract_dir, binary_name)
@@ -595,11 +597,11 @@ TOOLS = [
   },
   {
     "name": "update_opencode",
-    "description": (
-      "Update the opencode binary to a specific newer release tag. Offroad only, "
-      "requires the AgentAutoUpdate param enabled (user-approved) and the user's explicit "
-      "confirmation of the target version. Verifies the sha256 digest and rolls back on failure."
-    ),
+      "description": (
+        "Update the opencode binary to a specific newer release tag. Offroad only, "
+        + "requires the AgentAutoUpdate param enabled (user-approved) and the user's explicit "
+        + "confirmation of the target version. Verifies the sha256 digest and rolls back on failure."
+      ),
     "inputSchema": {
       "type": "object",
       "properties": {"version": {"type": "string", "description": "exact release tag, e.g. 'v2.3.1'"}},

@@ -38,6 +38,10 @@ AGENT_WS = "/data/agent_ws"
 # external_directory deny, so builtin tools can never reach /data/params or
 # key material.
 OPENCODE_PROJECT = "/data/openpilot"
+# Ambient automotive-expert context loaded by opencode's "instructions"
+# mechanism (see sunnypilot/agent/knowledge/*.md). Inside the project tree so
+# it ships with OTA and updates with the repo.
+KNOWLEDGE_DIR = os.path.join(OPENCODE_PROJECT, "sunnypilot", "agent", "knowledge")
 # Model-provider API key store. The key lives in a 0600 file, not a param:
 # params are world-readable on device and ride along in param backups.
 AGENT_ENV_DIR = "/data/agent"
@@ -113,6 +117,27 @@ def _established_connections(port: int) -> int:
   return count
 
 
+def knowledge_instructions() -> list[str]:
+  """Sorted *.md paths from KNOWLEDGE_DIR (absolute, so opencode resolves them
+  regardless of its config-relative path handling)."""
+  try:
+    return sorted(
+      os.path.join(KNOWLEDGE_DIR, name)
+      for name in os.listdir(KNOWLEDGE_DIR)
+      if name.endswith(".md")
+    )
+  except OSError:
+    return []
+
+
+def _workshop_mode(params: Params) -> str:
+  """Tolerate old libparams builds that don't know the key (UnknownKeyName)."""
+  try:
+    return params.get("AgentWorkshopMode") or ""
+  except Exception:
+    return ""
+
+
 def write_mcp_wrapper(path: str) -> str:
   """Standalone launcher so opencode can spawn comma_mcp without openpilot's env.
 
@@ -144,11 +169,14 @@ def main() -> None:
   os.makedirs(AGENT_WS, exist_ok=True)
 
   wrapper = write_mcp_wrapper(os.path.join(AGENT_WS, "comma_mcp_launch.sh"))
+  workshop_mode = _workshop_mode(params)
   config = build_opencode_config(
     base_url=params.get("AgentModelBase") or "",
     model_id=params.get("AgentModelId") or "",
     api_key=api_key,
     mcp_command=[wrapper],
+    workshop_mode=workshop_mode,
+    instructions=knowledge_instructions(),
   )
   config_json = json.dumps(config, indent=2) + "\n"
 
@@ -210,6 +238,10 @@ def main() -> None:
       # the new password is in the server env. The manager respawns us.
       if params.get("AgentPassword") != password:
         cloudlog.info("AI agent password changed, restarting to apply it")
+        break
+      # Tier changes (SSH param write) need a config regeneration too.
+      if _workshop_mode(params) != workshop_mode:
+        cloudlog.info("AI agent workshop mode changed, restarting to apply it")
         break
       if _established_connections(AGENT_PORT) > 0:
         idle_deadline = time.monotonic() + IDLE_EXIT_MINUTES * 60

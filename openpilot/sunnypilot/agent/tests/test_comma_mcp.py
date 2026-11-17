@@ -44,6 +44,19 @@ class TestControlBlacklist(unittest.TestCase):
         continue
       self.assertFalse(comma_mcp.is_control_param(key), f"{key} must never look like a control param")
 
+  def test_agent_cannot_grant_itself_a_higher_tier(self):
+    # AgentWorkshopMode is readable (get_params) but refused on write AND
+    # hard-blacklisted, so even a careless future whitelist edit can't let
+    # the agent escalate its own permissions tier.
+    self.assertIn("AgentWorkshopMode", comma_mcp.READ_PARAM_WHITELIST)
+    self.assertNotIn("AgentWorkshopMode", comma_mcp.WRITE_PARAM_WHITELIST)
+    self.assertTrue(comma_mcp.is_control_param("AgentWorkshopMode"))
+    with tempfile.TemporaryDirectory() as tmp:
+      params_dir = _make_params_dir(tmp, {"IsOffroad": "1"})
+      result = comma_mcp.tool_set_params({"params": {"AgentWorkshopMode": "full"}}, params_dir)
+      self.assertIn("REFUSED", result)
+      self.assertFalse(os.path.exists(os.path.join(params_dir, "AgentWorkshopMode")))
+
 
 class TestOffroadGate(unittest.TestCase):
   def test_write_refused_without_explicit_offroad(self):
@@ -135,6 +148,7 @@ class TestOpencodeUpdate(unittest.TestCase):
   def test_new_param_whitelists(self):
     self.assertIn("AgentAutoUpdate", comma_mcp.WRITE_PARAM_WHITELIST)
     self.assertIn("AgentOpencodeVersion", comma_mcp.READ_PARAM_WHITELIST)
+    self.assertIn("AgentWorkshopMode", comma_mcp.READ_PARAM_WHITELIST)
     self.assertFalse(comma_mcp.is_control_param("AgentAutoUpdate"))
 
 
