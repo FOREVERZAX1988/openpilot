@@ -92,6 +92,12 @@
             # 避免污染产树），经 gh-proxy 浅克隆；整体失败时撤销覆盖回退直连重试。
             git config -f .gitmodules --get-regexp 'submodule\..*\.url' | while IFS=' ' read key url; do
               case "$url" in
+                # tinygrad 的 pinned commit 不在 sunnypilot/tinygrad master 历史里，走自建
+                # CNB 浅镜像（mouxancnb/tinygrad，master tip = pinned 4ffcdb3f2）；gh-proxy
+                # 对其大 pack 极慢且频繁断流（曾 41 分钟断在 73%）
+                https://github.com/sunnypilot/tinygrad.git)
+                  git config submodule.tinygrad.url "https://cnb.cool/mouxancnb/tinygrad.git"
+                  echo "mirror: tinygrad_repo -> cnb.cool/mouxancnb/tinygrad" ;;
                 https://github.com/*)
                   name=${key#submodule.}
                   name=${name%.url}
