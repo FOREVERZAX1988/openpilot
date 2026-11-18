@@ -357,6 +357,14 @@ procs = [
   # stays idle until a viewer session opens (CarrotVisionActive).
   NativeProcess("carrot_vision_encoderd", "openpilot/system/loggerd", ["./encoderd", "--carrot-vision-road"], and_(iscar, enable_webrtc)),
   PythonProcess("logmessaged", "openpilot.system.logmessaged", always_run),
+  # Freeze the scene when a fault alert fires. Alerts such as
+  # locationdTemporaryError clear on their own inside a few seconds -- faster than
+  # anyone can attach a laptop -- so the daemon writes a small JSON snapshot
+  # (event, flags, swaglog tail, process table, route/segment) the moment one
+  # appears, and a second one when it goes away. Purely read-only.
+  # always_run: these faults also happen while parked with the engine off.
+  PythonProcess("diag_watchd", "openpilot.system.diag_watchd", always_run,
+                enabled=platform.system() != "Darwin"),
 
   NativeProcess("camerad", "openpilot/system/camerad", ["./camerad"], or_(driverview, livestream, onroad_preview), enabled=not WEBCAM,
                 watchdog_max_dt=CAMERAD_WATCHDOG_MAX_DT),
