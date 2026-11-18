@@ -45,7 +45,7 @@ POLL_S = 0.5
 MAX_FILES = 300
 SWAGLOG_BYTES = 150_000
 SWAGLOG_LINES = 40
-REPEAT_GUARD_S = 5.0
+REPEAT_GUARD_S = 2.0
 
 # Fault events worth a snapshot, taken from the live OnroadEvent schema.
 # Operational ones (steerOverride, gasOverride, personalityChanged,
@@ -231,12 +231,17 @@ def snapshot(latest, event, kind, swaglog_cache):
       f.flush()
       os.fsync(f.fileno())
     st = data['state']
+
+    def _v(key):
+      val = st.get(key)
+      return '-' if val is None else str(val)
+
     with open(INDEX, 'a') as f:
-      f.write('%s %-7s %-30s %s seg%s v=%.2f OK=%s/%s/%s big=%s alert=%s\n' % (
+      f.write('%s %-7s %-30s %s seg%s v=%s OK=%s/%s/%s big=%s alert=%s\n' % (
         data['local'], kind, event, route or '?', seg if seg is not None else '?',
-        st.get('vEgo', float('nan')),
-        st.get('inputsOK'), st.get('posenetOK'), st.get('sensorsOK'),
-        st.get('bigModel'), st.get('alertType')))
+        ('%.2f' % st['vEgo']) if 'vEgo' in st else '-',
+        _v('inputsOK'), _v('posenetOK'), _v('sensorsOK'),
+        _v('bigModel'), st.get('alertType') or '-'))
       f.flush()
       os.fsync(f.fileno())
     return fn
@@ -278,9 +283,9 @@ def main():
       present = watched_now(latest)
 
       for ev in sorted(present - active):
-        if now - last_write.get(ev, 0.0) < REPEAT_GUARD_S:
+        if now - last_write.get((ev, 'raised'), 0.0) < REPEAT_GUARD_S:
           continue
-        last_write[ev] = now
+        last_write[(ev, 'raised')] = now
         fn = snapshot(latest, ev, 'raised', swaglog_cache)
         if fn:
           cloudlog.warning('diag_watchd: captured %s -> %s' % (ev, fn))
@@ -288,9 +293,11 @@ def main():
 
       for ev in sorted(active - present):
         active.discard(ev)
-        if now - last_write.get(ev, 0.0) < REPEAT_GUARD_S:
+        # keyed per kind: a short alert must still record when it ended, so the
+        # raise guard must not swallow the clear three seconds later
+        if now - last_write.get((ev, 'cleared'), 0.0) < REPEAT_GUARD_S:
           continue
-        last_write[ev] = now
+        last_write[(ev, 'cleared')] = now
         snapshot(latest, ev, 'cleared', swaglog_cache)
 
       if now - last_prune > 60.0:
