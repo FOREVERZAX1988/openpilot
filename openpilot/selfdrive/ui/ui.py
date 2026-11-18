@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import os
-import sys
 import threading
 import time
 
 from openpilot.cereal import messaging
 from openpilot.common.hardware import COMMA_HARDWARE
-from openpilot.common.realtime import Priority, config_realtime_process, get_available_cores, set_core_affinity
+from openpilot.common.realtime import Priority, config_realtime_process, get_available_cores
 from openpilot.common.watchdog import kick_watchdog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.impact_dashcam import ImpactDashcamPrompt

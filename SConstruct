@@ -154,7 +154,7 @@ env = Environment(
   RPATH=[ffmpeg.LIB_DIR],
   COMPILATIONDB_USE_ABSPATH=True,
   REDNOSE_ROOT="#rednose_repo",
-  tools=["default", "compilation_db", "rednose_filter"],
+  tools=["default", "cython", "compilation_db", "rednose_filter"],
   toolpath=["#rednose_repo/site_scons/site_tools"],
 )
 # SCons' Darwin linker tool doesn't define the variables used to expand RPATH.
