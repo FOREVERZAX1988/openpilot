@@ -20,6 +20,10 @@ Writes to /data/diag_events/:
 Read-only with respect to the car: it subscribes to messages and never touches
 CAN or the panda. Snapshots are a few KB each and are pruned to the newest
 MAX_FILES.
+
+Subscriptions are plain sub_sock + drain_sock rather than SubMaster: with a poll
+service that is silent (selfdriveState while parked) SubMaster.update() only
+tries one non-polled socket per call, which made event pickup unreliable.
 """
 import glob
 import json
@@ -34,12 +38,14 @@ from openpilot.common.swaglog import cloudlog
 OUT_DIR = '/data/diag_events'
 INDEX = os.path.join(OUT_DIR, 'index.log')
 
+SERVICES = ['selfdriveState', 'onroadEvents', 'deviceState',
+            'carState', 'modelV2', 'deviceMotion']
+
 POLL_S = 0.5
 MAX_FILES = 300
-SWAGLOG_TTL_S = 60.0          # don't re-read the log tail more often than this
 SWAGLOG_BYTES = 150_000
 SWAGLOG_LINES = 40
-REPEAT_GUARD_S = 5.0          # a flapping alert must not write every poll
+REPEAT_GUARD_S = 5.0
 
 # Fault events worth a snapshot, taken from the live OnroadEvent schema.
 # Operational ones (steerOverride, gasOverride, personalityChanged,
@@ -130,77 +136,59 @@ def proc_top():
     return []
 
 
-def read_state(sm):
+def read_state(latest):
   st = {}
-  try:
-    if sm.seen['carState']:
-      cs = sm['carState']
-      st['vEgo'] = round(float(cs.vEgo), 3)
-      st['steerDeg'] = round(float(cs.steeringAngleDeg), 2)
-      st['gear'] = str(getattr(cs.gearShifter, 'raw', ''))
-      st['standstill'] = bool(cs.standstill)
-      st['cruiseEnabled'] = bool(cs.cruiseState.enabled)
-      st['cruiseAvailable'] = bool(cs.cruiseState.available)
-  except Exception:
-    pass
-  try:
-    if sm.seen['selfdriveState']:
-      ss = sm['selfdriveState']
-      st['enabled'] = bool(ss.enabled)
-      st['active'] = bool(ss.active)
-      st['alertType'] = str(ss.alertType)
-      st['alertStatus'] = str(ss.alertStatus)
-      st['alertText1'] = str(ss.alertText1)
-  except Exception:
-    pass
-  try:
-    if sm.seen['deviceMotion']:
-      dm = sm['deviceMotion']
-      st['inputsOK'] = bool(dm.inputsOK)
-      st['posenetOK'] = bool(dm.posenetOK)
-      st['sensorsOK'] = bool(dm.sensorsOK)
-      st['yawRateZ'] = round(float(dm.angularVelocityDevice.z), 4)
-  except Exception:
-    pass
-  try:
-    if sm.seen['modelV2']:
-      st['bigModel'] = bool(sm['modelV2'].big)
-  except Exception:
-    pass
-  try:
-    if sm.seen['deviceState']:
-      ds = sm['deviceState']
-      st['started'] = bool(ds.started)
-      st['onroad'] = bool(ds.onroad)
-      st['thermalStatus'] = str(ds.thermalStatus)
-      st['batteryPercent'] = round(float(ds.batteryPercent), 1)
-  except Exception:
-    pass
+  cs = latest.get('carState')
+  if cs is not None:
+    st['vEgo'] = round(float(cs.vEgo), 3)
+    st['steerDeg'] = round(float(cs.steeringAngleDeg), 2)
+    st['gear'] = str(getattr(cs.gearShifter, 'raw', ''))
+    st['standstill'] = bool(cs.standstill)
+    st['cruiseEnabled'] = bool(cs.cruiseState.enabled)
+    st['cruiseAvailable'] = bool(cs.cruiseState.available)
+  ss = latest.get('selfdriveState')
+  if ss is not None:
+    st['enabled'] = bool(ss.enabled)
+    st['active'] = bool(ss.active)
+    st['alertType'] = str(ss.alertType)
+    st['alertStatus'] = str(ss.alertStatus)
+    st['alertText1'] = str(ss.alertText1)
+  dm = latest.get('deviceMotion')
+  if dm is not None:
+    st['inputsOK'] = bool(dm.inputsOK)
+    st['posenetOK'] = bool(dm.posenetOK)
+    st['sensorsOK'] = bool(dm.sensorsOK)
+    st['yawRateZ'] = round(float(dm.angularVelocityDevice.z), 4)
+  mv = latest.get('modelV2')
+  if mv is not None:
+    st['bigModel'] = bool(mv.big)
+  ds = latest.get('deviceState')
+  if ds is not None:
+    st['started'] = bool(ds.started)
+    st['onroad'] = bool(ds.onroad)
+    st['thermalStatus'] = str(ds.thermalStatus)
+    st['batteryPercent'] = round(float(ds.batteryPercent), 1)
   return st
 
 
-def watched_now(sm) -> set:
+def watched_now(latest) -> set:
   """Fault events currently reported, from both the alert and the event list."""
   names = set()
-  try:
-    if sm.seen['selfdriveState']:
-      a = str(sm['selfdriveState'].alertType)
-      if a in WATCHED:
-        names.add(a)
-  except Exception:
-    pass
-  try:
-    if sm.seen['onroadEvents']:
-      for ev in sm['onroadEvents']:
-        n = str(ev.name)
-        if n in WATCHED:
-          names.add(n)
-  except Exception:
-    pass
+  ss = latest.get('selfdriveState')
+  if ss is not None:
+    a = str(ss.alertType)
+    if a in WATCHED:
+      names.add(a)
+  oe = latest.get('onroadEvents')
+  if oe is not None:
+    for ev in oe:
+      n = str(ev.name)
+      if n in WATCHED:
+        names.add(n)
   return names
 
 
-def snapshot(sm, event, kind, swaglog_cache):
+def snapshot(latest, event, kind, swaglog_cache):
   wall = time.time()
   route, seg = current_segment()
   swaglog_cache['at'], swaglog_cache['lines'] = wall, swaglog_tail()
@@ -212,7 +200,7 @@ def snapshot(sm, event, kind, swaglog_cache):
     'event': event,
     'route': route,
     'segment': seg,
-    'state': read_state(sm),
+    'state': read_state(latest),
     'swaglog': swaglog_cache['lines'],
     'top': proc_top(),
   }
@@ -225,7 +213,7 @@ def snapshot(sm, event, kind, swaglog_cache):
       os.fsync(f.fileno())
     st = data['state']
     with open(INDEX, 'a') as f:
-      f.write('%s %-6s %-30s %s seg%s v=%.2f OK=%s/%s/%s big=%s alert=%s\n' % (
+      f.write('%s %-7s %-30s %s seg%s v=%.2f OK=%s/%s/%s big=%s alert=%s\n' % (
         data['local'], kind, event, route or '?', seg if seg is not None else '?',
         st.get('vEgo', float('nan')),
         st.get('inputsOK'), st.get('posenetOK'), st.get('sensorsOK'),
@@ -250,12 +238,11 @@ def prune():
 def main():
   unknown = WATCHED - set(log.OnroadEvent.EventName.schema.enumerants)
   if unknown:
-    # names that drifted upstream; keep the daemon running with the rest
+    # names that drifted or never existed; keep running with the rest
     cloudlog.warning('diag_watchd: unknown event names ignored: %s' % (sorted(unknown),))
 
-  sm = messaging.SubMaster(['selfdriveState', 'onroadEvents', 'deviceState',
-                            'carState', 'modelV2', 'deviceMotion'],
-                           poll='selfdriveState')
+  socks = {s: messaging.sub_sock(s, conflate=True, timeout=20) for s in SERVICES}
+  latest = {}
   active = set()
   last_write = {}
   swaglog_cache = {'at': 0.0, 'lines': []}
@@ -263,15 +250,19 @@ def main():
 
   while True:
     try:
-      sm.update(0)
+      for name, sock in socks.items():
+        msgs = messaging.drain_sock(sock)
+        if msgs:
+          latest[name] = getattr(msgs[-1], name)
+
       now = time.time()
-      present = watched_now(sm)
+      present = watched_now(latest)
 
       for ev in sorted(present - active):
         if now - last_write.get(ev, 0.0) < REPEAT_GUARD_S:
           continue
         last_write[ev] = now
-        fn = snapshot(sm, ev, 'raised', swaglog_cache)
+        fn = snapshot(latest, ev, 'raised', swaglog_cache)
         if fn:
           cloudlog.warning('diag_watchd: captured %s -> %s' % (ev, fn))
       active |= present
@@ -281,7 +272,7 @@ def main():
         if now - last_write.get(ev, 0.0) < REPEAT_GUARD_S:
           continue
         last_write[ev] = now
-        snapshot(sm, ev, 'cleared', swaglog_cache)
+        snapshot(latest, ev, 'cleared', swaglog_cache)
 
       if now - last_prune > 60.0:
         last_prune = now
