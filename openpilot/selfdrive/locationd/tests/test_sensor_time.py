@@ -15,7 +15,9 @@ import numpy as np
 from openpilot.cereal import log
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.locationd.locationd import (
-  HandleLogResult, LocationEstimator, MAX_SENSOR_TIME_DIFF, update_observation_invalid)
+  CAMODO_INVALID_GRACE, HandleLogResult, INPUT_INVALID_LIMIT, INPUT_INVALID_RECOVERY,
+  LocationEstimator, MAX_SENSOR_TIME_DIFF, calculate_invalid_input_decay,
+  update_observation_invalid)
 
 FREQ = 104.0          # accelerometer
 LIMIT = 10            # round(INPUT_INVALID_LIMIT * FREQ / 20)
@@ -147,6 +149,37 @@ class TestGyroCamodoCrossCheck(OpenpilotTestCase):
     est.car_speed = 0.0
     msg = self._gyro(10.0, 20.0)
     self.assertEqual(est.handle_log(10.0, 'gyroscope', msg), HandleLogResult.INPUT_INVALID)
+
+
+class TestCameraOdoGrace(OpenpilotTestCase):
+  """A big/small model switch must not latch inputsOK.
+
+  cameraOdometry's budget is round(INPUT_INVALID_LIMIT * 20/20) = 2 and its
+  threshold is 1.5, so charging it once already crosses the threshold. Every
+  model switch publishes exactly one cameraOdometry with valid=false: route
+  0000003b had 16 modelV2.big flips and each was followed by one such frame, and
+  every one of them held inputsOK down for the ~10 s the decay needs (7 events,
+  98.3 s over threshold on that drive).
+  """
+
+  def test_two_charged_frames_latch_because_decay_is_slow(self):
+    limit = round(INPUT_INVALID_LIMIT * (20.0 / 20.0))  # cameraOdometry runs at 20 Hz
+    thr = limit - 0.5
+    decay = calculate_invalid_input_decay(limit, INPUT_INVALID_RECOVERY, 20.0)
+    self.assertEqual(limit, 2)
+    self.assertLess(1, thr, "one charged frame alone is survivable")
+    # but a second one a full second later is not: 20 good frames only take 2.0
+    # down to ~1.94, so isolated bad frames one second apart still accumulate
+    self.assertGreater(2 * decay ** 20, thr)
+
+  def test_the_grace_outlasts_a_model_switch(self):
+    # a switch costs one frame; the grace has to be longer than that
+    self.assertGreaterEqual(CAMODO_INVALID_GRACE, 2,
+                            "grace <= 1 means a model switch latches inputsOK again")
+
+  def test_the_grace_is_far_shorter_than_a_real_outage(self):
+    # 3 frames at 20 Hz is 150 ms; a genuinely dead camera pipeline lasts seconds
+    self.assertLess(CAMODO_INVALID_GRACE / 20.0, 1.0)
 
 
 if __name__ == "__main__":

@@ -51,6 +51,15 @@ YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
 # the check failing. get_msg already treats vision below 5 m/s as unreliable
 # (posenetOK), so hold the cross-check to the same speed.
 GYRO_CROSS_CHECK_MIN_SPEED = 5.0
+# Every big/small model switch publishes one cameraOdometry with valid=false: on
+# route 0000003b each flip of modelV2.big is followed by such a frame (16 flips,
+# 15 bad frames while big was false). The cameraOdometry budget is 2 with a
+# threshold of 1.5, so a single one of those frames spends the whole budget and
+# holds inputsOK down for the ~10 s the decay takes -- which is why every alert
+# on that drive lined up with a model switch. Require a run of this many frames
+# before charging the budget: 3 frames is 150 ms, far longer than a switch
+# transition and far shorter than a real outage.
+CAMODO_INVALID_GRACE = 3
 INPUT_INVALID_LIMIT = 2.0 # 1 (camodo) / 9 (sensor) bad input[s] ignored
 INPUT_INVALID_RECOVERY = 10.0 # ~10 secs to resume after exceeding allowed bad inputs by one
 POSENET_STD_INITIAL_VALUE = 10.0
@@ -383,6 +392,7 @@ def main():
   critical_services = ["accelerometer", "gyroscope", "cameraOdometry"]
   observation_input_invalid = defaultdict(int)
   last_inputs_valid = None
+  camodo_invalid_run = 0
 
   input_invalid_limit = {s: round(INPUT_INVALID_LIMIT * (SERVICE_LIST[s].frequency / 20.)) for s in critical_services}
   input_invalid_threshold = {s: input_invalid_limit[s] - 0.5 for s in critical_services}
@@ -420,6 +430,8 @@ def main():
         if valid:
           t = log_mono_time * 1e-9
           res = estimator.handle_log(t, which, msg)
+          if which == "cameraOdometry":
+            camodo_invalid_run = 0
           if which not in critical_services:
             continue
 
@@ -428,9 +440,13 @@ def main():
           update_observation_invalid(res, which, observation_input_invalid, timing_run,
                                      input_invalid_decay, timing_invalid_grace, input_invalid_limit)
         elif which == "cameraOdometry":
-          # a missed observation (modeld dropped a frame) spends the same budget as a rejected one,
-          # capped so a long outage recovers as fast as a short one
-          observation_input_invalid[which] = min(observation_input_invalid[which] + 1, input_invalid_limit[which])
+          # A model switch publishes a single cameraOdometry with valid=false.
+          # Charging the budget for every one of those latched inputsOK for ~10 s
+          # per switch (route 0000003b: 16 switches). Only a sustained run means
+          # the camera pipeline is actually gone.
+          camodo_invalid_run += 1
+          if camodo_invalid_run >= CAMODO_INVALID_GRACE:
+            observation_input_invalid[which] = min(observation_input_invalid[which] + 1, input_invalid_limit[which])
     else:
       filter_initialized = sm.all_checks() and sensor_all_checks(acc_msgs, gyro_msgs, sensor_valid, sensor_recv_time, sensor_alive, SIMULATION)
 
