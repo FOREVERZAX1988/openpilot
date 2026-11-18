@@ -25,7 +25,14 @@ ROLL_STD_MAX = np.radians(1.5)
 LATERAL_ACC_SENSOR_THRESHOLD = 4.0
 OFFSET_MAX = 10.0
 OFFSET_LOWERED_MAX = 8.0
-MIN_ACTIVE_SPEED = 1.0
+# Learn only above ~21 km/h. The learner infers the steering geometry from
+# delta ~= yaw_rate * steerRatio * wheelbase / v, so a given yaw-rate error maps to
+# a steering-angle error that grows as 1/v: 0.01 rad/s is 6.1 deg at 4 m/s but only
+# 1.0 deg at 25 m/s. Learning from 1 m/s let parking-lot manoeuvres walk
+# ANGLE_OFFSET_FAST from -4 to -12 deg and latch "Steering misalignment detected".
+# Offline replay of route 00000036 (2026-11-18) with the real learner:
+#   MIN_ACTIVE_SPEED 1.0 -> final offset -12.8 deg (alert), 4.0 -> -5.0, 6.0 -> no drift.
+MIN_ACTIVE_SPEED = 6.0
 LOW_ACTIVE_SPEED = 10.0
 
 

@@ -27,13 +27,6 @@ const double RESET_TRACKER_DECAY = 0.99995;
 const double DECAY = 0.9993; // ~10 secs to resume after a bad input
 const double MAX_FILTER_REWIND_TIME = 0.8; // s
 const double YAWRATE_CROSS_ERR_CHECK_FACTOR = 30;
-// Floor for the gyro-vs-camera yaw-rate cross-check. The model's cameraOdometry
-// rotStd on a real Macan is ~0.001 rad, which made the 30x threshold ~0.03 rad/s
-// -- tighter than normal chassis vibration (p90 0.034, peaks 0.11 rad/s). That
-// falsely invalidated the gyro, drove inputsOK=false and cascaded into
-// locationdTemporaryError -> angleOffset runaway -> "Steering misalignment".
-// 0.05 rad/s still catches a genuinely broken gyro/calibration (>0.1 rad/s).
-const double YAWRATE_CROSS_ERR_MIN_THRESHOLD = 0.05; // rad/s
 
 // TODO: GPS sensor time offsets are empirically calculated
 // They should be replaced with synced time from a real clock
@@ -283,8 +276,7 @@ void Localizer::handle_sensor(double current_time, const cereal::SensorEventData
 
     VectorXd gyro_bias = this->kf->get_x().segment<STATE_GYRO_BIAS_LEN>(STATE_GYRO_BIAS_START);
     float gyro_camodo_yawrate_err = std::abs((meas[2] - gyro_bias[2]) - this->camodo_yawrate_distribution[0]);
-    float gyro_camodo_yawrate_err_threshold = std::max(YAWRATE_CROSS_ERR_MIN_THRESHOLD,
-      YAWRATE_CROSS_ERR_CHECK_FACTOR * this->camodo_yawrate_distribution[1]);
+    float gyro_camodo_yawrate_err_threshold = YAWRATE_CROSS_ERR_CHECK_FACTOR * this->camodo_yawrate_distribution[1];
     bool gyro_valid = gyro_camodo_yawrate_err < gyro_camodo_yawrate_err_threshold;
 
     if ((meas.norm() < ROTATION_SANITY_CHECK) && gyro_valid) {

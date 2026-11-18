@@ -69,6 +69,36 @@ class TestParamsd(OpenpilotTestCase):
     learner.handle_log(3.0, "carState", cs)
     self.assertTrue(learner.active)
 
+  def test_low_speed_does_not_activate_learner(self):
+    """The bicycle-model fit is ill-conditioned at low speed.
+
+    delta ~= yaw_rate * steerRatio * wheelbase / v, so a given yaw-rate error maps
+    to a steering-angle error that scales with 1/v. Learning from parking-lot speeds
+    walked ANGLE_OFFSET_FAST from -4 to -12 deg and latched "Steering misalignment
+    detected" (route 00000036, 2026-11-18). The learner must stay inactive there.
+    """
+    lr = migrate(LogReader(TEST_ROUTE), [migrate_carParams])
+    CP = next(m for m in lr if m.which() == "carParams").carParams
+    learner = VehicleParamsLearner(CP, CP.steerRatio, 1.0, 0.0)
+
+    ec = messaging.new_message("extrinsicsCalibration").extrinsicsCalibration
+    ec.calStatus = log.ExtrinsicsCalibration.Status.calibrated
+    ec.rpyCalib = [0.0, 0.0, 0.0]
+    ec.imuCalibMatrix = np.eye(3, dtype=np.float32).flatten().tolist()
+    learner.handle_log(0.0, "extrinsicsCalibration", ec)
+
+    cs = messaging.new_message("carState").carState
+    cs.steeringAngleDeg = 0.0
+    cs.gearShifter = car.CarState.GearShifter.drive
+
+    cs.vEgo = 3.0
+    learner.handle_log(1.0, "carState", cs)
+    self.assertFalse(learner.active)
+
+    cs.vEgo = 8.0
+    learner.handle_log(2.0, "carState", cs)
+    self.assertTrue(learner.active)
+
   def test_inputsOK_false_ignores_yaw_rate_and_roll(self):
     """paramsd must not learn from deviceMotion that locationd has rejected.
 
