@@ -101,7 +101,7 @@ class Beepd:
       self.dispatch_beep(self.engage)
     elif new_alert == AudibleAlert.disengage:
       self.dispatch_beep(self.disengage)
-    elif new_alert in (AudibleAlert.warningSoft, AudibleAlert.warningImmediate):
+    elif new_alert in (AudibleAlert.warningSoft, AudibleAlert.warningImmediateSystem, AudibleAlert.warningImmediateUser):
       self.dispatch_beep(self.warning)
     elif new_alert == AudibleAlert.promptRepeat:
       # Ignore further promptRepeats inside the suppression window.

@@ -93,7 +93,7 @@ class Beepd:
         self.dispatch_beep(self.disengage)
       if new_alert == AudibleAlert.prompt:
         self.dispatch_beep(self.prompt)
-      if new_alert == AudibleAlert.warningImmediate:
+      if new_alert in (AudibleAlert.warningImmediateSystem, AudibleAlert.warningImmediateUser):
         self.dispatch_beep(self.warning_immediate)
 
   def get_audible_alert(self, sm):

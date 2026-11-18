@@ -360,7 +360,7 @@ class Soundd(QuietMode):
             self.get_carrot_alert(sm)
 
             # Ramp up immediate warning sound over 4s
-            if self.current_alert == AudibleAlert.warningImmediate:
+            if self.current_alert in (AudibleAlert.warningImmediateSystem, AudibleAlert.warningImmediateUser):
               elapsed = time.monotonic() - self.ramp_start_time
               ramp_vol = float(np.interp(elapsed, [0, ALERT_RAMP_TIME], [self.ramp_start_volume, MAX_VOLUME]))
               self.current_volume = max(self.current_volume, ramp_vol)
