@@ -137,37 +137,56 @@ def proc_top():
 
 
 def read_state(latest):
+  """The flags a fault report needs. Each block is guarded on its own: a field
+  that upstream renamed should cost one key, not the whole snapshot."""
   st = {}
-  cs = latest.get('carState')
-  if cs is not None:
-    st['vEgo'] = round(float(cs.vEgo), 3)
-    st['steerDeg'] = round(float(cs.steeringAngleDeg), 2)
-    st['gear'] = str(getattr(cs.gearShifter, 'raw', ''))
-    st['standstill'] = bool(cs.standstill)
-    st['cruiseEnabled'] = bool(cs.cruiseState.enabled)
-    st['cruiseAvailable'] = bool(cs.cruiseState.available)
-  ss = latest.get('selfdriveState')
-  if ss is not None:
-    st['enabled'] = bool(ss.enabled)
-    st['active'] = bool(ss.active)
-    st['alertType'] = str(ss.alertType)
-    st['alertStatus'] = str(ss.alertStatus)
-    st['alertText1'] = str(ss.alertText1)
-  dm = latest.get('deviceMotion')
-  if dm is not None:
-    st['inputsOK'] = bool(dm.inputsOK)
-    st['posenetOK'] = bool(dm.posenetOK)
-    st['sensorsOK'] = bool(dm.sensorsOK)
-    st['yawRateZ'] = round(float(dm.angularVelocityDevice.z), 4)
-  mv = latest.get('modelV2')
-  if mv is not None:
-    st['bigModel'] = bool(mv.big)
-  ds = latest.get('deviceState')
-  if ds is not None:
-    st['started'] = bool(ds.started)
-    st['onroad'] = bool(ds.onroad)
-    st['thermalStatus'] = str(ds.thermalStatus)
-    st['batteryPercent'] = round(float(ds.batteryPercent), 1)
+  try:
+    cs = latest.get('carState')
+    if cs is not None:
+      st['vEgo'] = round(float(cs.vEgo), 3)
+      st['steerDeg'] = round(float(cs.steeringAngleDeg), 2)
+      st['gear'] = str(getattr(cs.gearShifter, 'raw', ''))
+      st['standstill'] = bool(cs.standstill)
+      st['cruiseEnabled'] = bool(cs.cruiseState.enabled)
+      st['cruiseAvailable'] = bool(cs.cruiseState.available)
+  except Exception:
+    pass
+  try:
+    ss = latest.get('selfdriveState')
+    if ss is not None:
+      st['enabled'] = bool(ss.enabled)
+      st['active'] = bool(ss.active)
+      st['alertType'] = str(ss.alertType)
+      st['alertStatus'] = str(ss.alertStatus)
+      st['alertText1'] = str(ss.alertText1)
+  except Exception:
+    pass
+  try:
+    dm = latest.get('deviceMotion')
+    if dm is not None:
+      st['inputsOK'] = bool(dm.inputsOK)
+      st['posenetOK'] = bool(dm.posenetOK)
+      st['sensorsOK'] = bool(dm.sensorsOK)
+      st['yawRateZ'] = round(float(dm.angularVelocityDevice.z), 4)
+  except Exception:
+    pass
+  try:
+    mv = latest.get('modelV2')
+    if mv is not None:
+      st['bigModel'] = bool(mv.big)
+  except Exception:
+    pass
+  try:
+    ds = latest.get('deviceState')
+    if ds is not None:
+      # DeviceState has started/maxTempC/memoryUsagePercent/freeSpacePercent;
+      # there is no onroad or battery field on this schema.
+      st['started'] = bool(ds.started)
+      st['maxTempC'] = round(float(ds.maxTempC), 1)
+      st['memPct'] = int(ds.memoryUsagePercent)
+      st['freeSpacePct'] = round(float(ds.freeSpacePercent), 1)
+  except Exception:
+    pass
   return st
 
 
@@ -189,22 +208,22 @@ def watched_now(latest) -> set:
 
 
 def snapshot(latest, event, kind, swaglog_cache):
-  wall = time.time()
-  route, seg = current_segment()
-  swaglog_cache['at'], swaglog_cache['lines'] = wall, swaglog_tail()
-  data = {
-    'utc_offset_s': -time.timezone,
-    'local': _now_str(),
-    'wall': round(wall, 3),
-    'kind': kind,
-    'event': event,
-    'route': route,
-    'segment': seg,
-    'state': read_state(latest),
-    'swaglog': swaglog_cache['lines'],
-    'top': proc_top(),
-  }
   try:
+    wall = time.time()
+    route, seg = current_segment()
+    swaglog_cache['at'], swaglog_cache['lines'] = wall, swaglog_tail()
+    data = {
+      'utc_offset_s': -time.timezone,
+      'local': _now_str(),
+      'wall': round(wall, 3),
+      'kind': kind,
+      'event': event,
+      'route': route,
+      'segment': seg,
+      'state': read_state(latest),
+      'swaglog': swaglog_cache['lines'],
+      'top': proc_top(),
+    }
     os.makedirs(OUT_DIR, exist_ok=True)
     fn = os.path.join(OUT_DIR, '%s-%s-%s.json' % (_now_str().replace(':', '').replace(' ', '-'), _safe(event), kind))
     with open(fn, 'w') as f:
