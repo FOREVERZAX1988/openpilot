@@ -16,12 +16,13 @@ import numpy as np
 import raylib_nb as rl
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.realtime import DT_MDL
+from openpilot.selfdrive.ui.mici.onroad.status import status_fade
 from openpilot.selfdrive.ui.mici.onroad.torque_bar import TORQUE_ANGLE_SPAN, TorqueBar, arc_bar_pts
 from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus
 from openpilot.selfdrive.ui.sunnypilot.onroad.blendful import BLENDFUL_COLOR, FULL_BAR, BlendfulRenderer
 from openpilot.selfdrive.ui.sunnypilot.ui_state import UIStateSP
 from openpilot.sunnypilot.modeld_v2.blendful import LOOKAHEAD_TIME, MIN_LOOKAHEAD
-from openpilot.system.ui.lib.shader_polygon import draw_polygon
+from openpilot.system.ui.lib.polygon import draw_polygon
 
 BLUE = rl.Color(*BLENDFUL_COLOR, 255)
 IDLE = rl.Color(150, 160, 168, 255)  # the line with no nudge: grey, so a nudge stands out
@@ -111,11 +112,11 @@ class TorqueBarZP(TorqueBar):
     if self._show_bar():
       super()._render(rect)
     else:  # TorqueBar._render runs the fade the gauge uses
-      self._torque_line_alpha_filter.update(ui_state.status not in (UIStatus.DISENGAGED, UIStatus.LONG_ONLY))
+      self._torque_line_alpha_filter.update(not self._hidden)
     if not self._active:
       return
     # TorqueBar's circle, so the gauge runs parallel to its track and grows from the same middle
-    fade = self._torque_line_alpha_filter.x
+    fade = self._torque_line_alpha_filter.x * (1 - status_fade.weight(UIStatus.DISENGAGED, UIStatus.LONG_ONLY))
     half_span = fade * TORQUE_ANGLE_SPAN * min(1.0, rect.width / (TORQUE_VIEW_W * self._scale)) / 2
     radius = TORQUE_RADIUS * self._scale
     center = np.array([rect.x + rect.width / 2 + TORQUE_CENTER_SHIFT, rect.y + rect.height + radius - TORQUE_OFFSET * self._scale],

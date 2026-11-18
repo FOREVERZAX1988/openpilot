@@ -933,7 +933,7 @@ msgstr "清理编译缓存可释放空间，但下次重新编译将耗时明显
 
 #: openpilot\selfdrive\ui\widgets\pairing_dialog.py
 msgid "Click \"add new device\" and scan the QR code on the right"
-msgstr "点击“添加新设备”，扫描右侧二维码"
+msgstr "点击“add new device”，扫描右侧二维码"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Click the Sponsor button for more details"

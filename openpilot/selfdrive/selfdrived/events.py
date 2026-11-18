@@ -16,7 +16,7 @@ from openpilot.common.dm import is_dm_disabled
 from openpilot.sunnypilot.common.param_read import read_bool
 
 from openpilot.sunnypilot.selfdrive.selfdrived.events_base import EventsBase, Priority, ET, Alert, \
-  NoEntryAlert, SoftDisableAlert, UserSoftDisableAlert, ImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, \
+  NoEntryAlert, SoftDisableAlert, UserSoftDisableAlert, ImmediateDisableAlert, UserImmediateDisableAlert, EngagementAlert, NormalPermanentAlert, \
   StartupAlert, AlertCallbackType, wrong_car_mode_alert
 
 
@@ -129,7 +129,7 @@ def soft_disable_alert(alert_text_2: str) -> AlertCallbackType:
 def user_soft_disable_alert(alert_text_2: str) -> AlertCallbackType:
   def func(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
     if soft_disable_time < int(0.5 / DT_CTRL):
-      return ImmediateDisableAlert(alert_text_2)
+      return UserImmediateDisableAlert(alert_text_2)
     return UserSoftDisableAlert(alert_text_2)
   return func
 
@@ -492,7 +492,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "立即解除控制",
       "驾驶员分心",
       AlertStatus.critical, AlertSize.full,
-      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediate, .1),
+      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediateUser, .1),
   },
 
   EventName.driverUnresponsive1: {
@@ -516,7 +516,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "立即解除控制",
       "驾驶员无响应",
       AlertStatus.critical, AlertSize.full,
-      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediate, .1),
+      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediateUser, .1),
   },
 
   EventName.manualRestart: {
@@ -955,7 +955,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.full,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-    ET.USER_DISABLE: ImmediateDisableAlert("倒档"),
+    ET.USER_DISABLE: UserImmediateDisableAlert("倒档"),
     ET.NO_ENTRY: NoEntryAlert("倒档"),
   },
 
@@ -1075,9 +1075,10 @@ if HARDWARE.get_device_type() == 'mici':
         "",
         AlertStatus.normal, AlertSize.full,
         Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-      ET.USER_DISABLE: ImmediateDisableAlert("倒档"),
+      ET.USER_DISABLE: UserImmediateDisableAlert("倒档"),
       ET.NO_ENTRY: NoEntryAlert("倒档"),
     },
+    EventName.personalityChanged: {},
   })
 
 

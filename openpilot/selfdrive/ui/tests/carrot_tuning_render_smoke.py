@@ -257,7 +257,7 @@ def build_fake_application() -> types.ModuleType:
   m.FONT_SCALE = 1.16
   m.DEFAULT_TEXT_SIZE = 60
   m.DEFAULT_TEXT_COLOR = Color(255, 255, 255, 230)
-  m.GL_VERSION = "#version 330 es\n"  # shader_polygon concatenates this at module scope
+  m.GL_VERSION = "#version 330 es\n"  # polygon module takes GL_VERSION from raylib; kept for GL3 context
   m.MAX_TOUCH_SLOTS = 2
   m.MousePos = Vec2  # NamedTuple of (x, y) - a Vec2 is a faithful stand-in
   m.MouseEvent = types.SimpleNamespace

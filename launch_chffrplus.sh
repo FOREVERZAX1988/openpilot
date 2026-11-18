@@ -592,6 +592,8 @@ agnos_init() {
   sudo abctl --set_success
   sudo chgrp gpu /dev/adsprpc-smd /dev/ion /dev/kgsl-3d0
   sudo chmod 660 /dev/adsprpc-smd /dev/ion /dev/kgsl-3d0
+  sudo chgrp audio /dev/snd/*C* 2>/dev/null
+  sudo chmod 660 /dev/snd/*C* 2>/dev/null
 
   [ "$(< /VERSION)" = "$AGNOS_VERSION" ] && return 0
 

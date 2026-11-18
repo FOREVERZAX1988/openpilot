@@ -560,12 +560,9 @@ class HardwareComma(HardwareBase):
 
     # *** IRQ config ***
 
-    # mask off big cluster from default affinity
-    sudo_write("f", "/proc/irq/default_smp_affinity")
-
-    # move these off the default core
-    affine_irq(1, "msm_vidc")  # encoders
-    affine_irq(1, "i2c_geni")  # sensors
+    # move these off the default core, and off the cores AGNOS keeps for everything but openpilot
+    affine_irq(2, "msm_vidc")  # encoders
+    affine_irq(2, "i2c_geni")  # sensors
 
     # *** GPU config ***
     if self.has_builtin_display():
@@ -631,13 +628,6 @@ class HardwareComma(HardwareBase):
     time.sleep(0.1)
     gpio_set(GPIO.STM_BOOT0, False)
     time.sleep(1)
-
-  def booted(self):
-    # this normally boots within 8s, but on rare occasions takes 30+s
-    encoder_state = sudo_read("/sys/kernel/debug/msm_vidc/core0/info")
-    if "Core state: 0" in encoder_state and (time.monotonic() < 60*2):
-      return False
-    return True
 
 if __name__ == "__main__":
   t = HardwareComma()

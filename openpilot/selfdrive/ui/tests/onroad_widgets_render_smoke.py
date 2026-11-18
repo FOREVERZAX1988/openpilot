@@ -86,7 +86,7 @@ def _fake_draw_polygon(rect, points, color=None, gradient=None):
   _POLYGONS.append((points, color, gradient))
 
 
-sys.modules['openpilot.system.ui.lib.shader_polygon'] = types.SimpleNamespace(
+sys.modules['openpilot.system.ui.lib.polygon'] = types.SimpleNamespace(
   draw_polygon=_fake_draw_polygon, Gradient=_FakeGradient,
 )
 
