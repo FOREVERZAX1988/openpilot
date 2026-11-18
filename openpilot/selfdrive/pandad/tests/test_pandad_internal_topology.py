@@ -239,6 +239,29 @@ class TestCheckPandaSupport(unittest.TestCase):
     assert aux == "dos1"
     assert ext_red is True
 
+  def test_external_black_panda_plus_dos_auto(self):
+    # model-agnostic promotion: an external black panda (or any supported
+    # model) is auto-detected like the red one - active CAN panda without
+    # any param, internal dos as aux, mask-dos-ignition flag set
+    devices = {"dos1": (HW_DOS, True), "blk1": (HW_BLACK, False)}
+    topo = {"dos1": True, "blk1": False}
+    for patcher in _patch_env(devices, topo):
+      patcher.start()
+    active, aux, ext = pandad.check_panda_support(["blk1", "dos1"])
+    assert active == ["blk1"]
+    assert aux == "dos1"
+    assert ext is True
+
+  def test_external_black_panda_alone(self):
+    # external black panda with no internal panda found (topology explicit):
+    # still auto-promoted and flagged external
+    for patcher in _patch_env({"blk1": (HW_BLACK, False)}, {"blk1": False}):
+      patcher.start()
+    active, aux, ext = pandad.check_panda_support(["blk1"])
+    assert active == ["blk1"]
+    assert aux is None
+    assert ext is True
+
   def test_builtin_and_external_red_panda_prefer_external(self):
     # a device with a built-in Red Panda AND an external one plugged in:
     # the external one wins, the built-in one serves as the aux

@@ -246,11 +246,12 @@ std::optional<bool> send_panda_states(PubMaster *pm, Panda *panda, Panda *aux_pa
       health.flags_pkt |= HEALTH_FLAG_IGNITION_LINE;
     }
 
-    // on comma three setups with an external Red Panda, the dos can get false
-    // positive ignitions due to the harness box without a harness connector, so
-    // ignore its ignition line (ported from master-c3's red_panda_comma_three;
-    // pandad.py exports PANDAD_MASK_DOS_IGNITION when it sees a Red Panda
-    // alongside the internal dos)
+    // on comma three setups with an external panda (any model), the dos can
+    // get false positive ignitions due to the harness box without a harness
+    // connector - the quirk comes from the harness box + dos pair, not from
+    // the panda model - so ignore its ignition line (ported from master-c3's
+    // red_panda_comma_three; pandad.py exports PANDAD_MASK_DOS_IGNITION when
+    // an external panda is connected alongside the internal dos)
     static const bool mask_dos_ignition = getenv("PANDAD_MASK_DOS_IGNITION") != nullptr;
     if (mask_dos_ignition && (p->hw_type == cereal::PandaState::PandaType::DOS)) {
       health.flags_pkt &= ~HEALTH_FLAG_IGNITION_LINE;

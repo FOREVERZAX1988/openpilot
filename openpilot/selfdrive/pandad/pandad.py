@@ -313,7 +313,7 @@ def flash_panda(panda_serial: str):
 def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -> tuple[list[str], str | None, bool]:
   """Pick the active (CAN/safety) panda and, when it is external, the internal aux panda.
 
-  Returns (active_serials, aux_serial, red_panda_present).
+  Returns (active_serials, aux_serial, external_panda_present).
 
   master-c3 connects every panda and sorts the internal one first, so the
   internal dos always ends up as peripheral_panda and keeps the fan. Our C++
@@ -325,23 +325,27 @@ def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -
   Red Panda is hw_type-external but hub-internal, and becomes the active
   panda under the default branch instead of dead-looping.
 
-  An EXTERNAL Red Panda (topology checked when it can be) is auto-detected
-  and promoted to the active CAN panda without any configuration; the
-  UseRedPanda param only remains as a force switch for devices whose Red
-  Panda is hub-internal. The red-panda flag feeds PANDAD_MASK_DOS_IGNITION,
-  where a comma three with an external Red Panda reports false ignitions via
-  the harness box without a harness connector, so the C++ daemon must mask
-  the dos ignition line (ported from master-c3's red_panda_comma_three).
+  An EXTERNAL CAN panda of ANY model (white/grey/black/uno/dos/red/red v2/
+  tres/...; topology checked when it can be) is auto-detected and promoted
+  to the active CAN panda without any configuration; the internal panda
+  stays on fan/peripheral duty via the aux slot. The UseRedPanda param only
+  remains as a force switch for Red Pandas whose topology is hub-internal.
+  The third return value reports "an external panda is present" and feeds
+  PANDAD_MASK_DOS_IGNITION: with an external panda, the internal dos reports
+  false ignitions via the harness box without a harness connector - that
+  quirk comes from the harness box + dos pair, not from the panda model, so
+  masking must not depend on the external model (ported from master-c3's
+  red_panda_comma_three).
   """
-  external_red_panda = False
+  external_panda_present = False
   spi_serials = set(Panda.spi_list())
   usb_serials = [s for s in panda_serials if s not in spi_serials]
 
-  # scan every USB panda once: both the external Red Panda and the internal
-  # panda (dos or built-in Red Panda) must be found regardless of which one
+  # scan every USB panda once: the external panda and the internal panda
+  # (dos or built-in Red Panda) must both be found regardless of which one
   # enumerates first
   red_serial = None            # first Red Panda found (force-switch path)
-  external_red_serial = None   # first Red Panda that is not hub-internal
+  external_serial = None       # first external CAN panda of any model
   internal_serial = None
   fallback_serial = None
   for serial in usb_serials:
@@ -353,19 +357,19 @@ def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -
       # selection of the remaining ones
       continue
     try:
-      is_red = hw_type == Panda.HW_TYPE_RED_PANDA
+      is_can_panda = hw_type in Panda.SUPPORTED_DEVICES  # excludes the pedal
       topology_internal = _panda_hub_is_internal(serial)
-      if is_red and topology_internal is not True:
-        # external Red Panda, or topology unknown (keep the legacy behavior
-        # of treating it as external)
-        external_red_panda = True
-        if external_red_serial is None:
-          external_red_serial = serial
-      if red_serial is None and is_red:
+      if is_can_panda and topology_internal is not True:
+        # external panda of any model, or topology unknown (keep the legacy
+        # behavior of treating it as external)
+        external_panda_present = True
+        if external_serial is None:
+          external_serial = serial
+      if red_serial is None and hw_type == Panda.HW_TYPE_RED_PANDA:
         red_serial = serial
       if internal_serial is None and (panda.is_internal() or topology_internal is True):
         internal_serial = serial
-      if fallback_serial is None and hw_type in Panda.SUPPORTED_DEVICES:
+      if fallback_serial is None and is_can_panda:
         fallback_serial = serial
     finally:
       panda.close()
@@ -373,36 +377,36 @@ def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -
   # 1. SPI panda (comma 3X internal) wins unconditionally
   for serial in panda_serials:
     if serial in spi_serials:
-      return [serial], None, external_red_panda
+      return [serial], None, external_panda_present
 
-  # 2. external Red Panda: auto-detected and promoted to the active CAN panda
-  #    whenever one is attached - no param needed; the internal panda stays on
-  #    fan/peripheral duty via the aux slot - and with the DualPanda param it
-  #    additionally serves as a secondary CAN panda (logical buses 4-6, e.g.
-  #    the OBD/powertrain segment)
-  if external_red_serial is not None:
-    aux = internal_serial if internal_serial != external_red_serial else None
-    return [external_red_serial], aux, external_red_panda
+  # 2. external CAN panda of any model: auto-detected and promoted to the
+  #    active CAN panda whenever one is attached - no param needed; the
+  #    internal panda stays on fan/peripheral duty via the aux slot - and
+  #    with the DualPanda param it additionally serves as a secondary CAN
+  #    panda (logical buses 4-6, e.g. the OBD/powertrain segment)
+  if external_serial is not None:
+    aux = internal_serial if internal_serial != external_serial else None
+    return [external_serial], aux, external_panda_present
 
   # 2b. UseRedPanda force switch: kept for compatibility, promoting the
   #     first-found Red Panda even when the topology says it is hub-internal
   #     (e.g. a built-in Red Panda device); there is no aux if they coincide.
   if use_red_panda and red_serial is not None:
     aux = internal_serial if internal_serial != red_serial else None
-    return [red_serial], aux, external_red_panda
+    return [red_serial], aux, external_panda_present
 
   # 3. default: the internal panda is the active (and only) panda
   if internal_serial is not None:
-    return [internal_serial], None, external_red_panda
+    return [internal_serial], None, external_panda_present
 
   # 4. no internal panda: fall back to any supported external USB panda so a
   #    C3XL built-in panda (USB-only, possibly on an unexpected hub topology)
   #    or a standalone black panda still becomes the active panda instead of
   #    dead-looping (ported from mr-one's C3XL branch)
   if fallback_serial is not None:
-    return [fallback_serial], None, external_red_panda
+    return [fallback_serial], None, external_panda_present
 
-  return [], None, external_red_panda
+  return [], None, external_panda_present
 
 
 def main() -> None:
@@ -420,25 +424,25 @@ def main() -> None:
 
   # check health for lost heartbeat
   try:
-    # an external Red Panda auto-promotes to the active CAN panda
+    # an external panda of any model auto-promotes to the active CAN panda
     # (check_panda_support); the internal panda then runs as the aux
     # peripheral panda and is heartbeated by the C++ daemon. Skip the
     # internal heartbeat check in that case so a pre-update flag never
     # false-triggers PandaHeartbeatLost. UseRedPanda is kept as a force
     # switch with the same effect.
     use_red_panda = Params().get_bool("UseRedPanda")
-    red_active = False
+    external_active = False
     for s in Panda.list():
       try:
         with Panda(s) as p:
-          red_active |= p.get_type() == Panda.HW_TYPE_RED_PANDA and \
+          external_active |= p.get_type() in Panda.SUPPORTED_DEVICES and \
             (p.is_internal() is not True and _panda_hub_is_internal(s) is not True)
       except Exception:
         continue
     for s in Panda.list():
       with Panda(s) as p:
         internal = p.is_internal() or _panda_hub_is_internal(s) is True
-        if internal and (red_active or use_red_panda):
+        if internal and (external_active or use_red_panda):
           continue
         health = p.health()
         if internal and health["heartbeat_lost"]:
@@ -546,7 +550,7 @@ def main() -> None:
         # custom flasher for xnor's Rivian Longitudinal Upgrade Kit
         flash_rivian_long(panda_serials)
         # find the active (CAN) panda and the internal aux for peripherals
-        active_serials, aux_serial, red_panda_present = check_panda_support(panda_serials, use_red_panda=Params().get_bool("UseRedPanda"))
+        active_serials, aux_serial, external_panda_present = check_panda_support(panda_serials, use_red_panda=Params().get_bool("UseRedPanda"))
         # sanity: the aux slot must never duplicate the active panda (can
         # happen if UseRedPanda is set on a built-in Red Panda device)
         if aux_serial in active_serials:
@@ -581,13 +585,14 @@ def main() -> None:
         for serial in to_flash:
           flash_panda(serial)
 
-        # comma three + external Red Panda: the dos gets false positive
-        # ignitions from the harness box without a harness connector; tell the
-        # C++ daemon to mask the dos ignition line (master-c3
-        # red_panda_comma_three, adapted to the single-panda architecture)
-        if red_panda_present:
-          mask_note = " (built-in Red Panda devices have no dos, so this is a no-op there)"
-          cloudlog.warning("external Red Panda detected, masking dos ignition line false positives" + mask_note)
+        # comma three + external panda: the dos gets false positive ignitions
+        # from the harness box without a harness connector, regardless of the
+        # external panda model; tell the C++ daemon to mask the dos ignition
+        # line (master-c3 red_panda_comma_three, adapted to the single-panda
+        # architecture). The C++ side only masks DOS-type health, so an aux
+        # that is not a dos is unaffected either way.
+        if external_panda_present and aux_serial is not None:
+          cloudlog.warning("external panda detected, masking dos ignition line false positives")
           os.environ['PANDAD_MASK_DOS_IGNITION'] = '1'
         else:
           os.environ.pop('PANDAD_MASK_DOS_IGNITION', None)
