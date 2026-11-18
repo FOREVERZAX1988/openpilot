@@ -325,11 +325,13 @@ def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -
   Red Panda is hw_type-external but hub-internal, and becomes the active
   panda under the default branch instead of dead-looping.
 
-  The returned red-panda flag means EXTERNAL Red Panda (topology checked when
-  it can be): it feeds PANDAD_MASK_DOS_IGNITION, where a comma three with an
-  external Red Panda reports false ignitions via the harness box without a
-  harness connector, so the C++ daemon must mask the dos ignition line
-  (ported from master-c3's red_panda_comma_three).
+  An EXTERNAL Red Panda (topology checked when it can be) is auto-detected
+  and promoted to the active CAN panda without any configuration; the
+  UseRedPanda param only remains as a force switch for devices whose Red
+  Panda is hub-internal. The red-panda flag feeds PANDAD_MASK_DOS_IGNITION,
+  where a comma three with an external Red Panda reports false ignitions via
+  the harness box without a harness connector, so the C++ daemon must mask
+  the dos ignition line (ported from master-c3's red_panda_comma_three).
   """
   external_red_panda = False
   spi_serials = set(Panda.spi_list())
@@ -338,7 +340,8 @@ def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -
   # scan every USB panda once: both the external Red Panda and the internal
   # panda (dos or built-in Red Panda) must be found regardless of which one
   # enumerates first
-  red_serial = None
+  red_serial = None            # first Red Panda found (force-switch path)
+  external_red_serial = None   # first Red Panda that is not hub-internal
   internal_serial = None
   fallback_serial = None
   for serial in usb_serials:
@@ -356,6 +359,8 @@ def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -
         # external Red Panda, or topology unknown (keep the legacy behavior
         # of treating it as external)
         external_red_panda = True
+        if external_red_serial is None:
+          external_red_serial = serial
       if red_serial is None and is_red:
         red_serial = serial
       if internal_serial is None and (panda.is_internal() or topology_internal is True):
@@ -370,11 +375,18 @@ def check_panda_support(panda_serials: list[str], use_red_panda: bool = False) -
     if serial in spi_serials:
       return [serial], None, external_red_panda
 
-  # 2. UseRedPanda: the external Red Panda is the active CAN panda; the
-  #    internal panda stays on fan/peripheral duty via the aux slot - and with
-  #    the DualPanda param it additionally serves as a secondary CAN panda
-  #    (logical buses 4-6, e.g. the OBD/powertrain segment). If the Red Panda
-  #    itself is the internal one (built-in Red Panda), there is no aux.
+  # 2. external Red Panda: auto-detected and promoted to the active CAN panda
+  #    whenever one is attached - no param needed; the internal panda stays on
+  #    fan/peripheral duty via the aux slot - and with the DualPanda param it
+  #    additionally serves as a secondary CAN panda (logical buses 4-6, e.g.
+  #    the OBD/powertrain segment)
+  if external_red_serial is not None:
+    aux = internal_serial if internal_serial != external_red_serial else None
+    return [external_red_serial], aux, external_red_panda
+
+  # 2b. UseRedPanda force switch: kept for compatibility, promoting the
+  #     first-found Red Panda even when the topology says it is hub-internal
+  #     (e.g. a built-in Red Panda device); there is no aux if they coincide.
   if use_red_panda and red_serial is not None:
     aux = internal_serial if internal_serial != red_serial else None
     return [red_serial], aux, external_red_panda
@@ -408,14 +420,25 @@ def main() -> None:
 
   # check health for lost heartbeat
   try:
+    # an external Red Panda auto-promotes to the active CAN panda
+    # (check_panda_support); the internal panda then runs as the aux
+    # peripheral panda and is heartbeated by the C++ daemon. Skip the
+    # internal heartbeat check in that case so a pre-update flag never
+    # false-triggers PandaHeartbeatLost. UseRedPanda is kept as a force
+    # switch with the same effect.
     use_red_panda = Params().get_bool("UseRedPanda")
+    red_active = False
+    for s in Panda.list():
+      try:
+        with Panda(s) as p:
+          red_active |= p.get_type() == Panda.HW_TYPE_RED_PANDA and \
+            (p.is_internal() is not True and _panda_hub_is_internal(s) is not True)
+      except Exception:
+        continue
     for s in Panda.list():
       with Panda(s) as p:
         internal = p.is_internal() or _panda_hub_is_internal(s) is True
-        # when a Red Panda is the active CAN panda, the internal panda runs as
-        # the aux peripheral panda and is heartbeated by the C++ daemon; skip
-        # it so a pre-update flag never false-triggers PandaHeartbeatLost
-        if use_red_panda and internal:
+        if internal and (red_active or use_red_panda):
           continue
         health = p.health()
         if internal and health["heartbeat_lost"]:
