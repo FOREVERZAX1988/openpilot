@@ -15,9 +15,9 @@ import numpy as np
 from openpilot.cereal import log
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.locationd.locationd import (
-  CAMODO_INVALID_GRACE, HandleLogResult, INPUT_INVALID_LIMIT, INPUT_INVALID_RECOVERY,
-  LocationEstimator, MAX_SENSOR_TIME_DIFF, calculate_invalid_input_decay,
-  update_observation_invalid)
+  CAM_ODO_POSE_DELAY, CAMODO_INVALID_GRACE, HandleLogResult, INPUT_INVALID_LIMIT,
+  INPUT_INVALID_RECOVERY, LocationEstimator, MAX_SENSOR_TIME_DIFF,
+  calculate_invalid_input_decay, update_observation_invalid)
 
 FREQ = 104.0          # accelerometer
 LIMIT = 10            # round(INPUT_INVALID_LIMIT * FREQ / 20)
@@ -149,6 +149,50 @@ class TestGyroCamodoCrossCheck(OpenpilotTestCase):
     est.car_speed = 0.0
     msg = self._gyro(10.0, 20.0)
     self.assertEqual(est.handle_log(10.0, 'gyroscope', msg), HandleLogResult.INPUT_INVALID)
+
+
+class TestDeadCameraPose(OpenpilotTestCase):
+  """A model that does not produce pose publishes zeros with a camera's
+  confidence: route 00000041, 14740 chestnut frames at rotStd 0.0010 and
+  |rot| 0.0002, against 0.0275 and 0.0246 on the small model's three. Fed to
+  the filter, that bends GYRO_BIAS onto a car that never turns and makes the
+  cross-check reject every real turn."""
+
+  @staticmethod
+  def _camodo(t, rot_z, std_z, trans_x=0.25):
+    evt = log.Event.new_message()
+    evt.init('cameraOdometry')
+    co = evt.cameraOdometry
+    co.timestampEof = int((t + CAM_ODO_POSE_DELAY) * 1e9)
+    co.rot = [0.0, 0.0, rot_z]
+    co.rotStd = [std_z] * 3
+    co.trans = [trans_x, 0.0, 0.0]
+    co.transStd = [0.02] * 3
+    return co
+
+  def test_a_zero_pose_with_a_tiny_std_is_not_fed_to_the_filter(self):
+    est = LocationEstimator(False, None)
+    before = est.camodo_yawrate_distribution.copy()
+    res = est.handle_log(10.0, 'cameraOdometry', self._camodo(10.0, 0.0002, 0.001))
+    self.assertEqual(res, HandleLogResult.SUCCESS)
+    np.testing.assert_array_equal(est.camodo_yawrate_distribution, before,
+                                  'a dead pose must not become the camera reference')
+    self.assertEqual(float(est.camodo_yawrate_distribution[1]), 10.0,
+                     'the reference stays "no idea", so the cross-check cannot reject the gyro')
+
+  def test_a_real_pose_is_still_used(self):
+    est = LocationEstimator(False, None)
+    res = est.handle_log(10.0, 'cameraOdometry', self._camodo(10.0, 0.05, 0.027))
+    self.assertEqual(res, HandleLogResult.SUCCESS)
+    self.assertGreater(abs(float(est.camodo_yawrate_distribution[0])), 0.01,
+                       'a real turn becomes the reference')
+
+  def test_a_zero_pose_with_a_believable_std_is_kept(self):
+    # parked, and the camera says so with a confidence a camera can have
+    est = LocationEstimator(False, None)
+    est.handle_log(10.0, 'cameraOdometry', self._camodo(10.0, 0.0, 0.03))
+    self.assertLess(float(est.camodo_yawrate_distribution[1]), 1.0,
+                    'a believable zero is a measurement, not a dead pose')
 
 
 class TestCameraOdoGrace(OpenpilotTestCase):

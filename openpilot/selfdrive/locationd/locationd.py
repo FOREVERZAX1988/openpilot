@@ -38,6 +38,13 @@ ROTATION_SANITY_CHECK = 10.0  # rad/s
 TRANS_SANITY_CHECK = 200.0  # m/s
 CALIB_RPY_SANITY_CHECK = 0.5  # rad (+- 30 deg)
 MIN_STD_SANITY_CHECK = 1e-5  # m or rad
+# A model that does not produce a pose publishes zeros with a confidence no
+# camera can have. Measured 2026-11-18 on route 00000041: while the chestnut
+# model drove, rotStd was 0.0010 and |rot| 0.0002 on all 14740 frames, against
+# 0.0275 and 0.0246 on the small model's three. Both limits are well clear of a
+# real camera odometry in either direction.
+DEAD_POSE_ROT_STD = 0.005   # rad
+DEAD_POSE_ROT = 0.01        # rad/s
 MAX_FILTER_REWIND_TIME = 0.8  # s
 MAX_SENSOR_TIME_DIFF = 0.1  # s
 YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
@@ -127,6 +134,8 @@ class LocationEstimator:
     self.posenet_stds = np.array([POSENET_STD_INITIAL_VALUE] * (POSENET_STD_HIST_HALF * 2))
     self.car_speed = 0.0
     self.camodo_yawrate_distribution = np.array([0.0, 10.0])  # mean, std
+    # when the dead-pose warning last went out, so it is not per frame
+    self._dead_pose_logged = 0.0
     # last raw gyro sample in device axes, kept even when it is rejected, so the
     # inputsOK transition log can say what the sample looked like
     self.last_gyro_meas = np.zeros(3, dtype=np.float64)
@@ -282,6 +291,22 @@ class LocationEstimator:
 
       rot_calib_std = np.array(msg.rotStd)
       trans_calib_std = np.array(msg.transStd)
+
+      # A pose of zero carrying 0.001 rad of confidence is not a measurement, it
+      # is a model that does not produce pose at all -- the chestnut link does
+      # exactly this. Feeding it to the filter bends GYRO_BIAS onto a car that
+      # never turns (bias_z reached 0.13 rad/s, 7.5 deg/s), and the gyro/camera
+      # cross-check then throws away the real turn, spending the gyroscope's
+      # budget and latching inputsOK for the length of a drive. Not a fault and
+      # not a timing hiccup: a frame that says nothing, charged as a success so
+      # the budgets keep decaying.
+      if rot_calib_std.max() < DEAD_POSE_ROT_STD and np.abs(rot_device).max() < DEAD_POSE_ROT:
+        if time.monotonic() - self._dead_pose_logged > 10.0:
+          self._dead_pose_logged = time.monotonic()
+          cloudlog.warning('camodo pose is dead: rot=%s rotStd=%s v=%.2f; not fed to the filter'
+                           % (np.round(rot_device, 5).tolist(), np.round(rot_calib_std, 5).tolist(),
+                              self.car_speed))
+        return HandleLogResult.SUCCESS
 
       if rot_calib_std.min() <= MIN_STD_SANITY_CHECK or trans_calib_std.min() <= MIN_STD_SANITY_CHECK:
         return HandleLogResult.INPUT_INVALID
