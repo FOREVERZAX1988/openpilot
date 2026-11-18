@@ -118,6 +118,9 @@ class LocationEstimator:
     self.posenet_stds = np.array([POSENET_STD_INITIAL_VALUE] * (POSENET_STD_HIST_HALF * 2))
     self.car_speed = 0.0
     self.camodo_yawrate_distribution = np.array([0.0, 10.0])  # mean, std
+    # last raw gyro sample in device axes, kept even when it is rejected, so the
+    # inputsOK transition log can say what the sample looked like
+    self.last_gyro_meas = np.zeros(3, dtype=np.float64)
     self.device_from_calib = np.eye(3)
     params = params or Params()
     self.imu_calib_matrix = load_imu_calibration_matrix(params)
@@ -210,6 +213,7 @@ class LocationEstimator:
         return HandleLogResult.SENSOR_SOURCE_INVALID
 
       meas = sensor_to_device_frame(msg.gyroUncalibrated.v)
+      self.last_gyro_meas = meas
 
       gyro_bias = self.kf.x[States.GYRO_BIAS]
       gyro_camodo_yawrate_err = np.abs((meas[2] - gyro_bias[2]) - self.camodo_yawrate_distribution[0])
@@ -378,6 +382,7 @@ def main():
   filter_initialized = False
   critical_services = ["accelerometer", "gyroscope", "cameraOdometry"]
   observation_input_invalid = defaultdict(int)
+  last_inputs_valid = None
 
   input_invalid_limit = {s: round(INPUT_INVALID_LIMIT * (SERVICE_LIST[s].frequency / 20.)) for s in critical_services}
   input_invalid_threshold = {s: input_invalid_limit[s] - 0.5 for s in critical_services}
@@ -438,6 +443,27 @@ def main():
 
       msg = estimator.get_msg(sensors_valid, inputs_valid, filter_initialized)
       pm.send("deviceMotion", msg)
+
+      # One line per transition, so a locationd fault explains itself in the
+      # swaglog even when nobody is attached to the car. Before this, diagnosing
+      # the 2026-11-18 parking-speed outage meant replaying the route offline with
+      # a copy of this file just to learn which service had spent its budget.
+      if filter_initialized and inputs_valid != last_inputs_valid:
+        last_inputs_valid = inputs_valid
+        # A single WARNING line rather than a structured event: it lands in the
+        # swaglog that diag_watchd already snapshots, and grep is enough to read
+        # it. Order: acc/gyro/camodo for both budget and threshold.
+        cloudlog.warning(
+          'locdInputs ok=%d sm_ok=%d budget=%.2f/%.2f/%.2f thr=%.1f/%.1f/%.1f '
+          'v=%.2f gyro_z=%+.4f bias_z=%+.4f camo_yaw=%+.4f camo_std=%.5f sensors=%d' % (
+            int(inputs_valid), int(sm_inputs_valid),
+            observation_input_invalid['accelerometer'], observation_input_invalid['gyroscope'],
+            observation_input_invalid['cameraOdometry'],
+            input_invalid_threshold['accelerometer'], input_invalid_threshold['gyroscope'],
+            input_invalid_threshold['cameraOdometry'],
+            estimator.car_speed, estimator.last_gyro_meas[2], estimator.kf.x[States.GYRO_BIAS][2],
+            estimator.camodo_yawrate_distribution[0], estimator.camodo_yawrate_distribution[1],
+            int(sensors_valid)))
 
 
 if __name__ == "__main__":

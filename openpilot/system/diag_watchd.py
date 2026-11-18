@@ -105,12 +105,17 @@ def swaglog_tail():
         continue
       try:
         j = json.loads(line)
+        raw = j.get('msg$s')
+        if raw is None and isinstance(j.get('msg'), (dict, list)):
+          # cloudlog.event() logs a dict under "msg" (logbook tags each leaf with
+          # a type suffix); flatten it to text so the snapshot stays readable
+          raw = json.dumps(j['msg'], ensure_ascii=False, default=str)
         out.append({
           't': round(j.get('created', 0), 2),
           'level': j.get('level'),
           'daemon': (j.get('ctx') or {}).get('daemon'),
-          # swaglog stores the message under msg$s (logbook names the field that way)
-          'msg': j.get('msg$s') or j.get('msg') or '',
+          # swaglog stores plain messages under msg$s (logbook names it that way)
+          'msg': raw or j.get('msg') or '',
         })
       except Exception:
         out.append({'raw': line[:300]})
