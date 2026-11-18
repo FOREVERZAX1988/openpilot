@@ -41,6 +41,16 @@ MIN_STD_SANITY_CHECK = 1e-5  # m or rad
 MAX_FILTER_REWIND_TIME = 0.8  # s
 MAX_SENSOR_TIME_DIFF = 0.1  # s
 YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
+# The gyro/camodo cross-check compares the gyro against camera odometry's yaw
+# rate, and camera odometry has no usable yaw rate at parking speed. Route
+# 00000039, 2026-11-18: the wheel was held at +-385 deg while creeping at
+# 1.2-2.1 m/s, and cameraOdometry reported rotZ ~ +-0.0003 rad/s with rotStd
+# 0.001 -- "certainly not turning" -- for every frame of the manoeuvre. The
+# check rejected 79 correct gyro samples and the filter absorbed the real turn
+# into GYRO_BIAS (0.0025 -> 0.313 rad/s), which then widened the error and kept
+# the check failing. get_msg already treats vision below 5 m/s as unreliable
+# (posenetOK), so hold the cross-check to the same speed.
+GYRO_CROSS_CHECK_MIN_SPEED = 5.0
 INPUT_INVALID_LIMIT = 2.0 # 1 (camodo) / 9 (sensor) bad input[s] ignored
 INPUT_INVALID_RECOVERY = 10.0 # ~10 secs to resume after exceeding allowed bad inputs by one
 POSENET_STD_INITIAL_VALUE = 10.0
@@ -69,7 +79,7 @@ class HandleLogResult(Enum):
 
 
 def update_observation_invalid(res, which, observation_input_invalid, timing_run,
-                               input_invalid_decay, timing_invalid_grace):
+                               input_invalid_decay, timing_invalid_grace, input_invalid_limit):
   """How one handle_log result moves the per-service invalid counter.
 
   A wrong sample (INPUT_INVALID: accel/gyro out of range, camodo std implausible)
@@ -80,13 +90,20 @@ def update_observation_invalid(res, which, observation_input_invalid, timing_run
   pulling inputsOK down, while a genuinely broken timebase still crosses the
   limit. Without the grace a handful of late frames per drive latched
   locationdTemporaryError for the rest of it.
+
+  The counter is capped at input_invalid_limit, matching what the cameraOdometry
+  branch already did. INPUT_INVALID_RECOVERY is a promise of "about 10 s after
+  going over", and that only holds if the counter cannot pile up: 79 rejected
+  gyro samples in one parking manoeuvre took the gyroscope budget to 75 where
+  the limit is 10, and decaying 75 -> 9.5 at 104 Hz takes ~395 s. The measured
+  outage on route 00000039 was 414 s.
   """
   if res == HandleLogResult.TIMING_INVALID:
     timing_run[which] += 1
     if timing_run[which] >= timing_invalid_grace[which]:
-      observation_input_invalid[which] += 1
+      observation_input_invalid[which] = min(observation_input_invalid[which] + 1, input_invalid_limit[which])
   elif res == HandleLogResult.INPUT_INVALID:
-    observation_input_invalid[which] += 1
+    observation_input_invalid[which] = min(observation_input_invalid[which] + 1, input_invalid_limit[which])
   elif res == HandleLogResult.SUCCESS:
     observation_input_invalid[which] *= input_invalid_decay[which]
     timing_run[which] = 0
@@ -197,7 +214,8 @@ class LocationEstimator:
       gyro_bias = self.kf.x[States.GYRO_BIAS]
       gyro_camodo_yawrate_err = np.abs((meas[2] - gyro_bias[2]) - self.camodo_yawrate_distribution[0])
       gyro_camodo_yawrate_err_threshold = YAWRATE_CROSS_ERR_CHECK_FACTOR * self.camodo_yawrate_distribution[1]
-      gyro_valid = gyro_camodo_yawrate_err < gyro_camodo_yawrate_err_threshold
+      gyro_valid = (gyro_camodo_yawrate_err < gyro_camodo_yawrate_err_threshold
+                    or self.car_speed <= GYRO_CROSS_CHECK_MIN_SPEED)
 
       if np.linalg.norm(meas) >= ROTATION_SANITY_CHECK or not gyro_valid:
         return HandleLogResult.INPUT_INVALID
@@ -403,7 +421,7 @@ def main():
           if res != HandleLogResult.SUCCESS:
             cloudlog.warning(f"Observation {which} ignored ({res.name.lower()})")
           update_observation_invalid(res, which, observation_input_invalid, timing_run,
-                                     input_invalid_decay, timing_invalid_grace)
+                                     input_invalid_decay, timing_invalid_grace, input_invalid_limit)
         elif which == "cameraOdometry":
           # a missed observation (modeld dropped a frame) spends the same budget as a rejected one,
           # capped so a long outage recovers as fast as a short one
