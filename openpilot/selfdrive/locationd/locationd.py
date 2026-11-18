@@ -48,16 +48,14 @@ DEAD_POSE_ROT = 0.01        # rad/s
 MAX_FILTER_REWIND_TIME = 0.8  # s
 MAX_SENSOR_TIME_DIFF = 0.1  # s
 YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
-# The gyro/camodo cross-check compares the gyro against camera odometry's yaw
-# rate, and camera odometry has no usable yaw rate at parking speed. Route
-# 00000039, 2026-11-18: the wheel was held at +-385 deg while creeping at
-# 1.2-2.1 m/s, and cameraOdometry reported rotZ ~ +-0.0003 rad/s with rotStd
-# 0.001 -- "certainly not turning" -- for every frame of the manoeuvre. The
-# check rejected 79 correct gyro samples and the filter absorbed the real turn
-# into GYRO_BIAS (0.0025 -> 0.313 rad/s), which then widened the error and kept
-# the check failing. get_msg already treats vision below 5 m/s as unreliable
-# (posenetOK), so hold the cross-check to the same speed.
-GYRO_CROSS_CHECK_MIN_SPEED = 5.0
+# The cross-check has no speed exemption. Route 00000039 looked like it needed
+# one -- 79 correct gyro samples rejected at 1.2-2.1 m/s -- but the reason the
+# camera said "not turning" while the wheel was held at +-385 deg was a dead
+# pose, not a low speed: route 00000041 showed the chestnut model publishing
+# zeros at rotStd 0.0010 for a whole drive at 5-10 m/s. That is rejected at the
+# source now (DEAD_POSE_ROT_STD above) and never becomes the reference, so a
+# speed gate would only add a blind spot below 5 m/s where a genuinely broken
+# gyro would pass unnoticed.
 # Every big/small model switch publishes one cameraOdometry with valid=false: on
 # route 0000003b each flip of modelV2.big is followed by such a frame (16 flips,
 # 15 bad frames while big was false). The cameraOdometry budget is 2 with a
@@ -236,8 +234,7 @@ class LocationEstimator:
       gyro_bias = self.kf.x[States.GYRO_BIAS]
       gyro_camodo_yawrate_err = np.abs((meas[2] - gyro_bias[2]) - self.camodo_yawrate_distribution[0])
       gyro_camodo_yawrate_err_threshold = YAWRATE_CROSS_ERR_CHECK_FACTOR * self.camodo_yawrate_distribution[1]
-      gyro_valid = (gyro_camodo_yawrate_err < gyro_camodo_yawrate_err_threshold
-                    or self.car_speed <= GYRO_CROSS_CHECK_MIN_SPEED)
+      gyro_valid = gyro_camodo_yawrate_err < gyro_camodo_yawrate_err_threshold
 
       if np.linalg.norm(meas) >= ROTATION_SANITY_CHECK or not gyro_valid:
         return HandleLogResult.INPUT_INVALID

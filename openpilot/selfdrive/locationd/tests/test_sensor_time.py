@@ -108,11 +108,15 @@ class TestInvalidCounter(OpenpilotTestCase):
 
 
 class TestGyroCamodoCrossCheck(OpenpilotTestCase):
-  """The gyro is only checked against camera odometry while vision can see a turn.
+  """The cross-check has no low-speed exemption, on purpose.
 
-  Route 00000039: wheel held at +-385 deg, 1.2-2.1 m/s, and cameraOdometry kept
-  reporting rotZ ~ +-0.0003 rad/s with rotStd 0.001. The cross-check rejected 79
-  correct gyro samples and the filter absorbed the real turn into GYRO_BIAS.
+  Route 00000039 looked like it needed one: 79 correct gyro samples were
+  rejected while creeping at 1.2-2.1 m/s with the wheel held at +-385 deg. But
+  the camera was not saying "not turning" because the car was slow -- it was
+  publishing a dead pose. Route 00000041 showed the same pose at 5-10 m/s for a
+  whole drive, so no speed gate would have covered it, and a gate would only
+  blind the check below 5 m/s. What actually protects parking is that a dead
+  pose never becomes the reference (TestDeadCameraPose).
   """
 
   @staticmethod
@@ -131,20 +135,36 @@ class TestGyroCamodoCrossCheck(OpenpilotTestCase):
     est.camodo_yawrate_distribution = np.array([0.0, 0.01])  # threshold = 0.30 rad/s
     return est
 
-  def test_a_disagreeing_gyro_is_rejected_at_speed(self):
-    est = self._est()
-    est.car_speed = 20.0
-    msg = self._gyro(10.0, 0.4)
-    self.assertEqual(est.handle_log(10.0, 'gyroscope', msg), HandleLogResult.INPUT_INVALID)
+  def test_a_disagreeing_gyro_is_rejected_at_any_speed(self):
+    for speed in (20.0, 5.0, 2.0, 0.0):
+      est = self._est()
+      est.car_speed = speed
+      msg = self._gyro(10.0, 0.4)
+      self.assertEqual(est.handle_log(10.0, 'gyroscope', msg), HandleLogResult.INPUT_INVALID,
+                       'rejected at %.1f m/s: there is no speed exemption' % speed)
 
-  def test_the_same_gyro_is_kept_at_parking_speed(self):
-    est = self._est()
-    est.car_speed = 2.0
-    msg = self._gyro(10.0, 0.4)
-    self.assertEqual(est.handle_log(10.0, 'gyroscope', msg), HandleLogResult.SUCCESS)
+  def test_a_dead_pose_leaves_nothing_to_check_the_gyro_against(self):
+    # the parking case: vision cannot see the turn, the reference stays "no
+    # idea" (std 10 -> threshold 300 rad/s), so a correct gyro is never thrown
+    # away for want of a camera that is blind
+    est = LocationEstimator(False, None)
+    evt = log.Event.new_message()
+    evt.init('cameraOdometry')
+    co = evt.cameraOdometry
+    co.timestampEof = int((10.0 + CAM_ODO_POSE_DELAY) * 1e9)
+    co.rot = [0.0, 0.0, 0.0002]
+    co.rotStd = [0.001] * 3
+    co.trans = [0.25, 0.0, 0.0]
+    co.transStd = [0.02] * 3
+    est.handle_log(10.0, 'cameraOdometry', co)
+    self.assertEqual(float(est.camodo_yawrate_distribution[1]), 10.0,
+                     'a dead pose must not narrow the cross-check')
+    est.car_speed = 1.5
+    self.assertEqual(est.handle_log(10.2, 'gyroscope', self._gyro(10.2, 0.3)),
+                     HandleLogResult.SUCCESS)
 
-  def test_the_gate_does_not_excuse_a_broken_sample(self):
-    # a sample outside the rotation sanity bound is still rejected while parked
+  def test_a_broken_sample_is_still_rejected_while_parked(self):
+    # a sample outside the rotation sanity bound is rejected at any speed
     est = self._est()
     est.car_speed = 0.0
     msg = self._gyro(10.0, 20.0)
