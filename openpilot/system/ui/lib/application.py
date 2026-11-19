@@ -6,12 +6,13 @@ import queue
 import re
 import time
 import signal
+import platform
 import re
 import sys
+import numpy as np
 import raylib_nb as rl
 import openpilot.system.ui.lib.raylib_compat  # noqa: F401  (pyray-era API shims on raylib_nb)
 import threading
-import platform
 import subprocess
 from contextlib import contextmanager
 from collections.abc import Callable
@@ -100,6 +101,8 @@ RECORD_BITRATE = os.getenv("RECORD_BITRATE", "")  # Target bitrate e.g. "2000k" 
 RECORD_SPEED = int(os.getenv("RECORD_SPEED", "1"))  # Speed multiplier
 OFFSCREEN = os.getenv("OFFSCREEN") == "1"  # Disable FPS limiting for fast offline rendering
 
+BURN_IN_MODE = "BURN_IN" in os.environ
+
 GL_VERSION = """
 #version 300 es
 precision highp float;
@@ -109,7 +112,6 @@ if platform.system() == "Darwin":
     #version 330 core
   """
 
-BURN_IN_MODE = "BURN_IN" in os.environ
 BURN_IN_VERTEX_SHADER = GL_VERSION + """
 in vec3 vertexPosition;
 in vec2 vertexTexCoord;
@@ -136,6 +138,20 @@ void main() {
   fragColor = vec4(gradient, sampled.a);
 }
 """
+
+# a pixel's burn-in risk by its blue, from green to yellow to red
+def _burn_in_colors() -> np.ndarray:
+  """each blue value's color: red rising from 0 to 0.5, then green falling from 0.5 to 1"""
+  value = np.arange(256) / 255
+  colors = np.zeros((256, 4))
+  colors[:, 0] = np.clip(value * 2, 0, 1)
+  colors[:, 1] = 1 - np.clip((value - 0.5) * 2, 0, 1)
+  colors[:, 3] = 1
+  return np.round(colors * 255).astype(np.uint8)
+
+
+BURN_IN_COLORS = _burn_in_colors()
+
 
 DEFAULT_TEXT_SIZE = 60
 DEFAULT_TEXT_COLOR = rl.Color(255, 255, 255, int(255 * 0.9))
@@ -437,6 +453,7 @@ class GuiApplication(GuiApplicationExt):
     self._mouse_history: deque[MousePosWithTime] = deque(maxlen=MOUSE_THREAD_RATE)
     self._show_touches = SHOW_TOUCHES
     self._show_fps = SHOW_FPS
+    self._dim_color = rl.BLANK
     self._grid_size = GRID_SIZE
     self._profile_render_frames = PROFILE_RENDER
     self._render_profiler = None
@@ -453,6 +470,10 @@ class GuiApplication(GuiApplicationExt):
 
   def set_show_fps(self, show: bool):
     self._show_fps = show
+
+  def set_dim(self, dim: float):
+    """darken the whole screen, from 0 to 1"""
+    self._dim_color = rl.Color(0, 0, 0, round(255 * min(max(dim, 0.0), 1.0)))
 
   @property
   def show_touches(self) -> bool:
@@ -476,10 +497,8 @@ class GuiApplication(GuiApplicationExt):
           signal.signal(stop_signal, _close)
       atexit.register(self.close)
 
-      flags = rl.ConfigFlags.FLAG_MSAA_4X_HINT
       if ENABLE_VSYNC:
-        flags |= rl.ConfigFlags.FLAG_VSYNC_HINT
-      rl.set_config_flags(flags)
+        rl.set_config_flags(rl.ConfigFlags.FLAG_VSYNC_HINT)
 
       rl.init_window(self._scaled_width, self._scaled_height, title)
 
@@ -487,8 +506,11 @@ class GuiApplication(GuiApplicationExt):
       if self._scale != 1.0:
         rl.set_mouse_scale(1 / self._scale, 1 / self._scale)
       if needs_render_texture:
-        self._render_texture = rl.load_render_texture(self._scaled_width, self._scaled_height)
+        self._render_texture = rl.load_render_texture(self._scaled_width, self._scaled_height)  # noqa: TID251
         rl.set_texture_filter(self._render_texture.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
+
+      if BURN_IN_MODE and self._burn_in_shader is None:
+        self._burn_in_shader = rl.load_shader_from_memory(BURN_IN_VERTEX_SHADER, BURN_IN_FRAGMENT_SHADER)  # noqa: TID251
 
       if RECORD:
         output_fps = fps * RECORD_SPEED
@@ -498,10 +520,10 @@ class GuiApplication(GuiApplicationExt):
           '-nostats',               # Suppress encoding progress
           '-f', 'rawvideo',         # Input format
           '-pix_fmt', 'rgba',       # Input pixel format
-          '-s', f'{self._scaled_width}x{self._scaled_height}',  # Input resolution
+          '-s', 'x'.join(map(str, rl.cpu.screen().shape[1::-1])),  # Input resolution
           '-r', str(fps),           # Input frame rate
           '-i', 'pipe:0',           # Input from stdin
-          '-vf', 'vflip,format=yuv420p',  # Flip vertically and convert to yuv420p
+          '-vf', 'vflip,format=yuv420p',  # The screen's rows are bottom up: flip vertically and convert to yuv420p
           '-r', str(output_fps),    # Output frame rate (for speed multiplier)
           '-c:v', 'libx264',
           '-preset', 'veryfast',
@@ -533,8 +555,6 @@ class GuiApplication(GuiApplicationExt):
       self._load_fonts()
       self._patch_text_functions()
       self._patch_scissor_mode()
-      if BURN_IN_MODE and self._burn_in_shader is None:
-        self._burn_in_shader = rl.load_shader_from_memory(BURN_IN_VERTEX_SHADER, BURN_IN_FRAGMENT_SHADER)
 
       if not PC:
         self._mouse.start()
@@ -731,7 +751,7 @@ class GuiApplication(GuiApplicationExt):
     return image
 
   def _load_texture_from_image(self, image: rl.Image) -> rl.Texture:
-    """Send image to GPU and unload original image."""
+    """Make a texture from the image and unload the image."""
     texture = rl.load_texture_from_image(image)
     # Set texture filtering to smooth the result
     rl.set_texture_filter(texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
@@ -858,8 +878,11 @@ class GuiApplication(GuiApplicationExt):
         for tick in self._nav_stack_ticks:
           tick()
 
-        # Only render top widgets
-        for widget in self._nav_stack[-self._nav_stack_widgets_to_render:]:
+        # Only render top widgets, and none under one covering the screen
+        widgets = self._nav_stack[-self._nav_stack_widgets_to_render:]
+        if widgets and widgets[-1].covers_screen:
+          widgets = widgets[-1:]
+        for widget in widgets:
           widget.render(rl.Rectangle(0, 0, self.width, self.height))
 
         frame_time = rl.get_frame_time()
@@ -868,6 +891,9 @@ class GuiApplication(GuiApplicationExt):
 
         if self._scale != 1.0:
           rl.rl_pop_matrix()
+
+        if self._dim_color.a > 0:
+          rl.draw_rectangle(0, 0, self._scaled_width, self._scaled_height, self._dim_color)
 
         if self._render_texture:
           rl.end_texture_mode()
@@ -896,14 +922,21 @@ class GuiApplication(GuiApplicationExt):
         if self._grid_size > 0:
           self._draw_grid()
 
+        if BURN_IN_MODE and self._render_texture is None:
+          screen = rl.cpu.screen()
+          screen[:] = BURN_IN_COLORS[screen[..., 2]]
+
         rl.end_drawing()
 
         if RECORD:
-          image = rl.load_image_from_texture(self._render_texture.texture)
-          data_size = image.width * image.height * 4
-          data = image.to_bytes(data_size)
-          self._ffmpeg_queue.put(data)  # Async write via background thread
-          rl.unload_image(image)
+          if self._render_texture is not None:
+            image = rl.load_image_from_texture(self._render_texture.texture)
+            data_size = image.width * image.height * 4
+            data = image.to_bytes(data_size)
+            self._ffmpeg_queue.put(data)  # Async write via background thread
+            rl.unload_image(image)
+          else:
+            self._ffmpeg_queue.put(rl.cpu.screen().tobytes())  # Async write via background thread
 
         self._monitor_fps()
         self._frame += 1

@@ -12,8 +12,8 @@ from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets.nav_widget import NavWidget
 from openpilot.system.ui.widgets.scroller import Scroller
 from openpilot.system.ui.widgets.label import UnifiedLabel
-from openpilot.system.ui.mici_setup import (NetworkSetupPage, FailedPage, NetworkConnectivityMonitor,
-                                            GreyBigButton, BigPillButton)
+from openpilot.selfdrive.ui.mici.widgets.button import GreyBigButton, BigPillButton
+from openpilot.system.ui.mici_setup import NetworkSetupPage, FailedPage, NetworkConnectivityMonitor
 
 
 class UpdaterNetworkSetupPage(NetworkSetupPage):

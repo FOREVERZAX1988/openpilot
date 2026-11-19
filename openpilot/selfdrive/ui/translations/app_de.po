@@ -707,7 +707,7 @@ msgstr "VERBINDUNG"
 
 #: openpilot/system/ui/widgets/network.py
 msgid "CONNECTING..."
-msgstr "VERBINDUNG"
+msgstr "VERBINDEN..."
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Calculating..."
@@ -2102,7 +2102,7 @@ msgstr ""
 
 #: openpilot/system/ui/widgets/network.py
 msgid "FORGETTING..."
-msgstr "WIRD VERGESSEN..."
+msgstr "VERGESSEN..."
 
 #: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
 msgid "FRIC."
@@ -4757,7 +4757,7 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Standard"
-msgstr "Standardmodus"
+msgstr "Standard"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/following_profile_toggles.py
 msgid "Standard Personality"

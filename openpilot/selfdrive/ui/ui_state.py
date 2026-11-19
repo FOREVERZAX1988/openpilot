@@ -12,6 +12,7 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import drop_realtime
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.ui.lib.prime_state import PrimeState
+from openpilot.selfdrive.ui.lib.notifications import Notifications
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.common.hardware import HARDWARE, PC
 from openpilot.common.hardware.usb import cable_connected, get_usb_state, is_chestnut_usb_id
@@ -26,6 +27,9 @@ from openpilot.selfdrive.ui.screen_settings import (
 )
 
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
+BACKLIGHT_MIN = 30  # the lowest backlight the display shows properly
+# auto brightness goes below the backlight's floor by dimming the UI, down to 40% black
+BRIGHTNESS_MIN = BACKLIGHT_MIN * 0.6 if HARDWARE.get_device_type() == "mici" else BACKLIGHT_MIN
 PARAM_UPDATE_TIME = 1 / 5.0
 
 # C3 (tici) clone panels: the Samsung TSP firmware gates itself off when the
@@ -104,6 +108,7 @@ class UIState(UIStateSP):
     )
 
     self.prime_state = PrimeState()
+    self.notifications = Notifications()
 
     # UI Status tracking
     self.status: UIStatus = UIStatus.DISENGAGED
@@ -137,6 +142,7 @@ class UIState(UIStateSP):
     self.panda_type: log.PandaState.PandaType = log.PandaState.PandaType.unknown
     self.personality: log.LongitudinalPersonality = log.LongitudinalPersonality.standard
     self.has_longitudinal_control: bool = False
+    self.personality_param: int = log.LongitudinalPersonality.standard
     self.is_body: bool | None = False
     self.CP: car.CarParams | None = None
     self.light_sensor: float = -1.0
@@ -169,6 +175,7 @@ class UIState(UIStateSP):
 
   def update(self) -> None:
     self.prime_state.start()  # start thread after manager forks ui
+    self.notifications.start()
     if self._params_thread is None:
       self._params_thread = threading.Thread(target=self._params_refresh_worker, daemon=True)
       self._params_thread.start()
@@ -241,8 +248,8 @@ class UIState(UIStateSP):
 
     # Handle onroad/offroad transition
     if self.started != self._started_prev or self.sm.frame == 1:
+      self.status = UIStatus.DISENGAGED
       if self.started:
-        self.status = UIStatus.DISENGAGED
         self.started_frame = self.sm.frame
         self.started_time = time.monotonic()
         self.chestnut_present = self.sm["deviceState"].chestnutPresent or (self.chestnut_compiled and self.cable_may_be_chestnut())
@@ -302,6 +309,7 @@ class UIState(UIStateSP):
     self.initial_cruise_speed = self.params.get("InitialCruiseSpeedKph", return_default=True)
     self.always_on_dm = self.params.get_bool("AlwaysOnDM")
     self.pearl_eyes = self.params.get("CarrotDMPearlEyes", return_default=True)
+    self.personality_param = self.params.get("LongitudinalPersonality", return_default=True)
     self.navigation_enabled = self.params.get_bool("NavigationEnabled")
     self.nav_destination_set = self.params.get("NavDestination") is not None
     self.chestnut_active = self.params.get("ChestnutActive")
@@ -451,10 +459,15 @@ class Device(DeviceSP):
       else:
         clipped_brightness = float(self._screen_brightness_onroad)
 
-    brightness = round(self._brightness_filter.update(clipped_brightness))
+    brightness = self._brightness_filter.update(clipped_brightness)
 
     if gui_app.sunnypilot_ui():
-      brightness = DeviceSP.set_onroad_brightness(ui_state, self._awake, brightness)
+      brightness = DeviceSP.set_onroad_brightness(ui_state, self._awake, brightness, BRIGHTNESS_MIN, BACKLIGHT_MIN)
+      brightness, dim = DeviceSP.backlight_and_dim(brightness, BACKLIGHT_MIN, dims=BRIGHTNESS_MIN < BACKLIGHT_MIN)
+      gui_app.set_dim(dim)
+    else:
+      gui_app.set_dim(1 - brightness / BACKLIGHT_MIN)
+      brightness = round(max(brightness, BACKLIGHT_MIN))
 
     # Instant 100% when max brightness is requested, bypassing the 10 s filter ramp.
     target_is_max = (not ui_state.started and self._offroad_brightness == 100) or \

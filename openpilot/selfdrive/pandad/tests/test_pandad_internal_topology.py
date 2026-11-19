@@ -4,10 +4,10 @@
 Covers:
 - _panda_hub_is_internal: sysfs USB topology resolution (tici internal root
   hub usb1 vs external usb3, unknown platform -> None, unknown hub -> None)
-- check_panda_support: a built-in Red Panda (hub-internal but
-  hw_type-external) becomes the active panda by default; an external Red
-  Panda keeps the legacy UseRedPanda / aux-dos behavior and feeds the
-  external-red-panda flag
+- check_panda_support: an external Red Panda is auto-detected and promoted
+  (no param needed) with the internal dos as aux; a built-in Red Panda
+  (hub-internal but hw_type-external) becomes the active panda by default;
+  the legacy UseRedPanda param keeps working as a force switch
 - flash_panda: refuses to flash when the expected signature is unavailable
   (brick guard) and recovers a built-in Red Panda via the topology check
 """
@@ -221,21 +221,57 @@ class TestCheckPandaSupport(unittest.TestCase):
     assert aux is None
     assert ext_red is False
 
-  def test_external_red_panda_plus_dos_legacy(self):
-    # the classic setup: internal dos + external Red Panda. Default keeps the
-    # dos active; UseRedPanda promotes the Red Panda with the dos as aux.
+  def test_external_red_panda_plus_dos_auto_and_legacy(self):
+    # the classic setup: internal dos + external Red Panda. The Red Panda is
+    # auto-detected and promoted (no param needed) with the dos as aux;
+    # the UseRedPanda param keeps the same effect as a force switch.
     devices = {"dos1": (HW_DOS, True), "red1": (HW_RED, False)}
     topo = {"dos1": True, "red1": False}
     for patcher in _patch_env(devices, topo):
       patcher.start()
     active, aux, ext_red = pandad.check_panda_support(["red1", "dos1"])
-    assert active == ["dos1"]
-    assert aux is None
+    assert active == ["red1"]
+    assert aux == "dos1"
     assert ext_red is True
 
     active, aux, ext_red = pandad.check_panda_support(["red1", "dos1"], use_red_panda=True)
     assert active == ["red1"]
     assert aux == "dos1"
+    assert ext_red is True
+
+  def test_external_black_panda_plus_dos_auto(self):
+    # model-agnostic promotion: an external black panda (or any supported
+    # model) is auto-detected like the red one - active CAN panda without
+    # any param, internal dos as aux, mask-dos-ignition flag set
+    devices = {"dos1": (HW_DOS, True), "blk1": (HW_BLACK, False)}
+    topo = {"dos1": True, "blk1": False}
+    for patcher in _patch_env(devices, topo):
+      patcher.start()
+    active, aux, ext = pandad.check_panda_support(["blk1", "dos1"])
+    assert active == ["blk1"]
+    assert aux == "dos1"
+    assert ext is True
+
+  def test_external_black_panda_alone(self):
+    # external black panda with no internal panda found (topology explicit):
+    # still auto-promoted and flagged external
+    for patcher in _patch_env({"blk1": (HW_BLACK, False)}, {"blk1": False}):
+      patcher.start()
+    active, aux, ext = pandad.check_panda_support(["blk1"])
+    assert active == ["blk1"]
+    assert aux is None
+    assert ext is True
+
+  def test_builtin_and_external_red_panda_prefer_external(self):
+    # a device with a built-in Red Panda AND an external one plugged in:
+    # the external one wins, the built-in one serves as the aux
+    devices = {"brr1": (HW_RED, False), "red2": (HW_RED, False)}
+    topo = {"brr1": True, "red2": False}
+    for patcher in _patch_env(devices, topo):
+      patcher.start()
+    active, aux, ext_red = pandad.check_panda_support(["brr1", "red2"])
+    assert active == ["red2"]
+    assert aux == "brr1"
     assert ext_red is True
 
   def test_unknown_topology_falls_back_to_supported_panda(self):
@@ -264,15 +300,17 @@ class TestCheckPandaSupport(unittest.TestCase):
     assert ext_red is False
 
   def test_builtin_red_panda_true_topo_without_tici_would_be_external(self):
-    # if the topology check says False/None explicitly, a Red Panda stays
-    # external even on tici (plugged into the typec port)
+    # if the topology check says False/None explicitly, a Red Panda is
+    # external even on tici (plugged into the typec port) and auto-promotes
+    # over the internal dos
     devices = {"dos1": (HW_DOS, True), "red1": (HW_RED, False)}
     topo = {"dos1": True, "red1": False}
     for patcher in _patch_env(devices, topo):
       patcher.start()
     active, aux, ext_red = pandad.check_panda_support(["red1", "dos1"])
     assert ext_red is True
-    assert active == ["dos1"]
+    assert active == ["red1"]
+    assert aux == "dos1"
 
 
 class TestFlashPandaGuards(unittest.TestCase):

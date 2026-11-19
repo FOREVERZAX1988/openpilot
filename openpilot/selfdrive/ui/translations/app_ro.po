@@ -914,7 +914,7 @@ msgstr ""
 
 #: openpilot\selfdrive\ui\widgets\pairing_dialog.py
 msgid "Click \"add new device\" and scan the QR code on the right"
-msgstr "Apasă pe „adaugă un dispozitiv nou” și scanează codul QR din dreapta"
+msgstr "Apasă pe „add new device” și scanează codul QR din dreapta"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Click the Sponsor button for more details"

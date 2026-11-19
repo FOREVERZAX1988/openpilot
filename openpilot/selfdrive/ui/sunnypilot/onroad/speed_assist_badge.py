@@ -4,30 +4,31 @@ Copyright (c) 2026-, Zeph Leggett.
 This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 
-The longitudinal marks. Set Speed Assist is a set-speed gauge with a swoosh over it, its arrow
-ending on the needle's line: speed raised to the set speed. Alpha longitudinal is upstream's onroad
-car over three bars, tightened to the home footer's 40 px.
+The longitudinal marks. Set Speed Assist is a set-speed gauge with a swoosh over it, its arrow ending on
+the needle's line: speed raised to the set speed. It marks the assist in the home footer and on the tizi
+button. Alpha longitudinal is upstream's onroad car over three bars, tightened to the home footer's 40 px.
 
-Both are sized by their ink, not a padded box, so a status bar's spacing is the gap you see. The
-gauge is drawn as polygons rather than a texture, so it stays sharp at any size and adds no LFS asset.
+Both are sized by their ink, not a padded box, so a status bar's spacing is the gap you see. The gauge is
+three outlines filled by draw_polygon, antialiased at any size, and adds no LFS asset.
 """
 import math
+from functools import lru_cache
 
 import numpy as np
 import raylib_nb as rl
 
 from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.polygon import draw_polygon
 from openpilot.system.ui.widgets import Widget
 
 STATUS_ICON_HEIGHT = 40  # upstream's footer icons (network, chestnut, usb) are 40 px of ink
 STATUS_ICON_ALPHA = 0.9  # settings and network draw at 90%
 
-# gauge, in units of its scale s, about the dial's centre (raylib degrees: 0 right, clockwise).
-# Strokes sit near the wheel's rim (~6 px at 50) at the onroad 44 px; the swoosh rides out with its
-# thickness so the gap to the dial stays open, which is what keeps the weight from reading heavy.
+# gauge, in units of its scale, about the dial's centre (raylib degrees: 0 right, clockwise). The swoosh
+# rides out with its thickness so the gap to the dial stays open, which keeps the weight from reading heavy.
 DIAL_FROM, DIAL_TO = 135, 405
 DIAL_R, DIAL_T = 0.378, 0.115
-NEEDLE_DEG = 285          # about 12:30
+NEEDLE_DEG = 285  # about 12:30
 NEEDLE_LEN = DIAL_R - DIAL_T - 0.04
 HUB_R = 0.085
 SWOOSH_FROM = 195
@@ -40,106 +41,59 @@ SWOOSH_TO = NEEDLE_DEG - HEAD_DEG  # so the arrow's tip lies on the needle's lin
 SWOOSH_SEGMENTS = 24
 DIAL_SEGMENTS = 64
 HUB_SEGMENTS = 12
-
-def _pt(cx: float, cy: float, r: float, deg: float) -> tuple[float, float]:
-  return cx + r * math.cos(math.radians(deg)), cy + r * math.sin(math.radians(deg))
+DIAL_DROP = 1 / 16  # of the height: the swoosh weighs the top, so a dial on a button's centre looks high
 
 
-def _swoosh_t(f: float) -> float:
-  return SWOOSH_T0 + (SWOOSH_T1 - SWOOSH_T0) * f
+def _pt(r: float, deg: float) -> tuple[float, float]:
+  return r * math.cos(math.radians(deg)), r * math.sin(math.radians(deg))
 
 
-def _ink_bounds() -> tuple[float, float, float, float]:
-  """(left, top, right, bottom) of the gauge's ink at s = 1 about the dial's centre."""
-  pts = []
-  for deg in np.linspace(DIAL_FROM, DIAL_TO, 271):
-    pts += [_pt(0, 0, DIAL_R, deg), _pt(0, 0, DIAL_R - DIAL_T, deg)]
-  for f in np.linspace(0, 1, 101):
-    deg, t = SWOOSH_FROM + (SWOOSH_TO - SWOOSH_FROM) * f, _swoosh_t(f)
-    pts += [_pt(0, 0, SWOOSH_R + t / 2, deg), _pt(0, 0, SWOOSH_R - t / 2, deg)]
-  pts += [_pt(0, 0, SWOOSH_R, NEEDLE_DEG), _pt(0, 0, SWOOSH_R - HEAD_HALF, SWOOSH_TO), _pt(0, 0, SWOOSH_R + HEAD_HALF, SWOOSH_TO)]
-  xs, ys = zip(*pts, strict=True)
-  return min(xs), min(ys), max(xs), max(ys)
-
-
-_LEFT, _TOP, _RIGHT, _BOTTOM = _ink_bounds()
-GAUGE_ASPECT = (_RIGHT - _LEFT) / (_BOTTOM - _TOP)  # ink width / height
-
-
-Point = tuple[float, float]
-
-
-def _strip(left: list[Point], right: list[Point]) -> np.ndarray:
-  """One triangle strip between two chains, so a translucent colour lays each pixel once: separate
-  overlapping shapes would show darker seams wherever they meet."""
-  (lx, ly), (rx, ry), (nx, ny) = left[0], right[0], left[1]
-  if (rx - lx) * (ny - ly) - (ry - ly) * (nx - lx) > 0:
-    left, right = right, left  # raylib culls clockwise triangles; the strip's first one sets the winding
-  return np.array([p for pair in zip(left, right, strict=True) for p in pair])
-
-
-def _unit_strips() -> list[np.ndarray]:
-  """The gauge's three strips at s = 1 about the dial's centre."""
+def _unit_outlines() -> list[np.ndarray]:
+  """The dial's band, the needle and hub as one teardrop, and the tapered swoosh with its arrowhead."""
   dial = np.linspace(DIAL_FROM, DIAL_TO, DIAL_SEGMENTS + 1)
-  strips = [_strip([_pt(0, 0, DIAL_R, d) for d in dial], [_pt(0, 0, DIAL_R - DIAL_T, d) for d in dial])]
+  band = [_pt(DIAL_R, d) for d in dial] + [_pt(DIAL_R - DIAL_T, d) for d in dial[::-1]]
 
-  # needle and hub as one teardrop: the tip, then the hub's back half from where the sides meet it
-  tip = _pt(0, 0, NEEDLE_LEN, NEEDLE_DEG)
+  # the tip, then round the hub's back from one tangent to the other
   side = math.degrees(math.acos(HUB_R / NEEDLE_LEN))
-  back = np.linspace(side, 180, HUB_SEGMENTS)
-  strips.append(_strip([tip] + [_pt(0, 0, HUB_R, NEEDLE_DEG + d) for d in back],
-                       [tip] + [_pt(0, 0, HUB_R, NEEDLE_DEG - d) for d in back]))
+  needle = [_pt(NEEDLE_LEN, NEEDLE_DEG)] + [_pt(HUB_R, NEEDLE_DEG + d) for d in np.linspace(side, 360 - side, 2 * HUB_SEGMENTS - 1)]
 
-  # swoosh and arrowhead as one ribbon: the tapered shaft, its barbs, then the tip
   outer, inner = [], []
   for f in np.linspace(0, 1, SWOOSH_SEGMENTS + 1):
-    deg, t = SWOOSH_FROM + (SWOOSH_TO - SWOOSH_FROM) * f, _swoosh_t(f)
-    outer.append(_pt(0, 0, SWOOSH_R + t / 2, deg))
-    inner.append(_pt(0, 0, SWOOSH_R - t / 2, deg))
-  outer.append(_pt(0, 0, SWOOSH_R + HEAD_HALF, SWOOSH_TO))
-  inner.append(_pt(0, 0, SWOOSH_R - HEAD_HALF, SWOOSH_TO))
-  arrow_tip = _pt(0, 0, SWOOSH_R, NEEDLE_DEG)
-  strips.append(_strip(outer + [arrow_tip], inner + [arrow_tip]))
-  return strips
+    deg, t = SWOOSH_FROM + (SWOOSH_TO - SWOOSH_FROM) * f, SWOOSH_T0 + (SWOOSH_T1 - SWOOSH_T0) * f
+    outer.append(_pt(SWOOSH_R + t / 2, deg))
+    inner.append(_pt(SWOOSH_R - t / 2, deg))
+  head = [_pt(SWOOSH_R + HEAD_HALF, SWOOSH_TO), _pt(SWOOSH_R, NEEDLE_DEG), _pt(SWOOSH_R - HEAD_HALF, SWOOSH_TO)]
+  swoosh = outer + head + inner[::-1]
+  return [np.array(p, dtype=np.float32) for p in (band, needle, swoosh)]
 
 
-_UNIT_STRIPS = _unit_strips()
-# vertex arrays by (x, y, height): the gauge only moves while it slides in or out
-_placed: dict[tuple[float, float, float], list[list[rl.Vector2]]] = {}
-PLACED_MAX = 8
+_UNIT = _unit_outlines()
+_LEFT, _TOP = np.vstack(_UNIT).min(axis=0)
+_RIGHT, _BOTTOM = np.vstack(_UNIT).max(axis=0)
+GAUGE_ASPECT = float((_RIGHT - _LEFT) / (_BOTTOM - _TOP))  # ink width / height
+
+
+@lru_cache(maxsize=8)
+def gauge_outlines(height: float) -> list[np.ndarray]:
+  """The gauge's outlines `height` tall, its ink's top-left at the origin."""
+  s = height / (_BOTTOM - _TOP)
+  return [((unit - (_LEFT, _TOP)) * s).astype(np.float32) for unit in _UNIT]
 
 
 def draw_gauge(x: float, y: float, height: float, alpha: float = 1.0) -> None:
   """The Set Speed Assist gauge with its ink's top-left at (x, y), `height` tall."""
-  # rounded: a sliding filter only approaches its rest, so its last digits never settle
-  key = (round(x, 1), round(y, 1), round(height, 1))
-  strips = _placed.get(key)
-  if strips is None:
-    x, y, height = key
-    s = height / (_BOTTOM - _TOP)
-    origin = np.array([x - _LEFT * s, y - _TOP * s])
-    strips = []
-    for unit in _UNIT_STRIPS:
-      strips.append([rl.Vector2(px, py) for px, py in (unit * s + origin).tolist()])
-    if len(_placed) >= PLACED_MAX:
-      _placed.clear()
-    _placed[key] = strips
-  color = rl.fade(rl.WHITE, alpha)
-  for points in strips:
-    rl.draw_triangle_strip(points, len(points), color)
-
-
-def draw_gauge_centered(cx: float, cy: float, height: float, alpha: float = 1.0) -> None:
-  """Its ink box centred on (cx, cy), to sit beside other icons."""
-  draw_gauge(cx - GAUGE_ASPECT * height / 2, cy - height / 2, height, alpha)
-
-
-DIAL_DROP = 1 / 16  # of the height: the swoosh weighs the top, so a dial on the centre looks high
+  if alpha < 1e-2:
+    return
+  screen = rl.Rectangle(0, 0, gui_app.width, gui_app.height)
+  fill = rl.fade(rl.WHITE, alpha)
+  origin = np.array([x, y], dtype=np.float32)
+  for outline in gauge_outlines(round(height, 3)):
+    draw_polygon(screen, outline + origin, color=fill)
 
 
 def draw_gauge_on_dial(cx: float, cy: float, height: float, alpha: float = 1.0) -> None:
-  """For a round button: the dial's centre on (cx, cy), dropped a touch to look centred, so dial,
-  swoosh and button ring read as one; centring the ink box sets the dial low and right instead."""
+  """For a round button: the dial's centre on (cx, cy), dropped a touch to look centred, so dial, swoosh
+  and button ring read as one; centring the ink box sets the dial low and right instead."""
   s = height / (_BOTTOM - _TOP)
   draw_gauge(cx + _LEFT * s, cy + (_TOP + DIAL_DROP * (_BOTTOM - _TOP)) * s, height, alpha)
 

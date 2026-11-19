@@ -707,7 +707,7 @@ msgstr "CONECTAR"
 
 #: openpilot/system/ui/widgets/network.py
 msgid "CONNECTING..."
-msgstr "CONECTAR"
+msgstr "CONECTANDO..."
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/storage.py
 msgid "Calculating..."
@@ -813,7 +813,7 @@ msgstr ""
 
 #: openpilot/system/ui/widgets/network.py
 msgid "Cellular Metered"
-msgstr "Medición celular"
+msgstr "Red celular medida"
 
 #: openpilot/selfdrive/ui/layouts/settings/device.py
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/device.py
@@ -893,7 +893,7 @@ msgstr ""
 
 #: openpilot/selfdrive/ui/widgets/pairing_dialog.py
 msgid "Click \"add new device\" and scan the QR code on the right"
-msgstr "Haz clic en \"añadir nuevo dispositivo\" y escanea el código QR de la derecha"
+msgstr "Haz clic en \"add new device\" y escanea el código QR de la derecha"
 
 #: openpilot/selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py
 msgid "Click the Sponsor button for more details"
@@ -2102,7 +2102,7 @@ msgstr ""
 
 #: openpilot/system/ui/widgets/network.py
 msgid "FORGETTING..."
-msgstr "OLVIDAR..."
+msgstr "OLVIDANDO..."
 
 #: openpilot/selfdrive/ui/sunnypilot/onroad/developer_ui/elements.py
 msgid "FRIC."

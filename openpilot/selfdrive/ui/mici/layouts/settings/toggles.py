@@ -3,7 +3,7 @@ from collections.abc import Callable
 from openpilot.cereal import log
 
 from openpilot.system.ui.widgets.scroller import NavScroller
-from openpilot.selfdrive.ui.mici.widgets.button import BigParamControl, BigMultiParamToggle, BigMultiToggle, BigToggle, GreyBigButton
+from openpilot.selfdrive.ui.mici.widgets.button import BigToggle, BigParamControl, BigMultiParamToggle, BigMultiToggle, BigCircleButton, GreyBigButton
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigConfirmationCircleButton
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
@@ -41,9 +41,9 @@ class ExperimentalModeConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
     super().__init__()
 
-    accept = BigConfirmationCircleButton(tr("enable\nexperimental mode"),
-                                         gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
-                                         lambda: self.dismiss(on_confirm))
+    accept = BigCircleButton(gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
+                             title=tr("enable\nexperimental mode"))
+    accept.set_click_callback(lambda: self.dismiss(on_confirm))
 
     self._scroller.add_widgets([
       GreyBigButton(tr("enabling\nexperimental mode"), tr("scroll to continue"),

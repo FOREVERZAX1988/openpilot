@@ -130,7 +130,22 @@ def touch_thread(end_event):
   event_size = struct.calcsize(event_format)
   event_frame = []
 
-  with open("/dev/input/by-path/platform-894000.i2c-event", "rb") as event_file:
+  # a comma three without a display has no fts_ts event node, and the boot.sh
+  # symlink may not exist yet when this thread starts. Retrying keeps this
+  # thread alive - a dead thread makes main() exit, manager restart-loops
+  # hardwared every ~2 s, and the constant sm.frame reset pins
+  # not_onroad_cycle to false, permanently blocking entering onroad.
+  event_file = None
+  while event_file is None and not end_event.is_set():
+    try:
+      event_file = open("/dev/input/by-path/platform-894000.i2c-event", "rb")
+    except OSError:
+      cloudlog.exception("touch event node unavailable, retrying")
+      time.sleep(1)
+  if event_file is None:
+    return
+
+  with event_file:
     fcntl.fcntl(event_file, fcntl.F_SETFL, os.O_NONBLOCK)
     while not end_event.is_set():
       if (count % int(1. / DT_HW)) == 0:
@@ -369,9 +384,6 @@ def hardware_thread(end_event, hw_queue) -> None:
     startup_conditions["device_temp_engageable"] = thermal_status < ThermalStatus.overheated
 
     startup_conditions["not_flashing_chestnut"] = not chestnut.flashing
-
-    # ensure device is fully booted
-    startup_conditions["device_booted"] = startup_conditions.get("device_booted", False) or HARDWARE.booted()
 
     # user-forced status
     offroad_mode = params.get_bool("OffroadMode")

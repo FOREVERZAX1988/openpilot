@@ -160,6 +160,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // 0 = disable all recording, 1 = logs only (route files kept, no video), 2 = full (default)
     {"RecordingMode", {PERSISTENT | BACKUP, INT, "2"}},
     {"SecOCKey", {PERSISTENT | DONT_LOG | BACKUP, STRING}},
+    {"Notifications", {PERSISTENT, JSON}},
     {"ShowDebugInfo", {PERSISTENT, BOOL}},
     {"RouteCount", {PERSISTENT, INT, "0"}},
     {"SnoozeUpdate", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},

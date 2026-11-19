@@ -246,11 +246,12 @@ std::optional<bool> send_panda_states(PubMaster *pm, Panda *panda, Panda *aux_pa
       health.flags_pkt |= HEALTH_FLAG_IGNITION_LINE;
     }
 
-    // on comma three setups with an external Red Panda, the dos can get false
-    // positive ignitions due to the harness box without a harness connector, so
-    // ignore its ignition line (ported from master-c3's red_panda_comma_three;
-    // pandad.py exports PANDAD_MASK_DOS_IGNITION when it sees a Red Panda
-    // alongside the internal dos)
+    // on comma three setups with an external panda (any model), the dos can
+    // get false positive ignitions due to the harness box without a harness
+    // connector - the quirk comes from the harness box + dos pair, not from
+    // the panda model - so ignore its ignition line (ported from master-c3's
+    // red_panda_comma_three; pandad.py exports PANDAD_MASK_DOS_IGNITION when
+    // an external panda is connected alongside the internal dos)
     static const bool mask_dos_ignition = getenv("PANDAD_MASK_DOS_IGNITION") != nullptr;
     if (mask_dos_ignition && (p->hw_type == cereal::PandaState::PandaType::DOS)) {
       health.flags_pkt &= ~HEALTH_FLAG_IGNITION_LINE;
@@ -291,12 +292,12 @@ std::optional<bool> send_panda_states(PubMaster *pm, Panda *panda, Panda *aux_pa
 
     // Convert faults bitset to capnp list
     // bits above the last fault type would leave unset entries, which read as relayMalfunction
-    std::bitset<sizeof(health.faults_pkt) * 8> fault_bits(health.faults_pkt & ((2U << size_t(cereal::PandaState::FaultType::TIMER)) - 1U));
+    std::bitset<sizeof(health.faults_pkt) * 8> fault_bits(health.faults_pkt & ((2U << size_t(cereal::PandaState::FaultType::SAFETY_REDUNDANCY)) - 1U));
     auto faults = ps.initFaults(fault_bits.count());
 
     size_t j = 0;
     for (size_t f = size_t(cereal::PandaState::FaultType::RELAY_MALFUNCTION);
-         f <= size_t(cereal::PandaState::FaultType::TIMER); f++) {
+         f <= size_t(cereal::PandaState::FaultType::SAFETY_REDUNDANCY); f++) {
       if (fault_bits.test(f)) {
         faults.set(j, cereal::PandaState::FaultType(f));
         j++;
