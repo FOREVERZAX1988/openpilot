@@ -45,11 +45,24 @@ fi
 # master 的原始值，而 CNB staging 上可能带着与设备当前 AGNOS 配套的锁定提交
 # （版本错配会让设备 OTA 逻辑混乱）。默认保留 prev tip 的 AGNOS 期望；
 # 需要随新 AGNOS 升级发布时在流水线 env 设 BUMP_AGNOS=true。
+#
+# 2026-11-19 事故复盘：旧版 sed 模式 `^export AGNOS_VERSION=` 匹配不上 launch_env.sh
+# 里 if 块内的 `  export AGNOS_VERSION="..."`（有前导空格），sed 静默无效，而
+# agnos.json/agnos_tici.json 却被无条件恢复到 prev tip —— 产出了 launch_env=新版本
+# + manifest=旧版本的错配树，设备 updater 按旧 manifest 无限乒乓刷机（卡逗号 logo）。
+# 修复：sed 兼容前导空白；launch_env 与 manifest 的锁定/放行严格成对。
 if [ -n "$prev" ] && [ "${BUMP_AGNOS:-false}" != "true" ]; then
-  want_ver=$(git show "FETCH_HEAD:launch_env.sh" 2>/dev/null | grep -m1 'AGNOS_VERSION=' || true)
-  if [ -n "$want_ver" ] && [ "$(grep -m1 'AGNOS_VERSION=' launch_env.sh || true)" != "$want_ver" ]; then
-    sed -i "s|^export AGNOS_VERSION=.*|$want_ver|" launch_env.sh
-    echo "AGNOS version lock preserved: $want_ver"
+  want_line=$(git show "FETCH_HEAD:launch_env.sh" 2>/dev/null | grep -m1 'AGNOS_VERSION=' | sed 's|^[[:space:]]*||' || true)
+  cur_line=$(grep -m1 'AGNOS_VERSION=' launch_env.sh | sed 's|^[[:space:]]*||' || true)
+  if [ -n "$want_line" ] && [ "$cur_line" != "$want_line" ]; then
+    # 兼容行首任意空白（launch_env.sh 的 export 在 if 块内缩进）
+    sed -i -E "s|^([[:space:]]*)export AGNOS_VERSION=.*|\1${want_line}|" launch_env.sh
+    locked=$(grep -m1 'AGNOS_VERSION=' launch_env.sh || true)
+    if [ "$(echo "$locked" | sed 's|^[[:space:]]*||')" = "$want_line" ]; then
+      echo "AGNOS version lock preserved: $want_line"
+    else
+      echo "::warning::AGNOS version lock FAILED: wanted '$want_line', got '$locked'" >&2
+    fi
   fi
   # AGNOS OTA manifest 与锁定版本配对，一并保留
   for f in openpilot/common/hardware/comma/agnos.json openpilot/common/hardware/comma/agnos_tici.json; do
