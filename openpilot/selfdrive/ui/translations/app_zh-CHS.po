@@ -2569,6 +2569,10 @@ msgstr "在点位式区间测速路段内，当平均速度低于限速时允许
 msgid "Install"
 msgstr "安装"
 
+#: openpilot\system\ui\tici_updater.py
+msgid "Install ({n}s)"
+msgstr "安装（{n} 秒）"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\bluetooth_settings.py
 msgid "Install BlueZ to enable Bluetooth HID remotes and device management."
 msgstr "安装 BlueZ 以启用蓝牙 HID 遥控器与设备管理。"

@@ -2,6 +2,7 @@
 import sys
 import subprocess
 import threading
+import time
 import raylib_nb as rl
 from enum import IntEnum
 
@@ -21,6 +22,9 @@ BUTTON_WIDTH = 400
 PROGRESS_BAR_HEIGHT = 72
 TITLE_FONT_SIZE = 80
 BODY_FONT_SIZE = 65
+# Seconds to wait on the prompt screen before automatically starting the
+# install, so unattended devices (e.g. the update loop) never stall forever.
+AUTO_INSTALL_DELAY = 5
 BACKGROUND_COLOR = rl.BLACK
 PROGRESS_BG_COLOR = rl.Color(41, 41, 41, 255)
 PROGRESS_COLOR = rl.Color(54, 77, 239, 255)
@@ -49,13 +53,27 @@ class Updater(Widget):
     # Buttons
     self._wifi_button = Button(tr("Connect to Wi-Fi"), click_callback=lambda: self.set_current_screen(Screen.WIFI))
     self._install_button = Button(tr("Install"), click_callback=self.install_update, button_style=ButtonStyle.PRIMARY)
+    self._auto_install_deadline: float | None = time.monotonic() + AUTO_INSTALL_DELAY
     self._back_button = Button(tr("Back"), click_callback=lambda: self.set_current_screen(Screen.PROMPT))
     self._reboot_button = Button(tr("Reboot"), click_callback=lambda: HARDWARE.reboot())
     self._desc_label = UnifiedLabel(tr("An operating system update is required. Connect your device to Wi-Fi for the fastest update experience. " +
                                         "The download size is approximately 1GB."), BODY_FONT_SIZE, line_height=1 / 0.9)
 
   def set_current_screen(self, screen: Screen):
+    if screen == Screen.PROMPT:
+      # Restart the auto-install countdown every time the prompt is shown
+      self._auto_install_deadline = time.monotonic() + AUTO_INSTALL_DELAY
+    else:
+      self._auto_install_deadline = None
     self.current_screen = screen
+
+  def _handle_auto_install_countdown(self):
+    if self._auto_install_deadline is None:
+      return
+    remaining = max(0, round(self._auto_install_deadline - time.monotonic()))
+    self._install_button.set_text(tr("Install ({n}s)").format(n=remaining))
+    if remaining <= 0:
+      self.install_update()
 
   def install_update(self):
     self.set_current_screen(Screen.PROGRESS)
@@ -97,6 +115,9 @@ class Updater(Widget):
       self.show_reboot_button = True
 
   def render_prompt_screen(self, rect: rl.Rectangle):
+    # Auto-install countdown (button text shows "Install (5s)" ... "Install (0s)")
+    self._handle_auto_install_countdown()
+
     # Title
     title_rect = rl.Rectangle(MARGIN + 50, 250, rect.width - MARGIN * 2 - 100, TITLE_FONT_SIZE * FONT_SCALE)
     gui_label(title_rect, tr("Update Required"), TITLE_FONT_SIZE, font_weight=FontWeight.BOLD)
