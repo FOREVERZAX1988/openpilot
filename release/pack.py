@@ -15,7 +15,10 @@ from openpilot.common.basedir import BASEDIR
 # so it is bundled with the openpilot tree; a legacy top-level cereal/ dir is
 # only included when it actually has content.
 DIRS = ['cereal', 'openpilot']
-EXTS = ['.png', '.py', '.ttf', '.capnp', '.json', '.fnt', '.mo', '.po']
+# .otf must stay listed: OpFont-{Regular,Bold,...}.otf are the ONLY fonts with
+# CJK glyphs (Inter/Noto are latin-only subsets). Without them the updater UI
+# cannot bake its zh fallback atlas and renders tofu boxes (observed 2026-11-19).
+EXTS = ['.png', '.py', '.ttf', '.otf', '.capnp', '.json', '.fnt', '.mo', '.po']
 INTERPRETER = '/usr/bin/env python3'
 
 
