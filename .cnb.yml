@@ -24,7 +24,7 @@
 #     需要 bash 语义的步骤显式 `bash xxx.sh` 调用。
 
 "$":
-  web_trigger_release:
+  web_trigger_release: &staging_pipeline
     - name: release-staging
       runner:
         tags: cnb:arch:arm64:v8
@@ -151,3 +151,8 @@
 
         - name: publish staging to CNB
           script: bash .cnb/scripts/publish_staging.sh
+
+  # API 触发：与网页按钮共用同一段流水线（YAML 锚点），
+  # 供 `cnb build start-build --event api_trigger --env BUMP_AGNOS=true` 带参拉起；
+  # 网页按钮无法传 env，随新 AGNOS 升级发布时必须走这条通道。
+  api_trigger: *staging_pipeline
