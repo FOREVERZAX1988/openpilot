@@ -87,8 +87,8 @@ class CarEvents:
       if self.CP.openpilotLongitudinalControl:
         if CS.vEgo < self.CP.minEnableSpeed + 0.5:
           events.add(EventName.belowEngageSpeed)
-        if CC.enabled and CS.vEgo < self.CP.minEnableSpeed:
-          events.add(EventName.speedTooLow)
+        # if CC.enabled and CS.vEgo < self.CP.minEnableSpeed:
+        #   events.add(EventName.speedTooLow)
 
       # TODO: this needs to be implemented generically in carState struct
       # if CC.eps_timer_soft_disable_alert:
