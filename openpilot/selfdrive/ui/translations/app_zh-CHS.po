@@ -1627,6 +1627,46 @@ msgstr "正在下载地图..."
 msgid "Downloading..."
 msgstr "正在下载..."
 
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Searching repositories..."
+msgstr "正在搜索仓库源..."
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Cloning repository..."
+msgstr "正在克隆仓库..."
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Fetching submodules..."
+msgstr "正在拉取子仓库..."
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Fetching LFS files..."
+msgstr "正在拉取 LFS 资产..."
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Git clone failed. Check the repository, branch and network."
+msgstr "Git 克隆失败，请检查仓库地址、分支与网络。"
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Fetching submodules failed. Check the network."
+msgstr "子仓库拉取失败，请检查网络。"
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Fetching LFS files failed. Check the network."
+msgstr "LFS 资产拉取失败，请检查网络。"
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Not a valid openpilot repository."
+msgstr "不是有效的 openpilot 仓库。"
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Failed to install openpilot. Check free space in /data."
+msgstr "openpilot 安装失败，请检查 /data 剩余空间。"
+
+#: openpilot\system\ui\lib\git_installer.py
+msgid "Install failed."
+msgstr "安装失败。"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Draw a ring on the HUD with the traffic light evidence the neural model currently sees.<br>The outer ring is what the model observes; the centre dot is what the planner actually applies, and only appears with SignalAssistMode set to 2.<br><br>Experimental and advisory only. Nothing here lets openpilot act on a traffic light on your behalf. Always check the light yourself."
 msgstr "在 HUD 上画一个圆环，显示神经模型当前看到的红绿灯证据。<br>外环是模型观测到的内容；中心点是规划器实际采用的判断，仅在 SignalAssistMode 设为 2 时出现。<br><br>实验性功能，仅供参考。这里的一切都不会代替您对红绿灯采取动作，请务必自己观察信号灯。"
