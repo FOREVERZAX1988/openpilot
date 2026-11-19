@@ -154,12 +154,16 @@ def load_translations(path) -> tuple[dict[str, str], dict[str, list[str]]]:
 class Multilang:
   def __init__(self):
     self._params = Params() if Params is not None else None
-    self._language: str = "en"
+    # Default to Simplified Chinese: this fork's setup/reset/boot-time screens
+    # run before any settings UI is reachable, and a factory reset wipes
+    # LanguageSetting, so an English default here made the AGNOS setup wizard
+    # and System Reset screens come up untranslated on wiped devices.
+    self._language: str = "zh-CHS"
     self.languages: dict[str, str] = {}
     self.codes: dict[str, str] = {}
     self._translations: dict[str, str] = {}
     self._plurals: dict[str, list[str]] = {}
-    self._plural_selector = PLURAL_SELECTORS.get('en', lambda n: 0)
+    self._plural_selector = PLURAL_SELECTORS.get('zh-CHS', lambda n: 0)
     self._load_languages()
 
   @property

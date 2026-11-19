@@ -3260,6 +3260,10 @@ msgstr "未找到用户“{}”的 SSH 密钥"
 msgid "No custom software found at this URL."
 msgstr "此 URL 下未找到自定义软件。"
 
+#: openpilot\system\ui\tici_setup.py
+msgid "Server error ({code})."
+msgstr "服务器错误（{code}）。"
+
 #: openpilot\system\ui\mici_setup.py
 msgid "No custom software found at this URL: {url}"
 msgstr "此 URL 下未找到自定义软件:{url}"

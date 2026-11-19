@@ -391,6 +391,9 @@ msgstr "確定要重設校正嗎？"
 msgid "Are you sure you want to reset your device?"
 msgstr "您確定要重置您的裝置嗎？"
 
+msgid "Resetting device...\nThis may take up to a minute."
+msgstr "正在重置裝置...\n可能需要長達一分鐘。"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\sunnylink.py
 msgid "Are you sure you want to restore the last backed up sunnypilot settings?"
 msgstr "您確定要還原上次備份的 sunnypilot 設定嗎？"
@@ -3259,6 +3262,10 @@ msgstr "找不到使用者 '{}' 的 SSH 金鑰"
 #: openpilot\system\ui\tici_setup.py
 msgid "No custom software found at this URL."
 msgstr "在此 URL 中找不到自訂軟體。"
+
+#: openpilot\system\ui\tici_setup.py
+msgid "Server error ({code})."
+msgstr "伺服器錯誤（{code}）。"
 
 #: openpilot\system\ui\mici_setup.py
 msgid "No custom software found at this URL: {url}"
