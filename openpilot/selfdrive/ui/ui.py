@@ -5,7 +5,7 @@ import time
 
 from openpilot.cereal import messaging
 from openpilot.common.hardware import COMMA_HARDWARE
-from openpilot.common.realtime import Priority, config_realtime_process, get_available_cores
+from openpilot.common.realtime import Priority, config_realtime_process, get_available_cores, pick_online_core
 from openpilot.common.watchdog import kick_watchdog
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.impact_dashcam import ImpactDashcamPrompt
