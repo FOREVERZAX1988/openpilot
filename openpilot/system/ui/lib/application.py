@@ -918,8 +918,12 @@ class GuiApplication(GuiApplicationExt):
     """
     chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
     try:
+      # languages.json maps native display name -> code ("中文（简体）" -> "zh-CHS");
+      # the picker renders the native names, so bake every glyph they contain.
+      # join into one plain string: set.update() would otherwise add each name
+      # as a single multi-char element and ord() would blow up on it.
       with LANGUAGES_FILE.open(encoding="utf-8") as f:
-        chars.update(json.load(f).keys())
+        chars.update("".join(json.load(f).keys()))
     except (OSError, ValueError):
       cloudlog.exception("Failed to read languages.json for labels font baking")
     codepoints = sorted(map(ord, chars))
