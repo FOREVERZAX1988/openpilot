@@ -7755,8 +7755,8 @@ msgid "slide to install\ncustom software"
 msgstr "滑动安装\n自定义软件"
 
 #: openpilot\system\ui\mici_setup.py
-msgid "slide to install\nopenpilot"
-msgstr "滑动安装\nopenpilot"
+msgid "slide to install\nmouxancnb/openpilot"
+msgstr "滑动安装\nmouxancnb/openpilot"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\models.py
 msgid "smooth big model"
