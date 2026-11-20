@@ -56,28 +56,28 @@
   },
   {
     "name": "boot",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.9/boot-c3x-c4-054813f4003cd912647e5afc9b302789a31e4b61824e19061e577da93ddcbc00.img.xz",
-    "compressed_hash": "659098117b12a910c85e84edce35da8ee50641572e6b9695c5d86524e779895f",
-    "compressed_size": 14607392,
-    "hash": "054813f4003cd912647e5afc9b302789a31e4b61824e19061e577da93ddcbc00",
-    "hash_raw": "054813f4003cd912647e5afc9b302789a31e4b61824e19061e577da93ddcbc00",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.10/boot-c3x-c4-bdff9cb64d40aec5b2cd184b686a658a71b3f43dea98386a6e2a6b83679722e2.img.xz",
+    "compressed_hash": "8d933f66614dcfa9a3db50a213a08f7e5485aaa503d3fb6580f4cf30291d56c4",
+    "compressed_size": 14607388,
+    "hash": "bdff9cb64d40aec5b2cd184b686a658a71b3f43dea98386a6e2a6b83679722e2",
+    "hash_raw": "bdff9cb64d40aec5b2cd184b686a658a71b3f43dea98386a6e2a6b83679722e2",
     "size": 49043456,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "38a6d3d8004677884c219654d7fe47e9fec376659d7d20f63908ba71f2b54a77"
+    "ondevice_hash": "939bcec075836736e7d5dffda12f306a601852d5d5e2ae4d726535fb288ee479"
   },
   {
     "name": "system",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.9/system-a1ec85dead1d8819a866778483b17df7b77c1dc78ca5ebcdf734b7acd92e3c63.img.xz",
-    "compressed_hash": "2c2241ac18235b3e91bded3f4ba2fcac9148b0b56fe9d275853d7dd0bf8b3eed",
-    "compressed_size": 681125072,
-    "hash": "502f57e70b6752a9ca92aa976b85f291754269efa47f92c071218b1016adbd09",
-    "hash_raw": "a1ec85dead1d8819a866778483b17df7b77c1dc78ca5ebcdf734b7acd92e3c63",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.10/system-b02307327012b46ae9581a94ddc2b6601dd45594572a19af10a997da2b069f01.img.xz",
+    "compressed_hash": "e148cd78ffa3d449be3462b127fbd6939ec1e5179d6f111caea2df8bfd1e9916",
+    "compressed_size": 681116972,
+    "hash": "0b1f04b72a84ea50d055a7e718a82961ff3bfe3a25c2ab0ad4099c80cad9ff24",
+    "hash_raw": "b02307327012b46ae9581a94ddc2b6601dd45594572a19af10a997da2b069f01",
     "size": 4718592000,
     "sparse": true,
     "full_check": false,
     "has_ab": true,
-    "ondevice_hash": "81a87d069cf21f8a89e41ef0cb3e823362a782d8edbf5888000404027166389d"
+    "ondevice_hash": "3a7012824ba2f1c715b09383be062dbef243a476d10aa7c4335a8ee9b2b8510c"
   }
 ]
