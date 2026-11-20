@@ -1,7 +1,7 @@
 [
   {
     "name": "xbl",
-    "url": "https://commadist.azureedge.net/agnosupdate/xbl-6710967ca9701f205d7ab19c3a9b0dd2f547e65b3d96048b7c2b03755aafa0f1.img.xz",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-firmware/xbl-6710967ca9701f205d7ab19c3a9b0dd2f547e65b3d96048b7c2b03755aafa0f1.img.xz",
     "hash": "6710967ca9701f205d7ab19c3a9b0dd2f547e65b3d96048b7c2b03755aafa0f1",
     "hash_raw": "6710967ca9701f205d7ab19c3a9b0dd2f547e65b3d96048b7c2b03755aafa0f1",
     "size": 3282256,
@@ -12,7 +12,7 @@
   },
   {
     "name": "xbl_config",
-    "url": "https://commadist.azureedge.net/agnosupdate/xbl_config-63922cfbfdf4ab87986c4ba8f3a4df5bf28414b3f71a29ec5947336722215535.img.xz",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-firmware/xbl_config-63922cfbfdf4ab87986c4ba8f3a4df5bf28414b3f71a29ec5947336722215535.img.xz",
     "hash": "63922cfbfdf4ab87986c4ba8f3a4df5bf28414b3f71a29ec5947336722215535",
     "hash_raw": "63922cfbfdf4ab87986c4ba8f3a4df5bf28414b3f71a29ec5947336722215535",
     "size": 98124,
@@ -23,7 +23,7 @@
   },
   {
     "name": "abl",
-    "url": "https://commadist.azureedge.net/agnosupdate/abl-32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6.img.xz",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-firmware/abl-32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6.img.xz",
     "hash": "32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6",
     "hash_raw": "32a2174b5f764e95dfc54cf358ba01752943b1b3b90e626149c3da7d5f1830b6",
     "size": 274432,
@@ -34,7 +34,7 @@
   },
   {
     "name": "aop",
-    "url": "https://commadist.azureedge.net/agnosupdate/aop-21370172e590bd4ea907a558bcd6df20dc7a6c7d38b8e62fdde18f4a512ba9e9.img.xz",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-firmware/aop-21370172e590bd4ea907a558bcd6df20dc7a6c7d38b8e62fdde18f4a512ba9e9.img.xz",
     "hash": "21370172e590bd4ea907a558bcd6df20dc7a6c7d38b8e62fdde18f4a512ba9e9",
     "hash_raw": "21370172e590bd4ea907a558bcd6df20dc7a6c7d38b8e62fdde18f4a512ba9e9",
     "size": 184364,
@@ -45,7 +45,7 @@
   },
   {
     "name": "devcfg",
-    "url": "https://commadist.azureedge.net/agnosupdate/devcfg-d7d7e52963bbedbbf8a7e66847579ca106a0a729ce2cf60f4b8d8ea4b535d620.img.xz",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-firmware/devcfg-d7d7e52963bbedbbf8a7e66847579ca106a0a729ce2cf60f4b8d8ea4b535d620.img.xz",
     "hash": "d7d7e52963bbedbbf8a7e66847579ca106a0a729ce2cf60f4b8d8ea4b535d620",
     "hash_raw": "d7d7e52963bbedbbf8a7e66847579ca106a0a729ce2cf60f4b8d8ea4b535d620",
     "size": 40336,
@@ -56,28 +56,28 @@
   },
   {
     "name": "boot",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.4/boot-c3-c3clone-b8c914b507675b0e700fd7e6d8c17b40192880f0a5ec4ebb25b1f874284d18e7.img.xz",
-    "compressed_hash": "8cab19cc7f117c5519150b7aef36070d442d9428963d0cb6ebd0da87a0e6c042",
-    "compressed_size": 14602920,
-    "hash": "b8c914b507675b0e700fd7e6d8c17b40192880f0a5ec4ebb25b1f874284d18e7",
-    "hash_raw": "b8c914b507675b0e700fd7e6d8c17b40192880f0a5ec4ebb25b1f874284d18e7",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.13/boot-c3-c3clone-872e164b7705c58325ec0f07f16608e4579a79c9fce318667077045eab3cc339.img.xz",
+    "compressed_hash": "deb4618dff26393531c9fa33d0d85ad441a59b60e3a5a8d1736c849d48678d86",
+    "compressed_size": 14602188,
+    "hash": "872e164b7705c58325ec0f07f16608e4579a79c9fce318667077045eab3cc339",
+    "hash_raw": "872e164b7705c58325ec0f07f16608e4579a79c9fce318667077045eab3cc339",
     "size": 49043456,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "69fb1eee2f1da859d767bf5ed5f8eea508b7abdba0d3bfcc49b5ccb711bcb7aa"
+    "ondevice_hash": "a7e1038fb3b216f764096de207c26762656572ea801173b1ede756ce23087e9e"
   },
   {
     "name": "system",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.4/system-35cfd892ded569688d036e08992608affa4fe79e80cc4a80a87eb2bf4ee679de.img.xz",
-    "compressed_hash": "d64250b7b058325c1687f4da0d4ace7ac5ed69925e5b9d82d894828b79c92ff5",
-    "compressed_size": 688511760,
-    "hash": "6b13f5b51b6a2396d091928b85ac2adde65a501a9ae6d4131b48f0b85618f227",
-    "hash_raw": "35cfd892ded569688d036e08992608affa4fe79e80cc4a80a87eb2bf4ee679de",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.13/system-f9406230d8ee5757d1bfc3d99abdd12f8b386ec10d941aa2b39f5da3cd3daeaa.img.xz",
+    "compressed_hash": "ff7ed058860d0bd4f1c2d4b5e547eb78ee5789416f7ea9539f7e7066d5db8efc",
+    "compressed_size": 680705156,
+    "hash": "14d4a34971341f0c3b15ac4cf36827f3f187675d72851d8ca2ad308d7130d065",
+    "hash_raw": "f9406230d8ee5757d1bfc3d99abdd12f8b386ec10d941aa2b39f5da3cd3daeaa",
     "size": 4718592000,
     "sparse": true,
     "full_check": false,
     "has_ab": true,
-    "ondevice_hash": "e63425897c1769381a4770f61fbf204dd33f7f35d4823aee858ee00d750367f4"
+    "ondevice_hash": "72b0fa87627b5fdc450bd619d745a442a048403d138a1d7c89cb53274f4d3105"
   }
 ]
