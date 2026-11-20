@@ -1,4 +1,5 @@
 import atexit
+import json
 import math
 import os
 import queue
@@ -21,7 +22,7 @@ from typing import NamedTuple
 from importlib.resources import as_file, files
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.hardware import HARDWARE, PC
-from openpilot.system.ui.lib.multilang import TRANSLATIONS_DIR, multilang
+from openpilot.system.ui.lib.multilang import LANGUAGES_FILE, TRANSLATIONS_DIR, multilang
 from openpilot.common.realtime import Ratekeeper
 
 from openpilot.system.ui.sunnypilot.lib.application import GuiApplicationExt
@@ -190,6 +191,70 @@ def _opfont_filename(inter_filename: str, lang_code: str) -> str:
 _NON_LATIN_RE = re.compile(r"[\u0e00-\u0e7f\u1100-\u11ff\u2e80-\u318f\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef]")
 FALLBACK_ATLAS_MAX_CODEPOINTS = 2000
 
+# BMFont atlases loaded at runtime keep their glyph/rec arrays referenced by the
+# copied Font struct; hold them here so cffi never frees the backing memory.
+_FNT_KEEPALIVE: list = []
+
+
+def _load_bmfont_font(path: Path) -> rl.Font | None:
+  """Load a BMFont (.fnt + png) atlas produced by selfdrive/assets/fonts/process.py.
+
+  raylib_nb exposes neither LoadFont nor LoadBMFont, and its load_font_ex only
+  handles raw TTF data - on a .fnt path it reads the file but returns an empty
+  glyph set, which renders every non-ASCII glyph as '?'. Parse the BMFont text
+  format here and assemble the Font struct directly.
+  """
+  try:
+    atlas_path = None
+    font_size = 48
+    entries: list[dict] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+      parts = line.split()
+      if not parts:
+        continue
+      kv = dict(p.split("=", 1) for p in parts[1:] if "=" in p)
+      if parts[0] == "common":
+        font_size = int(kv.get("lineHeight", 48))
+      elif parts[0] == "page":
+        atlas_path = path.parent / kv.get("file", "")
+      elif parts[0] == "char":
+        entries.append(kv)
+    if atlas_path is None or not atlas_path.exists() or not entries:
+      return None
+
+    n = len(entries)
+    glyphs = rl.ffi.new("GlyphInfo[]", n)
+    recs = rl.ffi.new("Rectangle[]", n)
+    for i, e in enumerate(entries):
+      glyphs[i].value = int(e.get("id", 32))
+      glyphs[i].advanceX = int(e.get("xadvance", 0))
+      glyphs[i].offsetX = int(e.get("xoffset", 0))
+      glyphs[i].offsetY = int(e.get("yoffset", 0))
+      recs[i].x = float(e.get("x", 0))
+      recs[i].y = float(e.get("y", 0))
+      recs[i].width = float(e.get("width", 0))
+      recs[i].height = float(e.get("height", 0))
+
+    image = rl.load_image(atlas_path.as_posix())
+    if image.width == 0 or image.height == 0:
+      cloudlog.error(f"BMFont atlas image missing: {atlas_path}")
+      return None
+    texture = rl.load_texture_from_image(image)
+    rl.unload_image(image)
+
+    font = rl.ffi.new("Font *")
+    font.baseSize = font_size
+    font.glyphCount = n
+    font.glyphs = glyphs
+    font.recs = recs
+    font.texture = texture
+    _FNT_KEEPALIVE.append((glyphs, recs))
+    return font[0]
+  except Exception:
+    cloudlog.exception(f"BMFont loading failed for {path}")
+    return None
+
+
 class TextAlignment(IntEnum):
   LEFT = 0
   CENTER = 1
@@ -208,6 +273,11 @@ def font_fallback(font: rl.Font, text: str = "") -> rl.Font:
   # to the live font of the same weight first, otherwise the stale object renders nothing.
   font = gui_app.current_font(font)
   if multilang.requires_font_fallback():
+    # UNIFONT atlases (e.g. the language picker) carry every language's native
+    # names; swapping them for the active language's fallback atlas would drop
+    # the glyphs of all the other languages, so leave them untouched.
+    if gui_app._weight_by_object.get(id(font)) == FontWeight.UNIFONT:
+      return font
     if text and not _NON_LATIN_RE.search(text):
       return font
     return gui_app.fallback_font()
@@ -846,31 +916,43 @@ class GuiApplication(GuiApplicationExt):
       with as_file(FONT_DIR) as fspath:
         fnt_path = fspath / filename
         # Fall back to Regular weight if requested weight doesn't exist
-        if not fnt_path.exists() and multilang.requires_font_fallback():
+        # (UNIFONT is excluded: it must stay the shared all-languages atlas)
+        if not fnt_path.exists() and multilang.requires_font_fallback() and font_weight != FontWeight.UNIFONT:
           filename = f"OpFont-Regular-{active_lang}.fnt"
           fnt_path = fspath / filename
+        font: rl.Font | None = None
         if fnt_path.exists():
-          # raylib_nb has no load_font shim; LoadFontEx with no codepoints is
-          # the C LoadFont() equivalent (fontSize is ignored for .fnt atlases)
-          font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
-          # Detect LoadFontEx failure (raylib returns GetFontDefault() on
-          # failure). Texture ids get recycled by the GL driver, so id
-          # equality with the default font false-positives on loaded atlases;
-          # compare identity features instead (default font: 95 glyphs @ 10px,
-          # pre-baked OpFont atlases carry ~1000 glyphs).
-          default_font = rl.get_font_default()
-          if font.texture.id <= 0 or (font.glyphCount == default_font.glyphCount and font.baseSize == default_font.baseSize):
-            cloudlog.error(f"Failed to load pre-baked font {filename}; texture id={font.texture.id}")
-            if multilang.requires_font_fallback():
-              cloudlog.warning(f"Baking CJK fallback for {active_lang} from {NOTO_FONTS[active_lang]}")
-              font = self._load_or_bake_cjk_font(active_lang)
-        elif multilang.requires_font_fallback():
-          # Pre-baked OpFont atlas is missing (e.g. first install before scons runs).
-          # Bake the CJK font on-demand from the source TTF/OTF so the UI remains usable.
-          cloudlog.warning(f"OpFont atlas missing for {active_lang}; baking fallback from {NOTO_FONTS[active_lang]}")
-          font = self._load_or_bake_cjk_font(active_lang)
+          if fnt_path.suffix == ".fnt":
+            # raylib_nb's load_font_ex cannot parse BMFont atlases (empty glyph
+            # set); use the python BMFont loader instead.
+            font = _load_bmfont_font(fnt_path)
+            if font is None:
+              cloudlog.error(f"Failed to load BMFont atlas {filename}")
+          else:
+            # Detect LoadFontEx failure (raylib returns GetFontDefault() on
+            # failure). Texture ids get recycled by the GL driver, so id
+            # equality with the default font false-positives on loaded atlases;
+            # compare identity features instead (default font: 95 glyphs @ 10px,
+            # pre-baked OpFont atlases carry ~1000 glyphs).
+            font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
+            default_font = rl.get_font_default()
+            if font.texture.id <= 0 or (font.glyphCount == default_font.glyphCount and font.baseSize == default_font.baseSize):
+              cloudlog.error(f"Failed to load pre-baked font {filename}; texture id={font.texture.id}")
+              font = None
         else:
-          font = rl.load_font_ex(fnt_path.as_posix(), 200, None, 0)
+          cloudlog.warning(f"Font atlas missing: {filename}")
+        if font is None:
+          if multilang.requires_font_fallback() and font_weight != FontWeight.UNIFONT:
+            # Pre-baked OpFont atlas is missing (e.g. first install before scons runs)
+            # or failed to load; bake the CJK font on-demand from the source TTF/OTF
+            # so the UI remains usable.
+            cloudlog.warning(f"Baking CJK fallback for {active_lang} from {NOTO_FONTS[active_lang]}")
+            font = self._load_or_bake_cjk_font(active_lang)
+          else:
+            # UNIFONT (language picker) or a non-fallback language: bake an atlas
+            # covering ASCII plus every language's native display name.
+            cloudlog.warning(f"Baking language-labels font for {filename}")
+            font = self._bake_labels_font()
         rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
         self._fonts[font_weight] = font
         self._weight_by_object[id(font)] = font_weight
@@ -897,6 +979,27 @@ class GuiApplication(GuiApplicationExt):
     except FileNotFoundError:
       cloudlog.error(f"No translation file found for language: {language}")
     return self._bake_fallback_font(language, chars)
+
+  def _bake_labels_font(self) -> rl.Font:
+    """Bake an atlas covering ASCII plus every language's native display name.
+
+    Used when the pre-baked -Labels.fnt atlas is absent or fails to load, so the
+    language picker renders every option (中文 / 한국어 / ไทย / ...) in any UI language.
+    """
+    chars = set(map(chr, range(32, 127))) | set(EXTRA_FONT_CHARS)
+    try:
+      with LANGUAGES_FILE.open(encoding="utf-8") as f:
+        chars.update(json.load(f).keys())
+    except (OSError, ValueError):
+      cloudlog.exception("Failed to read languages.json for labels font baking")
+    codepoints = sorted(map(ord, chars))
+    codepoint_buffer = rl.ffi.new("int[]", codepoints)
+    with as_file(FONT_DIR) as fspath:
+      font = rl.load_font_ex((fspath / "OpFont-Regular.otf").as_posix(), 48,
+                             rl.ffi.cast("int *", codepoint_buffer), len(codepoints))
+    rl.gen_texture_mipmaps(font.texture)
+    rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
+    return font
 
   def _bake_fallback_font(self, language: str, chars: set[str]) -> rl.Font:
     codepoints = sorted(map(ord, chars))
