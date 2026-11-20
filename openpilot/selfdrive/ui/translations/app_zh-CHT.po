@@ -7592,3 +7592,35 @@ msgstr "✓ 已訂閱"
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
 
+
+#: openpilot/system/ui/tici_setup.py openpilot/system/ui/mici_setup.py
+msgid "Custom Repository"
+msgstr "自訂倉庫"
+
+#: openpilot/system/ui/tici_setup.py
+msgid "for Custom Repository"
+msgstr "自訂倉庫"
+
+#: openpilot/system/ui/tici_setup.py
+msgid "Enter branch"
+msgstr "輸入分支名"
+
+#: openpilot/system/ui/tici_setup.py
+msgid "leave empty for\ndefault branch"
+msgstr "留空則使用\n預設分支"
+
+#: openpilot/system/ui/mici_setup.py
+msgid "slide to install\ncustom repository"
+msgstr "滑動安裝\n自訂倉庫"
+
+#: openpilot/system/ui/mici_setup.py
+msgid "install custom repository"
+msgstr "安裝自訂倉庫"
+
+#: openpilot/system/ui/mici_setup.py
+msgid "custom repository URL..."
+msgstr "自訂倉庫地址..."
+
+#: openpilot/system/ui/mici_setup.py
+msgid "branch (optional)..."
+msgstr "分支名（可選）..."

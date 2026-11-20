@@ -7953,3 +7953,35 @@ msgstr "网页登录密码将被重新生成。"
 #: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
 msgid "Sessions using the old password stop working once the agent restarts."
 msgstr "助手重启后，使用旧密码的会话将失效。"
+
+#: openpilot/system/ui/tici_setup.py openpilot/system/ui/mici_setup.py
+msgid "Custom Repository"
+msgstr "自定义仓库"
+
+#: openpilot/system/ui/tici_setup.py
+msgid "for Custom Repository"
+msgstr "自定义仓库"
+
+#: openpilot/system/ui/tici_setup.py
+msgid "Enter branch"
+msgstr "输入分支名"
+
+#: openpilot/system/ui/tici_setup.py
+msgid "leave empty for\ndefault branch"
+msgstr "留空则使用\n默认分支"
+
+#: openpilot/system/ui/mici_setup.py
+msgid "slide to install\ncustom repository"
+msgstr "滑动安装\n自定义仓库"
+
+#: openpilot/system/ui/mici_setup.py
+msgid "install custom repository"
+msgstr "安装自定义仓库"
+
+#: openpilot/system/ui/mici_setup.py
+msgid "custom repository URL..."
+msgstr "自定义仓库地址..."
+
+#: openpilot/system/ui/mici_setup.py
+msgid "branch (optional)..."
+msgstr "分支名（可选）..."
