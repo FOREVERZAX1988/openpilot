@@ -65,6 +65,11 @@ def resolve_git_repo(owner: str, branch: str) -> str | None:
   All hosts are probed in parallel; candidate order is the priority
   (github direct, github via gh-proxy, gitee, cnb).
   """
+  # git ls-remote over HTTPS fails certificate validation on an RTC-less
+  # device (clock at 1970), which silently made EVERY probe fail and the
+  # wizard fall back to installer.comma.ai. Sync the clock first.
+  sync_clock()
+
   candidates: list[str] = []
   for host in GIT_REPO_HOSTS:
     url = f"{host}/{owner}/openpilot.git"

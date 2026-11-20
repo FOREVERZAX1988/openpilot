@@ -1634,6 +1634,10 @@ msgstr "正在下載..."
 msgid "Searching repositories..."
 msgstr "正在搜尋儲存庫來源..."
 
+#: openpilot/system/ui/lib/git_installer.py
+msgid "Repository not found on any known git host. Check the input."
+msgstr "在所有已知 Git 儲存庫來源中均未找到該儲存庫，請檢查輸入。"
+
 #: openpilot\system\ui\lib\git_installer.py
 msgid "Cloning repository..."
 msgstr "正在克隆儲存庫..."
