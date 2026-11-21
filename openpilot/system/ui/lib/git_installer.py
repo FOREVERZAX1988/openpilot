@@ -6,8 +6,8 @@ tools/release/install.sh so the custom-software screen can install arbitrary
 installer.comma.ai builds:
 
   resolve_git_repo()  — probe known hosts in parallel, first hit wins
-                        (cnb → gitee → gitcode → jihulab → atomgit → gitlvb
-                        → codeberg → gitlab → github direct/via gh-proxy)
+                        (China-reachable hosts first; github is also probed
+                        via gh-proxy and gitclone.com caching mirrors)
   install_from_git()  — git clone --depth=1 → submodules → LFS assets →
                         validate → replace /data/openpilot (old tree backed
                         up) → write /data/continue.sh
@@ -28,15 +28,21 @@ GIT_REPO_HOSTS = (
   "https://cnb.cool",
   "https://gitee.com",
   "https://gitcode.com",
+  "https://gitcode.net",
   "https://jihulab.com",
   "https://atomgit.com",
   "https://gitlvb.teallvbs.xyz",
+  "https://gitclone.com/github.com",
   "https://codeberg.org",
   "https://gitlab.com",
+  "https://gitclone.com/gitlab.com",
+  "https://gitea.com",
+  "https://bitbucket.org",
   "https://github.com",
 )
 # a short "owner/branch" target is probed against every host x repo-name pair;
-# first hit wins (host order is the priority)
+# first hit wins (host order is the priority). Entries may carry a path
+# prefix (gitclone.com is a caching proxy: https://gitclone.com/<host>/...).
 GIT_REPO_NAMES = (
   "openpilot",
   "zoompilot",
@@ -48,7 +54,7 @@ GIT_REPO_NAMES = (
 )
 # gh-proxy only mirrors github.com git traffic; other hosts are always direct.
 GH_PROXY_PREFIX = "https://gh-proxy.com/"
-PROXIED_HOSTS = {"github.com", "raw.githubusercontent.com"}
+GH_PROXY_HOSTS = ("https://github.com",)
 
 INSTALL_PATH = "/data/openpilot"
 TMP_PATH = "/data/tmppilot"
@@ -71,18 +77,12 @@ class GitInstallError(Exception):
     self.detail = detail
 
 
-def proxied_url(url: str) -> str:
-  if url.partition("://")[2].partition("/")[0] in PROXIED_HOSTS and not url.startswith(GH_PROXY_PREFIX):
-    return GH_PROXY_PREFIX + url
-  return url
-
-
 def resolve_git_repo(owner: str, branch: str, repo_names: tuple[str, ...] = GIT_REPO_NAMES) -> str | None:
   """Return a clone URL where owner/<one of repo_names>@branch exists, or None.
 
   All host x repo-name candidates are probed in parallel; candidate order is
-  the priority (see GIT_REPO_HOSTS; github.com entries are also probed via
-  gh-proxy).
+  the priority (see GIT_REPO_HOSTS; the bare github.com entry is also probed
+  via gh-proxy).
   """
   # git ls-remote over HTTPS fails certificate validation on an RTC-less
   # device (clock at 1970), which silently made EVERY probe fail and the
@@ -94,7 +94,7 @@ def resolve_git_repo(owner: str, branch: str, repo_names: tuple[str, ...] = GIT_
     for name in repo_names:
       url = f"{host}/{owner}/{name}.git"
       candidates.append(url)
-      if "github.com" in host:
+      if host in GH_PROXY_HOSTS:
         candidates.append(GH_PROXY_PREFIX + url)
 
   def probe(url: str) -> bool:
