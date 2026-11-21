@@ -1,90 +1,71 @@
-# zoompilot
+# mouxancnb/openpilot — 我们的 openpilot 定制软件分支
 
-A Mazda-optimized fork of [sunnypilot](https://github.com/sunnypilot/sunnypilot) for the CX-5 and CX-9. My goal is to enable the best steering possible and support all sunnypilot features on the 2022-2025 CX-5, staying within openpilot's safety guidelines.
+这是运行在我们 comma 设备上的 openpilot 定制分支，基于 sunnypilot / zoompilot 系，配合自建的 **Toyota AGNOS**（定制系统固件）使用，带 Toyota Space 品牌界面与完善的中文支持。
 
-This is what I run on my own 2022 CX-5 every day. There's a nicer tour of all of this at [zoompilot.ai](https://zoompilot.ai).
+> 上游项目：[sunnypilot](https://github.com/sunnypilot/sunnypilot)（特征集与调校框架） / [zoompilot](https://github.com/zoompilot/zoompilot)（Mazda 转向与雷达巡航调校） / [openpilot](https://github.com/commaai/openpilot)。上游特性说明见各自仓库。
 
-<a href="https://zoompilot.ai/screens/mici-demo.mp4"><img src="https://zoompilot.ai/screens/mici-demo.webp" width="100%" alt="zoompilot on the device: the Mazda defaults already on (the Firehose model, torque control, the v2.0 steering tune, speed-dependent self-tune), then turning on ICBM and Smart Cruise"></a>
+## 三个项目怎么配合
 
-## Install
-
-When your comma device asks for a custom software URL during setup, type:
+我们的整套方案由三个仓库组成（详见 [agnos-builder README](https://cnb.cool/mouxancnb/agnos-builder)）：
 
 ```
-zoompilot/main
+┌─────────────────────────────┐
+│  mouxancnb/agnos-builder     │
+│  构建 Toyota AGNOS 固件镜像  │
+│  + 刷机清单，发布到 release  │
+└──────────────┬──────────────┘
+               │ 发布 boot/system/清单
+               ▼
+┌─────────────────────────────┐
+│  mouxancnb/openpilot  ←本仓库│
+│  设备上运行的驾驶软件；同时   │
+│  托管 all-partitions-tici.json│
+│  （flash 工具「预设」的来源） │
+└──────────────┬──────────────┘
+               │ 预设清单 / 固件下载
+               ▼
+┌─────────────────────────────┐
+│  mouxancnb/flash             │
+│  网页刷机工具（Win/Android）  │
+└─────────────────────────────┘
 ```
 
-`main` carries the releases, built ahead of time so the device doesn't have to compile on install. `develop` is where the day to day work lands if you want it earlier.
+| 仓库 | 干什么 |
+| --- | --- |
+| [mouxancnb/flash](https://cnb.cool/mouxancnb/flash) | 网页刷机工具：把 AGNOS 固件线刷进设备 |
+| [mouxancnb/agnos-builder](https://cnb.cool/mouxancnb/agnos-builder) | 构建 Toyota AGNOS（kernel/system/boot/横版开机画面）并发布刷机清单 |
+| **mouxancnb/openpilot**（本仓库） | 设备上跑的驾驶软件；托管固件清单 |
 
-**This is experimental software.** You drive the car, you follow the law where you live, and you carry the risk. It ships with no warranty and no liability for any damage or injury.
+## 安装到设备
 
-## steering improvements
+1. 先用 flash 工具把设备刷到我们的 Toyota AGNOS（见 [flash 仓库 README](https://cnb.cool/mouxancnb/flash)）
+2. 设备开机引导 / 设置里的「安装自定义仓库」，仓库地址填：
+   ```
+   https://cnb.cool/mouxancnb/openpilot
+   ```
+   分支留空默认 `master`（界面已中文化：「自定义仓库地址…」「滑动安装 自定义仓库」）
 
-Using a data driven approach I reverse engineered the steering hardware and developed features to use the EPS to its full potential.
+## 本仓库的双重职责
 
-- **Speed-dependent torque.** The EPS caps the steering torque it will deliver, and that cap changes with speed. We encode the whole curve, so openpilot knows the extra torque it has at low speeds and the reduced torque at high speeds. More confident in the neighborhood, fewer wobbles on the highway.
-- **Speed-dependent tuning.** Stock openpilot learns ONE lateral acceleration factor and ONE friction value for every speed. We let it learn across seven speed ranges instead, matching the EPS's non-linear speed-dependent behaviour.
-- **Rate-matched commands.** The EPS accepts steering commands changing by up to 12 units a frame; stock asked for 10, leaving ~17% of that rate unused. We ask for the full 12, so torque ramps in faster.
-- **Factory-matched specs.** Steering ratio, mass, wheelbase, and steering lag, set to Mazda's real figures and refined against thousands of miles of learned data, so commands land where the planner intends.
+1. **设备软件**：openpilot 定制分支本体，master 分支是可安装的成品源树。
+2. **固件清单托管**：`openpilot/common/hardware/comma/all-partitions-tici.json` 与 `all-partitions.json` 是 flash 工具**预设**清单的来源（`*-tici` 给 comma three，无后缀给 3X/four）。清单内容随 AGNOS 版本一起同步（`dump 20.6.x` 提交），boot/system 指向 agnos-builder 发布的最新构建。
 
-## fix annoyances
+## 我们的定制内容
 
-The stock port threw warnings that should have only applied to pre-2022 cars. I pulled the logs from many drivers and cut the false ones. The real ones still fire.
+* **Toyota Space 品牌界面**：开机 spinner 动画（Toyota logo glow）、品牌文字烘焙进 glow atlas
+* **中文字体管线**：BMFont `.fnt` 字图运行时加载 + UNIFONT 兜底、字重运行时烘焙（不再依赖离线字图）
+* **中文翻译完善**：设置/安装界面全量中文化（简繁双语，含自定义仓库安装流程）
+* **稳定性修复**：语言选择器多字符崩溃修复等
+* **固件清单管理**：`dump 20.6.x` 同步 AGNOS 清单，`agnos-tici.json` OTA 派生说明见提交历史
 
-- **Place hands on wheel alert.** The Mazda port was built on pre-2022 cars, where an LKAS_BLOCK signal meant steering control was lost. Across thousands of logged miles from many drivers, we found 2022+ EPS keeps steering through LKAS_BLOCK. It mostly fires near a stop, or when stock LKAS loses the lane lines. Real faults still disengage; we just stopped alerting when the car is still steering.
-- **Steering override hysteresis.** The same override filter Hyundai, Ford, Tesla, and Rivian run. It weighs more frames before deciding you've taken the wheel, so a pothole or rough patch no longer trips a phantom takeover.
+## 开发
 
-## wire up sensors
+* **源仓库在 GitHub**（Actions 构建环境），CNB 仓库是发布/镜像出口：
+  * 用户侧直接维护 CNB `master`（固件清单、dump、UI 修改）
+  * GitHub 上跑 `打包发布 CNB`（release.yaml，手动触发）把 master 精简打包后发布到 CNB `staging` 分支（精简树为大文件裁剪版，适配设备端拉取）
+* 构建脚本见 `release/`（`build_release.sh` / `build_stripped.sh` / `build_carrot.sh`），submodules 用 `git submodule update --init` 拉全
+* 固件侧（boot/system 镜像本身）不在本仓库构建，见 [mouxancnb/agnos-builder](https://cnb.cool/mouxancnb/agnos-builder)
 
-Your CX-5 ships with sensors the stock port never reads. We wire them in.
+## 免责声明
 
-- **Forward radar.** A radar behind the front badge runs the factory cruise. We read it too: distance, angle, and closing speed for up to four cars ahead, fused with the camera. Braking and throttle stay factory.
-- **Blind-spot monitors.** The factory blind-spot sensors already watch the lanes beside you. We feed what they see into openpilot before every lane change.
-- **Speed-limit signs.** The camera already reads posted limits for your dash. We route those into speed-limit assist, which can set your cruise to match, so you're not re-dialing at every sign.
-
-## radar cruise enhancements
-
-The CX-5 keeps its factory cruise; zoompilot can set the speed for you by 'pressing' your wheel buttons.
-
-- **Fixed ICBM.** sunnypilot's Intelligent-Cruise-Button-Management and Smart-Cruise are broken for Mazda. I rebuilt how zoompilot works your wheel buttons. The speed you dial is remembered exactly: curves and speed limits can borrow it for a while, but you get your number back, never one or two under it. If the car misses a press, it quietly catches up.
-- **Speed-limit assist that sticks.** When the car sees a new limit, the screen asks once. Tap minus to accept a lower one and zoompilot dials the car down for you. It used to forget your answer a moment later; now it holds until the road changes. Press plus while it has you at a limit and it steps aside until the next sign. Your buttons always win.
-- **Slow for Curves.** sunnypilot's Smart Cruise: it reduces your set speed before a curve in the road and sets it back after. You can use vision or downloaded maps to determine when to slow down. Enable it in the cruise settings menu.
-- **Deceleration overshoot.** The Mazda's cruise control brakes according to how far the set speed sits below the car's speed, so for a curve zoompilot holds the set speed the measured gap below your actual speed that gives the braking the curve needs, then lands it on the curve's speed. Always on for Mazda; no setting.
-
-## additional Mazdas covered
-
-Not just the CX-5.
-
-- **EPS swaps.** Swapped a 2022+ CX-5 steering rack into an older Mazda? We fingerprint the rack by its firmware, not by the car openpilot thinks you're driving, and steer it all the way to a stop.
-- **CX-9.** Supported for all features, but speed-dependent torque will take longer to learn since I only supply seeds for the CX-5. The CX-9 specs are also updated to match Mazda's official figures.
-
-## recommended setup
-
-1. Factory-reset the device before you install. A clean device carries no stale settings from a previous fork.
-2. Pick a driving model. I run Firehose. DTRv6 is a favourite and MacroStiff is great at high speed.
-3. Under steering: turn on torque control, then self-tune. Speed-dependent tuning comes with self-tune.
-4. Leave custom tune and manual real-time off. Let the car teach the software. That's the point.
-
-Want to slow down for curves? Under cruise, turn on slow for curves: vision, map, or both. Maps need a region downloaded through SunnyLink first.
-
-You can manage almost all of it from the device screen. No laptop, no cloud editor. SunnyLink still works if you like it.
-
-## issues
-
-Something misbehaving on your Mazda? Open an issue on the [tracker](https://github.com/zoompilot/zoompilot/issues). A route ID or dashcam clip helps a lot.
-
-## credits
-
-zoompilot stands on [sunnypilot](https://github.com/sunnypilot/sunnypilot), which stands on [openpilot](https://github.com/commaai/openpilot) by comma.ai. Most of the code here is theirs. Remote access and dashboards come from [sunnylink](https://www.sunnylink.ai/), a free service paid for by the sunnypilot project. To support them: [sponsor sunnypilot](https://github.com/sponsors/sunnyhaibin), or [buy hardware from comma](https://comma.ai/shop).
-
-## license
-
-This project uses software from Haibin Wen and SUNNYPILOT LLC and is licensed under a custom license requiring permission for use. See [LICENSE.md](LICENSE.md) for sunnypilot's terms, [LICENSE](LICENSE) for openpilot's, and [NOTICE.md](NOTICE.md) for how they stack up and what zoompilot's own files are under.
-
----
-
-These features would work on other vehicles and could be upstreamed into sunnypilot or openpilot. I'm slowly working on that, but it's easier to share my own fork in the meantime.
-
-Mazda, comma.ai, and the sunnypilot project neither endorse this nor have anything to do with it.
-
-zoom-zoom-zoom
+这是实验性软件。开车的是你，请遵守当地法律，风险自负，不提供任何担保。
