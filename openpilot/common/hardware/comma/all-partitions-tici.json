@@ -361,7 +361,12 @@
     "sparse": true,
     "full_check": false,
     "has_ab": true,
-    "ondevice_hash": "fec067d10886b640080aa15d7899c7f04319837391986df55e7698b360ea8681"
+    "ondevice_hash": "fec067d10886b640080aa15d7899c7f04319837391986df55e7698b360ea8681",
+    "alt": {
+      "hash": "ba6342dc63d28a189a8646d15be3fea26a825befc56ac567cf156030cde0868c",
+      "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.13/system-dab4f53c8be4804c39acd6349b4cb6f73260380abb957256b81d2bb5db1aaa08.img.xz",
+      "size": 4718592000
+    }
   },
   {
     "name": "userdata_90",
