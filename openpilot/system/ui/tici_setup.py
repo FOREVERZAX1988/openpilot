@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import re
 import threading
 import time
@@ -30,6 +31,10 @@ BUTTON_HEIGHT = 160
 BUTTON_SPACING = 50
 
 OPENPILOT_URL = "https://openpilot.comma.ai"
+
+# comma.sh only re-checks /data/continue.sh after /tmp/installer shows up and
+# exits; git installs write a no-op installer there to unblock the boot loop.
+INSTALLER_DESTINATION_PATH = "/tmp/installer"
 
 
 class SetupState(IntEnum):
@@ -397,6 +402,16 @@ class Setup(Widget):
       install_from_git(clone_url, branch,
                        on_status=self._set_git_status,
                        on_progress=lambda pct: setattr(self, 'download_progress', pct))
+
+      # comma.sh only re-checks /data/continue.sh after /tmp/installer shows
+      # up and exits: a no-op installer unblocks the boot loop now that
+      # continue.sh is already written.
+      with open(INSTALLER_DESTINATION_PATH, "w") as f:
+        f.write("#!/bin/sh\nexit 0\n")
+      os.chmod(INSTALLER_DESTINATION_PATH, 0o755)
+
+      # give time for the UI to settle before the app closes
+      time.sleep(0.1)
       gui_app.request_close()
     except GitInstallError as e:
       self.download_failed(self.download_url, self._git_error_texts.get(e.kind, tr("Install failed.")))
