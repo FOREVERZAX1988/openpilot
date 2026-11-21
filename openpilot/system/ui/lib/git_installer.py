@@ -27,6 +27,18 @@ GIT_REPO_HOSTS = (
   "https://github.com",
   "https://gitee.com",
   "https://cnb.cool",
+  "https://gitlvb.teallvbs.xyz",
+)
+# a short "owner/branch" target is probed against every host x repo-name pair;
+# first hit wins (host order is the priority)
+GIT_REPO_NAMES = (
+  "openpilot",
+  "zoompilot",
+  "sunnypilot",
+  "dragonpilot",
+  "FrogPilot",
+  "StarPilot",
+  "IQ.Pilot",
 )
 # gh-proxy only mirrors github.com git traffic; other hosts are always direct.
 GH_PROXY_PREFIX = "https://gh-proxy.com/"
@@ -59,11 +71,11 @@ def proxied_url(url: str) -> str:
   return url
 
 
-def resolve_git_repo(owner: str, branch: str) -> str | None:
-  """Return a clone URL where owner/openpilot@branch exists, or None.
+def resolve_git_repo(owner: str, branch: str, repo_names: tuple[str, ...] = GIT_REPO_NAMES) -> str | None:
+  """Return a clone URL where owner/<one of repo_names>@branch exists, or None.
 
-  All hosts are probed in parallel; candidate order is the priority
-  (github direct, github via gh-proxy, gitee, cnb).
+  All host x repo-name candidates are probed in parallel; candidate order is
+  the priority (github direct, github via gh-proxy, gitee, cnb, gitlvb).
   """
   # git ls-remote over HTTPS fails certificate validation on an RTC-less
   # device (clock at 1970), which silently made EVERY probe fail and the
@@ -72,10 +84,11 @@ def resolve_git_repo(owner: str, branch: str) -> str | None:
 
   candidates: list[str] = []
   for host in GIT_REPO_HOSTS:
-    url = f"{host}/{owner}/openpilot.git"
-    candidates.append(url)
-    if "github.com" in host:
-      candidates.append(GH_PROXY_PREFIX + url)
+    for name in repo_names:
+      url = f"{host}/{owner}/{name}.git"
+      candidates.append(url)
+      if "github.com" in host:
+        candidates.append(GH_PROXY_PREFIX + url)
 
   def probe(url: str) -> bool:
     try:

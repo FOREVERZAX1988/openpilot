@@ -1674,6 +1674,14 @@ msgstr "openpilot 安裝失敗，請檢查 /data 剩餘空間。"
 msgid "Install failed."
 msgstr "安裝失敗。"
 
+#: openpilot\system\ui\tici_setup.py
+msgid "Installing openpilot..."
+msgstr "正在安裝 openpilot..."
+
+#: openpilot\system\ui\tici_setup.py
+msgid "owner/branch, owner/repo/branch or git URL"
+msgstr "owner/分支、owner/倉庫/分支或完整 git 位址"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Draw a ring on the HUD with the traffic light evidence the neural model currently sees.<br>The outer ring is what the model observes; the centre dot is what the planner actually applies, and only appears with SignalAssistMode set to 2.<br><br>Experimental and advisory only. Nothing here lets openpilot act on a traffic light on your behalf. Always check the light yourself."
 msgstr "在 HUD 上畫一個圓環，顯示神經模型當前看到的紅綠燈證據。<br>外環是模型觀測到的內容；中心點是規劃器實際採用的判斷，僅在 SignalAssistMode 設為 2 時出現。<br><br>實驗性功能，僅供參考。這裡的一切都不會代替您對紅綠燈採取動作，請務必自己觀察訊號燈。"
