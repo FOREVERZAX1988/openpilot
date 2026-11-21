@@ -6,10 +6,11 @@ tools/release/install.sh so the custom-software screen can install arbitrary
 installer.comma.ai builds:
 
   resolve_git_repo()  — probe known hosts in parallel, first hit wins
-                        (github direct → github via gh-proxy → gitee → cnb)
+                        (cnb → gitee → gitcode → jihulab → atomgit → gitlvb
+                        → codeberg → gitlab → github direct/via gh-proxy)
   install_from_git()  — git clone --depth=1 → submodules → LFS assets →
                         validate → replace /data/openpilot (old tree backed
-                        up) → write /data/continue.sh → inject SSH keys
+                        up) → write /data/continue.sh
 
 Pure stdlib; no hardware/UI dependencies so it can run inside the setup
 zipapp. The callers own the user-facing status/error texts (and their
@@ -24,10 +25,15 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 GIT_REPO_HOSTS = (
-  "https://github.com",
-  "https://gitee.com",
   "https://cnb.cool",
+  "https://gitee.com",
+  "https://gitcode.com",
+  "https://jihulab.com",
+  "https://atomgit.com",
   "https://gitlvb.teallvbs.xyz",
+  "https://codeberg.org",
+  "https://gitlab.com",
+  "https://github.com",
 )
 # a short "owner/branch" target is probed against every host x repo-name pair;
 # first hit wins (host order is the priority)
@@ -75,7 +81,8 @@ def resolve_git_repo(owner: str, branch: str, repo_names: tuple[str, ...] = GIT_
   """Return a clone URL where owner/<one of repo_names>@branch exists, or None.
 
   All host x repo-name candidates are probed in parallel; candidate order is
-  the priority (github direct, github via gh-proxy, gitee, cnb, gitlvb).
+  the priority (see GIT_REPO_HOSTS; github.com entries are also probed via
+  gh-proxy).
   """
   # git ls-remote over HTTPS fails certificate validation on an RTC-less
   # device (clock at 1970), which silently made EVERY probe fail and the
@@ -100,7 +107,7 @@ def resolve_git_repo(owner: str, branch: str, repo_names: tuple[str, ...] = GIT_
       return False
 
   with ThreadPoolExecutor(max_workers=len(candidates)) as pool:
-    for url, found in zip(candidates, pool.map(probe, candidates)):
+    for url, found in zip(candidates, pool.map(probe, candidates), strict=True):
       if found:
         return url
   return None
@@ -108,7 +115,7 @@ def resolve_git_repo(owner: str, branch: str, repo_names: tuple[str, ...] = GIT_
 
 def sync_clock() -> None:
   """Best-effort HTTP-date clock sync (HTTPS validation itself needs a valid clock)."""
-  if time.time() >= MIN_VALID_TIME:
+  if time.time() >= MIN_VALID_TIME:  # noqa: TID251 — wall-clock check is the whole point
     return
   for url in ("http://www.qq.com", "http://www.baidu.com", "http://github.com"):
     try:
@@ -117,7 +124,7 @@ def sync_clock() -> None:
         http_date = response.headers.get("date")
       if http_date:
         subprocess.run(["sudo", "date", "-s", http_date], capture_output=True, timeout=10)
-        if time.time() >= MIN_VALID_TIME:
+        if time.time() >= MIN_VALID_TIME:  # noqa: TID251 — wall-clock check is the whole point
           return
     except Exception:
       continue
@@ -129,7 +136,7 @@ def _stream_progress(cmd: list[str], on_progress=None) -> None:
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                             text=True, errors="replace")
   except FileNotFoundError as e:
-    raise GitInstallError("git_missing", str(e))
+    raise GitInstallError("git_missing", str(e)) from e
   assert proc.stderr is not None
   for line in proc.stderr:
     # "Receiving objects:  34% (1234/3600)" etc. (git rewrites the line with \r)
@@ -163,7 +170,7 @@ def install_from_git(clone_url: str, branch: str | None = None, on_status=None, 
   try:
     _stream_progress(cmd, on_progress)
   except GitInstallError as e:
-    raise GitInstallError("clone_failed", e.detail)
+    raise GitInstallError("clone_failed", e.detail) from e
 
   if os.path.isfile(os.path.join(TMP_PATH, ".gitmodules")):
     if on_status is not None:
@@ -174,7 +181,7 @@ def install_from_git(clone_url: str, branch: str | None = None, on_status=None, 
       _stream_progress(["git", "-C", TMP_PATH, "submodule", "update", "--init",
                         "--progress", "--depth=1", "--recursive"], on_progress)
     except GitInstallError as e:
-      raise GitInstallError("submodule_failed", e.detail)
+      raise GitInstallError("submodule_failed", e.detail) from e
 
   # LFS assets: fonts/models are pointer files until pulled (submodules too).
   subprocess.run(["git", "-C", TMP_PATH, "lfs", "install", "--local"], capture_output=True)
@@ -219,10 +226,9 @@ def install_from_git(clone_url: str, branch: str | None = None, on_status=None, 
       if name.startswith("launch_") and name.endswith(".sh"):
         os.chmod(os.path.join(INSTALL_PATH, name), 0o755)
   except OSError as e:
-    raise GitInstallError("install_failed", str(e))
+    raise GitInstallError("install_failed", str(e)) from e
 
   write_continue_sh()
-  inject_ssh_keys()
 
 
 def write_continue_sh() -> None:
@@ -232,29 +238,3 @@ def write_continue_sh() -> None:
     f.write(content)
   os.chmod(tmp, 0o755)
   os.replace(tmp, CONTINUE_PATH)
-
-
-def inject_ssh_keys() -> None:
-  """Mirror tools/release/install.sh: inject the maintainer SSH keys so the
-  device stays reachable after a git install (best effort, never fatal)."""
-  key_urls = (
-    "https://cnb.cool/mouxancnb/openpilot/-/git/raw/test/tools/release/github_keys.txt",
-    proxied_url("https://raw.githubusercontent.com/mouxangithub/openpilot/refs/heads/test/tools/release/github_keys.txt"),
-  )
-  try:
-    params_dir = "/data/params/d"
-    os.makedirs(params_dir, exist_ok=True)
-    for url in key_urls:
-      try:
-        with urllib.request.urlopen(url, timeout=15) as response:
-          data = response.read()
-        if data.count(b"ssh-") >= 1:
-          with open(os.path.join(params_dir, "GithubSshKeys"), "wb") as f:
-            f.write(data)
-          with open(os.path.join(params_dir, "SshEnabled"), "w") as f:
-            f.write("1")
-          return
-      except Exception:
-        continue
-  except Exception:
-    pass
