@@ -106,7 +106,7 @@ class VehicleParamsLearner:
       # "Steering misalignment detected" after the next engage cycle. Respect
       # the upstream verdict so a temporary localization fault cannot corrupt
       # the learned steering geometry. 2026-11-17 route 0000002d seg4/8 proof.
-      yaw_rate_valid = msg.angularVelocityDevice.valid and msg.inputsOK
+      yaw_rate_valid = msg.angularVelocityDevice.valid and msg.inputsOK and self.calibrator.calib_valid
       yaw_rate_valid = yaw_rate_valid and 0 < yaw_rate_std < 10  # rad/s
       yaw_rate_valid = yaw_rate_valid and abs(yaw_rate) < 1  # rad/s
       if not yaw_rate_valid:
@@ -116,7 +116,7 @@ class VehicleParamsLearner:
 
       localizer_roll, localizer_roll_std = device_motion.orientation.x, device_motion.orientation.x_std
       localizer_roll_std = np.radians(1) if np.isnan(localizer_roll_std) else localizer_roll_std
-      roll_valid = (localizer_roll_std < ROLL_STD_MAX) and (ROLL_MIN < localizer_roll < ROLL_MAX) and msg.sensorsOK and msg.inputsOK
+      roll_valid = (localizer_roll_std < ROLL_STD_MAX) and (ROLL_MIN < localizer_roll < ROLL_MAX) and msg.sensorsOK and msg.inputsOK and self.calibrator.calib_valid
       if roll_valid:
         roll = localizer_roll
         # Experimentally found multiplier of 2 to be best trade-off between stability and accuracy or similar?
@@ -156,11 +156,19 @@ class VehicleParamsLearner:
 
       in_linear_region = abs(steering_angle) < 45
       self.observed_speed = msg.vEgo
-      # Freeze vehicle-parameter learning until IMU extrinsics calibration is
-      # complete. Feeding uncalibrated device-frame motion into the learner
-      # caused transient "paramsd temporary error" alerts.
+      # Learning must not wait for IMU extrinsics calibration. On this car the
+      # camera never opens (spectra: VIDIOC_CAM_CONTROL errno 19), so
+      # calibrationd can never finish and calib_valid stays false for days.
+      # Gating on it froze every state at its default: after LiveParametersV2
+      # was cleared on 2026-11-18 the learner published angleOffsetDeg=0.0 with
+      # angleOffsetAverageStd exactly equal to the initial Q (0.000349) and
+      # angleOffsetValid=true, and lateral control pulled left on a car whose
+      # real offset is several degrees.
+      # Uncalibrated motion is handled where it belongs: yaw and roll fall back
+      # to their bounded 0 +/- 10 deg values below, so steer angle is still
+      # observed and the offset can converge over straight stretches.
       self.active = (self.observed_speed > MIN_ACTIVE_SPEED and in_linear_region and
-                     msg.gearShifter != car.CarState.GearShifter.reverse and self.calibrator.calib_valid)
+                     msg.gearShifter != car.CarState.GearShifter.reverse)
 
       if self.active:
         self.kf.predict_and_observe(t, ObservationKind.STEER_ANGLE, np.array([[np.radians(steering_angle)]]))
