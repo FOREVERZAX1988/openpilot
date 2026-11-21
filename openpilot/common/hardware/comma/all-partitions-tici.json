@@ -306,14 +306,14 @@
   },
   {
     "name": "splash",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-firmware/splash-bf2e9aed66aa26b99eeb97d9d31920207507d49419b4f5f42a665e34d4255295.img.xz",
-    "hash": "bf2e9aed66aa26b99eeb97d9d31920207507d49419b4f5f42a665e34d4255295",
-    "hash_raw": "bf2e9aed66aa26b99eeb97d9d31920207507d49419b4f5f42a665e34d4255295",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-firmware/splash-77fc18f575cd0d0fe5bc9ec608812e3fe87028e992df1b3b3b990d6fff9b1fbb.img.xz",
+    "hash": "77fc18f575cd0d0fe5bc9ec608812e3fe87028e992df1b3b3b990d6fff9b1fbb",
+    "hash_raw": "77fc18f575cd0d0fe5bc9ec608812e3fe87028e992df1b3b3b990d6fff9b1fbb",
     "size": 34226176,
     "sparse": false,
     "full_check": true,
     "has_ab": false,
-    "ondevice_hash": "bf2e9aed66aa26b99eeb97d9d31920207507d49419b4f5f42a665e34d4255295"
+    "ondevice_hash": "77fc18f575cd0d0fe5bc9ec608812e3fe87028e992df1b3b3b990d6fff9b1fbb"
   },
   {
     "name": "storsec",
@@ -339,32 +339,32 @@
   },
   {
     "name": "boot",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.13/boot-c3-c3clone-82d1da332bf915defbc0cc140114deb998812cffd93b2db463df867cac22f0a1.img.xz",
-    "compressed_hash": "2f33bf5d1f8042a88895d0d67edb25f85a6bf2fed3388a5118eaea65d81350b9",
-    "compressed_size": 14602224,
-    "hash": "82d1da332bf915defbc0cc140114deb998812cffd93b2db463df867cac22f0a1",
-    "hash_raw": "82d1da332bf915defbc0cc140114deb998812cffd93b2db463df867cac22f0a1",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.15/boot-c3-c3clone-0ac94a5383ee6f310aafdd39ca16877ffb7b25fd5ebff2c6555f68c2b1902476.img.xz",
+    "compressed_hash": "23fa70290d431c4f78b3900d6fec62781e896fb75e4d94b32547e80fb8e904c9",
+    "compressed_size": 14602292,
+    "hash": "0ac94a5383ee6f310aafdd39ca16877ffb7b25fd5ebff2c6555f68c2b1902476",
+    "hash_raw": "0ac94a5383ee6f310aafdd39ca16877ffb7b25fd5ebff2c6555f68c2b1902476",
     "size": 49043456,
     "sparse": false,
     "full_check": true,
     "has_ab": true,
-    "ondevice_hash": "b487abc458b7fe7850b835b0c0621e8598d0258e3d863f25acb4b753196d3c85"
+    "ondevice_hash": "6ad045ba7b8f20892d164eb589804ee484fc99f220b9ee5021ba0cf7e95f6301"
   },
   {
     "name": "system",
-    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.13/system-dab4f53c8be4804c39acd6349b4cb6f73260380abb957256b81d2bb5db1aaa08.img.xz",
-    "compressed_hash": "faf0a714d7fd165a3c34df958d0fd8ecdf176491c16ccbbf949565124e63fa6e",
-    "compressed_size": 680705036,
-    "hash": "ba6342dc63d28a189a8646d15be3fea26a825befc56ac567cf156030cde0868c",
-    "hash_raw": "dab4f53c8be4804c39acd6349b4cb6f73260380abb957256b81d2bb5db1aaa08",
+    "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.15/system-8d0bc77c6579587a04c12a0bbd52dff470fe4a7edf9a91092203e4a20ffa1de3.img.xz",
+    "compressed_hash": "cf4e11425bf2c00daa33a5a5ed5a35046d43f27af8eb7174deabf9a075d4671f",
+    "compressed_size": 680704920,
+    "hash": "a26cb793e18a4007ce25cdd195423f1627955a4d5a437a7d52407e367131f107",
+    "hash_raw": "8d0bc77c6579587a04c12a0bbd52dff470fe4a7edf9a91092203e4a20ffa1de3",
     "size": 4718592000,
     "sparse": true,
     "full_check": false,
     "has_ab": true,
-    "ondevice_hash": "fec067d10886b640080aa15d7899c7f04319837391986df55e7698b360ea8681",
+    "ondevice_hash": "054464a272c7a2cece051fdce0100d77ea253334e3bd516e9d14a09ec0309074",
     "alt": {
-      "hash": "ba6342dc63d28a189a8646d15be3fea26a825befc56ac567cf156030cde0868c",
-      "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.13/system-dab4f53c8be4804c39acd6349b4cb6f73260380abb957256b81d2bb5db1aaa08.img.xz",
+      "url": "https://cnb.cool/mouxancnb/agnos-builder/-/releases/download/agnos-20.6.15/system-8d0bc77c6579587a04c12a0bbd52dff470fe4a7edf9a91092203e4a20ffa1de3.img.xz",
+      "hash": "a26cb793e18a4007ce25cdd195423f1627955a4d5a437a7d52407e367131f107",
       "size": 4718592000
     }
   },

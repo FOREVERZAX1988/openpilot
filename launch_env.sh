@@ -16,7 +16,7 @@ export VECLIB_MAXIMUM_THREADS=1
 export QCOM_PRIORITY=12
 
 if [ -z "$AGNOS_VERSION" ]; then
-  export AGNOS_VERSION="20.6.13"
+  export AGNOS_VERSION="20.6.15"
 fi
 
 # RTC-less clone devices boot at 1970; every TLS operation (pip mirror,
