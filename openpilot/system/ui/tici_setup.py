@@ -88,6 +88,9 @@ class Setup(Widget):
     self._software_selection_back_button = Button(tr("Back"), self._software_selection_back_button_callback)
     self._software_selection_title_label = Label(tr("Choose Software to Use"), TITLE_FONT_SIZE, FontWeight.BOLD, TextAlignment.LEFT,
                                                  text_padding=20)
+    # AGNOS 版本显示在标题行右侧（/VERSION 即 AGNOS 版本号，如 20.6.16）
+    self._software_selection_version_label = Label(f"AGNOS {HARDWARE.get_os_version()}", 54, FontWeight.NORMAL, TextAlignment.RIGHT,
+                                                   text_color=rl.Color(170, 170, 170, 255), text_padding=20)
 
     self._download_failed_reboot_button = Button(tr("Reboot device"), HARDWARE.reboot)
     self._download_failed_startover_button = Button(tr("Start over"), self._download_failed_startover_button_callback, button_style=ButtonStyle.PRIMARY)
@@ -257,7 +260,9 @@ class Setup(Widget):
     self._network_setup_continue_button.render(rl.Rectangle(rect.x + MARGIN + button_width + BUTTON_SPACING, button_y, button_width, BUTTON_HEIGHT))
 
   def render_software_selection(self, rect: rl.Rectangle):
-    self._software_selection_title_label.render(rl.Rectangle(rect.x + MARGIN, rect.y + MARGIN, rect.width - MARGIN * 2, TITLE_FONT_SIZE * FONT_SCALE))
+    title_row = rl.Rectangle(rect.x + MARGIN, rect.y + MARGIN, rect.width - MARGIN * 2, TITLE_FONT_SIZE * FONT_SCALE)
+    self._software_selection_title_label.render(title_row)
+    self._software_selection_version_label.render(title_row)
 
     radio_height = 230
     radio_spacing = 30
