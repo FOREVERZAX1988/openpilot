@@ -235,6 +235,16 @@ class EncoderError(RuntimeError):
     self.errno = errno_
 
 
+def _log(message: str) -> None:
+  """One line into swaglog, where the rest of this link's telemetry goes. A
+  module that cannot reach swaglog (a test, a Mac) says nothing instead."""
+  try:
+    from openpilot.common.swaglog import cloudlog
+    cloudlog.info(message)
+  except Exception:
+    pass
+
+
 def node() -> str | None:
   """The encoder node, or None on a machine with no Venus block (a PC, a
   Jetson, a Mac): the caller then keeps the carrier it had."""
@@ -359,6 +369,7 @@ class VenusEncoder:
     self._free: list[int] = []
     self._in_size = 0
     self._out_size = 0
+    self._in_stride = 0
     if self.width and self.height:
       self._open()
 
@@ -456,6 +467,19 @@ class VenusEncoder:
       colorspace=COLORSPACE_470_SYSTEM_BG))
     _ioctl(self._fd, _iowr('V', 5, ctypes.sizeof(_Format)), in_fmt)            # VIDIOC_S_FMT
     self._in_size = max(in_fmt.pix_mp.plane_fmt[0].sizeimage, self.width * self.height * 3 // 2)
+    # The row pitch the driver settled on, not the one asked for: an encoder
+    # that pads its input rows reads a tight frame sheared, every row a little
+    # further off than the one before, and the picture that comes out is not the
+    # one that went in. write() feeds tight rows (that is what the warp makes),
+    # so a pitch wider than the picture would be exactly that bug -- say it once
+    # here rather than guess at it from the far end of a decode.
+    self._in_stride = int(in_fmt.pix_mp.plane_fmt[0].bytesperline) or self.width
+    if self._in_stride != self.width:
+      _log("jetlink hevc: encoder wants %d-byte rows for a %d-wide picture, fed %d: "
+           "the picture would shear" % (self._in_stride, self.width, self.width))
+    else:
+      _log("jetlink hevc: %dx%d in on %d-byte rows, %d bytes a frame"
+           % (self.width, self.height, self._in_stride, self._in_size))
 
     # rate control's CFR denominator: it must match what the caller sends, or
     # the bitrate is spread over a different number of frames than there are

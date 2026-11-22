@@ -43,8 +43,22 @@ MIN_STD_SANITY_CHECK = 1e-5  # m or rad
 # model drove, rotStd was 0.0010 and |rot| 0.0002 on all 14740 frames, against
 # 0.0275 and 0.0246 on the small model's three. Both limits are well clear of a
 # real camera odometry in either direction.
-DEAD_POSE_ROT_STD = 0.005   # rad
+#
+# Rotation alone cannot be the test, though: a car doing 40 km/h down a straight
+# road legitimately reports rot ~ 0, so a rot-only gate throws away good frames.
+# What a live camera can never do is deny translation while the car moves --
+# cameraOdometry.trans is observed as device velocity (pose_kf's
+# h_relative_motion_sym is the velocity state), so at 10 m/s it has to read
+# ~10 m/s. Measured 2026-11-21 on routes 00000043/44 (the chestnut drive that
+# left calibration at 0%): translation was 0.07 m/s on 231/231 moving frames of
+# seg 0, ratio 0.01 of vEgo, while the small model on the same drive (seg 4, 22
+# frames) read 1.01 of vEgo. Speed is the one fact the model cannot fake, so it
+# is what decides "dead" now.
+DEAD_POSE_ROT_STD = 0.005   # rad: the model is confident about its own zero
 DEAD_POSE_ROT = 0.01        # rad/s
+DEAD_POSE_TRANS_STD = 0.5   # m/s: the zero translation is asserted, not shrugged at
+DEAD_POSE_TRANS_REL = 0.35  # real camera odometry reaches at least this much of vEgo
+DEAD_POSE_MIN_SPEED = 1.0   # m/s: below this, translation says nothing about motion
 MAX_FILTER_REWIND_TIME = 0.8  # s
 MAX_SENSOR_TIME_DIFF = 0.1  # s
 YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
@@ -53,7 +67,7 @@ YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
 # camera said "not turning" while the wheel was held at +-385 deg was a dead
 # pose, not a low speed: route 00000041 showed the chestnut model publishing
 # zeros at rotStd 0.0010 for a whole drive at 5-10 m/s. That is rejected at the
-# source now (DEAD_POSE_ROT_STD above) and never becomes the reference, so a
+# source now (the dead-pose gate above) and never becomes the reference, so a
 # speed gate would only add a blind spot below 5 m/s where a genuinely broken
 # gyro would pass unnoticed.
 # Every big/small model switch publishes one cameraOdometry with valid=false: on
@@ -134,6 +148,11 @@ class LocationEstimator:
     self.camodo_yawrate_distribution = np.array([0.0, 10.0])  # mean, std
     # when the dead-pose warning last went out, so it is not per frame
     self._dead_pose_logged = 0.0
+    # how many frames the dead-pose gate has taken, split by whether the car was
+    # moving: the moving count is the one that means the model's motion channel
+    # is out (see the gate in handle_log), the still count is a car standing.
+    self._dead_pose_moving = 0
+    self._dead_pose_still = 0
     # last raw gyro sample in device axes, kept even when it is rejected, so the
     # inputsOK transition log can say what the sample looked like
     self.last_gyro_meas = np.zeros(3, dtype=np.float64)
@@ -297,12 +316,49 @@ class LocationEstimator:
       # budget and latching inputsOK for the length of a drive. Not a fault and
       # not a timing hiccup: a frame that says nothing, charged as a success so
       # the budgets keep decaying.
-      if rot_calib_std.max() < DEAD_POSE_ROT_STD and np.abs(rot_device).max() < DEAD_POSE_ROT:
+      #
+      # The evidence for "says nothing" is speed, not rotation. A straight road
+      # at 40 km/h has rot ~ 0 and a live camera, and translation is the part of
+      # the pose a model cannot fake: observed as device velocity, it has to
+      # read vEgo. So the frame is dropped when the model asserts a zero
+      # translation at a speed where that is provably false, or when the pose is
+      # zeros in both components at a standstill (where a live pose and a dead
+      # one are indistinguishable, so the frame carries nothing either way).
+      # Rotation is never the deciding evidence, which is what stops a straight
+      # road from being thrown away.
+      rot_is_zero = rot_calib_std.max() < DEAD_POSE_ROT_STD and np.abs(rot_device).max() < DEAD_POSE_ROT
+      trans_is_zero = (trans_calib_std.max() < DEAD_POSE_TRANS_STD and
+                       np.linalg.norm(trans_device) < max(DEAD_POSE_TRANS_REL * self.car_speed,
+                                                          DEAD_POSE_TRANS_REL))
+      moving = self.car_speed > DEAD_POSE_MIN_SPEED
+
+      if moving and trans_is_zero:
+        # The model is blind to motion, not merely quiet on rotation: its whole
+        # motion channel is out (routes 00000043/44 also had modelV2.velocity at
+        # 0.0 m/s while the car did 10). Rotation from the same head is worth no
+        # more than translation, so the frame goes whole. This is the one line
+        # that says why calibration cannot move on a big-model drive -- it is
+        # logged at WARNING because it is the fault, not a filter decision.
+        self._dead_pose_moving += 1
         if time.monotonic() - self._dead_pose_logged > 10.0:
           self._dead_pose_logged = time.monotonic()
-          cloudlog.warning('camodo pose is dead: rot=%s rotStd=%s v=%.2f; not fed to the filter'
-                           % (np.round(rot_device, 5).tolist(), np.round(rot_calib_std, 5).tolist(),
-                              self.car_speed))
+          cloudlog.warning('camodo pose is dead while moving: v=%.2f m/s but the model reports '
+                           '|trans|=%.3f m/s (%.0f%% of v, transStd=%.3f, |rot|=%.5f rotStd=%.5f); '
+                           'motion channel blind, frame not fed [%d such frames]'
+                           % (self.car_speed, np.linalg.norm(trans_device),
+                              100.0 * np.linalg.norm(trans_device) / max(self.car_speed, 1e-3),
+                              trans_calib_std.max(), np.linalg.norm(rot_device), rot_calib_std.max(),
+                              self._dead_pose_moving))
+        return HandleLogResult.SUCCESS
+
+      if rot_is_zero and trans_is_zero:
+        # Standing still: zeros are what a working pose says too. Nothing to
+        # learn from the frame, nothing to charge for it.
+        self._dead_pose_still += 1
+        if time.monotonic() - self._dead_pose_logged > 60.0:
+          self._dead_pose_logged = time.monotonic()
+          cloudlog.debug('camodo pose is all zeros at v=%.2f m/s; not fed [%d moving / %d still]'
+                         % (self.car_speed, self._dead_pose_moving, self._dead_pose_still))
         return HandleLogResult.SUCCESS
 
       if rot_calib_std.min() <= MIN_STD_SANITY_CHECK or trans_calib_std.min() <= MIN_STD_SANITY_CHECK:
