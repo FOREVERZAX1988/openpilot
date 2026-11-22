@@ -26,7 +26,11 @@ class TestParamsd(OpenpilotTestCase):
   def test_read_saved_params(self):
     params = Params()
 
-    CP = car.CarParams(carFingerprint="HONDA_CIVIC", steerRatio=15.38)
+    # 必须给几何参数：retrieve_initial_vehicle_params 会算 centerToFront/wheelbase
+    # 来判定"车辆几何是否变了"，两者都为 0 时 0/0 抛 ZeroDivisionError，被 catch
+    # 后当成"恢复失败"回退到 CP.steerRatio，断言就必然红（2026-11-23 定位）。
+    CP = car.CarParams(carFingerprint="HONDA_CIVIC", steerRatio=15.38,
+                       wheelbase=2.7, centerToFront=1.2)
 
     msg = get_random_vehicle_parameters(CP)
     params.put("LiveParametersV2", msg.to_bytes(), block=True)
