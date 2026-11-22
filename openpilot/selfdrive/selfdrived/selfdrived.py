@@ -216,6 +216,10 @@ class SelfdriveD:
     self.experimental_mode = False
     # 车距档位自跟踪（与 carstate.stock_zeitluecke 同源：值1=拉近-1/值2=拉远+1，默认3格）
     self._zeitluecke = 3
+    # 原厂档位真值缓存：carstate 写成 /data/params/d/MacanStockGap（Params key 表是编译进
+    # C++ 扩展的，设备上没法加 key）。每 10 帧读一次，够快也够便宜。
+    self._stock_gap_cached = None
+    self._stock_gap_frame = -10
     # Macan(MLB) only: 车距档 ↔ LongitudinalPersonality 双向同步。其他车保持上游
     # "按车距键循环递减" 的语义，避免我们的 Macan 行为改写别人的车。
     self.macan_personality_sync = (getattr(self.CP, "carFingerprint", None) == "PORSCHE_MACAN_MK1")
@@ -739,14 +743,20 @@ class SelfdriveD:
         # Macan(MLB): Longitudinal personality is bound to stock ACC distance bars
         # (zeitluecke, VW/MLB): 4 bars (farthest) -> relaxed(2), 3/2 -> standard(1),
         # 1 (closest) -> aggressive(0).
-        # carState 是 capnp 消息无 stock_zeitluecke 字段，故从 buttonEvents 自跟踪推导：
-        # 值1(Dist-1/拉近)=gapAdjustCruise → -1格；值2(Dist+1/拉远)=altButton2 → +1格
-        # （与 carstate.stock_zeitluecke 同源同逻辑，启动默认 3 格）。
-        for be in CS.buttonEvents:
-          if be.pressed and be.type == ButtonType.gapAdjustCruise:
-            self._zeitluecke = max(1, self._zeitluecke - 1)
-          elif be.pressed and be.type == ButtonType.altButton2:
-            self._zeitluecke = min(4, self._zeitluecke + 1)
+        # 2026-11-22：改成读原厂**真值**（carstate 的 stock_zeitluecke，含按键自跟踪 +
+        # ACC_02.ACC_Gesetzte_Zeitluecke 纠偏的合并结果），不再自己数按键。
+        # 数按键的旧路径有两个错位：司机在原厂界面/拨杆改档但事件漏掉就永久错一格；
+        # 按键丢帧或被 create_button_events 过滤时格数与仪表不一致（11-16 route 00000020
+        # 已经踩过一次「一按跳 2 格」）。真值读不到时才退回按键推导。
+        gap = self._read_stock_gap()
+        if gap is not None:
+          self._zeitluecke = gap
+        else:
+          for be in CS.buttonEvents:
+            if be.pressed and be.type == ButtonType.gapAdjustCruise:
+              self._zeitluecke = max(1, self._zeitluecke - 1)
+            elif be.pressed and be.type == ButtonType.altButton2:
+              self._zeitluecke = min(4, self._zeitluecke + 1)
         new_personality = {4: 2, 3: 1, 2: 1, 1: 0}.get(self._zeitluecke)
       elif any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents) and self.selfdrived_zp.gap_release_steps:
         new_personality = (self.personality - 1) % 3
@@ -756,6 +766,24 @@ class SelfdriveD:
         self.events.add(EventName.personalityChanged)
 
     self.icbm.run(CS, self.sm['carControl'], self.sm['longitudinalPlanSP'], self.is_metric)
+
+  def _read_stock_gap(self):
+    """原厂跟车档真值（1-4 格），由 opendbc 的 carstate 写在 /data/params/d/MacanStockGap。
+
+    走文件而不是 Params：Params 的 key 表白名单编译进 C++ 扩展，设备上没有 scons，
+    新增 key 需要重刷才能用。每 10 帧（约 100ms）重读一次，够跟手也够便宜。
+    读到合法值返回 1-4，文件缺失/内容异常返回 None，调用方退回按键推导。
+    """
+    frame = self.sm.frame
+    if frame - self._stock_gap_frame >= 10:
+      self._stock_gap_frame = frame
+      try:
+        with open("/data/params/d/MacanStockGap") as f:
+          gap = int(f.read().strip())
+        self._stock_gap_cached = gap if 1 <= gap <= 4 else None
+      except (OSError, ValueError):
+        self._stock_gap_cached = None
+    return self._stock_gap_cached
 
   def data_sample(self):
     _car_state = messaging.recv_one(self.car_state_sock)
