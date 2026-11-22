@@ -6,7 +6,6 @@ import threading
 import time
 import urllib.request
 import urllib.error
-from urllib.parse import urlparse
 from collections.abc import Callable
 
 import raylib_nb as rl
@@ -19,6 +18,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.common.utils import run_cmd
 from openpilot.system.ui.lib.application import gui_app, FontWeight, TextAlignment, TextAlignmentVertical
+from openpilot.system.ui.lib.git_installer import GitInstallError, install_from_git, resolve_git_repo
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.wifi_manager import WifiManager, ConnectStatus
 from openpilot.system.ui.widgets import Widget
@@ -34,10 +34,10 @@ from openpilot.selfdrive.ui.mici.widgets.button import GreyBigButton, BigPillBut
 NetworkType = log.DeviceState.NetworkType
 
 OPENPILOT_URL = "https://openpilot.comma.ai"
-USER_AGENT = f"AGNOSSetup-{HARDWARE.get_os_version()}"
 
+# comma.sh only re-checks /data/continue.sh after /tmp/installer shows up and
+# exits; git installs write a no-op installer there to unblock the boot loop.
 INSTALLER_DESTINATION_PATH = "/tmp/installer"
-INSTALLER_URL_PATH = "/tmp/installer_url"
 
 
 class NetworkConnectivityMonitor:
@@ -131,6 +131,11 @@ class SoftwareSelectionPage(NavWidget):
                use_custom_software_callback: Callable):
     super().__init__()
 
+    # AGNOS version display (top-right, mirrors tici_setup's version label)
+    self._version_label = UnifiedLabel(f"AGNOS {HARDWARE.get_os_version()}", 36,
+                                       text_color=rl.Color(255, 255, 255, int(255 * 0.4)),
+                                       font_weight=FontWeight.NORMAL, alignment=TextAlignment.RIGHT)
+
     self._openpilot_slider = self._child(LargerSlider(tr("slide to install\nopenpilot"), use_openpilot_callback))
     self._openpilot_slider.set_enabled(lambda: self.enabled and not self.is_dismissing)
     self._custom_software_slider = self._child(LargerSlider(tr("slide to install\ncustom software"), use_custom_software_callback, green=False, shimmer_offset=0.4))  # noqa: E501
@@ -168,6 +173,7 @@ class SoftwareSelectionPage(NavWidget):
       rect.height / 2,
     )
     self._custom_software_slider.render(custom_software_rect)
+    self._version_label.render(rl.Rectangle(rect.x + 12, rect.y + 8, rect.width - 24, 36))
 
 
 class CustomSoftwareWarningPage(NavScroller):
@@ -190,7 +196,8 @@ class CustomSoftwareWarningPage(NavScroller):
     ])
 
 
-# TODO: unifi with updater's progress page
+# git installs report phase texts through the title label and share the
+# updater-style progress bar design.
 class DownloadingPage(NavWidget):
   def __init__(self):
     super().__init__()
@@ -213,6 +220,23 @@ class DownloadingPage(NavWidget):
     self._progress = progress
     self._progress_label.set_text(f"{progress}%")
 
+  def set_status(self, text: str):
+    # git installs report phase texts (clone/submodules/LFS/...)
+    self._title_label.set_text(text)
+
+  def _draw_progress_bar(self, rect: rl.Rectangle):
+    # progress == 0 (unknown content-length or a git phase that has not
+    # reported yet) animates an indeterminate sliding segment.
+    rl.draw_rectangle_rounded(rect, 1.0, 8, rl.Color(255, 255, 255, 38))
+    if self._progress > 0:
+      width = max(rect.width * self._progress / 100.0, 8)
+      rl.draw_rectangle_rounded(rl.Rectangle(rect.x, rect.y, width, rect.height), 1.0, 8, rl.Color(24, 92, 252, 255))
+    else:
+      segment = rect.width * 0.25
+      offset = (rl.get_time() * 0.45) % 1.0
+      x = rect.x + (rect.width - segment) * offset
+      rl.draw_rectangle_rounded(rl.Rectangle(x, rect.y, segment, rect.height), 1.0, 8, rl.Color(24, 92, 252, 255))
+
   def _render(self, rect: rl.Rectangle):
     rl.draw_rectangle_rec(rect, rl.BLACK)
     self._title_label.render(rl.Rectangle(
@@ -221,6 +245,8 @@ class DownloadingPage(NavWidget):
       rect.width,
       64,
     ))
+
+    self._draw_progress_bar(rl.Rectangle(rect.x + 12, rect.y + 108, rect.width - 24, 26))
 
     self._progress_label.render(rl.Rectangle(
       rect.x + 12,
@@ -401,6 +427,22 @@ class Setup(Widget):
     self.download_progress = 0
     self.download_thread = None
     self._download_failed_reason: str | None = None
+    self._download_status = ""
+    self._git_status_texts = {
+      "clone": tr("Cloning repository..."),
+      "submodules": tr("Fetching submodules..."),
+      "lfs": tr("Fetching LFS files..."),
+      "install": tr("Installing openpilot..."),
+    }
+    self._git_error_texts = {
+      "git_missing": tr("Ensure the entered URL is valid, and the device's internet connection is good."),
+      "git_failed": tr("Git clone failed. Check the repository, branch and network."),
+      "clone_failed": tr("Git clone failed. Check the repository, branch and network."),
+      "submodule_failed": tr("Fetching submodules failed. Check the network."),
+      "lfs_failed": tr("Fetching LFS files failed. Check the network."),
+      "not_openpilot": tr("Not a valid openpilot repository."),
+      "install_failed": tr("Failed to install openpilot. Check free space in /data."),
+    }
 
     self._network_monitor = NetworkConnectivityMonitor()
     self._network_monitor.start()
@@ -426,6 +468,8 @@ class Setup(Widget):
 
   def _nav_stack_tick(self):
     self._downloading_page.set_progress(self.download_progress)
+    if self._download_status:
+      self._downloading_page.set_status(self._download_status)
 
     if self._download_failed_reason is not None:
       reason = self._download_failed_reason
@@ -450,7 +494,8 @@ class Setup(Widget):
 
   def _network_setup_continue_callback(self, custom_software: bool):
     if not custom_software:
-      self._download(OPENPILOT_URL)
+      # install comma's master straight from git (host probe + gh-proxy fallback)
+      self._download("commaai/master")
     else:
       def handle_keyboard_result(text):
         url = text.strip()
@@ -460,78 +505,59 @@ class Setup(Widget):
       keyboard = BigInputDialog(tr("custom software URL..."), confirm_callback=handle_keyboard_result, auto_return_to_letters="./")
       gui_app.push_widget(keyboard)
 
-  def _download(self, url: str):
-    # autocomplete incomplete URLs
-    if re.match("^([^/.]+)/([^/]+)$", url):
-      url = f"https://installer.comma.ai/{url}"
-
-    parsed = urlparse(url, scheme='https')
-    self.download_url = (urlparse(f"https://{url}") if not parsed.netloc else parsed).geturl()
+  def _download(self, spec: str):
+    """Install from git. spec is "owner/branch", "owner/repo/branch" or a full clone URL."""
+    self.download_url = spec
+    self._download_status = tr("Searching repositories...")
     self.download_progress = 0
 
     def start_download():
-      self.download_thread = threading.Thread(target=self._download_thread, daemon=True)
+      self.download_thread = threading.Thread(target=self._git_install_thread, args=(spec,), daemon=True)
       self.download_thread.start()
 
     self._downloading_page.set_shown_callback(start_download)
     gui_app.push_widget(self._downloading_page)
 
-  def _download_thread(self):
+  def _resolve_target(self, spec: str):
+    """Return (clone_url, branch); clone_url None means the probe found nothing."""
+    if "://" in spec:
+      return spec, None
+    parts = spec.strip().strip("/").split("/")
+    owner_re = r"^[^/.@]+$"  # git host paths never start with a dotted owner
+    if len(parts) == 2 and re.match(owner_re, parts[0]):
+      # shorthand "owner/branch": probe every host x repo name
+      return resolve_git_repo(parts[0], parts[1]), parts[1]
+    if len(parts) == 3 and re.match(owner_re, parts[0]):
+      # explicit "owner/repo/branch": probe hosts for that repo name only
+      return resolve_git_repo(parts[0], parts[2], (parts[1],)), parts[2]
+    return f"https://{spec}", None
+
+  def _git_install_thread(self, spec: str):
     try:
-      import tempfile
-
-      fd, tmpfile = tempfile.mkstemp(prefix="installer_")
-
-      headers = {"User-Agent": USER_AGENT,
-                 "X-openpilot-serial": HARDWARE.get_serial(),
-                 "X-openpilot-device-type": HARDWARE.get_device_type()}
-      req = urllib.request.Request(self.download_url, headers=headers)
-
-      with open(tmpfile, 'wb') as f, urllib.request.urlopen(req, timeout=30) as response:
-        total_size = int(response.headers.get('content-length', 0))
-        downloaded = 0
-        block_size = 8192
-
-        while True:
-          buffer = response.read(block_size)
-          if not buffer:
-            break
-
-          downloaded += len(buffer)
-          f.write(buffer)
-
-          if total_size:
-            self.download_progress = int(downloaded * 100 / total_size)
-
-      is_elf = False
-      with open(tmpfile, 'rb') as f:
-        header = f.read(4)
-        is_elf = header == b'\x7fELF'
-
-      if not is_elf:
-        self._download_failed_reason = tr("No custom software found at this URL: {url}").format(url=self.download_url.replace("https://", "", 1))
+      clone_url, branch = self._resolve_target(spec)
+      if clone_url is None:
+        self._download_failed_reason = tr("No custom software found at this URL.")
         return
+      self.download_url = clone_url
+      install_from_git(clone_url, branch,
+                       on_status=lambda key: setattr(self, "_download_status", self._git_status_texts.get(key, "")),
+                       on_progress=lambda pct: setattr(self, "download_progress", pct))
 
-      # NOTE: currently unused, for future logging
-      with open(INSTALLER_URL_PATH, "w") as f:
-        f.write(self.download_url)
+      # comma.sh only re-checks /data/continue.sh after /tmp/installer shows
+      # up and exits: a no-op installer unblocks the boot loop now that
+      # continue.sh is already written.
+      with open(INSTALLER_DESTINATION_PATH, "w") as f:
+        f.write("#!/bin/sh\nexit 0\n")
+      os.chmod(INSTALLER_DESTINATION_PATH, 0o755)
 
-      # AGNOS might try to execute the installer before this process exits.
-      # Therefore, important to close the fd before renaming the installer.
-      os.close(fd)
-      os.rename(tmpfile, INSTALLER_DESTINATION_PATH)
-
-      # give time for installer UI to take over
+      # give time for the UI to settle before the app closes
       time.sleep(0.1)
       gui_app.request_close()
 
-    except urllib.error.HTTPError as e:
-      if e.code == 409:
-        self._download_failed_reason = tr("Incompatible sunnypilot version.")
-      else:
-        self._download_failed_reason = f"Server error ({e.code}): " + self.download_url.replace("https://", "", 1)
+    except GitInstallError as e:
+      self._download_failed_reason = self._git_error_texts.get(e.kind, tr("Install failed."))
     except Exception:
-      self._download_failed_reason = tr("Invalid URL: {url}").format(url=self.download_url.replace("https://", "", 1))
+      self._download_failed_reason = tr("Ensure the entered URL is valid, and the device's internet connection is good.")
 
 
 def main():

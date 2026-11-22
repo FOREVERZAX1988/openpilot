@@ -41,37 +41,64 @@ else
   echo "full push: CNB branch missing, fetch failed, or FORCE_FULL_PUSH requested"
 fi
 
-# AGNOS 锁保护：精简树从 master 重打，launch_env.sh 的 AGNOS_VERSION 会回到
-# master 的原始值，而 CNB staging 上可能带着与设备当前 AGNOS 配套的锁定提交
-# （版本错配会让设备 OTA 逻辑混乱）。默认保留 prev tip 的 AGNOS 期望；
-# 需要随新 AGNOS 升级发布时在流水线 env 设 BUMP_AGNOS=true。
+# AGNOS 版本仲裁（版本感知，2026-11-21 修复）：
+#   master >= staging → 采信 master（正常路径：AGNOS 发版时 master 同步 bump 清单）
+#   master <  staging → 锁定到 staging（master 落后于设备实际 AGNOS，防回退错配）
+#   BUMP_AGNOS=true   → 无条件采信 master
+# 锁定动作严格成对：launch_env.sh 与两个 OTA manifest 一起恢复到 staging 版本。
 #
-# 2026-11-19 事故复盘：旧版 sed 模式 `^export AGNOS_VERSION=` 匹配不上 launch_env.sh
-# 里 if 块内的 `  export AGNOS_VERSION="..."`（有前导空格），sed 静默无效，而
-# agnos.json/agnos_tici.json 却被无条件恢复到 prev tip —— 产出了 launch_env=新版本
-# + manifest=旧版本的错配树，设备 updater 按旧 manifest 无限乒乓刷机（卡逗号 logo）。
-# 修复：sed 兼容前导空白；launch_env 与 manifest 的锁定/放行严格成对。
+# 历史 bug（两次事故同根因）：
+#   2026-11-19  sed 模式不兼容 launch_env.sh if 块内的前导空白，锁定静默无效；
+#   2026-11-21  manifest 恢复是无条件的（只查文件存在，不比对版本），master 上的
+#               新清单永远被 prev tip 的旧清单覆盖 → staging 冻结在 20.6.13，
+#               产出 launch_env=20.6.18 + manifest=20.6.13 错配树。
+agnos_ver_of() { # 从 stdin 读 launch_env.sh 文本，提取 AGNOS_VERSION（兼容前导空白与引号）
+  grep -m1 'AGNOS_VERSION=' | sed -E 's|^[[:space:]]*export[[:space:]]+AGNOS_VERSION="?([^"]+)"?.*|\1|'
+}
+manifest_ver_of() { # $1 = OTA manifest 文件路径，提取其指向的 agnos 镜像版本
+  grep -oE 'agnos-[0-9]+\.[0-9]+\.[0-9]+' "$1" | head -1 | cut -d- -f2
+}
+
 if [ -n "$prev" ] && [ "${BUMP_AGNOS:-false}" != "true" ]; then
-  want_line=$(git show "FETCH_HEAD:launch_env.sh" 2>/dev/null | grep -m1 'AGNOS_VERSION=' | sed 's|^[[:space:]]*||' || true)
-  cur_line=$(grep -m1 'AGNOS_VERSION=' launch_env.sh | sed 's|^[[:space:]]*||' || true)
-  if [ -n "$want_line" ] && [ "$cur_line" != "$want_line" ]; then
-    # 兼容行首任意空白（launch_env.sh 的 export 在 if 块内缩进）
-    sed -i -E "s|^([[:space:]]*)export AGNOS_VERSION=.*|\1${want_line}|" launch_env.sh
-    locked=$(grep -m1 'AGNOS_VERSION=' launch_env.sh || true)
-    if [ "$(echo "$locked" | sed 's|^[[:space:]]*||')" = "$want_line" ]; then
-      echo "AGNOS version lock preserved: $want_line"
+  prev_ver=$(git show "FETCH_HEAD:launch_env.sh" 2>/dev/null | agnos_ver_of || true)
+  cur_ver=$(agnos_ver_of < launch_env.sh || true)
+  if [ -n "$prev_ver" ] && [ -n "$cur_ver" ] && [ "$cur_ver" != "$prev_ver" ]; then
+    lower=$(printf '%s\n%s\n' "$cur_ver" "$prev_ver" | sort -V | head -1)
+    if [ "$lower" = "$prev_ver" ]; then
+      echo "AGNOS: master $cur_ver >= staging $prev_ver, adopting master (no lock)"
     else
-      echo "::warning::AGNOS version lock FAILED: wanted '$want_line', got '$locked'" >&2
+      want_line=$(git show "FETCH_HEAD:launch_env.sh" | grep -m1 'AGNOS_VERSION=' | sed 's|^[[:space:]]*||')
+      # 兼容行首任意空白（launch_env.sh 的 export 在 if 块内缩进）
+      sed -i -E "s|^([[:space:]]*)export AGNOS_VERSION=.*|\1${want_line}|" launch_env.sh
+      locked=$(agnos_ver_of < launch_env.sh || true)
+      if [ "$locked" = "$prev_ver" ]; then
+        echo "AGNOS version lock preserved: staging $prev_ver > master $cur_ver"
+      else
+        echo "::warning::AGNOS version lock FAILED: wanted '$prev_ver', got '$locked'" >&2
+      fi
+      # 与锁定版本严格配对：OTA manifest 一并恢复到 staging 版本
+      for f in openpilot/common/hardware/comma/agnos.json openpilot/common/hardware/comma/agnos_tici.json; do
+        if git cat-file -e "FETCH_HEAD:$f" 2>/dev/null; then
+          git checkout FETCH_HEAD -- "$f"
+          echo "AGNOS manifest restored from prev staging tip: $f"
+        fi
+      done
     fi
   fi
-  # AGNOS OTA manifest 与锁定版本配对，一并保留
-  for f in openpilot/common/hardware/comma/agnos.json openpilot/common/hardware/comma/agnos_tici.json; do
-    if git cat-file -e "FETCH_HEAD:$f" 2>/dev/null; then
-      git checkout FETCH_HEAD -- "$f"
-      echo "AGNOS manifest preserved from prev staging tip: $f"
-    fi
-  done
 fi
+
+# 发布前一致性自检（无条件执行）：launch_env 的 AGNOS_VERSION 必须与两个 OTA
+# manifest 指向的镜像版本一致——错配会让设备 updater 按旧 manifest 无限乒乓刷机
+# （卡逗号 logo，2026-11-19 事故）。发现错配直接失败：宁可不发，不可错发。
+le_ver=$(agnos_ver_of < launch_env.sh || true)
+for f in openpilot/common/hardware/comma/agnos.json openpilot/common/hardware/comma/agnos_tici.json; do
+  m_ver=$(manifest_ver_of "$f")
+  if [ -z "$le_ver" ] || [ "$m_ver" != "$le_ver" ]; then
+    echo "::error::AGNOS mismatch: launch_env=$le_ver but $f -> agnos $m_ver; refusing to publish a mismatched tree" >&2
+    exit 1
+  fi
+done
+echo "AGNOS consistency check OK: launch_env=$le_ver, both OTA manifests match"
 
 # 组装待发布提交：
 #   增量路径 —— 工作树可能带锁保护修改，write-tree 重组后 commit-tree 挂到 prev

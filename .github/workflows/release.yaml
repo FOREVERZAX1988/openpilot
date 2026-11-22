@@ -50,6 +50,23 @@ jobs:
           SKIP_ORIGIN_PUSH: "1"
         run: ./tools/release/build_stripped.sh
 
+      - name: AGNOS 一致性自检
+        working-directory: ${{ runner.temp }}/stripped
+        run: |
+          # launch_env 的 AGNOS_VERSION 必须与两个 OTA manifest 指向的镜像版本一致，
+          # 错配会让设备 updater 无限乒乓刷机（2026-11-19/11-21 两次事故同根因）
+          le_ver=$(grep -m1 'AGNOS_VERSION=' launch_env.sh | sed -E 's|^[[:space:]]*export[[:space:]]+AGNOS_VERSION="?([^"]+)"?.*|\1|')
+          fail=0
+          for f in openpilot/common/hardware/comma/agnos.json openpilot/common/hardware/comma/agnos_tici.json; do
+            m_ver=$(grep -oE 'agnos-[0-9]+\.[0-9]+\.[0-9]+' "$f" | head -1 | cut -d- -f2)
+            if [ "$m_ver" != "$le_ver" ]; then
+              echo "::error::AGNOS mismatch: launch_env=$le_ver but $f -> agnos $m_ver"
+              fail=1
+            fi
+          done
+          [ "$fail" = "0" ] || exit 1
+          echo "AGNOS consistency OK: launch_env=$le_ver, both OTA manifests match"
+
       - name: 同步发布到 CNB 镜像仓库
         env:
           BRANCH: staging

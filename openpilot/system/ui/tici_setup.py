@@ -4,14 +4,13 @@ import re
 import threading
 import time
 import urllib.request
-import urllib.error
-from urllib.parse import urlparse
 from enum import IntEnum
 
 import raylib_nb as rl
 
 from openpilot.cereal import log
 from openpilot.common.hardware import HARDWARE
+from openpilot.system.ui.lib.git_installer import GitInstallError, install_from_git, resolve_git_repo
 from openpilot.system.ui.lib.scroll_panel import GuiScrollPanel
 from openpilot.system.ui.lib.application import gui_app, FontWeight, FONT_SCALE, TextAlignment, TextAlignmentVertical
 from openpilot.system.ui.lib.multilang import tr
@@ -32,10 +31,10 @@ BUTTON_HEIGHT = 160
 BUTTON_SPACING = 50
 
 OPENPILOT_URL = "https://openpilot.comma.ai"
-USER_AGENT = f"AGNOSSetup-{HARDWARE.get_os_version()}"
 
+# comma.sh only re-checks /data/continue.sh after /tmp/installer shows up and
+# exits; git installs write a no-op installer there to unblock the boot loop.
 INSTALLER_DESTINATION_PATH = "/tmp/installer"
-INSTALLER_URL_PATH = "/tmp/installer_url"
 
 
 class SetupState(IntEnum):
@@ -61,6 +60,22 @@ class Setup(Widget):
     self.failed_reason = ""
     self.download_url = ""
     self.download_progress = 0
+    self.download_status = tr("Downloading...")
+    self._git_status_texts = {
+      "clone": tr("Cloning repository..."),
+      "submodules": tr("Fetching submodules..."),
+      "lfs": tr("Fetching LFS files..."),
+      "install": tr("Installing openpilot..."),
+    }
+    self._git_error_texts = {
+      "git_missing": tr("Ensure the entered URL is valid, and the device's internet connection is good."),
+      "git_failed": tr("Git clone failed. Check the repository, branch and network."),
+      "clone_failed": tr("Git clone failed. Check the repository, branch and network."),
+      "submodule_failed": tr("Fetching submodules failed. Check the network."),
+      "lfs_failed": tr("Fetching LFS files failed. Check the network."),
+      "not_openpilot": tr("Not a valid openpilot repository."),
+      "install_failed": tr("Failed to install openpilot. Check free space in /data."),
+    }
     self.download_thread = None
     self.wifi_ui = WifiManagerUI(WifiManager())
     self.keyboard = Keyboard()
@@ -88,6 +103,9 @@ class Setup(Widget):
     self._software_selection_back_button = Button(tr("Back"), self._software_selection_back_button_callback)
     self._software_selection_title_label = Label(tr("Choose Software to Use"), TITLE_FONT_SIZE, FontWeight.BOLD, TextAlignment.LEFT,
                                                  text_padding=20)
+    # AGNOS 版本显示在标题行右侧（/VERSION 即 AGNOS 版本号，如 20.6.16）
+    self._software_selection_version_label = Label(f"AGNOS {HARDWARE.get_os_version()}", 54, FontWeight.NORMAL, TextAlignment.RIGHT,
+                                                   text_color=rl.Color(170, 170, 170, 255), text_padding=20)
 
     self._download_failed_reboot_button = Button(tr("Reboot device"), HARDWARE.reboot)
     self._download_failed_startover_button = Button(tr("Start over"), self._download_failed_startover_button_callback, button_style=ButtonStyle.PRIMARY)
@@ -186,7 +204,8 @@ class Setup(Widget):
   def _network_setup_continue_button_callback(self):
     self.stop_network_check_thread.set()
     if self._software_selection_openpilot_button.selected:
-      self.download(OPENPILOT_URL)
+      # git install straight from comma's master (host probe + gh-proxy fallback)
+      self.download("commaai/master")
     else:
       self.state = SetupState.CUSTOM_SOFTWARE
 
@@ -257,7 +276,9 @@ class Setup(Widget):
     self._network_setup_continue_button.render(rl.Rectangle(rect.x + MARGIN + button_width + BUTTON_SPACING, button_y, button_width, BUTTON_HEIGHT))
 
   def render_software_selection(self, rect: rl.Rectangle):
-    self._software_selection_title_label.render(rl.Rectangle(rect.x + MARGIN, rect.y + MARGIN, rect.width - MARGIN * 2, TITLE_FONT_SIZE * FONT_SCALE))
+    title_row = rl.Rectangle(rect.x + MARGIN, rect.y + MARGIN, rect.width - MARGIN * 2, TITLE_FONT_SIZE * FONT_SCALE)
+    self._software_selection_title_label.render(title_row)
+    self._software_selection_version_label.render(title_row)
 
     radio_height = 230
     radio_spacing = 30
@@ -286,6 +307,10 @@ class Setup(Widget):
     self._software_selection_continue_button.render(rl.Rectangle(rect.x + MARGIN + button_width + BUTTON_SPACING, button_y, button_width, BUTTON_HEIGHT))
 
   def render_downloading(self, rect: rl.Rectangle):
+    status = self.download_status
+    if self.download_progress > 0:
+      status = f"{status}  {self.download_progress}%"
+    self._downloading_body_label.set_text(status)
     self._downloading_body_label.render(rl.Rectangle(rect.x, rect.y + rect.height / 2 - TITLE_FONT_SIZE * FONT_SCALE / 2, rect.width,
                                                      TITLE_FONT_SIZE * FONT_SCALE))
 
@@ -340,80 +365,61 @@ class Setup(Widget):
         self.state = SetupState.SOFTWARE_SELECTION
 
     self.keyboard.reset(min_text_size=1)
-    self.keyboard.set_title(tr("Enter URL"), tr("for Custom Software"))
+    self.keyboard.set_title(tr("Enter URL"), tr("owner/branch, owner/repo/branch or git URL"))
     self.keyboard.set_callback(handle_keyboard_result)
     gui_app.push_widget(self.keyboard)
 
-  def download(self, url: str):
-    # autocomplete incomplete URLs
-    if re.match("^([^/.]+)/([^/]+)$", url):
-      url = f"https://installer.comma.ai/{url}"
-
-    parsed = urlparse(url, scheme='https')
-    self.download_url = (urlparse(f"https://{url}") if not parsed.netloc else parsed).geturl()
-
+  def download(self, spec: str):
+    """Install from git. spec is "owner/branch", "owner/repo/branch" or a full clone URL."""
+    self.download_url = spec
+    self.download_status = tr("Searching repositories...")
+    self.download_progress = 0
     self.state = SetupState.DOWNLOADING
-
-    self.download_thread = threading.Thread(target=self._download_thread, daemon=True)
+    self.download_thread = threading.Thread(target=self._git_install_thread, args=(spec,), daemon=True)
     self.download_thread.start()
 
-  def _download_thread(self):
+  def _resolve_target(self, spec: str):
+    """Return (clone_url, branch); clone_url None means the probe found nothing."""
+    if "://" in spec:
+      return spec, None
+    parts = spec.strip().strip("/").split("/")
+    owner_re = r"^[^/.@]+$"  # git host paths never start with a dotted owner
+    if len(parts) == 2 and re.match(owner_re, parts[0]):
+      # shorthand "owner/branch": probe every host x repo name
+      return resolve_git_repo(parts[0], parts[1]), parts[1]
+    if len(parts) == 3 and re.match(owner_re, parts[0]):
+      # explicit "owner/repo/branch": probe hosts for that repo name only
+      return resolve_git_repo(parts[0], parts[2], (parts[1],)), parts[2]
+    return (f"https://{spec}" if "://" not in spec else spec), None
+
+  def _git_install_thread(self, spec: str):
     try:
-      import tempfile
-
-      fd, tmpfile = tempfile.mkstemp(prefix="installer_")
-
-      headers = {"User-Agent": USER_AGENT,
-                 "X-openpilot-serial": HARDWARE.get_serial(),
-                 "X-openpilot-device-type": HARDWARE.get_device_type()}
-      req = urllib.request.Request(self.download_url, headers=headers)
-
-      with open(tmpfile, 'wb') as f, urllib.request.urlopen(req, timeout=30) as response:
-        total_size = int(response.headers.get('content-length', 0))
-        downloaded = 0
-        block_size = 8192
-
-        while True:
-          buffer = response.read(block_size)
-          if not buffer:
-            break
-
-          downloaded += len(buffer)
-          f.write(buffer)
-
-          if total_size:
-            self.download_progress = int(downloaded * 100 / total_size)
-
-      is_elf = False
-      with open(tmpfile, 'rb') as f:
-        header = f.read(4)
-        is_elf = header == b'\x7fELF'
-
-      if not is_elf:
+      clone_url, branch = self._resolve_target(spec)
+      if clone_url is None:
         self.download_failed(self.download_url, tr("No custom software found at this URL."))
         return
+      self.download_url = clone_url
+      install_from_git(clone_url, branch,
+                       on_status=self._set_git_status,
+                       on_progress=lambda pct: setattr(self, 'download_progress', pct))
 
-      # AGNOS might try to execute the installer before this process exits.
-      # Therefore, important to close the fd before renaming the installer.
-      os.close(fd)
-      os.rename(tmpfile, INSTALLER_DESTINATION_PATH)
+      # comma.sh only re-checks /data/continue.sh after /tmp/installer shows
+      # up and exits: a no-op installer unblocks the boot loop now that
+      # continue.sh is already written.
+      with open(INSTALLER_DESTINATION_PATH, "w") as f:
+        f.write("#!/bin/sh\nexit 0\n")
+      os.chmod(INSTALLER_DESTINATION_PATH, 0o755)
 
-      with open(INSTALLER_URL_PATH, "w") as f:
-        f.write(self.download_url)
-
-      # give time for installer UI to take over
+      # give time for the UI to settle before the app closes
       time.sleep(0.1)
       gui_app.request_close()
-
-    except urllib.error.HTTPError as e:
-      if e.code == 409:
-        error_msg = e.read().decode("utf-8")
-        self.download_failed(self.download_url, error_msg)
-      else:
-        self.download_failed(self.download_url, tr("Server error ({code}).").format(code=e.code))
+    except GitInstallError as e:
+      self.download_failed(self.download_url, self._git_error_texts.get(e.kind, tr("Install failed.")))
     except Exception:
-      error_msg = tr("Ensure the entered URL is valid, and the device's internet connection is good.")
-      self.download_failed(self.download_url, error_msg)
+      self.download_failed(self.download_url, tr("Ensure the entered URL is valid, and the device's internet connection is good."))
+
+  def _set_git_status(self, key: str):
+    self.download_status = self._git_status_texts.get(key, self.download_status)
 
   def download_failed(self, url: str, reason: str):
     self.failed_url = url
