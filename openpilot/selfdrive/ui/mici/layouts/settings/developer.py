@@ -11,6 +11,27 @@ from openpilot.system.ui.lib.multilang import tr
 from openpilot.selfdrive.ui.widgets.ssh_key import SshKeyFetcher
 from openpilot.selfdrive.ui.widgets.tailscale_dialog import TailscaleDialog
 
+# JetlinkDiagMode is deliberately not registered in Params' compiled key table:
+# adding a key needs a C++ rebuild, which an OTA cannot do. The switch is the
+# same 1/0 file Params would write, read directly here.
+_JETLINK_DIAG_PATH = "/data/params/d/JetlinkDiagMode"
+
+
+def _jetlink_diag_enabled() -> bool:
+  try:
+    with open(_JETLINK_DIAG_PATH, "rb") as f:
+      return f.read().strip() == b"1"
+  except OSError:
+    return False
+
+
+def _set_jetlink_diag(state: bool):
+  try:
+    with open(_JETLINK_DIAG_PATH, "wb") as f:
+      f.write(b"1" if state else b"0")
+  except OSError:
+    pass
+
 
 class AlphaLongConfirmPage(NavScroller):
   def __init__(self, on_confirm: Callable[[], None]):
@@ -130,6 +151,9 @@ class DeveloperLayoutMici(NavScroller):
     self._debug_mode_toggle = BigParamControl(tr("ui debug mode"), "ShowDebugInfo",
                                               toggle_callback=lambda checked: (gui_app.set_show_touches(checked), gui_app.set_show_fps(checked)),
                                               description=tr("Show touch locations and the UI frame rate."))
+    self._jetlink_diag_toggle = BigToggle(tr("jetlink remote diagnostic"), initial_state=_jetlink_diag_enabled(),
+                                          toggle_callback=self._on_jetlink_diag,
+                                          description=tr("Relax model deadlines for parked, remote diagnosis. Restart modeld after changing. Never use while driving."))
 
     self._scroller.add_widgets([
       self._adb_toggle,
@@ -145,6 +169,7 @@ class DeveloperLayoutMici(NavScroller):
       self._lat_maneuver_toggle,
       self._alpha_long_toggle,
       self._debug_mode_toggle,
+      self._jetlink_diag_toggle,
       self._navigation_toggle,
     ])
 
@@ -161,8 +186,8 @@ class DeveloperLayoutMici(NavScroller):
       ("ShowDebugInfo", self._debug_mode_toggle),
       ("NavigationEnabled", self._navigation_toggle),
     )
-    onroad_blocked_toggles = (self._adb_toggle, self._joystick_toggle)
-    release_blocked_toggles = (self._joystick_toggle, self._long_maneuver_toggle, self._lat_maneuver_toggle, self._alpha_long_toggle, self._navigation_toggle)
+    onroad_blocked_toggles = (self._adb_toggle, self._joystick_toggle, self._jetlink_diag_toggle)
+    release_blocked_toggles = (self._joystick_toggle, self._long_maneuver_toggle, self._lat_maneuver_toggle, self._alpha_long_toggle, self._navigation_toggle, self._jetlink_diag_toggle)
     engaged_blocked_toggles = (self._long_maneuver_toggle, self._lat_maneuver_toggle, self._alpha_long_toggle)
 
     # Hide non-release toggles on release builds
@@ -224,7 +249,12 @@ class DeveloperLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+    self._jetlink_diag_toggle.set_checked(_jetlink_diag_enabled())
     self._agent_password_btn.set_value(ui_state.params.get("AgentPassword") or tr("Not set"))
+
+  def _on_jetlink_diag(self, state: bool):
+    _set_jetlink_diag(state)
+    self._update_toggles()
 
   def _on_enable_tailscale(self, state: bool):
     if state:

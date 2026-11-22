@@ -12071,3 +12071,12 @@ msgstr ""
 msgid "🚀 sunnylink 🚀"
 msgstr "🚀 sunnylink 🚀"
 
+
+msgid "Jetlink remote diagnostic mode"
+msgstr "Jetlink 遠端診斷模式"
+
+msgid "jetlink remote diagnostic"
+msgstr "jetlink 遠端診斷"
+
+msgid "Relax model deadlines for parked, remote diagnosis. Restart modeld after changing. Never use while driving."
+msgstr "停車遠端診斷時放寬模型超時。修改後需重啟 modeld。駕駛時請勿開啟。"

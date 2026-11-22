@@ -15,6 +15,27 @@ from openpilot.system.ui.widgets import DialogResult
 if gui_app.sunnypilot_ui():
   from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp as toggle_item
 
+# JetlinkDiagMode is deliberately not registered in Params' compiled key table:
+# adding a key needs a C++ rebuild, which an OTA cannot do. The switch is the
+# same 1/0 file Params would write, read directly here.
+_JETLINK_DIAG_PATH = "/data/params/d/JetlinkDiagMode"
+
+
+def _jetlink_diag_enabled() -> bool:
+  try:
+    with open(_JETLINK_DIAG_PATH, "rb") as f:
+      return f.read().strip() == b"1"
+  except OSError:
+    return False
+
+
+def _set_jetlink_diag(state: bool):
+  try:
+    with open(_JETLINK_DIAG_PATH, "wb") as f:
+      f.write(b"1" if state else b"0")
+  except OSError:
+    pass
+
 # Description constants
 DESCRIPTIONS = {
   'enable_adb': tr_noop(
@@ -149,6 +170,14 @@ class DeveloperLayout(Widget):
     )
     self._on_enable_ui_debug(self._params.get_bool("ShowDebugInfo"))
 
+    self._jetlink_diag_toggle = toggle_item(
+      lambda: tr("Jetlink remote diagnostic mode"),
+      description=lambda: tr("Relax model deadlines for parked, remote diagnosis. Restart modeld after changing. Never use while driving."),
+      initial_state=_jetlink_diag_enabled(),
+      callback=self._on_jetlink_diag,
+      enabled=lambda: not ui_state.engaged,
+    )
+
     self._scroller = Scroller([
       self._adb_toggle,
       self._ssh_toggle,
@@ -162,6 +191,7 @@ class DeveloperLayout(Widget):
       self._lat_maneuver_toggle,
       self._alpha_long_toggle,
       self._ui_debug_toggle,
+      self._jetlink_diag_toggle,
     ], line_separator=True, spacing=0)
 
     # Toggles should be not available to change in onroad state
@@ -214,6 +244,10 @@ class DeveloperLayout(Widget):
       ("ShowDebugInfo", self._ui_debug_toggle),
     ):
       item.action_item.set_state(self._params.get_bool(key))
+    self._jetlink_diag_toggle.action_item.set_state(_jetlink_diag_enabled())
+
+  def _on_jetlink_diag(self, state: bool):
+    _set_jetlink_diag(state)
 
   def _on_enable_ui_debug(self, state: bool):
     self._params.put_bool("ShowDebugInfo", state, block=True)

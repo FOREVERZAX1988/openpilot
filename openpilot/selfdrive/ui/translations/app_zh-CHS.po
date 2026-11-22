@@ -10427,3 +10427,12 @@ msgstr "网页登录密码将被重新生成。"
 #: openpilot\selfdrive\ui\mici\layouts\settings\developer.py
 msgid "Sessions using the old password stop working once the agent restarts."
 msgstr "助手重启后，使用旧密码的会话将失效。"
+
+msgid "Jetlink remote diagnostic mode"
+msgstr "Jetlink 远程诊断模式"
+
+msgid "jetlink remote diagnostic"
+msgstr "jetlink 远程诊断"
+
+msgid "Relax model deadlines for parked, remote diagnosis. Restart modeld after changing. Never use while driving."
+msgstr "停车远程诊断时放宽模型超时。修改后需重启 modeld。驾驶时请勿开启。"
