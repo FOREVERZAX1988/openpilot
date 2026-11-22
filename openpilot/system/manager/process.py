@@ -3,6 +3,7 @@ import os
 import signal
 import time
 import subprocess
+import traceback
 from collections.abc import Callable, ValuesView
 from abc import ABC, abstractmethod
 from multiprocessing import Process, get_context
@@ -38,6 +39,17 @@ def launcher(proc: str, name: str) -> None:
     # can't install the crash handler because sys.excepthook doesn't play nice
     # with threads, so catch it here.
     cloudlog.exception("crash")
+    # 2026-11-22：cloudlog.exception 的多行 traceback 走 logmessaged 的逐行通道时会
+    # 被拆散/丢掉——route 00000045 seg9 850.911 那次 selfdrived 崩溃，rlog 里只剩下
+    # 一行 "selfdrived: crash"，栈完全找不回来（process_crashes 也没有当天记录）。
+    # 这里把栈压成单行再记一次，保证能进 rlog；万一还是被截断，再落到本地文件。
+    try:
+      tb = traceback.format_exc().replace("\n", " | ")[-4000:]
+      cloudlog.error("CRASH_TRACEBACK daemon=%s %s", name, tb)
+      with open(f"/data/local/tmp/crash_{name}.log", "a") as f:
+        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {name}\n{traceback.format_exc()}\n")
+    except Exception:
+      pass
     raise
 
 
