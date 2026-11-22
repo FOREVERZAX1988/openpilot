@@ -629,17 +629,46 @@ class Car:
 
     initialized = (not any(e.name == EventName.selfdriveInitializing for e in self.sm['onroadEvents']) and
                    self.sm.seen['onroadEvents'])
-    if not self.CP.passive and initialized:
-      # 车距显示路线A：注入 OP 融合前车距离（radard 发布的 radarState.leadOne），
-      # 供 carcontroller 在原厂雷达无目标时补位仪表 ACC 车距图标。纯显示层，不参与 ACC_05 控制。
-      rs = self.sm['radarState']
-      self.CI.CS.op_lead_dRel = float(rs.leadOne.dRel) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
-      self.CI.CS.op_lead_vLead = float(rs.leadOne.vLead) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
-      self.controls_update(CS, self.sm['carControl'], self.sm['carControlSP'])
+    if not self.CP.passive:
+      if initialized:
+        # 车距显示路线A：注入 OP 融合前车距离（radard 发布的 radarState.leadOne），
+        # 供 carcontroller 在原厂雷达无目标时补位仪表 ACC 车距图标。纯显示层，不参与 ACC_05 控制。
+        rs = self.sm['radarState']
+        self.CI.CS.op_lead_dRel = float(rs.leadOne.dRel) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
+        self.CI.CS.op_lead_vLead = float(rs.leadOne.vLead) if (self.sm.valid['radarState'] and rs.leadOne.present) else 0.0
+        self.controls_update(CS, self.sm['carControl'], self.sm['carControlSP'])
+      elif (self.sm.seen['carControl'] and self.sm.seen['carControlSP']
+            and getattr(self.CP, "carFingerprint", None) == "PORSCHE_MACAN_MK1"):
+        # 运行中重启的 CAN 保活，见 _restart_can_keepalive。
+        self._restart_can_keepalive(CS)
 
     self.initialized_prev = initialized
     self.CS_prev = CS
     self.CS_SP_prev = CS_SP
+
+  def _restart_can_keepalive(self, CS: car.CarState) -> None:
+    """selfdrived 重启初始化期间保持 CAN 在线，发中性帧（2026-11-22）。
+
+    route 00000045 seg9 实证：850.91 selfdrived 崩溃 → manager 重启 → 853.90
+    onroadEvents 带上 selfdriveInitializing → step() 跳过 controls_update →
+    [853.90, 855.00] 整整 1.11 秒一条 sendcan 都没发（该窗口内只有 854.996 一条）。
+    而原厂雷达 853.03 刚随主开关上电，105 毫秒后就丢了 OP 的 ACC_05，
+    854.41 锁 ACC_Status_ACC=6（reversibler Fehler），854.44 引擎 ECU
+    TSK_04 0→3，仪表报 ACC/PAS 需要服务，两次熄火才清。
+
+    同一时刻其它一切正常：carControl 在该窗口到了 111 条、CAN 接收 10.2ms 无中断、
+    canValid 恒 True、panda 无拦截/无溢出、总线错误计数不动。所以问题就是"静默本身"。
+
+    这里把 CC 中性化后照常走 controls_update：enabled/latActive/longActive 全 False、
+    执行器清零、不发按键 → ACC_05 为 st=2 待机、力矩 0，与原厂待机语义一致，
+    不产生任何控制意图。冷启动不满足 seen 条件，保持原来的完全静默。
+    """
+    CC = self.sm['carControl'].as_builder()
+    CC.enabled = CC.latActive = CC.longActive = False
+    CC.actuators = car.CarControl.Actuators.new_message()
+    CC.cruiseControl.resume = CC.cruiseControl.override = False
+    CC.cruiseControl.cancel = CS.cruiseState.enabled
+    self.controls_update(CS, CC.as_reader(), self.sm['carControlSP'])
 
   def params_thread(self, evt):
     while not evt.is_set():
