@@ -47,6 +47,76 @@ EventName = log.OnroadEvent.EventName
 carlog.addHandler(ForwardingHandler(cloudlog))
 
 
+# ---------------------------------------------------------------------------
+# ACC/TSK 帧计数看门狗（2026-11-22，只记录，不改任何控制行为）
+#
+# 现象：route 00000045 seg9 t=854.41，车静止、ACC 待机、OP 完全未接入，
+# 引擎 ECU 的 TSK_04.TSK_Status_GRA_ACC_02 由 0 跳 3（故障），0.1s 后原厂
+# ACC_05 由 2 跳 6，仪表报 ACC/PAS 需要服务。查过且全部正常：OP 的 ACC_05
+# 内容（待机全零、激活镜像）、ACC_05/02/04 计数器、帧率、panda 拦截
+# （safetyTxBlocked/rxChecksInvalid/txBufferOverflow 全 0）、CAN 总线错误
+# （seg0-11 totalErrorCnt 不变）。NAS 上 3 月的 macan-routes/error
+# 0000000e/12/13 是同型样本（主开关上电后 5.4-5.6s 锁存），说明这是老问题
+# 的一个偶发变体，不是这次改动引入的。
+#
+# 剩下的唯一可查线索是"某一帧在总线上丢了"。本看门狗把 ACC_05 / ACC_02 /
+# TSK_04 / TSK_05 的帧计数器连续性、以及 TSK_04 状态跳变写进 rlog 的
+# logMessage；下次一锁存就能直接看出是哪一帧、在哪条总线上断的。
+# ---------------------------------------------------------------------------
+_ACC_WATCH_IDS = {
+  0x10D: "ACC_05",
+  0x10E: "TSK_04",
+  0x111: "TSK_05",
+  0x30C: "ACC_02",
+}
+
+
+class AccFrameWatch:
+  """MLB ACC/TSK 帧计数器连续性监控。只写日志，不参与任何控制决策。"""
+
+  MAX_LOGS = 400
+  MIN_PERIOD_NS = 5_000_000    # 5 ms：计数器异常允许连记，但不允许单帧刷屏
+
+  def __init__(self) -> None:
+    self.ctr: dict[tuple[int, int], int] = {}
+    self.tsk_status: int | None = None
+    self.logs = 0
+    self.last_log_ns = -self.MIN_PERIOD_NS
+    self.armed = False
+
+  def update(self, can_list, now_ns: int) -> None:
+    if not self.armed:
+      self.armed = True
+      self._log(now_ns, "armed: ACC_05/02 + TSK_04/05 counter continuity", force=True)
+    for _t, frames in can_list:
+      for addr, dat, src in frames:
+        name = _ACC_WATCH_IDS.get(addr)
+        if name is None:
+          continue
+        # COUNTER 是每帧 +1（16 回绕）；断一帧 → delta 2
+        ctr = dat[1] & 0x0F
+        key = (src, addr)
+        prev = self.ctr.get(key)
+        self.ctr[key] = ctr
+        if prev is not None:
+          delta = (ctr - prev) % 16
+          if delta != 1:
+            self._log(now_ns, f"{name} counter {prev}->{ctr} (delta {delta}) src={src}")
+        if addr == 0x10E:
+          # TSK_Status_GRA_ACC_02: 0=未接合 1=接合 2=驾驶员超驰 3=故障
+          st = (dat[7] >> 6) & 0x3
+          if st != self.tsk_status:
+            self._log(now_ns, f"TSK_04 status {self.tsk_status}->{st} src={src}", force=True)
+            self.tsk_status = st
+
+  def _log(self, now_ns: int, msg: str, force: bool = False) -> None:
+    if self.logs >= self.MAX_LOGS or (not force and now_ns - self.last_log_ns < self.MIN_PERIOD_NS):
+      return
+    self.logs += 1
+    self.last_log_ns = now_ns
+    cloudlog.warning("ACCWATCH %s", msg)
+
+
 def cached_car_params_bytes(params: Params) -> bytes | None:
   """CarParams bytes to hand to fingerprint(), so a reboot/OTA does not re-query ECUs.
 
@@ -160,6 +230,9 @@ class Car:
     self.card_diag_loop_max_us = 0
     self.card_diag_can_timeouts = 0
     self.card_diag_prev_timeout_counter = 0
+
+    # 见 AccFrameWatch：仅在 Macan 上启用，纯日志
+    self.acc_frame_watch: AccFrameWatch | None = None
 
     self.CC_prev = car.CarControl.new_message()
     self.CS_prev = car.CarState.new_message()
@@ -312,6 +385,15 @@ class Car:
 
     can_strs = messaging.drain_sock_raw(self.can_sock, wait_for_one=True)
     can_list = can_capnp_to_list(can_strs)
+
+    # ACC/TSK 帧计数看门狗（只记日志，任何异常都不允许影响控制链）
+    if getattr(getattr(self, "CP", None), "carFingerprint", None) == "PORSCHE_MACAN_MK1":
+      if self.acc_frame_watch is None:
+        self.acc_frame_watch = AccFrameWatch()
+      try:
+        self.acc_frame_watch.update(can_list, time.monotonic_ns())
+      except Exception:
+        self.acc_frame_watch = None
 
     # Update carState from CAN
     CS, CS_SP = self.CI.update(can_list)
