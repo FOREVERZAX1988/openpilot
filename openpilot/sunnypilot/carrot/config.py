@@ -101,6 +101,11 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "AutoNaviSpeedSafetyFactor": 105,
   "SoundVolumeAdjust": 100,
   "SoundVolumeAdjustEngage": 100,
+  # StarPilot blind-spot audible advisory (registered BOOLs in params_keys.h;
+  # listed here so the /nav_params web panel shows them alongside the toggles)
+  "LoudBlindspotAlert": 0,
+  "LoudBlindspotAlertWhenDisengaged": 0,
+  "LoudBlindspotAlertMuteAtStandstill": 0,
   # Carrot exception message persists across manager start
   "CarrotException": "",
   # ---------------------------------------------------------------------------

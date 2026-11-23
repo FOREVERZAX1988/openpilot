@@ -152,6 +152,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"PandaHeartbeatLost", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"PrimeType", {PERSISTENT, INT}},
     {"SentryEnabled", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL, "0"}},
+    {"SentryDiscordWebhookUrl", {PERSISTENT | BACKUP, STRING, ""}},  // optional sentry notification webhook; empty = disabled
+    {"SentryNtfyUrl", {PERSISTENT | BACKUP, STRING, ""}},  // optional sentry notification ntfy endpoint; empty = disabled
     {"RecordAudio", {PERSISTENT | BACKUP, BOOL}},
     {"RecordFront", {PERSISTENT | BACKUP, BOOL}},
     {"RecordFrontLock", {PERSISTENT, BOOL}},  // for the internal fleet
@@ -433,7 +435,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CECurvesLead", {PERSISTENT | BACKUP, BOOL, "1"}},  // allow the curve trigger while following a lead
     {"CELead", {PERSISTENT | BACKUP, BOOL, "1"}},  // trigger EXP when closing on a slower lead
     {"CESignalSpeed", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // m/s; blinker + speed below this triggers EXP (0 = disabled)
-    {"CEStatus", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},  // 0=off 1=curves 2=lead 3=signal 4=manual; UI hint of why EXP is on
+    {"CEStopLights", {PERSISTENT | BACKUP, BOOL, "1"}},  // StarPilot CEStopLights (preferences.py:41): CEM stop trigger from the model-length red-light detector (stop.py)
+    {"CESignalLaneWidth", {PERSISTENT | BACKUP, FLOAT, "0.0"}},  // m; blinker-side lane narrower than this qualifies the signal trigger (signal_lane.py); 0 = unqualified stock behaviour
+    {"CEChillLaunch", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot ccm_launch default-off (policy.py:130): CCM chill held through a standstill launch
+    {"CEStatus", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, INT, "0"}},  // 0=off 1=curves 2=lead 3=signal 4=manual; UI hint of why EXP is on (5-7=CCM, 8=stop, 9=CCM launch)
 
     // Mapbox speed-limit filler: when car/map/vision/carrot sources are all empty, ask the Mapbox
     // Driving-Match API for the segment maxspeed. Needs a user token; without one it stays inert.
@@ -538,6 +543,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LaneCenteringEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot vision lane-centering: bounded curvature correction toward the lane center (not for use with LateralLaneCentering)
     {"LaneCenterOffset", {PERSISTENT | BACKUP, FLOAT, "0"}},  // Lane centering lateral offset in meters (-0.3..0.3)
     {"LaneCenteringE2EAuthority", {PERSISTENT | BACKUP, BOOL, "0"}},  // Attenuate lane-centering correction on large deliberate path errors unless near a boundary
+    {"LoudBlindspotAlert", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot blind-spot advisory: replace the blocked-lane-change alert with a louder blind-spot alert while a lane change is blocked
+    {"LoudBlindspotAlertWhenDisengaged", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot blind-spot advisory: chime while lateral control is off and the driver signals toward an occupied blind spot on the same side
+    {"LoudBlindspotAlertMuteAtStandstill", {PERSISTENT | BACKUP, BOOL, "0"}},  // StarPilot blind-spot advisory: mute only the disengaged advisory while parked/stopped
     {"WebPushVapidKeys", {PERSISTENT | BACKUP, STRING}},
     {"WebPushSubscriptions", {PERSISTENT | BACKUP, STRING}},
     // Ensures steer-to-zero Mazda torque defaults are seeded once.
@@ -851,6 +859,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},
     {"AutoCurveSpeedFactor", {PERSISTENT | BACKUP, INT, "100"}},
     {"AutoCurveSpeedAggressiveness", {PERSISTENT | BACKUP, INT, "100"}},
+    // StarPilot curve_speed learning layer (sunnypilot/carrot/curve_speed_learning/): appended keys only.
+    {"CurveSpeedLearning", {PERSISTENT | BACKUP, BOOL, "0"}},    // master switch; off -> carrot curve-speed baseline unchanged
+    {"CurveComfortData", {PERSISTENT | BACKUP, STRING, ""}},     // learned v1 JSON document {"version":1,"buckets":{...}}
+    {"CurveSpeedFeedback", {PERSISTENT | BACKUP, STRING, ""}},   // driver nudge channel "up"/"down"; consumed+cleared by curve_speed_learning/runtime.py
     {"AutoTurnControl", {PERSISTENT | BACKUP, INT, "2"}},  // cp ATC: 0 off, 1 steering only, 2 speed+steering, 3 speed only; default full
     {"AutoTurnControlRightLaneChange", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp 32ed45b2e: independent right-fork TBT physical-indicator admission
     {"ManualLaneChangeIndicator", {PERSISTENT | BACKUP, BOOL, "0"}},  // cp boundary_indicator add-on: manual lamp feedback isolation
