@@ -302,6 +302,14 @@ NAVI_HTTP_PORT = 7713
 # stored value so it cannot look like a live setting.
 CARROT_MAN_UDP_PORT = 7706
 NAVI_HTTP_MAX_BODY_SIZE = 16 * 1024 * 1024
+# Reason-string contract for the CarrotException upload chain (cp
+# carrot_man.py:74). Writers queue one of these values (manager crash hook,
+# logmessaged decode failure, tmux dispatcher); the consumer below only
+# uploads whitelisted reasons and clears the value on success. NOTE: this is
+# deliberately NOT read via get_bool - Params.getBool only matches "1", so
+# reason strings would never trigger it.
+CARROT_EXCEPTION_TMUX_REASONS = ("exception", "log", "tmux_send", "can_error", "spi_error", "egpu_error")
+CARROT_EXCEPTION_UPLOAD_RETRY_SECONDS = 60.0  # cp carrot_man.py:73
 NAVI_EVENT_TYPES = ("complexCrossroad", "rgdata", "vrtx", "ssinf", "sinf", "route")
 NAVI_ROUTE_MAX_POINTS = 4096
 NAVI_IMAGE_PARAM = "CarrotNaviImage"
@@ -1101,6 +1109,15 @@ class CarrotManager:
     cm.xPosLon = _safe_float(raw.get("vpPosPointLon"), 0.0)
     cm.xPosAngle = _safe_float(raw.get("nPosAngle"), 0.0)
     cm.xPosSpeed = _safe_float(raw.get("nPosSpeed"), 0.0)
+    # Position fusion provenance (cp carrot_serv.py:1546-1549): the freshness
+    # gates live in selfdrive/navigation/helpers.py navigation_position(), which
+    # prefers this fused fix over the device GPS while it is fresh. Zero stamps
+    # (no usable source) keep the fusion channel closed.
+    pos_source, pos_fix, pos_now = self._carrot_serv.navigation_position_state()
+    cm.positionSource = pos_source
+    cm.positionFixMonoTime = max(0, int(pos_fix.stamp * 1e9)) if pos_fix is not None else 0
+    cm.positionMonoTime = max(0, int(pos_now * 1e9)) if pos_fix is not None else 0
+    cm.positionHeadingValid = pos_fix is not None and pos_fix.heading is not None
     cm.trafficState = self._carrot_serv.traffic_state
     cm.nGoPosDist = _safe_int(raw.get("nGoPosDist"), 0)
     cm.nGoPosTime = _safe_int(raw.get("nGoPosTime"), 0)
@@ -1871,19 +1888,30 @@ class CarrotManager:
               if web_ok or carrot_logs_ok:
                 self._is_tmux_sent = True
 
-            # Send exception if CarrotException is set
-            if self.params.get_bool("CarrotException") and network_connected:
-              pending_tmux_reason = "exception"
+            # Send exception report if CarrotException carries a queued reason.
+            # cp carrot_man.py:1188-1224 semantics: reason-string contract (NOT
+            # get_bool, which only matches "1" and never sees the writer values);
+            # can_error captures are onroad evidence, cancelled once offroad
+            # without an upload; the value clears only after one destination
+            # accepts, and failures back off before retrying.
+            carrot_exception = self.params.get("CarrotException") or ""
+            if carrot_exception == "can_error" and self._is_onroad_count == 0:
+              self.params.put("CarrotException", "")
+              carrot_exception = ""
+
+            if (carrot_exception in CARROT_EXCEPTION_TMUX_REASONS and network_connected
+                and time.monotonic() >= getattr(self, '_carrot_exc_next_attempt', 0.0)):
               self.make_tmux_data()
-              web_response = self.send_tmux_web(pending_tmux_reason, send_settings = False)
+              web_response = self.send_tmux_web(carrot_exception, send_settings = False)
               web_ok = web_response is not None and getattr(web_response, "ok", False)
-              carrot_logs_response = self.send_tmux_carrot_logs(pending_tmux_reason, send_settings = False)
+              carrot_logs_response = self.send_tmux_carrot_logs(carrot_exception, send_settings = False)
               carrot_logs_ok = carrot_logs_response is not None and getattr(carrot_logs_response, "ok", False)
-              discord_ok = self.send_tmux_discord(pending_tmux_reason, web_ok, carrot_logs_ok)
-              # Only clear the flag once one destination accepted the upload,
-              # so a failed send retries on the next loop (cp semantics).
+              discord_ok = self.send_tmux_discord(carrot_exception, web_ok, carrot_logs_ok)
               if web_ok or carrot_logs_ok or discord_ok:
-                self.params.put_bool("CarrotException", False)
+                self.params.put("CarrotException", "")
+                self._carrot_exc_next_attempt = 0.0
+              else:
+                self._carrot_exc_next_attempt = time.monotonic() + CARROT_EXCEPTION_UPLOAD_RETRY_SECONDS
 
           elif 'echo_cmd' in json_obj:
             # Execute remote command

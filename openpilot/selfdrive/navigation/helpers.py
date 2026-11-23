@@ -82,10 +82,22 @@ class NavigationPosition:
 def navigation_position(sm) -> NavigationPosition | None:
   """Retain Carrot's phone/navigation fusion, bounded by ORIGINAL fix freshness.
 
-  cp also fuses carrotMan's phone fix here; that needs positionFixMonoTime /
-  positionMonoTime / positionSource, which CarrotManSP in this fork does not
-  carry, so this degrades to the freshest GPS fix only.
+  cp semantics (selfdrive/navigation/helpers.py:60-74) over the CarrotManSP
+  position* fields (ported carrot custom.capnp @33-36): prefer the fused
+  fix while its ORIGINAL receipt is <2s old, the fused-position stamp is
+  <0.5s old, the message is fresh, and the packet position is finite and in
+  range; fall back to the freshest device GPS source otherwise.
   """
+  now = time.monotonic()
+  carrot = sm['carrotManSP']
+  if (sm.valid['carrotManSP'] and 0 <= now - sm.recv_time['carrotManSP'] < .5
+      and (not carrot.positionSource or carrot.positionHeadingValid)
+      and carrot.positionFixMonoTime > 0 and 0 <= now - carrot.positionFixMonoTime / 1e9 < 2
+      and 0 <= now - carrot.positionMonoTime / 1e9 < .5
+      and all(math.isfinite(v) for v in (carrot.xPosLat, carrot.xPosLon, carrot.xPosAngle, carrot.xPosSpeed))
+      and abs(carrot.xPosLat) <= 85.05112878 and abs(carrot.xPosLon) <= 180):
+    return NavigationPosition(carrot.xPosLat, carrot.xPosLon, carrot.xPosAngle, max(0., carrot.xPosSpeed / 3.6),
+                              carrot.positionMonoTime / 1e9, carrot.positionFixMonoTime / 1e9)
   source = latest_gps_source(sm)
   if source is None:
     return None

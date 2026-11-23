@@ -815,6 +815,19 @@ class CarrotServ:
     """
     return select(self._gps_fixes(), time.monotonic())[0]
 
+  def navigation_position_state(self) -> tuple[str, Fix | None, float]:
+    """(source label, selected fix, selection mono time) for CarrotManSP position fusion.
+
+    Mirrors carrot carrot_serv.py:147-148,1151-1160 semantics: fix.stamp is the
+    ORIGINAL fix receipt in monotonic seconds (never renewed by dead reckoning),
+    and the selection time acts as the fused-position refresh stamp. Consumed by
+    carrot_man.py when filling CarrotManSP.position* fields; the freshness gates
+    live in selfdrive/navigation/helpers.py navigation_position().
+    """
+    now = time.monotonic()
+    source, fix = select(self._gps_fixes(), now)
+    return source, fix, now
+
   def vehicle_speed_camera_active(self, cs: Any | None) -> bool:
     """True when vehicle CAN reports an active speed-camera zone."""
     return cs is not None and self._vehicle_speed_camera_enabled(cs)

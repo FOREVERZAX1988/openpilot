@@ -6,6 +6,7 @@ from typing import NoReturn
 import openpilot.cereal.messaging as messaging
 from openpilot.common.logging_extra import SwagLogFileFormatter
 from openpilot.common.hardware.hw import Paths
+from openpilot.common.params import Params
 from openpilot.common.swaglog import SWAGLOG_MAX_SIZE, cloudlog, get_file_handler
 
 
@@ -38,7 +39,20 @@ def main() -> NoReturn:
       if n == 0:
         continue
       level = buf[0]
-      record = buf[1:n].decode("utf-8")
+      # Ported from carrot system/logmessaged.py:31-36: a malformed (non-UTF-8)
+      # journald record used to raise out of this loop and kill the daemon;
+      # now it is skipped and flagged into the CarrotException upload chain
+      # (reason "log") so the failure is reported instead of silently crashing.
+      try:
+        record = buf[1:n].decode("utf-8", errors="replace")
+      except Exception as e:
+        print(f"decode error: {e}, skipping log")
+        print(f"Raw bytes (hex): {buf[1:min(n, 201)].hex()}")
+        try:
+          Params().put("CarrotException", "log")
+        except Exception:
+          pass
+        continue
       if level >= log_level:
         log_handler.emit(record)
 

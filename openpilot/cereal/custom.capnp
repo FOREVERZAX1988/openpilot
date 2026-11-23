@@ -1038,6 +1038,19 @@ struct CarrotManSP @0xcd96dafb67a082d0 {
   xSectionActive @76 :Bool = false;
   xSectionLimitKph @77 :Int32 = 0;
   xSectionAllowanceKph @78 :Float32 = 0;
+
+  # Position fusion provenance, ported from carrot custom.capnp CarrotMan
+  # @33-36. positionFixMonoTime is the ORIGINAL fix receipt (monotonic, never
+  # renewed by dead reckoning); positionMonoTime is the fused-position
+  # refresh time; positionSource is the gps_sources label ("navi"/"phone"/
+  # "device"/"none"); positionHeadingValid gates heading use. Consumer:
+  # selfdrive/navigation/helpers.py navigation_position() prefers this fused
+  # fix while fresh and falls back to the device GPS otherwise, keeping
+  # navigation positioning alive through tunnels / urban canyons.
+  positionFixMonoTime @79 :UInt64 = 0;
+  positionMonoTime @80 :UInt64 = 0;
+  positionSource @81 :Text = "";
+  positionHeadingValid @82 :Bool = false;
 }
 
 struct ImuCalibrationSP @0xb057204d7deadf3f {
