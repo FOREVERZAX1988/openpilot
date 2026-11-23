@@ -135,7 +135,7 @@ class SettingsLayoutSP(OP.SettingsLayout):
       self._scroller.add_widget(item)
 
   def _replace_panel(self, label: str, panel) -> None:
-    btn = next((btn for btn in self._scroller.items if btn.get_text() == label), None)
+    btn = next((btn for btn in self._scroller.items if btn.text == label), None)
     if btn is None:
       cloudlog.warning(f"mici settings: no panel button labelled {label!r}")
       return
