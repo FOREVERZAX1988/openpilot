@@ -47,7 +47,7 @@ class TogglesLayoutMici(NavScroller):
                                                                "Aggressive follows closer, with firmer gas and braking.\n" +
                                                                "Relaxed leaves more space.\n" +
                                                                "Use the steering wheel distance button on supported cars."))
-    self._experimental_btn = BigToggle(tr("experimental mode"), description_icon=gui_app.texture("icons_mici/experimental_mode.png", 64, 64),
+    self._experimental_btn = BigToggle(tr("experimental mode"), description_icon=gui_app.texture("icons_mici/longitudinal/car.png", 64, 64),
                                        initial_state=ui_state.params.get_bool("ExperimentalMode"), toggle_callback=self._on_experimental_mode,
                                        description=tr("Let the driving model control gas and brakes.\n" +
                                                    "Includes stopping for red lights and stop signs.\n" +

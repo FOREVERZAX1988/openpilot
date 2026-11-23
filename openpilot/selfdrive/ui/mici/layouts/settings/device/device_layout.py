@@ -152,6 +152,7 @@ class DeviceLayoutMici(NavScroller):
     self._fcc_dialog: MiciFccModal | None = None
     self._pairing_button = PairBigButton()
     self._pending_pairing_grow_animation = False
+    self._preview_callback: Callable | None = None
 
     def power_off_callback():
       ui_state.params.put_bool("DoShutdown", True, block=True)
@@ -199,6 +200,10 @@ class DeviceLayoutMici(NavScroller):
     cabin_cam_btn.set_click_callback(lambda: gui_app.push_widget(CabinCameraDialog()))
     cabin_cam_btn.set_enabled(lambda: ui_state.is_offroad())
 
+    self._onroad_preview_btn = BigButton("onroad\npreview", "", gui_app.texture("icons_mici/settings/device/cameras.png", 64, 64))
+    self._onroad_preview_btn.set_click_callback(self._enter_onroad_preview)
+    self._onroad_preview_btn.set_enabled(lambda: ui_state.is_offroad() or ui_state.params.get_bool("IsOnroadPreview"))
+
     review_training_guide_btn = BigButton("review\ntraining guide", "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     review_training_guide_btn.set_click_callback(lambda: gui_app.push_widget(ReviewTrainingGuide(completed_callback=lambda: gui_app.pop_widgets_to(self))))
     review_training_guide_btn.set_enabled(lambda: ui_state.is_offroad())
@@ -214,6 +219,7 @@ class DeviceLayoutMici(NavScroller):
       record_mic,
       review_training_guide_btn,
       cabin_cam_btn,
+      self._onroad_preview_btn,
       terms_btn,
       regulatory_btn,
       reset_calibration_btn,
@@ -233,6 +239,15 @@ class DeviceLayoutMici(NavScroller):
     for key, item in self._param_toggles:
       item.set_checked(ui_state.params.get_bool(key))
 
+  def set_preview_callback(self, callback: Callable | None) -> None:
+    self._preview_callback = callback
+
+  def _enter_onroad_preview(self) -> None:
+    is_preview = ui_state.params.get_bool("IsOnroadPreview")
+    ui_state.params.put_bool("IsOnroadPreview", not is_preview)
+    if not is_preview and self._preview_callback is not None:
+      self._preview_callback()
+
   def _update_state(self):
     super()._update_state()
     if self._pending_pairing_grow_animation:
@@ -241,6 +256,9 @@ class DeviceLayoutMici(NavScroller):
       if btn_right < visible_right + 50:
         self._pending_pairing_grow_animation = False
         self._pairing_button.trigger_grow_animation()
+    is_preview = ui_state.params.get_bool("IsOnroadPreview")
+    tint = rl.Color(70, 91, 234, 255) if (self._onroad_preview_btn.enabled and is_preview) else rl.WHITE
+    self._onroad_preview_btn.set_bg_tint(tint)
 
   def show_event(self):
     super().show_event()
