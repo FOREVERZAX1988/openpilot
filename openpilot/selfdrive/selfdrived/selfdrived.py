@@ -41,6 +41,7 @@ from openpilot.sunnypilot.common.param_read import read_bool
 from openpilot.sunnypilot.selfdrive.car.car_specific import CarSpecificEventsSP
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.controller import IntelligentCruiseButtonManagement
 from openpilot.sunnypilot.selfdrive.selfdrived.button_state_tracker import ButtonStateTracker
+from openpilot.sunnypilot.selfdrive.selfdrived.blindspot_alert import blindspot_alert
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 from openpilot.sunnypilot.selfdrive.selfdrived.model_events import ModelEventsSP
 from openpilot.sunnypilot.selfdrive.controls.lib.radar_only_warning import RadarOnlyWarning
@@ -187,6 +188,14 @@ class SelfdriveD:
     # Carrot radar-only advisory (default off, alert only).
     self.radar_only_warning = RadarOnlyWarning()
     self.radar_only_warning_enabled = self.params.get_bool("CarrotRadarOnlyWarningEnabled")
+
+    # Blind-spot audible advisory (StarPilot port, default off). A tuple so
+    # update_alerts reads it defensively even before params_thread's first pass.
+    self.blindspot_alert_settings = (self.params.get_bool("LoudBlindspotAlert"),
+                                     self.params.get_bool("LoudBlindspotAlertWhenDisengaged"),
+                                     self.params.get_bool("LoudBlindspotAlertMuteAtStandstill"))
+    # carState socket message stamp (ns) — the advisory's freshness source, set in data_sample.
+    self.car_state_log_ns = 0
 
     # Carrot cut-in audio alert (default off, chime only; cp selfdrived parity).
     self.cutin_audio_tracker = CutinAlertTracker()
@@ -722,6 +731,9 @@ class SelfdriveD:
   def data_sample(self):
     _car_state = messaging.recv_one(self.car_state_sock)
     CS = _car_state.carState if _car_state else self.CS_prev
+    # Age source for the blind-spot advisory (StarPilot parity): a stale or
+    # missing carState frame mutes the advisory instead of alerting on old data.
+    self.car_state_log_ns = _car_state.logMonoTime if _car_state else 0
 
     self.sm.update(0)
 
@@ -851,6 +863,22 @@ class SelfdriveD:
     alerts = self.events.create_alerts(self.state_machine.current_alert_types, callback_args)
     alerts_sp = self.events_sp.create_alerts(self.state_machine.current_alert_types, callback_args)
 
+    # Blind-spot audible advisory (StarPilot port, default off): replaces the
+    # blocked-lane-change alert while engaged and stands alone while lateral is
+    # off. Injected here rather than through the events map because it must
+    # reach the driver independent of the engagement WARNING filter, and the SP
+    # event-name enum (custom.capnp) is frozen. See
+    # sunnypilot/selfdrive/selfdrived/blindspot_alert.py for the gates.
+    loud, without_lateral, mute_at_standstill = getattr(self, 'blindspot_alert_settings', (False, False, False))
+    if loud or without_lateral:
+      blindspot = blindspot_alert(CS, self.sm, loud=loud, without_lateral=without_lateral,
+                                  lane_change_blocked=EventName.laneChangeBlocked in self.events.names,
+                                  mute_at_standstill=mute_at_standstill,
+                                  now_ns=time.monotonic_ns(), car_ns=getattr(self, 'car_state_log_ns', 0))
+      if blindspot is not None:
+        alerts = [alert for alert in alerts if alert.alert_type != 'laneChangeBlocked/warning']
+        alerts.append(blindspot)
+
     self.AM.add_many(self.sm.frame, alerts + alerts_sp)
     self.AM.process_alerts(self.sm.frame, clear_event_types)
 
@@ -971,6 +999,9 @@ class SelfdriveD:
       # so a writer that skipped the dialog cannot turn the mode on by itself.
       self.experimental_mode = experimental_mode_requested(self.params) and self.experimental_mode_available()
       self.speed_limit_changed_alert_enabled = read_bool(self.params, "SpeedLimitChangedAlert")
+      self.blindspot_alert_settings = (read_bool(self.params, "LoudBlindspotAlert"),
+                                       read_bool(self.params, "LoudBlindspotAlertWhenDisengaged"),
+                                       read_bool(self.params, "LoudBlindspotAlertMuteAtStandstill"))
       # Safety review C2: the navExitAhead advisory is gated by the same param
       # as the coordination constraint, so an off param means zero behavior
       # change — no alert, no constraint.
