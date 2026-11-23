@@ -1475,6 +1475,15 @@ bool SpectraCamera::handle_camera_event(const cam_req_mgr_message *event_data) {
 
   int buf_idx = request_id % ife_buf_depth;
   bool ret = processFrame(buf_idx, request_id, ife_frame_id, timestamp);
+  if (ret && pending_recovery_log) {
+    // Observability only (P1 forensics): how long the camera took from requeue
+    // back to publishing. Bench analysis of the 2320s incident showed the
+    // recovery window is paced by frame production itself, not by user-space
+    // waits, so we measure instead of guessing.
+    LOGW("camera %d recovered in %lu ms after requeue", cc.camera_num,
+         (unsigned long)((nanos_since_boot() - last_requeue_ts) / 1000000));
+    pending_recovery_log = false;
+  }
   destroySyncObjectAt(buf_idx);
   enqueue_frame(request_id + ife_buf_depth);  // request next frame for this slot
   return ret;
@@ -1526,6 +1535,7 @@ void SpectraCamera::clearAndRequeue(uint64_t from_request_id) {
   LOGW("clearing and requeuing camera %d from %lu", cc.camera_num, from_request_id);
   clear_req_queue();
   last_requeue_ts = nanos_since_boot();
+  pending_recovery_log = true;
   for (uint64_t id = from_request_id; id < from_request_id + ife_buf_depth; ++id) {
     enqueue_frame(id);
   }
