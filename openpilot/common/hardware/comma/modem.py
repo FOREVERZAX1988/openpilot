@@ -3,6 +3,7 @@ import fcntl
 import json
 import logging
 import os
+import random
 import select
 import signal
 import string
@@ -160,6 +161,15 @@ class State(Enum):
 
 
 STATE_WAIT = 1.0  # seconds to wait after each state handler returns
+
+# Exponential backoff before re-dialing the data session after failures.
+# Without this, a flapping modem re-dials every ~STATE_WAIT indefinitely --
+# observed on road as a reconnect storm holding a core near saturation.
+# The ladder grows per consecutive failure and resets once the data session is
+# actually up (see _poll). Both PPPSession and QMISession funnel through
+# _handle_pppd_exit, so one ladder covers both. safety: in-band AT time sync
+# does not depend on data connectivity, so the cap adds no clock risk.
+CONNECT_BACKOFF = (1.0, 2.0, 4.0, 8.0, 15.0)  # seconds
 
 
 class PPPSession:
@@ -408,8 +418,23 @@ class Modem:
     self._sim_change = False
     self._apn = ""  # blank = network-provided via PCO
     self._roaming_allowed = True
+    self._backoff_idx = 0
     self.running = True
     self.S = INITIAL_STATE.copy()
+
+  def _bump_backoff(self):
+    self._backoff_idx = min(self._backoff_idx + 1, len(CONNECT_BACKOFF) - 1)
+
+  def _reset_backoff(self):
+    self._backoff_idx = 0
+
+  def _wait_backoff(self):
+    """Sleep the current backoff before re-dialing; interruptible by stop()."""
+    wait = CONNECT_BACKOFF[self._backoff_idx] * random.uniform(0.9, 1.1)
+    logging.info(f"data session failed, backing off {wait:.1f}s before re-dialing")
+    deadline = time.monotonic() + wait
+    while self.running and time.monotonic() < deadline:
+      time.sleep(min(0.5, max(0.0, deadline - time.monotonic())))
 
   @staticmethod
   def _read_param(key):
@@ -619,10 +644,13 @@ class Modem:
     if self._sim_change or not os.path.exists(AT_PORT):
       return State.DISCONNECTING
     give_up = self._ppp.record_fail()
+    logging.warning(f"PPP fail {self._ppp.fails}/{self._ppp.MAX_FAILS}, {'reconnecting' if give_up else 'retrying'}")
+    # wait on the current rung first, then grow: first failure retries after
+    # CONNECT_BACKOFF[0], not [1] (device bench test caught this off-by-one)
+    self._wait_backoff()
+    self._bump_backoff()
     if give_up:
-      logging.warning(f"PPP fail {self._ppp.fails}/{self._ppp.MAX_FAILS}, reconnecting")
       return State.DISCONNECTING
-    logging.warning(f"PPP fail {self._ppp.fails}/{self._ppp.MAX_FAILS}, retrying")
     self._ppp.reset_data_port()
     if not os.path.exists(AT_PORT):
       return State.DISCONNECTING
@@ -781,6 +809,9 @@ class Modem:
                self._poll_extra, self._poll_temps, self._poll_iface,
                self._poll_byte_counters):
       s.update(fn())
+    if s.get("connected"):
+      # data session is actually up again (IP negotiated): clear the retry ladder
+      self._reset_backoff()
     if s:
       self._publish_state(**s)
 
