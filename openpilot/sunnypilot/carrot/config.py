@@ -237,6 +237,26 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "LeadAccelResponseTF3": -1,                # lead accel response, gap level 3 (cp default -1)
   "LeadAccelResponseTF4": -1,                # lead accel response, gap level 4 (cp default -1)
   "AutoNaviRearCameraHoldDistance": 100,     # navi rear-camera hold distance cm (cp default 100)
+  # --- implemented-but-unreachable: params consumed in code yet missing from ---
+  # --- the settings catalog. Defaults mirror common/params_keys.h.             ---
+  "CarrotTurnAccelEnabled": 0,               # cap positive accel by future model curvature (longitudinal_planner)
+  "CarrotCruiseCoastingEnabled": 0,          # release cruise overspeed brake within a bounded margin (controlsd_ext, longitudinal_planner)
+  "CarrotCruiseCoastingPercent": 10,         # coasting margin, 0-10 percent; read only when the toggle is on
+  "CarrotCutinPredecelEnabled": 0,           # bounded pre-decel for corner-radar cut-in risk (longitudinal_planner)
+  "CarrotCutinAlertEnabled": 0,              # cut-in audio chime (selfdrived)
+  "CarrotCutoutReliefEnabled": 0,            # ease following demand for a confirmed lead cut-out (longitudinal_planner)
+  "CarrotBrakingGapEnabled": 0,              # comfort reserve against the lead braking path (longitudinal_planner)
+  "CarrotCruiseAccelEnabled": 0,             # CruiseMaxVals accel envelope applied to the accel cap (longitudinal_planner)
+  "CarrotFastRadarEnabled": 0,               # refresh selected lead kinematics from newer radar frames (plannerd, Hyundai only)
+  "CarrotGapRecoveryEnabled": 0,             # recover the cruise gap after a lead pulls away (longitudinal_planner)
+  "CarrotLateralReadinessEnabled": 0,        # block startup steering until lateral inputs are ready (controlsd_ext)
+  "CarrotLeadPreviewEnabled": 0,             # early-decel preview from radar lead deceleration (longitudinal_planner)
+  "CarrotRadarOnlyWarningEnabled": 0,        # advisory alert for a measured obstacle with no selected lead (selfdrived)
+  "CarrotRecoveryEnabled": 0,                # serve the standalone recovery web terminal on 6999 (recovery/server)
+  "CarrotStoppingLeadEnabled": 0,            # require range evidence before a stopped lead counts as departing (plannerd)
+  "CarrotTrafficLightFusionEnabled": 0,      # fuse carrot / Amap / vision traffic lights (longitudinal_planner)
+  "CarrotTrafficStopProfileEnabled": 0,      # jerk-limited stop envelope for traffic-light stop&go (longitudinal_planner)
+  "LeadBrakeLights": 0,                      # display/log a lead brake-lamp candidate (lead_brake_lights; display only)
 }
 
 
