@@ -8,12 +8,20 @@ Tests for the conditional experimental mode: trigger conditions, hysteresis, the
 override muzzle and the standstill freeze. All condition inputs come through fake carState /
 sm doubles; the params are dict-backed so writes are inspectable.
 """
+import os
 import sys
 import types
 
-# common.params → swaglog → common.hardware → gpio imports fcntl at module load. It is only
-# *used* from hardware functions CEM never calls, so on PC a bare module keeps the import
-# chain alive. Must run before the CEM import below.
+# the repo checkout keeps opendbc in opendbc_repo (mirroring launch_env.sh); a bare
+# pytest run from the repo root does not have it on sys.path, a device/uv env does.
+# Must run before the CEM import below, whose chain resolves opendbc.car.
+# tests/ → selfdrived → selfdrive → sunnypilot → openpilot → repo root
+_repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
+_opendbc_repo = os.path.join(_repo, "opendbc_repo")
+if os.path.isdir(_opendbc_repo) and _opendbc_repo not in sys.path:
+  sys.path.append(_opendbc_repo)
+
 try:
   import fcntl  # noqa: F401
 except ImportError:
@@ -37,6 +45,7 @@ except (OSError, FileNotFoundError):
 from opendbc.car import structs
 from openpilot.sunnypilot.selfdrive.car.tests.fakes import FakeParams
 from openpilot.sunnypilot.selfdrive.selfdrived.conditional_experimental_mode import (
+  CE_CCM_LAUNCH,
   CE_CCM_SPEED,
   CE_CCM_VETO,
   CE_CURVES,
@@ -44,6 +53,7 @@ from openpilot.sunnypilot.selfdrive.selfdrived.conditional_experimental_mode imp
   CE_MANUAL,
   CE_OFF,
   CE_SIGNAL,
+  CE_STOP,
   MANUAL_HOLD_SECONDS,
   ConditionalExperimentalMode,
 )
@@ -56,7 +66,8 @@ class FakeCEParams(FakeParams):
   """FakeParams plus the int put CEM uses for CEStatus, and the registered defaults
   that real Params.get(key, return_default=True) would return."""
 
-  DEFAULTS = {"CECurves": True, "CECurvesLead": True, "CELead": True, "CESignalSpeed": 0.0}
+  DEFAULTS = {"CECurves": True, "CECurvesLead": True, "CELead": True, "CESignalSpeed": 0.0,
+              "CEStopLights": True, "CESignalLaneWidth": 0.0, "CEChillLaunch": False}
 
   def get(self, key, **kwargs):
     if key not in self.values and kwargs.get("return_default"):
@@ -360,3 +371,154 @@ class TestConditionalExperimentalMode(unittest.TestCase):
     clock.t += 0.5
     mode = cem.update(CS2, sm())
     assert mode is False  # still chilled
+
+
+# ---- stop-light / signal-lane / chill-scene triggers ---------------------------
+
+import os
+
+from types import SimpleNamespace
+
+IDX_N = 33
+
+
+def fake_line(y_val):
+  return SimpleNamespace(x=[i * 6.0 for i in range(IDX_N)], y=[y_val] * IDX_N)
+
+
+class _FakePosition:
+  def __init__(self, horizon_m):
+    self.x = [0.0] + [horizon_m] * (IDX_N - 1)  # non-decreasing; bend 0
+    self.y = [0.0] * IDX_N
+
+
+class _FakeModel:
+  """modelV2 double; logMonoTime advances per read so the 4-frame lane cadence sees new frames."""
+
+  def __init__(self, horizon_m, lane_ys, should_stop):
+    self.position = _FakePosition(horizon_m)
+    self.action = SimpleNamespace(shouldStop=should_stop)
+    ys = lane_ys if lane_ys is not None else (3.5, 5.5, -5.5, -3.5)  # narrow (2 m) lanes by default
+    self.laneLines = [fake_line(y) for y in ys]
+    self.roadEdges = [fake_line(15.0), fake_line(-15.0)]  # beyond the outer lines on both sides
+    self._stamp = 0
+
+  @property
+  def logMonoTime(self):
+    self._stamp += 1
+    return self._stamp
+
+
+def trigger_sm(desired_curvature=0.0, lead_status=False, lead_d_rel=100.0, lead_v_lead=30.0,
+               horizon_m=240.0, model_should_stop=False, plan_should_stop=False,
+               plan_allow_throttle=True, lane_ys=None):
+  """sm double extended with the modelV2 / longitudinalPlan / carControl the new
+  triggers consume; base fields match the plain sm() factory."""
+  sm_obj = sm(desired_curvature, lead_status, lead_d_rel, lead_v_lead)
+  sm_obj._data["modelV2"] = _FakeModel(horizon_m, lane_ys, model_should_stop)
+  sm_obj._data["longitudinalPlan"] = SimpleNamespace(shouldStop=plan_should_stop, allowThrottle=plan_allow_throttle)
+  sm_obj._data["carControl"] = SimpleNamespace(enabled=True)
+  return sm_obj
+
+
+class TestConditionalTriggers(unittest.TestCase):
+  def test_stop_trigger_acquires_and_holds(self):
+    cem, clock, params = make_cem()
+    CS = car_state(v_ego=25.0)
+    # 30 m horizon at 25 m/s is far below the 9 s stop expectation: sustained
+    # model_stopping with no blocking lead -> light_filter (tau 0.8 s) commits
+    mode = run_ccm_frames(cem, clock, 150, CS, trigger_sm(horizon_m=30.0))
+    assert mode is True
+    assert cem._stop_detector.committed
+    assert params.values["CEStatus"] == CE_STOP
+
+  def test_stop_release_after_plan_go_and_horizon_recover(self):
+    cem, clock, _ = make_cem()
+    CS = car_state(v_ego=25.0)
+    run_ccm_frames(cem, clock, 150, CS, trigger_sm(horizon_m=30.0))
+    assert cem._stop_detector.committed
+    # green: plan released, model plans past the 50 m + 4 m release band
+    sm_go = trigger_sm(horizon_m=240.0)
+    run_ccm_frames(cem, clock, 100, CS, sm_go)  # 1 s: > the 0.5 s clear dwell
+    assert not cem._stop_detector.committed
+    run_ccm_frames(cem, clock, 300, CS, sm_go)  # filters decay; guard, buffer and suppress expire
+    assert cem.experimental_mode is False
+    assert cem._last_ce_status_written == CE_OFF
+
+  def test_plan_should_stop_vetoes_stop_release(self):
+    cem, clock, _ = make_cem()
+    CS = car_state(v_ego=25.0)
+    run_ccm_frames(cem, clock, 150, CS, trigger_sm(horizon_m=30.0))
+    assert cem._stop_detector.committed
+    # horizon recovered but the plan still says stop: the commit must hold
+    sm_go = trigger_sm(horizon_m=240.0, plan_should_stop=True)
+    run_ccm_frames(cem, clock, 250, CS, sm_go)  # 2.5 s, far past the dwell
+    assert cem._stop_detector.committed
+
+  def test_stop_trigger_outranked_by_curve(self):
+    cem, clock, _ = make_cem()
+    CS = car_state(v_ego=30.0)
+    sm_obj = trigger_sm(horizon_m=30.0, desired_curvature=0.004)  # 3.6 m/s^2 lateral
+    mode = run_ccm_frames(cem, clock, 200, CS, sm_obj)
+    assert mode is True
+    assert cem._last_ce_status_written == CE_CURVES  # priority order unchanged
+
+  def test_signal_lane_width_requires_narrow_lane(self):
+    cem, clock, _ = make_cem(CESignalSpeed=12.0, CESignalLaneWidth=3.0)
+    CS = car_state(v_ego=9.5, left_blinker=True)  # above LANE_CHANGE_SPEED_MIN so geometry is used
+    # wide (5 m) adjacent lane: known-available, no trigger
+    mode = run_ccm_frames(cem, clock, 60, CS, trigger_sm(lane_ys=(3.5, 8.5, -8.5, -3.5)))
+    assert mode is False
+    # narrow (2 m) adjacent lane: not available -> trigger
+    mode = run_ccm_frames(cem, clock, 60, CS, trigger_sm())
+    assert mode is True
+    assert cem._last_ce_status_written == CE_SIGNAL
+
+  def test_signal_trigger_unqualified_by_default(self):
+    cem, clock, _ = make_cem(CESignalSpeed=12.0)  # CESignalLaneWidth unset (0.0)
+    CS = car_state(v_ego=9.5, left_blinker=True)
+    mode = run_ccm_frames(cem, clock, 60, CS, trigger_sm(lane_ys=(3.5, 8.5, -8.5, -3.5)))
+    assert mode is True  # stock blinker+speed behaviour untouched
+
+  def test_ccm_stop_light_veto(self):
+    cem, clock, _ = make_ccm()
+    CS = car_state(v_ego=CCM_SPEED_MPS + 2.0)
+    CS.vCruise = CCM_SPEED_MPS + 8.0
+    run_ccm_frames(cem, clock, 100, CS, trigger_sm(horizon_m=240.0))
+    assert cem.ccm_chill is True
+    # the model starts planning into a stop: the stop-light veto forces experimental
+    sm_stop = trigger_sm(horizon_m=25.0)
+    mode = run_ccm_frames(cem, clock, 100, CS, sm_stop)
+    assert mode is True
+    assert cem._ce_status == CE_STOP
+
+  def test_ccm_low_speed_stop_scene_veto(self):
+    cem, clock, _ = make_ccm()
+    CS = car_state(v_ego=CCM_SPEED_MPS + 2.0)
+    CS.vCruise = CCM_SPEED_MPS + 8.0
+    run_ccm_frames(cem, clock, 100, CS, trigger_sm(horizon_m=240.0))
+    assert cem.ccm_chill is True
+    # decelerate below 18 mph with the model planning into a stop: low_speed_stop veto
+    CS2 = car_state(v_ego=6.0)
+    CS2.vCruise = 30.0
+    clock.t += 0.5
+    mode = run_ccm_frames(cem, clock, 30, CS2, trigger_sm(horizon_m=25.0))
+    assert mode is True
+    assert cem._ce_status == CE_CCM_VETO
+
+  def test_ccm_launch_chill_waives_standstill_when_enabled(self):
+    cem, clock, _ = make_ccm(CEChillLaunch=True)
+    CS = car_state(v_ego=0.0, standstill=True)
+    CS.vCruise = 30.0
+    sm_obj = trigger_sm(horizon_m=240.0, plan_should_stop=False, plan_allow_throttle=True)
+    mode = run_ccm_frames(cem, clock, 30, CS, sm_obj)
+    assert mode is False  # chill held through the launch (policy.py:501-503)
+    assert cem._ce_status == CE_CCM_LAUNCH
+
+  def test_ccm_standstill_still_vetoes_launch_by_default(self):
+    cem, clock, _ = make_ccm()  # CEChillLaunch off: starpilot ModeSettings default
+    CS = car_state(v_ego=0.0, standstill=True)
+    CS.vCruise = 30.0
+    mode = run_ccm_frames(cem, clock, 30, CS, trigger_sm(horizon_m=240.0))
+    assert mode is True
+    assert cem._ce_status == CE_CCM_VETO
