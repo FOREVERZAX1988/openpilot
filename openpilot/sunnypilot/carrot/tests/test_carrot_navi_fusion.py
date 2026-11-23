@@ -229,5 +229,178 @@ class TestNavLaneGuideMerge(unittest.TestCase):
     self.assertFalse(cs_sp.carrotRightLineBlocked)
 
 
+class _FakeLaneHD:
+  def __init__(self, **kw):
+    self.available = kw.get("available", False)
+    self.hd = kw.get("hd", False)
+    self.laneCount = kw.get("laneCount", 0)
+    self.totalLaneCntConf = kw.get("totalLaneCntConf", 0.0)
+    self.curLaneIdx0 = kw.get("curLaneIdx0", -1)
+    self.curLaneNumConf = kw.get("curLaneNumConf", 0.0)
+    self.slope = kw.get("slope", 0.0)
+    self.leftBlocked = kw.get("leftBlocked", False)
+    self.rightBlocked = kw.get("rightBlocked", False)
+
+
+def _make_lane_with_meta(count: int, current_lane: int, available: list[int],
+                         received_age_s: float = 0.1, present: bool = True):
+  """Lane whose item received time sits `received_age_s` behind the publish clock."""
+
+  navi = _make_carrot_navi(_make_lane(count=count, current_lane=current_lane, available=available, present=present))
+  navi.laneHD = _FakeLaneHD(available=True)
+  navi.publishMonoTimeNanos = 1_000_000_000 * 10  # any fixed point
+  if navi.laneCurrent is not None:
+    navi.laneCurrent.meta.receivedMonoTimeNanos = navi.publishMonoTimeNanos - int(received_age_s * 1e9)
+  return navi
+
+
+class TestHdLaneState(unittest.TestCase):
+  """HD lane match (lane_current.value.hd -> carrotNaviSP.laneHD)."""
+
+  def _hd_state(self, navi):
+    return carrot_navi_fusion.hd_lane_state(navi)
+
+  def test_none_navi_is_unusable(self):
+    self.assertFalse(self._hd_state(None)["usable"])
+
+  def test_missing_laneHD_is_unusable(self):
+    navi = _make_carrot_navi(_make_lane(count=3, current_lane=2, available=[1, 1, 1]))
+    self.assertFalse(self._hd_state(navi)["usable"])
+
+  def test_valid_hd_state(self):
+    navi = _make_lane_with_meta(count=4, current_lane=2, available=[1, 1, 1, 1])
+    navi.laneHD = _FakeLaneHD(available=True, hd=True, laneCount=4, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.85, leftBlocked=True, rightBlocked=False)
+    state = self._hd_state(navi)
+    self.assertTrue(state["usable"])
+    self.assertEqual(state["curLaneIdx0"], 1)
+    self.assertEqual(state["laneCount"], 4)
+    self.assertTrue(state["leftBlocked"])
+    self.assertFalse(state["rightBlocked"])
+
+  def test_stale_item_is_unusable(self):
+    navi = _make_lane_with_meta(count=4, current_lane=2, available=[1, 1, 1, 1], received_age_s=5.0)
+    navi.laneHD = _FakeLaneHD(available=True, laneCount=4, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.85)
+    self.assertFalse(self._hd_state(navi)["usable"])
+
+  def test_low_confidence_is_unusable(self):
+    navi = _make_lane_with_meta(count=4, current_lane=2, available=[1, 1, 1, 1])
+    navi.laneHD = _FakeLaneHD(available=True, laneCount=4, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.2)
+    self.assertFalse(self._hd_state(navi)["usable"])
+
+    navi.laneHD = _FakeLaneHD(available=True, laneCount=4, totalLaneCntConf=0.1,
+                              curLaneIdx0=1, curLaneNumConf=0.9)
+    self.assertFalse(self._hd_state(navi)["usable"])
+
+  def test_out_of_range_lane_index_is_unusable(self):
+    navi = _make_lane_with_meta(count=4, current_lane=2, available=[1, 1, 1, 1])
+    navi.laneHD = _FakeLaneHD(available=True, laneCount=4, totalLaneCntConf=0.9,
+                              curLaneIdx0=4, curLaneNumConf=0.9)
+    self.assertFalse(self._hd_state(navi)["usable"])
+
+    navi.laneHD = _FakeLaneHD(available=True, laneCount=4, totalLaneCntConf=0.9,
+                              curLaneIdx0=-1, curLaneNumConf=0.9)
+    self.assertFalse(self._hd_state(navi)["usable"])
+
+
+class TestHdLaneMerge(unittest.TestCase):
+  """HD blocking joins the additive rule and never clears existing blocks."""
+
+  def test_hd_blocks_add_without_lane_data(self):
+    cs_sp = _FakeCarStateSP()
+    navi = _make_lane_with_meta(count=0, current_lane=0, available=[], present=False)
+    navi.laneHD = _FakeLaneHD(available=True, hd=True, laneCount=4, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.85, leftBlocked=True, rightBlocked=False)
+    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, navi)
+    self.assertTrue(cs_sp.carrotLaneValid)
+    self.assertTrue(cs_sp.carrotLeftLineBlocked)
+    self.assertFalse(cs_sp.carrotRightLineBlocked)
+
+  def test_hd_never_clears_7714_block(self):
+    cs_sp = _FakeCarStateSP()
+    # 7714 says right unavailable; HD claims right is fine.
+    navi = _make_lane_with_meta(count=3, current_lane=2, available=[1, 1, 0])
+    navi.laneHD = _FakeLaneHD(available=True, hd=True, laneCount=3, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.9, rightBlocked=False)
+    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, navi)
+    self.assertTrue(cs_sp.carrotRightLineBlocked, "HD must not clear the 7714 block")
+
+  def test_hd_adds_block_on_top_of_7714(self):
+    cs_sp = _FakeCarStateSP()
+    navi = _make_lane_with_meta(count=3, current_lane=2, available=[1, 1, 1])
+    navi.laneHD = _FakeLaneHD(available=True, hd=True, laneCount=3, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.9, leftBlocked=True)
+    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, navi)
+    self.assertTrue(cs_sp.carrotLeftLineBlocked)
+
+  def test_hd_unusable_falls_back_to_7714(self):
+    cs_sp = _FakeCarStateSP()
+    navi = _make_lane_with_meta(count=3, current_lane=2, available=[1, 1, 0])
+    navi.laneHD = _FakeLaneHD(available=False)
+    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, navi)
+    self.assertTrue(cs_sp.carrotLaneValid)
+    self.assertTrue(cs_sp.carrotRightLineBlocked)
+    self.assertFalse(cs_sp.carrotLeftLineBlocked)
+
+
+class TestLaneHdPayloadCapnpSmoke(unittest.TestCase):
+  """Real-schema smoke test (verification-auditor BLOCKER-1 regression).
+
+  Guards against payload key drift: every key in `_lane_hd()` output must be
+  an assignable LaneHD field, or capnp dict assignment raises AttributeError
+  and kills the whole carrotNaviSP publish loop. Skipped on workstations
+  without pycapnp (the codegen'd cereal module needs it); CI and the device
+  environment both have pycapnp 2.1.0.
+  """
+
+  def setUp(self):
+    try:
+      from pycapnp import capnp  # noqa: F401
+    except ImportError:
+      self.skipTest("pycapnp not available on this workstation")
+
+  def test_lane_hd_payload_assigns_cleanly(self):
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[3]
+    capnp_path = repo_root / "custom.capnp"
+    if not capnp_path.exists():
+      self.skipTest(f"custom.capnp not found at {capnp_path}")
+
+    from pycapnp import capnp
+    schema = capnp.load(str(capnp_path))
+
+    # Minimal _lane_hd()-shaped payload (keys must all exist on LaneHD).
+    lane_hd_payload = {
+      "available": True,
+      "hd": True,
+      "laneCount": 4,
+      "totalLaneCntConf": 0.9,
+      "curLaneIdx0": 1,
+      "curLaneNumConf": 0.85,
+      "slope": 0.0,
+      "leftBlocked": True,
+      "rightBlocked": False,
+      "freePosLaneNum": 0,
+      "matchedPosValid": True,
+      "matchedLatitude": 31.0,
+      "matchedLongitude": 121.0,
+      "matchedHeadingDeg": 92.0,
+    }
+    msg = schema.CarrotNaviStateSP.new_message()
+    msg.laneHD = lane_hd_payload
+    self.assertTrue(msg.laneHD.available)
+    self.assertEqual(msg.laneHD.curLaneIdx0, 1)
+    self.assertEqual(msg.laneHD.laneCount, 4)
+    self.assertTrue(msg.laneHD.leftBlocked)
+    self.assertFalse(msg.laneHD.rightBlocked)
+
+    # The degraded path (missing hd object) must also assign cleanly.
+    msg2 = schema.CarrotNaviStateSP.new_message()
+    msg2.laneHD = {"available": False}
+    self.assertFalse(msg2.laneHD.available)
+
+
 if __name__ == "__main__":
   unittest.main()

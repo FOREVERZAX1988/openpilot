@@ -601,6 +601,10 @@ struct OnroadEventSP @0xda96579883444c35 {
     # a sustained speedLimitLast jump (>= 5 kph holding > 2 s) fires this once per change,
     # mirroring StarPilot's speedLimitChanged standing alert
     speedLimitChangedAlert @37;
+
+    # carrot navigation lane fusion (Tencent probe): one-shot chime when the
+    # guided exit/fork maneuver first enters the convergence window (800 m)
+    navExitAhead @38;
   }
 }
 
@@ -1084,6 +1088,9 @@ struct CarrotNaviStateSP @0xbd443b539493bc68 {
   crossroad @12 :Crossroad;
   route @13 :Route;
   navigationStatus @14 :NavigationStatus;
+  # Tencent-probe HD lane match (App embeds it as the optional `hd` object
+  # inside the `lane_current` JSON value; missing key -> laneHD.available=False).
+  laneHD @15 :LaneHD;
 
   struct ItemMeta {
     present @0 :Bool;
@@ -1220,6 +1227,26 @@ struct CarrotNaviStateSP @0xbd443b539493bc68 {
     guidanceActive @2 :Bool;
     offRoute @3 :Bool;
     routePresent @4 :Bool;
+  }
+
+  # HD lane match from the Tencent map probe (HDLaneMatchResult). Field names
+  # follow the App-side mapping table; `curLaneIdx0` is 0-based because the
+  # probe's mCurLaneNum is 1-based (App applies getCurLaneNum()-1).
+  struct LaneHD {
+    available @0 :Bool;             # App sent a parseable `hd` object
+    hd @1 :Bool;                    # probe workMode indicates HD positioning
+    laneCount @2 :Int16;            # physical lane count (getCurLaneNum)
+    totalLaneCntConf @3 :Float32;   # confidence of laneCount
+    curLaneIdx0 @4 :Int16;          # current lane, 0-based; -1 = unknown
+    curLaneNumConf @5 :Float32;     # confidence of curLaneIdx0
+    slope @6 :Float32;              # road slope from the probe
+    leftBlocked @7 :Bool;           # left adjacent lane not usable
+    rightBlocked @8 :Bool;          # right adjacent lane not usable
+    freePosLaneNum @9 :Int16;       # free-position lane count when HD match lost
+    matchedPosValid @10 :Bool;      # matchedPos below carries a fix
+    matchedLatitude @11 :Float64;
+    matchedLongitude @12 :Float64;
+    matchedHeadingDeg @13 :Float32;
   }
 }
 

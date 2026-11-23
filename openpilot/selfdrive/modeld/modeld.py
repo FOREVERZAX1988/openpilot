@@ -31,6 +31,7 @@ from opendbc.car.car_helpers import get_demo_car_params
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
 from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
+from openpilot.sunnypilot.carrot.carrot_navi_coordination import CarrotNaviLaneCoordinator
 from openpilot.common.dm import is_dm_disabled
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.realtime import config_realtime_process, DT_MDL
@@ -349,7 +350,7 @@ def main(demo=False):
   pm = PubMaster(pub_socks)
   sm = SubMaster(["deviceState", "carState", "narrowRoadCameraState", "extrinsicsCalibration",
                   "driverMonitoringState", "carControl", "carControlSP", "controlsState",
-                  "lateralDelay", "carStateSP", "carrotManSP", "radarState"])
+                  "lateralDelay", "carStateSP", "carrotManSP", "carrotNaviSP", "radarState"])
 
   publish_state = PublishState()
   params = Params()
@@ -380,6 +381,9 @@ def main(demo=False):
   prev_action = log.ModelDataV2.Action()
 
   DH = DesireHelper()
+  # Navigation-driven lane-change constraints (P3, constraint-only; the
+  # CarrotNavLaneCoordination param gates everything, default off).
+  carrot_lane_coord = CarrotNaviLaneCoordinator(params)
   RELC = RoadEdgeLaneChangeController()
   lane_width_left_est = LaneWidthEstimator()
   lane_width_right_est = LaneWidthEstimator()
@@ -522,12 +526,23 @@ def main(demo=False):
       cs_sp = sm['carStateSP']
       left_lane_line_blocked = cs_sp.carrotLaneValid and cs_sp.carrotLeftLineBlocked
       right_lane_line_blocked = cs_sp.carrotLaneValid and cs_sp.carrotRightLineBlocked
+
       _accel_state = jetlink_adapter.state(model)
       mdv2sp_send.modelDataV2SP.zoompilot.acceleratorState = _accel_state
       # fork's big_model_ready_alert (selfdrived/events.py) reads the top-level field
       mdv2sp_send.modelDataV2SP.acceleratorState = _accel_state
       left_edge, right_edge = RELC.update_and_fill(modelv2_send.modelV2, mdv2sp_send.modelDataV2SP, v_ego)
       carrot_man = get_carrot_man(sm)
+
+      # Navigation lane-change coordination (exit-convergence constraint).
+      # Additive-only: these flags may block, never unblock; DH treats them
+      # together with the BSM hard blocks (nudges cannot override).
+      carrot_navi_msg = sm['carrotNaviSP'] if sm.valid.get('carrotNaviSP', False) else None
+      coord_block_left, coord_block_right = carrot_lane_coord.update(
+        carrot_navi_msg, str(getattr(carrot_man, 'atcType', "") or ""), DT_MDL)
+      left_lane_line_blocked = left_lane_line_blocked or coord_block_left
+      right_lane_line_blocked = right_lane_line_blocked or coord_block_right
+
       DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob, left_edge, right_edge,
                 left_lane_line_blocked=left_lane_line_blocked,
                 right_lane_line_blocked=right_lane_line_blocked,

@@ -49,6 +49,11 @@ from openpilot.sunnypilot.carrot.radar_motion.cutin_alert import (
   CutinAlertTracker,
   promoted_cutin_candidates,
 )
+from openpilot.sunnypilot.carrot.carrot_navi_coordination import (
+  EXIT_CONSTRAINT_RANGE_M,
+  CarrotNaviLaneCoordinator,
+  normalize_atc_direction,
+)
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitChangedAlertTracker
 from openpilot.sunnypilot.selfdrive.selfdrived.conditional_experimental_mode import ConditionalExperimentalMode
 from openpilot.sunnypilot.selfdrive.selfdrived.selfdrived_zp import SelfdrivedZP, lateral_only_experimental_available
@@ -135,7 +140,7 @@ class SelfdriveD:
     # scheduling blip otherwise makes all_checks() fail on a live 10 Hz feed and
     # raises the spurious "进程间通信问题: carrotManSP" comm issue mid-drive.
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan', 'liveTracks'] \
-             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP']
+             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP', 'carrotNaviSP']
     disable_dm = is_dm_disabled(self.params)
     if SIMULATION or disable_dm:
       ignore += ['cabinCameraState', 'managerState']
@@ -152,6 +157,8 @@ class SelfdriveD:
                                    'lateralManeuverPlan', 'modelDataV2SP', 'longitudinalPlanSP', 'carStateSP',
                                    # 灯效观测层（selfdrived/indicator_layer.py）的输入：模型帧 + 导航帽。
                                    'carState', 'carrotManSP',
+                                   # carrot navigation lane fusion: exit-convergence advisory source.
+                                   'carrotNaviSP',
                                    # ManualTurnIndicator 的实测横摆角速度源（cp modeld 同源 angularVelocityDevice.z）。
                                    'liveTracks'] + \
                                    self.camera_packets + self.sensor_packets + self.gps_packets,
@@ -241,6 +248,11 @@ class SelfdriveD:
       self.events.add(EventName.dashcamMode, static=True)
 
     self.events_sp = EventsSP()
+    # carrot navigation exit-convergence advisory: one-shot latch, reset when
+    # guidance direction clears so a re-approach re-announces. The enable
+    # flag is refreshed by the params thread (safety review C2).
+    self._nav_exit_alerted = False
+    self.nav_lane_coordination_enabled = False
     self.events_sp_prev = []
 
     self.mads = ModularAssistiveDrivingSystem(self)
@@ -440,6 +452,21 @@ class SelfdriveD:
     if self.excessive_actuation:
       self.events.add(EventName.excessiveActuation)
     # ******************************************************************************************
+
+    # Carrot navigation exit-convergence advisory (one-shot per approach).
+    # Gated by CarrotNavLaneCoordination (safety review C2): with the param
+    # off this branch is inert, matching the constraint's default-off stance.
+    if self.nav_lane_coordination_enabled and (self.sm.updated['carrotNaviSP'] or self.sm.updated['carrotManSP']):
+      carrot_navi_msg = self.sm['carrotNaviSP'] if self.sm.valid.get('carrotNaviSP', False) else None
+      atc_type = str(getattr(self.sm['carrotManSP'], 'atcType', '') or '')
+      nav_direction = normalize_atc_direction(atc_type)
+      nav_distance = CarrotNaviLaneCoordinator._guidance_distance(carrot_navi_msg)
+      if nav_direction and nav_distance is not None and nav_distance <= EXIT_CONSTRAINT_RANGE_M:
+        if not self._nav_exit_alerted:
+          self._nav_exit_alerted = True
+          self.events_sp.add(custom.OnroadEventSP.EventName.navExitAhead)
+      elif not nav_direction:
+        self._nav_exit_alerted = False
 
     # Handle lane change
     if self.sm['modelV2'].meta.laneChangeState == LaneChangeState.preLaneChange:
@@ -944,6 +971,10 @@ class SelfdriveD:
       # so a writer that skipped the dialog cannot turn the mode on by itself.
       self.experimental_mode = experimental_mode_requested(self.params) and self.experimental_mode_available()
       self.speed_limit_changed_alert_enabled = read_bool(self.params, "SpeedLimitChangedAlert")
+      # Safety review C2: the navExitAhead advisory is gated by the same param
+      # as the coordination constraint, so an off param means zero behavior
+      # change — no alert, no constraint.
+      self.nav_lane_coordination_enabled = read_bool(self.params, "CarrotNavLaneCoordination")
       self.personality = self.params.get("LongitudinalPersonality", return_default=True)
 
       self.mads.read_params()

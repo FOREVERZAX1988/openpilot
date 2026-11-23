@@ -13,6 +13,15 @@ See the LICENSE.md file in the root directory for more details.
 _LEFT_ADJACENT_OFFSET = -1
 _RIGHT_ADJACENT_OFFSET = 1
 
+# HD lane match (Tencent probe embedded in `lane_current.value.hd`).
+# The lane_current item may keep flowing stale after the app stops refreshing
+# it (e.g. guidance ended but the control socket lives on); the HD state is
+# only trusted within this window of the publish heartbeat.
+HD_LANE_MAX_AGE_S = 2.0
+# Below this confidence the probe's own positioning may be on the wrong lane;
+# both confidences must clear the bar before the HD state drives anything.
+HD_LANE_MIN_CONF = 0.5
+
 # Arrow codes used by the App's 7706 `navLaneGuide` array (App field list §2.2).
 # Only the left/right family matters for lane blocking: a guide that steers you
 # left/right means the opposite adjacent lane is not part of the maneuver.
@@ -119,14 +128,75 @@ def _adjacent_lane_available(lane, offset: int) -> bool:
   return int(available[adjacent_index]) > 0
 
 
+def hd_lane_state(carrot_navi) -> dict:
+  """Extract a validated HD lane-match state from ``carrotNaviSP``.
+
+  Returns a plain dict with ``usable`` plus the raw HD fields, or a dict with
+  ``usable: False`` when the HD state is absent, stale, or below the
+  confidence bar. Consumers must treat ``leftBlocked``/``rightBlocked`` as
+  additive-only blocking; nothing in this tree may clear a block based on HD
+  data.
+
+  Freshness: the lane_current item's received time must be within
+  ``HD_LANE_MAX_AGE_S`` of the publish heartbeat, so a stalled app item cannot
+  keep feeding HD claims after its stream died mid-route.
+  """
+  out = {
+    "usable": False, "hd": False, "laneCount": 0, "curLaneIdx0": -1,
+    "curLaneNumConf": 0.0, "totalLaneCntConf": 0.0, "slope": 0.0,
+    "leftBlocked": False, "rightBlocked": False,
+  }
+  if carrot_navi is None:
+    return out
+
+  lane_hd = getattr(carrot_navi, "laneHD", None)
+  if lane_hd is None or not bool(getattr(lane_hd, "available", False)):
+    return out
+
+  # Item-level freshness against the publish heartbeat.
+  lane = getattr(carrot_navi, "laneCurrent", None)
+  meta = getattr(lane, "meta", None)
+  publish_ns = int(getattr(carrot_navi, "publishMonoTimeNanos", 0) or 0)
+  received_ns = int(getattr(meta, "receivedMonoTimeNanos", 0) or 0) if meta is not None else 0
+  if publish_ns <= 0 or received_ns <= 0:
+    return out
+  age_s = (publish_ns - received_ns) / 1e9
+  if age_s < 0 or age_s > HD_LANE_MAX_AGE_S:
+    return out
+
+  lane_count = int(getattr(lane_hd, "laneCount", 0))
+  cur_idx = int(getattr(lane_hd, "curLaneIdx0", -1))
+  cur_conf = float(getattr(lane_hd, "curLaneNumConf", 0.0))
+  total_conf = float(getattr(lane_hd, "totalLaneCntConf", 0.0))
+  if lane_count <= 0 or cur_idx < 0 or cur_idx >= lane_count:
+    return out
+  if cur_conf < HD_LANE_MIN_CONF or total_conf < HD_LANE_MIN_CONF:
+    return out
+
+  out.update({
+    "usable": True,
+    "hd": bool(getattr(lane_hd, "hd", False)),
+    "laneCount": lane_count,
+    "curLaneIdx0": cur_idx,
+    "curLaneNumConf": cur_conf,
+    "totalLaneCntConf": total_conf,
+    "slope": float(getattr(lane_hd, "slope", 0.0)),
+    "leftBlocked": bool(getattr(lane_hd, "leftBlocked", False)),
+    "rightBlocked": bool(getattr(lane_hd, "rightBlocked", False)),
+  })
+  return out
+
+
 def merge_carrot_navi_lanes(CS_SP, carrot_navi, nav_lane_guide=None, nav_lane_guide_cnt: int = 0,
                             use_nav_lane_guide: bool = False) -> None:
   """Merge Carrot navigation lane hints into carStateSP.
 
-  Two Carrot sources feed the SAME pair of flags, so there is only one lane
+  Three Carrot sources feed the SAME pair of flags, so there is only one lane
   blocking decision in the tree:
 
     * **7714** ``carrotNaviSP.laneCurrent.available`` — per-lane availability.
+    * **7714 HD** ``carrotNaviSP.laneHD`` — Tencent-probe HD lane match
+      (embedded in the ``lane_current`` JSON as ``hd``); additive-only.
     * **7706** ``navLaneGuide`` / ``navLaneGuideCnt`` — the guided-lane arrow
       codes (App field list §2.2), folded in only when
       ``CarrotNavLaneGuideBlockEnabled`` is on.
@@ -148,6 +218,10 @@ def merge_carrot_navi_lanes(CS_SP, carrot_navi, nav_lane_guide=None, nav_lane_gu
   if use_nav_lane_guide:
     guide_left, guide_right = nav_lane_guide_blocks(nav_lane_guide, nav_lane_guide_cnt)
 
+  hd_state = hd_lane_state(carrot_navi)
+  hd_left = hd_state["leftBlocked"] if hd_state["usable"] else False
+  hd_right = hd_state["rightBlocked"] if hd_state["usable"] else False
+
   if carrot_navi is None:
     CS_SP.carrotLaneValid = guide_left or guide_right
     CS_SP.carrotLeftLineBlocked = guide_left
@@ -163,7 +237,9 @@ def merge_carrot_navi_lanes(CS_SP, carrot_navi, nav_lane_guide=None, nav_lane_gu
   valid = present and count > 0 and current_lane > 0
   # The guide path has no lane-count data, so it counts as valid on its own when
   # it produced a block; otherwise consumers would ignore the flags entirely.
-  CS_SP.carrotLaneValid = valid or guide_left or guide_right
+  # The HD path has explicit blocking claims of its own and joins the same
+  # additive rule: HD may only add blocking, never clear one.
+  CS_SP.carrotLaneValid = valid or guide_left or guide_right or hd_state["usable"]
 
   left_blocked = False
   right_blocked = False
@@ -171,6 +247,6 @@ def merge_carrot_navi_lanes(CS_SP, carrot_navi, nav_lane_guide=None, nav_lane_gu
     left_blocked = not _adjacent_lane_available(lane, _LEFT_ADJACENT_OFFSET)
     right_blocked = not _adjacent_lane_available(lane, _RIGHT_ADJACENT_OFFSET)
 
-  CS_SP.carrotLeftLineBlocked = left_blocked or guide_left
-  CS_SP.carrotRightLineBlocked = right_blocked or guide_right
+  CS_SP.carrotLeftLineBlocked = left_blocked or guide_left or hd_left
+  CS_SP.carrotRightLineBlocked = right_blocked or guide_right or hd_right
 

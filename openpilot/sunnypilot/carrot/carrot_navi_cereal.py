@@ -144,6 +144,54 @@ def _lane(record: dict[str, Any], value: Any) -> dict[str, Any]:
   }
 
 
+def _lane_hd(record: dict[str, Any], value: Any) -> dict[str, Any]:
+  """Parse the optional ``hd`` object embedded in the ``lane_current`` value.
+
+  The Tencent-probe bridge (drivingassist app) sends HD lane match data as::
+
+    {"count": 4, "current_lane": 2, "hd": {
+        "hd": true, "lane_count": 4, "total_lane_cnt_conf": 0.9,
+        "cur_lane_idx0": 1, "cur_lane_num_conf": 0.85, "slope": 0.0,
+        "left_blocked": false, "right_blocked": false,
+        "free_pos_lane_num": 0, "matched_pos": {"lat": .., "lon": .., "heading": ..}}}
+
+  Missing or malformed ``hd`` yields ``available: False`` so the fusion layer
+  falls back to the 7714 ``available`` array path. Field semantics follow the
+  probe's HDLaneMatchResult: ``cur_lane_idx0`` is 0-based (mCurLaneNum - 1);
+  ``left_blocked``/``right_blocked`` come from the probe's guidance arrows and
+  per-lane detail, and consumers must treat them as additive blocking only.
+  """
+  if not record.get("present"):
+    return {"available": False}
+  hd = _dict(value.get("hd") if isinstance(value, dict) else None)
+  if not hd:
+    return {"available": False}
+
+  # NOTE: deliberately NO "meta" key here — LaneHD has no meta field and capnp
+  # dict assignment raises AttributeError on unknown keys, which would kill
+  # the whole carrotNaviSP publish loop. Freshness for the HD state is judged
+  # off laneCurrent.meta.receivedMonoTimeNanos (see fusion hd_lane_state).
+
+  matched_pos = _dict(hd.get("matched_pos"))
+  matched_valid = matched_pos.get("lat") is not None and matched_pos.get("lon") is not None
+  return {
+    "available": True,
+    "hd": bool(hd.get("hd", True)),
+    "laneCount": _integer(hd.get("lane_count"), minimum=0, maximum=16),
+    "totalLaneCntConf": _finite(hd.get("total_lane_cnt_conf"), minimum=0.0, maximum=1.0),
+    "curLaneIdx0": _integer(hd.get("cur_lane_idx0"), default=-1, minimum=-1, maximum=15),
+    "curLaneNumConf": _finite(hd.get("cur_lane_num_conf"), minimum=0.0, maximum=1.0),
+    "slope": _finite(hd.get("slope"), minimum=-90.0, maximum=90.0),
+    "leftBlocked": bool(hd.get("left_blocked", False)),
+    "rightBlocked": bool(hd.get("right_blocked", False)),
+    "freePosLaneNum": _integer(hd.get("free_pos_lane_num"), minimum=0, maximum=16),
+    "matchedPosValid": matched_valid,
+    "matchedLatitude": _finite(matched_pos.get("lat"), minimum=-90.0, maximum=90.0),
+    "matchedLongitude": _finite(matched_pos.get("lon"), minimum=-180.0, maximum=180.0),
+    "matchedHeadingDeg": _finite(matched_pos.get("heading"), minimum=0.0, maximum=360.0),
+  }
+
+
 def _signal_light(value: Any) -> tuple[bool, bool, int]:
   light = _dict(value)
   if not light:
@@ -214,6 +262,7 @@ def build_carrot_navi_payload(snapshot: dict[str, Any], publish_mono_ns: int | N
     "guidanceCurrent": _guidance(snapshot, "guidance_current"),
     "guidanceNext": _guidance(snapshot, "guidance_next"),
     "laneCurrent": _lane(lane_record, lane_value),
+    "laneHD": _lane_hd(lane_record, lane_value),
     "laneAhead": [
       _lane(ahead_record, value)
       for value in ahead_values[:MAX_AHEAD_LANES]
