@@ -7,14 +7,21 @@ from collections.abc import Callable
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.selfdrive.ui.mici.layouts.settings.device.device_layout import EngagedConfirmationButton
 from openpilot.selfdrive.ui.mici.widgets.info import InfoLayoutMici
-from openpilot.selfdrive.ui.mici.widgets.button import BigButton
-from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog
+from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigParamControl
+from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationDialog
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app, MousePos
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets.scroller import NavScroller
 
 UPDATER_TIMEOUT = 10.0  # seconds to wait for updater to respond
+
+# Mapping updater internal states to translated display strings (mirrors the TICI panel)
+STATE_TO_DISPLAY_TEXT = {
+  "checking...": tr("checking..."),
+  "downloading...": tr("downloading..."),
+  "finalizing update...": tr("finalizing update..."),
+}
 
 
 def _split_description(desc: str) -> tuple[str, str, str, str] | None:
@@ -34,7 +41,7 @@ class UpdaterState(IntEnum):
 
 class SoftwareInfoLayoutMici(InfoLayoutMici):
   def __init__(self):
-    super().__init__("version", "", "branch", "")
+    super().__init__(tr("version"), "", tr("branch"), "")
 
   def _update_state(self):
     super()._update_state()
@@ -45,8 +52,8 @@ class SoftwareInfoLayoutMici(InfoLayoutMici):
       self.subtext1.set_text(f"{version} ({date})")
       self.subtext2.set_text(f"{branch} ({commit})")
     else:
-      self.subtext1.set_text(ui_state.params.get("Version") or "N/A")
-      self.subtext2.set_text(ui_state.params.get("GitBranch") or "N/A")
+      self.subtext1.set_text(ui_state.params.get("Version") or tr("N/A"))
+      self.subtext2.set_text(ui_state.params.get("GitBranch") or tr("N/A"))
 
 
 class CheckUpdateButton(BigButton):
@@ -57,7 +64,7 @@ class CheckUpdateButton(BigButton):
   def __init__(self):
     self._txt_update_icon = gui_app.texture("icons_mici/settings/device/update.png", 64, 75)
     self._txt_up_to_date_icon = gui_app.texture("icons_mici/settings/device/up_to_date.png", 64, 64)
-    super().__init__("check for update", "", self._txt_update_icon)
+    super().__init__(tr("check for update"), "", self._txt_update_icon)
 
     self._waiting_for_updater_t: float | None = None
     self._hide_value_t: float | None = None
@@ -77,7 +84,7 @@ class CheckUpdateButton(BigButton):
       gui_app.push_widget(dlg)
       return
 
-    self._signal_updater(self.DOWNLOAD_UPDATE if self.get_value() == "download update" else self.CHECK_FOR_UPDATE)
+    self._signal_updater(self.DOWNLOAD_UPDATE if self.get_value() == tr("download update") else self.CHECK_FOR_UPDATE)
 
   def check_for_update(self):
     self._signal_updater(self.CHECK_FOR_UPDATE)
@@ -99,7 +106,7 @@ class CheckUpdateButton(BigButton):
     if value:
       self.set_text("")
     else:
-      self.set_text("check for update")
+      self.set_text(tr("check for update"))
 
   def _update_state(self):
     super()._update_state()
@@ -123,7 +130,7 @@ class CheckUpdateButton(BigButton):
 
       if self._waiting_for_updater_t is not None and rl.get_time() - self._waiting_for_updater_t > UPDATER_TIMEOUT:
         self.set_rotate_icon(False)
-        self.set_value("updater failed\nto respond")
+        self.set_value(tr("updater failed\nto respond"))
         self._state = UpdaterState.IDLE
         self._hide_value_t = rl.get_time()
 
@@ -133,25 +140,26 @@ class CheckUpdateButton(BigButton):
         self._state = UpdaterState.IDLE
         self._hide_value_t = rl.get_time()
       else:
-        if self.get_value() != updater_state:
-          self.set_value(updater_state)
+        display_text = STATE_TO_DISPLAY_TEXT.get(updater_state, updater_state)
+        if self.get_value() != display_text:
+          self.set_value(display_text)
 
     elif self._state == UpdaterState.IDLE:
       self.set_rotate_icon(False)
       if failed:
         self.set_enabled(True)  # allow retry when failure came from updater param
-        if self.get_value() != "failed to update":
-          self.set_value("failed to update")
+        if self.get_value() != tr("failed to update"):
+          self.set_value(tr("failed to update"))
 
       elif ui_state.params.get_bool("UpdaterFetchAvailable"):
         self.set_enabled(True)
-        if self.get_value() != "download update":
-          self.set_value("download update")
+        if self.get_value() != tr("download update"):
+          self.set_value(tr("download update"))
 
       elif self._hide_value_t is not None:
         self.set_enabled(True)
-        if self.get_value() == "checking...":
-          self.set_value("up to date")
+        if self.get_value() == tr("checking..."):
+          self.set_value(tr("up to date"))
           self.set_icon(self._txt_up_to_date_icon)
 
         # Hide previous text after short amount of time (up to date or failed)
@@ -169,7 +177,7 @@ class CheckUpdateButton(BigButton):
 
 class InstallUpdateButton(BigButton):
   def __init__(self):
-    super().__init__("install now", "", gui_app.texture("icons_mici/settings/device/reboot.png", 64, 70))
+    super().__init__(tr("install now"), "", gui_app.texture("icons_mici/settings/device/reboot.png", 64, 70))
     self.set_visible(lambda: ui_state.is_offroad() and ui_state.params.get_bool("UpdateAvailable"))
 
   def _update_state(self):
@@ -218,8 +226,8 @@ class BranchSelectPage(NavScroller):
 
 class TargetBranchButton(BigButton):
   def __init__(self, check_update_btn: CheckUpdateButton):
-    super().__init__("target branch", ui_state.params.get("UpdaterTargetBranch") or "",
-                     description="Select the software branch to download on the next update check.")
+    super().__init__(tr("target branch"), ui_state.params.get("UpdaterTargetBranch") or "",
+                     description=tr("Select the software branch to download on the next update check."))
     self._check_update_btn = check_update_btn
     self.set_click_callback(self._on_click)
     self.set_visible(not ui_state.params.get_bool("IsTestedBranch"))
@@ -251,17 +259,36 @@ class SoftwareLayoutMici(NavScroller):
     def uninstall_openpilot_callback():
       ui_state.params.put_bool("DoUninstall", True, block=True)
 
-    uninstall_openpilot_btn = EngagedConfirmationButton("uninstall sunnypilot", "uninstall",
+    uninstall_openpilot_btn = EngagedConfirmationButton(tr("uninstall sunnypilot"), tr("uninstall"),
                                                         gui_app.texture("icons_mici/settings/device/uninstall.png", 64, 64),
                                                         uninstall_openpilot_callback, exit_on_confirm=False,
-                                                        description="Remove openpilot from this device.",
+                                                        description=tr("Remove openpilot from this device."),
                                                         description_icon=gui_app.texture("icons_mici/setup/factory_reset.png", 64, 64))
 
     check_update_btn = CheckUpdateButton()
+    # Disable Updates, mirrored from the TICI software panel: advanced toggle, parked
+    # only; a reboot applies it.
+    self._disable_updates_toggle = BigParamControl(tr("disable updates"), "DisableUpdates",
+                                                   toggle_callback=self._on_disable_updates_toggled,
+                                                   description=tr("When enabled, automatic software updates will be off.\n" +
+                                                                  "This requires a reboot to take effect. Parked only."))
     self._scroller.add_widgets([
       SoftwareInfoLayoutMici(),
       check_update_btn,
       InstallUpdateButton(),
       TargetBranchButton(check_update_btn),
+      self._disable_updates_toggle,
       uninstall_openpilot_btn,
     ])
+
+  def _on_disable_updates_toggled(self, enabled):
+    if enabled:
+      gui_app.push_widget(BigConfirmationDialog(tr("slide to\nreboot"),
+                                                gui_app.texture("icons_mici/settings/device/reboot.png", 64, 70),
+                                                lambda: ui_state.params.put_bool("DoReboot", True), exit_on_confirm=False))
+
+  def _update_state(self):
+    super()._update_state()
+    # gating mirrors the TICI panel: advanced visibility, offroad only
+    self._disable_updates_toggle.set_visible(ui_state.params.get_bool("ShowAdvancedControls"))
+    self._disable_updates_toggle.set_enabled(ui_state.is_offroad())

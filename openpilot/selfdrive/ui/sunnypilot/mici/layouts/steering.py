@@ -77,10 +77,26 @@ class SteeringLayoutMici(NavScroller):
     for btn in [self._mads_settings_btn, self._lane_change_btn, self._blinker_settings_btn, self._torque_settings_btn]:
       btn.set_subtitle_font_size(24)
 
+    # Steer-ratio resolution knobs consumed by controlsd via
+    # steer_ratio.resolve_vehicle_model_steer_ratio: a custom ratio (0.1 units,
+    # used only when it resolves above 1.0) overrides, otherwise the live ratio
+    # is scaled by SteerRatioRate (percent).
+    self._steer_ratio_rate = BigParamOption(tr("steer ratio rate"), "SteerRatioRate",
+                                            min_value=30, max_value=200, value_change_step=5,
+                                            label_callback=lambda v: f"{v}%",
+                                            description=tr("Scales the live steering ratio, in percent.\n" +
+                                                           "100 keeps the vehicle's ratio."))
+    self._custom_steer_ratio = BigParamOption(tr("custom steer ratio"), "CustomSR",
+                                              min_value=0, max_value=300, value_change_step=5,
+                                              label_callback=lambda v: tr("stock") if v == 0 else f"{v / 10.0:.1f}",
+                                              description=tr("Fixed steering ratio in 0.1 units (e.g. 130 = 13.0).\n" +
+                                                             "Overrides the live ratio when above 10. 0 uses the vehicle's ratio."))
+
     self._scroller.add_widgets([
       self._mads_settings_btn, self._lane_change_btn,
       self._blinker_settings_btn,
       self._torque_settings_btn, self._nnlc_toggle,
+      self._steer_ratio_rate, self._custom_steer_ratio,
     ])
 
     self._mads_toggle = BigParamControlSP(tr("steer without cruise"), "Mads",
@@ -234,6 +250,8 @@ class SteeringLayoutMici(NavScroller):
     super()._update_state()
 
     self._nnlc_toggle.refresh()
+    self._steer_ratio_rate.refresh()
+    self._custom_steer_ratio.refresh()
 
     # an angle or curvature car's torque params are cleared by ui_state's _enforce_constraints
     torque_allowed = self._torque_allowed = (ui_state.CP is not None and

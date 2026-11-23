@@ -63,6 +63,17 @@ class DisplayLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
 
+    self._offroad_brightness = BigParamOption(
+      tr("screen brightness"), "Brightness",
+      min_value=0, max_value=100, value_change_step=5,
+      label_callback=lambda v: tr("default") if not v else tr("{} %").format(v),
+      picker_label_callback=lambda v: tr("default") if not v else str(v),
+      picker_unit="%",
+      description=tr("Screen brightness when offroad.\n" +
+                     "0 uses the device default."),
+    )
+    self._hide_firehose_prompt = BigParamControl(tr("hide firehose prompt"), "HideFirehosePrompt",
+                                                 description=tr("Hides the firehose prompt on the home screen."))
     self._brightness = BigParamOption(
       tr("brightness"), "OnroadScreenOffBrightness",
       min_value=0, max_value=22,
@@ -76,7 +87,7 @@ class DisplayLayoutMici(NavScroller):
     )
     self._brightness_timer = BigParamOption(
       tr("brightness delay"), "OnroadScreenOffTimer",
-      min_value=0, max_value=15,
+      min_value=0, max_value=9,
       value_map=ONROAD_BRIGHTNESS_TIMER_VALUES,
       label_callback=_timer_label,
       picker_label_callback=_timer_picker_label,
@@ -109,11 +120,14 @@ class DisplayLayoutMici(NavScroller):
       description=tr("How long the screen saver runs before the screen turns off."),
     )
 
-    self._scroller.add_widgets([self._brightness, self._brightness_timer, self._ui_timeout,
+    self._scroller.add_widgets([self._offroad_brightness, self._hide_firehose_prompt,
+                                self._brightness, self._brightness_timer, self._ui_timeout,
                                 self._home_model, self._screensaver, self._screensaver_timeout])
 
   def _update_state(self):
     super()._update_state()
+    self._offroad_brightness.refresh()
+    self._hide_firehose_prompt.refresh()
     self._brightness.refresh()
     self._brightness_timer.refresh()
     self._ui_timeout.refresh()

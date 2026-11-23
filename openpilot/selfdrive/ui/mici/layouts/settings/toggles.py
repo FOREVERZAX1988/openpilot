@@ -59,6 +59,20 @@ class TogglesLayoutMici(NavScroller):
     # zp: initial cruise speed on SET press, only meaningful with openpilot long
     self._initial_cruise_speed = InitialCruiseSpeedButton()
     self._initial_cruise_speed.set_visible(lambda: ui_state.CP is not None and ui_state.has_longitudinal_control and not ui_state.CP.pcmCruise)
+    disengage_on_accelerator_toggle = BigParamControl(tr("disengage on accelerator"), "DisengageOnAccelerator",
+                                                      description=tr("Pressing the accelerator pedal disengages sunnypilot."))
+    # registered default is on: get_bool() ignores it, so read through the registered default
+    dm_pearl_eyes_toggle = BigParamControl(tr("dm pearl eyes"), "CarrotDMPearlEyes",
+                                           description=tr("Replaces the driver monitoring camera thumbnail with animated pearl cartoon eyes " +
+                                                          "that mirror head pose and blinks."))
+    disable_dm_toggle = BigParamControl(tr("disable driver monitoring"), "DisableDM", toggle_callback=restart_needed_callback,
+                                        description=tr("Disables driver monitoring entirely; no cabin camera is needed.\n" +
+                                                       "Similar to LITE mode."))
+    recording_mode_toggle = BigMultiParamToggle(tr("recording mode"), "RecordingMode",
+                                                [tr("disable all"), tr("logs only"), tr("full recording")],
+                                                description=tr("Choose what gets recorded on each route.\n" +
+                                                               "Full recording keeps logs plus all camera video. Logs only keeps the route logs.\n" +
+                                                               "Disable all records nothing. A change applies to the next route after restart."))
     is_metric_toggle = BigParamControl(tr("use metric units"), "IsMetric")
     ldw_toggle = BigParamControl(tr("lane departure warnings"), "IsLdwEnabled",
                                  description=tr("Warn when you drift across a detected lane line.\n" +
@@ -87,7 +101,11 @@ class TogglesLayoutMici(NavScroller):
       self._accel_personality_toggle,
       self._experimental_btn,
       self._initial_cruise_speed,
+      disengage_on_accelerator_toggle,
       is_metric_toggle,
+      dm_pearl_eyes_toggle,
+      disable_dm_toggle,
+      recording_mode_toggle,
       ldw_toggle,
       always_on_dm_toggle,
       distraction_level_toggle,
@@ -98,12 +116,20 @@ class TogglesLayoutMici(NavScroller):
 
     self._always_on_dm_toggle = always_on_dm_toggle
     self._distraction_level_toggle = distraction_level_toggle
+    self._record_front = record_front
+    self._record_mic = record_mic
+    self._dm_pearl_eyes_toggle = dm_pearl_eyes_toggle
+    self._disable_dm_toggle = disable_dm_toggle
+    self._recording_mode_toggle = recording_mode_toggle
 
     # Toggle lists
     self._refresh_toggles = (
       ("ExperimentalMode", self._experimental_btn),
       ("AccelPersonalityEnabled", self._accel_controller_enabled),
+      ("DisengageOnAccelerator", disengage_on_accelerator_toggle),
       ("IsMetric", is_metric_toggle),
+      ("CarrotDMPearlEyes", dm_pearl_eyes_toggle),
+      ("DisableDM", disable_dm_toggle),
       ("IsLdwEnabled", ldw_toggle),
       ("AlwaysOnDM", always_on_dm_toggle),
       ("RecordFront", record_front),
@@ -167,9 +193,21 @@ class TogglesLayoutMici(NavScroller):
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+    # registered default is on: get_bool() ignores it, so read the raw value
+    self._dm_pearl_eyes_toggle.set_checked(bool(ui_state.params.get("CarrotDMPearlEyes", return_default=True)))
+    self._recording_mode_toggle.refresh()
+
+    # DisableDM removes the driver monitor, so its settings have nothing to act on
+    dm_disabled = ui_state.params.get_bool("DisableDM")
+    for item in (self._always_on_dm_toggle, self._record_front, self._distraction_level_toggle):
+      item.set_visible(not dm_disabled)
+    # no video files without full recording: the record-and-upload toggles have nothing to act on
+    recording_full = int(ui_state.params.get("RecordingMode", return_default=True) or 2) >= 2
+    self._record_front.set_visible(recording_full and not dm_disabled)
+    self._record_mic.set_visible(recording_full)
 
     dm_on = ui_state.params.get_bool("AlwaysOnDM")
-    self._distraction_level_toggle.set_visible(dm_on)
+    self._distraction_level_toggle.set_visible(dm_on and not dm_disabled)
     if dm_on:
       self._distraction_level_toggle._load_value()
 

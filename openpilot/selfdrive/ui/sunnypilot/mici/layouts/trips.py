@@ -15,6 +15,8 @@ from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.ui.lib.api_helpers import get_token
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton
+from openpilot.selfdrive.ui.sunnypilot.lib.drive_stats import refresh_local_drive_stats
+from openpilot.selfdrive.ui.sunnypilot.mici.widgets.button import BigMultiParamToggleSP
 from openpilot.selfdrive.ui.ui_state import ui_state, device
 from openpilot.system.athena.registration import UNREGISTERED_DONGLE_ID
 from openpilot.system.ui.lib.multilang import tr
@@ -24,7 +26,9 @@ UPDATE_INTERVAL = 30
 
 
 class TripsLayoutMici(NavScroller):
-  PARAM_KEY = "ApiCache_DriveStats"
+  PARAM_KEY = "ApiCache_DriveStats"  # cloud stats from the comma backend
+  LOCAL_KEY = "LocalDriveStats"  # stats computed from on-device route logs
+  DATA_SOURCE_PARAM = "TripsDataSource"
 
   def __init__(self):
     super().__init__()
@@ -32,6 +36,12 @@ class TripsLayoutMici(NavScroller):
     self._params = Params()
     self._session = requests.Session()
     self._stats = self._get_stats()
+
+    self._source_toggle = BigMultiParamToggleSP(tr("data source"), self.DATA_SOURCE_PARAM,
+                                                [tr("local"), tr("cloud")], values=["local", "cloud"],
+                                                description=tr("Local counts the routes recorded on the device.\n" +
+                                                               "Cloud uses the drive stats from comma connect."))
+    self._scroller.add_widget(self._source_toggle)
 
     STAT_LABELS = [
       tr("all time drives"), tr("all time distance"), tr("all time hours"),
@@ -63,6 +73,8 @@ class TripsLayoutMici(NavScroller):
     self._running = False
 
   def _get_stats(self):
+    if (self._params.get(self.DATA_SOURCE_PARAM) or "local") == "local":
+      return self._params.get(self.LOCAL_KEY) or {}
     return self._params.get(self.PARAM_KEY) or {}
 
   def _fetch_drive_stats(self):
@@ -80,7 +92,10 @@ class TripsLayoutMici(NavScroller):
   def _update_loop(self):
     while self._running:
       if not ui_state.started and device.awake:
-        self._fetch_drive_stats()
+        # local stats stay fresh either way, so switching sources shows current data
+        refresh_local_drive_stats(self._params, self.LOCAL_KEY)
+        if (self._params.get(self.DATA_SOURCE_PARAM) or "local") == "cloud":
+          self._fetch_drive_stats()
       time.sleep(UPDATE_INTERVAL)
 
   def _format_stats(self):

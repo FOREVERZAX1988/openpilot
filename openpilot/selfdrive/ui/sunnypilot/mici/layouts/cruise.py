@@ -13,6 +13,14 @@ from openpilot.selfdrive.ui.sunnypilot.mici.widgets.button import (
   BigParamOption,
   speed_unit,
 )
+from openpilot.selfdrive.ui.mici.widgets.button import BigMultiToggle
+from openpilot.selfdrive.ui.sunnypilot.lib.following_profile_store import (
+  PRESET_ORDER,
+  PROFILE_PARAM_KEY,
+  serialize_selection,
+  selection_from_raw,
+)
+from openpilot.common.params import Params
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets.scroller import NavScroller
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -20,13 +28,95 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.helpers import icbm_moves_speed_limits
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Policy
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.source_auto import AUTO, car_shows_limit
+from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.tiered_offset import (
+  TIER_KEY_SUFFIXES,
+  tier_label,
+)
 
 SL_MODE_LABELS = [tr("off"), tr("info"), tr("warn"), tr("assist")]
 SL_SOURCE_LABELS = {AUTO: tr("auto"), Policy.car_state_only: tr("car"), Policy.map_data_only: tr("map")}
 SL_MODE_OFF = 0
 SL_MODE_WARN = 2
 SL_MODE_ASSIST = 3
+SL_OFFSET_FIXED = 1
+SL_OFFSET_PERCENT = 2
+SL_OFFSET_TIERED = 3
+SL_CONFIRM_LABELS = [tr("never"), tr("lower"), tr("higher"), tr("both")]
 ACC_LONG_PRESS_MAP = {1: 1, 2: 5, 3: 10}
+
+# Following Profile preset labels, in PRESET_ORDER order (following_profile_store).
+FOLLOWING_PRESET_LABELS = [tr("close"), tr("medium"), tr("far")]
+FOLLOWING_PERSONALITY_LABELS = {
+  "aggressive": "aggressive personality",
+  "standard": "standard personality",
+  "relaxed": "relaxed personality",
+}
+FOLLOWING_PROFILE_DESCRIPTION = tr("Replaces the single following distance per personality with a speed-dependent profile.\n" +
+                                   "The follow time is interpolated over speed, so the gap can be shorter in town and longer on the highway.")
+
+# Longitudinal MPC Tuning: (title, param, min, max, step, digits), values stored scaled x100.
+MPC_TUNING_PARAMS = [
+  (tr("comfort brake"), "LongitudinalMpcTuningComfortBrake", 150, 450, 5, 2),
+  (tr("stop distance"), "LongitudinalMpcTuningStopDistance", 200, 1200, 50, 1),
+  (tr("follow time - relaxed"), "LongitudinalMpcTuningTFollowRelaxed", 100, 250, 5, 2),
+  (tr("follow time - standard"), "LongitudinalMpcTuningTFollowStandard", 100, 220, 5, 2),
+  (tr("follow time - aggressive"), "LongitudinalMpcTuningTFollowAggressive", 80, 180, 5, 2),
+  (tr("distance cost"), "LongitudinalMpcTuningXEgoObstacleCost", 50, 600, 25, 2),
+  (tr("jerk cost"), "LongitudinalMpcTuningJEgoCost", 100, 1500, 50, 2),
+  (tr("acceleration change cost"), "LongitudinalMpcTuningAChangeCost", 5000, 60000, 500, 0),
+  (tr("danger zone cost"), "LongitudinalMpcTuningDangerZoneCost", 0, 50000, 500, 0),
+  (tr("lead danger factor"), "LongitudinalMpcTuningLeadDangerFactor", 25, 150, 5, 2),
+]
+# Three-channel jerk scaling per personality. 1.00 means "unchanged".
+MPC_TUNING_JERK_PARAMS = [
+  (tr(f"{channel} - {personality}"), f"LongitudinalMpcTuning{personality}{key}", 25, 200, 5, 2)
+  for personality in ("Aggressive", "Standard", "Relaxed")
+  for key, channel in (("JerkAccel", tr("accel smoothness")), ("JerkSpeed", tr("speed smoothness")),
+                       ("DangerBias", tr("safety gap bias")), ("JerkDanger", tr("danger smoothness")))
+]
+# Defaults in the scaled x100 domain (longitudinal_mpc_tuning.py _reset_defaults).
+MPC_TUNING_DEFAULTS = {
+  "LongitudinalMpcTuningComfortBrake": 250,
+  "LongitudinalMpcTuningStopDistance": 600,
+  "LongitudinalMpcTuningTFollowRelaxed": 175,
+  "LongitudinalMpcTuningTFollowStandard": 145,
+  "LongitudinalMpcTuningTFollowAggressive": 125,
+  "LongitudinalMpcTuningXEgoObstacleCost": 300,
+  "LongitudinalMpcTuningJEgoCost": 500,
+  "LongitudinalMpcTuningAChangeCost": 20000,
+  "LongitudinalMpcTuningDangerZoneCost": 10000,
+  "LongitudinalMpcTuningLeadDangerFactor": 75,
+}
+
+
+def _mpc_label(digits: int):
+  return lambda v: f"{v / 100.0:.{digits}f}"
+
+
+class FollowingProfilePickerMici(BigMultiToggle):
+  """One preset picker per driving personality.
+
+  The presets live in the LongitudinalFollowingProfile JSON document, so unlike
+  BigMultiParamToggleSP the click handler re-serializes the whole selection.
+  """
+
+  def __init__(self, personality: str, title: str, description: str):
+    self._params = Params()
+    self._personality = personality
+    super().__init__(title, FOLLOWING_PRESET_LABELS, select_callback=self._on_select, description=description)
+    self._selection = selection_from_raw(self._params.get(PROFILE_PARAM_KEY))
+    self.set_value(FOLLOWING_PRESET_LABELS[PRESET_ORDER.index(self._selection[personality])])
+
+  def _on_select(self, label: str):
+    preset = PRESET_ORDER[FOLLOWING_PRESET_LABELS.index(label)]
+    if self._selection.get(self._personality) == preset:
+      return
+    self._selection[self._personality] = preset
+    self._params.put(PROFILE_PARAM_KEY, serialize_selection(self._selection))
+
+  def refresh(self):
+    self._selection = selection_from_raw(self._params.get(PROFILE_PARAM_KEY))
+    self.set_value(FOLLOWING_PRESET_LABELS[PRESET_ORDER.index(self._selection[self._personality])])
 
 
 def _offset_unit():
@@ -44,21 +134,35 @@ def _offset_label(value):
 
 
 class CruiseLayoutMici(NavScroller):
-  """Cruise settings: alpha longitudinal and Set Speed Assist, SCC, speed limit assist, custom ACC increments.
+  """Cruise settings: alpha longitudinal, following profile, ICBM, Set Speed Assist, SCC, speed limit
+  assist, conditional chill exit, acceleration boost, custom ACC increments, and MPC tuning.
 
   State gating pattern:
     - _update_state runs every frame, reads params and enables/disables widgets
     - _prev_* fields track state transitions (None → first frame, True → False = cleanup)
-    - ICBM has no toggle: the features below bring it up wherever the car can press its
-      cruise buttons (icbm_applicable)
+    - ICBM's toggle is enabled wherever the car supports it without openpilot longitudinal
+      control (icbm_applicable); with longitudinal control it is locked and cleared
   """
 
   def __init__(self):
     super().__init__()
 
     self._prev_sla_available: bool | None = None
+    self._prev_icbm_available: bool | None = None
 
     self._alpha_long = AlphaLongitudinalTogglesMici()
+    # Following Profile: master switch plus a preset picker per personality.
+    self._following_toggle = BigParamControlSP(tr("custom following profiles"), "LongitudinalFollowingProfileEnabled",
+                                               description=FOLLOWING_PROFILE_DESCRIPTION)
+    self._following_pickers = {
+      personality: FollowingProfilePickerMici(personality, tr(FOLLOWING_PERSONALITY_LABELS[personality]),
+                                              description=tr("Preset used for this driving personality: close follows nearest, far leaves the most space."))
+      for personality in ("aggressive", "standard", "relaxed")
+    }
+    for picker in self._following_pickers.values():
+      picker.set_visible(lambda: self._following_toggle._checked)
+    self._icbm_toggle = BigParamControlSP(tr("cruise button management"), "IntelligentCruiseButtonManagement",
+                                          description=tr("Manages the car's built-in cruise buttons by emulating presses for limited longitudinal control."))
     self._scc_v_toggle = BigParamControlSP(tr("slow for curves: vision"), "SmartCruiseControlVision",
                                            description=tr("Slows for curves the camera sees, then resumes your set speed.\n" +
                                                           "Works alone or with slow for curves: map."))
@@ -69,16 +173,40 @@ class CruiseLayoutMici(NavScroller):
     self._curve_speed = BigMultiParamToggleSP(tr("curve speed"), "CurveSpeedProfile", [tr("gentle"), tr("normal"), tr("sporty")],
                                               description=tr("How fast slow for curves takes turns.\n" +
                                                              "Gentle slows more. Sporty slows less."))
+    # Conditional chill exit: while legacy chill is on, selfdrived flips ExperimentalMode from
+    # driving context. The sub-toggles map one-to-one onto the CEM conditions.
+    self._cem_toggle = BigParamControlSP(tr("conditional chill exit"), "ConditionalExperimental",
+                                         description=tr("While chill mode is on, temporarily switch to experimental mode " +
+                                                        "on demanding curves, slow leads and low-speed turns.\n" +
+                                                        "A manual switch keeps priority for a minute."))
+    self._cem_curves_toggle = BigParamControlSP(tr("curves"), "CECurves", depends_on=lambda: self._cem_toggle._checked,
+                                                description=tr("Experimental mode follows lateral acceleration while cornering."))
+    self._cem_curves_lead_toggle = BigParamControlSP(tr("curves while following"), "CECurvesLead", depends_on=lambda: self._cem_toggle._checked,
+                                                     description=tr("Allows the curve trigger while following a lead car."))
+    self._cem_lead_toggle = BigParamControlSP(tr("slow leads"), "CELead", depends_on=lambda: self._cem_toggle._checked,
+                                              description=tr("Experimental mode engages when closing on a slower lead."))
+
+    self._accel_boost_toggle = BigParamControlSP(tr("acceleration boost"), "AccelBoostSP",
+                                                 description=tr("Adds a small push on top of the planned acceleration, stronger in aggressive " +
+                                                                "and gentler in relaxed.\n" +
+                                                                "Eases off in curves and when slowing or stopping. Never goes past your set speed."))
+
     self._custom_acc_btn = BigButtonSP(tr("custom increments"))
     self._speed_limit_btn = BigButtonSP(tr("speed limit"))
+    self._mpc_tuning_btn = BigButtonSP(tr("longitudinal mpc tuning"))
 
-    for btn in [self._custom_acc_btn, self._speed_limit_btn]:
+    for btn in [self._custom_acc_btn, self._speed_limit_btn, self._mpc_tuning_btn]:
       btn.set_subtitle_font_size(24)
 
     self._scroller.add_widgets([
       *self._alpha_long.items,
+      self._following_toggle, *self._following_pickers.values(),
+      self._icbm_toggle,
       self._scc_v_toggle, self._scc_m_toggle, self._curve_speed,
       self._speed_limit_btn, self._custom_acc_btn,
+      self._cem_toggle, self._cem_curves_toggle, self._cem_curves_lead_toggle, self._cem_lead_toggle,
+      self._accel_boost_toggle,
+      self._mpc_tuning_btn,
     ])
 
     self._custom_acc_toggle = BigParamControlSP(tr("enable custom increments"), "CustomAccIncrementsEnabled",
@@ -105,17 +233,56 @@ class CruiseLayoutMici(NavScroller):
                                                            "Car or map uses only that one."))
     # cars that report no limit always use the map
     self._sl_source.set_visible(lambda: car_shows_limit(ui_state.CP, ui_state.CP_SP))
-    self._sl_offset_type = BigMultiParamToggleSP(tr("offset type"), "SpeedLimitOffsetType", [tr("none"), tr("fixed"), "%"], off_index=0,
+    self._sl_offset_type = BigMultiParamToggleSP(tr("offset type"), "SpeedLimitOffsetType",
+                                                 [tr("none"), tr("fixed"), "%", tr("tiered")], off_index=0,
                                                  description=tr("Adds an offset to the speed limit.\n" +
-                                                                "Fixed adds a set amount of speed. % adds a percentage of the limit."))
+                                                                "Fixed adds a set amount of speed. % adds a percentage of the limit.\n" +
+                                                                "Tiered adds a different offset for each speed limit range."))
     self._sl_offset_value = BigParamOption(tr("offset value"), "SpeedLimitValueOffset",
                                            min_value=-30, max_value=30, label_callback=_offset_label, picker_unit=_offset_unit,
                                            description=tr("The amount added to the speed limit. Negative values go below it."))
-    self._sl_view = self._speed_limit_btn.link_sub_panel([self._sl_mode, self._sl_source, self._sl_offset_type, self._sl_offset_value])
+    self._sl_confirm = BigMultiParamToggleSP(tr("confirm limit changes"), "SpeedLimitConfirmOnChange", SL_CONFIRM_LABELS, off_index=0,
+                                             description=tr("Asks before taking a new speed limit. Adds to the low-speed confirmation, never replaces it."))
+    self._sl_tiered_btn = BigButtonSP(tr("tiered offsets"))
+    self._sl_tiered_btn.set_subtitle_font_size(24)
+
+    def _tier_title(idx: int):
+      return tr("limit") + f" {tier_label(idx, ui_state.is_metric)}"
+
+    self._sl_tiered_options = [
+      BigParamOption(_tier_title(idx), key, min_value=-30, max_value=30,
+                     label_callback=lambda v: f"{v} {speed_unit()}", picker_unit=speed_unit,
+                     description=tr("The offset applied to the speed limit in this range."))
+      for idx, key in enumerate(TIER_KEY_SUFFIXES)
+    ]
+    self._sl_tiered_view = self._sl_tiered_btn.link_sub_panel(self._sl_tiered_options)
+    self._sl_view = self._speed_limit_btn.link_sub_panel([self._sl_mode, self._sl_source, self._sl_offset_type,
+                                                          self._sl_offset_value, self._sl_confirm, self._sl_tiered_btn])
+
+    # Longitudinal MPC tuning: values are stored scaled x100, like the TICI panel.
+    self._mpc_options = [
+      BigParamOption(title, param, min_value=mn, max_value=mx, value_change_step=step,
+                     label_callback=_mpc_label(digits), picker_label_callback=lambda v, d=digits: f"{v / 100.0:.{d}f}")
+      for title, param, mn, mx, step, digits in MPC_TUNING_PARAMS + MPC_TUNING_JERK_PARAMS
+    ]
+    self._mpc_reset_btn = BigButtonSP(tr("reset to defaults"))
+
+    def _mpc_reset():
+      params = ui_state.params
+      for option in self._mpc_options:
+        default = MPC_TUNING_DEFAULTS.get(option._param, 100)
+        params.put(option._param, default / 100.0)
+        option.refresh()
+
+    self._mpc_reset_btn.set_click_callback(_mpc_reset)
+    self._mpc_view = self._mpc_tuning_btn.link_sub_panel([*self._mpc_options, self._mpc_reset_btn])
 
   def show_event(self):
     super().show_event()
     self._alpha_long.refresh()
+    self._following_toggle.refresh()
+    for picker in self._following_pickers.values():
+      picker.refresh()
 
   def _update_state(self):
     super()._update_state()
@@ -124,10 +291,29 @@ class CruiseLayoutMici(NavScroller):
     self._scc_v_toggle.refresh()
     self._scc_m_toggle.refresh()
     self._curve_speed.refresh()
+    self._following_toggle.refresh()
+    self._icbm_toggle.refresh()
+    for toggle in (self._cem_toggle, self._cem_curves_toggle, self._cem_curves_lead_toggle, self._cem_lead_toggle,
+                   self._accel_boost_toggle):
+      toggle.refresh()
 
     cp_ready = ui_state.CP is not None and ui_state.CP_SP is not None
     has_long = cp_ready and ui_state.has_longitudinal_control
     has_icbm = cp_ready and ui_state.has_icbm
+
+    # Following profile needs longitudinal control
+    self._following_toggle.set_enabled(has_long)
+    for picker in self._following_pickers.values():
+      picker.set_enabled(has_long)
+
+    # ICBM: usable only where the car supports it and openpilot long is not the active control
+    icbm_available = cp_ready and ui_state.CP_SP.intelligentCruiseButtonManagementAvailable and not has_long
+    if not icbm_available and self._prev_icbm_available is not False:
+      ui_state.params.remove("IntelligentCruiseButtonManagement")
+    self._prev_icbm_available = icbm_available
+    self._icbm_toggle.set_enabled(icbm_available and ui_state.is_offroad())
+
+    self._accel_boost_toggle.set_enabled(cp_ready)
 
     for toggle in (self._scc_v_toggle, self._scc_m_toggle):
       toggle.set_superseded(not (has_long or has_icbm))
@@ -167,7 +353,9 @@ class CruiseLayoutMici(NavScroller):
       badges = [(sl_mode, "on"), (tr("icbm"), "on" if icbm else "off")]
       if car_shows_limit(ui_state.CP, ui_state.CP_SP):
         badges.append((sl_source, "on"))
-      if unit:
+      if offset_type == SL_OFFSET_TIERED:
+        badges.append((tr("tiered"), "on"))
+      elif unit:
         sign = "+" if sl_offset_val > 0 else ""
         badges.append((f"{sign}{sl_offset_val}{unit}", "on"))
       self._speed_limit_btn.set_badges(badges)
@@ -206,4 +394,10 @@ class CruiseLayoutMici(NavScroller):
     sl_on = self._sl_mode.value != SL_MODE_LABELS[SL_MODE_OFF]
     self._sl_source.set_superseded(not sl_on)
     self._sl_offset_type.set_superseded(not sl_on)
-    self._sl_offset_value.set_enabled(sl_on and offset_type != 0)  # 0 = off/none
+    self._sl_offset_value.set_enabled(sl_on and offset_type in (SL_OFFSET_FIXED, SL_OFFSET_PERCENT))  # 0 = off/none, 3 = tiered
+    self._sl_confirm.set_superseded(not sl_on)
+    self._sl_tiered_btn.set_enabled(sl_on and offset_type == SL_OFFSET_TIERED)
+    if not gui_app.widget_in_stack(self._mpc_view):
+      return
+    for option in self._mpc_options:
+      option.set_enabled(has_long)
