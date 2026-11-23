@@ -401,6 +401,21 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
   },
+
+  # Carrot navigation lane fusion: one-shot advisory when the guided exit /
+  # fork maneuver first enters the convergence window (800 m). Small and
+  # non-blocking on purpose — the constraint itself (blocking away-from-exit
+  # lane changes, driver-initiated ones included, same as the BSM hard block)
+  # lives in carrot_navi_coordination and rides the same DH hard-block input
+  # the BSM uses. Gated by CarrotNavLaneCoordination so an off param means
+  # zero behavior change, advisory included.
+  EventNameSP.navExitAhead: {
+    ET.WARNING: Alert(
+      'Carrot: Exit Ahead',
+      'Follow Navigation Into Target Lane',
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
 }
 
 EVENTS_SP.update(EVENTS_SP_ZP)

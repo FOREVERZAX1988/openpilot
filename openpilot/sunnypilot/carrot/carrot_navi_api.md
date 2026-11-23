@@ -453,7 +453,7 @@ status maps.
 | --- | --- |
 | `vehicle` | `lat`, `lon`, `heading_deg`, `speed_kph`, `road_name`, `virtual_gps` |
 | Guide point | `distance_m`, `time_sec`, `turn_type`, `road_name`, `main_text`, `near_direction`, `mid_direction`, `far_direction`, `point.{lat,lon}` |
-| Lane | `count`, `distance_m`, `visible`, `lane_play`, `current_lane`, `turn_code`, `turn_info[]`, `etc_info[]`, `available[]`, `guide_line_color`, `road_category`, `voice_code` |
+| Lane | `count`, `distance_m`, `visible`, `lane_play`, `current_lane`, `turn_code`, `turn_info[]`, `etc_info[]`, `available[]`, `guide_line_color`, `road_category`, `voice_code`, `hd` (fork extension, see 5.3) |
 | `speed` | `current_kph`, `road_limit_kph`, `sdi`, `sdi_secondary`, `section` |
 | `speed.sdi`, `speed.sdi_secondary` | `type`, `distance_m`, `speed_limit_kph`, `section_type`, `block_type`, `block_speed_kph`, `block_distance_m`, `block_average_kph`, `block_time_sec`, `point.{lat,lon}`. `sdi` is the valid first-normal projection or its `nSdiPlus*` fallback. `sdi_secondary` is the valid second-normal projection, or the Plus projection when the first normal occupies `sdi`. |
 | `speed.section` | `active`, `speed_limit_kph`, `average_kph`, `overall_average_kph`, `remaining_distance_m`, `remaining_time_sec`, `progress`, `suspended`, `off_route` |
@@ -476,6 +476,50 @@ For a raw value above 200, the APK attempts `(raw - 20) / 10`, requires exact
 integer division, then applies the same `10..200` and multiple-of-10 checks.
 Examples are `320 -> 30`, `520 -> 50`, and `1020 -> 100`; invalid values such as
 `300` are omitted.
+
+### 5.2.1 Fork extension: Tencent-probe HD lane match (`lane_current.value.hd`)
+
+> sunnypilot fork only. Not present in upstream CarrotPilot. The receiver
+> parses this object into `carrotNaviSP.laneHD` (custom.capnp). Missing key or
+> malformed content is fully backward compatible: the receiver treats it as
+> "HD unavailable" and falls back to the 7714 `available` array path.
+
+The drivingassist app embeds the Tencent map probe's `HDLaneMatchResult` as an
+optional `hd` object inside the `lane_current` value:
+
+```json
+{
+  "hd": true,
+  "lane_count": 4,
+  "total_lane_cnt_conf": 0.9,
+  "cur_lane_idx0": 1,
+  "cur_lane_num_conf": 0.85,
+  "slope": 0.0,
+  "left_blocked": false,
+  "right_blocked": false,
+  "free_pos_lane_num": 0,
+  "matched_pos": {"lat": 31.23, "lon": 121.47, "heading": 92.0}
+}
+```
+
+Field semantics (probe field names in parentheses):
+
+| Field | Mapping | Notes |
+| --- | --- | --- |
+| `hd` | `mWorkMode` | true when the probe reports HD positioning |
+| `lane_count` | `getCurLaneNum` | physical lane count; capped at 16 |
+| `total_lane_cnt_conf` | `getTotalLaneCntConf` | 0..1 |
+| `cur_lane_idx0` | `getCurLaneNum() - 1` | **0-based** current lane; -1 = unknown. The probe's mCurLaneNum is 1-based (App mapping table) |
+| `cur_lane_num_conf` | `getCurLaneNumConf` | 0..1; receiver requires >= 0.5 for both confidences |
+| `slope` | `getSlope` | degrees, -90..90 |
+| `left_blocked` / `right_blocked` | derived from `OnLaneGuideUpdate` arrows + `mLocLane` per-lane detail | additive-only on the receiver: it may block a lane change toward that side, never clear one |
+| `free_pos_lane_num` | `mFreePosLaneNum` | degradation info when HD match is lost |
+| `matched_pos` | `mLaneMatchedPos` | `lat`/`lon` (WGS84) + `heading` (deg, 0..360) |
+
+Freshness: the receiver trusts the HD state only while the enclosing
+`lane_current` item stays within 2 s of its publish heartbeat
+(`HD_LANE_MAX_AGE_S` in carrot_navi_fusion.py), so a stalled app stream
+cannot keep feeding stale lane claims.
 
 ### 5.3 SDI projection and fallback
 

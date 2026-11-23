@@ -59,7 +59,7 @@ def road_edge_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster
 
 def speed_assist_switched_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   state = "On" if SelfdrivedZP.switched_to else "Off"
-  return NormalPermanentAlert(f"Speed Assist {state}", duration=1.5)
+  return NormalPermanentAlert(f'Accel Assist {state}', duration=1.5)
 
 
 def big_model_ready_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:

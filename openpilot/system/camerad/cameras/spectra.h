@@ -222,6 +222,7 @@ public:
   int invalid_request_count = 0;
   int camera_reset_cycles = 0;  // consecutive full resets that never saw a valid frame again
   bool skip_expected = true;
+  bool pending_recovery_log = false;  // a requeue happened; log the recovery time on the next published frame
 
   CameraBuf buf;
   SpectraMaster *m;

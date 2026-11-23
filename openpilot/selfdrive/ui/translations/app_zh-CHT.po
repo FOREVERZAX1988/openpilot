@@ -4871,12 +4871,12 @@ msgstr "电池电量低"
 
 #: events i18n migration
 msgid "Low Camera Frame Rate"
-msgstr "摄像头刷新率低"
+msgstr "摄像头帧率低"
 
 
 #: events i18n migration
 msgid "Low Camera Frame Rate: Restart Device"
-msgstr "摄像头刷新率低：请重启设备"
+msgstr "摄像头帧率低：请重启设备"
 
 
 #: events i18n migration
@@ -12080,3 +12080,13 @@ msgstr "jetlink 遠端診斷"
 
 msgid "Relax model deadlines for parked, remote diagnosis. Restart modeld after changing. Never use while driving."
 msgstr "停車遠端診斷時放寬模型超時。修改後需重啟 modeld。駕駛時請勿開啟。"
+# events i18n: 由 openpilot/selfdrive/ui/translations/events_i18n.py 维护
+
+#: events i18n migration
+msgid "Carrot: Exit Ahead"
+msgstr "Carrot：前方出口/匝道"
+
+
+#: events i18n migration
+msgid "Follow Navigation Into Target Lane"
+msgstr "请按导航提前驶入目标车道"

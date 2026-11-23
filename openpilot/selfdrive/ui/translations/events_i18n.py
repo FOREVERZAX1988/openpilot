@@ -26,6 +26,10 @@ CONST_MAP: dict[str, str] = {
   "CPU使用率过高": "High CPU Usage",
   "Carrot：信号灯状态变化": "Carrot: Traffic Light State Changed",
   "Carrot：准备停车": "Carrot: Preparing to Stop",
+  "Carrot：前方出口/匝道": "Carrot: Exit Ahead",
+  "请按导航提前驶入目标车道": "Follow Navigation Into Target Lane",
+  "摄像头帧率低": "Low Camera Frame Rate",
+  "摄像头帧率低：请重启设备": "Low Camera Frame Rate: Restart Device",
   "Carrot：识别到绿灯": "Carrot: Green Light Detected",
   "Chill 模式已关闭": "Chill Mode Off",
   "Chill 模式已开启": "Chill Mode On",
@@ -271,6 +275,8 @@ TPL_MAP: dict[str, str] = {
 # 少数中文常量只作为 f-string 片段出现，单独给英文片段，
 # 让 apply_events_i18n.py 能把整条 f-string 逐段还原成英文模板。
 FRAG_MAP: dict[str, str] = {
+  "已丢帧 ": "Frames Dropped: ",
+  "加速辅助 ": "Accel Assist ",
   "速度误差: ": "Speed Error: ",
   " 米/秒": " m/s",
   "请重新安装设备 (俯仰角: ": "Remount Device (Pitch: ",

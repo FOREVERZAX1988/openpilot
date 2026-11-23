@@ -42,8 +42,9 @@ def _set_carrot_vision_active(active: bool) -> None:
     return
   _carrot_vision_active = active
   try:
-    # this fork's Params has no put_bool_nonblocking alias
-    _carrot_vision_params.put_nonblocking(CARROT_VISION_ACTIVE_PARAM, "1" if active else "0")
+    # this fork's Params has no put_bool_nonblocking alias; CarrotVisionActive is
+    # a BOOL param, so it must be written with a real bool (str fails python2cpp)
+    _carrot_vision_params.put_nonblocking(CARROT_VISION_ACTIVE_PARAM, active)
   except Exception:
     cloudlog.exception("[webrtcd] failed updating %s=%s", CARROT_VISION_ACTIVE_PARAM, active)
 
@@ -260,14 +261,23 @@ class StreamSession:
   async def get_answer(self):
     webrtcd_log("info", "Stream session (%s) building answer", self.identifier)
     answer = await self.stream.start()
-    self._bind_frame_sync_senders()
+    try:
+      self._bind_frame_sync_senders()
+    except Exception:
+      cloudlog.exception("[webrtcd] get_answer failed binding frame sync senders")
     webrtcd_log("info", "Stream session (%s) answer ready", self.identifier)
     return answer
 
   def _bind_frame_sync_senders(self) -> None:
     if not self.carrot_state:
       return
-    senders = self.stream.peer_connection.getSenders()
+    peer = self.stream.peer_connection
+    get_senders = getattr(peer, "getSenders", None)  # aiortc backend only
+    if get_senders is None:
+      # libdatachannel backend exposes no sender API; frame sync stays disabled
+      webrtcd_log("info", "frame sync unavailable on WebRTC backend %s", type(peer).__name__)
+      return
+    senders = get_senders()
     for track in self._video_tracks:
       if not getattr(track, "_use_source_frame_timestamps", False):
         continue

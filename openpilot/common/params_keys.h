@@ -856,6 +856,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SpeedCorrect60", {PERSISTENT, INT, "0"}},
     {"SpeedCorrect90", {PERSISTENT, INT, "0"}},
     {"CarrotNavLaneGuideBlockEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},   // let 7706 navLaneGuide block non-guided adjacent lanes
+    {"CarrotNavLaneCoordination", {PERSISTENT | BACKUP, BOOL, "0"}},        // block lane changes away from the guided exit within the convergence window (constraint-only)
     // Carrot speed/turn/navi tuning surface. Defaults mirror cp/fp behavior where applicable;
     // keys are registered so UnifiedParams writes land in the cross-process Params store.
     {"AutoCurveSpeedLowerLimit", {PERSISTENT | BACKUP, INT, "30"}},
