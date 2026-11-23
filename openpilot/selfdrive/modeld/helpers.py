@@ -7,10 +7,31 @@ import tempfile
 import time
 from pathlib import Path
 
+import numpy as np
+
 from openpilot.common.hardware import AGNOS
 from openpilot.common.hardware.usb import CHESTNUT_USB_PRODUCT, USB_DEVICES_PATH, is_chestnut_usb_id
 
 MODELS_DIR = Path(__file__).resolve().parent / 'models'
+
+# cp's generic_model_runtime navigation contract (selfdrive/modeld/generic_model_runtime.py:54-63),
+# applied to a {name: (shape, dtype)} input map. Models either carry both nav inputs in the
+# exact shapes cp trained, or neither; anything else refuses to load.
+def validate_navigation_contract(input_shapes: dict) -> None:
+  nav = set(input_shapes) & {'nav_map', 'navigation'}
+  if not nav:
+    return
+  if nav != {'nav_map', 'navigation'}:
+    raise ValueError('unsupported navigation input contract')
+  # Original nav uses byte maps/flat commands; RL nav exports float maps and
+  # batched commands. Both take 0..255 pixels (normalization is in the model).
+  nav_map_shape, nav_map_dtype = input_shapes['nav_map']
+  navigation_shape, navigation_dtype = input_shapes['navigation']
+  contract = (np.dtype(nav_map_dtype), tuple(navigation_shape))
+  if (tuple(nav_map_shape) != (1, 1, 256, 256) or np.dtype(navigation_dtype) != np.dtype(np.float32)
+      or contract not in ((np.dtype(np.uint8), (47,)), (np.dtype(np.float32), (1, 47)))):
+    raise ValueError('unsupported navigation input contract')
+
 
 # Re-added for compile_modeld.py (this fork's compile-time pickling path, kept
 # because jetlink_adapter/tests/test_queues.py imports it). The tn upstream

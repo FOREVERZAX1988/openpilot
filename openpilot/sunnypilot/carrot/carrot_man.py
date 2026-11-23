@@ -661,6 +661,11 @@ class CarrotManager:
     self._navi_points_active = False
     self._navd_active = False
     self._active_carrot_last = 0
+    # navRoute identity for the modeld nav_map channel (ported from carrot
+    # carrot_man.py: nav_route_id = time.monotonic_ns(), refreshed when the
+    # route source/geometry is replaced, reused across route heartbeats).
+    self._nav_route_id = 0
+    self._nav_route_sig: tuple | None = None
 
     # Broadcast state (P1-1)
     self._broadcast_ip: str | None = None
@@ -3099,6 +3104,14 @@ class CarrotManager:
     for i, coord in enumerate(route_coords):
       nav_route_coords[i].latitude = coord["latitude"]
       nav_route_coords[i].longitude = coord["longitude"]
+    # carrotRouteId lets modeld's nav_map input gate on route identity and map
+    # freshness (see selfdrive/navigation/map_client.py); 0 means "no id" and
+    # keeps the nav_map channel closed.
+    sig = tuple((c["latitude"], c["longitude"]) for c in route_coords)
+    if sig != self._nav_route_sig:
+      self._nav_route_sig = sig
+      self._nav_route_id = time.monotonic_ns()
+    nav_route.carrotRouteId = self._nav_route_id
     self.pm.send('navRoute', msg)
 
   # ---- kisa app (P3-2) --------------------------------------------------- #

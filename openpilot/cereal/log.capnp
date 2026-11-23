@@ -2561,6 +2561,10 @@ struct NavInstruction {
 
 struct NavRoute {
   coordinates @0 :List(Coordinate);
+  # sp port of cp's stable route identity: lets consumers tie a rendered map
+  # frame to the exact route it was drawn for. Producers that do not set it
+  # leave 0, which keeps cp's freshness gate closed (no map input is attached).
+  carrotRouteId @1 :UInt64;  # stable across route heartbeats; changes on source/geometry replacement
 
   struct Coordinate {
     latitude @0 :Float32;

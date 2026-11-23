@@ -46,6 +46,7 @@ from openpilot.common.transformations.camera import DEVICE_CAMERAS
 from openpilot.common.transformations.model import get_warp_matrix
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, smooth_value
+from openpilot.selfdrive.navigation.map_client import MapInput
 from openpilot.sunnypilot import jetlink_adapter
 
 from openpilot.sunnypilot.modeld_v2.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState, get_curvature_from_output
@@ -182,6 +183,22 @@ class ModelState(ModelStateBase):
     for key in ('traffic_convention', 'lateral_control_params', 'action_t'):
       if key in self.numpy_inputs and key in inputs:
         self.numpy_inputs[key][:] = inputs[key]
+
+    # MapInput omits expired/missing route inputs. Clear every frame, including
+    # the first frame after a join, so a previous turn/map never persists
+    # (cp jetlink inputs.py semantics).
+    for name in ('nav_map', 'navigation'):
+      if name not in self.numpy_inputs:
+        continue
+      self.numpy_inputs[name].fill(0)
+      if name in inputs:
+        value = np.asarray(inputs[name])
+        accepted = ((256, 256), (1, 1, 256, 256)) if name == 'nav_map' else ((47,), (1, 47))
+        if value.shape not in accepted or not np.isfinite(value).all():
+          raise ValueError(f'Invalid modeld {name} input')
+        if name == 'nav_map' and (np.any(value < 0) or np.any(value > 255)):
+          raise ValueError('modeld map pixels must remain in 0..255')
+        self.numpy_inputs[name][...] = value
 
     if self.adapter.is_native:
       for i, key in enumerate(self._vision_input_names):
@@ -401,7 +418,8 @@ def main(demo=False):
   pm = PubMaster(pub_socks)
   sm = SubMaster(["deviceState", "carState", "narrowRoadCameraState", "extrinsicsCalibration",
                   "driverMonitoringState", "carControl", "carControlSP", "controlsState",
-                  "lateralDelay", "carStateSP", "carrotManSP", "carrotNaviSP", "radarState"])
+                  "lateralDelay", "carStateSP", "carrotManSP", "carrotNaviSP", "radarState",
+                  "navInstructionCarrotSP", "navRoute"])
 
   publish_state = PublishState()
   chestnut_state = None
@@ -441,6 +459,7 @@ def main(demo=False):
   meta_main = FrameMeta()
   meta_extra = FrameMeta()
   settings = ModelSettings()
+  nav_input = MapInput()
 
 
   if demo:
@@ -561,6 +580,8 @@ def main(demo=False):
 
     if 'lateral_control_params' in model.numpy_inputs:
       inputs['lateral_control_params'] = np.array([v_ego, lat_delay], dtype=np.float32)
+
+    inputs.update(nav_input.update(model, sm, v_ego))
 
     model.frame_drop_ratio = frame_drop_ratio
     loop_timing.mark('run')
