@@ -116,7 +116,7 @@ class SpeedLimitSettingsLayout(Widget):
       description="",
       buttons=SPEED_LIMIT_OFFSET_TYPE_BUTTONS,
       param="SpeedLimitOffsetType",
-      button_width=450,
+      button_width=280,  # 4 options; match the zp toggle width (450 pushed "Tiered" off-screen)
     )
 
     self._speed_limit_value_offset = option_item_sp(
@@ -133,7 +133,7 @@ class SpeedLimitSettingsLayout(Widget):
       description=lambda: tr("Ask before taking a new speed limit. Adds to the low-speed confirmation, never replaces it."),
       buttons=SPEED_LIMIT_CONFIRM_BUTTONS,
       param="SpeedLimitConfirmOnChange",
-      button_width=450,
+      button_width=280,  # 4 options; match the zp toggle width (450 pushed "Both" off-screen)
     )
 
     self._tiered_offset_button = simple_button_item_sp(
