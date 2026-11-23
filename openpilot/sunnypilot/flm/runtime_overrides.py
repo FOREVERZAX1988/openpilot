@@ -78,6 +78,58 @@ FLM_BUNDLE_MAX_AGE_NS = 30_000_000_000  # 30s
 FLM_BASELINE_REVISION = "stock-v1"
 FLM_PHYSICAL_MODEL_REVISION = "stock-v1"
 
+# F1 control-surface effect envelope, carried through admission as a bundle
+# pass-through. A bundle without "controlEffects" admits exactly as before.
+# StarPilot evidence for each limit (mirrors latcontrol_vehicle_tunes
+# .FLM_CONTROL_EFFECT_LIMITS):
+# - ffDelta |x| <= 0.03: StarPilot torque_stages.py:79 (|delta_ff| > 0.03 -> rejected)
+# - deadbandDeg [0, 0.01] deg: StarPilot torque_stages.py:107 (0 <= delta <= 0.01)
+# - angleAssistMaxTorque [0, 0.8]: StarPilot torque_surface.py:439
+#   (_GM_BOUNDS low_speed_angle_assist_max_torque)
+FLM_CONTROL_EFFECT_LIMITS = {
+  "ffDelta": (-0.03, 0.03),
+  "deadbandDeg": (0.0, 0.01),
+  "angleAssistMaxTorque": (0.0, 0.8),
+}
+
+
+def _validate_control_effects(value) -> dict:
+  """Fail-closed admission of the optional controlEffects payload."""
+  if not isinstance(value, dict):
+    return {}
+  out = {}
+  for key, (low, high) in FLM_CONTROL_EFFECT_LIMITS.items():
+    entry = value.get(key)
+    if not _finite(entry):
+      continue
+    entry = float(entry)
+    if not low <= entry <= high:
+      continue
+    out[key] = entry
+  return out
+
+
+def _slew_control_effects(current: dict, target: dict, dt_s: float) -> dict:
+  """Linear slew toward the target effects at the friction-coordinate rate.
+
+  The rate is FLM_DEFAULT_SLEW_PER_S (this module, :67 evidence): the same
+  per-second rate the friction coordinates slew at, so an effect can never
+  reach the controller faster than the curve it belongs to.
+  """
+  step = FLM_DEFAULT_SLEW_PER_S * min(max(dt_s, 0.0), 1.0)
+  out = {}
+  for key, (low, high) in FLM_CONTROL_EFFECT_LIMITS.items():
+    goal = float(target.get(key, 0.0)) if isinstance(target, dict) else 0.0
+    goal = min(max(goal, low), high)
+    value = float(current.get(key, 0.0)) if isinstance(current, dict) else 0.0
+    if abs(goal - value) <= step:
+      value = goal
+    else:
+      value = value + math.copysign(step, goal - value)
+    if abs(value) > 1e-9:
+      out[key] = value
+  return out
+
 
 def identity_for_fingerprint(fingerprint: int | str | None) -> str:
   """Stable identity digest for a car fingerprint.
@@ -274,6 +326,11 @@ class FlmOverrideOwner:
     self._active: Profile | None = None
     self._applied_bundle: dict = {}
     self._last_seen_ns: int | None = None
+    # F1 control-surface effects: admitted with the bundle, slewed at the same
+    # rate as the friction coordinates, published alongside the friction curve.
+    self._effects_target: dict = {}
+    self._applied_effects: dict = {}
+    self._last_tick_ns: int | None = None
 
   @property
   def applied_bundle(self) -> dict:
@@ -293,11 +350,15 @@ class FlmOverrideOwner:
                                  now_ns=now_ns, sequence=self._sequence + 1,
                                  slew_per_s=self.slew_per_s)
     if profile is None:
+      # Fail-closed: a rejected bundle drops its control effects too, so the
+      # applied effects slew back to zero instead of lingering.
+      self._effects_target = {}
       return False
     self._sequence += 1
     self._pending = profile
     self._active = None
     self._last_seen_ns = now_ns
+    self._effects_target = _validate_control_effects(bundle.get("controlEffects"))
     return True
 
   def withdraw(self) -> None:
@@ -305,6 +366,8 @@ class FlmOverrideOwner:
     self._pending = None
     self._active = None
     self._last_seen_ns = None
+    self._effects_target = {}
+    self._applied_effects = {}
 
   def tick(self, *, now_ns: int, enabled: bool, healthy: bool = True,
            manual: bool = False) -> dict:
@@ -351,6 +414,8 @@ class FlmOverrideOwner:
 
     if not self.owner.current_admission_valid:
       self._applied_bundle = {}
+      # Fail-closed: admission lost means the effects leave with the curve.
+      self._applied_effects = {}
       return {}
 
     rebuilt = Profile(
@@ -368,6 +433,17 @@ class FlmOverrideOwner:
       policy="passive_stage_ridge_v1",
     )
     bundle = profile_to_bundle(rebuilt, self.baselines)
+    if bundle:
+      # F1: slew the control effects toward their admitted targets at the same
+      # per-second rate as the friction coordinates, then publish them with the
+      # curve. An empty target (no effects in the bundle) slews to zero.
+      dt_s = 0.0 if self._last_tick_ns is None or now_ns < self._last_tick_ns else (now_ns - self._last_tick_ns) / 1e9
+      self._last_tick_ns = now_ns
+      self._applied_effects = _slew_control_effects(self._applied_effects, self._effects_target, dt_s)
+      if self._applied_effects:
+        bundle["controlEffects"] = dict(self._applied_effects)
+    else:
+      self._applied_effects = {}
     self._applied_bundle = bundle
     return bundle
 

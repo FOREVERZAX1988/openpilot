@@ -12,8 +12,48 @@ the sunnypilot settings pages express grouping (see steering.py, models.py).
 """
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import (
+  ButtonActionSP, ListItemSP, LineSeparatorSP,
   option_item_sp, section_heading_sp, toggle_item_sp,
 )
+
+_FLM_STATE_LABELS = {
+  'idle': '空闲',
+  'collecting': '采集中',
+  'fitting': '拟合中',
+  'accepted': '已应用',
+  'rolled_back': '已回滚',
+  'error': '出错',
+}
+
+
+def _flm_status_text() -> str:
+  """One-line daemon status for the FLM analysis row (see flmanalysisd)."""
+  try:
+    import json
+    from openpilot.common.params import Params
+    raw = Params().get('FLMAnalysisStatus', encoding='utf-8') or ''
+    if not raw:
+      return tr('从未运行')
+    d = json.loads(raw)
+    state = str(d.get('state', 'idle'))
+    detail = str(d.get('detail', '')).strip()
+    label = _FLM_STATE_LABELS.get(state, state)
+    return f'{label}: {detail}' if detail else label
+  except Exception:
+    return tr('从未运行')
+
+
+def _flm_request_analysis() -> None:
+  """Ask the flmanalysisd daemon to run one background analysis pass.
+
+  The UI never runs the analyzer itself: the daemon owns offroad gating and
+  route selection, this only raises the request flag it watches.
+  """
+  try:
+    from openpilot.common.params import Params
+    Params().put_bool('FLMAnalysisRequested', True)
+  except Exception:
+    pass
 
 def build_start_items():
   return [
@@ -206,6 +246,26 @@ def build_speed_items():
 def build_tuning_items():
   return [
 
+    section_heading_sp(tr('FLM 转矩学习')),
+    toggle_item_sp(title=tr('FLM 运行时覆盖'),
+                   description=tr('将 FLM 分析得到的摩擦曲线/车辆旋钮应用到转矩控制器'),
+                   param='FlmRuntimeOverridesEnabled'),
+    ListItemSP(
+      title=lambda: tr('运行 FLM 后台分析'),
+      description=lambda: tr('停车时分析最近的行驶路线，自动整定转矩摩擦特性（要求 offroad 且车道居中关闭）'),
+      description_visible=True,
+      action_item=ButtonActionSP(
+        text=lambda: tr('RUN'),
+        enabled=lambda: True,
+      ),
+      callback=_flm_request_analysis,
+    ),
+    ListItemSP(
+      title=lambda: tr('分析状态'),
+      description=_flm_status_text,
+      description_visible=True,
+    ),
+    LineSeparatorSP(40),
 
     section_heading_sp(tr('Blind Spot')),
     toggle_item_sp(title=tr('Disable Blind Spot'), param='DisableBlindSpot'),

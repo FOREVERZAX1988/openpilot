@@ -2774,6 +2774,18 @@ def analyze_routes(route_names: list[str], footage_paths: list[str], feedback: d
     "addTheseParametersAndStartHere": _add_parameters_start_here(capabilities, suggestions, path_decision["primaryPathKey"]),
   }
 
+  # F4: sunnypilot.flm event_* chain second evaluation (bounded ridge + heldout
+  # gates) over this analysis's own eligible samples. Advisory-only: the verdict
+  # lands in the report and the status JSON and gates nothing. Guarded so the
+  # crosscheck can never fail the analysis itself.
+  cross_check: dict[str, Any] = {}
+  try:
+    from openpilot.selfdrive.controls.lib.flm_crosscheck import crosscheck_samples
+    cross_check = crosscheck_samples(all_samples, car_fingerprint)
+  except Exception as cross_error:
+    cross_check = {"status": "unavailable", "reason": f"crosscheck_error:{cross_error}"}
+  report["crossCheck"] = cross_check
+
   _require_flm_offroad(params)
   paths = ensure_flm_workspace()
   html = _render_report_html(report)
@@ -2796,6 +2808,7 @@ def analyze_routes(route_names: list[str], footage_paths: list[str], feedback: d
     "total": len(sources),
     "skippedSegments": skipped_segments,
     "reportId": report_id,
+    "crossCheck": cross_check,
   })
   return report
 
@@ -3190,6 +3203,12 @@ def _merge_flm_override_state(base: dict[str, Any], delta: dict[str, Any]) -> di
     "vehicleKnobs": {
       **base.get("vehicleKnobs", {}),
       **delta.get("vehicleKnobs", {}),
+    },
+    # F1: control-surface effects merge per-field; normalize_flm_overrides
+    # re-admits the merged payload against its envelope afterwards.
+    "controlEffects": {
+      **base.get("controlEffects", {}),
+      **delta.get("controlEffects", {}),
     },
   }
   return normalize_flm_overrides(merged)

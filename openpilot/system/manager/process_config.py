@@ -378,6 +378,14 @@ procs = [
   PythonProcess("pandad", "openpilot.selfdrive.pandad.pandad", always_run),
   PythonProcess("paramsd", "openpilot.selfdrive.locationd.paramsd", only_onroad),
   PythonProcess("lagd", "openpilot.selfdrive.locationd.lagd", only_onroad),
+  # FLM analysis daemon (F3): resident worker that watches the
+  # FLMAnalysisRequested param and re-runs flm_workspace analysis on a slow
+  # offroad cadence. Registered like StarPilot's steerlearnerd
+  # (StarPilot process_config.py:217, restart_on_exit=True); the sp equivalent
+  # is restart_if_crash=True (manager restarts a dead proc on its next loop,
+  # process.py:284). The loop itself is exception-guarded so a bad analysis
+  # cycle never kills the daemon or the manager.
+  PythonProcess("flmanalysisd", "openpilot.selfdrive.controls.lib.flmanalysisd", always_run, restart_if_crash=True),
   PythonProcess("ubloxd", "openpilot.system.ubloxd.ubloxd", ublox, enabled=COMMA_HARDWARE),
   PythonProcess("pigeond", "openpilot.system.ubloxd.pigeond", ublox, enabled=COMMA_HARDWARE),
   PythonProcess("plannerd", "openpilot.selfdrive.controls.plannerd", not_long_maneuver),

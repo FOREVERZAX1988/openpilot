@@ -50,6 +50,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"FLMSubmittedTune", {PERSISTENT, JSON}},  // Galaxy tune submission handoff payload
     {"FLMTrialApplied", {PERSISTENT | BACKUP, BOOL, "0"}},  // FLM trial profile currently applied
     {"FLMTrialBaseline", {PERSISTENT | BACKUP, JSON}},  // FLM rollback baseline snapshot
+    {"FLMAnalysisRequested", {PERSISTENT | BACKUP, BOOL, "0"}},  // F2 trigger: UI sets true; flmanalysisd consumes it (auto-discovers the latest route) and clears it back to false
+    {"FLMAnalysisStatus", {PERSISTENT | BACKUP, STRING}},  // F2 status: flmanalysisd writes a short JSON {"state": "idle|collecting|fitting|accepted|rolled_back|error", "detail": "...", "ts": <unix>} on every state change; UI only reads this
     {"ForceAutoTune", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ForceAutoTuneOff", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"GitBranch", {PERSISTENT, STRING}},
