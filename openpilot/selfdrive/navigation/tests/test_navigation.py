@@ -17,7 +17,7 @@ import requests
 
 import openpilot.cereal.messaging as messaging
 from openpilot.common.prefix import OpenpilotPrefix
-from openpilot.selfdrive.navigation.mapsd import MapsD
+from openpilot.selfdrive.navigation.mapsd import ARCHIVE_MAX_AGE, MapsD
 from openpilot.selfdrive.navigation.navd import REROUTE_COUNTER_MIN, RouteEngine
 from openpilot.selfdrive.navigation.pmtiles import PMTiles, decode_directory, tile_id
 from openpilot.selfdrive.navigation.renderer import MAJOR, MEDIUM, MINOR, SIZE, STREET, TRACK, MapRenderer, draw_segments, mercator, project, stroke_widths
@@ -160,6 +160,9 @@ class TestEndToEnd(TileServerCase):
     super().setUp()
     demand_params = MagicMock()
     demand_params.get_bool.return_value = True  # UsbGpuActive: the map is wanted
+    # keep mapsd on the local-server PMTiles path: an auto-magic Params.get
+    # would hand mapsd a truthy MapboxPublicKey and send it to real Mapbox
+    demand_params.get.return_value = None
     self.enterContext(patch('openpilot.selfdrive.navigation.mapsd.Params', MagicMock(return_value=demand_params)))
 
   def test_navd_to_map_frames(self):
@@ -209,20 +212,21 @@ class TestEndToEnd(TileServerCase):
       self.assertTrue(all('Range' in headers for headers in self.server.requests))
       self.assertTrue(all(headers['If-Match'] == self.server.etag for headers in self.server.requests[1:]))
       self.assertTrue(all(b'secret' not in p.read_bytes() for p in self.cache.iterdir()))
-      # The archive is replaced on the server and the cache evicted: the next fetch fails, the map goes black,
-      # and after a delay a fresh reader starts over on the new version.
+      # The archive is replaced on the server and the cache evicted: the on-demand
+      # renderer keeps serving its in-memory tile cache (no request, no failure —
+      # the old prefetch flow used to fail closed here), and a fresh reader only
+      # starts over on the new version once the archive ages out.
       self.server.etag = '"new-version"'
       for cached in self.cache.iterdir():
         cached.unlink()
       values.pop('NavDestination')
       frame()
       values['NavDestination'] = dict(destination)
-      image, timestamp = frame()
-      self.assertFalse(image.any() or timestamp)
       fetched = len(self.server.requests)
-      self.assertFalse(frame()[1])  # not retried yet
-      self.assertEqual(len(self.server.requests), fetched)
-      mapsd.retry_at = 0
+      self.assertEqual(frame()[0][128, 128], 128)  # still rendered from the in-memory cache
+      self.assertEqual(len(self.server.requests), fetched)  # without touching the replaced archive
+      mapsd.archive_created = time.monotonic() - 2 * ARCHIVE_MAX_AGE
+      mapsd.demand_checked = 0.  # age the archive out past ARCHIVE_MAX_AGE
       self.assertEqual(frame()[0][128, 128], 128)
       self.assertEqual((self.cache / 'version').read_text().split()[0], '"new-version"')
 
@@ -280,7 +284,11 @@ class TestRouteEngine(unittest.TestCase):
     self.sm.recv_time = dict.fromkeys(self.sm.valid, time.monotonic())
     self.sm.__getitem__.return_value = SimpleNamespace(
       hasFix=True, latitude=0, longitude=0, bearingDeg=90, speed=0,
-      gearShifter='drive', standstill=False, vEgo=5.0, activeCarrot=0)
+      gearShifter='drive', standstill=False, vEgo=5.0, activeCarrot=0,
+      # carrotManSP position provenance (R2): absent fix provenance keeps the
+      # engine on the plain device-GPS source, like the pre-R2 stubs
+      positionSource='', positionHeadingValid=False, positionFixMonoTime=0,
+      positionMonoTime=0, xPosLat=0.0, xPosLon=0.0, xPosAngle=0.0, xPosSpeed=0.0)
     self.engine = route_engine(self.sm, self.pm, self.values)
     self.engine.refresh_token()  # picks up MapboxPublicKey from the params mock
     self.engine.last_position, self.engine.last_bearing = Coordinate(0., 0.), 90
@@ -305,7 +313,7 @@ class TestRouteEngine(unittest.TestCase):
   def test_request_and_instruction(self):
     get = self.load_route()
     url = get.call_args.args[0]
-    self.assertTrue(url.startswith('https://api.mapbox.com/directions/v5/mapbox/driving-traffic/0,0;0.002,0'), url)
+    self.assertTrue(url.startswith('https://api.mapbox.com/directions/v5/mapbox/driving-traffic/0.0,0.0;0.002,0.0'), url)
     options = get.call_args.kwargs['params']
     self.assertEqual((options['access_token'], options['bearings'], options['language']), ('test-token', '90,90;', 'en'))
     self.assertEqual(len(self.last_message('navRoute').navRoute.coordinates), 5)
@@ -378,6 +386,8 @@ class TestRouteEngine(unittest.TestCase):
     with patch('requests.get', return_value=self.response) as get:
       self.engine.gps_ok = True
       self.engine.recompute_route()
+      if self.engine.pending is not None:
+        self.engine.pending.result()  # the executor runs the patched request before the assertion
       self.engine.reroute_counter = REROUTE_COUNTER_MIN  # still off route, but an immediate second recompute is held back
       self.engine.recompute_route()
       self.assertEqual(get.call_count, 1)
@@ -406,7 +416,9 @@ class TestRouteEngine(unittest.TestCase):
     fixes = {'gpsLocation': SimpleNamespace(hasFix=True, latitude=1, longitude=1, bearingDeg=180, speed=0),
              'gpsLocationExternal': SimpleNamespace(hasFix=True, latitude=2, longitude=2, bearingDeg=0, speed=0),
              'carState': SimpleNamespace(gearShifter='drive', standstill=False, vEgo=5.0),
-             'carrotManSP': SimpleNamespace(activeCarrot=0)}
+             'carrotManSP': SimpleNamespace(activeCarrot=0, positionSource='', positionHeadingValid=False,
+                                           positionFixMonoTime=0, positionMonoTime=0,
+                                           xPosLat=0.0, xPosLon=0.0, xPosAngle=0.0, xPosSpeed=0.0)}
     self.sm.__getitem__.side_effect = fixes.get
     self.sm.logMonoTime = {'gpsLocation': 2, 'gpsLocationExternal': 1}  # replayed logs are judged by receipt time
     with patch('requests.get', return_value=self.response):

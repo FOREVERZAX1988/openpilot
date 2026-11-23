@@ -219,11 +219,13 @@ class TestSamplingGatingGaps(unittest.TestCase):
     # lead visible through the settle period
     self._frames(learning, 60, tracking_lead=True)
     self.assertFalse(learning.enable_training)
-    # lead dropped: sampling must stay silent for CSC_LEAD_CLEAR_TIME (1 s)
-    self._frames(learning, 60)
+    # lead dropped: sampling must stay silent while CSC_LEAD_CLEAR_TIME (1 s)
+    # is still elapsing (19 frames at 20 Hz keeps the clear timer below 1 s)
+    self._frames(learning, 19)
     self.assertFalse(learning.enable_training)
-    # 1 s of clear frames (20 at 20 Hz) on top of the settled timer
-    self._frames(learning, 21)
+    # clear frames past the cooldown: eligibility resumes and the settle
+    # timer (2 s) accrues over the remaining 41 frames
+    self._frames(learning, 41)
     self.assertTrue(learning.enable_training)
 
   def test_lead_reappear_resets_cooldown(self):
@@ -238,11 +240,14 @@ class TestSamplingGatingGaps(unittest.TestCase):
     learning = CurvatureLearning(dt=0.05)
     # openpilot owns the speed: the quiet timer is pinned
     self._frames(learning, 100, manual_speed_control=False, long_control_active=True)
-    self._frames(learning, 100)  # driver takes over, quiet timer 5 s
     self.assertFalse(learning.enable_training)
-    self._frames(learning, 81)   # 4.05 s < CSC_CONTROL_QUIET_TIME
+    # driver takes over: quiet timer (5 s) decays and keeps sampling silent;
+    # 99 frames at 20 Hz leaves 0.05 s on the timer
+    self._frames(learning, 99)
     self.assertFalse(learning.enable_training)
-    self._frames(learning, 20)   # past 5 s + settle already elapsed
+    # past the quiet window (one extra decay frame absorbs the float drift of
+    # the 5 s timer) the settle timer (2 s) accrues over the eligible frames
+    self._frames(learning, 45)
     self.assertTrue(learning.enable_training)
 
   def test_pure_manual_driving_has_no_silence(self):
@@ -298,6 +303,7 @@ class TestAsyncPersistenceContract(unittest.TestCase):
 
   def test_sync_hook_saved_immediately(self):
     learning = CurvatureLearning(dt=0.05)
+    learning.curvature_data["0.010"] = {"average": 2.5, "count": 1}
     learning.data_dirty = True
     stored = {}
     learning.put_fn = lambda data: stored.update(data) or None
