@@ -11,10 +11,13 @@ openpilot-architecture-engineer adjudication for this fork:
   inside the cabin" semantics cannot be reproduced here. This daemon never
   infers occupancy. It watches the parked state and records events; the
   detection itself is expected to run off-device.
-- The notification layer is not ported: StarPilot's notifications.py and
-  web_push.py are bound to the Galaxy phone push ecosystem, which this fork
-  does not have. The state is published on cereal instead, so any consumer
-  (carrot PWA, web UI, log) can read the same fact.
+- The notification layer is ported with the same narrowed scope: events
+  ride the existing carrot web push channel (Params-backed subscriptions
+  and VAPID keys, see sunnypilot/sentry/notifications.py), with Discord
+  and ntfy as optional params. Motion kinds cannot fire on this device
+  today (no offroad accelerometer, no cabin camera), so only the
+  low_voltage transition is expected to notify in practice; the motion
+  wiring exists for a future qualified motion source.
 - The motion detector (policy.P1) is in place but is not fed by an
   accelerometer here, so it stays in the sensor_unavailable path until a
   qualified input exists.
@@ -28,6 +31,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.common.messaging import SubMaster
 from openpilot.common.params import Params
 from openpilot.selfdrive.selfdrived.alertmanager import set_offroad_alert
+from openpilot.sunnypilot.sentry.notifications import SentryNotifier
 from openpilot.sunnypilot.sentry.policy import Inputs, SentryPolicy, Settings
 
 
@@ -56,6 +60,10 @@ class SentryDaemon:
     self.policy = SentryPolicy(Settings(sensitivity=DEFAULT_SENSITIVITY))
     self.last_state_ns: int | None = None
     self.last_decision = None
+    # Notification delivery (carrot web push + optional webhooks). Sends
+    # happen in a background worker; a send failure never touches the
+    # decision loop.
+    self.notifier = SentryNotifier(self.params)
 
   def _device_fresh(self, now: float) -> bool:
     if self.last_state_ns is None:
@@ -107,6 +115,8 @@ class SentryDaemon:
       cloudlog.info("sentry state=%s event=%s remaining=%s",
                     decision.state, decision.event, decision.seconds_remaining)
       self.last_decision = decision
+    if self.notifier is not None:
+      self.notifier.update(now, decision)
 
     # The local screen notification mirrors the state. The alert text is
     # static so the UI never has to parse a message.

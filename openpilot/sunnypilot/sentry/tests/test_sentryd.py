@@ -145,6 +145,9 @@ def make_daemon(*, enabled=True, started=False, ignition=False, voltage=12500,
   daemon.policy = sentryd.SentryPolicy()
   daemon.last_state_ns = None
   daemon.last_decision = None
+  # The notification worker is covered by test_notifications.py; these
+  # daemon tests assert only on the decision loop.
+  daemon.notifier = None
   return daemon
 
 
