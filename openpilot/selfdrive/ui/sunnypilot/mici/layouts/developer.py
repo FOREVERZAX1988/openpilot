@@ -11,7 +11,9 @@ from openpilot.common.hardware import PC
 from openpilot.common.hardware.hw import Paths
 from openpilot.selfdrive.ui.mici.layouts.settings.developer import DeveloperLayoutMici
 from openpilot.selfdrive.ui.mici.widgets.button import BigParamControl
+from openpilot.selfdrive.ui.mici.widgets.dialog import SettingDescriptionDialog
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr
 
 PREBUILT_PATH = os.path.join(Paths.comma_home(), "prebuilt") if PC else "/data/openpilot/prebuilt"
@@ -61,6 +63,18 @@ class DeveloperLayoutMiciSP(DeveloperLayoutMici):
       self._quickboot_toggle.set_checked(prebuilt_file)
 
     self._update_advanced_visibility()
+    self._update_agent_description()
+
+  def _update_agent_description(self):
+    # append the agent web address to the AI agent toggle's long-press description,
+    # mirroring Big GUI layouts/settings/developer.py _agent_description
+    description = tr("Built-in AI agent, offroad only. Browser access on port 5095; the password is shown below.")
+    address = ui_state.params.get("NetworkAddress")
+    if address:
+      description += "\n" + f"http://{address}:5095"
+    self._agent_toggle.set_long_press_callback(
+      lambda: gui_app.push_widget(SettingDescriptionDialog(tr("AI agent"), description,
+                                                           gui_app.texture("icons_mici/settings/developer/ssh.png", 82, 82))))
 
   @staticmethod
   def _on_quickboot_toggled(state: bool):
@@ -81,3 +95,4 @@ class DeveloperLayoutMiciSP(DeveloperLayoutMici):
   def _update_toggles(self):
     super()._update_toggles()
     self._update_advanced_visibility()
+    self._update_agent_description()

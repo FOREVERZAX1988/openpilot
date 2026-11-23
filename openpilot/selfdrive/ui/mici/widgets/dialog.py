@@ -104,7 +104,8 @@ class BigInputDialog(BigDialogBase):
                minimum_length: int = 1,
                confirm_callback: Callable[[str], None] | None = None,
                auto_return_to_letters: str = "",
-               text_validator: Callable[[str], bool] | None = None):
+               text_validator: Callable[[str], bool] | None = None,
+               mask: bool = False):
     super().__init__()
     self._hint_label = UnifiedLabel(hint, font_size=35, text_color=rl.Color(255, 255, 255, int(255 * 0.35)),
                                     font_weight=FontWeight.MEDIUM)
@@ -112,6 +113,10 @@ class BigInputDialog(BigDialogBase):
     self._keyboard.set_text(default_text)
     self._keyboard.set_enabled(lambda: self.enabled and not self.is_dismissing)  # for nav stack + NavWidget
     self._text_valid = lambda text: len(text) >= minimum_length and (text_validator is None or text_validator(text))
+
+    # password mode: echo area shows dots; tap the echo area to reveal
+    self._mask = mask
+    self._show_text = False
 
     self._backspace_held_time: float | None = None
 
@@ -156,13 +161,18 @@ class BigInputDialog(BigDialogBase):
     # draw current text so far below everything. text floats left but always stays in view
     text = self._keyboard.text()
     candidate_char = self._keyboard.get_candidate_character()
-    text_size = measure_text_cached(gui_app.font(FontWeight.ROMAN), text + candidate_char or self._hint_label.text, self.TEXT_INPUT_SIZE)
+    # in mask mode the echo shows dots until the user taps the echo area to reveal
+    display_text = text if (not self._mask or self._show_text) else "•" * len(text)
+    display_candidate = candidate_char if (not self._mask or self._show_text) else ("•" if candidate_char else "")
+    text_size = measure_text_cached(gui_app.font(FontWeight.ROMAN), display_text + display_candidate or self._hint_label.text, self.TEXT_INPUT_SIZE)
 
     bg_block_margin = 5
     text_x = PADDING / 2 + self._enter_img.width + PADDING
     text_field_rect = rl.Rectangle(text_x, self._rect.y + PADDING - bg_block_margin,
                                    self._rect.width - text_x * 2,
                                    text_size.y)
+    # tap target for the show/hide password toggle
+    self._echo_rect = text_field_rect
 
     # draw text input
     # push text left with a gradient on left side if too long
@@ -170,12 +180,12 @@ class BigInputDialog(BigDialogBase):
       text_x -= text_size.x - text_field_rect.width
 
     rl.begin_scissor_mode(int(text_field_rect.x), int(text_field_rect.y), int(text_field_rect.width), int(text_field_rect.height))
-    rl.draw_text_ex(gui_app.font(FontWeight.ROMAN), text, rl.Vector2(text_x, text_field_rect.y), self.TEXT_INPUT_SIZE, 0, rl.WHITE)
+    rl.draw_text_ex(gui_app.font(FontWeight.ROMAN), display_text, rl.Vector2(text_x, text_field_rect.y), self.TEXT_INPUT_SIZE, 0, rl.WHITE)
 
     # draw grayed out character user is hovering over
-    if candidate_char:
-      candidate_char_size = measure_text_cached(gui_app.font(FontWeight.ROMAN), candidate_char, self.TEXT_INPUT_SIZE)
-      rl.draw_text_ex(gui_app.font(FontWeight.ROMAN), candidate_char,
+    if display_candidate:
+      candidate_char_size = measure_text_cached(gui_app.font(FontWeight.ROMAN), display_candidate, self.TEXT_INPUT_SIZE)
+      rl.draw_text_ex(gui_app.font(FontWeight.ROMAN), display_candidate,
                       rl.Vector2(min(text_x + text_size.x, text_field_rect.x + text_field_rect.width) - candidate_char_size.x, text_field_rect.y),
                       self.TEXT_INPUT_SIZE, 0, rl.Color(255, 255, 255, 128))
 
@@ -236,6 +246,11 @@ class BigInputDialog(BigDialogBase):
     #  or turn into icon widgets :eyes_open:
 
     if self.is_dismissing:
+      return
+
+    # tap the echo area to show/hide a masked password
+    if self._mask and rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), self._echo_rect):
+      self._show_text = not self._show_text
       return
 
     # handle backspace icon click

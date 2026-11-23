@@ -8882,3 +8882,33 @@ msgstr "运行 FLM 后台分析"
 
 msgid "driving"
 msgstr "驾驶"
+
+msgid "hidden network"
+msgstr "隐藏网络"
+
+msgid "Connect to a Wi-Fi network that does not broadcast its name."
+msgstr "连接到不广播名称的 Wi-Fi 网络。"
+
+msgid "enter SSID..."
+msgstr "输入 SSID..."
+
+msgid "temperature"
+msgstr "温度"
+
+msgid "Device is pointed {:.1f}° {} and {:.1f}° {}."
+msgstr "设备朝向：俯仰 {:.1f}° {}，偏航 {:.1f}° {}。"
+
+msgid "Steering lag calibration is {}% complete."
+msgstr "转向延迟校准已完成 {}%。"
+
+msgid "Steering lag calibration is complete."
+msgstr "转向延迟校准已完成。"
+
+msgid "Steering torque response calibration is {}% complete."
+msgstr "转向扭矩响应校准已完成 {}%。"
+
+msgid "Steering torque response calibration is complete."
+msgstr "转向扭矩响应校准已完成。"
+
+msgid "unavailable, {} driving"
+msgstr "不可用，{} 正在驾驶"

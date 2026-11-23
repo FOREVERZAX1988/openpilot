@@ -8544,3 +8544,33 @@ msgid ""
 msgstr ""
 "讓大模型使用小模型的轉向平滑。\n"
 "可減輕直路上的輕微左右擺動。"
+
+msgid "hidden network"
+msgstr "隱藏網絡"
+
+msgid "Connect to a Wi-Fi network that does not broadcast its name."
+msgstr "連接到不廣播名稱的 Wi-Fi 網絡。"
+
+msgid "enter SSID..."
+msgstr "輸入 SSID..."
+
+msgid "temperature"
+msgstr "溫度"
+
+msgid "Device is pointed {:.1f}° {} and {:.1f}° {}."
+msgstr "設備朝向：俯仰 {:.1f}° {}，偏航 {:.1f}° {}。"
+
+msgid "Steering lag calibration is {}% complete."
+msgstr "轉向延遲校準已完成 {}%。"
+
+msgid "Steering lag calibration is complete."
+msgstr "轉向延遲校準已完成。"
+
+msgid "Steering torque response calibration is {}% complete."
+msgstr "轉向扭矩響應校準已完成 {}%。"
+
+msgid "Steering torque response calibration is complete."
+msgstr "轉向扭矩響應校準已完成。"
+
+msgid "unavailable, {} driving"
+msgstr "不可用，{} 正在駕駛"

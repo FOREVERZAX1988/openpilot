@@ -1,17 +1,20 @@
+import math
 import os
 import raylib_nb as rl
 from collections.abc import Callable
 from typing import Union
 
+from openpilot.cereal import log, messaging
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
+from openpilot.common.swaglog import cloudlog
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.selfdrive.ui.mici.layouts.settings.device.prime import PrimeScroller
 from openpilot.system.ui.widgets.scroller import NavRawScrollPanel, NavScroller
 from openpilot.selfdrive.ui.mici.widgets.info import InfoLayoutMici
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton, BigCircleButton, BigToggle, BigParamControl, BigMultiParamToggle
 from openpilot.selfdrive.ui.sunnypilot.mici.widgets.button import BigParamOption
-from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationDialog
+from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationDialog, SettingDescriptionDialog
 from openpilot.selfdrive.ui.mici.onroad.cabin_camera_dialog import CabinCameraDialog
 from openpilot.selfdrive.ui.mici.layouts.onboarding import TrainingGuide, TermsPage
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
@@ -100,9 +103,32 @@ class EngagedConfirmationButton(BigButton):
 
 
 class DeviceInfoLayoutMici(InfoLayoutMici):
+  # matches Big GUI sidebar Colors.DANGER for thermal state coloring
+  THERMAL_DANGER_COLOR = rl.Color(201, 34, 49, 255)
+
   def __init__(self):
     params = Params()
-    super().__init__(tr("device ID"), params.get("DongleId") or tr('N/A'), tr("serial"), params.get("HardwareSerial") or tr('N/A'), width=380)
+    super().__init__(tr("device ID"), params.get("DongleId") or tr('N/A'), tr("serial"), params.get("HardwareSerial") or tr('N/A'),
+                     title3=tr("temperature"), width=380)
+
+  def _update_state(self):
+    super()._update_state()
+
+    # CPU temperature row, mirroring Big GUI sidebar _update_temperature_status:
+    # show the live reading when the sensor reports, otherwise GOOD/HIGH; non-ok thermal turns red
+    sm = ui_state.sm
+    if not sm.updated['deviceState']:
+      return
+    device_state = sm['deviceState']
+    thermal_ok = device_state.thermalStatus == log.DeviceState.ThermalStatus.ok
+    cpu_temp_c = device_state.cpuTempC
+    temp = cpu_temp_c[0] if len(cpu_temp_c) else 0.0
+    if temp > 0:
+      text = f"{round(temp)}°C"
+    else:
+      text = tr("GOOD") if thermal_ok else tr("HIGH")
+    color = self._subheader_color if thermal_ok else self.THERMAL_DANGER_COLOR
+    self.set_subtext3(text, color)
 
 
 class PairBigButton(BigButton):
@@ -174,11 +200,12 @@ class DeviceLayoutMici(NavScroller):
       params.remove("LiveParametersV2")
       params.remove("LiveDelay")
       params.put_bool("OnroadCycleRequested", True, block=True)
+      self._update_calib_description()
 
-    reset_calibration_btn = EngagedConfirmationButton(tr("reset calibration"), tr("reset"), gui_app.texture("icons_mici/settings/device/lkas.png", 122, 64),
+    self._reset_calib_btn = EngagedConfirmationButton(tr("reset calibration"), tr("reset"), gui_app.texture("icons_mici/settings/device/lkas.png", 122, 64),
                                                       reset_calibration_callback,
-                                                      description=tr("Mount the device within 4° left or right and 5° up or 9° down. openpilot calibrates " +
-                                                                     "continuously; resetting is rarely needed. Resetting clears learned calibration."))
+                                                      description=self._calib_base_description())
+    self._update_calib_description()
 
     reboot_btn = EngagedConfirmationCircleButton(tr("reboot"), gui_app.texture("icons_mici/settings/device/reboot.png", 64, 70),
                                                  reboot_callback, exit_on_confirm=False)
@@ -270,7 +297,7 @@ class DeviceLayoutMici(NavScroller):
       self._onroad_preview_btn,
       terms_btn,
       regulatory_btn,
-      reset_calibration_btn,
+      self._reset_calib_btn,
       self._safe_mode_btn,
       reset_settings_btn,
       reboot_btn,
@@ -278,6 +305,59 @@ class DeviceLayoutMici(NavScroller):
     ])
 
     ui_state.add_engaged_transition_callback(self._update_toggles)
+
+  @staticmethod
+  def _calib_base_description() -> str:
+    return tr("Mount the device within 4° left or right and 5° up or 9° down. openpilot calibrates " +
+              "continuously; resetting is rarely needed. Resetting clears learned calibration.")
+
+  def _update_calib_description(self):
+    # live calibration facts appended to the reset calibration description,
+    # mirroring Big GUI layouts/settings/device.py _update_calib_description
+    desc = self._calib_base_description()
+    params = ui_state.params
+
+    calib_bytes = params.get("CalibrationParams")
+    if calib_bytes:
+      try:
+        calib = messaging.log_from_bytes(calib_bytes, log.Event).extrinsicsCalibration
+        if calib.calStatus != log.ExtrinsicsCalibration.Status.uncalibrated:
+          pitch = math.degrees(calib.rpyCalib[1])
+          yaw = math.degrees(calib.rpyCalib[2])
+          desc += "\n" + tr("Device is pointed {:.1f}° {} and {:.1f}° {}.").format(
+            abs(pitch), tr("down") if pitch > 0 else tr("up"),
+            abs(yaw), tr("left") if yaw > 0 else tr("right"))
+      except Exception:
+        cloudlog.exception("invalid CalibrationParams")
+
+    lag_perc = 0
+    lag_bytes = params.get("LiveDelay")
+    if lag_bytes:
+      try:
+        lag_perc = messaging.log_from_bytes(lag_bytes, log.Event).lateralDelay.calPerc
+      except Exception:
+        cloudlog.exception("invalid LiveDelay")
+    if lag_perc < 100:
+      desc += "\n" + tr("Steering lag calibration is {}% complete.").format(lag_perc)
+    else:
+      desc += "\n" + tr("Steering lag calibration is complete.")
+
+    torque_bytes = params.get("LiveTorqueParameters")
+    if torque_bytes:
+      try:
+        torque = messaging.log_from_bytes(torque_bytes, log.Event).lateralTorqueParameters
+        # don't add for non-torque cars
+        if torque.useParams:
+          if torque.calPerc < 100:
+            desc += "\n" + tr("Steering torque response calibration is {}% complete.").format(torque.calPerc)
+          else:
+            desc += "\n" + tr("Steering torque response calibration is complete.")
+      except Exception:
+        cloudlog.exception("invalid LiveTorqueParameters")
+
+    icon = gui_app.texture("icons_mici/settings/device/lkas.png", 122, 64)
+    self._reset_calib_btn.set_long_press_callback(
+      lambda: gui_app.push_widget(SettingDescriptionDialog(tr("reset calibration"), desc, icon)))
 
   def _on_metric_toggle(self, state: bool):
     ui_state.params.put_bool("IsMetric", state, block=True)
@@ -371,6 +451,7 @@ class DeviceLayoutMici(NavScroller):
   def show_event(self):
     super().show_event()
     self._update_toggles()
+    self._update_calib_description()
     if not ui_state.prime_state.is_paired():
       self.set_shown_callback(self._pairing_button.trigger_grow_animation)
 
