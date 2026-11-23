@@ -303,6 +303,7 @@ async def get_stream(request: web.Request):
     try:
       answer = await session.get_answer()
     except Exception:
+      webrtcd.webrtcd_log("exception", "get_answer failed for session %s", session.identifier)
       await session.stop()
       raise
     session.start()

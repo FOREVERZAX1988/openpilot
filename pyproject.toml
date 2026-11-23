@@ -45,6 +45,8 @@ dependencies = [
   "pyzmq",  # sunnypilot statsd
   "shapely>=2.0",  # carrot navigation path resampling
   "aiohttp>=3.8",  # carrot 7714 v2 WebSocket receiver
+  "aiortc",  # carrot_webrtcd: WebRTC answer builder + media streams (AGNOS runtime was missing this)
+  "PyAV",     # carrot_webrtcd video.py: encoded H264 packets -> WebRTC track
   "setproctitle",
   "jeepney",
   "zstandard",  # this can go once we're on Python 3.14+

@@ -24,6 +24,7 @@ class LiveStreamVideoStreamTrack(TiciVideoStreamTrack):
   def __init__(self, camera_type: str, *, use_source_frame_timestamps: bool = False):
     dt = DT_DMON if camera_type == "driver" else DT_MDL
     super().__init__(camera_type, dt)
+    self._dt = dt  # parent TiciVideoStreamTrack does not store dt
 
     self._source_name = self.camera_to_sock_mapping[camera_type]
     self._sock = messaging.sub_sock(self._source_name, conflate=True)
