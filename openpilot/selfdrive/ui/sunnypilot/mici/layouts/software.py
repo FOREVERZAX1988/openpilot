@@ -37,7 +37,7 @@ class ReleaseNotesPage(NavRawScrollPanel):
     super().__init__()
     self._content = HtmlRenderer(text=no_notes(), text_size={ElementType.P: NOTES_FONT_SIZE})
     # installing is a reboot: offer it under the notes of the release waiting to be installed
-    self._install = self._child(LargerSlider("slide to install", confirm_callback=self._on_install))
+    self._install = self._child(LargerSlider(tr("slide to install"), confirm_callback=self._on_install))
     self._install.set_visible(lambda: ui_state.is_offroad() and update_pending())
     self._install.set_enabled(lambda: self.enabled and not self.is_dismissing)
 
@@ -70,7 +70,7 @@ class ReleaseNotesPage(NavRawScrollPanel):
 
 class ReleaseNotesButton(BigButton):
   def __init__(self):
-    super().__init__("release notes", "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
+    super().__init__(tr("release notes"), "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     self._page = ReleaseNotesPage()
     self.set_click_callback(lambda: self._page.show_notes(update_pending()))
 
@@ -88,17 +88,17 @@ class CheckUpdateButtonSP(CheckUpdateButton):
   updater is idle, because UpdaterFetchAvailable (the remote differs from what is installed)
   stays set until the install, and "install now" is the next item down: a user switching
   branches read the download as having failed (2026-10-04). A tap still re-downloads."""
-  READY = "update ready\nscroll to install"
+  READY = tr("update ready\nscroll to install")
 
   def _update_state(self):
     super()._update_state()
-    if self._state == UpdaterState.IDLE and self.get_value() == "download update" and update_pending():
+    if self._state == UpdaterState.IDLE and self.get_value() == tr("download update") and update_pending():
       self.set_value(self.READY)
       self.set_icon(self._txt_up_to_date_icon)
 
   def _handle_mouse_release(self, mouse_pos):
     if self.get_value() == self.READY:
-      self.set_value("download update")   # what upstream's handler reads to pick the download signal
+      self.set_value(tr("download update"))   # what upstream's handler reads to pick the download signal
     super()._handle_mouse_release(mouse_pos)
 
 

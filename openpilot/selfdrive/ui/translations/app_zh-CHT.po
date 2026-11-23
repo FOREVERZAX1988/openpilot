@@ -319,13 +319,11 @@ msgstr "Alpha 縱向控制"
 msgid ""
 "Alpha. Nudges the car toward the middle of the lane.\n"
 "Stronger when the lane lines are clear. Yields around obstacles.\n"
-"The blue line shows the strength and direction of correction.\n"
-"Debug UI shows the exact adjustment in cm."
+"The center line turns blue as it nudges."
 msgstr ""
 "Alpha。將車輛輕微引向車道中間。\n"
 "車道線清晰時更強，遇到障礙物會讓行。\n"
-"藍線顯示修正的強度和方向。\n"
-"除錯介面以釐米顯示精確調整量。"
+"微調時居中線變藍。"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Always On"
@@ -7632,3 +7630,917 @@ msgstr "自訂倉庫地址..."
 #: openpilot/system/ui/mici_setup.py
 msgid "branch (optional)..."
 msgstr "分支名（可選）..."
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "(default)"
+msgstr "（預設）"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Adds a small push on top of the planned acceleration, stronger in aggressive and gentler in relaxed.\nEases off in curves and when slowing or stopping. Never goes past your set speed."
+msgstr "在規劃加速度之上疊加小幅助推，激進個性下更強、放鬆個性下更柔和。\n過彎以及減速、停車時會自動收力。永遠不會超過你的設定車速。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Adds an offset to the speed limit.\nFixed adds a set amount of speed. % adds a percentage of the limit.\nTiered adds a different offset for each speed limit range."
+msgstr "對限速增加一個偏移量。\n固定：增加設定的速度值；%：按限速的百分比增加。\n分段：為每個限速區間添加不同的偏移量。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Allows the curve trigger while following a lead car."
+msgstr "跟車時也允許彎道觸發。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Asks before taking a new speed limit. Adds to the low-speed confirmation, never replaces it."
+msgstr "採用新限速前先詢問確認。在低速確認的基礎上疊加，絕不會取代它。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Battery {}%"
+msgstr "電量 {}%"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Capture this remote's events to verify the mapping."
+msgstr "擷取此遙控器的事件以驗證映射。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Center"
+msgstr "中鍵"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Choose what gets recorded on each route.\nFull recording keeps logs plus all camera video. Logs only keeps the route logs.\nDisable all records nothing. A change applies to the next route after restart."
+msgstr "選擇每段路程錄製的內容。\n完整錄製保存日誌和所有攝影機視訊。僅日誌只保存路程日誌。\n全部停用則不錄製任何內容。變更在重啟後對下一段路程生效。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "Collects FLM lateral learning data while you drive and records verdicts as telemetry.\nIt never changes steering."
+msgstr "行駛時收集 FLM 橫向學習數據，並將判定結果記錄到遙測。\n絕不改變轉向。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "Connect it to a good USB-C adapter and Wi-Fi."
+msgstr "請連接可靠的 USB-C 轉接器和 Wi-Fi。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Controls the state of the device after boot or sleep.\nOffroad keeps the device in always offroad mode after booting or waking up."
+msgstr "控制設備啟動或睡眠後的狀態。\n離路：設備啟動或喚醒後將進入始終離路模式。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Cruise -"
+msgstr "巡航 -"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Cruise - Long"
+msgstr "巡航 - 長按"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Disables driver monitoring entirely; no cabin camera is needed.\nSimilar to LITE mode."
+msgstr "完全停用駕駛員監控，無需艙內攝影機。\n效果類似 LITE 模式。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Disengage to {}"
+msgstr "脫離以{}"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Double press"
+msgstr "雙擊"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Down"
+msgstr "下"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\osm.py
+msgid "Downloading Maps"
+msgstr "正在下載地圖"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Experimental mode engages when closing on a slower lead."
+msgstr "接近較慢前車時切入實驗模式。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Experimental mode follows lateral acceleration while cornering."
+msgstr "過彎時按橫向加速度切入實驗模式。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "FLM 转矩学习"
+msgstr "FLM 轉矩學習"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "FLM 运行时覆盖"
+msgstr "FLM 執行時覆寫"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "FORGET"
+msgstr "移除"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "Firehose Mode can also work while you're driving if connected to a hotspot or unlimited SIM card."
+msgstr "若連接熱點或不限量 SIM 卡，Firehose 模式也可以在行駛中工作。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "Firehose Mode maximizes your training data uploads to improve openpilot."
+msgstr "Firehose 模式最大化訓練數據上傳，以改進 openpilot。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "Fixed steering ratio in 0.1 units (e.g. 130 = 13.0).\nOverrides the live ratio when above 10. 0 uses the vehicle's ratio."
+msgstr "固定轉向比，0.1 單位（如 130 = 13.0）。\n大於 10 時覆蓋即時轉向比。0 使用車輛即時值。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "For maximum effectiveness, bring your device inside weekly."
+msgstr "為獲得最佳效果，請每週將設備帶到室內。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\display.py
+msgid "Hides the firehose prompt on the home screen."
+msgstr "隱藏首頁的 Firehose 提示。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "How fast slow for curves takes turns.\nGentle slows more. Sporty slows less."
+msgstr "彎道減速的力度。\n平緩減得更多，運動減得更少。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "Hyundai"
+msgstr "現代"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Left"
+msgstr "左"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\trips.py
+msgid "Local counts the routes recorded on the device.\nCloud uses the drive stats from comma connect."
+msgstr "本地統計設備上錄製的路程。\n雲端使用 comma connect 的行程統計。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Long press"
+msgstr "長按"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "MAPPING"
+msgstr "映射"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Manages the car's built-in cruise buttons by emulating presses for limited longitudinal control."
+msgstr "透過模擬按鍵操作車輛自帶巡航按鈕，實現有限縱向控制。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "More data means bigger models, which means better driving."
+msgstr "更多數據意味著更大的模型，也就意味著更好的駕駛。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Mount the device within 4° left or right and 5° up or 9° down. openpilot calibrates continuously; resetting is rarely needed. Resetting clears learned calibration."
+msgstr "將設備安裝在左右偏差 4° 以內、上 5° 下 9° 以內的位置。openpilot 會持續校準，很少需要重置。重置會清除已學習的校準。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Open or close the HID connection to this device."
+msgstr "開啟或關閉與此設備的 HID 連接。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Paddle -"
+msgstr "撥片 -"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Preset used for this driving personality: close follows nearest, far leaves the most space."
+msgstr "此駕駛個性使用的預設：近檔跟車最近，遠檔留出最多空間。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Pressing the accelerator pedal disengages sunnypilot."
+msgstr "踩下加速踏板時退出 sunnypilot。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Preview the cabin camera to check driver monitoring visibility. The vehicle must be off."
+msgstr "預覽艙內攝影機以檢查駕駛員監控視野。車輛必須熄火。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Profile, Carrot mapping and per-button actions."
+msgstr "設定檔、Carrot 映射和各按鍵操作。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "RUN"
+msgstr "執行"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Radio, discoverable, device name and reset."
+msgstr "藍牙開關、可發現性、設備名稱和重置。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "Remove openpilot from this device."
+msgstr "從此設備解除安裝 openpilot。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "Replaces the driver monitoring camera thumbnail with animated pearl cartoon eyes that mirror head pose and blinks."
+msgstr "將駕駛員監控攝影機縮圖替換為會跟隨頭部姿態和眨眼的珍珠卡通動畫眼睛。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "Replaces the single following distance per personality with a speed-dependent profile.\nThe follow time is interpolated over speed, so the gap can be shorter in town and longer on the highway."
+msgstr "將每種駕駛個性的單一跟車距離替換為隨速度變化的跟車剖面。\n跟車時間按速度插值，因此市區跟車距離可更短、高速可更長。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Resets every setting to its default, then reboots the device."
+msgstr "將所有設定恢復為預設值，然後重啟設備。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\visuals.py
+msgid "Runs the traffic-light detector on the road camera and draws a box around each\ndetected signal housing, with the observed signal written under the box.\nDisplay only: it never feeds the planner. Check the light yourself."
+msgstr "在前視攝影機上執行紅綠燈偵測器，並在每個偵測到的號誌燈外畫框，\n框下方顯示辨識到的號誌狀態。\n僅用於顯示：絕不會輸入規劃器。請自行確認號誌。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "SAVE"
+msgstr "儲存"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "STOP"
+msgstr "停止"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "Scales the live steering ratio, in percent.\n100 keeps the vehicle's ratio."
+msgstr "按百分比縮放車輛即時轉向比。\n100 保持原廠。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Scan for nearby Bluetooth devices."
+msgstr "掃描附近的藍牙設備。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\display.py
+msgid "Screen brightness when offroad.\n0 uses the device default."
+msgstr "離路時的螢幕亮度。\n0 使用設備預設值。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Select the action for this press:"
+msgstr "選擇此次按壓的操作："
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "Select the custom longitudinal tuning profile for supported Hyundai vehicles."
+msgstr "為支援的現代車型選擇自訂縱向調校配置。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "Select the software branch to download on the next update check."
+msgstr "選擇下次檢查更新時下載的軟體分支。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Short press"
+msgstr "短按"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Silences the chimes and prompts openpilot plays while offroad."
+msgstr "靜音 openpilot 在離路狀態播放的提示音和語音。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Store this device's profile and mapping."
+msgstr "儲存此設備的設定檔和映射。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "Subaru"
+msgstr "斯巴魯"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Switches every driving knob this fork adds to a conservative value and remembers what it replaced.\nUndo puts the learned values back. Parked only."
+msgstr "將本 fork 新增的所有駕駛旋鈕切換為保守值，並記住被替換的原值。\n復原可恢復已學習的數值。僅停車時可用。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "Tesla"
+msgstr "特斯拉"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "The device shuts down automatically this long after the engine is turned off.\n30 h is the default."
+msgstr "引擎熄火後，設備在此時長後自動關機。\n預設 30 小時。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "The offset applied to the speed limit in this range."
+msgstr "此區間內應用於限速的偏移量。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\developer.py
+msgid "Toggles the visibility of advanced zoompilot controls.\nIt only changes which toggles are shown, not whether they are enabled."
+msgstr "切換 zoompilot 進階控件的顯示。\n只改變顯示哪些開關，不影響其是否可用。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "Toyota"
+msgstr "豐田"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py
+msgid "Up"
+msgstr "上"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "Uploads data while driving. Without it, uploads wait until the car is off."
+msgstr "行駛時上傳數據。否則上傳將等待熄火後進行。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "Use a multi-finger press on the infotainment screen to toggle MADS. Selecting a higher finger count may reduce accidental activations. Note: Setting this to Off will reset your MADS settings to default."
+msgstr "在車機屏上用多指按壓切換 MADS。選擇更多手指可減少誤觸發。注意：設為關閉會將 MADS 設定重置為預設。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "When enabled, automatic software updates will be off.\nThis requires a reboot to take effect. Parked only."
+msgstr "啟用後自動軟體更新將關閉。\n需重啟後生效。僅停車時可用。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\developer.py
+msgid "When toggled on, this creates a prebuilt file to allow accelerated boot times.\nWhen toggled off, it removes the prebuilt file so compilation of locally edited cpp files can be made."
+msgstr "開啟時建立 prebuilt 檔案以加快啟動速度。\n關閉時刪除 prebuilt 檔案，以便編譯本地修改過的 cpp 檔案。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "While chill mode is on, temporarily switch to experimental mode on demanding curves, slow leads and low-speed turns.\nA manual switch keeps priority for a minute."
+msgstr "Chill 模式開啟時，遇到急彎、慢速前車和低速轉彎時暫時切換到實驗模式。\n手動切換後一分鐘內保持優先。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "accel smoothness"
+msgstr "加速度平滑"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "acceleration boost"
+msgstr "加速助力"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "acceleration change cost"
+msgstr "加速度變化成本"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "add profile"
+msgstr "新增設定檔"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "always on"
+msgstr "始終開啟"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "both"
+msgstr "兩者"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "branch"
+msgstr "分支"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\settings.py
+msgid "carrot"
+msgstr "Carrot 調參"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "change"
+msgstr "更改"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "change\nlanguage"
+msgstr "更改\n語言"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "check for update"
+msgstr "檢查更新"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "claim\nprime trial"
+msgstr "領取\nprime 試用"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "claim prime trial"
+msgstr "領取 prime 試用"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "close"
+msgstr "近"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\trips.py
+msgid "cloud"
+msgstr "雲端"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "comfort brake"
+msgstr "舒適制動"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "conditional chill exit"
+msgstr "條件性退出 Chill"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "confirm limit changes"
+msgstr "限速變化確認"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "connect lets you review recent driving footage and bookmark events."
+msgstr "connect 可查看最近的行駛錄影並收藏事件。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "connect to an\nunmetered network"
+msgstr "連接到\n不計流量的網路"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "connect.comma.ai"
+msgstr "connect.comma.ai"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\developer.py
+msgid "copyparty is a file server: download your routes, view your logs and edit files from a browser.\nConnect to your comma locally via its IP address."
+msgstr "copyparty 是檔案伺服器：可在瀏覽器中下載路程、查看日誌和編輯檔案。\n透過 IP 位址在本地連接你的 comma。"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\developer.py
+msgid "copyparty service"
+msgstr "copyparty 服務"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "cruise button management"
+msgstr "巡航按鈕管理"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "curve speed"
+msgstr "彎道速度"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "curves"
+msgstr "彎道"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "curves while following"
+msgstr "跟車時彎道"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "custom following profiles"
+msgstr "自訂跟車剖面"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "custom steer ratio"
+msgstr "自訂轉向比"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "danger smoothness"
+msgstr "危險平滑"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "danger zone cost"
+msgstr "危險區域成本"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\trips.py
+msgid "data source"
+msgstr "資料來源"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "device ID"
+msgstr "設備 ID"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "disable all"
+msgstr "全部停用"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "disable driver monitoring"
+msgstr "停用駕駛員監控"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "disable updates"
+msgstr "停用更新"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "disengage on accelerator"
+msgstr "踩加速踏板時脫離"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "distance cost"
+msgstr "距離成本"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "dm pearl eyes"
+msgstr "DM 珍珠眼"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py openpilot\selfdrive\ui\mici\layouts\settings\software.py openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "download update"
+msgstr "下載更新"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "driver\ncamera preview"
+msgstr "駕駛員\n攝影機預覽"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "enable"
+msgstr "啟用"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "enter a nickname..."
+msgstr "輸入暱稱..."
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "erase"
+msgstr "清除"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "esim error"
+msgstr "eSIM 錯誤"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "failed to update"
+msgstr "更新失敗"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "far"
+msgstr "遠"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "fingerprinted automatically"
+msgstr "已自動識別指紋"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "finish setup"
+msgstr "完成設定"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "firehose mode"
+msgstr "Firehose 模式"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "flm shadow"
+msgstr "FLM 影子"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "flm-shadow"
+msgstr "FLM 影子"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "follow time - aggressive"
+msgstr "跟車時間 - 激進"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "follow time - relaxed"
+msgstr "跟車時間 - 從容"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "follow time - standard"
+msgstr "跟車時間 - 標準"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "full recording"
+msgstr "完整錄製"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "gentle"
+msgstr "平緩"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\developer.py
+msgid "github runner service"
+msgstr "GitHub Runner 服務"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\display.py
+msgid "hide firehose prompt"
+msgstr "隱藏 Firehose 提示"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "higher"
+msgstr "升高時"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "hold QR code to camera"
+msgstr "將二維碼對準攝影機"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "install now"
+msgstr "立即安裝"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "installing profile"
+msgstr "正在安裝設定檔"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "jerk cost"
+msgstr "加加速度成本"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "lead danger factor"
+msgstr "前車危險係數"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "limit"
+msgstr "限速"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\trips.py
+msgid "local"
+msgstr "本地"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "logs only"
+msgstr "僅日誌"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "longitudinal mpc tuning"
+msgstr "縱向 MPC 調校"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "lower"
+msgstr "降低時"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "manage prime"
+msgstr "管理 prime"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "manually selected fingerprint"
+msgstr "已手動選擇指紋"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "max time offroad"
+msgstr "最長離路時間"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "nickname"
+msgstr "暱稱"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "not an LPA code"
+msgstr "不是 LPA 碼"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\vehicle.py
+msgid "not fingerprinted"
+msgstr "未識別指紋"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "not subscribed"
+msgstr "未訂閱"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "offroad"
+msgstr "離路"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "onroad\npreview"
+msgstr "行駛\n預覽"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "onroad uploads"
+msgstr "行駛中上傳"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "pair to connect"
+msgstr "配對到 connect"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "please wait"
+msgstr "請稍候"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "please wait..."
+msgstr "請稍候..."
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "power off"
+msgstr "關機"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "prime"
+msgstr "prime"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "prime adds 24/7 LTE to device and 1 year of cloud storage in connect."
+msgstr "prime 為設備提供全天候 LTE，並在 connect 提供 1 年雲端儲存。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "prime also includes commacare extended device warranty."
+msgstr "prime 還包含 commacare 設備延保服務。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "prime lets you view live video and GPS location remotely in connect."
+msgstr "prime 可讓你在 connect 遠端查看即時視訊和 GPS 位置。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "prime lite"
+msgstr "prime lite"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\developer.py
+msgid "quickboot mode"
+msgstr "快速啟動模式"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "quiet mode"
+msgstr "靜音模式"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "reboot"
+msgstr "重啟"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
+msgid "recording mode"
+msgstr "錄製模式"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "regulatory info"
+msgstr "法規資訊"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\software.py
+msgid "release notes"
+msgstr "發行說明"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "reset"
+msgstr "重置"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "reset\nsettings"
+msgstr "重置\n設定"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "reset calibration"
+msgstr "重置校準"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "reset to defaults"
+msgstr "恢復預設"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "review\ntraining guide"
+msgstr "查看\n訓練指南"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "safe mode"
+msgstr "安全模式"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "safety gap bias"
+msgstr "安全間距偏置"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "scan QR code"
+msgstr "掃描二維碼"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "scan QR code or visit connect.comma.ai"
+msgstr "掃描二維碼或造訪 connect.comma.ai"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "scan to claim trial"
+msgstr "掃碼領取試用"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "scan to manage\nprime status"
+msgstr "掃碼管理\nprime 狀態"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "scan to open\ndevice prime settings"
+msgstr "掃碼開啟\n設備 prime 設定"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\display.py
+msgid "screen brightness"
+msgstr "螢幕亮度"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\bluetooth.py openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot.py openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\osm.py
+msgid "selected"
+msgstr "已選擇"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "serial"
+msgstr "序號"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\developer.py
+msgid "show advanced controls"
+msgstr "顯示進階控制項"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "slide to\nreboot"
+msgstr "滑動以\n重啟"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "slide to\nreset settings"
+msgstr "滑動以\n重置設定"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "slide to\n{}"
+msgstr "滑動以\n{}"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "slide to\n{} safe mode"
+msgstr "滑動以\n{} 安全模式"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "slide to delete"
+msgstr "滑動以刪除"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\osm.py
+msgid "slide to delete all maps"
+msgstr "滑動以刪除所有地圖"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\software.py
+msgid "slide to install"
+msgstr "滑動以安裝"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "slow leads"
+msgstr "慢速前車"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "speed smoothness"
+msgstr "速度平滑"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "sporty"
+msgstr "運動"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "steer ratio rate"
+msgstr "轉向比縮放"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
+msgid "stock"
+msgstr "原廠"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "stop distance"
+msgstr "停車距離"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\navigation.py
+msgid "style 1"
+msgstr "樣式 1"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\navigation.py
+msgid "style 2"
+msgstr "樣式 2"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "sunnypilot learns to drive by watching humans, like you, drive."
+msgstr "sunnypilot 透過觀察像你一樣的人類駕駛來學習駕駛。"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\network\esim_ui.py
+msgid "switch"
+msgstr "切換"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "target branch"
+msgstr "目標分支"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "terms &\nconditions"
+msgstr "條款與\n條件"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "tiered"
+msgstr "分段"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\cruise.py
+msgid "tiered offsets"
+msgstr "分段偏移"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\visuals.py
+msgid "traffic light vision boxes"
+msgstr "紅綠燈視覺偵測框"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "try prime for\n30 days"
+msgstr "試用 prime\n30 天"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "undo"
+msgstr "復原"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "uninstall"
+msgstr "解除安裝"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "uninstall sunnypilot"
+msgstr "解除安裝 sunnypilot"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "up to date"
+msgstr "已是最新"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\software.py
+msgid "update ready\nscroll to install"
+msgstr "更新就緒\n滾動以安裝"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "updater failed\nto respond"
+msgstr "更新器\n無回應"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "upgrade\nto prime"
+msgstr "升級到\nprime"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py openpilot\selfdrive\ui\mici\layouts\settings\device\prime.py
+msgid "upgrade to prime"
+msgstr "升級到 prime"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\firehose.py
+msgid "uploaded segments:"
+msgstr "已上傳分段："
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\software.py
+msgid "version"
+msgstr "版本"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "wake up behavior"
+msgstr "喚醒方式"
+
+#: openpilot\selfdrive\ui\mici\layouts\settings\device\device_layout.py
+msgid "{} h"
+msgstr "{} 小時"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "从未运行"
+msgstr "從未執行"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "停车时分析最近的行驶路线，自动整定转矩摩擦特性（要求 offroad 且车道居中关闭）"
+msgstr "停車時分析最近的行駛路線，自動整定轉矩摩擦特性（要求 offroad 且車道居中關閉）"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "分析状态"
+msgstr "分析狀態"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "将 FLM 分析得到的摩擦曲线/车辆旋钮应用到转矩控制器"
+msgstr "將 FLM 分析得到的摩擦曲線/車輛旋鈕應用到轉矩控制器"
+
+#: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings\carrot_items.py
+msgid "运行 FLM 后台分析"
+msgstr "執行 FLM 背景分析"
+
+msgid "driving"
+msgstr "駕駛"
+
+msgid ""
+"Gives big models the small models' steering smoothing.\n"
+"Can calm small side-to-side wiggles on straight roads."
+msgstr ""
+"讓大模型使用小模型的轉向平滑。\n"
+"可減輕直路上的輕微左右擺動。"

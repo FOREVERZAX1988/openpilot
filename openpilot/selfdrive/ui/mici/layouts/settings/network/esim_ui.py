@@ -127,7 +127,7 @@ class QRScannerDialog(NavWidget):
     else:
       label_y = rect.y + rect.height * 3 / 4
       label_rect = rl.Rectangle(rect.x, label_y + (rect.height - label_y) / 2 - 20, rect.width, 40)
-      text = "not an LPA code" if rl.get_time() < self._invalid_code_until else "hold QR code to camera"
+      text = tr("not an LPA code") if rl.get_time() < self._invalid_code_until else tr("hold QR code to camera")
       gui_label(label_rect, text, font_size=32, font_weight=FontWeight.MEDIUM,
                 alignment=TextAlignment.CENTER,
                 color=rl.Color(255, 255, 255, int(255 * 0.9)))
@@ -139,7 +139,7 @@ class InstallingProfileDialog(BigDialog):
   DOT_STEP = 0.6
 
   def __init__(self):
-    super().__init__("installing profile", "please wait...")
+    super().__init__(tr("installing profile"), tr("please wait..."))
     self._show_time = 0.0
 
   def show_event(self):
@@ -153,7 +153,7 @@ class InstallingProfileDialog(BigDialog):
   def _render(self, _):
     t = (rl.get_time() - self._show_time) % (self.DOT_STEP * 2)
     dots = "." * min(int(t / (self.DOT_STEP / 4)), 3)
-    self._card.set_value(f"please wait{dots}")
+    self._card.set_value(tr("please wait") + dots)
     super()._render(_)
 
 
@@ -192,7 +192,7 @@ class EsimProfileButton(BigButton):
     self._profile = profile
     active = profile.enabled
     self.set_text(profile.display_name)
-    self.set_value("active" if active else "switch")
+    self.set_value(tr("active") if active else tr("switch"))
 
   def _update_state(self):
     super()._update_state()
@@ -209,13 +209,13 @@ class EsimProfileButton(BigButton):
 
   def _on_rename(self):
     current = self._profile.nickname or ""
-    dlg = BigInputDialog("nickname", default_text=current, confirm_callback=self._on_nickname_entered,
+    dlg = BigInputDialog(tr("nickname"), default_text=current, confirm_callback=self._on_nickname_entered,
                          text_validator=lambda text: bool(text.strip()))
     gui_app.push_widget(dlg)
 
   def _on_delete(self):
     icon = gui_app.texture("icons_mici/settings/network/new/trash.png", 54, 64)
-    gui_app.push_widget(BigConfirmationDialog("slide to delete", icon, self._delete_profile, red=True))
+    gui_app.push_widget(BigConfirmationDialog(tr("slide to delete"), icon, self._delete_profile, red=True))
 
   def _delete_profile(self):
     if not self._locked and not self._cellular_manager.busy and self._show_delete_btn:
@@ -295,7 +295,7 @@ class EsimProfileButton(BigButton):
 class EsimErrorDialog(NavRawScrollPanel):
   def __init__(self, error: str):
     super().__init__()
-    self._title = UnifiedLabel("esim error", font_size=64, font_weight=FontWeight.BOLD)
+    self._title = UnifiedLabel(tr("esim error"), font_size=64, font_weight=FontWeight.BOLD)
     self._error = UnifiedLabel(error, font_size=36, elide=False)
 
   def _render(self, rect: rl.Rectangle):
@@ -318,7 +318,7 @@ class EsimUI(NavScroller):
     self._cellular_manager = cellular_manager
     self._profiles_enabled = profiles_enabled
 
-    self._add_profile_btn = BigButton("add profile", "scan QR code")
+    self._add_profile_btn = BigButton(tr("add profile"), tr("scan QR code"))
     self._add_profile_btn.set_click_callback(self._on_add_profile)
     self._scroller.add_widget(self._add_profile_btn)
     self._installing_dialog: InstallingProfileDialog | None = None
@@ -387,7 +387,7 @@ class EsimUI(NavScroller):
     gui_app.push_widget(QRScannerDialog(on_qr_detected=self._on_qr_scanned))
 
   def _on_qr_scanned(self, lpa_code: str):
-    dlg = BigInputDialog("enter a nickname...", text_validator=lambda text: bool(text.strip()),
+    dlg = BigInputDialog(tr("enter a nickname..."), text_validator=lambda text: bool(text.strip()),
                          confirm_callback=lambda nickname: self._download_profile(lpa_code, nickname))
     gui_app.push_widget(dlg)
 

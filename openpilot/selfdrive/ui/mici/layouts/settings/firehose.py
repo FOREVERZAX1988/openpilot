@@ -109,7 +109,7 @@ class StatusCard(GreyBigButton):
   ICON_SPACING = 14
 
   def __init__(self):
-    super().__init__("firehose mode", "", gui_app.texture("icons_mici/settings/firehose.png", 52, 62))
+    super().__init__(tr("firehose mode"), "", gui_app.texture("icons_mici/settings/firehose.png", 52, 62))
     self._check_icon = gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", self.ICON_SIZE, self.ICON_SIZE)
     self.active = False
 

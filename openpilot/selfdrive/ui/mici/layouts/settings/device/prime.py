@@ -9,6 +9,7 @@ from openpilot.selfdrive.ui.mici.widgets.info import InfoLayoutMici
 from openpilot.selfdrive.ui.mici.widgets.qr import QR
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets.scroller import NavScroller
 
 
@@ -29,8 +30,8 @@ class PairingInfoLayout(InfoLayoutMici):
   @staticmethod
   def _get_prime_status() -> str:
     if ui_state.prime_state.is_prime():
-      return "prime" if ui_state.prime_state.is_full_prime() else "prime lite"
-    return "not subscribed"
+      return tr("prime") if ui_state.prime_state.is_full_prime() else tr("prime lite")
+    return tr("not subscribed")
 
   def _layout(self):
     super()._layout()
@@ -66,19 +67,19 @@ class PrimeManagementScroller(NavScroller):
     self._prime_adverts = [
       QR(self._get_prime_url()),
       GreyBigButton(
-        "try prime for\n30 days" if can_claim_trial else "upgrade to prime",
-        "scan to claim trial" if can_claim_trial else "scan to manage\nprime status",
+        tr("try prime for\n30 days") if can_claim_trial else tr("upgrade to prime"),
+        tr("scan to claim trial") if can_claim_trial else tr("scan to manage\nprime status"),
         self._prime_icon
       ),
-      GreyBigButton("", "prime adds 24/7 LTE to device and 1 year of cloud storage in connect.",),
-      GreyBigButton("", "prime lets you view live video and GPS location remotely in connect.",),
-      GreyBigButton("", "prime also includes commacare extended device warranty.",),
+      GreyBigButton("", tr("prime adds 24/7 LTE to device and 1 year of cloud storage in connect."),),
+      GreyBigButton("", tr("prime lets you view live video and GPS location remotely in connect."),),
+      GreyBigButton("", tr("prime also includes commacare extended device warranty."),),
     ]
     self._prime_management = [
       QR(self._get_prime_url()),
       GreyBigButton(
-        "manage prime",
-        "scan to open\ndevice prime settings",
+        tr("manage prime"),
+        tr("scan to open\ndevice prime settings"),
         self._phone_icon
       ),
     ]
@@ -108,10 +109,10 @@ class PrimeScroller(NavScroller):
 
     self._manage_icon = gui_app.texture("icons_mici/settings/comma_icon.png", 33, 60)
     if not ui_state.prime_state.is_prime():
-      title = "claim\nprime trial" if ui_state.prime_state.can_claim_prime_trial() else "upgrade\nto prime"
+      title = tr("claim\nprime trial") if ui_state.prime_state.can_claim_prime_trial() else tr("upgrade\nto prime")
       self._manage_prime = BigButton(title, icon=self._manage_icon)
     else:
-      self._manage_prime = BigButton("manage prime", icon=self._manage_icon)
+      self._manage_prime = BigButton(tr("manage prime"), icon=self._manage_icon)
     self._manage_prime.set_click_callback(lambda: gui_app.push_widget(PrimeManagementScroller()))
 
     if self.initial_is_paired:
@@ -124,9 +125,9 @@ class PrimeScroller(NavScroller):
       self._scroller.scroll_indicator_start_after = self._qr
       self._scroller.add_widgets([
         self._qr,
-        GreyBigButton("finish setup", "scan QR code or visit connect.comma.ai",
+        GreyBigButton(tr("finish setup"), tr("scan QR code or visit connect.comma.ai"),
                       gui_app.texture("icons_mici/settings/device/green_settings.png", 64, 64)),
-        GreyBigButton("", "connect lets you review recent driving footage and bookmark events."),
+        GreyBigButton("", tr("connect lets you review recent driving footage and bookmark events.")),
       ])
 
   def _get_pairing_url(self) -> str:
