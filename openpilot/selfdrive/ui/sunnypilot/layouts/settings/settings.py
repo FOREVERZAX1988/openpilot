@@ -159,6 +159,12 @@ class SettingsLayoutSP(OP.SettingsLayout):
     except Exception:
       pass
     self._build_panels()
+    # 侧边栏 NavButton 在首次绘制时一次性创建，持有旧 PanelInfo 的引用并把点击
+    # 热区写进 panel_info.button_rect（旧对象）；_handle_mouse_release 遍历的是
+    # 新 _panels 字典，新 PanelInfo 的 button_rect 永远是零矩形 → 侧边栏全部
+    # 点不动。这里同步重建导航按钮与滚动容器，让热区写回新 PanelInfo。
+    self._nav_items = []
+    self._sidebar_scroller = Scroller([], spacing=0, line_separator=False, pad_end=False)
     try:
       self._panels[self._current_panel].instance.show_event()
     except Exception:
