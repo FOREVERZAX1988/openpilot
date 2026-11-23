@@ -45,6 +45,7 @@ from openpilot.common.realtime import DT_MDL
 from openpilot.sunnypilot.carrot.carrot_man_input import get_carrot_man
 from openpilot.sunnypilot.carrot.config import UnifiedParams
 from openpilot.sunnypilot.carrot.curve_speed import TARGET_LAT_ACCEL, VisionCurveSpeed, curve_speed
+from openpilot.sunnypilot.carrot.curve_speed_learning.runtime import CurveSpeedLearningRuntime
 from openpilot.sunnypilot.carrot.radar_geometry import RADAR_TO_CAMERA_M
 from openpilot.sunnypilot.carrot.radar_motion.lane_change_gap import (
   LaneChangeGapPlan,
@@ -595,6 +596,11 @@ class CarrotPlanner:
     # geometry. One instance per planner so its history tracks the same model path
     # the calls do; it is not shared between ticks of different objects.
     self._vision_curve_speed = VisionCurveSpeed()
+    # Learned-comfort correction layer (StarPilot curve_speed learning port). Owns sampling
+    # and persistence; contributes a per-point lateral-acceleration budget through
+    # comfort_fn() only when the CurveSpeedLearning switch is on and a sample exists.
+    # Off/unready -> the envelope below runs the baseline unchanged (baseline invariance).
+    self._curve_learning = CurveSpeedLearningRuntime()
     # Road class from the navi packet (1 = highway, > 1 = surface street). Supplied
     # by the caller because CarrotPlanner has no view of the raw packet; it gates
     # the highway/surface split in vturn_speed(). Defaults to 8 so a caller that
@@ -1342,6 +1348,11 @@ class CarrotPlanner:
     sensitivity = self._auto_curve_speed_factor if self._roadcate > 1 else self._auto_curve_speed_factor_h
 
     model_data = sm['modelV2']
+    # Sample driver-owned curve driving and refresh the enable switch (defensive; a
+    # missing service only pauses learning). Then apply the learned budget per point
+    # when the layer is enabled and has samples - otherwise comfort_fn is None and the
+    # envelope runs the fixed TARGET_LAT_ACCEL / sensitivity baseline unchanged.
+    self._curve_learning.update(sm, cs, time.monotonic())
     result = curve_speed(
       model_data,
       cs.vEgo,
@@ -1353,6 +1364,7 @@ class CarrotPlanner:
       # 0 in the schema means "not measured", which is a ratio of 1.0.
       speed_ratio=float(cs.vCluRatio) or 1.0,
       a_ego=float(getattr(cs, "aEgo", 0.0) or 0.0),
+      comfort_fn=self._curve_learning.comfort_fn(),
     )
 
     # Publish the geometry for the UI/diagnostics, same as the reduced version did.
