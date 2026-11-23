@@ -111,12 +111,20 @@ class SettingsLayoutSP(OP.SettingsLayout):
     self._sidebar_scroller = Scroller([], spacing=0, line_separator=False, pad_end=False)
 
     # Panel configuration
-    wifi_manager = WifiManager()
-    wifi_manager.set_active(False)
+    self._wifi_manager = WifiManager()
+    self._wifi_manager.set_active(False)
 
+    self._build_panels()
+
+    # 面板在构造期直接求值 tr()（非 lambda），切换语言后旧文案会一直显示到重启。
+    # 注册重建回调：语言切换应用后（帧间、字体已重建）整体重建面板，
+    # 所有构造期 tr() 用新语言的翻译字典重新求值。
+    gui_app.add_language_change_listener(self._rebuild_panels)
+
+  def _build_panels(self):
     self._panels = {
       OP.PanelType.DEVICE: PanelInfo(tr_noop("Device"), DeviceLayoutSP(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_home.png"),
-      OP.PanelType.NETWORK: PanelInfo(tr_noop("Network"), NetworkUISP(wifi_manager), icon="icons/network.png"),
+      OP.PanelType.NETWORK: PanelInfo(tr_noop("Network"), NetworkUISP(self._wifi_manager), icon="icons/network.png"),
       OP.PanelType.BLUETOOTH: PanelInfo(tr_noop("Bluetooth"), CarrotBluetoothLayout(), icon="icons/bluetooth.png"),
       OP.PanelType.SUNNYLINK: PanelInfo(tr_noop("sunnylink"), SunnylinkLayout(), icon="icons/wifi_strength_full.png"),
       OP.PanelType.TOGGLES: PanelInfo(tr_noop("Toggles"), TogglesLayout(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_toggle.png"),
@@ -142,6 +150,19 @@ class SettingsLayoutSP(OP.SettingsLayout):
 
     device_layout = self._panels[OP.PanelType.DEVICE].instance
     device_layout.set_preview_callback(self._enter_onroad_preview)
+
+  def _rebuild_panels(self):
+    # 切换语言后由 gui_app 在帧间调用：销毁旧面板实例并以当前语言重建。
+    # 保留当前面板选择与 WifiManager（网络扫描状态不丢）。
+    try:
+      self._panels[self._current_panel].instance.hide_event()
+    except Exception:
+      pass
+    self._build_panels()
+    try:
+      self._panels[self._current_panel].instance.show_event()
+    except Exception:
+      pass
 
   def _draw_sidebar(self, rect: rl.Rectangle):
     rl.draw_rectangle_rec(rect, OP.SIDEBAR_COLOR)
