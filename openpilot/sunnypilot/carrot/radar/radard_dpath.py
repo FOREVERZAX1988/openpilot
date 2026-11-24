@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import gc
 import time
 from typing import Any
 
@@ -203,6 +204,17 @@ class DPathRadarD:
 
 
 def main() -> None:
+  # NOTE: config_realtime_process disables the cyclic GC (upstream behaviour).
+  # This daemon churns per-frame capnp builders whose wrappers form reference
+  # cycles, so without an explicit sweep the process leaked ~1.1 GB/h of
+  # uncollected arena memory (measured: 39 -> 104 MB in 150 s with gc disabled,
+  # flat with gc enabled) until long drives exhausted the 3.5 GB device and
+  # triggered lowMemory alerts plus the page-reclaim stalls behind
+  # locationdTemporaryError. A full collect every ~30 s (600 frames at 20 Hz)
+  # bounds the leak at ~15 MB; the pause is a few ms against a 50 ms budget.
+  gc_collect_every_n_frames = 600
+  gc_frame_counter = 0
+
   config_realtime_process(5, Priority.CTRL_LOW)
 
   cloudlog.info("dPath radard is waiting for CarParams")
@@ -242,6 +254,10 @@ def main() -> None:
                          thread_cpu_ms=(time.thread_time() - cpu_start) * 1000,
                          model_age_ms=(start - sm.logMonoTime['modelV2'] * 1e-9) * 1000,
                          tracks_age_ms=(start - sm.logMonoTime['liveTracks'] * 1e-9) * 1000)
+      gc_frame_counter += 1
+      if gc_frame_counter >= gc_collect_every_n_frames:
+        gc.collect()
+        gc_frame_counter = 0
 
 
 if __name__ == "__main__":
