@@ -16,6 +16,11 @@ they can be unit-tested without hardware or the UI import chain.
 The four keys are deliberately NOT registered in params_keys.h yet; unknown
 keys read as unset and code defaults keep stock behavior. A settings-page
 entry will be added separately.
+
+TspKeepAliveBrightness is likewise unregistered and device-local: it opts a
+unit into a nonzero sleep backlight duty so touch-wake survives on clone
+panels whose Samsung TSP gates itself off at zero duty. Default (unset) is
+true dark sleep, matching stock behavior.
 """
 import math
 
@@ -28,6 +33,8 @@ KEY_SCREEN_BRIGHTNESS_ONROAD = "ScreenBrightnessOnroad"
 KEY_SCREEN_BRIGHTNESS_ONROAD_OFFSET = "ScreenBrightnessOnroadOffset"
 KEY_SCREEN_BRIGHTNESS_OFFROAD = "ScreenBrightnessOffroad"
 KEY_SCREEN_BRIGHTNESS_OFFROAD_OFFSET = "ScreenBrightnessOffroadOffset"
+KEY_TSP_KEEPALIVE = "TspKeepAliveBrightness"
+TSP_KEEPALIVE_MAX = 10
 
 
 def parse_level(raw, default=None) -> int | None:
@@ -57,6 +64,26 @@ def parse_offset(raw, default: float = 0.0) -> float:
   if not math.isfinite(value):
     return default
   return min(OFFSET_MAX, max(OFFSET_MIN, value))
+
+
+def parse_keepalive(raw, default: int = 0) -> int:
+  """Parse the TSP touch keep-alive duty (0-10, percent).
+
+  Unset/0 = true dark sleep (default; normal panels wake by touch at 0).
+  A small positive value (measured alive at >=2) keeps the Samsung TSP on
+  C3 clone panels powered at zero backlight writes. Out-of-range or
+  unparseable values fall back to ``default``.
+  """
+  try:
+    value = float(raw)
+  except (TypeError, ValueError):
+    return default
+  if not math.isfinite(value):
+    return default
+  value = round(value)
+  if not (0 <= value <= TSP_KEEPALIVE_MAX):
+    return default
+  return int(value)
 
 
 def apply_offset(value: float, offset: float) -> float:
