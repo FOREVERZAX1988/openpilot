@@ -22,9 +22,7 @@ from openpilot.selfdrive.ui.sunnypilot.ui_state import UIStateSP, DeviceSP
 from openpilot.selfdrive.ui.screen_settings import (
   apply_offset,
   calculate_screen_brightness,
-  parse_keepalive,
   read_screen_brightness,
-  KEY_TSP_KEEPALIVE,
 )
 
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
@@ -33,19 +31,15 @@ BACKLIGHT_MIN = 30  # the lowest backlight the display shows properly
 BRIGHTNESS_MIN = BACKLIGHT_MIN * 0.6 if HARDWARE.get_device_type() == "mici" else BACKLIGHT_MIN
 PARAM_UPDATE_TIME = 1 / 5.0
 
-# C3 (tici) clone panels: the Samsung TSP firmware gates itself off when the
-# backlight duty is (near) zero, and on some units panel power-down itself
-# drops the TSP's shared VDD rail — both make touch-wake impossible.
-#
-# Compatibility: the workaround is OPT-IN per device via the
-# TspKeepAliveBrightness param (1-10%; recommended 2 = ~20/1023 raw):
-# - set -> sleep keeps the panel controller powered (bl_power=0) with a
-#   nonzero backlight duty: touch-wake survives, at the cost of a faint glow.
-# - unset/0 (default) -> stock behavior: sleep powers the panel down
-#   (bl_power=4, true dark) and writes brightness 0; normal panels wake by
-#   touch just fine (verified on an EA8074 unit, touch alive through
-#   bl_power=4). The floor also covers the onroad screen-off zero write.
-TSP_KEEPALIVE_RECOMMENDED = TSP_WAKE_SLEEP_BRIGHTNESS = 2  # percent; 2% of 1023 = ~20 raw steps
+# C3 (tici) clone panels: on some units the Samsung TSP loses touch-wake when
+# the panel powers down or backlight duty hits zero (measured 11-06 on a
+# c3clone unit: touch alive at >=10/1023 duty, dead at 0). The default sleep
+# path is carrot-style true dark (bl_power=4 + brightness 0), which an EA8074
+# unit verified fine (touch alive through bl_power=4). If a unit shows dead
+# touch-wake after sleep, wire the TspKeepAliveBrightness param (parsed in
+# screen_settings.parse_keepalive) back into Device to keep the panel powered
+# at a nonzero duty — deliberately unwired until such a unit shows up.
+TSP_WAKE_SLEEP_BRIGHTNESS = 2  # percent; reference value for the opt-in above
 
 
 class UIStatus(Enum):
@@ -358,7 +352,6 @@ class Device(DeviceSP):
     self._screen_brightness_onroad_offset: float = 0.0
     self._screen_brightness_offroad: int | None = None
     self._screen_brightness_offroad_offset: float = 0.0
-    self._tsp_keepalive: int = 0
     self._last_brightness: int = 0
     self._brightness_filter = FirstOrderFilter(BACKLIGHT_OFFROAD, 10.00, 1 / gui_app.target_fps)
     self._brightness_thread: threading.Thread | None = None
@@ -432,11 +425,9 @@ class Device(DeviceSP):
     try:
       (self._screen_brightness_onroad, self._screen_brightness_onroad_offset,
        self._screen_brightness_offroad, self._screen_brightness_offroad_offset) = read_screen_brightness(ui_state.params)
-      self._tsp_keepalive = parse_keepalive(ui_state.params.get(KEY_TSP_KEEPALIVE))
     except Exception:
       self._screen_brightness_onroad, self._screen_brightness_onroad_offset = None, 0.0
       self._screen_brightness_offroad, self._screen_brightness_offroad_offset = None, 0.0
-      self._tsp_keepalive = 0
     self._offroad_brightness = calculate_screen_brightness(
       self._offroad_brightness, self._screen_brightness_offroad, self._screen_brightness_offroad_offset)
 
@@ -485,13 +476,6 @@ class Device(DeviceSP):
     if not self._awake:
       brightness = 0
 
-    # True 0 kills touch-wake on Samsung TSP clone panels (see the TSP comment
-    # above). Opt-in per-device floor via TspKeepAliveBrightness; normal panels
-    # sleep true dark. Covers every zero write on tici (parked sleep and the
-    # onroad screen-off mode) so touch-wake survives both.
-    if brightness <= 0 and self._tsp_keepalive and "tici" in HARDWARE.get_device_type():
-      brightness = self._tsp_keepalive
-
     if brightness != self._last_brightness:
       self._brightness_target = int(brightness)
       self._brightness_event.set()
@@ -527,10 +511,7 @@ class Device(DeviceSP):
         return
       self._awake = on
       cloudlog.debug(f"setting display power {int(on)}")
-      # Units needing the TSP keep-alive floor keep the panel controller powered
-      # at sleep (bl_power=0 + nonzero duty) instead of powering it down, since
-      # panel power-down drops the Samsung TSP's shared VDD rail on those.
-      HARDWARE.set_display_power(on or bool(self._tsp_keepalive))
+      HARDWARE.set_display_power(on)
       gui_app.set_should_render(on)
 
 

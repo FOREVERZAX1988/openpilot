@@ -437,13 +437,9 @@ class HardwareComma(HardwareBase):
   def set_display_power(self, on):
     try:
       with open("/sys/class/backlight/panel0-backlight/bl_power", "w") as f:
-        # Off -> bl_power=4 (FB_BLANK_POWERDOWN): the panel controller itself
-        # powers down, so the panel stops emitting even at DCS brightness 0
-        # (faint residual glow otherwise, visible in a dark room). On units
-        # where panel power-down drops the shared VDD rail for the Samsung
-        # touch controller (touch-wake dies until reboot), the UI keeps the
-        # panel powered instead via the TspKeepAliveBrightness param — see
-        # Device._set_awake in ui_state.py.
+        # Carrot-style: off -> bl_power=4 (FB_BLANK_POWERDOWN) powers the DSI
+        # panel fully down. DCS brightness 0 alone leaves faint panel emission
+        # (residual glow in a dark room); only panel power-down is true dark.
         f.write("0" if on else "4")
     except Exception:
       pass
