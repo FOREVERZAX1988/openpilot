@@ -92,6 +92,7 @@ def manual_update_loop(params: Params, updater: "Updater") -> None:
       # progress — a late write makes the check button look dead again.
       params.put("UpdaterState", "checking...", block=True)
 
+      cleanup_device_tree()
       if not system_time_valid():
         try:
           sync_system_time_http()
@@ -124,6 +125,52 @@ def manual_update_loop(params: Params, updater: "Updater") -> None:
 
 def run(cmd: list[str], cwd: str | None = None) -> str:
   return subprocess.check_output(cmd, cwd=cwd, stderr=subprocess.STDOUT, encoding='utf8')
+
+
+def _git_repo_paths(basedir: str) -> list[str]:
+  """The main repo plus every initialized submodule worktree (recursive)."""
+  repos = [basedir]
+  try:
+    out = run(["git", "submodule", "status", "--recursive"], basedir)
+  except subprocess.CalledProcessError:
+    return repos  # stripped tree or not a repo; nothing more to list
+  for line in out.splitlines():
+    parts = line.strip().split()
+    if len(parts) >= 2:
+      path = os.path.join(basedir, parts[1])
+      if os.path.isdir(path):
+        repos.append(path)
+  return repos
+
+
+def cleanup_device_tree(basedir: str = BASEDIR) -> None:
+  """Discard device-local edits so an update can never collide with them.
+
+  scp hot-fix deployments and manual experiments leave tracked changes and
+  untracked files behind, in the main repo and inside submodules. In the
+  main repo they only dirty GitDiff, but inside a submodule they make
+  `git submodule update` fail, which fails the whole fetch.
+
+  Runs only when a worktree is actually dirty, and cleans with -fd rather
+  than -x: ignored build artifacts (prebuilt, scons caches) survive, so
+  boots stay fast and the running tree keeps its compiled outputs. The
+  staging overlay fetch path already runs the full `clean -xdff`; this is
+  about bringing the running tree back to a state the next fetch can
+  build on.
+  """
+  for repo in _git_repo_paths(basedir):
+    try:
+      dirty = run(["git", "status", "--porcelain"], repo)
+    except subprocess.CalledProcessError:
+      continue  # not a git repo (stripped layout); nothing to clean
+    if not dirty.strip():
+      continue
+    cloudlog.info(f"cleaning local changes in {repo}: {len(dirty.splitlines())} entries")
+    try:
+      run(["git", "reset", "--hard"], repo)
+      run(["git", "clean", "-fd"], repo)
+    except subprocess.CalledProcessError as e:
+      cloudlog.exception(f"cleanup failed in {repo}: {e.output}")
 
 
 def set_consistent_flag(consistent: bool) -> None:
@@ -830,7 +877,13 @@ class Updater:
 
     r = [
       run(cmd, OVERLAY_MERGED) for cmd in [
-        ["git", "submodule", "update", "--init", "--recursive"],
+        # Submodules arrive here as copies of the dirty running tree; a
+        # plain `submodule update` refuses to checkout over local changes
+        # and untracked files, so force every submodule back to a clean
+        # state first, then move it onto the commit the main repo pins.
+        ["git", "submodule", "foreach", "--recursive", "git", "reset", "--hard"],
+        ["git", "submodule", "foreach", "--recursive", "git", "clean", "-fd"],
+        ["git", "submodule", "update", "--init", "--recursive", "--force"],
         ["git", "submodule", "foreach", "--recursive", "git", "reset", "--hard"],
       ]
     ]
@@ -906,6 +959,7 @@ def main() -> None:
       exception = None
       try:
         # TODO: reuse overlay from previous updated instance if it looks clean
+        cleanup_device_tree()
         init_overlay()
 
         # ensure we have some params written soon after startup
