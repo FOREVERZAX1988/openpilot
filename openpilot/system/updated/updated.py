@@ -64,6 +64,64 @@ def write_time_to_param(params, param) -> None:
   t = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
   params.put(param, t, block=True)
 
+def manual_update_loop(params: Params, updater: "Updater") -> None:
+  """Serve user-triggered update cycles while DisableUpdates is set.
+
+  Automatic periodic updates stay off, but the software screens must not
+  go dead: the UI triggers SIGUSR1 (check) or SIGHUP (check + download)
+  and this loop runs exactly one cycle per signal, mirroring the main
+  loop's error handling and param writes. Without it the check button
+  looks broken and LastUpdateTime freezes at the last automatic cycle.
+  """
+  wait_helper = WaitTimeHelper()
+  failed_count = 0
+  while params.get_bool("DisableUpdates"):
+    wait_helper.ready_event.clear()
+    # Event-based wait: the signal handlers set the event, so a sleeping
+    # pass wakes immediately instead of swallowing the signal.
+    wait_helper.sleep(10)
+    request = wait_helper.user_request
+    if request == UserRequest.NONE:
+      continue
+    wait_helper.user_request = UserRequest.NONE
+
+    exception = None
+    try:
+      # Write the busy state before any slow work: overlay init can take a
+      # while on first use, and the software screens poll this param to show
+      # progress — a late write makes the check button look dead again.
+      params.put("UpdaterState", "checking...", block=True)
+
+      if not system_time_valid():
+        try:
+          sync_system_time_http()
+        except Exception:
+          cloudlog.exception("updated: http time sync failed")
+
+      init_overlay()
+
+      updater.check_for_update()
+
+      if request == UserRequest.FETCH:
+        updater.fetch_update_with_retry()
+        write_time_to_param(params, "UpdaterLastFetchTime")
+
+      failed_count = 0
+    except subprocess.CalledProcessError as e:
+      cloudlog.event("update process failed", cmd=e.cmd, output=e.output, returncode=e.returncode)
+      exception = f"command failed: {e.cmd}\n{e.output}"
+      OVERLAY_INIT.unlink(missing_ok=True)
+    except Exception as e:
+      cloudlog.exception("uncaught updated exception, shouldn't happen")
+      exception = str(e)
+      OVERLAY_INIT.unlink(missing_ok=True)
+
+    try:
+      params.put("UpdaterState", "idle", block=True)
+      updater.set_params(failed_count == 0, failed_count, exception)
+    except Exception:
+      cloudlog.exception("uncaught updated exception while setting params, shouldn't happen")
+
 def run(cmd: list[str], cwd: str | None = None) -> str:
   return subprocess.check_output(cmd, cwd=cwd, stderr=subprocess.STDOUT, encoding='utf8')
 
@@ -802,18 +860,17 @@ def main() -> None:
     # Stay resident instead of exiting: manager respawns us within a second
     # otherwise, and every respawn is a full interpreter start that burns CPU
     # (observed ~2 respawns/s pinning multiple cores on mici offroad).
-    # The settings page still needs version info: UpdaterCurrentDescription
-    # and UpdaterTargetBranch are CLEAR_ON_MANAGER_START, so every boot wipes
-    # whatever the last real cycle wrote and only set_params can refill them.
-    # While updates are disabled no cycle ever runs, so write the display
-    # params once here or the software panel shows empty values forever.
+    # Automatic periodic updates stay off, but user-triggered cycles from the
+    # software screens still work (see manual_update_loop). UpdaterCurrent-
+    # Description/UpdaterTargetBranch are CLEAR_ON_MANAGER_START, so populate
+    # them once here or the panel shows empty values until first check.
     try:
-      Updater().set_params(False, 0, None)
+      updater = Updater()
+      updater.set_params(False, 0, None)
     except Exception:
       cloudlog.exception("failed to populate updater display params")
-    import time
-    while params.get_bool("DisableUpdates"):
-      time.sleep(10)
+      updater = Updater()
+    manual_update_loop(params, updater)
     cloudlog.info("updates re-enabled, continuing startup")
 
   with open(LOCK_FILE, 'w') as ov_lock_fd:
