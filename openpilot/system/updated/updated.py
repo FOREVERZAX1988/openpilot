@@ -802,6 +802,15 @@ def main() -> None:
     # Stay resident instead of exiting: manager respawns us within a second
     # otherwise, and every respawn is a full interpreter start that burns CPU
     # (observed ~2 respawns/s pinning multiple cores on mici offroad).
+    # The settings page still needs version info: UpdaterCurrentDescription
+    # and UpdaterTargetBranch are CLEAR_ON_MANAGER_START, so every boot wipes
+    # whatever the last real cycle wrote and only set_params can refill them.
+    # While updates are disabled no cycle ever runs, so write the display
+    # params once here or the software panel shows empty values forever.
+    try:
+      Updater().set_params(False, 0, None)
+    except Exception:
+      cloudlog.exception("failed to populate updater display params")
     import time
     while params.get_bool("DisableUpdates"):
       time.sleep(10)
