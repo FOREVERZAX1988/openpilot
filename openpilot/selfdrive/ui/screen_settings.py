@@ -18,9 +18,11 @@ keys read as unset and code defaults keep stock behavior. A settings-page
 entry will be added separately.
 
 TspKeepAliveBrightness is likewise unregistered and device-local: it opts a
-unit into a nonzero sleep backlight duty so touch-wake survives on clone
-panels whose Samsung TSP gates itself off at zero duty. Default (unset) is
-true dark sleep, matching stock behavior.
+unit into the clone-panel touch workaround — sleep keeps the panel controller
+powered (bl_power=0) with a nonzero backlight duty (recommended 2), so the
+Samsung TSP's shared VDD rail stays up and touch-wake survives. Default
+(unset) is stock behavior: sleep powers the panel down (bl_power=4, true
+dark) with brightness 0.
 """
 import math
 

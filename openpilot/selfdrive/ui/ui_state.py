@@ -34,18 +34,17 @@ BRIGHTNESS_MIN = BACKLIGHT_MIN * 0.6 if HARDWARE.get_device_type() == "mici" els
 PARAM_UPDATE_TIME = 1 / 5.0
 
 # C3 (tici) clone panels: the Samsung TSP firmware gates itself off when the
-# backlight duty is (near) zero, so a true 0 makes touch-wake impossible — the
-# controller generates no IRQs at all while asleep until the next brightness
-# change. Measured on a c3clone unit: touch alive at >=10/1023 duty, dead at 0
-# even with the panel controller kept powered (see hardware.py
-# set_display_power, the companion bl_power fix).
+# backlight duty is (near) zero, and on some units panel power-down itself
+# drops the TSP's shared VDD rail — both make touch-wake impossible.
 #
-# Compatibility: sleeping at a nonzero duty keeps that boost rail alive but
-# leaves a faint glow on every normal panel, so the floor is OPT-IN per device
-# via the TspKeepAliveBrightness param (1-10%; recommended 2 = ~20/1023 raw).
-# Unset/0 = true dark sleep (stock behavior); normal panels wake by touch at 0
-# just like upstream. The floor applies to every zero write on tici (parked
-# sleep and onroad screen-off) so touch-wake survives both.
+# Compatibility: the workaround is OPT-IN per device via the
+# TspKeepAliveBrightness param (1-10%; recommended 2 = ~20/1023 raw):
+# - set -> sleep keeps the panel controller powered (bl_power=0) with a
+#   nonzero backlight duty: touch-wake survives, at the cost of a faint glow.
+# - unset/0 (default) -> stock behavior: sleep powers the panel down
+#   (bl_power=4, true dark) and writes brightness 0; normal panels wake by
+#   touch just fine (verified on an EA8074 unit, touch alive through
+#   bl_power=4). The floor also covers the onroad screen-off zero write.
 TSP_KEEPALIVE_RECOMMENDED = TSP_WAKE_SLEEP_BRIGHTNESS = 2  # percent; 2% of 1023 = ~20 raw steps
 
 
@@ -528,7 +527,10 @@ class Device(DeviceSP):
         return
       self._awake = on
       cloudlog.debug(f"setting display power {int(on)}")
-      HARDWARE.set_display_power(on)
+      # Units needing the TSP keep-alive floor keep the panel controller powered
+      # at sleep (bl_power=0 + nonzero duty) instead of powering it down, since
+      # panel power-down drops the Samsung TSP's shared VDD rail on those.
+      HARDWARE.set_display_power(on or bool(self._tsp_keepalive))
       gui_app.set_should_render(on)
 
 
