@@ -74,6 +74,9 @@ class UIStateSP(UIStateZP):
     self.onroad_brightness_timer_param: int = 0
     self.rainbow_path: bool = False
     self.road_name_toggle: bool = False
+    # pre-read so render-time lambdas (mici settings always-offroad buttons) can
+    # never hit AttributeError before the first background params pass lands
+    self.always_offroad: bool = self.params.get_bool("OffroadMode") or self.params.get_bool("OffroadModeRequested")
     self.rocket_fuel: bool = False
     self.speed_limit_mode = None
     self.standstill_timer: bool = False

@@ -279,7 +279,10 @@ class BrandPickerPage(NavScroller):
 class ModelPickerPage(NavScroller):
   def __init__(self, layout: VehicleLayoutMici, make: str):
     super().__init__()
-    self._layout = layout
+    # NOTE: never store the layout as `self._layout` — that would shadow
+    # NavWidget._layout() (called by Widget.render each frame) and crash the ui
+    # process with TypeError: 'VehicleLayoutMici' object is not callable.
+    self._vehicle_layout = layout
     self._scroller.add_widget(GreyBigButton(make, tr("scroll to continue")))
     for name in sorted(n for n, p in layout._platforms.items() if p.get('make') == make):
       btn = BigButton(name, "", scroll=True)

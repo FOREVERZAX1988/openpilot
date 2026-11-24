@@ -8574,3 +8574,31 @@ msgstr "轉向扭矩響應校準已完成。"
 
 msgid "unavailable, {} driving"
 msgstr "不可用，{} 正在駕駛"
+
+#: openpilot\selfdrive\ui\mici (c4 fix)
+msgid "bluetooth"
+msgstr "藍牙"
+
+#: openpilot\selfdrive\ui\mici (c4 fix)
+msgid "storage"
+msgstr "儲存"
+
+#: openpilot\selfdrive\ui\mici (c4 fix)
+msgid "osm"
+msgstr "OSM 地圖"
+
+#: openpilot\selfdrive\ui\mici (c4 fix)
+msgid "navigation"
+msgstr "導航"
+
+#: openpilot\selfdrive\ui\mici (c4 fix)
+msgid "vehicle"
+msgstr "車輛"
+
+#: openpilot\selfdrive\ui\mici (c4 fix)
+msgid "check alerts"
+msgstr "檢視提醒"
+
+#: openpilot\selfdrive\ui\mici (c4 fix)
+msgid "openpilot can't start"
+msgstr "openpilot 無法啟動"

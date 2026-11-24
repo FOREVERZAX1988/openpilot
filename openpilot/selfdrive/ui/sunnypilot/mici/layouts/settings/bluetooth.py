@@ -420,7 +420,7 @@ class BluetoothLayoutMici(NavScroller):
 class DevicePage(NavScroller):
   def __init__(self, layout: BluetoothLayoutMici, addr: str):
     super().__init__()
-    self._layout = layout
+    self._bt_layout = layout
     self._addr = addr
 
     dev = layout.current_device(addr)
@@ -441,31 +441,31 @@ class DevicePage(NavScroller):
 
   def _update_state(self):
     super()._update_state()
-    self._layout.fetch_if_stale()
+    self._bt_layout.fetch_if_stale()
 
-    dev = self._layout.current_device(self._addr)
+    dev = self._bt_layout.current_device(self._addr)
     if dev is None:
       return
-    self._info_btn.set_value(self._layout._device_status(dev))
+    self._info_btn.set_value(self._bt_layout._device_status(dev))
     self._connect_btn.set_text(tr("Disconnect") if dev.connected else tr("Connect"))
 
   def _on_connect(self):
-    dev = self._layout.current_device(self._addr)
+    dev = self._bt_layout.current_device(self._addr)
     if dev is None:
       return
-    self._layout._post_async('disconnect' if dev.connected else 'connect', {'address': dev.address})
+    self._bt_layout._post_async('disconnect' if dev.connected else 'connect', {'address': dev.address})
 
   def _on_edit(self):
-    gui_app.push_widget(EditorPage(self._layout, self._addr))
+    gui_app.push_widget(EditorPage(self._bt_layout, self._addr))
 
   def _on_forget(self):
-    dev = self._layout.current_device(self._addr)
+    dev = self._bt_layout.current_device(self._addr)
     if dev is None:
       return
     name = dev.name or dev.address
 
     def on_confirm():
-      self._layout._post_async('forget', {'address': dev.address})
+      self._bt_layout._post_async('forget', {'address': dev.address})
       gui_app.pop_widget()
     gui_app.push_widget(BigConfirmationDialog(tr('Forget "{}"?').format(name),
                                               gui_app.texture(WARN_ICON, 64, 64), on_confirm, red=True))
@@ -476,7 +476,7 @@ class EditorPage(NavScroller):
 
   def __init__(self, layout: BluetoothLayoutMici, addr: str):
     super().__init__()
-    self._layout = layout
+    self._bt_layout = layout
     self._addr = addr
 
     dev = layout.current_device(addr)
@@ -498,9 +498,9 @@ class EditorPage(NavScroller):
     self._save_btn.set_click_callback(self._on_save)
     self._learn_btn = BigButton(tr("Test / Learn"), tr("START"),
                                 description=tr("Capture this remote's events to verify the mapping."))
-    self._learn_btn.set_click_callback(lambda: self._layout._post_async('learn', {'address': self._addr, 'enabled': True}))
+    self._learn_btn.set_click_callback(lambda: self._bt_layout._post_async('learn', {'address': self._addr, 'enabled': True}))
     self._stop_btn = BigButton(tr("Stop Test"), tr("STOP"))
-    self._stop_btn.set_click_callback(lambda: self._layout._post_async('learn', {'address': self._addr, 'enabled': False}))
+    self._stop_btn.set_click_callback(lambda: self._bt_layout._post_async('learn', {'address': self._addr, 'enabled': False}))
 
     widgets: list = [
       GreyBigButton(self._device_name, tr("Button Mapping")),
@@ -525,12 +525,12 @@ class EditorPage(NavScroller):
 
   def _update_state(self):
     super()._update_state()
-    self._layout.fetch_if_stale()
+    self._bt_layout.fetch_if_stale()
     for token, row in self._mapping_rows.items():
       row.set_value(ACTION_LABELS.get(self._mapping.get(token, 'none'), tr('None')))
 
   def _on_save(self):
-    self._layout._post_async('device-config', {
+    self._bt_layout._post_async('device-config', {
       'address': self._addr,
       'device': {
         'name': self._device_name,
@@ -565,7 +565,7 @@ class ActionPickerPage(NavScroller):
 class AdvancedPage(NavScroller):
   def __init__(self, layout: BluetoothLayoutMici):
     super().__init__()
-    self._layout = layout
+    self._bt_layout = layout
     # optimistic values until the daemon state catches up with the POST
     self._pending: dict[str, bool] = {}
 
@@ -600,34 +600,34 @@ class AdvancedPage(NavScroller):
 
   def _update_state(self):
     super()._update_state()
-    self._layout.fetch_if_stale()
+    self._bt_layout.fetch_if_stale()
 
-    state = self._layout.state
+    state = self._bt_layout.state
     self._sync_toggle(self._radio_toggle, 'radio', state.radio_enabled)
     self._sync_toggle(self._discoverable_toggle, 'discoverable', state.discoverable)
     self._name_btn.set_value(state.local_name)
 
   def _on_radio(self, checked: bool):
     self._pending['radio'] = checked
-    self._layout._post_async('radio', {'enabled': checked})
+    self._bt_layout._post_async('radio', {'enabled': checked})
 
   def _on_discoverable(self, checked: bool):
     self._pending['discoverable'] = checked
-    self._layout._post_async('discoverable', {'enabled': checked})
+    self._bt_layout._post_async('discoverable', {'enabled': checked})
 
   def _on_name(self):
-    current = self._layout.state.local_name
+    current = self._bt_layout.state.local_name
     gui_app.push_widget(BigInputDialog(
       tr("Device name"),
       current,
       minimum_length=1,
-      confirm_callback=lambda text: self._layout._post_async('name', {'name': text.strip()}),
+      confirm_callback=lambda text: self._bt_layout._post_async('name', {'name': text.strip()}),
     ))
 
   def _on_reset(self):
     gui_app.push_widget(BigConfirmationDialog(
       tr("Reset Bluetooth"),
       gui_app.texture(WARN_ICON, 64, 64),
-      self._layout._on_reset_confirmed,
+      self._bt_layout._on_reset_confirmed,
       red=True,
     ))
