@@ -6,7 +6,6 @@ See the LICENSE.md file in the root directory for more details.
 """
 
 import asyncio
-import copy
 import os
 import re
 import threading
@@ -572,9 +571,13 @@ class ModelManagerSP:
         return
       model_to_download, source = resolved
       # the download path mutates artifact.downloadProgress in place; hand it
-      # a copy so the parsed-catalog objects cached in ModelFetcher stay
-      # pristine for the 1 Hz validate/report reads
-      model_to_download = copy.deepcopy(model_to_download)
+      # a mutable copy so the parsed-catalog objects cached in ModelFetcher
+      # stay pristine. A fresh capnp builder, NOT deepcopy: deepcopy of a
+      # capnp builder yields a read-only reader and the first status write
+      # raises AttributeError, silently cancelling the download.
+      bundle_copy = custom.ModelManagerSP.ModelBundle()
+      bundle_copy.from_dict(model_to_download.to_dict())
+      model_to_download = bundle_copy
       self._download_ref = ref_to_download
       try:
         self.download(model_to_download, Paths.model_root(), source)
