@@ -348,6 +348,7 @@ ensure_wheel_package() {
 start_service() {
   local name="$1"
   local script="$2"
+  local nice_level="${3:-0}"
   local logfile="/tmp/${name}.log"
   local root="$DIR"
 
@@ -367,7 +368,9 @@ start_service() {
   if [ "${WEBUI_TLS:-0}" = "1" ]; then
     tls_env="WEBUI_TLS=1"
   fi
-  (cd "$root" && PYTHONPATH="$py_path" $tls_env "$py" -m "$module" >> "$logfile" 2>&1 &)
+  local nice_cmd=""
+  [ "$nice_level" != "0" ] && nice_cmd="nice -n $nice_level"
+  (cd "$root" && PYTHONPATH="$py_path" $tls_env $nice_cmd "$py" -m "$module" >> "$logfile" 2>&1 &)
 }
 
 # Background keep-alive for a service. Starts immediately, then restarts every
@@ -377,10 +380,11 @@ keep_alive() {
   local script="$2"
   local port="$3"
   local interval="${4:-45}"
-  start_service "$name" "$script"
+  local nice_level="${5:-0}"
+  start_service "$name" "$script" "$nice_level"
   while true; do
     sleep "$interval"
-    start_service "$name" "$script"
+    start_service "$name" "$script" "$nice_level"
   done
 }
 
@@ -1211,9 +1215,14 @@ launch() {
   launch_stage "bluez/updater deps done"
 
   # Start AI and WebUI before the AGNOS OS update so they stay reachable even
-  # if the updater loops waiting for user confirmation.
-  keep_alive aid ai/aid.py 5090 &
-  keep_alive webui webui/webuid.py 5080 &
+  # if the updater loops waiting for user confirmation. Both are niced down:
+  # they are network conveniences, not the driving stack. On mici (8 cores)
+  # webuid alone averaged ~23% CPU lifetime; at load ~13 during a drive every
+  # runnable task competes with camerad/modeld, whose frame gaps cascade into
+  # commIssue / locationdTemporaryError alerts. nice only bites under
+  # contention - offroad the driving stack is idle and these still get CPU.
+  keep_alive aid ai/aid.py 5090 45 10 &
+  keep_alive webui webui/webuid.py 5080 45 10 &
 
   # Ensure DRM fd socket is available for the native UI. On devices where the
   # panel backlight is present but the touch controller did not probe, the

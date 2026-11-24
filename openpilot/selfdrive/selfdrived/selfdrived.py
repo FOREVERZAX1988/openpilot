@@ -140,8 +140,17 @@ class SelfdriveD:
     # mirror); controlsd/ui already treat it as optional. A transient msgq
     # scheduling blip otherwise makes all_checks() fail on a live 10 Hz feed and
     # raises the spurious "进程间通信问题: carrotManSP" comm issue mid-drive.
+    # driverMonitoringState is read-only here (DM lockout/alert fields); its
+    # valid flag mirrors dmonitoringd's own sm.all_checks() across 8 inputs,
+    # so a momentary cabin-camera or radar hiccup downstream publishes an
+    # invalid DM state and selfdrived raised "进程间通信问题" (SOFT_DISABLE)
+    # for it 334 times in one 14-minute drive on the C4. Upstream does not
+    # subscribe to driverMonitoringState in selfdrived at all; ignoring its
+    # health checks keeps the field reads working without gating commIssue
+    # on a feed that is not on the controls critical path.
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan', 'liveTracks'] \
-             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP', 'carrotNaviSP']
+             + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP', 'carrotNaviSP'] \
+             + ['driverMonitoringState']
     disable_dm = is_dm_disabled(self.params)
     if SIMULATION or disable_dm:
       ignore += ['cabinCameraState', 'managerState']
