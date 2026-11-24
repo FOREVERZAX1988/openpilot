@@ -13,6 +13,7 @@ exposed without polluting ``common/params_keys.h``.
 """
 import json
 import os
+import time
 from typing import Any, Optional
 
 from openpilot.common.params import Params
@@ -276,6 +277,13 @@ class UnifiedParams:
   """
   _instance: Optional["UnifiedParams"] = None
   _initialized: bool = False
+  # Hot-path TTL cache for system-param reads. carrot_man's 10 Hz tick and
+  # CarrotServ's update_params sweep the whole tuning table every cycle;
+  # params reads are file IO through the C++ layer, which measured at
+  # ~80 opens/s for state that only changes when a settings page writes it.
+  # 1 s staleness is imperceptible for settings round-trips. Self-writes
+  # invalidate their key; cross-process writes (webui) settle within the TTL.
+  _CACHE_TTL_S = 1.0
 
   def __new__(cls, nav_json_file: str | None = None) -> "UnifiedParams":
     if cls._instance is None:
@@ -293,6 +301,7 @@ class UnifiedParams:
     self._nav_json_file = os.path.realpath(nav_json_file)
     self._nav_data: dict[str, Any] = dict(_DEFAULT_NAV_PARAMS)
     self._load_nav_params()
+    self._sys_cache: dict[str, tuple[float, Any]] = {}
     self._initialized = True
 
   # ---- internal helpers --------------------------------------------------
@@ -368,7 +377,13 @@ class UnifiedParams:
   # ---- public API ---------------------------------------------------------
 
   def get(self, key: str, default: Any = None, return_default: bool = False) -> Any:
-    sys_val = self._read_from_system(key, return_default)
+    now = time.monotonic()
+    hit = self._sys_cache.get(key)
+    if hit is not None and now < hit[0]:
+      sys_val = hit[1]
+    else:
+      sys_val = self._read_from_system(key, return_default)
+      self._sys_cache[key] = (now + self._CACHE_TTL_S, sys_val)
     if sys_val is not None and sys_val != b"":
       return sys_val
     if key in self._nav_data:
@@ -405,6 +420,7 @@ class UnifiedParams:
     if not self._write_to_system(key, value):
       self._nav_data[key] = value
       self._save_nav_params()
+    self._sys_cache.pop(key, None)
 
   def put_int(self, key: str, value: int) -> None:
     self.put(key, int(value))
@@ -421,6 +437,7 @@ class UnifiedParams:
     except Exception:
       pass
     self._nav_data.pop(key, None)
+    self._sys_cache.pop(key, None)
     self._save_nav_params()
 
   def keys(self):
