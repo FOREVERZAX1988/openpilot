@@ -72,7 +72,7 @@ class Sidebar(Widget, SidebarSP):
 
     self._temp_status = MetricData(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
     self._cpu_status = MetricData(tr_noop("CPU"), "--", Colors.GOOD)
-    self._gpu_status = MetricData(tr_noop("GPU"), "--", Colors.GOOD)
+    self._mem_status = MetricData(tr_noop("MEM"), "--", Colors.GOOD)
     self._panda_status = MetricData(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
     self._recording_audio = False
 
@@ -118,7 +118,7 @@ class Sidebar(Widget, SidebarSP):
     self._update_network_status(device_state)
     self._update_temperature_status(device_state)
     self._update_cpu_status(device_state)
-    self._update_gpu_status(device_state)
+    self._update_mem_status(device_state)
     self._update_panda_status()
 
   def _update_network_status(self, device_state):
@@ -147,11 +147,14 @@ class Sidebar(Widget, SidebarSP):
       color = Colors.DANGER if pct >= 90 else Colors.WARNING if pct >= 70 else Colors.GOOD
       self._cpu_status.update(tr_noop("CPU"), f"{pct}%", color)
 
-  def _update_gpu_status(self, device_state):
-    gpu = device_state.gpuUsagePercent
-    if gpu >= 0:
-      color = Colors.DANGER if gpu >= 90 else Colors.WARNING if gpu >= 70 else Colors.GOOD
-      self._gpu_status.update(tr_noop("GPU"), f"{round(gpu)}%", color)
+  def _update_mem_status(self, device_state):
+    # memory usage, same source as selfdrived's lowMemory alert. GPU is not
+    # shown: gpubusy counters do not tick on this SoC so the reading is
+    # always 0, while memory reflects real pressure (page cache, leaks).
+    mem = device_state.memoryUsagePercent
+    if mem >= 0:
+      color = Colors.DANGER if mem >= 90 else Colors.WARNING if mem >= 70 else Colors.GOOD
+      self._mem_status.update(tr_noop("MEM"), f"{round(mem)}%", color)
 
   def _update_panda_status(self):
     if ui_state.panda_type == log.PandaState.PandaType.unknown:
@@ -229,7 +232,7 @@ class Sidebar(Widget, SidebarSP):
   def _draw_metrics(self, rect: rl.Rectangle):
     # TEMP / CPU / GPU / VEHICLE, evenly spaced between the network indicator
     # and the home button (same layout math the sunnylink variant used).
-    metrics = [self._temp_status, self._cpu_status, self._gpu_status, self._panda_status]
+    metrics = [self._temp_status, self._cpu_status, self._mem_status, self._panda_status]
     start_y = int(rect.y) + METRIC_START_Y
     available_height = max(0, int(HOME_BTN.y) - METRIC_MARGIN - METRIC_HEIGHT - start_y)
     spacing = available_height / max(1, len(metrics) - 1)

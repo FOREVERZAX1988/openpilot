@@ -367,7 +367,7 @@ msgstr "确定要进入始终离路模式吗？"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Are you sure you want to exit Always Offroad mode?"
-msgstr "确定要退出始终离路模式吗？"
+msgstr "确定要退出始终离线模式吗？"
 
 #: openpilot\selfdrive\ui\layouts\settings\device.py
 msgid "Are you sure you want to power off?"
@@ -2049,7 +2049,7 @@ msgstr "退出"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Exit Always Offroad"
-msgstr "退出始终离路"
+msgstr "退出始终离线"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid "Exit Safe Mode"
@@ -6345,7 +6345,7 @@ msgstr "关闭"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings.py
 msgid "exit always offroad"
-msgstr "退出始终离路"
+msgstr "退出始终离线"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "experimental mode"
@@ -6989,11 +6989,11 @@ msgstr "滑动以备份"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings.py
 msgid "slide to exit always offroad"
-msgstr "滑动以退出始终离路"
+msgstr "滑动以退出始终离线"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings.py
 msgid "slide to force offroad"
-msgstr "滑动以强制离路"
+msgstr "滑动以强制离线"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\network\wifi_ui.py
 msgid "slide to forget"
@@ -8940,3 +8940,42 @@ msgstr "查看提醒"
 #: openpilot\selfdrive\ui\mici (c4 fix)
 msgid "openpilot can't start"
 msgstr "openpilot 无法启动"
+
+msgid "Disengage to enter Always Offroad mode"
+msgstr "退出接管后进入始终离线模式"
+
+
+msgid "Keeps openpilot off the road even after a reboot. hardwared applies it when the car is ready."
+msgstr "重启后 openpilot 仍保持离线状态。车辆就绪后由 hardwared 自动应用。"
+
+
+msgid "always\noffroad"
+msgstr "始终\n离线"
+
+
+msgid "enter"
+msgstr "进入"
+
+
+msgid "slide to\nconfirm reset"
+msgstr "滑动以\n确认重置"
+
+
+msgid "slide to\n{} always offroad"
+msgstr "滑动以\n{}始终离线"
+
+
+msgid "tap to enter"
+msgstr "点按进入"
+
+
+msgid "tap to exit"
+msgstr "点按退出"
+
+
+msgid "{} - {}"
+msgstr "{} - {}"
+
+
+msgid "{}%"
+msgstr "{}%"

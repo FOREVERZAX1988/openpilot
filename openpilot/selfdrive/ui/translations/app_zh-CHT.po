@@ -8602,3 +8602,154 @@ msgstr "檢視提醒"
 #: openpilot\selfdrive\ui\mici (c4 fix)
 msgid "openpilot can't start"
 msgstr "openpilot 無法啟動"
+
+msgid "AI agent"
+msgstr "AI 助理"
+
+
+msgid "AI agent password"
+msgstr "AI 助理密碼"
+
+
+msgid "Built-in AI agent, offroad only. Browser access on port 5095; the password is shown below."
+msgstr "內建 AI 助理，僅限離線使用。透過瀏覽器存取 5095 連接埠；密碼顯示於下方。"
+
+
+msgid "Disengage to enter Always Offroad mode"
+msgstr "退出接管後進入始終離線模式"
+
+
+msgid "Keeps openpilot off the road even after a reboot. hardwared applies it when the car is ready."
+msgstr "重啟後 openpilot 仍保持離線狀態。車輛就緒後由 hardwared 自動套用。"
+
+
+msgid "Login password for the agent web page (port 5095). Tap to regenerate."
+msgstr "助理網頁的登入密碼（連接埠 5095）。點按可重新產生。"
+
+
+msgid "Reopen the Tailscale pairing QR and the SSH address while remote SSH is enabled."
+msgstr "遠端 SSH 開啟時，重新開啟 Tailscale 配對 QR 碼和 SSH 位址。"
+
+
+msgid "Sessions using the old password stop working once the agent restarts."
+msgstr "助理重啟後，使用舊密碼的會話將立即失效。"
+
+
+msgid "The web login password will be regenerated."
+msgstr "網頁登入密碼將被重新產生。"
+
+
+msgid "This will delete ALL downloaded maps\n\nAre you sure you want to delete all maps?"
+msgstr "這將刪除所有已下載的地圖\n\n確定要刪除全部地圖嗎？"
+
+
+msgid "accept\nterms"
+msgstr "接受\n條款"
+
+
+msgid "always\noffroad"
+msgstr "始終\n離線"
+
+
+msgid "decline &\nuninstall"
+msgstr "拒絕並\n解除安裝"
+
+
+msgid "disable\nsunnylink"
+msgstr "關閉\nsunnylink"
+
+
+msgid "driver monitoring\ncheck"
+msgstr "司機監測\n檢查"
+
+
+msgid "enable\nexperimental mode"
+msgstr "啟用\n實驗模式"
+
+
+msgid "enable\nsunnylink"
+msgstr "啟用\nsunnylink"
+
+
+msgid "enable alpha\nlongitudinal"
+msgstr "啟用 Alpha\n縱向控制"
+
+
+msgid "enabling\nexperimental mode"
+msgstr "正在啟用\n實驗模式"
+
+
+msgid "enter"
+msgstr "進入"
+
+
+msgid "enter agent password..."
+msgstr "輸入助理密碼..."
+
+
+msgid "joystick debug\nmode"
+msgstr "搖桿除錯\n模式"
+
+
+msgid "make sure comma\nfour can see your face"
+msgstr "確保 comma four\n能看到你的臉"
+
+
+msgid "pairing QR code"
+msgstr "配對 QR 碼"
+
+
+msgid "remote SSH"
+msgstr "遠端 SSH"
+
+
+msgid "reset agent\npassword"
+msgstr "重設助理\n密碼"
+
+
+msgid "reset agent password"
+msgstr "重設助理密碼"
+
+
+msgid "set agent password"
+msgstr "設定助理密碼"
+
+
+msgid "show"
+msgstr "顯示"
+
+
+msgid "slide to\nconfirm reset"
+msgstr "滑動以\n確認重設"
+
+
+msgid "slide to\n{} always offroad"
+msgstr "滑動以\n{}始終離線"
+
+
+msgid "smooth big model"
+msgstr "平滑大模型"
+
+
+msgid "start the car to\nuse sunnypilot"
+msgstr "啟動車輛以\n使用 sunnypilot"
+
+
+msgid "tap to enter"
+msgstr "點按進入"
+
+
+msgid "tap to exit"
+msgstr "點按退出"
+
+
+msgid "terms of\nservice"
+msgstr "服務\n條款"
+
+
+msgid "{} - {}"
+msgstr "{} - {}"
+
+
+msgid "{}%"
+msgstr "{}%"

@@ -87,7 +87,10 @@ class SettingsLayoutSP(OP.SettingsLayout):
     for label, (panel_cls, icon) in panels.items():
       btn = SettingsBigButton(tr(label), "", icon)
       btn.set_click_callback(open_panel(panel_cls()))
-      sp_buttons[label] = btn
+      # key by the translated label: the base scroller buttons are built with
+      # tr(...) text, and the merge below matches on btn.text, so raw-English
+      # keys silently dropped every SP panel on non-English locales
+      sp_buttons[tr(label)] = btn
 
     # Carrot is its own subsystem built by its own panel modules; skipped if they
     # are absent (e.g. stripped trees), same fallback idea as the Big GUI import.
@@ -95,14 +98,14 @@ class SettingsLayoutSP(OP.SettingsLayout):
       from openpilot.selfdrive.ui.sunnypilot.mici.layouts.settings.carrot import CarrotLayoutMici
       carrot_btn = SettingsBigButton(tr("carrot"), "", gui_app.texture(f"{SP_ICON}/icon_map.png", 64, 64))
       carrot_btn.set_click_callback(open_panel(CarrotLayoutMici()))
-      sp_buttons["carrot"] = carrot_btn
+      sp_buttons[tr("carrot")] = carrot_btn
     except ImportError:
       cloudlog.warning("mici settings: carrot panel not available, skipping")
 
     sunnylink_panel = SunnylinkLayoutMici()
     sunnylink_btn = SunnylinkBigButton(tr("sunnylink"), "", gui_app.texture("../../sunnypilot/selfdrive/assets/icons_mici/sunnylink.png", 76, 44))
     sunnylink_btn.set_click_callback(lambda: gui_app.push_widget(sunnylink_panel))
-    sp_buttons["sunnylink"] = sunnylink_btn
+    sp_buttons[tr("sunnylink")] = sunnylink_btn
 
     always_offroad_desc = tr("Keeps the device offroad while the car is on, so zoompilot won't engage.\n" +
                              "Settings that need the car off can be changed.")
@@ -152,7 +155,9 @@ class SettingsLayoutSP(OP.SettingsLayout):
       self._scroller.add_widget(item)
 
   def _replace_panel(self, label: str, panel) -> None:
-    btn = next((btn for btn in self._scroller.items if btn.text == label), None)
+    # the base buttons are constructed with tr(...) text; match on the same
+    # translation so the swap works on non-English locales too
+    btn = next((btn for btn in self._scroller.items if btn.text == tr(label)), None)
     if btn is None:
       cloudlog.warning(f"mici settings: no panel button labelled {label!r}")
       return
