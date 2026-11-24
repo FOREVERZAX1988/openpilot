@@ -6348,7 +6348,7 @@ msgstr "結束"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings.py
 msgid "exit always offroad"
-msgstr "退出始終離線"
+msgstr "退出始終離路"
 
 #: openpilot\selfdrive\ui\mici\layouts\settings\toggles.py
 msgid "experimental mode"
