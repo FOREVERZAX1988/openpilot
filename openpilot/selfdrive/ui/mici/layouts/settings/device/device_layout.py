@@ -19,6 +19,7 @@ from openpilot.selfdrive.ui.mici.onroad.cabin_camera_dialog import CabinCameraDi
 from openpilot.selfdrive.ui.mici.layouts.onboarding import TrainingGuide, TermsPage
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import device, ui_state
+from openpilot.selfdrive.ui.sunnypilot.ui_state import set_always_offroad
 from openpilot.system.ui.lib.application import gui_app, MousePos
 from openpilot.system.ui.lib.multilang import multilang, tr
 from openpilot.system.ui.widgets import DialogResult
@@ -212,7 +213,8 @@ class DeviceLayoutMici(NavScroller):
 
     self._power_off_btn = EngagedConfirmationCircleButton(tr("power off"), gui_app.texture("icons_mici/settings/device/power.png", 64, 66),
                                                           power_off_callback, exit_on_confirm=False, red=True)
-    self._power_off_btn.set_visible(lambda: not ui_state.ignition)
+    # Big GUI shows Power Off only when parked (offroad), not merely ignition-off.
+    self._power_off_btn.set_visible(lambda: ui_state.is_offroad())
 
     self._metric_toggle = BigToggle(tr("use metric units"), initial_state=ui_state.params.get_bool("IsMetric"), toggle_callback=self._on_metric_toggle)
 
@@ -251,6 +253,10 @@ class DeviceLayoutMici(NavScroller):
     self._safe_mode_btn.set_click_callback(self._on_safe_mode)
     self._safe_mode_btn.set_enabled(lambda: ui_state.is_offroad())
 
+    self._always_offroad_btn = BigButton(tr("always\noffroad"), "", gui_app.texture("icons_mici/settings/device/power.png", 64, 66),
+                                         description=tr("Keeps openpilot off the road even after a reboot. hardwared applies it when the car is ready."))
+    self._always_offroad_btn.set_click_callback(self._on_always_offroad)
+
     record_front = BigParamControl(tr("record & upload cabin camera"), "RecordFront",
                                    description_icon=gui_app.texture("icons_mici/settings/device/cameras.png", 64, 64),
                                    toggle_callback=restart_needed_callback, description=tr("Upload cabin camera data to help improve driver monitoring."))
@@ -264,6 +270,8 @@ class DeviceLayoutMici(NavScroller):
 
     regulatory_btn = BigButton(tr("regulatory info"), "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
     regulatory_btn.set_click_callback(self._on_regulatory)
+    # Big GUI gates Regulatory behind offroad as well.
+    regulatory_btn.set_enabled(lambda: ui_state.is_offroad())
 
     cabin_cam_btn = BigButton(tr("driver\ncamera preview"), "", gui_app.texture("icons_mici/settings/device/cameras.png", 64, 64),
                               description=tr("Preview the cabin camera to check driver monitoring visibility. The vehicle must be off."))
@@ -299,6 +307,7 @@ class DeviceLayoutMici(NavScroller):
       regulatory_btn,
       self._reset_calib_btn,
       self._safe_mode_btn,
+      self._always_offroad_btn,
       reset_settings_btn,
       reboot_btn,
       self._power_off_btn,
@@ -404,6 +413,27 @@ class DeviceLayoutMici(NavScroller):
     gui_app.push_widget(BigConfirmationDialog(tr("slide to\n{} safe mode").format(tr("undo") if status["active"] else tr("enable")),
                                               gui_app.texture("icons_mici/setup/warning.png", 64, 64), do_set, red=enabling))
 
+  def _on_always_offroad(self):
+    """Big GUI parity: the guarded Always Offroad switch (P0-1).
+
+    Writes OffroadModeRequested only; hardwared owns the actual transition,
+    so entering waits until the car hands control back.
+    """
+    if ui_state.engaged:
+      gui_app.push_widget(BigDialog("", tr("Disengage to enter Always Offroad mode")))
+      return
+
+    enabling = not ui_state.always_offroad
+
+    def do_set():
+      if not ui_state.engaged:
+        set_always_offroad(ui_state.params, enabling)
+
+    action = tr("exit") if not enabling else tr("enter")
+    gui_app.push_widget(BigConfirmationDialog(tr("slide to\n{} always offroad").format(action),
+                                              gui_app.texture("icons_mici/settings/device/power.png", 64, 66),
+                                              do_set, red=not enabling))
+
   def _on_reset_settings(self):
     reset_icon = gui_app.texture("icons_mici/settings/device/reboot.png", 64, 70)
 
@@ -413,7 +443,12 @@ class DeviceLayoutMici(NavScroller):
       from openpilot.common.hardware import HARDWARE
       HARDWARE.reboot()
 
-    gui_app.push_widget(BigConfirmationDialog(tr("slide to\nreset settings"), reset_icon, do_reset, red=True))
+    # Big GUI parity: two-stage confirmation. The first slide arms the flow,
+    # the second makes the unrecoverable step explicit (P1-1).
+    def second_confirm():
+      gui_app.push_widget(BigConfirmationDialog(tr("slide to\nconfirm reset"), reset_icon, do_reset, red=True))
+
+    gui_app.push_widget(BigConfirmationDialog(tr("slide to\nreset settings"), reset_icon, second_confirm, red=True))
 
   def _update_toggles(self):
     # mirror external param changes
@@ -441,6 +476,12 @@ class DeviceLayoutMici(NavScroller):
     is_preview = ui_state.params.get_bool("IsOnroadPreview")
     tint = rl.Color(70, 91, 234, 255) if (self._onroad_preview_btn.enabled and is_preview) else rl.WHITE
     self._onroad_preview_btn.set_bg_tint(tint)
+    # always offroad button mirrors the requested state, like Big GUI's
+    # Exit/Enable Always Offroad label swap
+    if ui_state.always_offroad:
+      self._always_offroad_btn.set_value(tr("tap to exit"))
+    else:
+      self._always_offroad_btn.set_value(tr("tap to enter"))
     # with RecordingMode 0 nothing is recorded, so there is nothing to upload;
     # manager also forces the param off
     self._onroad_uploads_toggle.set_superseded(ui_state.params.get_int("RecordingMode") == 0)
