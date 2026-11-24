@@ -799,7 +799,13 @@ def main() -> None:
 
   if params.get_bool("DisableUpdates"):
     cloudlog.warning("updates are disabled by the DisableUpdates param")
-    exit(0)
+    # Stay resident instead of exiting: manager respawns us within a second
+    # otherwise, and every respawn is a full interpreter start that burns CPU
+    # (observed ~2 respawns/s pinning multiple cores on mici offroad).
+    import time
+    while params.get_bool("DisableUpdates"):
+      time.sleep(10)
+    cloudlog.info("updates re-enabled, continuing startup")
 
   with open(LOCK_FILE, 'w') as ov_lock_fd:
     try:
