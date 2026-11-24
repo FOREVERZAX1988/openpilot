@@ -6,6 +6,7 @@ See the LICENSE.md file in the root directory for more details.
 """
 
 import asyncio
+import copy
 import os
 import re
 import threading
@@ -570,6 +571,10 @@ class ModelManagerSP:
       if not resolved:
         return
       model_to_download, source = resolved
+      # the download path mutates artifact.downloadProgress in place; hand it
+      # a copy so the parsed-catalog objects cached in ModelFetcher stay
+      # pristine for the 1 Hz validate/report reads
+      model_to_download = copy.deepcopy(model_to_download)
       self._download_ref = ref_to_download
       try:
         self.download(model_to_download, Paths.model_root(), source)

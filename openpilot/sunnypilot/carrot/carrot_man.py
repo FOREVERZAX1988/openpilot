@@ -701,6 +701,13 @@ class CarrotManager:
     self._zmq_running = False
     self._is_onroad_count = 0
     self._is_tmux_sent = False
+    # 1 Hz snapshot of the params the 100 ms ZMQ poll loop consults; params
+    # reads are file IO through the C++ layer and polling them at the poll
+    # cadence burns a few percent of a core for state that only gates the
+    # 50 s onroad tmux upload and the offroad exception-cancel.
+    self._zmq_param_tick = 0
+    self._is_onroad_cached = False
+    self._carrot_exc_cached = ""
     self._show_panda_debug = False
 
     # Navigation route state (P2-1)
@@ -1862,7 +1869,13 @@ class CarrotManager:
 
           if json_obj is None:
             # No message - check onroad status and send tmux if needed
-            is_onroad = self.params.get_bool("IsOnroad")
+            # Refresh the params snapshot at 1 Hz instead of every poll
+            # iteration (see __init__ note).
+            if self._zmq_param_tick % 10 == 0:
+              self._is_onroad_cached = self.params.get_bool("IsOnroad")
+              self._carrot_exc_cached = self.params.get("CarrotException") or ""
+            self._zmq_param_tick += 1
+            is_onroad = self._is_onroad_cached
             self._is_onroad_count = self._is_onroad_count + 1 if is_onroad else 0
 
             if self._is_onroad_count == 0:
@@ -1894,9 +1907,10 @@ class CarrotManager:
             # can_error captures are onroad evidence, cancelled once offroad
             # without an upload; the value clears only after one destination
             # accepts, and failures back off before retrying.
-            carrot_exception = self.params.get("CarrotException") or ""
+            carrot_exception = self._carrot_exc_cached
             if carrot_exception == "can_error" and self._is_onroad_count == 0:
               self.params.put("CarrotException", "")
+              self._carrot_exc_cached = ""
               carrot_exception = ""
 
             if (carrot_exception in CARROT_EXCEPTION_TMUX_REASONS and network_connected
@@ -1909,6 +1923,7 @@ class CarrotManager:
               discord_ok = self.send_tmux_discord(carrot_exception, web_ok, carrot_logs_ok)
               if web_ok or carrot_logs_ok or discord_ok:
                 self.params.put("CarrotException", "")
+                self._carrot_exc_cached = ""
                 self._carrot_exc_next_attempt = 0.0
               else:
                 self._carrot_exc_next_attempt = time.monotonic() + CARROT_EXCEPTION_UPLOAD_RETRY_SECONDS
