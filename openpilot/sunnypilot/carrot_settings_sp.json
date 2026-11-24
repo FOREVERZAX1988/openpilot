@@ -6598,7 +6598,7 @@
    "etitle": "Steer Without Cruise",
    "edescr": "Modded ACC/Steering: independent steering engagement.",
    "cgroup": "转向",
-   "ctitle": "无巡航转向",
+   "ctitle": "自动巡航转向",
    "cdescr": "改装巡航/转向（MADS）：转向独立接管。",
    "default": true,
    "type": "bool"

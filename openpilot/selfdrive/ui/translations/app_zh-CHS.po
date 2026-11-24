@@ -4841,7 +4841,7 @@ msgstr "巡航设定时转向"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\steering.py
 msgid "Steer Without Cruise"
-msgstr "无巡航转向"
+msgstr "自动巡航转向"
 
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\settings.py
 msgid "Steering"
@@ -7134,7 +7134,7 @@ msgstr "巡航设定时转向"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\steering.py
 msgid "steer without cruise"
-msgstr "无巡航转向"
+msgstr "自动巡航转向"
 
 #: openpilot\selfdrive\ui\sunnypilot\mici\layouts\settings.py
 msgid "steering"
