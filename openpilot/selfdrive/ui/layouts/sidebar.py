@@ -1,5 +1,4 @@
 import raylib_nb as rl
-import time
 from dataclasses import dataclass
 from collections.abc import Callable
 from openpilot.cereal import log
@@ -15,6 +14,7 @@ SIDEBAR_WIDTH = 300
 METRIC_HEIGHT = 126
 METRIC_WIDTH = 240
 METRIC_MARGIN = 30
+METRIC_START_Y = 300
 FONT_SIZE = 35
 
 SETTINGS_BTN = rl.Rectangle(50, 35, 200, 117)
@@ -71,8 +71,9 @@ class Sidebar(Widget, SidebarSP):
     self._net_strength = 0
 
     self._temp_status = MetricData(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+    self._cpu_status = MetricData(tr_noop("CPU"), "--", Colors.GOOD)
+    self._gpu_status = MetricData(tr_noop("GPU"), "--", Colors.GOOD)
     self._panda_status = MetricData(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
-    self._connect_status = MetricData(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
     self._recording_audio = False
 
     self._home_img = gui_app.texture("images/button_home.png", HOME_BTN.width, HOME_BTN.height)
@@ -116,9 +117,9 @@ class Sidebar(Widget, SidebarSP):
     self._recording_audio = ui_state.recording_audio
     self._update_network_status(device_state)
     self._update_temperature_status(device_state)
-    self._update_connection_status(device_state)
+    self._update_cpu_status(device_state)
+    self._update_gpu_status(device_state)
     self._update_panda_status()
-    SidebarSP._update_sunnylink_status(self)
 
   def _update_network_status(self, device_state):
     self._net_type = NETWORK_TYPES.get(device_state.networkType.raw, tr_noop("Unknown"))
@@ -137,14 +138,20 @@ class Sidebar(Widget, SidebarSP):
     else:
       self._temp_status.update(tr_noop("TEMP"), tr_noop("GOOD" if thermal_ok else "HIGH"), Colors.GOOD if thermal_ok else Colors.DANGER)
 
-  def _update_connection_status(self, device_state):
-    last_ping = device_state.lastAthenaPingTime
-    if last_ping == 0:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
-    elif time.monotonic_ns() - last_ping < 80_000_000_000:  # 80 seconds in nanoseconds
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ONLINE"), Colors.GOOD)
-    else:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ERROR"), Colors.DANGER)
+  def _update_cpu_status(self, device_state):
+    # Average per-core usage (same aggregate thermald uses); offline cores
+    # report < 0 and are skipped.
+    cores = [v for v in device_state.cpuUsagePercent if v >= 0]
+    if cores:
+      pct = round(sum(cores) / len(cores))
+      color = Colors.DANGER if pct >= 90 else Colors.WARNING if pct >= 70 else Colors.GOOD
+      self._cpu_status.update(tr_noop("CPU"), f"{pct}%", color)
+
+  def _update_gpu_status(self, device_state):
+    gpu = device_state.gpuUsagePercent
+    if gpu >= 0:
+      color = Colors.DANGER if gpu >= 90 else Colors.WARNING if gpu >= 70 else Colors.GOOD
+      self._gpu_status.update(tr_noop("GPU"), f"{round(gpu)}%", color)
 
   def _update_panda_status(self):
     if ui_state.panda_type == log.PandaState.PandaType.unknown:
@@ -220,17 +227,14 @@ class Sidebar(Widget, SidebarSP):
     rl.draw_text_ex(self._font_regular, tr(self._net_type), text_pos, FONT_SIZE, 0, Colors.WHITE)
 
   def _draw_metrics(self, rect: rl.Rectangle):
-    if gui_app.sunnypilot_ui():
-      metrics, start_y, spacing = SidebarSP._draw_metrics_w_sunnylink(self, rect, self._temp_status, self._panda_status, self._connect_status)
-      for idx, metric in enumerate(metrics):
-        self._draw_metric(rect, metric, start_y + idx * spacing)
-
-      return
-
-    metrics = [(self._temp_status, 338), (self._panda_status, 496), (self._connect_status, 654)]
-
-    for metric, y_offset in metrics:
-      self._draw_metric(rect, metric, rect.y + y_offset)
+    # TEMP / CPU / GPU / VEHICLE, evenly spaced between the network indicator
+    # and the home button (same layout math the sunnylink variant used).
+    metrics = [self._temp_status, self._cpu_status, self._gpu_status, self._panda_status]
+    start_y = int(rect.y) + METRIC_START_Y
+    available_height = max(0, int(HOME_BTN.y) - METRIC_MARGIN - METRIC_HEIGHT - start_y)
+    spacing = available_height / max(1, len(metrics) - 1)
+    for idx, metric in enumerate(metrics):
+      self._draw_metric(rect, metric, start_y + idx * spacing)
 
   def _draw_metric(self, rect: rl.Rectangle, metric: MetricData, y: float):
     metric_rect = rl.Rectangle(rect.x + METRIC_MARGIN, y, METRIC_WIDTH, METRIC_HEIGHT)
