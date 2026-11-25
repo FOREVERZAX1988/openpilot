@@ -148,12 +148,23 @@ class SelfdriveD:
     # subscribe to driverMonitoringState in selfdrived at all; ignoring its
     # health checks keeps the field reads working without gating commIssue
     # on a feed that is not on the controls critical path.
+    # managerState is supervisory only and must never gate commIssue. On the
+    # 2026-11-25 C4 commute a sunnylink webrtc stream session wedged the shared
+    # qcom_vidc encoder node (selfdrive recording + webcast both poll the same
+    # /dev/v4l/by-path/platform-aa00000.qcom_vidc-video-index1); the stuck
+    # stream_encoderd ignored SIGINT for 5 s and lingered ~2 s in kernel D-state
+    # after SIGKILL, which froze managerd's main loop for 7.6 s. managerState
+    # was the only non-ignored feed, so selfdrived raised commIssue
+    # SOFT_DISABLE ("立即接管控制") for 19 s mid-drive. Staleness of a
+    # supervisory feed must not disengage the driver: a real manager death
+    # still surfaces via the control-path feeds dying, and dead processes are
+    # still caught via processNotRunning below (message content, not aliveness).
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan', 'liveTracks'] \
              + ['modelDataV2SP', 'longitudinalPlanSP', 'carStateSP', 'carrotManSP', 'carrotNaviSP'] \
-             + ['driverMonitoringState']
+             + ['driverMonitoringState', 'managerState']
     disable_dm = is_dm_disabled(self.params)
     if SIMULATION or disable_dm:
-      ignore += ['cabinCameraState', 'managerState']
+      ignore += ['cabinCameraState']
     if disable_dm:
       ignore += ['driverMonitoringState', 'driverStateV2']
     if REPLAY:
