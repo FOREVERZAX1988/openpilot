@@ -2,6 +2,7 @@ import glob
 import os
 import platform
 import time
+from functools import lru_cache
 
 from opendbc.car.structs import car
 from openpilot.cereal import custom
@@ -70,6 +71,37 @@ def chassis_yaw(started: bool, params: Params, CP: car.CarParams) -> bool:
   if available != params.get_bool("ChassisYawAvailable"):
     params.put_bool("ChassisYawAvailable", available, block=True)
   return True
+
+# --- Virtual sensord (cars without a physical IMU, e.g. C3XL) -----------------
+# TODO(device-verify): the sysfs node name "1-006a" is inferred from the LSM6DS3
+# address (lsm6ds3_accel.py:32), not confirmed on a real C3XL. A WHO_AM_I probe
+# via SMBus is stronger but its AGNOS behaviour is unverified; sysfs presence is
+# the conservative first layer. Detection failure -> assume IMU present -> real
+# sensord wins, so a healthy car is never switched to synthetic data.
+@lru_cache(maxsize=1)
+def imu_present() -> bool:
+  if PC:
+    return True
+  try:
+    return os.path.isdir('/sys/bus/i2c/devices/1-006a')
+  except Exception:
+    return True
+
+def _virtual_sensord_wanted(params: Params) -> bool:
+  # Before libparams_c.so is rebuilt, the key is unregistered and get_bool
+  # raises UnknownKeyName (common/params.py:155-159). Fall back to off so the
+  # manager does not crash on gate evaluation.
+  try:
+    return params.get_bool("VirtualSensordEnabled")
+  except Exception:
+    return False
+
+def virtual_sensord(started: bool, params: Params, CP: car.CarParams) -> bool:
+  return only_onroad(started, params, CP) and not imu_present() and _virtual_sensord_wanted(params)
+
+def real_sensord(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # Strictly complementary to virtual_sensord(): exactly one publishing pair.
+  return only_onroad(started, params, CP) and (imu_present() or not _virtual_sensord_wanted(params))
 
 def joystick(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and params.get_bool("JoystickDebugMode")
@@ -373,7 +405,10 @@ procs = [
   PythonProcess("navd", "openpilot.selfdrive.navigation.navd", navigation),
   PythonProcess("mapsd", "openpilot.selfdrive.navigation.mapsd", navigation),
 
-  PythonProcess("sensord", "openpilot.system.sensord.sensord", only_onroad, enabled=not PC),
+  # Real and virtual sensord are strictly complementary gates: exactly one of
+  # them publishes accelerometer/gyroscope at any time. Virtual is default-off.
+  PythonProcess("sensord", "openpilot.system.sensord.sensord", real_sensord, enabled=not PC),
+  PythonProcess("virtualsensord", "openpilot.system.sensord.virtual_sensord", virtual_sensord, enabled=not PC),
   # Parked watch (StarPilot sentry_mode, narrowed scope): offroad only and
   # gated on SentryEnabled (default off => the process never starts).
   PythonProcess("sentryd", "openpilot.sunnypilot.sentry.sentryd", sentry_enabled, enabled=not PC),
