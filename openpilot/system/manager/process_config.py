@@ -57,6 +57,20 @@ def ublox(started: bool, params: Params, CP: car.CarParams) -> bool:
     params.put_bool("UbloxAvailable", use_ublox, block=True)
   return started and use_ublox
 
+# HyundaiExtFlags.CHASSIS_YAW_RATE (opendbc/car/hyundai/values.py), kept in sync
+# here so process_config does not import an opendbc brand-specific enum.
+CHASSIS_YAW_RATE_EXT_FLAG = 2 ** 20
+
+def chassis_yaw(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # Mirror the fingerprint-detected chassis yaw capability (CP.extFlags) into
+  # Params so locationd (which only subscribes to carState, not CarParams) can
+  # enable the chassis yaw KF observation. Evaluated every manager tick like
+  # ublox(); always returns True so the hosting process is unaffected.
+  available = bool(int(CP.extFlags) & CHASSIS_YAW_RATE_EXT_FLAG)
+  if available != params.get_bool("ChassisYawAvailable"):
+    params.put_bool("ChassisYawAvailable", available, block=True)
+  return True
+
 def joystick(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and params.get_bool("JoystickDebugMode")
 
@@ -438,7 +452,7 @@ procs += [
 
   # mapd
   NativeProcess("mapd", Paths.mapd_root(), ["bash", "-c", f"{MAPD_PATH} > /dev/null 2>&1"], mapd_ready),
-  PythonProcess("mapd_manager", "openpilot.sunnypilot.mapd.mapd_manager", always_run),
+  PythonProcess("mapd_manager", "openpilot.sunnypilot.mapd.mapd_manager", chassis_yaw),
 
   # Carrot
   # amapNaviSP and AmapMapData (Web API) removed: carrot_man now only produces
