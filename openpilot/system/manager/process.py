@@ -138,12 +138,24 @@ class ManagerProcess(ABC):
       if self.proc.exitcode is None and retry:
         cloudlog.info(f"killing {self.name} with SIGKILL")
         self.signal(signal.SIGKILL)
-        self.proc.join()
+        # Bound this join: a process wedged in an uninterruptible kernel call
+        # (e.g. a stuck qcom_vidc encoder ioctl) stays in D-state past SIGKILL,
+        # and the 2026-11-25 C4 commute incident showed an unbounded join here
+        # can freeze the whole manager loop for seconds - managerState goes
+        # stale and selfdrived raised a spurious commIssue mid-drive. The
+        # kernel reaps the D-state process in the background; a later
+        # ensure_running / stop pass finishes the bookkeeping.
+        join_process(self.proc, 5)
+        if self.proc.exitcode is None:
+          cloudlog.warning(f"{self.name} still not reaped 5 s after SIGKILL (D-state?); continuing")
 
     ret = self.proc.exitcode
     if ret not in (None, 0) and not self.shutting_down:
       report_process_exit(self.name, self.proc.pid, ret)
-    cloudlog.info(f"{self.name} is dead with {ret}")
+    if ret is None:
+      cloudlog.warning(f"{self.name} not reaped when stop() returned; bookkeeping deferred to the next pass")
+    else:
+      cloudlog.info(f"{self.name} is dead with {ret}")
 
     if self.proc.exitcode is not None:
       # Drop the heartbeat file together with the process it belonged to, so

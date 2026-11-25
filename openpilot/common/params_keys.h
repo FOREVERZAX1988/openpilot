@@ -118,6 +118,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LiveParameters", {PERSISTENT, JSON}},
     {"LiveParametersV2", {PERSISTENT, BYTES}},
     {"LivestreamEncoderBitrate", {CLEAR_ON_MANAGER_START | DONT_LOG, INT}},
+    {"LivestreamOnroadEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // allow remote live streaming while the car is onroad (see manager process_config livestream())
     {"LivestreamRequestKeyframe", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
     {"LiveTorqueParameters", {PERSISTENT | DONT_LOG, BYTES}},
     {"LiveTorqueParametersSP", {PERSISTENT | DONT_LOG, BYTES}},
@@ -191,6 +192,14 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ConfidenceBall", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrainingVersion", {PERSISTENT, STRING}},
     {"UbloxAvailable", {PERSISTENT, BOOL}},
+    // Chassis yaw-rate availability from fingerprint (Hyundai ESC ESP12 etc).
+    // Written by manager from CP.extFlags; consumed by locationd to enable the
+    // chassis yaw KF observation. Default off: cars without the signal are unaffected.
+    {"ChassisYawAvailable", {PERSISTENT, BOOL, "0"}},
+    // Virtual sensord for cars without a physical IMU (e.g. C3XL). Default off.
+    // Requires device-side rebuild of libparams_c.so to take effect; before that
+    // the manager gate catches UnknownKeyName and falls back to real sensord.
+    {"VirtualSensordEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"UpdateAvailable", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"UpdateFailedCount", {CLEAR_ON_MANAGER_START, INT}},
     {"UpdaterAvailableBranches", {PERSISTENT, STRING}},
@@ -1098,7 +1107,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotYouTubeLive", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotYouTubeQuality", {PERSISTENT | BACKUP, INT, "0"}},
     {"CarrotYouTubeTimestamp", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"CarrotVisionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // serve the road camera to the 7000 panel while driving
+    {"CarrotVisionEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},  // carrot-app-equivalent onroad WebRTC road viewing: carrot_webrtcd(5001) + road-only encoder, encodes only while a session is active (CarrotVisionActive). Default on to match carrot app behavior; LAN listener, switch off if unwanted.
     {"CarrotVisionActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},  // a viewer session is open
     {"ClusterHud", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ClusterHudBrightness", {PERSISTENT | BACKUP, INT, "0"}},

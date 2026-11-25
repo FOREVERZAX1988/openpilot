@@ -153,6 +153,14 @@ def build_navi_items():
                    description=tr('Distance after the speed limit point to resume normal cruise.')),
 
     section_heading_sp(tr('Stop / Speed Camera')),
+    # Master switch for the whole traffic-light stop&go chain (and the carrot
+    # longitudinal source it lives in). Placed here - not on the Developer
+    # page - because this is where users look for light-stop behaviour.
+    toggle_item_sp(title=tr('Traffic Light Stop & Go'), param='CarrotLongitudinalSourceEnabled',
+                   description=tr('Master switch for the vision traffic-light chain: brake for red lights and ' +
+                                   'start on green, no phone connection required. Off disables automatic ' +
+                                   'traffic-light stops. Phone-app longitudinal tuning (follow time, comfort ' +
+                                   'braking, stop point) also flows through this switch.')),
     toggle_item_sp(title=tr('Same Direction Speed Cam Filter'), param='SameSpiCamFilter'),
     option_item_sp(title=tr('Traffic Stop Distance Adjust'), param='TrafficStopDistanceAdjust', min_value=-500, max_value=500, value_change_step=10,
                    description=tr('Fine-tune stop distance for traffic lights (cm).')),
@@ -374,12 +382,9 @@ def build_dev_items():
     toggle_item_sp(title=tr('Show Debug Log'), param='ShowDebugLog'),
 
     # Unified-control killswitches. All default OFF: they change vehicle
-    # behaviour, so they are grouped here and opt-in.
-    #
-    # This one is the heaviest of them: it is the only switch on this page that
-    # decides whether the phone app's numbers reach the MPC at all. It used to be
-    # reachable only by writing the param by hand, which made a wired-in
-    # longitudinal source look like dead code.
+    # behaviour, so they are grouped here and opt-in. The traffic-light master
+    # switch used to live here but moved to the Navigation page
+    # ("Stop / Speed Camera" section) where users actually look for it.
     section_heading_sp(tr('Longitudinal Control (advanced)')),
     toggle_item_sp(title=tr('Carrot Longitudinal Source'), param='CarrotLongitudinalSourceEnabled',
                    description=tr('Let the phone app drive the longitudinal plan: its target speed becomes ' +

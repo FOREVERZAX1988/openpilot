@@ -78,7 +78,12 @@ struct EncoderSettings {
 
   static EncoderSettings StreamEncoderSettings() {
     int _stream_bitrate = getenv("STREAM_BITRATE") ? atoi(getenv("STREAM_BITRATE")) : 3'000'000;
-    return EncoderSettings{.encode_type = cereal::EncodeIndex::Type::QCAMERA_H264, .bitrate = _stream_bitrate , .gop_size = 3};
+    // gop 10 instead of 3: IDR frames dominate VENC load, and three live
+    // encoders share the msm_vidc core with dashcam recording onroad. The
+    // 3-frame IDR cadence compounded the 2026-11-25 C4 live-stream stall.
+    // WebRTC still gets instant keyframes on connect/switch via the
+    // LivestreamRequestKeyframe param (on-demand IDR), so viewers are unaffected.
+    return EncoderSettings{.encode_type = cereal::EncodeIndex::Type::QCAMERA_H264, .bitrate = _stream_bitrate , .gop_size = 10};
   }
 };
 

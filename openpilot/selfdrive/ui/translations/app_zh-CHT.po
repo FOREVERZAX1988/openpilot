@@ -5844,6 +5844,14 @@ msgstr "路況壅塞降速"
 msgid "Traffic Light Detect Mode"
 msgstr "紅綠燈檢測模式"
 
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Traffic Light Stop & Go"
+msgstr "紅綠燈停車起步"
+
+#: openpilot\selfdrive\ui\sunnypilot\layouts\settings\carrot_tuning_items.py
+msgid "Master switch for the vision traffic-light chain: brake for red lights and start on green, no phone connection required. Off disables automatic traffic-light stops. Phone-app longitudinal tuning (follow time, comfort braking, stop point) also flows through this switch."
+msgstr "紅綠燈視覺鏈總開關：紅燈自動剎車、綠燈起步，無需連接手機。關閉後不再自動偵測紅綠燈停車。手機應用的縱向調校（跟車時距、舒適制動、停車點）也經此開關生效。"
+
 #: openpilot\selfdrive\ui\sunnypilot\layouts\settings\visuals.py
 msgid "Traffic Light Vision Boxes (YOLO)"
 msgstr "紅綠燈視覺偵測框（YOLO）"
