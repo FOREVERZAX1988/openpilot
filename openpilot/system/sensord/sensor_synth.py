@@ -7,13 +7,16 @@ in the C3XL reports. Nothing here has been run on a device.
 """
 import numpy as np
 
+from openpilot.common.transformations.orientation import sensor_to_device_frame
+
 GRAVITY = 9.81
 CHASSIS_YAW_INVALID = 100.0   # opendbc hyundai/carstate.py:37
 ACCEL_LIMIT = 100.0           # below locationd ACCEL_SANITY_CHECK=100
 
+
 def s2d_inv(v):
-  """sensor_to_device_frame(v) = [-v[2], -v[1], -v[0]] is self-inverse."""
-  return np.array([-v[2], -v[1], -v[0]])
+  """sensor_to_device_frame is self-inverse; call the canonical implementation."""
+  return sensor_to_device_frame(v)
 
 
 def build_gyro(yaw_rate: float, camodo_rot, device_from_calib: np.ndarray, chassis_yaw_ok: bool) -> np.ndarray:
@@ -31,7 +34,9 @@ def build_gyro(yaw_rate: float, camodo_rot, device_from_calib: np.ndarray, chass
   """
   gyro_calib = np.asarray(camodo_rot, dtype=float).copy()
   if chassis_yaw_ok:
-    gyro_calib = np.array([0.0, 0.0, -yaw_rate], dtype=float)
+    # Only override the yaw axis; keep camodo roll/pitch (D4: zeroing them
+    # would feed a tight-variance false-zero to PHONE_GYRO and distort attitude).
+    gyro_calib[2] = -yaw_rate
   return s2d_inv(np.asarray(device_from_calib, dtype=float) @ gyro_calib)
 
 

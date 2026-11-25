@@ -92,11 +92,13 @@ class TestVirtualSensordMath(unittest.TestCase):
   def test_gyro_z_sign_matches_stage2(self):
     # D3: left turn +0.3 rad/s must land on device z as -0.3 (vehicle yaw-up
     # is -z in the calib frame; stage-2 chassis_yaw.py:24 uses [0,0,-yaw]).
-    sensor = build_gyro(0.3, [9.9, 9.9, 9.9], np.eye(3), True)
+    # D4: camodo roll/pitch must be PRESERVED, not zeroed, when CAN yaw is used.
+    camodo = [0.1, -0.05, 9.9]  # z is a sentinel: must be replaced by CAN yaw
+    sensor = build_gyro(0.3, camodo, np.eye(3), True)
     device = s2d_inv(sensor)
     self.assertAlmostEqual(device[2], -0.3, places=6)
-    self.assertAlmostEqual(device[0], 0.0, places=6)
-    self.assertAlmostEqual(device[1], 0.0, places=6)
+    self.assertAlmostEqual(device[0], 0.1, places=6)    # roll preserved
+    self.assertAlmostEqual(device[1], -0.05, places=6)  # pitch preserved
 
   def test_gyro_rotated_by_mount_angle(self):
     # With a non-unit device_from_calib the yaw must be rotated, not raw.
