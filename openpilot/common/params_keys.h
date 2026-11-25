@@ -1088,7 +1088,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotYouTubeLive", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CarrotYouTubeQuality", {PERSISTENT | BACKUP, INT, "0"}},
     {"CarrotYouTubeTimestamp", {PERSISTENT | BACKUP, BOOL, "0"}},
-    {"CarrotVisionEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // serve the road camera to the 7000 panel while driving
+    {"CarrotVisionEnabled", {PERSISTENT | BACKUP, BOOL, "1"}},  // carrot-app-equivalent onroad WebRTC road viewing: carrot_webrtcd(5001) + road-only encoder, encodes only while a session is active (CarrotVisionActive). Default on to match carrot app behavior; LAN listener, switch off if unwanted.
     {"CarrotVisionActive", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},  // a viewer session is open
     {"ClusterHud", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"ClusterHudBrightness", {PERSISTENT | BACKUP, INT, "0"}},
