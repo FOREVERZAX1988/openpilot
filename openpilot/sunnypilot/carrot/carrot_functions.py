@@ -209,13 +209,16 @@ class TrafficState(Enum):
     return self.name
 
 
-# Traffic-light confirmation thresholds (frames @ ~20 Hz model ticks). Vision
-# red/green must be sustained before CarrotPlanner trusts them so a single
-# misdetected frame (oncoming green, shadow, billboard) cannot trigger a stop or
-# a false start. These are intentionally NOT params: they are safety-critical and
-# the killswitch params registered in params_keys.h stay off-by-default.
-_TRAFFIC_RED_CONFIRM_FRAMES = 5
-_TRAFFIC_GREEN_CONFIRM_FRAMES = 8
+# Traffic-light confirmation thresholds (frames @ ~20 Hz model ticks), tuned to
+# match cp exactly: red is confirmed on a single vision stop frame
+# (cp: stopSignCount * DT_MDL > 0.0) and green after 5 sustained frames
+# (cp: startSignCount * DT_MDL > 0.2 with DT_MDL = 0.05). The 10-frame moving
+# average on model_v already smooths single-frame noise, so extra red debounce
+# only delayed stops. These are intentionally NOT params: they are
+# safety-critical and the killswitch params registered in params_keys.h stay
+# off-by-default.
+_TRAFFIC_RED_CONFIRM_FRAMES = 1
+_TRAFFIC_GREEN_CONFIRM_FRAMES = 5
 
 # Above this speed (km/h) a phone-navigation-only red light is no longer allowed
 # to command a stop or slam the target speed down; only a vision-confirmed stop
