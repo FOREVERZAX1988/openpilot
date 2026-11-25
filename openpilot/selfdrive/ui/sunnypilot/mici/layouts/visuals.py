@@ -29,6 +29,9 @@ TOGGLE_PARAMS = [
                                                   "Only while cruise is not engaged. Check the road before you go.")),
   (tr("lead depart alert"), "LeadDepartAlert", tr("Chimes when you're stopped and the car ahead pulls away.\n" +
                                                   "Only while cruise is not engaged. Check the road before you go.")),
+  (tr("traffic light vision boxes"), "SignalYoloEnabled", tr("Runs the traffic-light detector on the road camera and draws a box around each\n" +
+                                                             "detected signal housing, with the observed signal written under the box.\n" +
+                                                             "Display only: it never feeds the planner. Check the light yourself.")),
 ]
 
 

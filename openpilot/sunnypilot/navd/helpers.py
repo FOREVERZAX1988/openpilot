@@ -106,19 +106,33 @@ def distance_along_geometry(geometry: list[Coordinate], pos: Coordinate) -> floa
   return total_distance_closest
 
 
-def coordinate_from_param(param: str, params: Params | None = None) -> Coordinate | None:
+def coordinate_from_param(param: str, params: Params | None = None) -> tuple[Coordinate | None, str | None]:
+  """Parse a destination param into (Coordinate, place_name), like cp navd.
+
+  sp's typed Params hand JSON-typed keys back as dicts and STRING/BYTES keys
+  as raw JSON strings, so both shapes are accepted here.
+  """
   if params is None:
     params = Params()
 
-  json_str = params.get(param)
-  if json_str is None:
-    return None
+  pos = params.get(param)
+  if isinstance(pos, (str, bytes, bytearray)):
+    if not pos:
+      return None, None
+    try:
+      pos = json.loads(pos)
+    except (ValueError, TypeError):
+      return None, None
+  if not isinstance(pos, dict):
+    return None, None
 
-  pos = json.loads(json_str)
-  if 'latitude' not in pos or 'longitude' not in pos:
-    return None
-
-  return Coordinate(pos['latitude'], pos['longitude'])
+  try:
+    lat, lon = float(pos['latitude']), float(pos['longitude'])
+    if not math.isfinite(lat) or not math.isfinite(lon) or abs(lat) > 85.05112878 or abs(lon) > 180:
+      return None, None
+    return Coordinate(lat, lon), pos.get('place_name')
+  except (ValueError, TypeError, KeyError):
+    return None, None
 
 
 def string_to_direction(direction: str) -> str:

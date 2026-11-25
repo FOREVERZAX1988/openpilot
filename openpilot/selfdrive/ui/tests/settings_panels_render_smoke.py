@@ -219,6 +219,7 @@ def install() -> None:
   ui_mod.device = _FakeDevice()
   ui_mod.ChestnutState = ChestnutState
   ui_mod.PrimeState = _AnyAttr
+  ui_mod.UIStatus = _AnyAttr  # mici cameraview imports it; panels never construct it
   sys.modules["openpilot.selfdrive.ui.ui_state"] = ui_mod
 
   sys.modules["pyray"] = build_fake_pyray()
@@ -291,6 +292,7 @@ def install() -> None:
   wifi.Network = _AnyAttr
   wifi.MeteredType = _AnyAttr
   wifi.normalize_ssid = lambda s: s
+  wifi.ConnectStatus = types.SimpleNamespace(DISCONNECTED=0, CONNECTING=1, CONNECTED=2)
   sys.modules["openpilot.system.ui.lib.wifi_manager"] = wifi
 
   for name in ("openpilot.common.swaglog", "openpilot.common.wifi_manager"):

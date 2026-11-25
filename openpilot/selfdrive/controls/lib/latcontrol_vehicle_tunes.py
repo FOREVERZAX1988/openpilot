@@ -224,7 +224,8 @@ PRIUS_CARS = (
 
 CAMRY_CARS = (
   TOYOTA_CAR.TOYOTA_CAMRY,
-)
+  TOYOTA_CAR.TOYOTA_CAMRY_TSS2,  # 2021+ TSS 2.5 Camry: same DSU-era torque channel,
+)                                # shares the toyota_camry FLM rich profile + friction tune.
 
 RAV4_PRIME_CARS = (
   TOYOTA_CAR.TOYOTA_RAV4_PRIME,
@@ -1468,6 +1469,19 @@ def _flm_copy_json(value):
 FLM_OVERRIDE_MIN_FRICTION_THRESHOLD = 0.05  # same floor as upstream GmSurface
 FLM_OVERRIDE_MAX_KNOB_ABS = 100.0  # coarse sanity cap; every legitimate knob stays below 40
 
+# F1 control-surface effect envelope for runtime-injected FLM bundles. Each
+# bundle field is optional: a bundle without "controlEffects" behaves exactly
+# like the pre-F1 bundles (backward compatible). StarPilot evidence:
+# - ffDelta |x| <= 0.03: StarPilot torque_stages.py:79 (|delta_ff| > 0.03 -> rejected)
+# - deadbandDeg [0, 0.01] deg: StarPilot torque_stages.py:107 (0 <= delta <= 0.01)
+# - angleAssistMaxTorque [0, 0.8]: StarPilot torque_surface.py:439
+#   (_GM_BOUNDS low_speed_angle_assist_max_torque)
+FLM_CONTROL_EFFECT_LIMITS = {
+  "ffDelta": (-0.03, 0.03),
+  "deadbandDeg": (0.0, 0.01),
+  "angleAssistMaxTorque": (0.0, 0.8),
+}
+
 
 def _flm_override_number(value, *, floor=None):
   """Finite plain number admission; bool is not a number here."""
@@ -1507,6 +1521,7 @@ def normalize_flm_overrides(overrides) -> dict:
     "schemaVersion": FLM_SCHEMA_VERSION,
     "baseFrictionThresholds": {},
     "vehicleKnobs": {},
+    "controlEffects": {},
   }
 
   for family in ("gm", "standard", "hkg_canfd"):
@@ -1532,7 +1547,18 @@ def normalize_flm_overrides(overrides) -> dict:
         continue
       normalized["vehicleKnobs"][str(key)] = admitted
 
-  if not normalized["baseFrictionThresholds"] and not normalized["vehicleKnobs"]:
+  # F1: optional control-surface effects. Each field is admitted independently
+  # and fail-closed: an out-of-envelope or non-finite entry is dropped, and an
+  # empty result keeps the key out of the bundle entirely (no effect).
+  control_effects = overrides.get("controlEffects", {})
+  if isinstance(control_effects, dict):
+    for key, (low, high) in FLM_CONTROL_EFFECT_LIMITS.items():
+      admitted = _flm_override_number(control_effects.get(key))
+      if admitted is None or not low <= admitted <= high:
+        continue
+      normalized["controlEffects"][key] = admitted
+
+  if not normalized["baseFrictionThresholds"] and not normalized["vehicleKnobs"] and not normalized["controlEffects"]:
     return {}
 
   return normalized
@@ -1556,6 +1582,61 @@ def clear_flm_runtime_overrides() -> None:
 
 def get_flm_runtime_overrides() -> dict:
   return _flm_copy_json(_FLM_ACTIVE_OVERRIDES) if _FLM_ACTIVE_OVERRIDES else {}
+
+
+def get_flm_control_effects() -> dict:
+  """F1: the admitted control-surface effects of the active FLM bundle.
+
+  Empty dict when no bundle is active or the bundle carries no
+  "controlEffects" — the controller then applies nothing (stock behavior).
+  """
+  return _flm_copy_json(_FLM_ACTIVE_OVERRIDES.get("controlEffects", {}))
+
+
+# F1 low-speed angle assist. The formula is reused verbatim from the ported
+# StarPilot surface module (sunnypilot/flm/torque_surface.py:382-418), running
+# in the normalized torque space StarPilot's GM surface assumes (|output| <= 1).
+_ANGLE_ASSIST_SURFACE_CACHE: dict = {}
+
+
+def flm_low_speed_angle_assist(max_torque: float, output_torque: float, desired_angle_deg: float,
+                               actual_angle_deg: float, v_ego: float, setpoint: float,
+                               jerk: float, steering_pressed: bool) -> float:
+  """Normalized-space low-speed angle assist, StarPilot live.py:129-141 contract.
+
+  StarPilot evidence:
+  - formula: sunnypilot/flm/torque_surface.py:382-418 (verbatim via GmSurface.angle_assist)
+  - output clip to [-1.0, 1.0]: torque_surface.py:406-407 and :418
+  - max torque knob envelope (0.0, 0.8): torque_surface.py:439
+  Input envelopes match SurfaceInput.__post_init__ (torque_surface.py:55-57):
+  speed <= 90, |setpoint| <= 20, |jerk| <= 20, |angle| <= 1080, |output| <= 1.0.
+  Any invalid input returns the unchanged output (fail-closed, live.py:89-96).
+  """
+  if max_torque <= 1e-4:
+    return output_torque
+  from openpilot.sunnypilot.flm.torque_surface import GmSurface, SurfaceInput
+  key = round(float(max_torque), 6)
+  surface = _ANGLE_ASSIST_SURFACE_CACHE.get(key)
+  if surface is None:
+    try:
+      surface = GmSurface("torque_universal", {"low_speed_angle_assist_max_torque": key})
+    except ValueError:
+      return output_torque
+    _ANGLE_ASSIST_SURFACE_CACHE[key] = surface
+  try:
+    sample = SurfaceInput(
+      float(np.clip(v_ego, 0.0, 90.0)),
+      float(np.clip(setpoint, -20.0, 20.0)),
+      float(np.clip(jerk, -20.0, 20.0)),
+      float(np.clip(desired_angle_deg, -1080.0, 1080.0)),
+      float(np.clip(actual_angle_deg, -1080.0, 1080.0)),
+      float(np.clip(output_torque, -1.0, 1.0)),
+      bool(steering_pressed),
+      1.0,
+    )
+    return float(surface.angle_assist(sample))
+  except (ValueError, OverflowError, TypeError):
+    return output_torque
 
 
 def flm_runtime_overrides_active() -> bool:

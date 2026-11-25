@@ -64,8 +64,113 @@ def write_time_to_param(params, param) -> None:
   t = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
   params.put(param, t, block=True)
 
+def manual_update_loop(params: Params, updater: "Updater") -> None:
+  """Serve user-triggered update cycles while DisableUpdates is set.
+
+  Automatic periodic updates stay off, but the software screens must not
+  go dead: the UI triggers SIGUSR1 (check) or SIGHUP (check + download)
+  and this loop runs exactly one cycle per signal, mirroring the main
+  loop's error handling and param writes. Without it the check button
+  looks broken and LastUpdateTime freezes at the last automatic cycle.
+  """
+  wait_helper = WaitTimeHelper()
+  failed_count = 0
+  while params.get_bool("DisableUpdates"):
+    wait_helper.ready_event.clear()
+    # Event-based wait: the signal handlers set the event, so a sleeping
+    # pass wakes immediately instead of swallowing the signal.
+    wait_helper.sleep(10)
+    request = wait_helper.user_request
+    if request == UserRequest.NONE:
+      continue
+    wait_helper.user_request = UserRequest.NONE
+
+    exception = None
+    try:
+      # Write the busy state before any slow work: overlay init can take a
+      # while on first use, and the software screens poll this param to show
+      # progress — a late write makes the check button look dead again.
+      params.put("UpdaterState", "checking...", block=True)
+
+      cleanup_device_tree()
+      if not system_time_valid():
+        try:
+          sync_system_time_http()
+        except Exception:
+          cloudlog.exception("updated: http time sync failed")
+
+      init_overlay()
+
+      updater.check_for_update()
+
+      if request == UserRequest.FETCH:
+        updater.fetch_update_with_retry()
+        write_time_to_param(params, "UpdaterLastFetchTime")
+
+      failed_count = 0
+    except subprocess.CalledProcessError as e:
+      cloudlog.event("update process failed", cmd=e.cmd, output=e.output, returncode=e.returncode)
+      exception = f"command failed: {e.cmd}\n{e.output}"
+      OVERLAY_INIT.unlink(missing_ok=True)
+    except Exception as e:
+      cloudlog.exception("uncaught updated exception, shouldn't happen")
+      exception = str(e)
+      OVERLAY_INIT.unlink(missing_ok=True)
+
+    try:
+      params.put("UpdaterState", "idle", block=True)
+      updater.set_params(failed_count == 0, failed_count, exception)
+    except Exception:
+      cloudlog.exception("uncaught updated exception while setting params, shouldn't happen")
+
 def run(cmd: list[str], cwd: str | None = None) -> str:
   return subprocess.check_output(cmd, cwd=cwd, stderr=subprocess.STDOUT, encoding='utf8')
+
+
+def _git_repo_paths(basedir: str) -> list[str]:
+  """The main repo plus every initialized submodule worktree (recursive)."""
+  repos = [basedir]
+  try:
+    out = run(["git", "submodule", "status", "--recursive"], basedir)
+  except subprocess.CalledProcessError:
+    return repos  # stripped tree or not a repo; nothing more to list
+  for line in out.splitlines():
+    parts = line.strip().split()
+    if len(parts) >= 2:
+      path = os.path.join(basedir, parts[1])
+      if os.path.isdir(path):
+        repos.append(path)
+  return repos
+
+
+def cleanup_device_tree(basedir: str = BASEDIR) -> None:
+  """Discard device-local edits so an update can never collide with them.
+
+  scp hot-fix deployments and manual experiments leave tracked changes and
+  untracked files behind, in the main repo and inside submodules. In the
+  main repo they only dirty GitDiff, but inside a submodule they make
+  `git submodule update` fail, which fails the whole fetch.
+
+  Runs only when a worktree is actually dirty, and cleans with -fd rather
+  than -x: ignored build artifacts (prebuilt, scons caches) survive, so
+  boots stay fast and the running tree keeps its compiled outputs. The
+  staging overlay fetch path already runs the full `clean -xdff`; this is
+  about bringing the running tree back to a state the next fetch can
+  build on.
+  """
+  for repo in _git_repo_paths(basedir):
+    try:
+      dirty = run(["git", "status", "--porcelain"], repo)
+    except subprocess.CalledProcessError:
+      continue  # not a git repo (stripped layout); nothing to clean
+    if not dirty.strip():
+      continue
+    cloudlog.info(f"cleaning local changes in {repo}: {len(dirty.splitlines())} entries")
+    try:
+      run(["git", "reset", "--hard"], repo)
+      run(["git", "clean", "-fd"], repo)
+    except subprocess.CalledProcessError as e:
+      cloudlog.exception(f"cleanup failed in {repo}: {e.output}")
 
 
 def set_consistent_flag(consistent: bool) -> None:
@@ -772,7 +877,13 @@ class Updater:
 
     r = [
       run(cmd, OVERLAY_MERGED) for cmd in [
-        ["git", "submodule", "update", "--init", "--recursive"],
+        # Submodules arrive here as copies of the dirty running tree; a
+        # plain `submodule update` refuses to checkout over local changes
+        # and untracked files, so force every submodule back to a clean
+        # state first, then move it onto the commit the main repo pins.
+        ["git", "submodule", "foreach", "--recursive", "git", "reset", "--hard"],
+        ["git", "submodule", "foreach", "--recursive", "git", "clean", "-fd"],
+        ["git", "submodule", "update", "--init", "--recursive", "--force"],
         ["git", "submodule", "foreach", "--recursive", "git", "reset", "--hard"],
       ]
     ]
@@ -799,7 +910,21 @@ def main() -> None:
 
   if params.get_bool("DisableUpdates"):
     cloudlog.warning("updates are disabled by the DisableUpdates param")
-    exit(0)
+    # Stay resident instead of exiting: manager respawns us within a second
+    # otherwise, and every respawn is a full interpreter start that burns CPU
+    # (observed ~2 respawns/s pinning multiple cores on mici offroad).
+    # Automatic periodic updates stay off, but user-triggered cycles from the
+    # software screens still work (see manual_update_loop). UpdaterCurrent-
+    # Description/UpdaterTargetBranch are CLEAR_ON_MANAGER_START, so populate
+    # them once here or the panel shows empty values until first check.
+    try:
+      updater = Updater()
+      updater.set_params(False, 0, None)
+    except Exception:
+      cloudlog.exception("failed to populate updater display params")
+      updater = Updater()
+    manual_update_loop(params, updater)
+    cloudlog.info("updates re-enabled, continuing startup")
 
   with open(LOCK_FILE, 'w') as ov_lock_fd:
     try:
@@ -834,6 +959,7 @@ def main() -> None:
       exception = None
       try:
         # TODO: reuse overlay from previous updated instance if it looks clean
+        cleanup_device_tree()
         init_overlay()
 
         # ensure we have some params written soon after startup

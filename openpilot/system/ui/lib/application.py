@@ -401,6 +401,10 @@ class GuiApplication(GuiApplicationExt):
     # font atlases mid-draw invalidates the bound GL textures (black / blank text until
     # a restart). Defer the actual font rebuild to between frames.
     self._pending_language: str | None = None
+    # Widgets whose texts are evaluated at construction time (not per-frame tr()) need to
+    # rebuild after a language switch; they register callbacks here, invoked from
+    # _apply_pending_language once the new font atlases are live.
+    self._language_change_listeners: list[Callable[[], None]] = []
     # Baking an atlas costs 108-233 ms on tizi against a 50 ms frame budget, so it is only
     # ever allowed off-road. Onroad the queue just accumulates and unbaked glyphs draw as '?'.
     self.allow_font_rebake: bool = True
@@ -1182,6 +1186,13 @@ class GuiApplication(GuiApplicationExt):
     # swapping GL font textures mid-draw, which leaves the screen black / textless until reboot.
     self._pending_language = lang_code
 
+  def add_language_change_listener(self, callback: Callable[[], None]) -> None:
+    """Register a callback invoked after a language switch has been applied
+    (fonts rebuilt, between frames). Used by layouts whose widget texts were
+    evaluated at construction time so they can rebuild with the new language."""
+    if callback not in self._language_change_listeners:  # bound methods compare by (self, func)
+      self._language_change_listeners.append(callback)
+
   def _apply_pending_language(self) -> None:
     lang_code = self._pending_language
     if lang_code is None:
@@ -1203,6 +1214,12 @@ class GuiApplication(GuiApplicationExt):
     from openpilot.system.ui.lib import text_measure, wrap_text
     text_measure._cache.clear()
     wrap_text._cache.clear()
+    # Fonts are live again; now let construction-time texts rebuild themselves.
+    for callback in self._language_change_listeners:
+      try:
+        callback()
+      except Exception:
+        cloudlog.exception(f"language change listener failed: {callback}")
 
   def _set_styles(self):
     # raygui only; no-op on AGNOS images whose pyray has no raygui compiled in.

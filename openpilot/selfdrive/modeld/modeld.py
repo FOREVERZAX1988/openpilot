@@ -45,7 +45,9 @@ from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_drivi
 from openpilot.selfdrive.modeld.lane_width import LaneWidthEstimator
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.signal_shadow import ShadowClient
-from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob, wait_for_chestnut
+from openpilot.selfdrive.modeld.helpers import (MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path,
+                                                load_oob, wait_for_chestnut, validate_navigation_contract)
+from openpilot.selfdrive.navigation.map_client import MapInput
 from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.modeld_v2.model_settings import ModelSettings, with_blendful
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
@@ -155,6 +157,10 @@ def input_view(buffer: Buffer, shape: tuple[int, ...], dtype: DType, offset: int
   return Tensor(UOp.from_buffer(view, dtype)).reshape(shape)
 
 
+# the navigation contract admits only these two element types
+DTYPES_FROM_NUMPY = {np.dtype(np.float32): dtypes.float32, np.dtype(np.uint8): dtypes.uint8}
+
+
 def compile_copy(tensor: Tensor) -> Callable[[], Tensor]:
   jit = CapturedJit(tensor, compile_linear(tensor.schedule_linear()), [], [])
   return lambda: jit([], {})
@@ -169,6 +175,7 @@ class ModelState(ModelStateBase):
     self.model_device = jits['input_specs']['new_img'][2]
     self.input_shapes = {name: (shape, np.dtype(dtype)) for name, (shape, dtype, _) in jits['input_specs'].items()}
     self.state_pairs = {name: f'next_{name}' for name in self.input_shapes if f'next_{name}' in jits['metadata']['output_shapes']}
+    validate_navigation_contract(self.input_shapes)
     self.vision_input_names = ('img', 'big_img')
     self.output_slices = pickle.loads(base64.b64decode(jits['metadata']['metadata']['output_slices']))
 
@@ -206,9 +213,12 @@ class ModelState(ModelStateBase):
     # Pack host inputs into one upload to reduce USB transfer overhead for the eGPU.
     self.input_queues = {name: Tensor(np.zeros(shape, dtype=dtype), device=self.model_device).realize()
                          for name, (shape, dtype) in self.input_shapes.items() if name in self.state_pairs}
-    shapes = {'tfm': (2, 3, 3)} | {name: shape for name, (shape, _) in self.input_shapes.items()
-                                   if name not in self.state_pairs and name != 'new_img'}
-    npy_size = sum(round_up(math.prod(shape) * 4, 128) for shape in shapes.values())
+    # Slot dtype follows the model's declared spec: every legacy input is float32,
+    # only a navigation model may declare a uint8 nav_map (cp contract).
+    packed = {'tfm': ((2, 3, 3), np.dtype(np.float32))} | {
+      name: (shape, dtype) for name, (shape, dtype) in self.input_shapes.items()
+      if name not in self.state_pairs and name != 'new_img'}
+    npy_size = sum(round_up(math.prod(shape) * dtype.itemsize, 128) for shape, dtype in packed.values())
     self.packed_input = np.zeros(npy_size + 2 * self.frame_copy_size, dtype=np.uint8)
     self.input_host = Tensor(self.packed_input, device='NPY')
     self.input_device = self.input_host.to(self.model_device)
@@ -216,9 +226,11 @@ class ModelState(ModelStateBase):
     self.copy_inputs()
     self.npy = {}
     offset = 0
-    for name, shape in shapes.items():
-      self.npy[name] = np.ndarray(shape, dtype=np.float32, buffer=self.packed_input, offset=offset)
-      self.input_queues[name] = input_view(self.input_device._buffer(), shape, dtypes.float32, offset)
+    for name, (shape, dtype) in packed.items():
+      self.npy[name] = np.ndarray(shape, dtype=dtype, buffer=self.packed_input, offset=offset)
+      if dtype not in DTYPES_FROM_NUMPY:
+        raise ValueError(f'unsupported model input dtype for {name}: {dtype}')
+      self.input_queues[name] = input_view(self.input_device._buffer(), shape, DTYPES_FROM_NUMPY[dtype], offset)
       offset += round_up(self.npy[name].nbytes, 128)
     self.frames = self.packed_input[npy_size:].reshape(2, self.frame_copy_size)
     self.warp_inputs = {'input_frame': input_view(self.input_device._buffer(), self.frames.shape, dtypes.uint8, npy_size),
@@ -239,6 +251,21 @@ class ModelState(ModelStateBase):
     self.prev_desire[:] = inputs['desire_pulse']
     self.npy['traffic_convention'][:] = inputs['traffic_convention']
     self.npy['action_t'][:] = inputs['action_t']
+    # MapInput omits expired/missing route inputs. Clear every frame, including
+    # the first frame after a join, so a previous turn/map never persists
+    # (cp jetlink inputs.py semantics).
+    for name in ('nav_map', 'navigation'):
+      if name not in self.npy:
+        continue
+      self.npy[name].fill(0)
+      if name in inputs:
+        value = np.asarray(inputs[name])
+        accepted = ((256, 256), (1, 1, 256, 256)) if name == 'nav_map' else ((47,), (1, 47))
+        if value.shape not in accepted or not np.isfinite(value).all():
+          raise ValueError(f'Invalid modeld {name} input')
+        if name == 'nav_map' and (np.any(value < 0) or np.any(value > 255)):
+          raise ValueError('modeld map pixels must remain in 0..255')
+        self.npy[name][...] = value
 
     self.copy_inputs()
     if self.shadow_inputs is not None:
@@ -390,7 +417,8 @@ def main(demo=False):
   pm = PubMaster(pub_socks)
   sm = SubMaster(["deviceState", "carState", "narrowRoadCameraState", "extrinsicsCalibration",
                   "driverMonitoringState", "carControl", "carControlSP", "controlsState",
-                  "lateralDelay", "carStateSP", "carrotManSP", "carrotNaviSP", "radarState"])
+                  "lateralDelay", "carStateSP", "carrotManSP", "carrotNaviSP", "radarState",
+                  "navInstructionCarrotSP", "navRoute"])
 
   publish_state = PublishState()
   params = Params()
@@ -429,6 +457,7 @@ def main(demo=False):
   lane_width_right_est = LaneWidthEstimator()
   settings = ModelSettings()
   action_from_model = with_blendful(get_action_from_model, MIN_LAT_CONTROL_SPEED)
+  nav_input = MapInput()
 
   while True:
     # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
@@ -511,6 +540,8 @@ def main(demo=False):
       'traffic_convention': traffic_convention,
       'action_t': np.array([lat_action_t, long_action_t], dtype=np.float32),
     }
+
+    inputs.update(nav_input.update(model, sm, v_ego))
 
     model.frame_drop_ratio = frame_drop_ratio
     mt1 = time.perf_counter()

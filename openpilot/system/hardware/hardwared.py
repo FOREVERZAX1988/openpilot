@@ -527,6 +527,17 @@ def hardware_thread(end_event, hw_queue) -> None:
       params.put("UptimeOffroad", uptime_offroad, block=True)
       params.put("UptimeOnroad", uptime_onroad, block=True)
 
+    # Headless (WebuiHeadlessMode="on"): manager stops the native ui, which is
+    # otherwise the only writer of panel brightness, so the panel would sit at
+    # its last brightness showing a dead frame. Blank the backlight instead —
+    # brightness only, never bl_power=4 (powering the DSI panel controller off
+    # breaks touch on some C3 units until reboot; see comma set_display_power).
+    # Re-check every second so a ui killed just after its last brightness
+    # write, or racing a mode switch, still ends up blanked.
+    if (count % int(1. / DT_HW)) == 0:
+      if (params.get("WebuiHeadlessMode") or "auto") == "on" and HARDWARE.get_screen_brightness() != 0:
+        HARDWARE.set_screen_brightness(0)
+
     count += 1
     should_start_prev = should_start
 

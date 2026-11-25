@@ -11,6 +11,7 @@ import pickle
 import numpy as np
 
 from openpilot.common.basedir import BASEDIR
+from openpilot.selfdrive.modeld.helpers import validate_navigation_contract
 from openpilot.sunnypilot.modeld_v2.frame_fusion import pack_layout, SPLIT_FRAMES
 from openpilot.sunnypilot.modeld_v2.helpers import load_model
 from openpilot.sunnypilot.modeld_v2.compile_modeld import (POLICY_INPUTS, derive_frame_skip,
@@ -84,6 +85,10 @@ class LegacyModelAdapter(BaseModelAdapter):
     if 'model' in metadata:
       model_metadata = metadata.get('model', metadata)
       self.input_shapes = model_metadata['input_shapes']
+      # legacy artifact layouts pack every scalar slot as float32; a navigation
+      # model cannot be expressed there, so refuse it before any queue is built
+      if {'nav_map', 'navigation'} & set(self.input_shapes):
+        raise ValueError('unsupported navigation input contract')
       self.vision_output_slices = model_metadata['output_slices']
       self._vision_input_names = [key for key in self.input_shapes if 'img' in key]
       self.frame_skip = derive_frame_skip({}, self.input_shapes)
@@ -106,6 +111,8 @@ class LegacyModelAdapter(BaseModelAdapter):
       self._vision_input_names = [key for key in vision_metadata['input_shapes'] if 'img' in key]
       first_policy_meta = metadata[policy_keys[0]]
       self.frame_skip = derive_frame_skip(vision_metadata['input_shapes'], first_policy_meta['input_shapes'])
+      if {'nav_map', 'navigation'} & (set(vision_metadata['input_shapes']) | set(first_policy_meta['input_shapes'])):
+        raise ValueError('unsupported navigation input contract')
       self.input_queues, self.numpy_inputs = make_split_input_queues(vision_metadata['input_shapes'], first_policy_meta['input_shapes'],
                                                                      self.frame_skip, device=self.QUEUE_DEV)
 
@@ -158,6 +165,7 @@ class NativeTinygradAdapter(BaseModelAdapter):
 
     self.model_device = self.input_specs['new_img'][2]
     self.input_shapes = {name: (shape, np.dtype(dtype)) for name, (shape, dtype, _) in self.input_specs.items()}
+    validate_navigation_contract(self.input_shapes)
     self.state_pairs = {name: f'next_{name}' for name in self.input_shapes if f'next_{name}' in self.jits['metadata']['output_shapes']}
 
     stride, y_height, uv_height, _ = get_nv12_info(self.cam_w, self.cam_h)
@@ -178,7 +186,11 @@ class NativeTinygradAdapter(BaseModelAdapter):
     offsets, packed = pack_layout(shapes, 0 if self.split else self.warp_frame_size)
     self.packed_input = np.zeros(packed, dtype=np.uint8)
     self.host = Tensor(self.packed_input, device='NPY')
-    self.numpy_inputs = {name: np.ndarray(shape, dtype=np.float32, buffer=self.packed_input, offset=offsets[name])
+    # slot dtype follows the model's declared spec: every legacy input is float32,
+    # only a navigation model may declare a uint8 nav_map (cp contract). pack_layout
+    # sizing stays shared with the compile-time frame_part layout and is untouched.
+    npy_dtypes = {'tfm': np.dtype(np.float32)} | {name: self.input_shapes[name][1] for name in shapes}
+    self.numpy_inputs = {name: np.ndarray(shape, dtype=npy_dtypes[name], buffer=self.packed_input, offset=offsets[name])
                          for name, shape in ({'tfm': (2, 3, 3)} | shapes).items()}
     self.frames = self.packed_input[offsets['frames']:].reshape(2, -1)
 

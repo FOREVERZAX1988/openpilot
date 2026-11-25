@@ -188,6 +188,11 @@ class ModelFetcher:
     self._retry_at: dict[str, float] = {}
     self._failures: dict[str, int] = {}
     self._time_invalid_logged = False
+    # 1 Hz manager loop calls get_bundles_for_source every tick; keep the
+    # parsed capnp catalog per source and invalidate it by (C-level, cheap)
+    # dict equality when the underlying params blob changes, instead of
+    # rebuilding the whole catalog from the tens-of-KB manifest each tick.
+    self._parsed_cache: dict[str, tuple[dict, list]] = {}
     self._last_active_json: dict[str, str] | None = None
     self._refetched_extends: bool | None = None
     self._update_active_json(extended=False)
@@ -307,6 +312,9 @@ class ModelFetcher:
       # a source is refetched over a mismatch at most once per process: if the fresh
       # manifest still mismatches, the URL is authoritative and the cache is trusted
       if self._cache_matches_source(source, cached_data) or source in self._refetched:
+        hit = self._parsed_cache.get(source)
+        if hit is not None and hit[0] == cached_data:
+          return hit[1]
         try:
           parsed = self.model_parser.parse_models(cached_data)
         except Exception:
@@ -314,6 +322,7 @@ class ModelFetcher:
         else:
           if parsed:
             cloudlog.debug(f"Using valid cached models data for source {source}")
+            self._parsed_cache[source] = (cached_data, parsed)
             return parsed
           # a source-matching cache that yields no valid bundles is stale (e.g. an old
           # manifest version) - do not trust it, refetch so the source is repopulated

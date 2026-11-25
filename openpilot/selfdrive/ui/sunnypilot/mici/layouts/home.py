@@ -11,7 +11,8 @@ import raylib_nb as rl
 from openpilot.selfdrive.ui.mici.layouts.home import MiciHomeLayout, HOME_PADDING
 from openpilot.selfdrive.ui.sunnypilot.onroad.speed_assist_badge import LongitudinalIcon, SpeedAssistIcon
 from openpilot.selfdrive.ui.ui_state import ui_state, ChestnutState
-from openpilot.system.ui.lib.application import FontWeight, TextAlignment
+from openpilot.system.ui.lib.application import FontWeight, TextAlignment, gui_app
+from openpilot.system.ui.widgets.icon_widget import IconWidget
 from openpilot.system.ui.widgets.label import UnifiedLabel, gui_label
 
 MODEL_FONT_SIZE = 32
@@ -35,6 +36,21 @@ class MiciHomeLayoutSP(MiciHomeLayout):
     for i, icon in enumerate((self._long_icon, self._speed_assist_icon)):
       self._status_bar_layout.add_widget(icon)
       self._status_bar_layout.widgets.insert(2 + i, self._status_bar_layout.widgets.pop())
+
+    # Carrot Web entry, aligned with the Big GUI sidebar: while the Carrot Web panel toggle is
+    # on, the status bar gains a carrot icon that opens the LAN QR dialog on tap.
+    self._carrot_web_icon = IconWidget("icons/carrot_web.png", (54, 40))
+    self._carrot_web_icon.set_visible(lambda: ui_state.params.get_bool("CarrotWebEnabled"))
+    self._status_bar_layout.add_widget(self._carrot_web_icon)
+
+  def _handle_mouse_release(self, mouse_pos):
+    if ui_state.params.get_bool("CarrotWebEnabled"):
+      rect = self._carrot_web_icon.rect
+      if rect.width > 0 and rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), rect):
+        from openpilot.selfdrive.ui.widgets.carrot_web_dialog import CarrotWebDialog
+        gui_app.push_widget(CarrotWebDialog())
+        return
+    super()._handle_mouse_release(mouse_pos)
 
   def _set_chestnut_visibility(self):
     usb_connected = ui_state.usb_connected

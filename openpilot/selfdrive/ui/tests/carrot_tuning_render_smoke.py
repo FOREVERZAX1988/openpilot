@@ -303,6 +303,7 @@ class FakeGuiApp:
     self._mouse_events: list = []
     # widget stack (push_widget/pop_widget) - click-flow smoke tests assert on it
     self.pushed_widgets: list = []
+    self._language_change_listeners: list = []
 
   @property
   def mouse_events(self):
@@ -355,6 +356,21 @@ class FakeGuiApp:
   def pop_widget(self, widget=None):
     if self.pushed_widgets and (widget is None or self.pushed_widgets[-1] is widget):
       self.pushed_widgets.pop()
+
+  def add_language_change_listener(self, callback):
+    # Real app invokes these between frames after a language switch; the fake
+    # never switches, so just record them for assertions.
+    self._language_change_listeners.append(callback)
+
+  def pop_widgets_to(self, widget, callback=None, instant=False):
+    # Mirrors GuiApplication.pop_widgets_to: pop everything above `widget`,
+    # then dismiss it (or just run the callback if it is already on top).
+    while self.pushed_widgets and self.pushed_widgets[-1] is not widget:
+      self.pushed_widgets.pop()
+    if self.pushed_widgets and self.pushed_widgets[-1] is widget:
+      self.pushed_widgets.pop()
+    if callback:
+      callback()
 
 
 def build_fake_application() -> types.ModuleType:

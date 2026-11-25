@@ -56,14 +56,27 @@ class CurveSpeed:
   curve_kph: float = NO_LIMIT_KPH
   distance: float = 0.0
   direction: float = 1.0
+  # StarPilot curve_speed/target.py:68-78 carries the binding curvature with the
+  # envelope (its ``evaluate`` iterates (curvature, distance) pairs); exposing it
+  # lets the learning layer (curve_speed_learning/) observe and correct the exact
+  # geometry the baseline picked. Additive field, default keeps old behaviour.
+  curvature: float = 0.0
 
 
-def curve_speed(model, v_ego, sensitivity=1.0, lower_limit_kph=30.0, *, speed_ratio=1.0, a_ego=0.0):
+def curve_speed(model, v_ego, sensitivity=1.0, lower_limit_kph=30.0, *, speed_ratio=1.0, a_ego=0.0, comfort_fn=None):
   """Find the tightest distance-adjusted speed constraint on a valid model path.
 
   Returns a ``CurveSpeed``, or ``None`` when the path is unusable - which is not
   the same as "no limit": the caller distinguishes them, and a missing result
   must not be read as a straight road.
+
+  ``comfort_fn`` (optional, StarPilot curve_speed/target.py:74 learned-comfort port): when
+  given, it is called with each candidate point's |curvature| and must return a positive
+  finite lateral-acceleration budget in m/s^2, replacing the fixed
+  ``TARGET_LAT_ACCEL / sensitivity`` for that point - exactly how StarPilot's
+  ``evaluate()`` reads ``comfort.comfort(magnitude)`` per point. ``None`` (the default,
+  and what every existing caller passes) keeps the fixed budget and this function's
+  behaviour bit-for-bit identical.
   """
   if not all(math.isfinite(value) for value in (v_ego, sensitivity, lower_limit_kph, speed_ratio, a_ego)):
     return None
@@ -107,13 +120,19 @@ def curve_speed(model, v_ego, sensitivity=1.0, lower_limit_kph=30.0, *, speed_ra
     curve = float(np.median(curvature[neighbourhood]))
     if abs(curve) < 1e-6:
       continue
-    curve_ms = max(floor_ms, math.sqrt(lateral_budget / abs(curve)))
+    if comfort_fn is not None:
+      budget = comfort_fn(abs(curve))
+      if budget is None or not math.isfinite(budget) or budget <= 0.0:
+        continue
+    else:
+      budget = lateral_budget
+    curve_ms = max(floor_ms, math.sqrt(budget / abs(curve)))
     braking_distance = max(0.0, distance[i] - response_distance)
     approach_ms = math.sqrt(curve_ms**2 + 2.0 * APPROACH_DECEL * braking_distance)
     approach_kph = min(NO_LIMIT_KPH, approach_ms * 3.6 / ratio)
     if approach_kph < best.approach_kph:
       best = CurveSpeed(approach_kph, min(NO_LIMIT_KPH, curve_ms * 3.6 / ratio),
-                        float(distance[i]), math.copysign(1.0, curve))
+                        float(distance[i]), math.copysign(1.0, curve), abs(curve))
   return best if found_valid else None
 
 

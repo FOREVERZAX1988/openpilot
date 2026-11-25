@@ -8,6 +8,8 @@ import time
 
 import raylib_nb as rl
 
+from collections.abc import Callable
+
 from openpilot.cereal import custom
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigConfirmationDialog, BigDialog
 from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_selected_bundle
@@ -21,7 +23,7 @@ from openpilot.selfdrive.ui.sunnypilot.mici.layouts.models_zp import ModelOption
 from openpilot.selfdrive.ui.sunnypilot.mici.widgets.button import BigMultiParamToggleSP
 from openpilot.sunnypilot.jetlink_adapter import KEYS, MODES
 
-from openpilot.system.ui.lib.application import FontWeight, gui_app
+from openpilot.system.ui.lib.application import FontWeight, gui_app, MousePos
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.label import UnifiedLabel
@@ -65,9 +67,16 @@ def _model_info() -> tuple[str, str, str]:
   if standin := standin_model():
     # the last model the Jetson built drives until the pick is downloaded and built
     return active_text, tr("big model"), tr("{} for now").format(standin.lower())
+  # a Default big can only fall back to the Default small (stock modeld), like
+  # Big GUI models.py _status_note; a custom big has no automatic fallback yet
+  fallback_name = default_model_name("qcom").lower()
   if state == 'failed':
+    if get_selected_bundle(ui_state.params, "chestnut") is None:
+      return active_text, tr("big model"), tr("unavailable, {} driving").format(fallback_name)
     return active_text, tr("big model"), tr("unavailable")
   if state == 'loading':
+    if get_selected_bundle(ui_state.params, "chestnut") is None:
+      return active_text, tr("big model"), tr("{} for now").format(fallback_name)
     return active_text, tr("big model"), tr("getting ready")
   header = tr("small model") if source == "chestnut" else tr("big model")
   return active_text, header, other_name.lower()
@@ -101,6 +110,55 @@ class CurrentModelInfo(Widget):
 
     self.info_text.set_position(self._rect.x + 20, self._rect.y + 161 - 25)
     self.info_text.render()
+
+class FavoriteButton(Widget):
+  """Bookmark overlay on a model row; mirrors wifi_ui ForgetButton's secondary action pattern."""
+  MARGIN = 12  # bottom and right
+
+  def __init__(self, is_favored: Callable[[], bool], on_toggle: Callable):
+    super().__init__()
+    self._is_favored = is_favored
+    self._on_toggle = on_toggle
+    self._bookmark_txt = gui_app.texture("icons_mici/onroad/bookmark.png", 36, 36)
+    self._bookmark_fill_txt = gui_app.texture("icons_mici/onroad/bookmark_fill.png", 36, 36)
+    self.set_rect(rl.Rectangle(0, 0, 84 + self.MARGIN * 2, 84 + self.MARGIN * 2))
+
+  def _handle_mouse_release(self, mouse_pos: MousePos):
+    super()._handle_mouse_release(mouse_pos)
+    self._on_toggle()
+
+  def _render(self, _):
+    icon = self._bookmark_fill_txt if self._is_favored() else self._bookmark_txt
+    rl.draw_texture_ex(icon, rl.Vector2(self._rect.x + (self._rect.width - icon.width) / 2,
+                                        self._rect.y + (self._rect.height - icon.height) / 2), 0, 1.0, rl.WHITE)
+
+
+class ModelRowButton(BigButton):
+  """Model row with a favorite toggle as secondary action, like WifiButton's forget button."""
+
+  def __init__(self, text: str, value: str, is_favored: Callable[[], bool], on_toggle_favorite: Callable):
+    super().__init__(text, value, scroll=True)
+    self._favorite_btn = FavoriteButton(is_favored, on_toggle_favorite)
+
+  def _handle_mouse_release(self, mouse_pos: MousePos):
+    # tapping the bookmark toggles the favorite instead of selecting the model
+    if rl.check_collision_point_rec(rl.Vector2(mouse_pos.x, mouse_pos.y), self._favorite_btn.rect):
+      return
+    super()._handle_mouse_release(mouse_pos)
+
+  def set_touch_valid_callback(self, touch_callback: Callable[[], bool]) -> None:
+    super().set_touch_valid_callback(lambda: touch_callback() and not self._favorite_btn.is_pressed)
+    self._favorite_btn.set_touch_valid_callback(touch_callback)
+
+  def _draw_content(self, btn_y: float):
+    super()._draw_content(btn_y)
+    self._favorite_btn.render(rl.Rectangle(
+      self._rect.x + self._rect.width - self._favorite_btn.rect.width,
+      btn_y + self._rect.height - self._favorite_btn.rect.height,
+      self._favorite_btn.rect.width,
+      self._favorite_btn.rect.height,
+    ))
+
 
 class ModelsLayoutMici(NavScroller):
   def __init__(self):
@@ -231,6 +289,26 @@ class ModelsLayoutMici(NavScroller):
     refresh_model_list()
     self._refresh_start = time.monotonic()
 
+  @staticmethod
+  def _is_favored(ref: str) -> bool:
+    favs = ui_state.params.get("ModelManager_Favs")
+    return bool(favs) and ref in set(favs.split(';'))
+
+  @staticmethod
+  def _toggle_favorite(bundle):
+    # write-back mirrors Big GUI TreeOptionDialog._toggle_favorite: a ';'-separated
+    # string param, re-read before writing, deduped and sorted
+    favs = ui_state.params.get("ModelManager_Favs")
+    favorites = set(favs.split(';')) if favs else set()
+    if bundle.ref in favorites:
+      favorites.remove(bundle.ref)
+    else:
+      favorites.add(bundle.ref)
+    if favorites:
+      ui_state.params.put("ModelManager_Favs", ';'.join(sorted(favorites)))
+    else:
+      ui_state.params.remove("ModelManager_Favs")
+
   def _select_folder(self, folder_name):
     source = self._selection_source
     if source is None:  # folders are only reachable after picking a hardware
@@ -244,7 +322,9 @@ class ModelsLayoutMici(NavScroller):
     btns = []
     for bundle in bundles:
       note = big_model_note(bundle.ref) if source == "chestnut" else None
-      btn = BigButton(bundle.displayName.lower(), value=note.lower() if note else "")
+      btn = ModelRowButton(bundle.displayName.lower(), note.lower() if note else "",
+                           is_favored=lambda r=bundle.ref: self._is_favored(r),
+                           on_toggle_favorite=lambda b=bundle: self._toggle_favorite(b))
       btn.set_click_callback(lambda b=bundle: self._select_model(b))
       btns.append(btn)
     self._push_selection_view(btns)

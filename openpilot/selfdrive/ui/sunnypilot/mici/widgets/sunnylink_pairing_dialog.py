@@ -81,7 +81,7 @@ class SunnylinkPairingDialog(NavWidget):
     if not self._qr_texture:
       error_font = gui_app.font(FontWeight.BOLD)
       rl.draw_text_ex(
-        error_font, "QR Code Error", rl.Vector2(self._rect.x + 20, self._rect.y + self._rect.height // 2 - 15), 30, 0.0, rl.RED
+        error_font, tr("QR Code Error"), rl.Vector2(self._rect.x + 20, self._rect.y + self._rect.height // 2 - 15), 30, 0.0, rl.RED
       )
       return
 

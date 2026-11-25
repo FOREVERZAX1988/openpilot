@@ -32,14 +32,15 @@ BACKLIGHT_MIN = 30  # the lowest backlight the display shows properly
 BRIGHTNESS_MIN = BACKLIGHT_MIN * 0.6 if HARDWARE.get_device_type() == "mici" else BACKLIGHT_MIN
 PARAM_UPDATE_TIME = 1 / 5.0
 
-# C3 (tici) clone panels: the Samsung TSP firmware gates itself off when the
-# backlight duty is (near) zero, so a true 0 makes touch-wake impossible — the
-# controller generates no IRQs at all while asleep until the next brightness
-# change. Measured on a c3clone unit: touch alive at >=10/1023 duty, dead at 0
-# even with the panel controller kept powered (see hardware.py
-# set_display_power, the companion bl_power fix). Sleeping at ~2% instead keeps
-# the shared boost rail alive; the glow is imperceptible in a car.
-TSP_WAKE_SLEEP_BRIGHTNESS = 2  # percent; 2% of 1023 = ~20 raw steps
+# C3 (tici) clone panels: on some units the Samsung TSP loses touch-wake when
+# the panel powers down or backlight duty hits zero (measured 11-06 on a
+# c3clone unit: touch alive at >=10/1023 duty, dead at 0). The default sleep
+# path is carrot-style true dark (bl_power=4 + brightness 0), which an EA8074
+# unit verified fine (touch alive through bl_power=4). If a unit shows dead
+# touch-wake after sleep, wire the TspKeepAliveBrightness param (parsed in
+# screen_settings.parse_keepalive) back into Device to keep the panel powered
+# at a nonzero duty — deliberately unwired until such a unit shows up.
+TSP_WAKE_SLEEP_BRIGHTNESS = 2  # percent; reference value for the opt-in above
 
 
 class UIStatus(Enum):
@@ -477,8 +478,7 @@ class Device(DeviceSP):
       brightness = 100
 
     if not self._awake:
-      # True 0 kills touch-wake on C3 clone panels (see TSP_WAKE_SLEEP_BRIGHTNESS).
-      brightness = TSP_WAKE_SLEEP_BRIGHTNESS if "tici" in HARDWARE.get_device_type() else 0
+      brightness = 0
 
     if brightness != self._last_brightness:
       self._brightness_target = int(brightness)

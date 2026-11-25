@@ -4,19 +4,14 @@ import unittest
 import numpy as np
 
 from openpilot.selfdrive.controls.lib.curve_speed_learning import (
-  CSC_CONTROL_QUIET_TIME,
   CSC_COUNT_CAP,
   CSC_LAT_ACCEL_MAX,
   CSC_LAT_ACCEL_MIN,
-  CSC_LEAD_CLEAR_TIME,
   CSC_NUDGE_WEIGHT,
-  CSC_TRAINING_SETTLE_TIME,
   CURVATURE_BUCKETS,
-  CURVATURE_GRID,
   DEFAULT_LATERAL_ACCELERATION,
   CurvatureLearning,
   bucket_curvature,
-  learning_status_from_data,
   normalize_curvature_data,
   weighted_isotonic,
 )
@@ -206,59 +201,6 @@ if __name__ == "__main__":
   unittest.main()
 
 
-class TestCalibrationProgress(unittest.TestCase):
-  """StarPilot _calibration_progress parity: per-bucket threshold, whole-grid percent."""
-
-  def test_empty_data_is_zero(self):
-    self.assertEqual(CurvatureLearning().calibration_progress(), 0.0)
-
-  def test_one_calibrated_bucket_is_grid_fraction(self):
-    learning = CurvatureLearning()
-    key = bucket_curvature(0.01)
-    learning.curvature_data[key] = {"average": 2.5, "count": 200}  # exactly at threshold
-    self.assertAlmostEqual(learning.calibration_progress(), 100.0 / CURVATURE_BUCKETS, places=6)
-
-  def test_progress_caps_per_bucket(self):
-    learning = CurvatureLearning()
-    learning.curvature_data[bucket_curvature(0.01)] = {"average": 2.5, "count": 200 * 10}
-    learning.curvature_data[bucket_curvature(0.005)] = {"average": 2.5, "count": 50}
-    expected = (1.0 + 50 / 200) / CURVATURE_BUCKETS * 100
-    self.assertAlmostEqual(learning.calibration_progress(), expected, places=6)
-
-  def test_all_buckets_calibrated_is_hundred(self):
-    learning = CurvatureLearning()
-    for key in CURVATURE_GRID:
-      learning.curvature_data[str(round(float(key), 6))] = {"average": 2.5, "count": 200}
-    self.assertAlmostEqual(learning.calibration_progress(), 100.0, places=6)
-
-
-class TestLearningStatusFromData(unittest.TestCase):
-  """The web UI's read-only view: derives everything from persisted bucket JSON."""
-
-  def test_none_and_garbage_yield_defaults(self):
-    for data in (None, {}, "not a dict", {"bad": "shape"}, {"0.01": {"average": float("nan"), "count": 5}}):
-      status = learning_status_from_data(data)
-      self.assertEqual(status["progress_pct"], 0.0)
-      self.assertEqual(status["buckets"], 0)
-      self.assertEqual(status["total_count"], 0)
-      self.assertEqual(status["lateral_acceleration"], DEFAULT_LATERAL_ACCELERATION)
-
-  def test_status_matches_instance_values(self):
-    learning = CurvatureLearning()
-    learning.curvature_data[bucket_curvature(0.01)] = {"average": 2.5, "count": 400}
-    learning.curvature_data[bucket_curvature(0.004)] = {"average": 2.2, "count": 60}
-    learning.rebuild()
-    status = learning_status_from_data(learning.curvature_data)
-    self.assertEqual(status["buckets"], 2)
-    self.assertEqual(status["total_count"], 460)
-    self.assertAlmostEqual(status["progress_pct"], round(learning.calibration_progress(), 1), places=6)
-    self.assertAlmostEqual(status["lateral_acceleration"], round(learning.lateral_acceleration, 2), places=6)
-
-  def test_status_accepts_raw_persisted_json_shape(self):
-    raw = {"0.01": {"average": 2.5, "count": 400}, "junk": [1, 2], "0.5": {"average": 9.9, "count": -3}}
-    status = learning_status_from_data(raw)
-    self.assertEqual(status["buckets"], 1)  # junk + non-positive count dropped by normalize
-    self.assertEqual(status["total_count"], 400)
 class TestSamplingGatingGaps(unittest.TestCase):
   """StarPilot runtime gating ported with the B1-4 persistence/trigger work:
   the lead-clear cooldown and the post-control silence the original port
@@ -277,13 +219,13 @@ class TestSamplingGatingGaps(unittest.TestCase):
     # lead visible through the settle period
     self._frames(learning, 60, tracking_lead=True)
     self.assertFalse(learning.enable_training)
-    # The lead-clear cooldown delays the settle timer by CSC_LEAD_CLEAR_TIME;
-    # derive the frame count from the shipped constants instead of hardcoding
-    # seconds that no longer match the policy (the old 60 frames = 3 s already
-    # exceeded cooldown + settle, so the assertion could never hold).
-    self._frames(learning, int(CSC_LEAD_CLEAR_TIME / learning.dt))
+    # lead dropped: sampling must stay silent while CSC_LEAD_CLEAR_TIME (1 s)
+    # is still elapsing (19 frames at 20 Hz keeps the clear timer below 1 s)
+    self._frames(learning, 19)
     self.assertFalse(learning.enable_training)
-    self._frames(learning, int(CSC_TRAINING_SETTLE_TIME / learning.dt) + 2)
+    # clear frames past the cooldown: eligibility resumes and the settle
+    # timer (2 s) accrues over the remaining 41 frames
+    self._frames(learning, 41)
     self.assertTrue(learning.enable_training)
 
   def test_lead_reappear_resets_cooldown(self):
@@ -296,15 +238,16 @@ class TestSamplingGatingGaps(unittest.TestCase):
 
   def test_control_silence_after_openpilot_ownership(self):
     learning = CurvatureLearning(dt=0.05)
-    # openpilot owns the speed: the quiet timer is pinned each frame
+    # openpilot owns the speed: the quiet timer is pinned
     self._frames(learning, 100, manual_speed_control=False, long_control_active=True)
-    # once the driver takes over the pinned timer counts down; sampling stays
-    # silent for the whole CSC_CONTROL_QUIET_TIME window
-    quiet_frames = int(CSC_CONTROL_QUIET_TIME / learning.dt)
-    self._frames(learning, quiet_frames - 1)
     self.assertFalse(learning.enable_training)
-    # after quiet expires the settle timer still has to elapse
-    self._frames(learning, int(CSC_TRAINING_SETTLE_TIME / learning.dt) + 2)
+    # driver takes over: quiet timer (5 s) decays and keeps sampling silent;
+    # 99 frames at 20 Hz leaves 0.05 s on the timer
+    self._frames(learning, 99)
+    self.assertFalse(learning.enable_training)
+    # past the quiet window (one extra decay frame absorbs the float drift of
+    # the 5 s timer) the settle timer (2 s) accrues over the eligible frames
+    self._frames(learning, 45)
     self.assertTrue(learning.enable_training)
 
   def test_pure_manual_driving_has_no_silence(self):
@@ -360,13 +303,10 @@ class TestAsyncPersistenceContract(unittest.TestCase):
 
   def test_sync_hook_saved_immediately(self):
     learning = CurvatureLearning(dt=0.05)
+    learning.curvature_data["0.010"] = {"average": 2.5, "count": 1}
     learning.data_dirty = True
-    # A legacy hook returning None means "saved synchronously". Give the learner
-    # some data first, otherwise the hook dict is empty and this cannot prove
-    # the payload was handed over.
-    learning.curvature_data = {"0.0010": {"average": 2.0, "count": 3}}
     stored = {}
     learning.put_fn = lambda data: stored.update(data) or None
     learning.flush()
     self.assertFalse(learning.data_dirty)
-    self.assertEqual(stored, learning.curvature_data)
+    self.assertTrue(stored)

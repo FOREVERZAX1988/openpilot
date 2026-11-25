@@ -292,6 +292,7 @@ class DeveloperLayoutMici(NavScroller):
       ui_state.params.get("AgentPassword") or "",
       minimum_length=4,
       confirm_callback=set_password,
+      mask=True,
     )
     gui_app.push_widget(dlg)
 

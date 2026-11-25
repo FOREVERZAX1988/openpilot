@@ -25,7 +25,7 @@ class BaseMapData(ABC):
 
     self.localizer_valid = False
     self.last_bearing = None
-    self.last_position = coordinate_from_param("LastGPSPositionLLK", self.params)
+    self.last_position, _ = coordinate_from_param("LastGPSPositionLLK", self.params)
 
   @abstractmethod
   def update_location(self) -> None:

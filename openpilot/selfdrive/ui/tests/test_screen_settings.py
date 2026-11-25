@@ -13,8 +13,10 @@ from openpilot.selfdrive.ui.screen_settings import (
   KEY_SCREEN_BRIGHTNESS_ONROAD_OFFSET,
   OFFSET_MAX,
   OFFSET_MIN,
+  TSP_KEEPALIVE_MAX,
   apply_offset,
   calculate_screen_brightness,
+  parse_keepalive,
   parse_level,
   parse_offset,
   read_screen_brightness,
@@ -141,6 +143,31 @@ class TestReadScreenBrightness(unittest.TestCase):
     self.assertEqual(onroad_offset, 0.0)
     self.assertIsNone(offroad)
     self.assertEqual(offroad_offset, 0.0)
+
+
+class TestParseKeepalive(unittest.TestCase):
+  def test_unset_is_true_dark(self):
+    self.assertEqual(parse_keepalive(None), 0)
+
+  def test_valid_values(self):
+    self.assertEqual(parse_keepalive(b"2"), 2)
+    self.assertEqual(parse_keepalive(b"0"), 0)
+    self.assertEqual(parse_keepalive(b"10"), 10)
+    self.assertEqual(parse_keepalive(b"2.6"), 3)
+
+  def test_out_of_range_falls_back(self):
+    self.assertEqual(parse_keepalive(b"11"), 0)
+    self.assertEqual(parse_keepalive(b"-1"), 0)
+
+  def test_invalid_falls_back(self):
+    self.assertEqual(parse_keepalive(b"junk"), 0)
+    self.assertEqual(parse_keepalive(float("nan")), 0)
+
+  def test_custom_default(self):
+    # ui_state's TSP_WAKE_SLEEP_BRIGHTNESS (2) is the recommended keep-alive duty;
+    # kept as a literal here so this suite stays import-light (no ui_state chain).
+    self.assertEqual(parse_keepalive(None, default=2), 2)
+    self.assertLessEqual(TSP_KEEPALIVE_MAX, 10)
 
 
 if __name__ == "__main__":

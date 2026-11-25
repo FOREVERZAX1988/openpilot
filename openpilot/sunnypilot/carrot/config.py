@@ -102,6 +102,11 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "AutoNaviSpeedSafetyFactor": 105,
   "SoundVolumeAdjust": 100,
   "SoundVolumeAdjustEngage": 100,
+  # StarPilot blind-spot audible advisory (registered BOOLs in params_keys.h;
+  # listed here so the /nav_params web panel shows them alongside the toggles)
+  "LoudBlindspotAlert": 0,
+  "LoudBlindspotAlertWhenDisengaged": 0,
+  "LoudBlindspotAlertMuteAtStandstill": 0,
   # Carrot exception message persists across manager start
   "CarrotException": "",
   # ---------------------------------------------------------------------------
@@ -238,6 +243,26 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "LeadAccelResponseTF3": -1,                # lead accel response, gap level 3 (cp default -1)
   "LeadAccelResponseTF4": -1,                # lead accel response, gap level 4 (cp default -1)
   "AutoNaviRearCameraHoldDistance": 100,     # navi rear-camera hold distance cm (cp default 100)
+  # --- implemented-but-unreachable: params consumed in code yet missing from ---
+  # --- the settings catalog. Defaults mirror common/params_keys.h.             ---
+  "CarrotTurnAccelEnabled": 0,               # cap positive accel by future model curvature (longitudinal_planner)
+  "CarrotCruiseCoastingEnabled": 0,          # release cruise overspeed brake within a bounded margin (controlsd_ext, longitudinal_planner)
+  "CarrotCruiseCoastingPercent": 10,         # coasting margin, 0-10 percent; read only when the toggle is on
+  "CarrotCutinPredecelEnabled": 0,           # bounded pre-decel for corner-radar cut-in risk (longitudinal_planner)
+  "CarrotCutinAlertEnabled": 0,              # cut-in audio chime (selfdrived)
+  "CarrotCutoutReliefEnabled": 0,            # ease following demand for a confirmed lead cut-out (longitudinal_planner)
+  "CarrotBrakingGapEnabled": 0,              # comfort reserve against the lead braking path (longitudinal_planner)
+  "CarrotCruiseAccelEnabled": 0,             # CruiseMaxVals accel envelope applied to the accel cap (longitudinal_planner)
+  "CarrotFastRadarEnabled": 0,               # refresh selected lead kinematics from newer radar frames (plannerd, Hyundai only)
+  "CarrotGapRecoveryEnabled": 0,             # recover the cruise gap after a lead pulls away (longitudinal_planner)
+  "CarrotLateralReadinessEnabled": 0,        # block startup steering until lateral inputs are ready (controlsd_ext)
+  "CarrotLeadPreviewEnabled": 0,             # early-decel preview from radar lead deceleration (longitudinal_planner)
+  "CarrotRadarOnlyWarningEnabled": 0,        # advisory alert for a measured obstacle with no selected lead (selfdrived)
+  "CarrotRecoveryEnabled": 0,                # serve the standalone recovery web terminal on 6999 (recovery/server)
+  "CarrotStoppingLeadEnabled": 0,            # require range evidence before a stopped lead counts as departing (plannerd)
+  "CarrotTrafficLightFusionEnabled": 0,      # fuse carrot / Amap / vision traffic lights (longitudinal_planner)
+  "CarrotTrafficStopProfileEnabled": 0,      # jerk-limited stop envelope for traffic-light stop&go (longitudinal_planner)
+  "LeadBrakeLights": 0,                      # display/log a lead brake-lamp candidate (lead_brake_lights; display only)
 }
 
 
@@ -257,6 +282,13 @@ class UnifiedParams:
   """
   _instance: Optional["UnifiedParams"] = None
   _initialized: bool = False
+  # Hot-path TTL cache for system-param reads. carrot_man's 10 Hz tick and
+  # CarrotServ's update_params sweep the whole tuning table every cycle;
+  # params reads are file IO through the C++ layer, which measured at
+  # ~80 opens/s for state that only changes when a settings page writes it.
+  # 1 s staleness is imperceptible for settings round-trips. Self-writes
+  # invalidate their key; cross-process writes (webui) settle within the TTL.
+  _CACHE_TTL_S = 1.0
 
   def __new__(cls, nav_json_file: str | None = None) -> "UnifiedParams":
     if cls._instance is None:
@@ -276,6 +308,7 @@ class UnifiedParams:
     self._nav_mtime_ns: int | None = None
     self._next_nav_check = 0.0
     self._load_nav_params()
+    self._sys_cache: dict[str, tuple[float, Any]] = {}
     self._initialized = True
 
   # ---- internal helpers --------------------------------------------------
@@ -375,7 +408,13 @@ class UnifiedParams:
 
   def get(self, key: str, default: Any = None, return_default: bool = False) -> Any:
     self._reload_nav_params_if_changed()
-    sys_val = self._read_from_system(key, return_default)
+    now = time.monotonic()
+    hit = self._sys_cache.get(key)
+    if hit is not None and now < hit[0]:
+      sys_val = hit[1]
+    else:
+      sys_val = self._read_from_system(key, return_default)
+      self._sys_cache[key] = (now + self._CACHE_TTL_S, sys_val)
     if sys_val is not None and sys_val != b"":
       return sys_val
     if key in self._nav_data:
@@ -412,6 +451,7 @@ class UnifiedParams:
     if not self._write_to_system(key, value):
       self._nav_data[key] = value
       self._save_nav_params()
+    self._sys_cache.pop(key, None)
 
   def put_int(self, key: str, value: int) -> None:
     self.put(key, int(value))
@@ -430,6 +470,7 @@ class UnifiedParams:
     # Only rewrite the file when the JSON actually held the key: every tool and test that
     # clears a *registered* key used to re-serialise this whole file, which reordered it and
     # dropped its comment, so a read-only errand looked like an edit in the working tree.
+    self._sys_cache.pop(key, None)
     if key in self._nav_data:
       del self._nav_data[key]
       self._save_nav_params()

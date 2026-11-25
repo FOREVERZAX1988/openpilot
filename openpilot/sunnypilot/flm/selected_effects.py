@@ -365,14 +365,15 @@ def bounded_profile_on_limited_frame(parent):
     return False
   if getattr(parent, 'manual_flm_effects', None) is not None:
     return False
-  # This is parameter shaping, not a native grant. The live owner must already
-  # hold current source/native permission; replay uses the same bounded math.
-  # Legacy residual owners and arbitrary callback objects remain inhibited.
-  from openpilot.sunnypilot.flm.live_trial_owner import TrackingTrialOwner
-
+  # This is parameter shaping, not a native grant. The replay owner must
+  # already hold current source/native permission; replay uses the same bounded
+  # math. Legacy residual owners and arbitrary callback objects remain
+  # inhibited. TrackingTrialOwner (StarPilot live_trial_owner) is deliberately
+  # not ported (see sunnypilot/flm/README "Not ported on purpose"), so it is
+  # absent from this whitelist.
   owner = getattr(parent, 'automatic_flm_effects', None)
   return (
-    type(owner) in (TrackingTrialOwner, EffectReplaySource, EffectReplayRecordedSource)
+    type(owner) in (EffectReplaySource, EffectReplayRecordedSource)
     and type(owner.source) is CanonicalSurfaceEffects
     and owner.source.allow_limited_profile
   )

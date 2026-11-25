@@ -364,7 +364,7 @@ class WifiUIMici(NavScroller):
           break
       return
 
-    dlg = BigInputDialog(tr("enter password..."), "", minimum_length=8,
+    dlg = BigInputDialog(tr("enter password..."), "", minimum_length=8, mask=True,
                          confirm_callback=lambda _password: self._connect_with_password(ssid, _password))
     gui_app.push_widget(dlg)
 

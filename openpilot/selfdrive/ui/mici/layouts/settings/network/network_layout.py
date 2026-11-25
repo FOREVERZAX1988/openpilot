@@ -21,6 +21,7 @@ class NetworkLayoutMici(NavScroller):
 
     self._wifi_manager.add_callbacks(
       networks_updated=self._on_network_updated,
+      need_auth=self._on_need_auth,
     )
 
     # ******** Tethering ********
@@ -42,7 +43,7 @@ class NetworkLayoutMici(NavScroller):
     def tethering_password_clicked():
       tethering_password = self._wifi_manager.tethering_password
       # WPA2 passphrases are 8 to 63 characters, NetworkManager rejects anything else
-      dlg = BigInputDialog(tr("enter password..."), tethering_password, minimum_length=8,
+      dlg = BigInputDialog(tr("enter password..."), tethering_password, minimum_length=8, mask=True,
                            confirm_callback=tethering_password_callback, text_validator=lambda text: len(text) <= 63)
       gui_app.push_widget(dlg)
 
@@ -70,6 +71,12 @@ class NetworkLayoutMici(NavScroller):
     self._wifi_button = WifiNetworkButton(self._wifi_manager)
     self._wifi_button.set_click_callback(lambda: gui_app.push_widget(self._wifi_ui))
 
+    # ******** Hidden network ********
+    self._connecting_hidden_ssid: str | None = None
+    self._hidden_network_btn = BigButton(tr("hidden network"), tr("connect"),
+                                         description=tr("Connect to a Wi-Fi network that does not broadcast its name."))
+    self._hidden_network_btn.set_click_callback(self._connect_to_hidden_network)
+
     # ******** eSIM ********
     self._cellular_manager = CellularManager()
     self._esim_ui = EsimUI(
@@ -94,6 +101,7 @@ class NetworkLayoutMici(NavScroller):
     # Main scroller ----------------------------------
     self._scroller.add_widgets([
       self._wifi_button,
+      self._hidden_network_btn,
       self._esim_button,
       self._network_metered_btn,
       self._tethering_toggle_btn,
@@ -129,6 +137,30 @@ class NetworkLayoutMici(NavScroller):
     gui_app.remove_nav_stack_tick(self._wifi_manager.process_callbacks)
     gui_app.remove_nav_stack_tick(self._cellular_manager.process_callbacks)
 
+  def _connect_to_hidden_network(self):
+    def connect_hidden(ssid: str):
+      if not ssid:
+        return
+
+      def enter_password(password: str):
+        # WPA2 passphrases are 8 to 63 characters, NetworkManager rejects anything else
+        self._connecting_hidden_ssid = ssid
+        self._wifi_manager.connect_to_network(ssid, password, hidden=True)
+
+      dlg = BigInputDialog(tr("enter password..."), "", minimum_length=0, mask=True,
+                           confirm_callback=enter_password, text_validator=lambda text: len(text) <= 63)
+      gui_app.push_widget(dlg)
+
+    dlg = BigInputDialog(tr("enter SSID..."), minimum_length=1, confirm_callback=connect_hidden)
+    gui_app.push_widget(dlg)
+
+  def _on_need_auth(self, ssid, incorrect_password=True):
+    # a hidden network is not in the scan results, so its wrong password feedback
+    # shakes the hidden network button instead of a WifiButton row
+    if incorrect_password and ssid == self._connecting_hidden_ssid:
+      self._connecting_hidden_ssid = None
+      self._hidden_network_btn.trigger_shake()
+
   def _edit_apn(self):
     def update_apn(apn: str):
       apn = apn.strip()
@@ -138,7 +170,7 @@ class NetworkLayoutMici(NavScroller):
         ui_state.params.put("GsmApn", apn)
 
     current_apn = ui_state.params.get("GsmApn") or ""
-    dlg = BigInputDialog(tr("enter APN..."), current_apn, minimum_length=0, confirm_callback=update_apn)
+    dlg = BigInputDialog(tr("enter APN..."), current_apn, minimum_length=0, mask=True, confirm_callback=update_apn)
     gui_app.push_widget(dlg)
 
   def _on_network_updated(self, networks: list[Network]):

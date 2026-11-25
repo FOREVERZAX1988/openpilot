@@ -12,6 +12,9 @@ class _SuppressedConfidenceBall:
   def render(self, *_):
     pass
 
+  def set_hidden(self, hidden: bool):
+    pass
+
 
 class AugmentedRoadViewSP(AugmentedRoadView):
   def __init__(self, **kwargs):

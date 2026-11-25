@@ -6,6 +6,7 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.mici.layouts.settings.initial_cruise_speed import InitialCruiseSpeedButton
+from openpilot.system.ui.lib.multilang import tr
 
 PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
@@ -14,20 +15,21 @@ class DrivingLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
 
-    self._personality_toggle = BigMultiParamToggle("driving personality", "LongitudinalPersonality", ["aggressive", "standard", "relaxed"],
-                                                   description="Standard is recommended.\n" +
-                                                               "Aggressive follows closer, with firmer gas and braking.\n" +
-                                                               "Relaxed leaves more space.\n" +
-                                                               "Use the steering wheel distance button on supported cars.")
+    self._personality_toggle = BigMultiParamToggle(tr("driving personality"), "LongitudinalPersonality", [tr("aggressive"), tr("standard"), tr("relaxed")],
+                                                   description=tr("Standard is recommended.\n" +
+                                                                  "Aggressive follows closer, with firmer gas and braking.\n" +
+                                                                  "Relaxed leaves more space.\n" +
+                                                                  "Use the steering wheel distance button on supported cars."))
     self._initial_cruise_speed = InitialCruiseSpeedButton()
     self._initial_cruise_speed.set_visible(lambda: ui_state.CP is not None and ui_state.has_longitudinal_control and not ui_state.CP.pcmCruise)
-    ldw_toggle = BigParamControl("lane departure warnings", "IsLdwEnabled",
-                                 description="Warn when you drift across a detected lane line.\n" +
-                                             "Only above 31 mph (50 km/h), with no turn signal.")
-    always_on_dm_toggle = BigParamControl("always-on driver monitor", "AlwaysOnDM", description="Monitor the driver even when sunnypilot is not engaged.")
-    enable_openpilot = BigParamControl("enable sunnypilot", "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback,
-                                       description="Enable to use sunnypilot driver assistance.\n" +
-                                                   "Disable to use your car's stock driver assistance.")
+    ldw_toggle = BigParamControl(tr("lane departure warnings"), "IsLdwEnabled",
+                                 description=tr("Warn when you drift across a detected lane line.\n" +
+                                                "Only above 31 mph (50 km/h), with no turn signal."))
+    always_on_dm_toggle = BigParamControl(tr("always-on driver monitor"), "AlwaysOnDM",
+                                          description=tr("Monitor the driver even when sunnypilot is not engaged."))
+    enable_openpilot = BigParamControl(tr("enable sunnypilot"), "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback,
+                                       description=tr("Enable to use sunnypilot driver assistance.\n" +
+                                                      "Disable to use your car's stock driver assistance."))
 
     self._scroller.add_widgets([
       self._personality_toggle,

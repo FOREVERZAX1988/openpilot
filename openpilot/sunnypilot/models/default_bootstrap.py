@@ -4,7 +4,7 @@ Copyright (c) 2026-, Zeph Leggett.
 This file is part of zoompilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 
-Ship the Firehose Model as the default driving model.
+Ship a default driving model.
 
 The model binary is not committed to the release. Instead the bundle is queued for download the
 first time the manifest lists it, through the same hash-validated path the model selector uses.
@@ -22,16 +22,20 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.cereal import custom
 from openpilot.sunnypilot import jetlink_adapter
 from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_selected_bundle
+from openpilot.sunnypilot.models.model_name import DEFAULT_MODEL, DEFAULT_MODEL_REF
 
-# Firehose Model in sunnypilot's driving_models manifest. Matched by short name rather than
-# index: the manifest is renumbered on every regeneration (FM was 30 in v17, 28 in v22).
-DEFAULT_MODEL_SHORT_NAME = "FM"
+# Default bundle is matched by ref first (model_name.py is the source of truth);
+# falling back to the short name keeps working when the catalog rebuilds the
+# entry under a new ref. Matching by name rather than index: the manifest is
+# renumbered on every regeneration (FM was 30 in v17, 28 in v22).
+DEFAULT_MODEL_SHORT_NAME = DEFAULT_MODEL
 CARRY_OVER_KEY = "ModelManager_CarryOver"
 _carry_over_queued: set[str] = set()
 
 
 def find_default_bundle(available_bundles: list["custom.ModelManagerSP.ModelBundle"]) -> "custom.ModelManagerSP.ModelBundle | None":
-  matches = [b for b in available_bundles if b.internalName == DEFAULT_MODEL_SHORT_NAME and b.ref]
+  matches = [b for b in available_bundles if b.ref == DEFAULT_MODEL_REF] or \
+            [b for b in available_bundles if b.internalName == DEFAULT_MODEL_SHORT_NAME and b.ref]
   return max(matches, key=lambda b: b.index) if matches else None
 
 

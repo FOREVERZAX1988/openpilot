@@ -66,6 +66,25 @@ for _fp in tunes.GENESIS_G70_CARS:
   _REGISTRY.setdefault(_fp, VehicleTuneSpec(output_scale=_genesis_g70_output))
 
 
+def _camry_friction_threshold(setpoint, measurement, jerk, v_ego):
+  return tunes.get_camry_friction_threshold(v_ego, desired_lateral_accel=setpoint)
+
+
+def _camry_ff_scale(setpoint, measurement, jerk, v_ego):
+  return tunes.get_camry_ff_scale(setpoint, jerk, v_ego)
+
+
+# Toyota Camry (2018-20 DSU and 2021+ TSS 2.5): unwire-proof — these tune
+# functions existed in latcontrol_vehicle_tunes.py but had zero call sites
+# before this registry entry; the FLM rich profile ("toyota_camry") already
+# covered CAMRY_CARS, this wires the non-FLM torque-controller path too.
+for _fp in tunes.CAMRY_CARS:
+  _REGISTRY.setdefault(_fp, VehicleTuneSpec(
+    ff_scale=_camry_ff_scale,
+    friction_threshold=_camry_friction_threshold,
+  ))
+
+
 def resolve_vehicle_tune(CP) -> VehicleTuneSpec | None:
   # Note: StarPilot's Civic Bosch EPS-modified tune is not wired here — this
   # fork's opendbc has no EPS_MODIFIED flag. Add it if the variant is ported.

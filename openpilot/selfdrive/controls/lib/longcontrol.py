@@ -86,6 +86,16 @@ class LongControl(LongControlSP):
     self.long_control_state = LongCtrlState.off
     self.pid = PIDController(0.0, (CP.longitudinalTuning.kiBP, CP.longitudinalTuning.kiV),
                              rate=1 / DT_CTRL)
+    # Toyota pass-through (ported from carrot longcontrol._apply_toyota_longitudinal_tuning):
+    # the opendbc Toyota CarController already closes the accel loop with its own
+    # long_pid at the PCM send rate (carcontroller.py get_long_tune / long_pid.update),
+    # so an I-term here feeds measured-accel noise and duplicate correction into
+    # that loop. Zero it for Toyota: with k_p already 0 and feedforward=a_target
+    # (see update()), LongControl then passes the planner target straight through
+    # and opendbc's long_pid is the single correction stage. Same semantics as
+    # carrot's k_p=k_i=0 + k_f=1.0; this PID has no k_f, the feedforward IS k_f=1.
+    if getattr(CP, "brand", "") == "toyota":
+      self.pid._k_i = ([0.0], [0.0])
     self.last_output_accel = 0.0
     # StarPilot gates (default off; refreshed once per second of runtime).
     # Params is constructed lazily/defensively so PC test hosts can instantiate

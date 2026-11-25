@@ -16,7 +16,11 @@ from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext import La
 from openpilot.sunnypilot.selfdrive.controls.lib.vehicle_tune_dispatch import resolve_vehicle_tune
 from openpilot.selfdrive.controls.lib.latcontrol_vehicle_tunes import (
   FLM_FRICTION_SPEED_KNOTS,
+  RAV4_TSS2_CARS,
+  flm_low_speed_angle_assist,
   flm_runtime_overrides_active,
+  get_flm_control_effects,
+  get_rav4_tss2_pid_output,
   get_standard_friction_threshold,
   set_flm_runtime_overrides,
 )
@@ -65,6 +69,18 @@ CUSTOM_KP_SCALE_LIMITS = (0.5, 2.0)
 # The refresh cadence is slow because the bundle only changes when the user
 # applies a new FLM profile.
 FLM_OVERRIDE_REFRESH_FRAMES = 150
+
+# T2: LateralTorque* manual microtuning consumption (carrot reference
+# /e/cp/openpilot/selfdrive/controls/lib/latcontrol_torque.py:144-162):
+# refresh every 10 frames (cp :144); AccelFactor/Friction scale 0.001
+# (cp :147-148); Kp/Ki/Kf/Kd scale 0.01 (cp :149-152).
+# LateralTorqueCustom is read WITHOUT return_default so an unset param means
+# off (cp params_keys.h:389 default "0"). sp registers it as BOOL "1"
+# (params_keys.h:1037), so honoring the registry default would silently flip
+# every existing car into manual gains at the next boot.
+MANUAL_TORQUE_REFRESH_FRAMES = 10
+MANUAL_TORQUE_PARAM_SCALE = 0.001
+MANUAL_TORQUE_GAIN_SCALE = 0.01
 
 
 def _flm_baseline_curves() -> dict:
@@ -134,6 +150,26 @@ class LatControlTorque(LatControl):
     )
     self._refresh_flm_overrides()
 
+    # T2: manual LateralTorque* microtuning state. Defaults captured from the
+    # stock CP torque params before any live/FLM application, used to restore
+    # stock when the user turns the custom switch off (cp :158-161).
+    self._manual_frame = -1
+    self.lateral_torque_custom = 0
+    self._manual_kf = None
+    self._manual_applied = None
+    self._manual_defaults = (
+      self.torque_params.latAccelFactor,
+      self.torque_params.latAccelOffset,
+      self.torque_params.friction,
+    )
+
+    # T4: RAV4_TSS2 (威兰达同源) low-speed center-reversal damping.
+    # get_rav4_tss2_pid_output existed in latcontrol_vehicle_tunes.py with zero
+    # call sites; wiring it needs one frame of output state for its alpha
+    # smoothing, tracked only while the gate below holds.
+    self._rav4_tss2_output = getattr(CP, 'carFingerprint', None) in RAV4_TSS2_CARS
+    self._rav4_prev_output = 0.0
+
   def _refresh_flm_overrides(self) -> None:
     """Publish the FLM override bundle to the process-wide override table.
 
@@ -162,13 +198,11 @@ class LatControlTorque(LatControl):
       return
 
     if self._flm_frame % FLM_OVERRIDE_REFRESH_FRAMES == 0:
-      # Params.get() in this fork has no encoding kwarg: it hands back bytes.
-      # Decoding here (not in Params) keeps the override bundle a plain string
-      # for the JSON parser and leaves every other reader untouched.
       try:
-        raw = self.params.get("FLMActiveOverrides") or b""
-        if isinstance(raw, (bytes, bytearray)):
-          raw = raw.decode("utf-8", errors="ignore")
+        # NOTE: sp Params.get(key, block, return_default) takes no encoding
+        # kwarg; an encoding= call raised TypeError and was silently swallowed
+        # here, so the bundle never reached the owner. Read without it.
+        raw = self.params.get("FLMActiveOverrides") or ""
       except Exception:
         raw = ""
 
@@ -218,10 +252,86 @@ class LatControlTorque(LatControl):
     self._flm_enabled = read_bool(self.params, "FlmRuntimeOverridesEnabled", False)
 
   def update_torque_parameters(self, latAccelFactor, latAccelOffset, friction):
+    # T2: cp latcontrol_torque.py:134-136 — while LateralTorqueCustom is on,
+    # live-tuned params (controlsd/torqued) must not overwrite the user's
+    # manual values. The extension call site in update() re-asserts the manual
+    # values on the same flag.
+    if self.lateral_torque_custom > 0:
+      return
     self.torque_params.latAccelFactor = latAccelFactor
     self.torque_params.latAccelOffset = latAccelOffset
     self.torque_params.friction = friction
     self.update_limits()
+
+  def _manual_param(self, key: str) -> float:
+    """Registry-defaulted numeric read for the manual LateralTorque* params.
+
+    Unset params fall back to their registered defaults (AccelFactor 2500,
+    Friction 100, KpV/Kf 100, KiV 10, Kd 0 — params_keys.h:1038-1042,1109),
+    matching cp's defaults when the user enables custom without touching the
+    sliders.
+    """
+    try:
+      value = float(self.params.get(key, return_default=True))
+    except (TypeError, ValueError):
+      value = float("nan")
+    return value if math.isfinite(value) else 0.0
+
+  def _refresh_manual_torque_tune(self) -> None:
+    """T2: apply the LateralTorque* manual microtuning (cp :144-162 formulas).
+
+    Priority: a published FLM runtime override sits ABOVE the manual tune.
+    While flm_runtime_overrides_active() the manual application is skipped
+    wholesale (no partial mixing: FLM owns the shaping, manual values are
+    parked). When FLM deactivates the manual values resume at the next
+    refresh; when the user turns LateralTorqueCustom off, stock params and
+    PID tables are restored (cp :158-161).
+    """
+    self._manual_frame += 1
+    if self._manual_frame % MANUAL_TORQUE_REFRESH_FRAMES != 0:
+      return
+    try:
+      custom = int(self.params.get("LateralTorqueCustom") or 0)
+    except (TypeError, ValueError):
+      custom = 0
+
+    if custom > 0 and flm_runtime_overrides_active():
+      # FLM wins: leave both the manual params and the PID gains parked.
+      self.lateral_torque_custom = custom
+      return
+
+    if custom > 0:
+      # cp :147-148 — accel factor and friction in milli-units.
+      lat_accel_factor = self._manual_param("LateralTorqueAccelFactor") * MANUAL_TORQUE_PARAM_SCALE
+      friction = self._manual_param("LateralTorqueFriction") * MANUAL_TORQUE_PARAM_SCALE
+      offset = self._manual_defaults[1]  # cp :157 — stock roll-bias offset while custom is on
+      self.torque_params.latAccelFactor = lat_accel_factor
+      self.torque_params.friction = friction
+      self.torque_params.latAccelOffset = offset
+      self._manual_applied = (lat_accel_factor, offset, friction)
+      # cp :149-156 — constant PID gains replace the speed-interpolated tables.
+      kp = self._manual_param("LateralTorqueKpV") * MANUAL_TORQUE_GAIN_SCALE
+      ki = self._manual_param("LateralTorqueKiV") * MANUAL_TORQUE_GAIN_SCALE
+      kd = self._manual_param("LateralTorqueKd") * MANUAL_TORQUE_GAIN_SCALE
+      self.pid._k_p = [[0], [kp]]
+      self.pid._k_i = [[0], [ki]]
+      self.pid._k_d = [[0], [kd]]
+      # cp :155 sets pid.k_f; the sp PIDController has no separate k_f field,
+      # so the Kf knob maps to a feedforward multiplier applied in update().
+      self._manual_kf = self._manual_param("LateralTorqueKf") * MANUAL_TORQUE_GAIN_SCALE
+      self.update_limits()
+    elif self.lateral_torque_custom > 0:
+      # Manual -> off: restore stock params and the speed-interpolated PID
+      # tables (cp :158-161 restore semantics; the custom-Kp scale the user
+      # chose independently is preserved).
+      (self.torque_params.latAccelFactor,
+       self.torque_params.latAccelOffset,
+       self.torque_params.friction) = self._manual_defaults
+      self._apply_custom_kp_scale(self._custom_kp_scale)
+      self._manual_kf = None
+      self._manual_applied = None
+      self.update_limits()
+    self.lateral_torque_custom = custom
 
   def update_limits(self):
     self.pid.set_limits(self.lateral_accel_from_torque(self.steer_max, self.torque_params),
@@ -232,8 +342,19 @@ class LatControlTorque(LatControl):
   def update(self, active, CS, VM, params, steer_limited_by_safety, desired_curvature, calibrated_pose, curvature_limited, lat_delay):
     self.refresh_custom_kp_scale()
     self._refresh_flm_overrides()
-    # Override torque params from extension
-    if self.extension.update_override_torque_params(self.torque_params):
+    self._refresh_manual_torque_tune()
+    # Override torque params from extension. The call always runs — it also
+    # owns the steer_max rail-schedule update — but while the T2 manual tune
+    # is active its TorqueParamsOverride knobs are re-asserted over by the
+    # manual values (manual LateralTorque* wins, same precedence as
+    # update_torque_parameters, cp :134-136).
+    ext_changed = self.extension.update_override_torque_params(self.torque_params)
+    if self.lateral_torque_custom > 0 and self._manual_applied is not None:
+      (self.torque_params.latAccelFactor,
+       self.torque_params.latAccelOffset,
+       self.torque_params.friction) = self._manual_applied
+      ext_changed = True
+    if ext_changed:
       self.update_limits()
 
     pid_log = log.ControlsState.LateralTorqueState.new_message()
@@ -245,7 +366,22 @@ class LatControlTorque(LatControl):
     self.lat_accel_request_buffer.append(future_desired_lateral_accel)
 
     roll_compensation = params.roll * ACCELERATION_DUE_TO_GRAVITY
-    curvature_deadzone = abs(VM.calc_curvature(math.radians(self.steering_angle_deadzone_deg), CS.vEgo, 0.0))
+    # F1: FLM control-surface effects. Gated on active, no driver override, no
+    # safety limiting and no extension output override — the same baseline
+    # invariance StarPilot enforces (torque_stages.py:64-66: inactive /
+    # driver_override / limited frames emit the unchanged baseline). A bundle
+    # without controlEffects yields {} here, i.e. exactly the pre-F1 behavior.
+    flm_effects = {}
+    if (active and not CS.steeringPressed and not steer_limited_by_safety
+        and not self.extension.overrides_output and flm_runtime_overrides_active()):
+      flm_effects = get_flm_control_effects()
+    flm_deadband_deg = float(flm_effects.get("deadbandDeg", 0.0))
+    flm_ff_delta = float(flm_effects.get("ffDelta", 0.0))
+    flm_assist_max = float(flm_effects.get("angleAssistMaxTorque", 0.0))
+    # F1 deadzone: added to the steering angle deadzone the same way StarPilot
+    # composes it (latcontrol_torque.py:126: self.steering_angle_deadzone_deg +
+    # flm.deadband(surface, CS.vEgo)); envelope [0, 0.01] deg (torque_stages.py:107).
+    curvature_deadzone = abs(VM.calc_curvature(math.radians(self.steering_angle_deadzone_deg + flm_deadband_deg), CS.vEgo, 0.0))
     lateral_accel_deadzone = curvature_deadzone * CS.vEgo ** 2
 
     delay_frames = int(np.clip(lat_delay / self.dt + 1, 1, self.lat_accel_request_buffer_len))
@@ -260,6 +396,16 @@ class LatControlTorque(LatControl):
     ff = gravity_adjusted_future_lateral_accel
     # latAccelOffset corrects roll compensation bias from device roll misalignment relative to car roll
     ff -= self.torque_params.latAccelOffset
+    if self._manual_kf is not None and self.lateral_torque_custom > 0 and not flm_runtime_overrides_active():
+      # T2: cp :155 pid.k_f semantics as a feedforward multiplier (sp's
+      # PIDController has no separate k_f field). Inactive while an FLM
+      # override is published (FLM sits above the manual tune).
+      ff *= self._manual_kf
+    if flm_ff_delta != 0.0:
+      # F1 FF residual: ff * (1 + delta_ff), StarPilot torque_stages.py:81-82;
+      # |delta| <= 0.03 envelope (torque_stages.py:79), slewed by the owner.
+      ff *= (1.0 + flm_ff_delta)
+
     vehicle_tune = self.vehicle_tune if self.vehicle_tunes_enabled else None
     # Base friction threshold: the speed-dependent standard curve. When an FLM
     # profile is active it overrides this per speed knot, so the learned
@@ -297,6 +443,32 @@ class LatControlTorque(LatControl):
 
       if vehicle_tune is not None and vehicle_tune.output_scale is not None:
         output_torque *= vehicle_tune.output_scale(setpoint, measurement, desired_lateral_jerk, CS.vEgo)
+
+      # T4: RAV4_TSS2 damping sits between the vehicle tune and the FLM assist
+      # (the assist stays the last shaping step, StarPilot ordering). Same
+      # baseline invariance gate family as the F1 effects: skip driver-override
+      # / safety-limited / extension-overridden frames so stock behavior is
+      # untouched exactly where the assist is untouched.
+      if (self._rav4_tss2_output and self.steer_max > 0 and not CS.steeringPressed
+              and not steer_limited_by_safety and not self.extension.overrides_output):
+        rav4_angle_deg = math.degrees(VM.get_steer_from_curvature(-desired_curvature, CS.vEgo, params.roll))
+        output_torque = get_rav4_tss2_pid_output(
+          output_torque, self._rav4_prev_output, rav4_angle_deg, CS.vEgo)
+      self._rav4_prev_output = output_torque
+
+      if flm_assist_max > 1e-4 and self.steer_max > 0:
+        # F1 low-speed angle assist, StarPilot latcontrol_torque.py:183 ordering
+        # (last shaping step on the output). Applied in the normalized torque
+        # space StarPilot's GM surface assumes; the ported formula clips to
+        # [-1.0, 1.0] (torque_surface.py:406-407/:418), which maps back to
+        # [-steer_max, steer_max] here — the stock actuator limit is untouched.
+        desired_angle_deg = math.degrees(VM.get_steer_from_curvature(-desired_curvature, CS.vEgo, params.roll))
+        actual_angle_deg = CS.steeringAngleDeg - params.angleOffsetDeg
+        assisted_norm = flm_low_speed_angle_assist(
+          flm_assist_max, float(np.clip(output_torque / self.steer_max, -1.0, 1.0)),
+          desired_angle_deg, actual_angle_deg, CS.vEgo, setpoint, desired_lateral_jerk,
+          bool(CS.steeringPressed))
+        output_torque = float(np.clip(assisted_norm, -1.0, 1.0)) * self.steer_max
 
       pid_log.active = True
       pid_log.p = float(self.pid.p)
