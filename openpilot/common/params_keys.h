@@ -187,6 +187,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ConfidenceBall", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrainingVersion", {PERSISTENT, STRING}},
     {"UbloxAvailable", {PERSISTENT, BOOL}},
+    // Chassis yaw-rate availability from fingerprint (Hyundai ESC ESP12 etc).
+    // Written by manager from CP.extFlags; consumed by locationd to enable the
+    // chassis yaw KF observation. Default off: cars without the signal are unaffected.
+    {"ChassisYawAvailable", {PERSISTENT, BOOL, "0"}},
     {"UpdateAvailable", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"UpdateFailedCount", {CLEAR_ON_MANAGER_START, INT}},
     {"UpdaterAvailableBranches", {PERSISTENT, STRING}},

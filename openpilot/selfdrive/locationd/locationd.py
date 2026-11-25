@@ -13,6 +13,7 @@ from openpilot.common.realtime import config_realtime_process
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.locationd.helpers import rotate_std
+from openpilot.selfdrive.locationd.chassis_yaw import chassis_yaw_to_device, chassis_yaw_R
 from openpilot.selfdrive.locationd.models.pose_kf import PoseKalman, States
 from openpilot.selfdrive.locationd.models.constants import ObservationKind, GENERATED_DIR
 
@@ -119,6 +120,9 @@ class LocationEstimator:
     # frames must not flip device_from_calib back to the camera mounting
     # (same dual-publisher issue as PoseCalibrator).
     self._imu_calibrated = self.use_imu_calib
+    # Chassis yaw capability mirrored from CP.extFlags by manager (Params).
+    # Off by default: cars without a fingerprinted yaw sensor are untouched.
+    self.chassis_yaw_available = params.get_bool("ChassisYawAvailable")
 
     obs_kinds = [ObservationKind.PHONE_ACCEL, ObservationKind.PHONE_GYRO, ObservationKind.CAMERA_ODO_ROTATION, ObservationKind.CAMERA_ODO_TRANSLATION]
     self.observations = {kind: np.zeros(3, dtype=np.float32) for kind in obs_kinds}
@@ -210,6 +214,18 @@ class LocationEstimator:
 
     elif which == "carState":
       self.car_speed = abs(msg.vEgo)
+
+      # Chassis yaw rate (ESC, vehicle-frame yaw-up, rad/s). Inject as a
+      # yaw-only PHONE_GYRO observation: rotate the vehicle yaw axis into the
+      # device frame via device_from_calib, then per-call R masks roll/pitch so
+      # this source only constrains angular_velocity[2]. No new ObservationKind
+      # and no pose_kf equation change: PHONE_GYRO maps 1:1 to ang. velocity.
+      if self.chassis_yaw_available:
+        yaw_rate_device = chassis_yaw_to_device(msg.yawRate, self.device_from_calib)
+        if np.linalg.norm(yaw_rate_device) < ROTATION_SANITY_CHECK:
+          # gating on STAT was done in carstate; yawRate is 0 when invalid
+          self.kf.predict_and_observe(t, ObservationKind.PHONE_GYRO, yaw_rate_device,
+                                      np.array([chassis_yaw_R()]))
 
     elif which == "extrinsicsCalibration":
       # cameraOdometry is published in the calibration frame defined by
