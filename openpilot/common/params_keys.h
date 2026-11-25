@@ -188,6 +188,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ConfidenceBall", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrainingVersion", {PERSISTENT, STRING}},
     {"UbloxAvailable", {PERSISTENT, BOOL}},
+    // Virtual sensord for cars without a physical IMU (e.g. C3XL). Default off.
+    // Requires device-side rebuild of libparams_c.so to take effect; before that
+    // the manager gate catches UnknownKeyName and falls back to real sensord.
+    {"VirtualSensordEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"UpdateAvailable", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"UpdateFailedCount", {CLEAR_ON_MANAGER_START, INT}},
     {"UpdaterAvailableBranches", {PERSISTENT, STRING}},
