@@ -384,13 +384,8 @@ def build_dev_items():
     toggle_item_sp(title=tr('Carrot Longitudinal Source'), param='CarrotLongitudinalSourceEnabled',
                    description=tr('Let the phone app drive the longitudinal plan: its target speed becomes ' +
                                    'a plan source, and its follow time, comfort braking and stop point ' +
-                                   'reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected ' +
-                                   'phone - without a fresh packet the source stays inactive.')),
-    option_item_sp(title=tr('Carrot Source Timeout'), param='CarrotSourceTimeoutMs', min_value=500, max_value=5000,
-                   value_change_step=100, use_registered_default=True,
-                   description=tr("How old a phone packet may be before the carrot source counts as gone; "
-                                   "past this the source goes inactive instead of holding its last request. "
-                                   "Only read while Carrot Longitudinal Source is on.")),
+                                   'reach the MPC. Default on: the vision traffic-light stop&go chain ' +
+                                   'lives inside this switch and works without a connected phone.')),
     toggle_item_sp(title=tr('Lead Preview'), param='CarrotLeadPreviewEnabled',
                    description=tr("Ease off from the lead vehicle's own deceleration, before the gap "
                                    "starts closing. Read once when plannerd starts - restart to apply.")),
