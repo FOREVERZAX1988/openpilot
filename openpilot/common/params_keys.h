@@ -118,6 +118,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LiveParameters", {PERSISTENT, JSON}},
     {"LiveParametersV2", {PERSISTENT, BYTES}},
     {"LivestreamEncoderBitrate", {CLEAR_ON_MANAGER_START | DONT_LOG, INT}},
+    {"LivestreamOnroadEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},  // allow remote live streaming while the car is onroad (see manager process_config livestream())
     {"LivestreamRequestKeyframe", {CLEAR_ON_MANAGER_START | DONT_LOG, BOOL}},
     {"LiveTorqueParameters", {PERSISTENT | DONT_LOG, BYTES}},
     {"LiveTorqueParametersSP", {PERSISTENT | DONT_LOG, BYTES}},

@@ -109,7 +109,16 @@ def ai_agent_run(started: bool, params: Params, CP: car.CarParams) -> bool:
   return not PC and not started and params.get_bool("AgentEnabled") and not params.get_bool("AgentSuspended")
 
 def livestream(started: bool, params: Params, CP: car.CarParams) -> bool:
-  return params.get_bool("IsLiveStreaming")
+  # Remote live streaming runs three extra 1280x720 VENC sessions (narrow/wide/
+  # cabin) on the SAME msm_vidc encoder core the dashcam recorder uses, plus
+  # aiortc CPU/network load. 2026-11-25 C4 evidence: a sunnylink live stream
+  # during a morning commute contributed to a managerd stall -> commIssue
+  # alert (selfdrived ignore list has that mitigation). To keep the onroad
+  # load off the driving path by default, streaming is gated offroad; users
+  # can restore the always-on behavior with LiveStreamOnroadEnabled.
+  # manager re-evaluates this every loop, so the stream pauses on ignition-on
+  # and resumes automatically once parked.
+  return params.get_bool("IsLiveStreaming") and (not started or params.get_bool("LiveStreamOnroadEnabled"))
 
 def enable_webrtc(started: bool, params: Params, CP: car.CarParams) -> bool:
   # Cluster HUD and Carrot Vision can consume the road camera concurrently.
