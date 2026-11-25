@@ -30,8 +30,8 @@ curl "http://<device>:7000/api/params_bulk?names=CarrotMapDecelEnabled,CarrotTur
 | 参数 | 默认 | 层级 | 读点 | 作用 |
 | --- | --- | --- | --- | --- |
 | `CarrotAtcBlinkerEnabled` | `1` | 1 | `openpilot/selfdrive/controls/lib/desire_helper.py` | 导航转向指令合成为转向灯，会到车上的真灯 |
-| `CarrotEnabled` | `0` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | carrot 导航总开关，地图类功能的前提 |
-| `CarrotLongitudinalSourceEnabled` | `0` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 手机目标速度成为第 5 个纵向源；跟车时距、舒适制动与停车点进 MPC |
+| `CarrotEnabled` | `1` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | carrot 导航总开关，地图类功能的前提；关闭时 carrot_man 不发布 carrotManSP |
+| `CarrotLongitudinalSourceEnabled` | `1` | 2 | `openpilot/sunnypilot/selfdrive/controls/lib/longitudinal_planner.py` | 手机目标速度成为第 5 个纵向源；跟车时距、舒适制动与停车点进 MPC。视觉红绿灯停车链在其中，默认开且不依赖手机连接 |
 | `CarrotNavCruiseSpeedEnabled` | `1` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/speed_limit/speed_limit_resolver.py` | 导航目标速度限制巡航速度 |
 | `CarrotTrafficCongestionEnabled` | `0` | 1 | `openpilot/sunnypilot/selfdrive/controls/lib/smart_cruise_control/map_controller.py` | 拥堵报告折进地图巡航，只降不升 |
 

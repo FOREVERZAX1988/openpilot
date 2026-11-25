@@ -378,8 +378,8 @@ def build_dev_items():
     toggle_item_sp(title=tr('Carrot Longitudinal Source'), param='CarrotLongitudinalSourceEnabled',
                    description=tr('Let the phone app drive the longitudinal plan: its target speed becomes ' +
                                    'a plan source, and its follow time, comfort braking and stop point ' +
-                                   'reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected ' +
-                                   'phone - without a fresh packet the source stays inactive.')),
+                                   'reach the MPC. Default on: the vision traffic-light stop&go chain ' +
+                                   'lives inside this switch and works without a connected phone.')),
     section_heading_sp(tr('Navigation Control (advanced)')),
     toggle_item_sp(title=tr('Traffic Congestion Slowdown'), param='CarrotTrafficCongestionEnabled',
                    description=tr('Fold the phone app traffic congestion report into map-based cruise ' +

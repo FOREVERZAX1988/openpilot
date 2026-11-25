@@ -397,8 +397,8 @@ def build_dev_items() -> list[dict]:
     _t('CarrotLongitudinalSourceEnabled', tr_noop('Carrot Longitudinal Source'),
        desc=tr_noop('Let the phone app drive the longitudinal plan: its target speed becomes ' +
                     'a plan source, and its follow time, comfort braking and stop point ' +
-                    'reach the MPC. Off keeps stock sunnypilot behaviour. Needs a connected ' +
-                    'phone - without a fresh packet the source stays inactive.')),
+                    'reach the MPC. Default on: the vision traffic-light stop&go chain ' +
+                    'lives inside this switch and works without a connected phone.')),
     _h(tr_noop('Navigation Control (advanced)')),
     _t('CarrotTrafficCongestionEnabled', tr_noop('Traffic Congestion Slowdown'),
        desc=tr_noop('Fold the phone app traffic congestion report into map-based cruise ' +

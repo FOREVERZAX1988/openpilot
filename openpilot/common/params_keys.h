@@ -619,7 +619,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // instead of a hand-maintained list that drifts. The stock value is left
     // at std::nullopt: these switches do not exist on any car, so their
     // registered default already is the value to fall back to.
-    {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 1, SETTINGS_SIMPLE}},
+    {"CarrotEnabled", {PERSISTENT | BACKUP, BOOL, "1", std::nullopt, 1, SETTINGS_SIMPLE}},
     // Behaviour switch for the 7714 WebSocket v2 navi stream. When off, card.py
     // consumes only the 7706 navLaneGuide path and ignores the v2 lane data.
     // NOT a process gate: carrot_navi is always_run (mirrors CarrotPilot) so the
@@ -701,7 +701,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // server's own startup check read it.
     {"CarrotRecoveryEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     // Unified control killswitches (carrot > Amap > OSM arbitration). Default off/safe.
-    {"CarrotLongitudinalSourceEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // enable CarrotPlanner as a LongitudinalPlanSP source
+    {"CarrotLongitudinalSourceEnabled", {PERSISTENT | BACKUP, BOOL, "1", std::nullopt, 2, SETTINGS_ADVANCED}},  // enable CarrotPlanner as a LongitudinalPlanSP source (default ON: the vision traffic-light stop&go chain lives inside it and must not depend on manual opt-in)
     {"CarrotTrafficLightFusionEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // fuse carrot / Amap / vision traffic lights
     {"SignalAssistMode", {PERSISTENT, INT, "0"}},  // 0 off, 1 red-light shadow only, 2 prepare/start control (experimental)
     {"CarrotTurnAccelEnabled", {PERSISTENT | BACKUP, BOOL, "0", std::nullopt, 2, SETTINGS_ADVANCED}},  // cap positive accel by future model curvature in turns

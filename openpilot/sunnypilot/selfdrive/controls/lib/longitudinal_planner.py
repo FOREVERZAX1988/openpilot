@@ -495,7 +495,10 @@ class LongitudinalPlannerSP:
       LongitudinalPlanSource.speedLimitAssist: (self.sla.output_v_target, self.sla.output_a_target),
     }
 
-    # Carrot longitudinal source (gated by CarrotLongitudinalSourceEnabled; default OFF).
+    # Carrot longitudinal source (gated by CarrotLongitudinalSourceEnabled; default ON).
+    # The vision traffic-light stop&go chain lives inside it, so it must be on by
+    # default - a fresh install otherwise loses light stops entirely (cp parity:
+    # cp's check_model_stopping runs unconditionally).
     self.carrot_should_stop = False
     self.carrot_source_active = False
     self.carrot_t_follow = 0.0
@@ -571,12 +574,19 @@ class LongitudinalPlannerSP:
 
     self.output_v_target, self.output_a_target = v_target, a_target
 
-    # When the carrot source is active and commanding a stop, flag it for MPC
-    # stop-line handling (consumed downstream / by the subclass). Carrot no
-    # longer competes for the speed *target* (SLA is the single executor of the
-    # road-speed-limit value); its longitudinal adapter now only supplies
-    # t-follow / lane-change / traffic-stop data to the MPC when active.
-    if self.carrot_source.active:
+    # Consume the carrot outputs whenever the carrot update actually ran this
+    # tick (CarrotLongitudinalSourceEnabled). Nothing in this block is
+    # phone-derived - t-follow / jerk / comfort brake / stop distance / lane
+    # change gap are all param-, model- or radar-derived - so requiring the
+    # phone-freshness gate here made the vision traffic-light stop depend on a
+    # connected phone app. cp runs the same stop chain unconditionally; only
+    # the phone-supplied cruise/ATC numbers stay behind `carrot_source.active`
+    # (see the 5th speed source above), so a stale 7706/7714 stream still
+    # cannot command speed. Carrot no longer competes for the speed *target*
+    # (SLA is the single executor of the road-speed-limit value); its
+    # longitudinal adapter only supplies t-follow / lane-change / traffic-stop
+    # data to the MPC.
+    if self._carrot_enabled:
       self.carrot_source_active = True
       self.carrot_t_follow = float(self.carrot_source.t_follow)
       self.carrot_jerk_factor = float(self.carrot_source.jerk_factor)
