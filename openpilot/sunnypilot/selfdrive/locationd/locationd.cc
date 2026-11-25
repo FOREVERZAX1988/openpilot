@@ -469,9 +469,16 @@ void Localizer::handle_car_state(double current_time, const cereal::CarState::Re
   // Chassis yaw rate (ESC, vehicle-frame yaw-up, rad/s). Mirror of the Python
   // locationd observation: rotate vehicle yaw into device frame and inject a
   // yaw-only PHONE_GYRO observation via per-call R that masks roll/pitch.
-  if (this->chassis_yaw_available) {
+  // Read the capability param per frame: manager writes it only after the first
+  // carParams frame, which can be after this localizer is constructed. The
+  // constructor snapshot would capture a stale false on cold start.
+  Params params;
+  bool chassis_yaw_available = params.getBool("ChassisYawAvailable");
+  if (chassis_yaw_available) {
     Vector3d yaw_rate_calib(0.0, 0.0, -log.getYawRate());
     Vector3d yaw_rate_device = this->device_from_calib * yaw_rate_calib;
+    // Invalid readings are encoded by carstate as an out-of-range sentinel
+    // (100 rad/s); the sanity gate skips them without a false zero injection.
     if (yaw_rate_device.norm() < ROTATION_SANITY_CHECK) {
       MatrixXdr chassis_R = MatrixXdr::Identity(3, 3);
       chassis_R(0, 0) = CHASSIS_YAW_OBS_MASK_R;
@@ -739,7 +746,6 @@ void Localizer::load_imu_calibration_params() {
   // update this matrix and the calibrated flag as they arrive.
   Params params;
   this->imu_calibration_enabled = params.getBool("ImuCalibrationEnabled");
-  this->chassis_yaw_available = params.getBool("ChassisYawAvailable");
   if (!this->imu_calibration_enabled) {
     return;
   }

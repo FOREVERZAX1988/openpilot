@@ -120,9 +120,11 @@ class LocationEstimator:
     # frames must not flip device_from_calib back to the camera mounting
     # (same dual-publisher issue as PoseCalibrator).
     self._imu_calibrated = self.use_imu_calib
-    # Chassis yaw capability mirrored from CP.extFlags by manager (Params).
-    # Off by default: cars without a fingerprinted yaw sensor are untouched.
-    self.chassis_yaw_available = params.get_bool("ChassisYawAvailable")
+    # Chassis yaw capability (Params) is read per carState frame, not snapshotted
+    # here: manager writes it from CP.extFlags which is only available after the
+    # first carParams frame (onroad), so a constructor-time read would capture a
+    # stale false on cold start. Default off: non-capable cars are untouched.
+    self.params = params
 
     obs_kinds = [ObservationKind.PHONE_ACCEL, ObservationKind.PHONE_GYRO, ObservationKind.CAMERA_ODO_ROTATION, ObservationKind.CAMERA_ODO_TRANSLATION]
     self.observations = {kind: np.zeros(3, dtype=np.float32) for kind in obs_kinds}
@@ -220,10 +222,11 @@ class LocationEstimator:
       # device frame via device_from_calib, then per-call R masks roll/pitch so
       # this source only constrains angular_velocity[2]. No new ObservationKind
       # and no pose_kf equation change: PHONE_GYRO maps 1:1 to ang. velocity.
-      if self.chassis_yaw_available:
+      # Re-read each frame: the capability param is written by manager only
+      # after carParams arrives, which can be after this estimator is built.
+      if self.params.get_bool("ChassisYawAvailable") and np.isfinite(msg.yawRate):
         yaw_rate_device = chassis_yaw_to_device(msg.yawRate, self.device_from_calib)
         if np.linalg.norm(yaw_rate_device) < ROTATION_SANITY_CHECK:
-          # gating on STAT was done in carstate; yawRate is 0 when invalid
           self.kf.predict_and_observe(t, ObservationKind.PHONE_GYRO, yaw_rate_device,
                                       np.array([chassis_yaw_R()]))
 

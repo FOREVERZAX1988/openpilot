@@ -72,7 +72,6 @@ private:
   MatrixXdr calib_from_device;
   bool calibrated = false;
   bool imu_calibration_enabled = false;
-  bool chassis_yaw_available = false;
 
   double car_speed = 0.0;
   double last_reset_time = NAN;

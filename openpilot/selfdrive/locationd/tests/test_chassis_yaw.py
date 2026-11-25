@@ -26,7 +26,17 @@ class TestChassisYawToDevice(unittest.TestCase):
     np.testing.assert_allclose(got, [0.0, 0.0, -0.3], atol=1e-9)
 
   def test_zero_yaw_is_zero_vector(self):
-    np.testing.assert_allclose(chassis_yaw_to_device(0.0, np.eye(3)), np.zeros(3), atol=1e-9)
+    # A genuine zero yaw (straight driving) stays injectable: norm 0 < sanity gate.
+    got = chassis_yaw_to_device(0.0, np.eye(3))
+    np.testing.assert_allclose(got, np.zeros(3), atol=1e-9)
+    self.assertLess(np.linalg.norm(got), 10.0)  # ROTATION_SANITY_CHECK
+
+  def test_invalid_sentinel_is_skipped_by_sanity_gate(self):
+    # carstate emits 100 rad/s when ESP12 STAT is invalid. It must map to a
+    # device vector whose norm exceeds ROTATION_SANITY_CHECK (10) so locationd
+    # skips it - otherwise a sensor fault would inject a confident yaw reading.
+    got = chassis_yaw_to_device(100.0, np.eye(3))
+    self.assertGreater(np.linalg.norm(got), 10.0)
 
   def test_mount_angle_rotates_into_roll_component(self):
     # Legacy Custin rpyCalib (rad): small pitch/yaw. A pure vehicle yaw must
