@@ -188,6 +188,13 @@ def build_navi_items() -> list[dict]:
        desc=tr_noop('Distance after the speed limit point to resume normal cruise.')),
     _h(tr_noop('Stop / Speed Camera')),
     _t('SameSpiCamFilter', tr_noop('Same Direction Speed Cam Filter')),
+    # Master switch for the traffic-light stop&go chain, placed next to the
+    # other traffic-light controls where users look for it.
+    _t('CarrotLongitudinalSourceEnabled', tr_noop('Traffic Light Stop & Go'),
+       desc=tr_noop('Master switch for the vision traffic-light chain: brake for red lights and ' +
+                    'start on green, no phone connection required. Off disables automatic ' +
+                    'traffic-light stops. Phone-app longitudinal tuning (follow time, comfort ' +
+                    'braking, stop point) also flows through this switch.')),
     _v('TrafficStopDistanceAdjust', tr_noop('Traffic Stop Distance Adjust'), -500, 500, 10,
        desc=tr_noop('Fine-tune stop distance for traffic lights (cm).')),
     _v('TrafficLightDetectMode', tr_noop('Traffic Light Detect Mode'), 0, 2, 1),
@@ -387,18 +394,9 @@ def build_dev_items() -> list[dict]:
     _h(tr_noop('Hardware / Tests')),
     _t('ShowDebugLog', tr_noop('Show Debug Log')),
     # Unified-control killswitches. All default OFF: they change vehicle
-    # behaviour, so they are grouped here and opt-in.
-    #
-    # This one is the heaviest of them: it is the only switch on this page that
-    # decides whether the phone app's numbers reach the MPC at all. It used to be
-    # reachable only by writing the param by hand, which made a wired-in
-    # longitudinal source look like dead code.
-    _h(tr_noop('Longitudinal Control (advanced)')),
-    _t('CarrotLongitudinalSourceEnabled', tr_noop('Carrot Longitudinal Source'),
-       desc=tr_noop('Let the phone app drive the longitudinal plan: its target speed becomes ' +
-                    'a plan source, and its follow time, comfort braking and stop point ' +
-                    'reach the MPC. Default on: the vision traffic-light stop&go chain ' +
-                    'lives inside this switch and works without a connected phone.')),
+    # behaviour, so they are grouped here and opt-in. The traffic-light master
+    # switch used to live here but moved to the Navigation page
+    # ("Stop / Speed Camera" section) where users actually look for it.
     _h(tr_noop('Navigation Control (advanced)')),
     _t('CarrotTrafficCongestionEnabled', tr_noop('Traffic Congestion Slowdown'),
        desc=tr_noop('Fold the phone app traffic congestion report into map-based cruise ' +
