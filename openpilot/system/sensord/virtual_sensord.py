@@ -37,52 +37,13 @@ import openpilot.cereal.messaging as messaging
 from openpilot.common.realtime import config_realtime_process, Ratekeeper
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
-from openpilot.common.transformations.orientation import rot_from_euler, sensor_to_device_frame
+from openpilot.common.transformations.orientation import rot_from_euler
+from openpilot.system.sensord.sensor_synth import build_gyro, build_accel, can_yaw_ok
 
 SERVICES = ['accelerometer', 'gyroscope']
 SOURCE = log.SensorEventData.SensorSource.velodyne
-GRAVITY = 9.81
 ROTATION_SANITY_CHECK = 10.0       # locationd.py:37
-CHASSIS_YAW_INVALID = 100.0        # opendbc hyundai/carstate.py:37 sentinel
-ACCEL_LIMIT = 100.0                # below ACCEL_SANITY_CHECK=100 (locationd.py:36)
 WARMUP_S = 0.5                     # cover manager's async stop() double-publish window
-
-
-def s2d_inv(v):
-  """sensor_to_device_frame is self-inverse: [-v2,-v1,-v0] applied twice == v."""
-  return sensor_to_device_frame(v)
-
-
-def build_gyro(yaw_rate: float, camodo_rot, device_from_calib: np.ndarray, chassis_yaw_ok: bool) -> np.ndarray:
-  """Build a gyroUncalibrated sample (sensor frame).
-
-  locationd applies only s2d() to gyro (locationd.py:195), while cameraOdometry
-  is rotated by device_from_calib first (:246). To make the device-frame result
-  correct for a non-unit mounting, pre-rotate by device_from_calib and invert s2d.
-  yaw axis uses the independent CAN signal; roll/pitch fall back to camodo.
-  """
-  rot = np.asarray(camodo_rot, dtype=float)
-  gyro_device = np.array(rot, dtype=float)
-  if chassis_yaw_ok:
-    gyro_device[2] = yaw_rate
-  # TODO(device-verify): gyro_device is in the calib frame for camodo but the
-  # CAN yaw is vehicle-frame; a left/right-turn route must confirm the sign and
-  # the calib<->device rotation before onroad use.
-  return s2d_inv(device_from_calib @ gyro_device)
-
-
-def build_accel(v_ego: float, yaw_rate: float, a_ego: float,
-                device_from_calib: np.ndarray, chassis_yaw_ok: bool) -> np.ndarray:
-  """Build an acceleration sample (sensor frame).
-
-  Gravity on sensor x maps to device z (the absolute roll/pitch reference).
-  a_ego goes on sensor z with a NEGATIVE sign so s2d puts +a_ego on device x,
-  which is what ExcessiveActuationCheck reads (selfdrived/helpers.py:29,45).
-  a_lat = vEgo*yawRate from CAN goes on sensor y (device y = -a_lat).
-  """
-  a_lat = v_ego * yaw_rate if chassis_yaw_ok else 0.0
-  sensor = np.array([GRAVITY, a_lat, -a_ego], dtype=float)
-  return np.clip(sensor, -ACCEL_LIMIT, ACCEL_LIMIT)
 
 
 def send_pair(pm, accel: np.ndarray, gyro: np.ndarray) -> None:
@@ -98,18 +59,6 @@ def send_pair(pm, accel: np.ndarray, gyro: np.ndarray) -> None:
     payload.init(union_name)                   # union must be explicitly initialized
     getattr(payload, union_name).v = np.asarray(values, dtype=float).tolist()
     pm.send(service, msg)
-
-
-def can_yaw_ok(cs, CP) -> bool:
-  """Only trust carState.yawRate on platforms that actually decode it.
-
-  No getattr(...,0) fallback: a Toyota reports yawRate=0 forever, which would
-  silently make a_lat=0 while tests stay green. Gate on the fingerprint bit.
-  """
-  hyundai_bit = int(HyundaiExtFlags.CHASSIS_YAW_RATE)
-  if CP.brand == 'hyundai' and (int(CP.extFlags) & hyundai_bit):
-    return abs(float(cs.yawRate)) < ROTATION_SANITY_CHECK and abs(float(cs.yawRate)) != CHASSIS_YAW_INVALID
-  return False
 
 
 def main() -> None:
@@ -138,7 +87,7 @@ def main() -> None:
     device_from_calib = rot_from_euler(np.asarray(ext.rpyCalib, dtype=float))
 
     cs, CP = sm['carState'], sm['carParams']
-    ok = can_yaw_ok(cs, CP)
+    ok = can_yaw_ok(cs, CP, int(HyundaiExtFlags.CHASSIS_YAW_RATE), ROTATION_SANITY_CHECK)
     yaw_rate = float(cs.yawRate) if ok else 0.0
     accel = build_accel(abs(float(cs.vEgo)), yaw_rate, float(cs.aEgo), device_from_calib, ok)
     gyro = build_gyro(yaw_rate, sm['cameraOdometry'].rot, device_from_calib, ok)
