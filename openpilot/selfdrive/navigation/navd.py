@@ -23,6 +23,8 @@ import numpy as np
 import openpilot.cereal.messaging as messaging
 from openpilot.cereal import log
 
+from openpilot.common.api import Api
+from openpilot.common.api.comma_connect import get_api_host
 from openpilot.common.params import Params
 from openpilot.common.realtime import Ratekeeper
 from openpilot.common.swaglog import cloudlog
@@ -92,6 +94,9 @@ class RouteEngine:
 
     self.mapbox_token = ""
     self.mapbox_host = "https://api.mapbox.com"
+    # Fallback for devices with no mapbox key: route through comma's relay instead,
+    # which is the only path that works where api.mapbox.com is unreachable.
+    self._api = Api(self.params.get("DongleId"))
     self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="mapbox-route")
     self.pending = None
     self.pending_destination = None
@@ -115,6 +120,22 @@ class RouteEngine:
       self.mapbox_token = token
       self.clear_route()
       self.reset_recompute_limits()
+
+  def _route_token(self) -> str:
+    """Mapbox key when one is configured, else a comma-issued token for the relay."""
+    if self.mapbox_token:
+      return self.mapbox_token
+    try:
+      return self._api.get_token() or ""
+    except Exception:
+      return ""
+
+  def _route_host(self) -> str:
+    # With no mapbox key the route has to come from comma's relay (get_api_host);
+    # that is the only path available where api.mapbox.com cannot be reached.
+    if self.mapbox_token:
+      return "https://api.mapbox.com"
+    return get_api_host().rstrip('/') + '/v1/nav'
 
   def update(self):
     self.sm.update(0)
@@ -162,7 +183,7 @@ class RouteEngine:
       self.last_bearing = gps.bearing
 
   def recompute_route(self):
-    if self.last_position is None or not self.mapbox_token:
+    if self.last_position is None or not self._route_token():
       return
 
     new_destination, place_name = self.destination_from_params()
@@ -232,12 +253,12 @@ class RouteEngine:
       return None
 
   def calculate_route(self, destination):
-    if self.pending is not None or not self.mapbox_token:
+    if self.pending is not None or not self._route_token():
       return
     if destination != self.nav_destination:
       self.clear_route()
     params = {
-      'access_token': self.mapbox_token, 'annotations': 'maxspeed',
+      'access_token': self._route_token(), 'annotations': 'maxspeed',
       'geometries': 'geojson', 'overview': 'full', 'steps': 'true',
       'banner_instructions': 'true', 'alternatives': 'false',
       'language': (self.params.get('LanguageSetting') or 'en').replace('main_', ''),
@@ -257,7 +278,7 @@ class RouteEngine:
       params['bearings'] = f'{self.last_bearing % 360:.0f},90' + ';' * (len(points) - 1)
     self.pending_waypoints = waypoints if waypoints else []
     self.pending_destination, self.pending_token = destination, self.mapbox_token
-    self.pending = self.executor.submit(self.request_route, self.mapbox_host + '/directions/v5/mapbox/driving-traffic/' + coords, params)
+    self.pending = self.executor.submit(self.request_route, self._route_host() + '/directions/v5/mapbox/driving-traffic/' + coords, params)
 
   def poll_route(self):
     if self.pending is None or not self.pending.done():
