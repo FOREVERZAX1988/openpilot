@@ -14,6 +14,7 @@ from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.locationd.helpers import rotate_std
 from openpilot.selfdrive.locationd.chassis_yaw import chassis_yaw_to_device, chassis_yaw_R
+from openpilot.selfdrive.locationd.gyro_crosscheck import gyro_yawrate_crosscheck_valid
 from openpilot.selfdrive.locationd.models.pose_kf import PoseKalman, States
 from openpilot.selfdrive.locationd.models.constants import ObservationKind, GENERATED_DIR
 
@@ -41,7 +42,6 @@ CALIB_RPY_SANITY_CHECK = 0.5  # rad (+- 30 deg)
 MIN_STD_SANITY_CHECK = 1e-5  # m or rad
 MAX_FILTER_REWIND_TIME = 0.8  # s
 MAX_SENSOR_TIME_DIFF = 0.1  # s
-YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
 INPUT_INVALID_LIMIT = 2.0 # 1 (camodo) / 9 (sensor) bad input[s] ignored
 INPUT_INVALID_RECOVERY = 10.0 # ~10 secs to resume after exceeding allowed bad inputs by one
 POSENET_STD_INITIAL_VALUE = 10.0
@@ -201,9 +201,16 @@ class LocationEstimator:
       meas = sensor_to_device_frame(msg.gyroUncalibrated.v)
 
       gyro_bias = self.kf.x[States.GYRO_BIAS]
-      gyro_camodo_yawrate_err = np.abs((meas[2] - gyro_bias[2]) - self.camodo_yawrate_distribution[0])
-      gyro_camodo_yawrate_err_threshold = YAWRATE_CROSS_ERR_CHECK_FACTOR * self.camodo_yawrate_distribution[1]
-      gyro_valid = gyro_camodo_yawrate_err < gyro_camodo_yawrate_err_threshold
+      # Cross-check the IMU yaw rate against cameraOdometry, skipping the check
+      # at near-standstill: steering while parked twists the body (the IMU
+      # honestly reports it) while the model reports yaw=0 with tiny std, so
+      # every such frame counted INPUT_INVALID and latched inputsOK=false
+      # (route 00000003: repeated locationdTemporaryError in a parking lot).
+      # See gyro_crosscheck.py for the route evidence and rationale.
+      gyro_valid = gyro_yawrate_crosscheck_valid(
+        float(meas[2]), float(gyro_bias[2]),
+        float(self.camodo_yawrate_distribution[0]), float(self.camodo_yawrate_distribution[1]),
+        self.car_speed)
 
       if np.linalg.norm(meas) >= ROTATION_SANITY_CHECK or not gyro_valid:
         return HandleLogResult.INPUT_INVALID
