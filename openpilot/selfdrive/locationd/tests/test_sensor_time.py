@@ -135,13 +135,16 @@ class TestGyroCamodoCrossCheck(OpenpilotTestCase):
     est.camodo_yawrate_distribution = np.array([0.0, 0.01])  # threshold = 0.30 rad/s
     return est
 
-  def test_a_disagreeing_gyro_is_rejected_at_any_speed(self):
-    for speed in (20.0, 5.0, 2.0, 0.0):
+  def test_a_disagreeing_gyro_is_rejected_while_moving(self):
+    # Standstill steering (< 1 m/s) is exempt now -- see gyro_crosscheck.py and
+    # tests/test_gyro_crosscheck.py. While actually moving the check must still
+    # catch a gyro/vision divergence.
+    for speed in (20.0, 5.0, 2.0):
       est = self._est()
       est.car_speed = speed
       msg = self._gyro(10.0, 0.4)
       self.assertEqual(est.handle_log(10.0, 'gyroscope', msg), HandleLogResult.INPUT_INVALID,
-                       'rejected at %.1f m/s: there is no speed exemption' % speed)
+                       'rejected at %.1f m/s' % speed)
 
   def test_a_dead_pose_leaves_nothing_to_check_the_gyro_against(self):
     # the parking case: vision cannot see the turn, the reference stays "no
