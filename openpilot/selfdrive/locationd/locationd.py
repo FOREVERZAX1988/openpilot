@@ -44,6 +44,7 @@ MAX_FILTER_REWIND_TIME = 0.8  # s
 MAX_SENSOR_TIME_DIFF = 0.1  # s
 INPUT_INVALID_LIMIT = 2.0 # 1 (camodo) / 9 (sensor) bad input[s] ignored
 INPUT_INVALID_RECOVERY = 10.0 # ~10 secs to resume after exceeding allowed bad inputs by one
+CAM_ODO_DROP_RUN_GRACE = 2  # consecutive invalid cameraOdometry msgs before the camodo budget is spent
 POSENET_STD_INITIAL_VALUE = 10.0
 POSENET_STD_HIST_HALF = 20
 CAM_ODO_POSE_DELAY = 0.1 # dependent on the vision model context frames and temporal frequency (current model is 5 fps with 2 context frames)
@@ -91,6 +92,30 @@ def update_observation_invalid(res, which, observation_input_invalid, timing_run
   elif res == HandleLogResult.SUCCESS:
     observation_input_invalid[which] *= input_invalid_decay[which]
     timing_run[which] = 0
+
+
+def update_camodo_drop(drop_run: int, observation_input_invalid, input_invalid_limit) -> int:
+  """How a run of invalid cameraOdometry *messages* spends the camodo budget.
+
+  modeld marks cameraOdometry invalid when a VIPC frame was dropped
+  (fill_pose_msg: valid = calibration_seen & dropped_frames < 1). On a loaded
+  device that happens as an isolated single frame -- the wide stream stays
+  continuous, the next frame is healthy, and the filter simply skips one
+  observation at 20 Hz. That is a transport hiccup, the same class as a late
+  frame, so it must not reach the budget: two isolated drops 6 s apart (route
+  00000014 seg 95: frameId 114404 and 114532, 60 km/h straight) pushed the
+  camodo counter to 1.83 >= 1.5 and latched inputsOK=false for 7.0 s, raising
+  locationdTemporaryError ("take control immediately") mid-drive. Only a run
+  of consecutive invalid frames -- modeld actually starving -- spends budget,
+  mirroring the TIMING grace above; reaching the grace charges the whole run at
+  once, so a genuine outage latches immediately.
+  """
+  drop_run += 1
+  if drop_run >= CAM_ODO_DROP_RUN_GRACE:
+    charge = CAM_ODO_DROP_RUN_GRACE if drop_run == CAM_ODO_DROP_RUN_GRACE else 1
+    observation_input_invalid["cameraOdometry"] = min(
+      observation_input_invalid["cameraOdometry"] + charge, input_invalid_limit["cameraOdometry"])
+  return drop_run
 
 
 class LocationEstimator:
@@ -394,6 +419,7 @@ def main():
   # Half a second of *continuous* late frames is a timebase fault; fewer is a hiccup.
   timing_run = defaultdict(int)
   timing_invalid_grace = {s: max(1, round(0.5 * SERVICE_LIST[s].frequency)) for s in critical_services}
+  camodo_drop_run = 0
 
   initial_pose_data = params.get("LocationFilterInitialState")
   if initial_pose_data is not None:
@@ -423,6 +449,8 @@ def main():
         if valid:
           t = log_mono_time * 1e-9
           res = estimator.handle_log(t, which, msg)
+          if which == "cameraOdometry":
+            camodo_drop_run = 0  # a healthy frame ends any drop run
           if which not in critical_services:
             continue
 
@@ -432,8 +460,9 @@ def main():
                                      input_invalid_decay, timing_invalid_grace)
         elif which == "cameraOdometry":
           # a missed observation (modeld dropped a frame) spends the same budget as a rejected one,
-          # capped so a long outage recovers as fast as a short one
-          observation_input_invalid[which] = min(observation_input_invalid[which] + 1, input_invalid_limit[which])
+          # capped so a long outage recovers as fast as a short one; isolated single-frame drops
+          # are transport hiccups and are exempted by the run grace (see update_camodo_drop)
+          camodo_drop_run = update_camodo_drop(camodo_drop_run, observation_input_invalid, input_invalid_limit)
     else:
       filter_initialized = sm.all_checks() and sensor_all_checks(acc_msgs, gyro_msgs, sensor_valid, sensor_recv_time, sensor_alive, SIMULATION)
 
