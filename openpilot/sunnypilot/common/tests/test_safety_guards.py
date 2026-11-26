@@ -80,6 +80,26 @@ class TestCommIssueGrace(unittest.TestCase):
     self.assertTrue(grace.update(all_checks=False, all_alive=False, all_freq_ok=True))
     self.assertFalse(grace.update(all_checks=False, all_alive=True, all_freq_ok=True))
 
+  def test_default_grace_is_one_second(self):
+    self.assertEqual(CommIssueGrace().grace_frames, 100)
+
+  def test_route_cascade_burst_does_not_raise(self):
+    # Route 00000013--a659907557--95 (C3): radard stall -> one invalid frame ->
+    # plannerd cascade. The union invalid window at selfdrived was 88 ms,
+    # ~9 consecutive frames at 100 Hz with alive+freq_ok feeds. That burst
+    # must not raise commIssue.
+    grace = CommIssueGrace()
+    for _ in range(9):
+      self.assertFalse(grace.update(all_checks=False, all_alive=True, all_freq_ok=True))
+
+  def test_sustained_invalid_data_raises_after_one_second(self):
+    # A publisher that keeps flagging its own output invalid for a full second
+    # is a real fault and still trips, just not on a single-frame blip.
+    grace = CommIssueGrace()
+    for _ in range(99):
+      self.assertFalse(grace.update(all_checks=False, all_alive=True, all_freq_ok=True))
+    self.assertTrue(grace.update(all_checks=False, all_alive=True, all_freq_ok=True))
+
 
 class TestExcessiveActuationCleanup(unittest.TestCase):
   def test_longitudinal_is_cleared(self):

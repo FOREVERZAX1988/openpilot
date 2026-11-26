@@ -14,6 +14,7 @@ from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.locationd.helpers import rotate_std
 from openpilot.selfdrive.locationd.chassis_yaw import chassis_yaw_to_device, chassis_yaw_R
+from openpilot.selfdrive.locationd.gyro_crosscheck import gyro_yawrate_crosscheck_valid
 from openpilot.selfdrive.locationd.models.pose_kf import PoseKalman, States
 from openpilot.selfdrive.locationd.models.constants import ObservationKind, GENERATED_DIR
 
@@ -62,26 +63,15 @@ DEAD_POSE_TRANS_REL = 0.35  # real camera odometry reaches at least this much of
 DEAD_POSE_MIN_SPEED = 1.0   # m/s: below this, translation says nothing about motion
 MAX_FILTER_REWIND_TIME = 0.8  # s
 MAX_SENSOR_TIME_DIFF = 0.1  # s
-YAWRATE_CROSS_ERR_CHECK_FACTOR = 30
-# The cross-check has no speed exemption. Route 00000039 looked like it needed
-# one -- 79 correct gyro samples rejected at 1.2-2.1 m/s -- but the reason the
-# camera said "not turning" while the wheel was held at +-385 deg was a dead
-# pose, not a low speed: route 00000041 showed the chestnut model publishing
-# zeros at rotStd 0.0010 for a whole drive at 5-10 m/s. That is rejected at the
-# source now (the dead-pose gate above) and never becomes the reference, so a
-# speed gate would only add a blind spot below 5 m/s where a genuinely broken
-# gyro would pass unnoticed.
-# Every big/small model switch publishes one cameraOdometry with valid=false: on
-# route 0000003b each flip of modelV2.big is followed by such a frame (16 flips,
-# 15 bad frames while big was false). The cameraOdometry budget is 2 with a
-# threshold of 1.5, so a single one of those frames spends the whole budget and
-# holds inputsOK down for the ~10 s the decay takes -- which is why every alert
-# on that drive lined up with a model switch. Require a run of this many frames
-# before charging the budget: 3 frames is 150 ms, far longer than a switch
-# transition and far shorter than a real outage.
-CAMODO_INVALID_GRACE = 3
+
+# Historical note: route 0000003b first showed that a model switch publishes an
+# isolated cameraOdometry(valid=false), and that charging the budget for it held
+# inputsOK down for ~10 s. Upstream generalized this into update_camodo_drop()
+# below (grace = CAM_ODO_DROP_RUN_GRACE), which also covers isolated transport
+# drops and sustained outages.
 INPUT_INVALID_LIMIT = 2.0 # 1 (camodo) / 9 (sensor) bad input[s] ignored
 INPUT_INVALID_RECOVERY = 10.0 # ~10 secs to resume after exceeding allowed bad inputs by one
+CAM_ODO_DROP_RUN_GRACE = 2  # consecutive invalid cameraOdometry msgs before the camodo budget is spent
 POSENET_STD_INITIAL_VALUE = 10.0
 POSENET_STD_HIST_HALF = 20
 CAM_ODO_POSE_DELAY = 0.1 # dependent on the vision model context frames and temporal frequency (current model is 5 fps with 2 context frames)
@@ -136,6 +126,30 @@ def update_observation_invalid(res, which, observation_input_invalid, timing_run
   elif res == HandleLogResult.SUCCESS:
     observation_input_invalid[which] *= input_invalid_decay[which]
     timing_run[which] = 0
+
+
+def update_camodo_drop(drop_run: int, observation_input_invalid, input_invalid_limit) -> int:
+  """How a run of invalid cameraOdometry *messages* spends the camodo budget.
+
+  modeld marks cameraOdometry invalid when a VIPC frame was dropped
+  (fill_pose_msg: valid = calibration_seen & dropped_frames < 1). On a loaded
+  device that happens as an isolated single frame -- the wide stream stays
+  continuous, the next frame is healthy, and the filter simply skips one
+  observation at 20 Hz. That is a transport hiccup, the same class as a late
+  frame, so it must not reach the budget: two isolated drops 6 s apart (route
+  00000014 seg 95: frameId 114404 and 114532, 60 km/h straight) pushed the
+  camodo counter to 1.83 >= 1.5 and latched inputsOK=false for 7.0 s, raising
+  locationdTemporaryError ("take control immediately") mid-drive. Only a run
+  of consecutive invalid frames -- modeld actually starving -- spends budget,
+  mirroring the TIMING grace above; reaching the grace charges the whole run at
+  once, so a genuine outage latches immediately.
+  """
+  drop_run += 1
+  if drop_run >= CAM_ODO_DROP_RUN_GRACE:
+    charge = CAM_ODO_DROP_RUN_GRACE if drop_run == CAM_ODO_DROP_RUN_GRACE else 1
+    observation_input_invalid["cameraOdometry"] = min(
+      observation_input_invalid["cameraOdometry"] + charge, input_invalid_limit["cameraOdometry"])
+  return drop_run
 
 
 class LocationEstimator:
@@ -257,9 +271,16 @@ class LocationEstimator:
       self.last_gyro_meas = meas
 
       gyro_bias = self.kf.x[States.GYRO_BIAS]
-      gyro_camodo_yawrate_err = np.abs((meas[2] - gyro_bias[2]) - self.camodo_yawrate_distribution[0])
-      gyro_camodo_yawrate_err_threshold = YAWRATE_CROSS_ERR_CHECK_FACTOR * self.camodo_yawrate_distribution[1]
-      gyro_valid = gyro_camodo_yawrate_err < gyro_camodo_yawrate_err_threshold
+      # Cross-check the IMU yaw rate against cameraOdometry, skipping the check
+      # at near-standstill: steering while parked twists the body (the IMU
+      # honestly reports it) while the model reports yaw=0 with tiny std, so
+      # every such frame counted INPUT_INVALID and latched inputsOK=false
+      # (route 00000003: repeated locationdTemporaryError in a parking lot).
+      # See gyro_crosscheck.py for the route evidence and rationale.
+      gyro_valid = gyro_yawrate_crosscheck_valid(
+        float(meas[2]), float(gyro_bias[2]),
+        float(self.camodo_yawrate_distribution[0]), float(self.camodo_yawrate_distribution[1]),
+        self.car_speed)
 
       if np.linalg.norm(meas) >= ROTATION_SANITY_CHECK or not gyro_valid:
         return HandleLogResult.INPUT_INVALID
@@ -489,7 +510,6 @@ def main():
   critical_services = ["accelerometer", "gyroscope", "cameraOdometry"]
   observation_input_invalid = defaultdict(int)
   last_inputs_valid = None
-  camodo_invalid_run = 0
 
   input_invalid_limit = {s: round(INPUT_INVALID_LIMIT * (SERVICE_LIST[s].frequency / 20.)) for s in critical_services}
   input_invalid_threshold = {s: input_invalid_limit[s] - 0.5 for s in critical_services}
@@ -498,6 +518,7 @@ def main():
   # Half a second of *continuous* late frames is a timebase fault; fewer is a hiccup.
   timing_run = defaultdict(int)
   timing_invalid_grace = {s: max(1, round(0.5 * SERVICE_LIST[s].frequency)) for s in critical_services}
+  camodo_drop_run = 0
 
   initial_pose_data = params.get("LocationFilterInitialState")
   if initial_pose_data is not None:
@@ -528,7 +549,7 @@ def main():
           t = log_mono_time * 1e-9
           res = estimator.handle_log(t, which, msg)
           if which == "cameraOdometry":
-            camodo_invalid_run = 0
+            camodo_drop_run = 0  # a healthy frame ends any drop run
           if which not in critical_services:
             continue
 
@@ -537,13 +558,10 @@ def main():
           update_observation_invalid(res, which, observation_input_invalid, timing_run,
                                      input_invalid_decay, timing_invalid_grace, input_invalid_limit)
         elif which == "cameraOdometry":
-          # A model switch publishes a single cameraOdometry with valid=false.
-          # Charging the budget for every one of those latched inputsOK for ~10 s
-          # per switch (route 0000003b: 16 switches). Only a sustained run means
-          # the camera pipeline is actually gone.
-          camodo_invalid_run += 1
-          if camodo_invalid_run >= CAMODO_INVALID_GRACE:
-            observation_input_invalid[which] = min(observation_input_invalid[which] + 1, input_invalid_limit[which])
+          # a missed observation (modeld dropped a frame) spends the same budget as a rejected one,
+          # capped so a long outage recovers as fast as a short one; isolated single-frame drops
+          # are transport hiccups and are exempted by the run grace (see update_camodo_drop)
+          camodo_drop_run = update_camodo_drop(camodo_drop_run, observation_input_invalid, input_invalid_limit)
     else:
       filter_initialized = sm.all_checks() and sensor_all_checks(acc_msgs, gyro_msgs, sensor_valid, sensor_recv_time, sensor_alive, SIMULATION)
 

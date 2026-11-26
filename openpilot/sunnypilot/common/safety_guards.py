@@ -96,7 +96,17 @@ def blocked_onroad_reason(name: str, is_onroad: bool,
 
 # How long stale-but-present data is tolerated before it is called a
 # communication issue. A single dropped frame is not a fault.
-VALID_ONLY_COMM_ISSUE_GRACE_FRAMES = 5  # 0.5s at 100Hz
+# Route 00000013--a659907557--95 (C3, 2026-11-26): a 350 ms radard scheduling
+# stall made radard publish one valid=False radarState; plannerd mirrored it
+# into one invalid longitudinalPlan + driverAssistance frame. The union of the
+# cascade's invalid window at the selfdrived subscriber was 88 ms (~9 frames at
+# 100 Hz) — over the old 5-frame grace, so a stop-and-go disengage at 15-40
+# km/h raised a spurious commIssue SOFT_DISABLE ("立即接管控制/进程间通信问题").
+# A 1 s persistence requirement (same threshold class as the >1 s
+# locationdTemporaryError rule) keeps the immediate-raise behaviour for dead
+# and slow publishers while absorbing single-frame publisher blips and their
+# downstream cascades; a genuinely broken feed still trips within 1 s.
+VALID_ONLY_COMM_ISSUE_GRACE_FRAMES = 100  # 1 s at 100 Hz
 
 
 class CommIssueGrace:
