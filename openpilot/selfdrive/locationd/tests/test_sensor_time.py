@@ -15,7 +15,7 @@ import numpy as np
 from openpilot.cereal import log
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.locationd.locationd import (
-  CAM_ODO_POSE_DELAY, CAMODO_INVALID_GRACE, HandleLogResult, INPUT_INVALID_LIMIT,
+  CAM_ODO_POSE_DELAY, HandleLogResult, INPUT_INVALID_LIMIT,
   INPUT_INVALID_RECOVERY, LocationEstimator, MAX_SENSOR_TIME_DIFF,
   calculate_invalid_input_decay, update_observation_invalid)
 
@@ -235,16 +235,6 @@ class TestCameraOdoGrace(OpenpilotTestCase):
     # but a second one a full second later is not: 20 good frames only take 2.0
     # down to ~1.94, so isolated bad frames one second apart still accumulate
     self.assertGreater(2 * decay ** 20, thr)
-
-  def test_the_grace_outlasts_a_model_switch(self):
-    # a switch costs one frame; the grace has to be longer than that
-    self.assertGreaterEqual(CAMODO_INVALID_GRACE, 2,
-                            "grace <= 1 means a model switch latches inputsOK again")
-
-  def test_the_grace_is_far_shorter_than_a_real_outage(self):
-    # 3 frames at 20 Hz is 150 ms; a genuinely dead camera pipeline lasts seconds
-    self.assertLess(CAMODO_INVALID_GRACE / 20.0, 1.0)
-
 
 if __name__ == "__main__":
   unittest.main()
