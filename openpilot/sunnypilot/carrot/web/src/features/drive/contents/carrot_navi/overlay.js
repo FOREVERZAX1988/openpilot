@@ -19,6 +19,17 @@ export function guidanceGlyph(guidance) {
   return "↑";
 }
 
+// Per-lane turn type glyph from the probe's locLaneTypes codes. The code
+// table is provisional (1 straight / 2 left / 3 right / 4 uturn) and unknown
+// codes fall back to a straight arrow until verified against live data.
+export function laneTurnGlyph(code) {
+  const value = Number(code);
+  if (value === 2) return "↰";
+  if (value === 3) return "↱";
+  if (value === 4) return "↶";
+  return "↑";
+}
+
 export function selectCurrentGuidanceImageName(hasImage) {
   if (hasImage("tbt_current_full")) return "tbt_current_full";
   if (hasImage("tbt_current_compact")) return "tbt_current_compact";
@@ -455,6 +466,16 @@ export class OverlayRenderer {
       ? this.state.laneCurrent
       : (Array.isArray(this.state?.laneAhead) ? this.state.laneAhead.find(recordPresent) : null);
     if (!lane || !lane.visible || lane.count < 1) return false;
+    const hd = recordPresent(this.state?.laneHD) && this.state.laneHD.available ? this.state.laneHD : null;
+    const hdActive = Boolean(hd && hd.hd);
+    // Current lane: HD match wins when valid, otherwise the App's own lane index.
+    let currentLane = Number(lane.currentLane);
+    if (hdActive && Number.isFinite(Number(hd.curLaneIdx0)) && Number(hd.curLaneIdx0) >= 0) {
+      currentLane = Number(hd.curLaneIdx0);
+    }
+    const leftBlocked = hdActive && Boolean(hd.leftBlocked);
+    const rightBlocked = hdActive && Boolean(hd.rightBlocked);
+    const locTypes = hdActive && Array.isArray(hd.locLaneTypes) ? hd.locLaneTypes : [];
     const context = this.context;
     const count = clamp(Math.round(finite(lane.count)), 1, 8);
     const panelWidth = Math.min(width * 0.48, 300);
@@ -468,15 +489,50 @@ export class OverlayRenderer {
     context.fillStyle = "rgba(5, 9, 14, 0.78)";
     context.fill();
     for (let index = 0; index < count; index += 1) {
-      const selected = index === Number(lane.currentLane) || Number(lane.available?.[index]) > 0;
+      const availableValue = Number(lane.available?.[index]) || 0;
+      const selected = index === currentLane || availableValue > 0;
+      const blocked = (index === 0 && leftBlocked) || (index === count - 1 && rightBlocked);
       const laneX = x + 10 + index * (laneWidth + gap);
       roundedRect(context, laneX, y + 12, laneWidth, panelHeight - 30, 7);
-      context.fillStyle = selected ? "rgba(73, 218, 157, 0.82)" : "rgba(255,255,255,0.13)";
+      if (blocked) {
+        context.fillStyle = "rgba(255, 255, 255, 0.05)";
+      } else if (selected) {
+        context.fillStyle = "rgba(73, 218, 157, 0.82)";
+      } else {
+        context.fillStyle = "rgba(255,255,255,0.13)";
+      }
       context.fill();
-      this.drawOutlinedText("↑", laneX + laneWidth * 0.5, y + panelHeight * 0.57, clamp(laneWidth * 0.72, 15, 28), { align: "center" });
+      if (blocked) {
+        // struck-through unavailable lane
+        context.strokeStyle = "rgba(255, 99, 104, 0.85)";
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(laneX + laneWidth * 0.22, y + 12 + (panelHeight - 30) * 0.5);
+        context.lineTo(laneX + laneWidth * 0.78, y + 12 + (panelHeight - 30) * 0.5);
+        context.stroke();
+        context.lineWidth = 1;
+      } else {
+        const glyph = laneTurnGlyph(locTypes[index]);
+        this.drawOutlinedText(glyph, laneX + laneWidth * 0.5, y + panelHeight * 0.57, clamp(laneWidth * 0.72, 15, 28), { align: "center" });
+      }
     }
     context.restore();
     if (lane.distanceM > 0) this.drawOutlinedText(formatDistance(lane.distanceM), width * 0.5, y + panelHeight - 5, 12, { align: "center" });
+    if (hdActive) {
+      // HD badge with match confidence when the probe reports it
+      const ratioValid = Boolean(hd.laneRatioValid);
+      const ratio = ratioValid ? Math.round(clamp(finite(hd.laneRatio), 0, 1) * 100) : -1;
+      const label = `HD${ratio >= 0 ? ` ${ratio}%` : ""}`;
+      const badgeWidth = 52;
+      const badgeX = x + (panelWidth - badgeWidth) / 2;
+      const badgeY = y - 24;
+      context.save();
+      roundedRect(context, badgeX, badgeY, badgeWidth, 20, 9);
+      context.fillStyle = "rgba(36, 120, 255, 0.88)";
+      context.fill();
+      context.restore();
+      this.drawOutlinedText(label, badgeX + badgeWidth / 2, badgeY + 15, 12, { align: "center", color: "#fff", stroke: "rgba(0,0,0,.4)" });
+    }
     return true;
   }
 

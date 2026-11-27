@@ -78,9 +78,28 @@ NAVI_VEHICLE_SCHEMA = (
 NAVI_LANE_SCHEMA = (
   ("present", "bool", ("meta", "present")),
   ("count", "i16"),
+  ("currentLane", "i16"),
   ("distanceM", "i32"),
   ("visible", "bool"),
   ("available", "i16_list"),
+)
+
+# Appended laneset: CarrotNaviStateSP.laneHD (Tencent-probe HD lane match).
+# Schema evolution keeps new fields at the end of the carrotNavi frame so
+# shorter recorded frames stay decodable (see SERVICE_SCHEMAS note).
+NAVI_LANE_HD_SCHEMA = (
+  ("available", "bool", ("hd", "available")),
+  ("hd", "bool", ("hd", "hd")),
+  ("laneCount", "i16", ("hd", "laneCount")),
+  ("curLaneIdx0", "i16", ("hd", "curLaneIdx0")),
+  ("laneRatioValid", "bool", ("hd", "laneRatioValid")),
+  ("laneRatio", "f32", ("hd", "laneRatio")),
+  ("leftBlocked", "bool", ("hd", "leftBlocked")),
+  ("rightBlocked", "bool", ("hd", "rightBlocked")),
+  ("matchedIndexValid", "bool", ("hd", "matchedIndexValid")),
+  ("matchedIndex", "i32", ("hd", "matchedIndex")),
+  ("locLaneCount", "i16", ("hd", "locLaneCount")),
+  ("locLaneTypes", "i16_list", ("hd", "locLaneTypes")),
 )
 
 NAVI_SPEED_SCHEMA = (
@@ -415,6 +434,7 @@ SERVICE_SCHEMAS: dict[str, tuple[int, tuple[tuple[Any, ...], ...]]] = {
     ("crossroad", ("struct", NAVI_CROSSROAD_SCHEMA)),
     ("route", ("struct", NAVI_ROUTE_SCHEMA)),
     ("navigationStatus", ("struct", NAVI_STATUS_SCHEMA)),
+    ("laneHD", ("struct", NAVI_LANE_HD_SCHEMA)),
   )),
   "deviceMotion": (20, (
     ("orientationNED", ("struct", XYZ_MEASUREMENT_SCHEMA)),

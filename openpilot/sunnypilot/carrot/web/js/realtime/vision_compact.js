@@ -47,8 +47,15 @@ window.CarrotVisionCompact = (() => {
     ["headingDeg","f32"], ["speedKph","f32"], ["roadName","text"],
   ];
   const naviLane = [
-    ["present","bool"], ["count","i16"], ["distanceM","i32"],
+    ["present","bool"], ["count","i16"], ["currentLane","i16"], ["distanceM","i32"],
     ["visible","bool"], ["available","i16list"],
+  ];
+  const naviLaneHD = [
+    ["available","bool"], ["hd","bool"], ["laneCount","i16"], ["curLaneIdx0","i16"],
+    ["laneRatioValid","bool"], ["laneRatio","f32"],
+    ["leftBlocked","bool"], ["rightBlocked","bool"],
+    ["matchedIndexValid","bool"], ["matchedIndex","i32"],
+    ["locLaneCount","i16"], ["locLaneTypes","i16list"],
   ];
   const naviSpeed = [
     ["roadLimitValid","bool"], ["roadLimitKph","i16"],
@@ -209,6 +216,7 @@ window.CarrotVisionCompact = (() => {
       ["crossroad","struct",naviCrossroad],
       ["route","struct",naviRoute],
       ["navigationStatus","struct",naviStatus],
+      ["laneHD","struct",naviLaneHD],
     ]]],
     [20, ["livePose", [
       ["orientationNED", "struct", xyzMeasurement],
