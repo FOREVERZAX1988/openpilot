@@ -240,6 +240,8 @@ class _FakeLaneHD:
     self.slope = kw.get("slope", 0.0)
     self.leftBlocked = kw.get("leftBlocked", False)
     self.rightBlocked = kw.get("rightBlocked", False)
+    self.laneRatio = kw.get("laneRatio", 0.0)
+    self.laneRatioValid = kw.get("laneRatioValid", False)
 
 
 def _make_lane_with_meta(count: int, current_lane: int, available: list[int],
@@ -303,6 +305,48 @@ class TestHdLaneState(unittest.TestCase):
     navi.laneHD = _FakeLaneHD(available=True, laneCount=4, totalLaneCntConf=0.9,
                               curLaneIdx0=-1, curLaneNumConf=0.9)
     self.assertFalse(self._hd_state(navi)["usable"])
+
+
+class TestLaneRatioGate(unittest.TestCase):
+  """tc-v61 P1 secondary gate: present-but-low laneRatio downgrades to the
+  plain availability path; absent/invalid ratio keeps the pre-P1 behavior."""
+
+  def _hd_state(self, navi):
+    return carrot_navi_fusion.hd_lane_state(navi)
+
+  def _ratio_navi(self, ratio: float, ratio_valid: bool):
+    navi = _make_lane_with_meta(count=4, current_lane=2, available=[1, 1, 1, 1])
+    navi.laneHD = _FakeLaneHD(available=True, hd=True, laneCount=4, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.85,
+                              laneRatio=ratio, laneRatioValid=ratio_valid)
+    return navi
+
+  def test_absent_ratio_never_gates(self):
+    # Pre-P1 App: no lane_ratio key -> laneRatioValid False -> full HD blocking.
+    state = self._hd_state(self._ratio_navi(0.0, False))
+    self.assertTrue(state["usable"])
+    self.assertFalse(state["ratioGated"])
+
+  def test_ratio_at_bar_stays_usable(self):
+    state = self._hd_state(self._ratio_navi(carrot_navi_fusion.HD_LANE_MIN_RATIO, True))
+    self.assertTrue(state["usable"])
+    self.assertFalse(state["ratioGated"])
+
+  def test_ratio_below_bar_gates(self):
+    state = self._hd_state(self._ratio_navi(0.3, True))
+    self.assertFalse(state["usable"])
+    self.assertTrue(state["ratioGated"])
+
+  def test_gated_state_falls_back_to_7714(self):
+    cs_sp = _FakeCarStateSP()
+    navi = _make_lane_with_meta(count=3, current_lane=2, available=[1, 1, 0])
+    navi.laneHD = _FakeLaneHD(available=True, hd=True, laneCount=3, totalLaneCntConf=0.9,
+                              curLaneIdx0=1, curLaneNumConf=0.9, laneRatio=0.2, laneRatioValid=True)
+    carrot_navi_fusion.merge_carrot_navi_lanes(cs_sp, navi)
+    # HD blocking suppressed by the ratio gate; the 7714 availability path
+    # still blocks the unavailable right lane (additive rule, never clears).
+    self.assertTrue(cs_sp.carrotRightLineBlocked)
+    self.assertFalse(cs_sp.carrotLeftLineBlocked)
 
 
 class TestHdLaneMerge(unittest.TestCase):
@@ -387,6 +431,13 @@ class TestLaneHdPayloadCapnpSmoke(unittest.TestCase):
       "matchedLatitude": 31.0,
       "matchedLongitude": 121.0,
       "matchedHeadingDeg": 92.0,
+      "laneRatio": 0.92,
+      "laneRatioValid": True,
+      "matchedIndex": 7,
+      "matchedIndexValid": True,
+      "logoDisplayType": 3,
+      "locLaneCount": 4,
+      "locLaneTypes": [1, 1, 2, 1],
     }
     msg = schema.CarrotNaviStateSP.new_message()
     msg.laneHD = lane_hd_payload
@@ -395,11 +446,79 @@ class TestLaneHdPayloadCapnpSmoke(unittest.TestCase):
     self.assertEqual(msg.laneHD.laneCount, 4)
     self.assertTrue(msg.laneHD.leftBlocked)
     self.assertFalse(msg.laneHD.rightBlocked)
+    # tc-v61 P1 extension fields assign and round-trip.
+    self.assertAlmostEqual(msg.laneHD.laneRatio, 0.92)
+    self.assertTrue(msg.laneHD.laneRatioValid)
+    self.assertEqual(msg.laneHD.matchedIndex, 7)
+    self.assertEqual(list(msg.laneHD.locLaneTypes), [1, 1, 2, 1])
 
     # The degraded path (missing hd object) must also assign cleanly.
     msg2 = schema.CarrotNaviStateSP.new_message()
     msg2.laneHD = {"available": False}
     self.assertFalse(msg2.laneHD.available)
+
+
+class TestLaneHdParsing(unittest.TestCase):
+  """Offline parse tests for carrot_navi_cereal._lane_hd (stdlib-only module).
+
+  New tc-v61 keys are optional: an App without them must produce valid=False
+  flags, and hostile values (bool where number expected, out-of-range) must
+  never crash the publish loop.
+  """
+
+  @classmethod
+  def setUpClass(cls):
+    src = pathlib.Path(__file__).resolve().parent.parent / "carrot_navi_cereal.py"
+    spec = importlib.util.spec_from_file_location("carrot_navi_cereal_under_test", src)
+    cls.cereal_mod = importlib.util.module_from_spec(spec)
+    sys.modules["carrot_navi_cereal_under_test"] = cls.cereal_mod
+    spec.loader.exec_module(cls.cereal_mod)
+
+  def _parse(self, lane_value, present=True):
+    record = {"present": present, "value": lane_value}
+    return self.cereal_mod._lane_hd(record, lane_value)
+
+  def test_missing_hd_object_unavailable(self):
+    self.assertEqual(self._parse({"count": 3}), {"available": False})
+    self.assertEqual(self._parse({}, present=False), {"available": False})
+
+  def test_legacy_payload_keeps_valid_flags_false(self):
+    # Pre-P1 App payload: no new keys -> all new validity flags False.
+    hd = self._parse({"count": 4, "current_lane": 2, "hd": {
+      "hd": True, "lane_count": 4, "total_lane_cnt_conf": 0.9,
+      "cur_lane_idx0": 1, "cur_lane_num_conf": 0.85, "slope": 0.0}})
+    self.assertTrue(hd["available"])
+    self.assertFalse(hd["laneRatioValid"])
+    self.assertFalse(hd["matchedIndexValid"])
+    self.assertEqual(hd["locLaneCount"], 0)
+    self.assertEqual(hd["locLaneTypes"], [])
+
+  def test_full_payload_parses(self):
+    hd = self._parse({"count": 4, "current_lane": 2, "hd": {
+      "hd": True, "lane_count": 4, "total_lane_cnt_conf": 0.9,
+      "cur_lane_idx0": 1, "cur_lane_num_conf": 0.85, "slope": 0.0,
+      "lane_ratio": 0.92, "matched_index": 7, "logo_display_type": 3,
+      "loc_lane_types": [1, 1, 2, 1]}})
+    self.assertTrue(hd["laneRatioValid"])
+    self.assertAlmostEqual(hd["laneRatio"], 0.92)
+    self.assertTrue(hd["matchedIndexValid"])
+    self.assertEqual(hd["matchedIndex"], 7)
+    self.assertEqual(hd["logoDisplayType"], 3)
+    self.assertEqual(hd["locLaneTypes"], [1, 1, 2, 1])
+    self.assertEqual(hd["locLaneCount"], 4)
+
+  def test_hostile_values_do_not_crash_or_validate(self):
+    # JSON `true` is an int in Python — must NOT validate as a ratio/index.
+    hd = self._parse({"count": 4, "current_lane": 2, "hd": {
+      "hd": True, "lane_ratio": True, "matched_index": True,
+      "lane_ratio_out": None}})
+    self.assertFalse(hd["laneRatioValid"])
+    self.assertFalse(hd["matchedIndexValid"])
+    # Out-of-range ratio clamps into range but stays flagged invalid.
+    hd = self._parse({"count": 4, "current_lane": 2, "hd": {
+      "hd": True, "lane_ratio": 7.5}})
+    self.assertFalse(hd["laneRatioValid"])
+    self.assertLessEqual(hd["laneRatio"], 1.0)
 
 
 if __name__ == "__main__":

@@ -193,3 +193,102 @@ class TestCoordinationFreshnessGate(unittest.TestCase):
 
 if __name__ == "__main__":
   unittest.main()
+
+
+# tc-v61 P3: route-generation revocation — a route recalculation must end the
+# old maneuver's constraint until atcType changes or disappears. Fail-safe
+# property: a generation flip may only ever REMOVE a constraint, never add one.
+
+
+class _GenNavi(_FakeNavi):
+  def __init__(self, distances=None, generation: int = 0):
+    super().__init__(distances)
+    self.generation = generation
+
+
+class TestRouteGenerationRevocation(unittest.TestCase):
+  _DT = 0.01
+
+  def _coordinator(self):
+    coordinator, _ = _make_coordinator(enabled=True)
+    coordinator._enabled = True
+    return coordinator
+
+  def test_no_flip_keeps_constraint(self):
+    coordinator = self._coordinator()
+    navi = _GenNavi({"next": (True, 300)}, generation=7)
+    self.assertEqual(coordinator.update(navi, "fork right", self._DT), (True, False))
+    self.assertEqual(coordinator.update(navi, "atc right", self._DT), (True, False))
+
+  def test_flip_while_armed_revokes_same_direction(self):
+    coordinator = self._coordinator()
+    navi = _GenNavi({"next": (True, 300)}, generation=7)
+    self.assertEqual(coordinator.update(navi, "atc right", self._DT), (True, False))
+    # Route recalculated (generation flip): the armed direction's constraint dies.
+    navi2 = _GenNavi({"next": (True, 300)}, generation=8)
+    self.assertEqual(coordinator.update(navi2, "atc right", self._DT), (False, False))
+    # ...and stays revoked while the same direction persists.
+    self.assertEqual(coordinator.update(navi2, "atc right", self._DT), (False, False))
+
+  def test_rearmed_direction_ends_revocation(self):
+    coordinator = self._coordinator()
+    navi = _GenNavi({"next": (True, 300)}, generation=7)
+    coordinator.update(navi, "atc right", self._DT)
+    navi2 = _GenNavi({"next": (True, 300)}, generation=8)
+    self.assertEqual(coordinator.update(navi2, "atc right", self._DT), (False, False))
+    # A different (re-armed) direction ends the revocation.
+    self.assertEqual(coordinator.update(navi2, "atc left", self._DT), (False, True))
+    self.assertEqual(coordinator.update(navi2, "atc right", self._DT), (True, False))
+
+  def test_direction_disappear_clears_revocation(self):
+    coordinator = self._coordinator()
+    navi = _GenNavi({"next": (True, 300)}, generation=7)
+    coordinator.update(navi, "atc right", self._DT)
+    navi2 = _GenNavi({"next": (True, 300)}, generation=8)
+    self.assertEqual(coordinator.update(navi2, "atc right", self._DT), (False, False))
+    self.assertEqual(coordinator.update(navi2, "", self._DT), (False, False))
+    # Same direction re-armed after the guidance cleared: constraint is back.
+    self.assertEqual(coordinator.update(navi2, "atc right", self._DT), (True, False))
+
+  def test_flip_with_no_direction_does_not_revoke_future(self):
+    coordinator = self._coordinator()
+    navi = _GenNavi({"next": (True, 300)}, generation=7)
+    self.assertEqual(coordinator.update(navi, "", self._DT), (False, False))
+    navi2 = _GenNavi({"next": (True, 300)}, generation=8)
+    self.assertEqual(coordinator.update(navi2, "", self._DT), (False, False))
+    # Direction armed after a directionless flip is a fresh maneuver.
+    self.assertEqual(coordinator.update(navi2, "atc right", self._DT), (True, False))
+
+  def test_flip_never_adds_a_constraint(self):
+    coordinator = self._coordinator()
+    navi = _GenNavi({"next": (True, 300)}, generation=7)
+    self.assertEqual(coordinator.update(navi, "atc right", self._DT), (True, False))
+    # A flip can only relax, never block: assert both flags are False after it.
+    navi2 = _GenNavi({"next": (True, 300)}, generation=8)
+    blocks = coordinator.update(navi2, "atc right", self._DT)
+    self.assertEqual(blocks, (False, False))
+
+
+class TestTurnFamilyClassifier(unittest.TestCase):
+  """tc-v61 P2: consecutive-turn classification (fail-inert on unknown codes)."""
+
+  def test_unknown_codes_yield_empty(self):
+    for code in (None, "", "x", True, -1, 999999):
+      self.assertEqual(coord.navi_turn_family(code), "")
+
+  def test_is_consecutive_turns_gates(self):
+    # Distance gate: beyond the range there is nothing to prepare for.
+    self.assertFalse(coord.is_consecutive_turns(12, 13, coord.CONSECUTIVE_TURN_NEXT_RANGE_M + 1))
+    self.assertFalse(coord.is_consecutive_turns(12, 13, 0))
+    self.assertFalse(coord.is_consecutive_turns(12, 13, -5))
+
+  def test_classifier_matches_carrot_table_when_importable(self):
+    if coord.NavTypeMapper is None:
+      self.skipTest("carrot_serv not importable on this offline workstation")
+    self.assertEqual(coord.navi_turn_family(12), "turn")     # left
+    self.assertEqual(coord.navi_turn_family(13), "turn")     # right
+    self.assertEqual(coord.navi_turn_family(131), "rotary")
+    # forks / off-ramps belong to the exit advisory, not the turn family
+    self.assertEqual(coord.navi_turn_family(7), "")
+    self.assertEqual(coord.navi_turn_family(1006), "")
+    self.assertTrue(coord.is_consecutive_turns(12, 13, coord.CONSECUTIVE_TURN_NEXT_RANGE_M))

@@ -407,6 +407,30 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
   },
+
+  # tc-v61 P1/P2 advisories, all one-shot and gated by CarrotNavLaneCoordination
+  # (same C2 gate as navExitAhead): display-only, they never block or disable.
+  EventNameSP.navLaneDowngrade: {
+    ET.WARNING: Alert(
+      "Carrot：高精定位降级",
+      "车道级信息精度下降，约束已暂停",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
+  EventNameSP.navConsecutiveTurns: {
+    ET.WARNING: Alert(
+      "Carrot：前方连续转弯",
+      "请提前减速，按导航预留车道",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
+  EventNameSP.navArrivalSoon: {
+    ET.WARNING: Alert(
+      "Carrot：即将到达目的地",
+      "请留意导航终点提示",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
 }
 
 EVENTS_SP.update(EVENTS_SP_ZP)

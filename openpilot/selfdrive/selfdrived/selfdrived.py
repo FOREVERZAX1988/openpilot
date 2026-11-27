@@ -51,8 +51,10 @@ from openpilot.sunnypilot.carrot.radar_motion.cutin_alert import (
   promoted_cutin_candidates,
 )
 from openpilot.sunnypilot.carrot.carrot_navi_coordination import (
+  ARRIVAL_ADVISE_RANGE_M,
   EXIT_CONSTRAINT_RANGE_M,
   CarrotNaviLaneCoordinator,
+  is_consecutive_turns,
   normalize_atc_direction,
 )
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitChangedAlertTracker
@@ -281,6 +283,13 @@ class SelfdriveD:
     # guidance direction clears so a re-approach re-announces. The enable
     # flag is refreshed by the params thread (safety review C2).
     self._nav_exit_alerted = False
+    # tc-v61 P1/P2 one-shot advisory bookkeeping (all inert unless the
+    # CarrotNavLaneCoordination param gate below is on):
+    self._nav_route_generation = None   # carrotNaviSP.generation; a flip re-arms all advisories
+    self._nav_turns_alerted = False     # navConsecutiveTurns fired for the current turn pair
+    self._nav_arrival_alerted = False   # navArrivalSoon fired for the current route
+    self._nav_hd_prev = False           # last seen probe workMode (HD flag)
+    self._nav_downgrade_alerted = False # navLaneDowngrade fired for the current HD spell
     self.nav_lane_coordination_enabled = False
     self.events_sp_prev = []
 
@@ -496,6 +505,64 @@ class SelfdriveD:
           self.events_sp.add(custom.OnroadEventSP.EventName.navExitAhead)
       elif not nav_direction:
         self._nav_exit_alerted = False
+
+      # tc-v61 P1/P2 advisories (display-only, one-shot each). A route
+      # generation flip (probe OnMainRouteChanged / OnRouteDeleted) means the
+      # old task is dead: re-arm every navigation advisory for the new route.
+      nav_generation = int(getattr(carrot_navi_msg, 'generation', 0) or 0)
+      if self._nav_route_generation is None or nav_generation != self._nav_route_generation:
+        self._nav_route_generation = nav_generation
+        self._nav_exit_alerted = False
+        self._nav_turns_alerted = False
+        self._nav_arrival_alerted = False
+        self._nav_downgrade_alerted = False
+
+      if carrot_navi_msg is not None:
+        # 连续转弯提前准备: active AND next maneuver are turns/rotaries with the
+        # next one close. Unknown turn codes keep the advisory off (fail-inert).
+        guidance_cur = getattr(carrot_navi_msg, 'guidanceCurrent', None)
+        guidance_nxt = getattr(carrot_navi_msg, 'guidanceNext', None)
+        cur_present = bool(getattr(getattr(guidance_cur, 'meta', None), 'present', False))
+        nxt_present = bool(getattr(getattr(guidance_nxt, 'meta', None), 'present', False))
+        consecutive = cur_present and nxt_present and is_consecutive_turns(
+          int(getattr(guidance_cur, 'turnType', -1) or -1),
+          int(getattr(guidance_nxt, 'turnType', -1) or -1),
+          int(getattr(guidance_nxt, 'distanceM', 0) or 0))
+        if consecutive:
+          if not self._nav_turns_alerted:
+            self._nav_turns_alerted = True
+            self.events_sp.add(custom.OnroadEventSP.EventName.navConsecutiveTurns)
+        elif not nxt_present:
+          self._nav_turns_alerted = False
+
+        # 终点附近到达辅助: remaining route distance first enters the arrival
+        # window while guidance is active. Reminder only — no auto slowdown.
+        route = getattr(carrot_navi_msg, 'route', None)
+        route_present = bool(getattr(getattr(route, 'meta', None), 'present', False))
+        remaining_m = int(getattr(route, 'remainingDistanceM', 0) or 0)
+        guidance_active = bool(getattr(getattr(carrot_navi_msg, 'navigationStatus', None), 'guidanceActive', False))
+        if guidance_active and route_present and 0 < remaining_m <= ARRIVAL_ADVISE_RANGE_M:
+          if not self._nav_arrival_alerted:
+            self._nav_arrival_alerted = True
+            self.events_sp.add(custom.OnroadEventSP.EventName.navArrivalSoon)
+        elif not guidance_active:
+          self._nav_arrival_alerted = False
+
+        # 定位差时自动降级 (P1): the probe's workMode flipped HD→SD. One-shot
+        # per HD spell; recovers silently when HD comes back.
+        lane_hd = getattr(carrot_navi_msg, 'laneHD', None)
+        hd_available = bool(getattr(lane_hd, 'available', False)) if lane_hd is not None else False
+        hd_now = bool(getattr(lane_hd, 'hd', False)) if hd_available else False
+        if hd_available:
+          if self._nav_hd_prev and not hd_now and not self._nav_downgrade_alerted:
+            self._nav_downgrade_alerted = True
+            self.events_sp.add(custom.OnroadEventSP.EventName.navLaneDowngrade)
+          elif hd_now:
+            self._nav_downgrade_alerted = False
+          self._nav_hd_prev = hd_now
+        else:
+          self._nav_hd_prev = False
+          self._nav_downgrade_alerted = False
 
     # Handle lane change
     if self.sm['modelV2'].meta.laneChangeState == LaneChangeState.preLaneChange:
