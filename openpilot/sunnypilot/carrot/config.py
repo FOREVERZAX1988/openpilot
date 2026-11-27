@@ -262,7 +262,9 @@ _DEFAULT_NAV_PARAMS: dict[str, Any] = {
   "CarrotStoppingLeadEnabled": 0,            # require range evidence before a stopped lead counts as departing (plannerd)
   "CarrotTrafficLightFusionEnabled": 0,      # fuse carrot / Amap / vision traffic lights (longitudinal_planner)
   "CarrotTrafficStopProfileEnabled": 0,      # jerk-limited stop envelope for traffic-light stop&go (longitudinal_planner)
-  "LeadBrakeLights": 0,                      # display/log a lead brake-lamp candidate (lead_brake_lights; display only)
+  # LeadBrakeLights is deliberately NOT listed here: this fork keeps the SignalAssist
+  # family out of the settings catalog (set it via params only). It stays registered in
+  # params_keys.h, so lead_brake_lights.py reads it normally with its own default.
 }
 
 

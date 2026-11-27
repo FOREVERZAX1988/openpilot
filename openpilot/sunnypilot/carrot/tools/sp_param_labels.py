@@ -261,7 +261,9 @@ PARAM_LABELS: dict[str, tuple[str, str, str, str]] = {
   "CarrotRecoveryEnabled": ("Recovery terminal", "Serve the standalone recovery web terminal (port 6999) when the main web stack is broken.", "恢复终端", "主 Web 服务异常时提供独立的恢复终端（端口 6999）。"),
   "CarrotTrafficLightFusionEnabled": ("Traffic light fusion", "Fuse carrot, Amap and vision traffic-light detections. Off by default.", "红绿灯融合", "融合 Carrot、高德与视觉的红绿灯检测结果。默认关闭。"),
   "CarrotTrafficStopProfileEnabled": ("Traffic stop profile", "Closed-form jerk-limited stop envelope for traffic-light stop & go. Off by default.", "红绿灯停车包络", "红绿灯停走场景使用封闭式、加加速度受限的停车包络。默认关闭。"),
-  "LeadBrakeLights": ("Lead brake lights", "Display and log a lead brake-lamp candidate. Display only, never a control input (needs signal mode > 0).", "前车刹车灯", "显示并记录前车刹车灯候选信号。仅显示与记录，绝不作为控制输入（需信号模式 > 0）。"),
+  # "LeadBrakeLights" label intentionally omitted: this fork keeps the SignalAssist
+  # experiment family out of the settings catalog (params-only). See
+  # test_lead_brake_lights.TestRegistration.test_parameter_defaults_off_and_is_registered.
   "ChevronInfo": ("Chevron info", "What the lead-car chevron shows (distance/time/speed).", "车距信息", "前车箭头（chevron）显示的内容。"),
   "DevUIInfo": ("Developer UI info", "Show developer info overlays onroad.", "开发者信息", "行车界面显示开发者信息。"),
   "E2EAlertsWhenEngaged": ("Alerts while engaged", "Play the green light and lead depart alerts even while cruise is engaged at a standstill.", "接管时也提醒", "巡航接管停住时也响绿灯/前车起步提醒。"),

@@ -391,6 +391,11 @@ def build_dev_items():
                                    'a plan source, and its follow time, comfort braking and stop point ' +
                                    'reach the MPC. Default on: the vision traffic-light stop&go chain ' +
                                    'lives inside this switch and works without a connected phone.')),
+    option_item_sp(title=tr('Carrot Source Timeout'), param='CarrotSourceTimeoutMs', min_value=500, max_value=5000,
+                   value_change_step=100, use_registered_default=True,
+                   description=tr("How old a phone packet may be before the carrot source counts as gone; "
+                                   "past this the source goes inactive instead of holding its last request. "
+                                   "Only read while Carrot Longitudinal Source is on.")),
     toggle_item_sp(title=tr('Lead Preview'), param='CarrotLeadPreviewEnabled',
                    description=tr("Ease off from the lead vehicle's own deceleration, before the gap "
                                    "starts closing. Read once when plannerd starts - restart to apply.")),

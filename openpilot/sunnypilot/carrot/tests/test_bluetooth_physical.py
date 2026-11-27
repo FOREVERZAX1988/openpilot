@@ -35,6 +35,26 @@ def lease(stamp, mode=1, direction='left', override=True, fingerprint=FINGERPRIN
           'fingerprint': fingerprint}
 
 
+class _DictParams:
+  """Test-local params.
+
+  HoldReader throttles its AutoBlinkerControl read by 0.2 s, and the real (or
+  stub) Params is process/instance-shared: under the parallel test runner two
+  workers touching the same key made test_feature_off and test_feature_on
+  swap results. A per-test dict removes both the sharing and the ordering
+  dependency.
+  """
+
+  def __init__(self):
+    self._v = {}
+
+  def put_int(self, key, value):
+    self._v[key] = int(value)
+
+  def get_int(self, key, default=None):
+    return self._v.get(key, 0 if default is None else int(default))
+
+
 class TestLeaseValue(unittest.TestCase):
   def test_fresh_lease_maps_direction(self):
     self.assertEqual(lease_value(lease(stamp=10.0), 10.1), 2)  # left hold
@@ -66,7 +86,7 @@ class TestHoldReader(unittest.TestCase):
   def setUp(self):
     self.tmp = tempfile.TemporaryDirectory()
     self.path = Path(self.tmp.name) / 'physical-hold.json'
-    self.params = Params()
+    self.params = _DictParams()
 
   def tearDown(self):
     self.tmp.cleanup()

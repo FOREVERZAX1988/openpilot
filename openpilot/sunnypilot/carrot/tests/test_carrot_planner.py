@@ -24,6 +24,7 @@ from openpilot.common.test import OpenpilotTestCase
 
 from openpilot.sunnypilot.carrot.carrot_functions import (
   CarrotPlanner, TrafficState, XState,
+  _TRAFFIC_GREEN_CONFIRM_FRAMES, _TRAFFIC_RED_CONFIRM_FRAMES,
 )
 from openpilot.sunnypilot.carrot.config import UnifiedParams
 
@@ -57,14 +58,17 @@ class TestTrafficStateEnum(OpenpilotTestCase):
 
 
 class TestMultiFrameConfirmation(OpenpilotTestCase):
-  def test_red_requires_confirmation(self) -> None:
+  def test_red_confirms_after_its_configured_frames(self) -> None:
+    """Red confirms once _TRAFFIC_RED_CONFIRM_FRAMES of stop evidence is seen.
+
+    The threshold is 1 (aligned with cp), so the first stop frame flips it; the
+    old test pinned 5 and broke when the threshold changed.
+    """
     planner = _make_planner()
-    # A single stop frame must NOT flip the state.
-    _check_stopping(planner, stop=True)
-    assert planner._traffic_state == TrafficState.off
-    # Five sustained frames confirm red.
-    for _ in range(4):
+    for _ in range(_TRAFFIC_RED_CONFIRM_FRAMES - 1):
       _check_stopping(planner, stop=True)
+    assert planner._traffic_state == TrafficState.off
+    _check_stopping(planner, stop=True)
     assert planner._traffic_state == TrafficState.red
 
   def test_red_expires_when_lost(self) -> None:
@@ -82,7 +86,7 @@ class TestMultiFrameConfirmation(OpenpilotTestCase):
     # Build a green frame: fast end-of-path velocity => start_sign True.
     v_model = np.array([4.0] * 33, dtype=float)
     v_model[-1] = 8.0
-    for _ in range(7):  # one short of the 8-frame green threshold
+    for _ in range(_TRAFFIC_GREEN_CONFIRM_FRAMES - 1):  # one short of the threshold
       planner._check_model_stopping(0.0, v_model, 10.0, 0.0, 300.0, v_model, 50.0)
     assert planner._traffic_state == TrafficState.off
     planner._check_model_stopping(0.0, v_model, 10.0, 0.0, 300.0, v_model, 50.0)

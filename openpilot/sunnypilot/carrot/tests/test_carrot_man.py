@@ -1975,11 +1975,23 @@ class TestCarrotParamAlignment(unittest.TestCase):
                        f"{param} default mismatch")
 
   def test_unified_params_get_returns_default(self):
+    """UnifiedParams is a process-wide singleton.
+
+    An earlier test in the suite creates it with the real nav_params.json, so a
+    fresh ``UnifiedParams(...)`` here silently returns that instance and whatever
+    that file holds (a live box had 9999 in it). Reset the singleton for the
+    duration of this test so the assertion really exercises the default path.
+    """
     from openpilot.sunnypilot.carrot.config import UnifiedParams
-    params = UnifiedParams(nav_json_file="/tmp/nonexistent_carrot_nav_params.json")
-    for param, (default, _) in self._P1_PARAMS.items():
-      self.assertEqual(params.get(param, default), default,
-                       f"UnifiedParams.get({param}) should return default")
+    saved = (UnifiedParams._instance, UnifiedParams._initialized)
+    UnifiedParams._instance, UnifiedParams._initialized = None, False
+    try:
+      params = UnifiedParams(nav_json_file="/tmp/nonexistent_carrot_nav_params.json")
+      for param, (default, _) in self._P1_PARAMS.items():
+        self.assertEqual(params.get(param, default), default,
+                         f"UnifiedParams.get({param}) should return default")
+    finally:
+      UnifiedParams._instance, UnifiedParams._initialized = saved
 
   def test_imported_params_present_in_defaults(self):
     from openpilot.sunnypilot.carrot.config import _DEFAULT_NAV_PARAMS
