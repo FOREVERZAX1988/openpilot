@@ -9904,3 +9904,33 @@ msgstr "度"
 #: events i18n migration
 msgid "°C"
 msgstr "摄氏度"
+# events i18n: 由 openpilot/selfdrive/ui/translations/events_i18n.py 维护
+
+#: events i18n migration
+msgid "Carrot: Arriving Soon"
+msgstr "Carrot：即将到达目的地"
+
+
+#: events i18n migration
+msgid "Carrot: Consecutive Turns Ahead"
+msgstr "Carrot：前方连续转弯"
+
+
+#: events i18n migration
+msgid "Carrot: HD Positioning Downgraded"
+msgstr "Carrot：高精定位降级"
+
+
+#: events i18n migration
+msgid "Lane-level accuracy reduced, constraints paused"
+msgstr "车道级信息精度下降，约束已暂停"
+
+
+#: events i18n migration
+msgid "Slow down early and follow the navigation lane"
+msgstr "请提前减速，按导航预留车道"
+
+
+#: events i18n migration
+msgid "Watch for the navigation destination"
+msgstr "请留意导航终点提示"

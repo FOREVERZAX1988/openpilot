@@ -87,6 +87,12 @@ class CarrotNaviLaneCoordinator:
     # and the constraint goes inert until fresh data resumes.
     self._last_publish_ns = 0
     self._last_publish_mono = 0.0
+    # tc-v61 P3: route-generation revocation. A route recalculation (probe
+    # OnMainRouteChanged / OnRouteDeleted, surfaced as carrotNaviSP.generation)
+    # ends the old maneuver task: the direction armed at the flip is suppressed
+    # until atcType changes (a new maneuver is armed) or disappears.
+    self._last_generation = None
+    self._revoked_direction = ""
 
   def _read_param(self) -> bool:
     if self._params is None:
@@ -120,8 +126,24 @@ class CarrotNaviLaneCoordinator:
       return False, False
 
     direction = normalize_atc_direction(atc_type)
+
+    # P3 route-generation revocation: track the publisher's route generation.
+    # A flip while a direction is armed revokes that direction's constraint
+    # (route changed → old task dead) until atcType changes or disappears. This
+    # is fail-safe: revoking only ever *removes* a constraint, it never adds one.
+    generation = int(getattr(carrot_navi, "generation", 0) or 0) if carrot_navi is not None else 0
+    if self._last_generation is None:
+      self._last_generation = generation
+    elif generation != self._last_generation:
+      self._last_generation = generation
+      self._revoked_direction = direction
     if not direction:
+      self._revoked_direction = ""
       return False, False
+    if self._revoked_direction:
+      if direction == self._revoked_direction:
+        return False, False
+      self._revoked_direction = ""  # a different (re-armed) direction ends the revocation
 
     # C3 freshness gate: a stalled carrotNaviSP publisher must not keep
     # feeding lane-change constraints after its stream died mid-route.
@@ -159,3 +181,65 @@ class CarrotNaviLaneCoordinator:
       if distance_m > 0:
         distances.append(distance_m)
     return min(distances) if distances else None
+
+
+# ----------------------------------------------------------------------------------
+# tc-v61 P2/P3 extensions: route-generation revocation, consecutive-turn and
+# arrival advisories. All display/advisory-only or constraint-revoking; nothing
+# here initiates a lane change (that stays P4 behind a dedicated safety review).
+# ----------------------------------------------------------------------------------
+
+# Consecutive-turn advisory ("连续转弯提前准备"): both the active and the next
+# maneuver are turns/rotaries and the next one is within this range, so the
+# driver should prepare early instead of reacting to each turn separately.
+CONSECUTIVE_TURN_NEXT_RANGE_M = 400
+
+# Arrival advisory ("终点附近到达辅助"): one-shot reminder when the remaining
+# route distance first enters this window. Reminder only — no auto slowdown.
+ARRIVAL_ADVISE_RANGE_M = 500
+
+# Turn-family maneuver kinds from the carrot turn-code table
+# (carrot_serv.NAV_TYPE_MAPPING). Forks / off-ramps are covered by the
+# navExitAhead exit-convergence advisory and deliberately excluded here.
+TURN_FAMILY = frozenset(("turn", "rotary"))
+
+# The carrot turn-code table lives in carrot_serv (NAV_TYPE_MAPPING). The
+# import is guarded so this module stays offline-executable (Windows test
+# workstation): without it every code classifies as unknown and the advisory
+# is fail-inert instead of wrong.
+try:
+  from openpilot.sunnypilot.carrot.carrot_serv import NavTypeMapper
+except Exception:  # pragma: no cover - offline test workstation only
+  NavTypeMapper = None
+
+
+def navi_turn_family(turn_type: int) -> str:
+  """Maneuver kind for a guidance ``turnType`` code ("" when unknown/invalid).
+
+  Forks / off-ramps are excluded (they belong to the navExitAhead advisory);
+  unknown codes yield "" so callers degrade to inert, never to wrong.
+  """
+  if not isinstance(turn_type, (int, float)) or isinstance(turn_type, bool):
+    return ""
+  if NavTypeMapper is None:
+    return ""
+  try:
+    maneuver, _modifier, _xturn = NavTypeMapper.resolve(int(turn_type))
+  except Exception:
+    return ""
+  return maneuver if maneuver in TURN_FAMILY else ""
+
+
+def is_consecutive_turns(current_turn_type: int, next_turn_type: int,
+                         next_distance_m: int) -> bool:
+  """True when the active AND the upcoming maneuver are both turns/rotaries
+  and the upcoming one is close enough to warrant early preparation.
+
+  Pure function: unknown turn codes (custom App, future probe semantics)
+  yield False, so the advisory simply stays off instead of misfiring.
+  """
+  if not navi_turn_family(current_turn_type):
+    return False
+  if not navi_turn_family(next_turn_type):
+    return False
+  return 0 < int(next_distance_m) <= CONSECUTIVE_TURN_NEXT_RANGE_M

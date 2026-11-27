@@ -21,6 +21,13 @@ HD_LANE_MAX_AGE_S = 2.0
 # Below this confidence the probe's own positioning may be on the wrong lane;
 # both confidences must clear the bar before the HD state drives anything.
 HD_LANE_MIN_CONF = 0.5
+# tc-v61 P1 secondary gate: the probe's mRatio (match-confidence ratio) can be
+# low even when both confidences pass (e.g. ambiguous lane topology). When the
+# App sends lane_ratio and it is below this bar the HD state degrades to the
+# plain lane-availability path (advisory-only); a ratio of exactly the bar or
+# above keeps full HD blocking. Absent ratio (laneRatioValid False) is the
+# pre-P1 App behavior and skips this gate entirely.
+HD_LANE_MIN_RATIO = 0.5
 
 # Arrow codes used by the App's 7706 `navLaneGuide` array (App field list §2.2).
 # Only the left/right family matters for lane blocking: a guide that steers you
@@ -139,12 +146,15 @@ def hd_lane_state(carrot_navi) -> dict:
 
   Freshness: the lane_current item's received time must be within
   ``HD_LANE_MAX_AGE_S`` of the publish heartbeat, so a stalled app item cannot
-  keep feeding HD claims after its stream died mid-route.
+  keep feeding HD claims after its stream died mid-route. A present-but-low
+  ``laneRatio`` (< HD_LANE_MIN_RATIO) additionally downgrades the state to the
+  plain availability path; ``ratioGated`` reports that outcome.
   """
   out = {
     "usable": False, "hd": False, "laneCount": 0, "curLaneIdx0": -1,
     "curLaneNumConf": 0.0, "totalLaneCntConf": 0.0, "slope": 0.0,
     "leftBlocked": False, "rightBlocked": False,
+    "laneRatio": 0.0, "laneRatioValid": False, "ratioGated": False,
   }
   if carrot_navi is None:
     return out
@@ -171,6 +181,16 @@ def hd_lane_state(carrot_navi) -> dict:
   if lane_count <= 0 or cur_idx < 0 or cur_idx >= lane_count:
     return out
   if cur_conf < HD_LANE_MIN_CONF or total_conf < HD_LANE_MIN_CONF:
+    return out
+
+  ratio = float(getattr(lane_hd, "laneRatio", 0.0) or 0.0)
+  ratio_valid = bool(getattr(lane_hd, "laneRatioValid", False))
+  out["laneRatio"] = ratio
+  out["laneRatioValid"] = ratio_valid
+  # P1 secondary gate: a present-but-low ratio downgrades the HD state to the
+  # plain availability path (advisory-only). Missing ratio never gates.
+  if ratio_valid and ratio < HD_LANE_MIN_RATIO:
+    out["ratioGated"] = True
     return out
 
   out.update({

@@ -610,6 +610,14 @@ struct OnroadEventSP @0xda96579883444c35 {
     # guided exit/fork maneuver first enters the convergence window (800 m)
     # @39：上游原本写 @38，与本 fork 的 macanAutoResume 撞号，顺延一位。
     navExitAhead @39;
+
+    # carrot navigation lane fusion (Tencent probe) advisories, all one-shot
+    # and gated by CarrotNavLaneCoordination like navExitAhead.
+    # Upstream assigned @39/@40/@41; shifted by one here because navExitAhead
+    # already occupies @39 (macanAutoResume took @38 in this fork).
+    navLaneDowngrade @40;      # HD lane match degraded to SD / lost (probe workMode flip)
+    navConsecutiveTurns @41;   # consecutive turn maneuvers close together ahead
+    navArrivalSoon @42;        # remaining route distance entered the arrival window
   }
 }
 
@@ -1265,6 +1273,16 @@ struct CarrotNaviStateSP @0xbd443b539493bc68 {
     matchedLatitude @11 :Float64;
     matchedLongitude @12 :Float64;
     matchedHeadingDeg @13 :Float32;
+    # --- tc-v61 probe extensions (P1). All optional: an App that does not send
+    # the key leaves the *Valid flag False, and every consumer must treat a
+    # False validity as "absent", never as a zero value.
+    laneRatio @14 :Float32;         # probe mRatio: match-confidence ratio (0..1)
+    laneRatioValid @15 :Bool;       # App sent a numeric lane_ratio in range
+    matchedIndex @16 :Int32;        # probe mLaneMatchedIndex (lanePointIndex)
+    matchedIndexValid @17 :Bool;    # App sent matched_index
+    logoDisplayType @18 :Int32;     # probe mLogoDisplayTypeForLane (-1 unknown)
+    locLaneCount @19 :Int16;        # entries in locLaneTypes (0 when absent)
+    locLaneTypes @20 :List(Int16);  # per-lane type codes from probe mLocLane
   }
 }
 

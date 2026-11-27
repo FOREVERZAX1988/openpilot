@@ -416,6 +416,30 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
   },
+
+  # tc-v61 P1/P2 advisories, all one-shot and gated by CarrotNavLaneCoordination
+  # (same C2 gate as navExitAhead): display-only, they never block or disable.
+  EventNameSP.navLaneDowngrade: {
+    ET.WARNING: Alert(
+      'Carrot: HD Positioning Downgraded',
+      'Lane-level accuracy reduced, constraints paused',
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
+  EventNameSP.navConsecutiveTurns: {
+    ET.WARNING: Alert(
+      'Carrot: Consecutive Turns Ahead',
+      'Slow down early and follow the navigation lane',
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
+  EventNameSP.navArrivalSoon: {
+    ET.WARNING: Alert(
+      'Carrot: Arriving Soon',
+      'Watch for the navigation destination',
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.2),
+  },
 }
 
 EVENTS_SP.update(EVENTS_SP_ZP)

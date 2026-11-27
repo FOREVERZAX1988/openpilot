@@ -153,7 +153,9 @@ def _lane_hd(record: dict[str, Any], value: Any) -> dict[str, Any]:
         "hd": true, "lane_count": 4, "total_lane_cnt_conf": 0.9,
         "cur_lane_idx0": 1, "cur_lane_num_conf": 0.85, "slope": 0.0,
         "left_blocked": false, "right_blocked": false,
-        "free_pos_lane_num": 0, "matched_pos": {"lat": .., "lon": .., "heading": ..}}}
+        "free_pos_lane_num": 0, "matched_pos": {"lat": .., "lon": .., "heading": ..},
+        "lane_ratio": 0.92, "matched_index": 7, "logo_display_type": 3,
+        "loc_lane_types": [1, 1, 2, 1]}}
 
   Missing or malformed ``hd`` yields ``available: False`` so the fusion layer
   falls back to the 7714 ``available`` array path. Field semantics follow the
@@ -174,6 +176,20 @@ def _lane_hd(record: dict[str, Any], value: Any) -> dict[str, Any]:
 
   matched_pos = _dict(hd.get("matched_pos"))
   matched_valid = matched_pos.get("lat") is not None and matched_pos.get("lon") is not None
+
+  # tc-v61 probe extensions (P1). Each optional field carries its own validity
+  # flag so an App without the key degrades cleanly: the fusion layer treats a
+  # False validity as "absent", never as a zero value.
+  raw_ratio = hd.get("lane_ratio")
+  ratio = _finite(raw_ratio, default=0.0, minimum=0.0, maximum=1.0)
+  ratio_valid = isinstance(raw_ratio, (int, float)) and not isinstance(raw_ratio, bool) \
+    and math.isfinite(float(raw_ratio)) and 0.0 <= float(raw_ratio) <= 1.0
+  raw_matched_index = hd.get("matched_index")
+  matched_index = _integer(raw_matched_index, default=-1, minimum=-1, maximum=1_000_000)
+  matched_index_valid = isinstance(raw_matched_index, (int, float)) and not isinstance(raw_matched_index, bool)
+  raw_logo = hd.get("logo_display_type")
+  logo_display_type = _integer(raw_logo, default=-1, minimum=-1, maximum=100_000)
+  loc_lane_types = _int16_list(hd.get("loc_lane_types"))
   return {
     "available": True,
     "hd": bool(hd.get("hd", True)),
@@ -189,6 +205,13 @@ def _lane_hd(record: dict[str, Any], value: Any) -> dict[str, Any]:
     "matchedLatitude": _finite(matched_pos.get("lat"), minimum=-90.0, maximum=90.0),
     "matchedLongitude": _finite(matched_pos.get("lon"), minimum=-180.0, maximum=180.0),
     "matchedHeadingDeg": _finite(matched_pos.get("heading"), minimum=0.0, maximum=360.0),
+    "laneRatio": ratio,
+    "laneRatioValid": ratio_valid,
+    "matchedIndex": matched_index,
+    "matchedIndexValid": matched_index_valid,
+    "logoDisplayType": logo_display_type,
+    "locLaneCount": len(loc_lane_types),
+    "locLaneTypes": loc_lane_types,
   }
 
 
