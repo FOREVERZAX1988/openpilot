@@ -550,6 +550,13 @@ struct OnroadEventSP @0xda96579883444c35 {
   }
 
   enum EventName {
+    # Fork-only event ordinals: @1000 and above are reserved for this fork.
+    # Upstream allocates from @0 upward (currently ~@42); keeping all local
+    # additions in the high range means an upstream bump can never collide with
+    # a Macan/local event, so no more last-minute renumbering of released
+    # ordinals (which would misdecode those events in previously recorded
+    # routes). Existing low-numbered local events are grandfathered in place;
+    # every NEW fork-only event must take @1000+.
     lkasEnable @0;
     lkasDisable @1;
     manualSteeringRequired @2;
