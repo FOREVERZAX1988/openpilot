@@ -89,6 +89,14 @@ def manager_init() -> None:
 
   if params.get_bool("AlwaysOnDMLock"):
     params.put_bool("AlwaysOnDM", True, block=True)
+  # First install (param never written): default always-on DM on so the
+  # onboarding training guide's driver-monitoring calibration sees a live
+  # monitor and the device starts monitored from day one. Units without a
+  # driver camera flip DisableDM during boot (dmonitoringmodeld cabin-stream
+  # timeout), which stops both DM processes and disables monitoring anyway.
+  # Never overrides a user's own off choice: once the param exists we leave it.
+  if params.get("AlwaysOnDM") is None and not params.get_bool("DisableDM"):
+    params.put_bool("AlwaysOnDM", True, block=True)
   if COMMA_HARDWARE:
     headless_override = os.getenv("OPENPILOT_HEADLESS", "").strip().lower()
     if headless_override in ("1", "true", "yes"):

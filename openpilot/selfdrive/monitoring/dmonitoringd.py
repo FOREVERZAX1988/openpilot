@@ -167,13 +167,14 @@ def dmonitoringd_thread():
       # not reset, so leaving the hold resumes exactly where it stopped.
       pm.send('driverMonitoringState', soft_hold_state_packet(DM, valid=valid))
       continue
-    # the always-on toggle only controls event handling inside the policy, it must
-    # never gate run_step: otherwise faceDetected stays frozen at False whenever
-    # AlwaysOnDM is unset or off (breaks the onboarding driver monitoring check)
+    # Demo mode (driver view preview / onboarding DM calibration) must run the
+    # monitor even when AlwaysOnDM is off: faceDetected only updates inside
+    # run_step(), so gating it out here left the training guide's DM
+    # calibration step waiting on a face flag that could never change.
     if demo_mode and sm.valid['driverStateV2']:
       DM.run_step(sm, demo=True)
       DM.set_distract_level_params()
-    elif valid:
+    elif (DM.always_on or demo_mode) and valid:
       DM.run_step(sm, demo=demo_mode)
       DM.set_distract_level_params()
 

@@ -123,24 +123,85 @@ def manual_update_loop(params: Params, updater: "Updater") -> None:
     except Exception:
       cloudlog.exception("uncaught updated exception while setting params, shouldn't happen")
 
-def run(cmd: list[str], cwd: str | None = None) -> str:
-  return subprocess.check_output(cmd, cwd=cwd, stderr=subprocess.STDOUT, encoding='utf8')
+def run(cmd: list[str], cwd: str | None = None, timeout: float | None = None) -> str:
+  return subprocess.check_output(cmd, cwd=cwd, stderr=subprocess.STDOUT, encoding='utf8', timeout=timeout)
 
 
 def _git_repo_paths(basedir: str) -> list[str]:
-  """The main repo plus every initialized submodule worktree (recursive)."""
+  """The main repo plus every submodule worktree (recursive if possible).
+
+  A broken submodule - a vendored directory from a packaged branch, a
+  half-finished clone - makes `git submodule status --recursive` fail
+  outright, which would silently skip cleanup for every submodule. Fall
+  back to the .gitmodules registry so those paths still get cleaned.
+  """
   repos = [basedir]
   try:
     out = run(["git", "submodule", "status", "--recursive"], basedir)
+    paths = [line.strip().split()[1] for line in out.splitlines()
+             if len(line.strip().split()) >= 2]
   except subprocess.CalledProcessError:
-    return repos  # stripped tree or not a repo; nothing more to list
-  for line in out.splitlines():
-    parts = line.strip().split()
-    if len(parts) >= 2:
-      path = os.path.join(basedir, parts[1])
-      if os.path.isdir(path):
-        repos.append(path)
+    try:
+      paths = _submodule_paths(basedir)
+    except Exception:
+      paths = []  # stripped tree or not a repo; nothing more to list
+  for path in paths:
+    path_ = os.path.join(basedir, path)
+    if os.path.isdir(path_):
+      repos.append(path_)
   return repos
+
+
+# git state files/dirs an interrupted operation leaves behind; none of them
+# can be cleared by `git reset --hard`.
+_GIT_STATE_MARKERS = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD",
+                      "rebase-merge", "rebase-apply", "BISECT_LOG")
+
+
+def _rmtree_readonly(path: str) -> None:
+  """rmtree that tolerates git's read-only object files (and Windows)."""
+  def _onerror(func, p, _exc):
+    try:
+      os.chmod(p, 0o700)
+      func(p)
+    except OSError:
+      pass
+  shutil.rmtree(path, onerror=_onerror)
+
+
+def _clear_in_progress_git_state(repo: str) -> None:
+  """Abort half-finished git operations a killed deploy or power loss left.
+
+  A tree mid-rebase/mid-merge makes `git reset --hard` insufficient: the
+  state markers survive and every later git command keeps failing, which
+  bricked the update path until now. Aborts are best-effort; the marker
+  sweep catches the states whose abort command itself is broken.
+  """
+  try:
+    git_dir = run(["git", "rev-parse", "--absolute-git-dir"], repo).strip()
+  except subprocess.CalledProcessError:
+    return
+
+  # A stale index.lock from a killed git blocks everything below.
+  lock = Path(git_dir) / "index.lock"
+  if lock.exists():
+    cloudlog.warning(f"removing stale index.lock in {repo}")
+    lock.unlink(missing_ok=True)
+
+  for cmd in (["git", "rebase", "--abort"], ["git", "merge", "--abort"],
+              ["git", "cherry-pick", "--abort"], ["git", "am", "--abort"]):
+    try:
+      run(cmd, repo)
+      cloudlog.info(f"aborted in-progress git state in {repo}: {' '.join(cmd)}")
+    except subprocess.CalledProcessError:
+      pass  # nothing in progress, or the abort itself is broken - swept below
+
+  for marker in _GIT_STATE_MARKERS:
+    p = Path(git_dir) / marker
+    if p.is_dir():
+      _rmtree_readonly(str(p))
+    elif p.exists():
+      p.unlink(missing_ok=True)
 
 
 def cleanup_device_tree(basedir: str = BASEDIR) -> None:
@@ -163,14 +224,26 @@ def cleanup_device_tree(basedir: str = BASEDIR) -> None:
       dirty = run(["git", "status", "--porcelain"], repo)
     except subprocess.CalledProcessError:
       continue  # not a git repo (stripped layout); nothing to clean
+    # Stale locks and in-progress markers are invisible to status
+    # --porcelain; sweep them even on a clean tree or the next fetch
+    # inherits them (observed: a stale .git/modules/<sub>/index.lock from
+    # a crashed run failed every later `submodule foreach` forever).
+    _clear_in_progress_git_state(repo)
     if not dirty.strip():
       continue
     cloudlog.info(f"cleaning local changes in {repo}: {len(dirty.splitlines())} entries")
     try:
       run(["git", "reset", "--hard"], repo)
       run(["git", "clean", "-fd"], repo)
-    except subprocess.CalledProcessError as e:
-      cloudlog.exception(f"cleanup failed in {repo}: {e.output}")
+    except subprocess.CalledProcessError:
+      # A corrupt in-progress state can still block the reset; sweep the
+      # markers directly and retry once before giving up.
+      _clear_in_progress_git_state(repo)
+      try:
+        run(["git", "reset", "--hard"], repo)
+        run(["git", "clean", "-fd"], repo)
+      except subprocess.CalledProcessError as e:
+        cloudlog.exception(f"cleanup failed in {repo}: {e.output}")
 
 
 def set_consistent_flag(consistent: bool) -> None:
@@ -350,6 +423,50 @@ def carry_build_artifacts(basedir: str, finalized: str, staging_root: str) -> No
           pass
   except Exception:
     cloudlog.exception("failed carrying build artifacts into the finalized tree")
+
+
+def _prepare_submodule_dirs(repo: str, target: str) -> None:
+  """Align the worktree's dependency directories with the target tree's layout.
+
+  Branch switches move submodule paths between vendored directories and
+  gitlinks in both directions: packaged/release branches commit the files
+  in place, master keeps gitlinks. Git itself handles neither direction -
+  a vendored directory has no .git so `submodule update --init` refuses
+  to clone into it, and a checked-out submodule blocks the checkout from
+  writing regular files over the path (checkout --force and clean -xdff
+  deliberately skip submodule paths).
+
+  Remove whichever directory is in the way; the fetch below re-clones
+  what the target pins. Idempotent and a no-op on trees whose layout
+  already matches.
+  """
+  def _gitlinks(treeish: str) -> set[str]:
+    try:
+      out = run(["git", "ls-tree", treeish], repo)
+    except subprocess.CalledProcessError:
+      return set()
+    links = set()
+    for line in out.splitlines():
+      meta, _, path = line.partition("\t")
+      # "<mode> <type> <sha>\t<path>" - mode is the first column
+      if meta.split()[0] == "160000":
+        links.add(path.strip())
+    return links
+
+  current = _gitlinks("HEAD")
+  target = _gitlinks(target)
+  watch = current | target | set(_submodule_paths(repo))
+  for path in sorted(watch):
+    d = os.path.join(repo, path)
+    if not os.path.isdir(d):
+      continue
+    is_repo = os.path.exists(os.path.join(d, ".git"))
+    if path in target and not is_repo:
+      cloudlog.info(f"removing vendored submodule directory {path} (target pins a gitlink)")
+      _rmtree_readonly(d)
+    elif path not in target and is_repo:
+      cloudlog.info(f"removing checked-out submodule directory {path} (target vendors the files)")
+      _rmtree_readonly(d)
 
 
 def finalize_update() -> None:
@@ -799,13 +916,23 @@ class Updater:
     self.ensure_git_source()
 
     try:
-      run(["git", "ls-remote", "origin", "HEAD"], OVERLAY_MERGED)
+      run(["git", "ls-remote", "origin", "HEAD"], OVERLAY_MERGED, timeout=30)
       self._has_internet = True
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
       self._has_internet = False
 
     setup_git_options(OVERLAY_MERGED)
-    output = run(["git", "ls-remote", "--heads"], OVERLAY_MERGED)
+    # A flaky network or a rate-limiting proxy fails the listing once and
+    # then works; the check button should not make the user retry for it.
+    output = None
+    for attempt in range(2):
+      try:
+        output = run(["git", "ls-remote", "--heads"], OVERLAY_MERGED, timeout=60)
+        break
+      except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        if attempt == 1:
+          raise
+        cloudlog.warning(f"ls-remote --heads failed ({e!r}), retrying once")
 
     self.branches.clear()
     for line in output.split('\n'):
@@ -856,6 +983,11 @@ class Updater:
     r = [run(cmd, OVERLAY_MERGED) for cmd in cmds]
     cloudlog.info("git reset success: %s", '\n'.join(r))
 
+    # Branch switches between packaged (vendored) trees and master (gitlinks)
+    # need the submodule directories cleared before git touches them - see
+    # _prepare_submodule_dirs. No-op when the layout already matches.
+    _prepare_submodule_dirs(OVERLAY_MERGED, branch)
+
     # The staged tree must keep the dependency layout this fork ships: every
     # submodule registered in .gitmodules still a gitlink pointer, and no
     # unregistered gitlink injected. A layout mutation means the branch was
@@ -874,6 +1006,15 @@ class Updater:
         cloudlog.info(f"git_proxy: rewrote {changed} submodule urls to the proxy")
       except Exception as e:
         cloudlog.exception(f"git_proxy: failed to apply the proxy to submodules: {e}")
+
+    # A crashed git run anywhere in the shared .git leaves an index.lock
+    # that outlives overlay recreation - the overlay's .git IS the running
+    # tree's .git - and `submodule foreach` then fails forever (observed:
+    # repeated "Unable to create .../modules/ai/index.lock: File exists").
+    for repo in [OVERLAY_MERGED] + [os.path.join(OVERLAY_MERGED, p)
+                                    for p in _submodule_paths(OVERLAY_MERGED)]:
+      if os.path.isdir(repo):
+        _clear_in_progress_git_state(repo)
 
     r = [
       run(cmd, OVERLAY_MERGED) for cmd in [

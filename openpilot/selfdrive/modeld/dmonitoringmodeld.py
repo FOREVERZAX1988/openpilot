@@ -12,6 +12,7 @@ from openpilot.cereal.messaging import PubMaster, SubMaster
 from openpilot.cereal.visionipc import VisionStreamType
 from msgq.visionipc import VisionIpcClient, VisionBuf
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process
 from openpilot.common.transformations.model import dmonitoringmodel_intrinsics
 from openpilot.common.transformations.camera import _ar_ox_fisheye, _os_fisheye
@@ -20,6 +21,11 @@ from openpilot.selfdrive.modeld.parse_model_outputs import sigmoid, safe_exp
 
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')
 MODEL_PKL_PATH = MODELS_DIR / 'dmonitoring_model_tinygrad.pkl'
+
+# A cabin stream that never comes up while this process is clearly running
+# means the unit has no driver camera hardware (clone C3/C4s ship both
+# ways). Well past any slow camerad bringup before we give up.
+CABIN_STREAM_TIMEOUT = 60.0
 
 
 class ModelState:
@@ -115,6 +121,7 @@ def main():
 
   cloudlog.warning("connecting to cabin stream")
   vipc_client = VisionIpcClient("camerad", VisionStreamType.VISION_STREAM_CABIN, True)
+  params = Params()
   wait_start = time.monotonic()
   last_log = 0.0
   while not vipc_client.connect(False) or not vipc_client.num_buffers or vipc_client.width is None or vipc_client.height is None:
@@ -123,6 +130,15 @@ def main():
       elapsed = now - wait_start
       cloudlog.warning(f"waiting for cabin stream buffers... ({elapsed:.1f}s)")
       last_log = now
+    # No cabin camera hardware: flip the existing user-facing DisableDM
+    # switch so dm_process stops both DM processes on manager's next cycle
+    # and the device runs alert-free, then exit. Camera-equipped units
+    # connect in seconds and never reach this; a unit that later gets a
+    # camera fitted just has the toggle switched back off by the user.
+    if now - wait_start >= CABIN_STREAM_TIMEOUT:
+      params.put_bool("DisableDM", True)
+      cloudlog.warning("no cabin stream after %.0fs, assuming no driver camera and disabling driver monitoring", now - wait_start)
+      return
     time.sleep(0.1)
   assert vipc_client.is_connected()
   cam_w, cam_h = vipc_client.width, vipc_client.height
