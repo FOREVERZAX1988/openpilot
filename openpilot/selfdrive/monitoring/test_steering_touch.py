@@ -10,6 +10,7 @@ from openpilot.selfdrive.monitoring.dm2_context import SteeringTouchEvidence
 from openpilot.selfdrive.monitoring.dm2 import DriverMonitoring2
 from openpilot.selfdrive.monitoring.policy import AlertLevel
 from openpilot.selfdrive.monitoring.test_dm2 import camera, wheel
+from openpilot.selfdrive.monitoring.dm2_test_settings import pin_carrot_vision_settings
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.common.parameterized import parameterized
 
@@ -20,6 +21,12 @@ def sample(time, held=True, valid=True, available=True):
 
 
 class TestSteeringTouchTests(OpenpilotTestCase):
+
+  def setUp(self):
+    # Same reason as test_dm2/test_dm2d: this fork ships the regulatory VISION
+    # timeouts (8/12/20 s) while these assertions were written against
+    # carrotpilot's (5/8/13 s). Pin the suite's own values for this test only.
+    pin_carrot_vision_settings(self)
 
   def test_contact_requires_release_before_camera_edge_and_expires(self):
     monitor = SteeringTouchEvidence()
