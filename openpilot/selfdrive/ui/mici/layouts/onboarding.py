@@ -1,4 +1,5 @@
 import math
+import time
 import numpy as np
 import raylib_nb as rl
 from collections.abc import Callable
@@ -92,6 +93,11 @@ class DMBadFaceDetected(NavScroller):
 class TrainingGuideDMTutorial(NavWidget):
   PROGRESS_DURATION = 4
   LOOKING_THRESHOLD_DEG = 30.0
+  # Zero driverMonitoringState packets for this long means the unit has no
+  # driver camera (or DM is otherwise dead): auto-skip the step instead of
+  # hanging the first-boot training guide forever. dmonitoringmodeld flips
+  # DisableDM at 60s; keep this past that so the disable path completes first.
+  NO_DM_DATA_TIMEOUT = 75.0
 
   def __init__(self, continue_callback: Callable[[], None]):
     super().__init__()
@@ -108,6 +114,9 @@ class TrainingGuideDMTutorial(NavWidget):
     self._progress = FirstOrderFilter(0.0, 0.5, 1 / gui_app.target_fps)
     self._dialog = DriverCameraSetupDialog()
     self._bad_face_page = DMBadFaceDetected()
+    self._continue_callback = continue_callback
+    self._auto_skipped = False
+    self._shown_at: float | None = None
 
     # Disable driver monitoring model when device times out for inactivity
     def inactivity_callback():
@@ -119,9 +128,22 @@ class TrainingGuideDMTutorial(NavWidget):
     super().show_event()
     self._dialog.show_event()
     self._progress.x = 0.0
+    if self._shown_at is None:
+      self._shown_at = time.monotonic()
 
   def _update_state(self):
     super()._update_state()
+    # No camera hardware / dead DM: skip to the next step instead of stalling.
+    # Sticky once triggered so re-showing this widget can't push duplicates.
+    if not self._auto_skipped and self._shown_at is not None:
+      dm_seen = ui_state.sm.recv_frame.get("driverMonitoringState", 0) > 0
+      dm_disabled = ui_state.params.get_bool("DisableDM")
+      stalled = not dm_seen and (time.monotonic() - self._shown_at) > self.NO_DM_DATA_TIMEOUT
+      if dm_disabled or stalled:
+        self._auto_skipped = True
+        self._continue_callback()
+        return
+
     if device.awake and not ui_state.params.get_bool("IsDriverViewEnabled"):
       ui_state.params.put_bool("IsDriverViewEnabled", True)
 
