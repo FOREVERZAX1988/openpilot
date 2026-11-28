@@ -558,7 +558,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
       return
     max_dist = 40.0
     radar_state = sm['radarState'] if sm.valid['radarState'] else None
-    if radar_state is not None and radar_state.leadOne.status:
+    if radar_state is not None and radar_state.leadOne.present:
       d_rel = float(radar_state.leadOne.dRel)
       if 3.0 < d_rel < max_dist:
         max_dist = d_rel

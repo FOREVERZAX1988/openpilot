@@ -819,7 +819,7 @@ def get_toyota_sienna_post_departure_restop_cap(CP, lead, v_ego, accel_min,
   """Re-arm a stop if a Sienna's lead twitches forward and stops again."""
   if (
     CP.brand != "toyota" or str(CP.carFingerprint) != "TOYOTA_SIENNA_4TH_GEN" or
-    now_t >= departure_latch_until or lead is None or not lead.status or
+    now_t >= departure_latch_until or lead is None or not getattr(lead, 'present', False) or
     float(v_ego) > TOYOTA_SIENNA_POST_DEPARTURE_RESTOP_MAX_EGO_SPEED
   ):
     return None

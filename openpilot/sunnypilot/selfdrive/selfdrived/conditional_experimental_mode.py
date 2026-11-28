@@ -566,10 +566,10 @@ class ConditionalExperimentalMode:
   @staticmethod
   def _lead_snapshot(sm) -> tuple[bool, float, float, float | None, float | None] | None:
     """(present, dRel, vLead, vRel, aLeadK) from radarState.leadOne; None when the
-    source is unavailable. present mirrors lead.status, sp's following bit."""
+    source is unavailable. sp's cereal renamed cp's LeadData.status to present."""
     try:
       lead = sm["radarState"].leadOne
-      present = bool(lead.status)
+      present = bool(lead.present)
       distance = float(lead.dRel)
       speed = float(lead.vLead)
     except (KeyError, TypeError, AttributeError, ValueError):
