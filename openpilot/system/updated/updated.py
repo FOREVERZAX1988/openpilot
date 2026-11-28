@@ -224,22 +224,26 @@ def cleanup_device_tree(basedir: str = BASEDIR) -> None:
       dirty = run(["git", "status", "--porcelain"], repo)
     except subprocess.CalledProcessError:
       continue  # not a git repo (stripped layout); nothing to clean
+    # Stale locks and in-progress markers are invisible to status
+    # --porcelain; sweep them even on a clean tree or the next fetch
+    # inherits them (observed: a stale .git/modules/<sub>/index.lock from
+    # a crashed run failed every later `submodule foreach` forever).
+    _clear_in_progress_git_state(repo)
     if not dirty.strip():
       continue
     cloudlog.info(f"cleaning local changes in {repo}: {len(dirty.splitlines())} entries")
     try:
+      run(["git", "reset", "--hard"], repo)
+      run(["git", "clean", "-fd"], repo)
+    except subprocess.CalledProcessError:
+      # A corrupt in-progress state can still block the reset; sweep the
+      # markers directly and retry once before giving up.
       _clear_in_progress_git_state(repo)
       try:
         run(["git", "reset", "--hard"], repo)
         run(["git", "clean", "-fd"], repo)
-      except subprocess.CalledProcessError:
-        # A corrupt in-progress state can still block the reset; sweep the
-        # markers directly and retry once before giving up.
-        _clear_in_progress_git_state(repo)
-        run(["git", "reset", "--hard"], repo)
-        run(["git", "clean", "-fd"], repo)
-    except subprocess.CalledProcessError as e:
-      cloudlog.exception(f"cleanup failed in {repo}: {e.output}")
+      except subprocess.CalledProcessError as e:
+        cloudlog.exception(f"cleanup failed in {repo}: {e.output}")
 
 
 def set_consistent_flag(consistent: bool) -> None:
@@ -1002,6 +1006,15 @@ class Updater:
         cloudlog.info(f"git_proxy: rewrote {changed} submodule urls to the proxy")
       except Exception as e:
         cloudlog.exception(f"git_proxy: failed to apply the proxy to submodules: {e}")
+
+    # A crashed git run anywhere in the shared .git leaves an index.lock
+    # that outlives overlay recreation - the overlay's .git IS the running
+    # tree's .git - and `submodule foreach` then fails forever (observed:
+    # repeated "Unable to create .../modules/ai/index.lock: File exists").
+    for repo in [OVERLAY_MERGED] + [os.path.join(OVERLAY_MERGED, p)
+                                    for p in _submodule_paths(OVERLAY_MERGED)]:
+      if os.path.isdir(repo):
+        _clear_in_progress_git_state(repo)
 
     r = [
       run(cmd, OVERLAY_MERGED) for cmd in [

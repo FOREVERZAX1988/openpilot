@@ -57,6 +57,16 @@ def _commit(repo: str, rel: str, content: str = "x") -> None:
   _git(repo, "commit", "-q", "-m", f"add {rel}")
 
 
+def _repo_with_submodule(root: str) -> str:
+  """A parent repo with a real submodule at sub/ (gitlink + gitdir)."""
+  dep = _init_repo(os.path.join(root, "dep"))
+  _commit(dep, "lib.txt", "dep")
+  parent = _init_repo(os.path.join(root, "parent"))
+  _git(parent, "-c", "protocol.file.allow=always", "submodule", "add", "-q", dep, "sub")
+  _git(parent, "commit", "-q", "-m", "add submodule")
+  return parent
+
+
 class TestCleanupDeviceTree(OpenpilotTestCase):
   """cleanup_device_tree must return any local git state to a fetchable
   one: modified, staged, conflicted, interrupted-rebase, stale-lock."""
@@ -118,22 +128,29 @@ class TestCleanupDeviceTree(OpenpilotTestCase):
       self.assertFalse(os.path.exists(os.path.join(git_dir, "rebase-merge")))
       self.assertFalse(os.path.exists(os.path.join(git_dir, "index.lock")))
 
+  def test_sweeps_stale_submodule_lock_on_clean_tree(self):
+    """A crashed git in a submodule leaves an index.lock invisible to
+    status; the sweep must find it even on an otherwise clean tree."""
+    with tempfile.TemporaryDirectory() as tmp:
+      parent = _repo_with_submodule(tmp)
+      git_dir = _git(parent, "rev-parse", "--absolute-git-dir").strip()
+      lock = os.path.join(git_dir, "modules", "sub", "index.lock")
+      os.makedirs(os.path.dirname(lock), exist_ok=True)
+      with open(lock, "w") as f:
+        f.write("stale")
+
+      self.assertEqual("", _status(parent))
+      cleanup_device_tree(parent)
+      self.assertFalse(os.path.exists(lock))
+
 
 class TestPrepareSubmoduleDirs(OpenpilotTestCase):
   """Branch switches between gitlink and vendored layouts must clear the
   directory git itself refuses to touch."""
 
-  def _repo_with_submodule(self, root: str) -> str:
-    dep = _init_repo(os.path.join(root, "dep"))
-    _commit(dep, "lib.txt", "dep")
-    parent = _init_repo(os.path.join(root, "parent"))
-    _git(parent, "-c", "protocol.file.allow=always", "submodule", "add", "-q", dep, "sub")
-    _git(parent, "commit", "-q", "-m", "add submodule")
-    return parent
-
   def test_vendored_dir_removed_when_target_pins_gitlink(self):
     with tempfile.TemporaryDirectory() as tmp:
-      parent = self._repo_with_submodule(tmp)
+      parent = _repo_with_submodule(tmp)
       sub = os.path.join(parent, "sub")
       # a checked-out, valid submodule stays untouched
       _prepare_submodule_dirs(parent, "HEAD")
@@ -149,7 +166,7 @@ class TestPrepareSubmoduleDirs(OpenpilotTestCase):
 
   def test_checked_out_submodule_removed_when_target_vendors(self):
     with tempfile.TemporaryDirectory() as tmp:
-      parent = self._repo_with_submodule(tmp)
+      parent = _repo_with_submodule(tmp)
       # Target tree vendors the files: replace the gitlink with a regular file.
       _git(parent, "rm", "-q", "--cached", "sub")
       shutil.rmtree(os.path.join(parent, "sub"))
