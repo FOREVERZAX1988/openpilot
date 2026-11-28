@@ -1,10 +1,11 @@
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
 
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.system.updated.updated import carry_build_artifacts
+from openpilot.system.updated.updated import _prepare_submodule_dirs, cleanup_device_tree, carry_build_artifacts
 
 # The firmware paths the packager strips from the staged tree (they stay
 # tracked in the panda fork for pandad's DFU rescue), and the .gitignore
@@ -19,6 +20,7 @@ GITIGNORE = """\
 panda/board/obj/*.bin
 panda/board/obj/*.bin.signed
 .params_registry_ok
+prebuilt
 """
 
 
@@ -46,6 +48,121 @@ def _status(repo: str) -> str:
   return _git(repo, "status", "--porcelain").strip()
 
 
+def _commit(repo: str, rel: str, content: str = "x") -> None:
+  p = os.path.join(repo, rel)
+  os.makedirs(os.path.dirname(p), exist_ok=True)
+  with open(p, "w") as f:
+    f.write(content)
+  _git(repo, "add", rel)
+  _git(repo, "commit", "-q", "-m", f"add {rel}")
+
+
+class TestCleanupDeviceTree(OpenpilotTestCase):
+  """cleanup_device_tree must return any local git state to a fetchable
+  one: modified, staged, conflicted, interrupted-rebase, stale-lock."""
+
+  def test_discards_modified_staged_and_untracked(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      repo = _init_repo(os.path.join(tmp, "r"))
+      _commit(repo, "a.txt", "one")
+
+      with open(os.path.join(repo, "a.txt"), "w") as f:
+        f.write("modified")
+      _commit(repo, "b.txt", "b")
+      _git(repo, "reset", "-q", "HEAD~1")  # b.txt now staged
+      with open(os.path.join(repo, "c.txt"), "w") as f:
+        f.write("untracked")
+
+      self.assertNotEqual("", _status(repo))
+      cleanup_device_tree(repo)
+      self.assertEqual("", _status(repo))
+      with open(os.path.join(repo, "a.txt")) as f:
+        self.assertEqual("one", f.read())
+      self.assertFalse(os.path.exists(os.path.join(repo, "c.txt")))
+
+  def test_resolves_merge_conflict_state(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      repo = _init_repo(os.path.join(tmp, "r"))
+      _commit(repo, "a.txt", "base")
+      _git(repo, "checkout", "-q", "-b", "other")
+      _commit(repo, "a.txt", "other side")
+      _git(repo, "checkout", "-q", "master")
+      _commit(repo, "a.txt", "master side")
+      try:
+        _git(repo, "merge", "other")
+      except subprocess.CalledProcessError:
+        pass  # conflict is the point
+      self.assertIn("UU", _status(repo))
+      cleanup_device_tree(repo)
+      self.assertEqual("", _status(repo))
+      with open(os.path.join(repo, "a.txt")) as f:
+        self.assertEqual("master side", f.read())
+
+  def test_sweeps_interrupted_rebase_and_stale_lock(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      repo = _init_repo(os.path.join(tmp, "r"))
+      _commit(repo, "a.txt", "one")
+      with open(os.path.join(repo, "a.txt"), "w") as f:
+        f.write("dirty")
+
+      # Fake the leftovers of a power loss mid-rebase / mid-git.
+      git_dir = os.path.join(repo, ".git")
+      os.makedirs(os.path.join(git_dir, "rebase-merge"))
+      with open(os.path.join(git_dir, "rebase-merge", "msgnum"), "w") as f:
+        f.write("1")
+      with open(os.path.join(git_dir, "index.lock"), "w") as f:
+        f.write("stale")
+
+      cleanup_device_tree(repo)
+      self.assertEqual("", _status(repo))
+      self.assertFalse(os.path.exists(os.path.join(git_dir, "rebase-merge")))
+      self.assertFalse(os.path.exists(os.path.join(git_dir, "index.lock")))
+
+
+class TestPrepareSubmoduleDirs(OpenpilotTestCase):
+  """Branch switches between gitlink and vendored layouts must clear the
+  directory git itself refuses to touch."""
+
+  def _repo_with_submodule(self, root: str) -> str:
+    dep = _init_repo(os.path.join(root, "dep"))
+    _commit(dep, "lib.txt", "dep")
+    parent = _init_repo(os.path.join(root, "parent"))
+    _git(parent, "-c", "protocol.file.allow=always", "submodule", "add", "-q", dep, "sub")
+    _git(parent, "commit", "-q", "-m", "add submodule")
+    return parent
+
+  def test_vendored_dir_removed_when_target_pins_gitlink(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      parent = self._repo_with_submodule(tmp)
+      sub = os.path.join(parent, "sub")
+      # a checked-out, valid submodule stays untouched
+      _prepare_submodule_dirs(parent, "HEAD")
+      self.assertTrue(os.path.isdir(sub))
+
+      # vendored layout: plain directory, no .git anywhere inside
+      shutil.rmtree(sub)
+      os.makedirs(sub)
+      with open(os.path.join(sub, "vendored.txt"), "w") as f:
+        f.write("v")
+      _prepare_submodule_dirs(parent, "HEAD")
+      self.assertFalse(os.path.exists(sub))
+
+  def test_checked_out_submodule_removed_when_target_vendors(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      parent = self._repo_with_submodule(tmp)
+      # Target tree vendors the files: replace the gitlink with a regular file.
+      _git(parent, "rm", "-q", "--cached", "sub")
+      shutil.rmtree(os.path.join(parent, "sub"))
+      _commit(parent, "sub/file.txt", "vendored")
+      # back to the submodule commit without touching the worktree
+      _git(parent, "checkout", "-q", "HEAD~1")
+      # restore the real submodule worktree for the current HEAD
+      _git(parent, "-c", "protocol.file.allow=always", "submodule", "update", "--init")
+
+      _prepare_submodule_dirs(parent, "master")  # master vendors sub/file.txt
+      self.assertFalse(os.path.exists(os.path.join(parent, "sub")))
+
+
 class TestFirmwareCarryLifecycle(OpenpilotTestCase):
 
   def test_device_rebuild_carried_and_tree_stays_clean(self):
@@ -59,7 +176,7 @@ class TestFirmwareCarryLifecycle(OpenpilotTestCase):
       os.makedirs(staging_root, exist_ok=True)
 
       # finalized: staged tree - no firmware tracked at all (packager strips it)
-      self.assertEqual("", _tracked(finalized) & set(PACKAGED_FIRMWARE))
+      self.assertEqual(set(), _tracked(finalized) & set(PACKAGED_FIRMWARE))
 
       # basedir: device rebuild, ignored
       for rel in PACKAGED_FIRMWARE:
