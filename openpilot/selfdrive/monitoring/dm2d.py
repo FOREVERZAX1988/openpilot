@@ -116,7 +116,7 @@ def stationary_pause_eligible(sm, now, demo=False):
     return False
   radar = sm['radarState']
   lead = radar.leadOne
-  return (not any(radar.radarErrors.to_dict().values()) and lead.status and
+  return (not any(radar.radarErrors.to_dict().values()) and lead.present and
           math.isfinite(lead.dRel) and 0 < lead.dRel <= 40 and
           math.isfinite(lead.vLead) and abs(lead.vLead) < .1)
 

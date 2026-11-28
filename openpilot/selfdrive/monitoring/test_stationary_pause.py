@@ -34,7 +34,7 @@ def _plan(**overrides):
 
 
 def _lead(**overrides):
-  lead = {'status': True, 'dRel': 12.0, 'vLead': 0.0}
+  lead = {'present': True, 'dRel': 12.0, 'vLead': 0.0}
   lead.update(overrides)
   return NS(**lead)
 
@@ -102,7 +102,7 @@ class TestStationaryPauseLead(unittest.TestCase):
   def test_lead_vetoes(self):
     plan = _plan(xState=XSTATE_LEAD, hasLead=True, trafficState=0)
     for name, radar in (
-      ('no_lead', _radar(leadOne=_lead(status=False))),
+      ('no_lead', _radar(leadOne=_lead(present=False))),
       ('too_far', _radar(leadOne=_lead(dRel=45.0))),
       ('lead_moving', _radar(leadOne=_lead(vLead=0.5))),
       ('radar_errors', _radar(radarErrors=NS(to_dict=lambda: {'commIssue': True}))),
@@ -135,7 +135,7 @@ class TestStationaryPauseFailClosed(unittest.TestCase):
       ('wrong_control_state', _Sm(
         plan=base_plan,
         car_control=_car_control(
-          actuators=NS(longControlState=car.CarControl.Actuators.LongControlState.enabled)))),
+          actuators=NS(longControlState=car.CarControl.Actuators.LongControlState.pid)))),
       ('vtarget_too_high', _Sm(plan=self._plan_variant(vTargetNow=0.5), checks=True)),
       ('vtarget_missing_nan', _Sm(plan=self._plan_variant(vTargetNow=float('nan')))),
     ):

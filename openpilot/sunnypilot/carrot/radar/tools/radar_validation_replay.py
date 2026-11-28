@@ -1100,7 +1100,7 @@ def corner_radar_display_points(frame: RadarFrame) -> tuple[RadarPoint, ...]:
 
 
 def _recorded_candidate(lead: RecordedLead, reason: str) -> Candidate | None:
-  if not lead.status:
+  if not lead.present:
     return None
   return Candidate(
     track_id=lead.track_id if lead.radar else -1,
@@ -3444,7 +3444,7 @@ def current_cutin_track_ids(
 
 
 def recorded_track_id(lead: RecordedLead) -> int | None:
-  return lead.track_id if lead.status and lead.radar and lead.track_id >= 0 else None
+  return lead.track_id if lead.present and lead.radar and lead.track_id >= 0 else None
 
 
 def resolved_recorded_track_id(frame: RadarFrame, lead: RecordedLead) -> int | None:

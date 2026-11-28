@@ -98,7 +98,7 @@ def stationary_pause_eligible(sm, now, demo=False):
     return False
   lead = radar.leadOne
   lead_d_rel, lead_v_lead = float(lead.dRel), float(lead.vLead)
-  return (bool(lead.status) and math.isfinite(lead_d_rel) and 0 < lead_d_rel <= 40 and
+  return (bool(lead.present) and math.isfinite(lead_d_rel) and 0 < lead_d_rel <= 40 and
           math.isfinite(lead_v_lead) and abs(lead_v_lead) < SOFT_HOLD_SPEED_MPS)
 
 

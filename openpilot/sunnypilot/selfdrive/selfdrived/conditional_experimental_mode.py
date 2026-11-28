@@ -452,7 +452,7 @@ class ConditionalExperimentalMode:
       accel = float(lead.aLeadK)
     except (KeyError, TypeError, AttributeError):
       return False
-    if not bool(lead.status):
+    if not bool(lead.present):
       return False
     # radar presence is authoritative; vision-only leads need model confidence
     radar = bool(getattr(lead, "radar", True))
@@ -565,10 +565,10 @@ class ConditionalExperimentalMode:
   @staticmethod
   def _lead_snapshot(sm) -> tuple[bool, float, float, float | None, float | None] | None:
     """(present, dRel, vLead, vRel, aLeadK) from radarState.leadOne; None when the
-    source is unavailable. present mirrors lead.status, sp's following bit."""
+    source is unavailable. sp's cereal renamed cp's LeadData.status to present."""
     try:
       lead = sm["radarState"].leadOne
-      present = bool(lead.status)
+      present = bool(lead.present)
       distance = float(lead.dRel)
       speed = float(lead.vLead)
     except (KeyError, TypeError, AttributeError, ValueError):
@@ -797,7 +797,7 @@ class ConditionalExperimentalMode:
     held = self._lead_hold_active(sm, v_ego)
     try:
       lead = sm["radarState"].leadOne
-      lead_status = bool(lead.status)
+      lead_status = bool(lead.present)
       lead_distance = float(lead.dRel)
       lead_speed = float(lead.vLead)
     except (KeyError, TypeError, AttributeError):
@@ -823,7 +823,7 @@ class ConditionalExperimentalMode:
   @staticmethod
   def _following_lead(sm) -> bool:
     try:
-      return bool(sm["radarState"].leadOne.status)
+      return bool(sm["radarState"].leadOne.present)
     except (KeyError, TypeError, AttributeError):
       return False
 

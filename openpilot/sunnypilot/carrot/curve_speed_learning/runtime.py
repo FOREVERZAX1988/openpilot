@@ -173,7 +173,7 @@ class CurveSpeedLearningRuntime:
       brake_pressed = bool(cs.brakePressed)
       long_active = bool(sm['selfdriveState'].active)
       curvature = float(sm['controlsState'].desiredCurvature)
-      tracking_lead = bool(sm['radarState'].leadOne.status)
+      tracking_lead = bool(sm['radarState'].leadOne.present)
     except (AttributeError, KeyError, TypeError, ValueError):
       self._last_scene = (0.0, 0.0, False)
       return

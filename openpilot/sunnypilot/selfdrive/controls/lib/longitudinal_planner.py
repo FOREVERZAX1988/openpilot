@@ -381,7 +381,7 @@ class LongitudinalPlannerSP:
     lead_speed = 100.0
     try:
         lead = sm['radarState'].leadOne
-        lead_present = bool(lead.status)
+        lead_present = bool(lead.present)
         lead_distance = float(lead.dRel)
         lead_speed = float(lead.vLead)
     except (AttributeError, KeyError, TypeError, ValueError):
@@ -478,7 +478,7 @@ class LongitudinalPlannerSP:
         self.sla.output_v_target = self._lead_drop.relax(
           float(self.sla.output_v_target), float(v_ego),
           lead_present=bool(lead.present),
-          lead_status=bool(lead.status),
+          lead_status=bool(lead.present),
           d_rel=float(lead.dRel),
           v_lead=float(lead.vLead),
           a_lead_k=float(lead.aLeadK),
